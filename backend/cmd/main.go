@@ -67,37 +67,12 @@ func main() {
 }
 
 type ComponentConfig struct {
-	Redis struct {
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		Password string `mapstructure:"password"`
-	} `mapstructure:"redis"`
-	RDS struct {
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
-		Host     string `mapstructure:"host"`
-		Port     string `mapstructure:"port"`
-		DB       string `mapstructure:"db"`
-	} `mapstructure:"rds"`
-	S3Config struct {
-		Region          string `mapstructure:"region"`
-		Endpoint        string `mapstructure:"endpoint"`
-		Bucket          string `mapstructure:"bucket"`
-		AccessKey       string `mapstructure:"access_key"`
-		SecretAccessKey string `mapstructure:"secret_access_key"`
-	} `mapstructure:"s3_config"`
-	CKConfig struct {
-		Host        string `mapstructure:"host"`
-		Database    string `mapstructure:"database"`
-		UserName    string `mapstructure:"username"`
-		Password    string `mapstructure:"password"`
-		DialTimeout int    `mapstructure:"dial_timeout"`
-		ReadTimeout int    `mapstructure:"read_timeout"`
-	} `mapstructure:"ck_config"`
-	IDGen struct {
-		ServerIDs []int64 `mapstructure:"server_ids"`
-	} `mapstructure:"idgen"`
-	LogLevel string `mapstructure:"log_level"`
+	Redis    redisConfig `mapstructure:"redis"`
+	RDS      rdsConfig   `mapstructure:"rds"`
+	S3Config s3Config    `mapstructure:"s3_config"`
+	CKConfig ckConfig    `mapstructure:"ck_config"`
+	IDGen    idGenConfig `mapstructure:"idgen"`
+	LogLevel string      `mapstructure:"log_level"`
 }
 
 func getComponentConfig(configFactory conf.IConfigLoaderFactory) (*ComponentConfig, error) {
@@ -156,39 +131,38 @@ func newComponent(ctx context.Context) (*component, error) {
 		return nil, fmt.Errorf("failed to get component config: %w", err)
 	}
 
-	if err := setupLogging(cfg.LogLevel);
-	 err != nil {
-		return nil, err
+	if err := setupLogging(cfg.LogLevel); err != nil {
+		return nil, fmt.Errorf("failed to setup logging: %w", err)
 	}
 
 	redisClient, err := newRedisClient(cfg.Redis)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create redis client: %w", err)
 	}
 
 	db, err := newDB(cfg.RDS)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create database provider: %w", err)
 	}
 
 	objectStorage, err := newObjectStorage(cfg.S3Config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create object storage client: %w", err)
 	}
 
 	ckDb, err := newCKDB(cfg.CKConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create clickhouse provider: %w", err)
 	}
 
 	idGenerator, err := newIDGenerator(redisClient, cfg.IDGen)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create id generator: %w", err)
 	}
 
 	translater, err := newTranslater()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create translater: %w", err)
 	}
 
 	return &component{
@@ -217,11 +191,42 @@ func setupLogging(logLevel string) error {
 	return nil
 }
 
-func newRedisClient(cfg struct {
+type redisConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
-}) (redis.Cmdable, error) {
+}
+
+type rdsConfig struct {
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	DB       string `mapstructure:"db"`
+}
+
+type s3Config struct {
+	Region          string `mapstructure:"region"`
+	Endpoint        string `mapstructure:"endpoint"`
+	Bucket          string `mapstructure:"bucket"`
+	AccessKey       string `mapstructure:"access_key"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+}
+
+type ckConfig struct {
+	Host        string `mapstructure:"host"`
+	Database    string `mapstructure:"database"`
+	UserName    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	DialTimeout int    `mapstructure:"dial_timeout"`
+	ReadTimeout int    `mapstructure:"read_timeout"`
+}
+
+type idGenConfig struct {
+	ServerIDs []int64 `mapstructure:"server_ids"`
+}
+
+func newRedisClient(cfg redisConfig) (redis.Cmdable, error) {
 	cmdable, err := redis.NewClient(&goredis.Options{
 		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Password: cfg.Password,
@@ -232,13 +237,7 @@ func newRedisClient(cfg struct {
 	return cmdable, nil
 }
 
-func newDB(cfg struct {
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
-	DB       string `mapstructure:"db"`
-}) (db.Provider, error) {
+func newDB(cfg rdsConfig) (db.Provider, error) {
 	db, err := db.NewDBFromConfig(&db.Config{
 		User:         cfg.User,
 		Password:     cfg.Password,
@@ -258,13 +257,7 @@ func newDB(cfg struct {
 	return db, nil
 }
 
-func newObjectStorage(cfg struct {
-	Region          string `mapstructure:"region"`
-	Endpoint        string `mapstructure:"endpoint"`
-	Bucket          string `mapstructure:"bucket"`
-	AccessKey       string `mapstructure:"access_key"`
-	SecretAccessKey string `mapstructure:"secret_access_key"`
-}) (fileserver.ObjectStorage, error) {
+func newObjectStorage(cfg s3Config) (fileserver.ObjectStorage, error) {
 	s3Config := fileserver.NewS3Config(func(c *fileserver.S3Config) {
 		c.Endpoint = cfg.Endpoint
 		c.Region = cfg.Region
@@ -279,14 +272,7 @@ func newObjectStorage(cfg struct {
 	return objectStorage, nil
 }
 
-func newCKDB(cfg struct {
-	Host        string `mapstructure:"host"`
-	Database    string `mapstructure:"database"`
-	UserName    string `mapstructure:"username"`
-	Password    string `mapstructure:"password"`
-	DialTimeout int    `mapstructure:"dial_timeout"`
-	ReadTimeout int    `mapstructure:"read_timeout"`
-}) (ck.Provider, error) {
+func newCKDB(cfg ckConfig) (ck.Provider, error) {
 	ckDb, err := ck.NewCKFromConfig(&ck.Config{
 		Host:              cfg.Host,
 		Database:          cfg.Database,
@@ -304,9 +290,7 @@ func newCKDB(cfg struct {
 	return ckDb, nil
 }
 
-func newIDGenerator(redisClient redis.Cmdable, cfg struct {
-	ServerIDs []int64 `mapstructure:"server_ids"`
-}) (idgen.IIDGenerator, error) {
+func newIDGenerator(redisClient redis.Cmdable, cfg idGenConfig) (idgen.IIDGenerator, error) {
 	redisCli, ok := redis.Unwrap(redisClient)
 	if !ok {
 		return nil, errors.New("unwrap redis cli fail")
