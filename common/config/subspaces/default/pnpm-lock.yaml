@@ -170,7 +170,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/config/eslint-config:
     dependencies:
@@ -436,14 +436,14 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^12.10.3
-        version: 12.10.3
+        specifier: ^15.10.2
+        version: 15.11.7
       sucrase:
         specifier: ^3.32.0
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/infra/eslint-plugin:
     dependencies:
@@ -525,7 +525,7 @@ importers:
         version: 10.9.2(@types/node@18.18.9)(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/infra/idl/idl-parser:
     dependencies:
@@ -559,7 +559,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/infra/idl/idl2ts-cli:
     dependencies:
@@ -816,8 +816,8 @@ importers:
         specifier: npm:@coze-arch/pkg-root-webpack-plugin@1.0.0-alpha.74b402
         version: /@coze-arch/pkg-root-webpack-plugin@1.0.0-alpha.74b402
       '@rushstack/rush-sdk':
-        specifier: 5.100.2
-        version: 5.100.2(@types/node@18.18.9)
+        specifier: 5.147.2
+        version: 5.147.2(@types/node@18.18.9)
     devDependencies:
       '@babel/core':
         specifier: ^7.20.2
@@ -851,7 +851,7 @@ importers:
         version: 1.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
       webpack:
         specifier: ~5.89.0
         version: 5.89.0
@@ -888,13 +888,13 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/infra/utils/monorepo-kits:
     dependencies:
       '@rushstack/rush-sdk':
-        specifier: 5.100.2
-        version: 5.100.2(@types/node@18.18.9)
+        specifier: 5.147.2
+        version: 5.147.2(@types/node@18.18.9)
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*
@@ -916,7 +916,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/infra/utils/rush-logger:
     dependencies:
@@ -938,7 +938,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/bot-env:
     dependencies:
@@ -969,7 +969,7 @@ importers:
         version: 20.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/bot-env-adapter:
     devDependencies:
@@ -996,7 +996,7 @@ importers:
         version: 20.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/bot-flags:
     dependencies:
@@ -1045,7 +1045,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/bot-md-box-adapter:
     dependencies:
@@ -1127,7 +1127,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/bot-typings:
     devDependencies:
@@ -1203,7 +1203,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/logger:
     dependencies:
@@ -1249,7 +1249,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/slardar-interface:
     devDependencies:
@@ -1273,7 +1273,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/arch/subspace-resolve-plugin:
     dependencies:
@@ -1307,7 +1307,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/account:
     dependencies:
@@ -1347,7 +1347,7 @@ importers:
         version: 18.2.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/api-schema:
     dependencies:
@@ -1384,7 +1384,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/auth-pages:
     dependencies:
@@ -1442,7 +1442,7 @@ importers:
         version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/base-hooks:
     dependencies:
@@ -1479,7 +1479,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/biz-components:
     dependencies:
@@ -1543,7 +1543,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/biz-hooks:
     dependencies:
@@ -1592,7 +1592,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/components:
     dependencies:
@@ -1667,8 +1667,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^12.10.3
-        version: 12.10.3
+        specifier: ^15.10.2
+        version: 15.11.7
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -1689,7 +1689,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/env:
     devDependencies:
@@ -1710,7 +1710,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/evaluate:
     dependencies:
@@ -1831,7 +1831,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/evaluate-components:
     dependencies:
@@ -2027,7 +2027,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/evaluate-pages:
     dependencies:
@@ -2100,7 +2100,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/guard:
     dependencies:
@@ -2155,7 +2155,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/i18n:
     dependencies:
@@ -2219,8 +2219,8 @@ importers:
         specifier: workspace:*
         version: link:../../../config/vitest-config
       '@rushstack/rush-sdk':
-        specifier: 5.100.2
-        version: 5.100.2(@types/node@18.18.9)
+        specifier: 5.147.2
+        version: 5.147.2(@types/node@18.18.9)
       '@types/jju':
         specifier: ^1.4.5
         version: 1.4.5
@@ -2314,7 +2314,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/observation/trace-detail:
     dependencies:
@@ -2446,8 +2446,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^12.10.3
-        version: 12.10.3
+        specifier: ^15.10.2
+        version: 15.11.7
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -2465,7 +2465,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/observation/trace-list:
     dependencies:
@@ -2613,7 +2613,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/observation/trace-struct-data:
     dependencies:
@@ -2743,7 +2743,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/prompt-components:
     dependencies:
@@ -2857,8 +2857,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^12.10.3
-        version: 12.10.3
+        specifier: ^15.10.2
+        version: 15.11.7
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -2876,7 +2876,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/prompt-pages:
     dependencies:
@@ -2978,8 +2978,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^12.10.3
-        version: 12.10.3
+        specifier: ^15.10.2
+        version: 15.11.7
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -3003,7 +3003,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/resources/loop-lng:
     devDependencies:
@@ -3024,7 +3024,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/rsbuild-config:
     dependencies:
@@ -3100,7 +3100,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
       webpack:
         specifier: ~5.91.0
         version: 5.91.0
@@ -3140,7 +3140,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/tailwind-config:
     dependencies:
@@ -3225,14 +3225,14 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^12.10.3
-        version: 12.10.3
+        specifier: ^15.10.2
+        version: 15.11.7
       typescript:
         specifier: 5.8.2
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
   ../../../frontend/packages/cozeloop/toolkit:
     dependencies:
@@ -3260,7 +3260,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@12.10.3)
+        version: 3.0.9(happy-dom@15.11.7)
 
 packages:
 
@@ -7929,7 +7929,6 @@ packages:
     dependencies:
       '@pnpm/patching.types': 1.0.0
       '@pnpm/types': 12.2.0
-    dev: false
 
   /@pnpm/package-bins@4.1.0:
     resolution: {integrity: sha512-57/ioGYLBbVRR80Ux9/q2i3y8Q+uQADc3c+Yse8jr/60YLOi3jcWz13e2Jy+ANYtZI258Qc5wk2X077rp0Ly/Q==}
@@ -7943,7 +7942,6 @@ packages:
   /@pnpm/patching.types@1.0.0:
     resolution: {integrity: sha512-juCdQCC1USqLcOhVPl1tYReoTO9YH4fTullMnFXXcmpsDM7Dkn3tzuOQKC3oPoJ2ozv+0EeWWMtMGqn2+IM3pQ==}
     engines: {node: '>=18.12'}
-    dev: false
 
   /@pnpm/read-modules-dir@2.0.3:
     resolution: {integrity: sha512-i9OgRvSlxrTS9a2oXokhDxvQzDtfqtsooJ9jaGoHkznue5aFCTSrNZFQ6M18o8hC03QWfnxaKi0BtOvNkKu2+A==}
@@ -7983,7 +7981,6 @@ packages:
   /@pnpm/types@12.2.0:
     resolution: {integrity: sha512-5RtwWhX39j89/Tmyv2QSlpiNjErA357T/8r1Dkg+2lD3P7RuS7Xi2tChvmOC3VlezEFNcWnEGCOeKoGRkDuqFA==}
     engines: {node: '>=18.12'}
-    dev: false
 
   /@pnpm/types@6.4.0:
     resolution: {integrity: sha512-nco4+4sZqNHn60Y4VE/fbtlShCBqipyUO+nKRPvDHqLrecMW9pzHWMVRxk4nrMRoeowj3q0rX3GYRBa8lsHTAg==}
@@ -9680,7 +9677,6 @@ packages:
         optional: true
     dependencies:
       '@types/node': 18.18.9
-    dev: false
 
   /@rushstack/node-core-library@3.55.2:
     resolution: {integrity: sha512-SaLe/x/Q/uBVdNFK5V1xXvsVps0y7h1sN7aSJllQyFbugyOaxhNRF25bwEDnicARNEjJw0pk0lYnJQ9Kr6ev0A==}
@@ -9699,23 +9695,6 @@ packages:
       z-schema: 5.0.5
     dev: false
 
-  /@rushstack/node-core-library@3.59.6(@types/node@18.18.9):
-    resolution: {integrity: sha512-bMYJwNFfWXRNUuHnsE9wMlW/mOB4jIwSUkRKtu02CwZhQdmzMsUbxE0s1xOLwTpNIwlzfW/YT7OnOHgDffLgYg==}
-    peerDependencies:
-      '@types/node': 18.18.9
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-    dependencies:
-      '@types/node': 18.18.9
-      colors: 1.2.5
-      fs-extra: 7.0.1
-      import-lazy: 4.0.0
-      jju: 1.4.0
-      resolve: 1.22.10
-      semver: 7.5.4
-      z-schema: 5.0.5
-
   /@rushstack/node-core-library@5.10.1(@types/node@18.18.9):
     resolution: {integrity: sha512-BSb/KcyBHmUQwINrgtzo6jiH0HlGFmrUy33vO6unmceuVKTEyL2q+P0fQq2oB5hvXVWOEUhxB2QvlkZluvUEmg==}
     peerDependencies:
@@ -9733,7 +9712,6 @@ packages:
       jju: 1.4.0
       resolve: 1.22.10
       semver: 7.5.4
-    dev: false
 
   /@rushstack/package-deps-hash@4.3.1(@types/node@18.18.9):
     resolution: {integrity: sha512-afJHso7sXH8pLOc3bb0k9y2ftjUjaysQq+dK1tn4rh7QYKH9NAgAFtlT/1Qyr5TNqSduoUAPU/Ih0kOWuQTjhA==}
@@ -9741,7 +9719,6 @@ packages:
       '@rushstack/node-core-library': 5.10.1(@types/node@18.18.9)
     transitivePeerDependencies:
       - '@types/node'
-    dev: false
 
   /@rushstack/package-extractor@0.10.5(@types/node@18.18.9):
     resolution: {integrity: sha512-CQaspm9imR4Kw/vd6M6GAqmUban9kmKSCFXbOC31gmoFGS9nRYHu9vQwePAOCSzLsYYn63akX3iN2FwlWrrWoA==}
@@ -9802,15 +9779,6 @@ packages:
       - supports-color
     dev: false
 
-  /@rushstack/rush-sdk@5.100.2(@types/node@18.18.9):
-    resolution: {integrity: sha512-+4DKbXj6R8vilRYswH8Lb+WIuIoD29/ZjMmazKBKXJTm3x7sgGJy45ozAZbfeXvdOTzqsg11NzIbwaDm8rRhLQ==}
-    dependencies:
-      '@rushstack/node-core-library': 3.59.6(@types/node@18.18.9)
-      '@types/node-fetch': 2.6.2
-      tapable: 2.2.1
-    transitivePeerDependencies:
-      - '@types/node'
-
   /@rushstack/rush-sdk@5.147.2(@types/node@18.18.9):
     resolution: {integrity: sha512-WY2fYcUPVUXYQTtub0PwOT7OqRbGxEXa7QzoeoDdOmlS4WVWkVkGrANaWHyXFo270CUog/wpLOQRnntFNxRQQQ==}
     dependencies:
@@ -9822,7 +9790,6 @@ packages:
       tapable: 2.2.1
     transitivePeerDependencies:
       - '@types/node'
-    dev: false
 
   /@rushstack/stream-collator@4.1.79(@types/node@18.18.9):
     resolution: {integrity: sha512-EE3XeTVBfQdIV6xcqkwkdeN3jMCzmCYtBwUnEQG0zvv1/XgSPw+fQXzQDQX9+CZfF9ZlUePipiy5JJPS6BNXrQ==}
@@ -9844,7 +9811,6 @@ packages:
       '@rushstack/node-core-library': 5.10.1(@types/node@18.18.9)
       '@types/node': 18.18.9
       supports-color: 8.1.1
-    dev: false
 
   /@rushstack/tree-pattern@0.2.4:
     resolution: {integrity: sha512-H8i0OinWsdKM1TKEKPeRRTw85e+/7AIFpxm7q1blceZJhuxRBjCGAUZvQXZK4CMLx75xPqh/h1t5WHwFmElAPA==}
@@ -11329,12 +11295,6 @@ packages:
       form-data: 4.0.3
     dev: true
 
-  /@types/node-fetch@2.6.2:
-    resolution: {integrity: sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==}
-    dependencies:
-      '@types/node': 18.18.9
-      form-data: 3.0.3
-
   /@types/node@18.18.9:
     resolution: {integrity: sha512-0f5klcuImLnG4Qreu9hPj/rEfFq6YRc5n2mAjSsH+ec/mJL+3voBH0+8T7o8RpFjH7ovc+TRsL/c7OYIQsPTfQ==}
     dependencies:
@@ -12408,7 +12368,7 @@ packages:
       std-env: 3.9.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.0.9(@types/node@18.18.9)(happy-dom@12.10.3)
+      vitest: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -12852,7 +12812,6 @@ packages:
         optional: true
     dependencies:
       ajv: 8.13.0
-    dev: false
 
   /ajv-formats@2.1.1(ajv@8.12.0):
     resolution: {integrity: sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==}
@@ -12873,7 +12832,6 @@ packages:
         optional: true
     dependencies:
       ajv: 8.13.0
-    dev: false
 
   /ajv-keywords@3.5.2(ajv@6.12.6):
     resolution: {integrity: sha512-5p6WTN0DdTGVQk6VjcEju19IgaHudalcfabD7yhDGeA6bcQnmL+CpveLJq/3hvfwd1aof6L386Ougkx6RfyMIQ==}
@@ -12913,7 +12871,6 @@ packages:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
       uri-js: 4.4.1
-    dev: false
 
   /ansi-align@3.0.1:
     resolution: {integrity: sha512-IOfwwBF5iczOjp/WeY4YxyjqAFMQoZufdQWDd19SEExbVLNXqvpzSJ/M7Za4/sCPmQ0+GRquoA7bGcINcxew6w==}
@@ -13225,6 +13182,7 @@ packages:
 
   /asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
+    dev: true
 
   /at-least-node@1.0.0:
     resolution: {integrity: sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==}
@@ -14129,12 +14087,14 @@ packages:
   /colors@1.2.5:
     resolution: {integrity: sha512-erNRLao/Y3Fv54qUa0LBB+//Uf3YwMUmdJinN20yMXm9zdKKqH9wt7R9IIVZ+K7ShzfpLV/Zg8+VyrBJYB4lpg==}
     engines: {node: '>=0.1.90'}
+    dev: false
 
   /combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
     dependencies:
       delayed-stream: 1.0.0
+    dev: true
 
   /comlink@4.4.2:
     resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
@@ -14180,6 +14140,7 @@ packages:
     resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
     engines: {node: ^12.20.0 || >=14}
     requiresBuild: true
+    dev: false
     optional: true
 
   /common-path-prefix@3.0.0:
@@ -14800,6 +14761,7 @@ packages:
   /delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
+    dev: true
 
   /depcheck@1.4.7:
     resolution: {integrity: sha512-1lklS/bV5chOxwNKA/2XUUk/hPORp8zihZsXflr8x0kLwmcZ9Y9BsS6Hs3ssvA+2wUVbG0U2Ciqvm1SokNjPkA==}
@@ -16609,15 +16571,6 @@ packages:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
 
-  /form-data@3.0.3:
-    resolution: {integrity: sha512-q5YBMeWy6E2Un0nMGWMgI65MAKtaylxfNJGJxpGh45YDciZB4epbWpaAfImil6CPAPTYB4sh0URQNDRIZG5F2w==}
-    engines: {node: '>= 6'}
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      es-set-tostringtag: 2.1.0
-      mime-types: 2.1.35
-
   /form-data@4.0.3:
     resolution: {integrity: sha512-qsITQPfmvMOSAdeyZ+12I1c+CKSstAFAwu+97zrnWAbIr5u8wfsExUzCesVLC8NgHuRUqNN4Zy6UPWUTRGslcA==}
     engines: {node: '>= 6'}
@@ -17130,14 +17083,12 @@ packages:
       uglify-js: 3.19.3
     dev: true
 
-  /happy-dom@12.10.3:
-    resolution: {integrity: sha512-JzUXOh0wdNGY54oKng5hliuBkq/+aT1V3YpTM+lrN/GoLQTANZsMaIvmHiHe612rauHvPJnDZkZ+5GZR++1Abg==}
+  /happy-dom@15.11.7:
+    resolution: {integrity: sha512-KyrFvnl+J9US63TEzwoiJOQzZBJY7KgBushJA8X61DMbNsH+2ONkDuLDnCnwUiPTF42tLoEmrPyoqbenVA5zrg==}
+    engines: {node: '>=18.0.0'}
     dependencies:
-      css.escape: 1.5.1
       entities: 4.5.0
-      iconv-lite: 0.6.3
       webidl-conversions: 7.0.0
-      whatwg-encoding: 2.0.0
       whatwg-mimetype: 3.0.0
     dev: true
 
@@ -17498,6 +17449,7 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       safer-buffer: 2.1.2
+    dev: false
 
   /icss-utils@4.1.1:
     resolution: {integrity: sha512-4aFq7wvWyMHKgxsH8QQtGpvbASCf+eM3wPRLI6R+MgAnTCZ6STYsRvttLvRWK0Nfif5piF394St3HeJDaljGPA==}
@@ -18824,6 +18776,7 @@ packages:
   /lodash.get@4.4.2:
     resolution: {integrity: sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==}
     deprecated: This package is deprecated. Use the optional chaining (?.) operator instead.
+    dev: false
 
   /lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
@@ -18836,6 +18789,7 @@ packages:
   /lodash.isequal@4.5.0:
     resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
     deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+    dev: false
 
   /lodash.isinteger@4.0.4:
     resolution: {integrity: sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==}
@@ -25510,6 +25464,7 @@ packages:
   /validator@13.15.15:
     resolution: {integrity: sha512-BgWVbCI72aIQy937xbawcs+hrVaN/CZ2UwutgaJ36hGqRrLNM+f5LUT/YPRbo8IV/ASeFzXszezV+y2+rq3l8A==}
     engines: {node: '>= 0.10'}
+    dev: false
 
   /varint@6.0.0:
     resolution: {integrity: sha512-cXEIW6cfr15lFv563k4GuVuW/fiwjknytD37jIOLSdSWuOI6WnO/oKwmP2FQTU2l01LP8/M5TSAJpzUaGe3uWg==}
@@ -25712,7 +25667,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vitest@3.0.9(@types/node@18.18.9)(happy-dom@12.10.3):
+  /vitest@3.0.9(@types/node@18.18.9)(happy-dom@15.11.7):
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -25751,7 +25706,7 @@ packages:
       chai: 5.2.0
       debug: 4.3.3
       expect-type: 1.2.1
-      happy-dom: 12.10.3
+      happy-dom: 15.11.7
       magic-string: 0.30.17
       pathe: 2.0.3
       std-env: 3.9.0
@@ -25841,7 +25796,7 @@ packages:
       - yaml
     dev: true
 
-  /vitest@3.0.9(happy-dom@12.10.3):
+  /vitest@3.0.9(happy-dom@15.11.7):
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -25879,7 +25834,7 @@ packages:
       chai: 5.2.0
       debug: 4.3.3
       expect-type: 1.2.1
-      happy-dom: 12.10.3
+      happy-dom: 15.11.7
       magic-string: 0.30.17
       pathe: 2.0.3
       std-env: 3.9.0
@@ -26075,13 +26030,6 @@ packages:
       - '@swc/core'
       - esbuild
       - uglify-js
-
-  /whatwg-encoding@2.0.0:
-    resolution: {integrity: sha512-p41ogyeMUrw3jWclHWTQg1k05DSVXPLcVxRTYsXUk+ZooOCZLcoYgPZ/HL/D/N+uQPOtcp1me1WhBEaX02mhWg==}
-    engines: {node: '>=12'}
-    dependencies:
-      iconv-lite: 0.6.3
-    dev: true
 
   /whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
@@ -26414,6 +26362,7 @@ packages:
       validator: 13.15.15
     optionalDependencies:
       commander: 9.5.0
+    dev: false
 
   /zod-validation-error@1.2.0(zod@3.22.4):
     resolution: {integrity: sha512-laJkD/ugwEh8CpuH+xXv5L9Z+RLz3lH8alNxolfaHZJck611OJj97R4Rb+ZqA7WNly2kNtTo4QwjdjXw9scpiw==}
