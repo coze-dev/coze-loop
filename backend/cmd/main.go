@@ -156,7 +156,8 @@ func newComponent(ctx context.Context) (*component, error) {
 		return nil, fmt.Errorf("failed to get component config: %w", err)
 	}
 
-	if err := setupLogging(cfg.LogLevel); err != nil {
+	if err := setupLogging(cfg.LogLevel);
+	 err != nil {
 		return nil, err
 	}
 
