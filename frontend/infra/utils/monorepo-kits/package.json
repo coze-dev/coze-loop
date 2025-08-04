@@ -13,7 +13,7 @@
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
-    "@rushstack/rush-sdk": "5.100.2"
+    "@rushstack/rush-sdk": "5.147.2"
   },
   "devDependencies": {
     "@coze-arch/eslint-config": "workspace:*",
@@ -25,4 +25,3 @@
     "vitest": "~3.0.5"
   }
 }
-
