@@ -67,37 +67,12 @@ func main() {
 }
 
 type ComponentConfig struct {
-	Redis struct {
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		Password string `mapstructure:"password"`
-	} `mapstructure:"redis"`
-	RDS struct {
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
-		Host     string `mapstructure:"host"`
-		Port     string `mapstructure:"port"`
-		DB       string `mapstructure:"db"`
-	} `mapstructure:"rds"`
-	S3Config struct {
-		Region          string `mapstructure:"region"`
-		Endpoint        string `mapstructure:"endpoint"`
-		Bucket          string `mapstructure:"bucket"`
-		AccessKey       string `mapstructure:"access_key"`
-		SecretAccessKey string `mapstructure:"secret_access_key"`
-	} `mapstructure:"s3_config"`
-	CKConfig struct {
-		Host        string `mapstructure:"host"`
-		Database    string `mapstructure:"database"`
-		UserName    string `mapstructure:"username"`
-		Password    string `mapstructure:"password"`
-		DialTimeout int    `mapstructure:"dial_timeout"`
-		ReadTimeout int    `mapstructure:"read_timeout"`
-	} `mapstructure:"ck_config"`
-	IDGen struct {
-		ServerIDs []int64 `mapstructure:"server_ids"`
-	} `mapstructure:"idgen"`
-	LogLevel string `mapstructure:"log_level"`
+	Redis    redisConfig `mapstructure:"redis"`
+	RDS      rdsConfig   `mapstructure:"rds"`
+	S3Config s3Config    `mapstructure:"s3_config"`
+	CKConfig ckConfig    `mapstructure:"ck_config"`
+	IDGen    idGenConfig `mapstructure:"idgen"`
+	LogLevel string      `mapstructure:"log_level"`
 }
 
 func getComponentConfig(configFactory conf.IConfigLoaderFactory) (*ComponentConfig, error) {
@@ -150,43 +125,125 @@ func initTracer(handler *apis.APIHandler) error {
 }
 
 func newComponent(ctx context.Context) (*component, error) {
-	c := new(component)
 	cfgFactory := viper.NewFileConfigLoaderFactory(viper.WithFactoryConfigPath("conf"))
-	componentConfig, err := getComponentConfig(cfgFactory)
+	cfg, err := getComponentConfig(cfgFactory)
 	if err != nil {
-		return c, err
+		return nil, fmt.Errorf("failed to get component config: %w", err)
 	}
-	switch componentConfig.LogLevel {
-	case "debug":
-		logs.SetLogLevel(logs.DebugLevel)
-	case "info":
-		logs.SetLogLevel(logs.InfoLevel)
-	case "warn":
-		logs.SetLogLevel(logs.WarnLevel)
-	case "error":
-		logs.SetLogLevel(logs.ErrorLevel)
-	case "fatal":
-		logs.SetLogLevel(logs.FatalLevel)
+
+	if err := setupLogging(cfg.LogLevel); err != nil {
+		return nil, fmt.Errorf("failed to setup logging: %w", err)
 	}
+
+	redisClient, err := newRedisClient(cfg.Redis)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create redis client: %w", err)
+	}
+
+	db, err := newDB(cfg.RDS)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database provider: %w", err)
+	}
+
+	objectStorage, err := newObjectStorage(cfg.S3Config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create object storage client: %w", err)
+	}
+
+	ckDb, err := newCKDB(cfg.CKConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create clickhouse provider: %w", err)
+	}
+
+	idGenerator, err := newIDGenerator(redisClient, cfg.IDGen)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create id generator: %w", err)
+	}
+
+	translater, err := newTranslater()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create translater: %w", err)
+	}
+
+	return &component{
+		idgen:              idGenerator,
+		db:                 db,
+		redis:              redisClient,
+		cfgFactory:         cfgFactory,
+		mqFactory:          rocketmq.NewFactory(),
+		objectStorage:      objectStorage,
+		batchObjectStorage: objectStorage,
+		benefitSvc:         benefit.NewNoopBenefitService(),
+		auditClient:        audit.NewNoopAuditService(),
+		metric:             metrics.GetMeter(),
+		limiterFactory:     dist.NewRateLimiterFactory(redisClient),
+		ckDb:               ckDb,
+		translater:         translater,
+	}, nil
+}
+
+func setupLogging(logLevel string) error {
+	level, err := logs.ParseLevel(logLevel)
+	if err != nil {
+		return fmt.Errorf("failed to parse log level: %w", err)
+	}
+	logs.SetLogLevel(level)
+	return nil
+}
+
+type redisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+}
+
+type rdsConfig struct {
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	DB       string `mapstructure:"db"`
+}
+
+type s3Config struct {
+	Region          string `mapstructure:"region"`
+	Endpoint        string `mapstructure:"endpoint"`
+	Bucket          string `mapstructure:"bucket"`
+	AccessKey       string `mapstructure:"access_key"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+}
+
+type ckConfig struct {
+	Host        string `mapstructure:"host"`
+	Database    string `mapstructure:"database"`
+	UserName    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	DialTimeout int    `mapstructure:"dial_timeout"`
+	ReadTimeout int    `mapstructure:"read_timeout"`
+}
+
+type idGenConfig struct {
+	ServerIDs []int64 `mapstructure:"server_ids"`
+}
+
+func newRedisClient(cfg redisConfig) (redis.Cmdable, error) {
 	cmdable, err := redis.NewClient(&goredis.Options{
-		Addr:     fmt.Sprintf("%s:%d", componentConfig.Redis.Host, componentConfig.Redis.Port),
-		Password: componentConfig.Redis.Password,
+		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Password: cfg.Password,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create redis client: %w", err)
 	}
+	return cmdable, nil
+}
 
-	redisCli, ok := redis.Unwrap(cmdable)
-	if !ok {
-		return c, errors.New("unwrap redis cli fail")
-	}
-
+func newDB(cfg rdsConfig) (db.Provider, error) {
 	db, err := db.NewDBFromConfig(&db.Config{
-		User:         componentConfig.RDS.User,
-		Password:     componentConfig.RDS.Password,
-		DBHostname:   componentConfig.RDS.Host,
-		DBPort:       componentConfig.RDS.Port,
-		DBName:       componentConfig.RDS.DB,
+		User:         cfg.User,
+		Password:     cfg.Password,
+		DBHostname:   cfg.Host,
+		DBPort:       cfg.Port,
+		DBName:       cfg.DB,
 		Loc:          "Local",
 		DBCharset:    "utf8mb4",
 		Timeout:      time.Minute,
@@ -195,63 +252,64 @@ func newComponent(ctx context.Context) (*component, error) {
 		DSNParams:    url.Values{"clientFoundRows": []string{"true"}},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create database provider: %w", err)
 	}
+	return db, nil
+}
 
-	s3Config := fileserver.NewS3Config(func(cfg *fileserver.S3Config) {
-		cfg.Endpoint = componentConfig.S3Config.Endpoint
-		cfg.Region = componentConfig.S3Config.Region
-		cfg.Bucket = componentConfig.S3Config.Bucket
-		cfg.AccessKeyID = componentConfig.S3Config.AccessKey
-		cfg.SecretAccessKey = componentConfig.S3Config.SecretAccessKey
+func newObjectStorage(cfg s3Config) (fileserver.ObjectStorage, error) {
+	s3Config := fileserver.NewS3Config(func(c *fileserver.S3Config) {
+		c.Endpoint = cfg.Endpoint
+		c.Region = cfg.Region
+		c.Bucket = cfg.Bucket
+		c.AccessKeyID = cfg.AccessKey
+		c.SecretAccessKey = cfg.SecretAccessKey
 	})
 	objectStorage, err := fileserver.NewS3Client(s3Config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create object storage client: %w", err)
 	}
+	return objectStorage, nil
+}
 
+func newCKDB(cfg ckConfig) (ck.Provider, error) {
 	ckDb, err := ck.NewCKFromConfig(&ck.Config{
-		Host:              componentConfig.CKConfig.Host,
-		Database:          componentConfig.CKConfig.Database,
-		Username:          componentConfig.CKConfig.UserName,
-		Password:          componentConfig.CKConfig.Password,
+		Host:              cfg.Host,
+		Database:          cfg.Database,
+		Username:          cfg.UserName,
+		Password:          cfg.Password,
 		CompressionMethod: ck.CompressionMethodZSTD,
 		CompressionLevel:  3,
 		Protocol:          ck.ProtocolNative,
-		DialTimeout:       time.Duration(componentConfig.CKConfig.DialTimeout) * time.Second,
-		ReadTimeout:       time.Duration(componentConfig.CKConfig.ReadTimeout) * time.Second,
+		DialTimeout:       time.Duration(cfg.DialTimeout) * time.Second,
+		ReadTimeout:       time.Duration(cfg.ReadTimeout) * time.Second,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create clickhouse provider: %w", err)
 	}
+	return ckDb, nil
+}
 
-	idgenerator, err := redis_gen.NewIDGenerator(redisCli, componentConfig.IDGen.ServerIDs)
+func newIDGenerator(redisClient redis.Cmdable, cfg idGenConfig) (idgen.IIDGenerator, error) {
+	redisCli, ok := redis.Unwrap(redisClient)
+	if !ok {
+		return nil, errors.New("unwrap redis cli fail")
+	}
+	idGenerator, err := redis_gen.NewIDGenerator(redisCli, cfg.ServerIDs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create id generator: %w", err)
 	}
+	return idGenerator, nil
+}
 
+func newTranslater() (i18n.ITranslater, error) {
 	localeDir, err := file.FindSubDir(os.Getenv("PWD"), "runtime/locales")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find locales directory: %w", err)
 	}
 	translater, err := goi18n.NewTranslater(localeDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create translater: %w", err)
 	}
-
-	return &component{
-		idgen:              idgenerator,
-		db:                 db,
-		redis:              cmdable,
-		cfgFactory:         cfgFactory,
-		mqFactory:          rocketmq.NewFactory(),
-		objectStorage:      objectStorage,
-		batchObjectStorage: objectStorage,
-		benefitSvc:         benefit.NewNoopBenefitService(),
-		auditClient:        audit.NewNoopAuditService(),
-		metric:             metrics.GetMeter(),
-		limiterFactory:     dist.NewRateLimiterFactory(cmdable),
-		ckDb:               ckDb,
-		translater:         translater,
-	}, nil
+	return translater, nil
 }
