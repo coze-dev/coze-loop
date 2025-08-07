@@ -25,7 +25,6 @@ services:
       start_period: 10s
 
   app:
-    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
