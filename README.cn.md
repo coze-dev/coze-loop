@@ -51,8 +51,8 @@ Coze Loop 通过提供全生命周期的管理能力，帮助开发者更高效�
    cd coze-loop
    ```
 2. 配置模型。进入目录 `conf/default/app/runtime/`，编辑文件 `model_config.yaml`，修改 api_key 和 model 字段。以火山方舟为例：
-   * api_key：火山方舟 API Key，获取方式可参考[获取 API Key](Keyhttps://www.volcengine.com/docs/82379/1541594)。
-   * model：火山方舟模型接入点的 Endpoint ID，获取方式可参考[获取 Endpoint](https://www.volcengine.com/docs/82379/1099522)。
+   * api_key：火山方舟 API Key。中国境内用户参考[火山方舟文档](https://www.volcengine.com/docs/82379/1541594)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
+   * model：火山方舟模型接入点的 Endpoint ID。中国境内用户参考[火山方舟文档](https://www.volcengine.com/docs/82379/1099522)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
 3. 启动服务。执行以下命令，使用 Docker Compose 快速部署 Coze Loop 开源版。
    ```Bash
    # 启动服务，默认为开发模式
