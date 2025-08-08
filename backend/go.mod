@@ -1,8 +1,8 @@
 module github.com/coze-dev/coze-loop/backend
 
-go 1.23.4
+go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.24.4
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
@@ -39,7 +39,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0
 	github.com/dolthub/vitess v0.0.0-20240228192915-d55088cef56a
-	github.com/expr-lang/expr v1.15.8
+	github.com/expr-lang/expr v1.17.0
 	github.com/fatih/structs v1.1.0
 	github.com/getkin/kin-openapi v0.118.0
 	github.com/go-playground/validator/v10 v10.20.0
@@ -58,7 +58,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/modern-go/reflect2 v1.0.2
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
-	github.com/ollama/ollama v0.5.12
+	github.com/ollama/ollama v0.10.1
 	github.com/panjf2000/ants/v2 v2.11.3
 	github.com/parquet-go/parquet-go v0.25.0
 	github.com/pkg/errors v0.9.2-0.20201214064552-5dd12d0cfe7f
