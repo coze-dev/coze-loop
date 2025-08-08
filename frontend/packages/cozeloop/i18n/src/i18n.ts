@@ -36,8 +36,4 @@ async function initIntl(options: IntlClientOptions = {}) {
   });
 }
 
-I18n.t('please_add');
-
-I18n.t('Confirm');
-
 export { I18n, initIntl };

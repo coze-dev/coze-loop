@@ -22,6 +22,10 @@ export class IntlClient {
     return i18next.language;
   }
 
+  get language() {
+    return i18next.language;
+  }
+
   async setLang(lng: string) {
     await i18next.changeLanguage(lng);
   }
