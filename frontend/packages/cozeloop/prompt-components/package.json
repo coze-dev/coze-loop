@@ -44,6 +44,7 @@
     "@coze-arch/bot-typings": "workspace:*",
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
+    "@coze-arch/vitest-config": "workspace:*",
     "@cozeloop/tailwind-config": "workspace:*",
     "@types/lodash-es": "^4.17.10",
     "@types/react": "18.2.37",

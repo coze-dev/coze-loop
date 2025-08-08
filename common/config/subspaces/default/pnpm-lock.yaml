@@ -2841,6 +2841,9 @@ importers:
       '@coze-arch/ts-config':
         specifier: workspace:*
         version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
         version: link:../tailwind-config
