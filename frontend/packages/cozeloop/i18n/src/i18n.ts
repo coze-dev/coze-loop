@@ -24,6 +24,7 @@ async function initIntl(options: IntlClientOptions = {}) {
       lookupCookie: 'i18next',
       lookupLocalStorage: 'i18next',
       caches: ['cookie'],
+      ...options.detection,
     },
     resources: {
       'zh-CN': {
