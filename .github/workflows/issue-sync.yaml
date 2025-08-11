@@ -4,6 +4,10 @@ on:
   issues:
     types: ['opened', 'reopened']
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   sync:
     name: Sync Issues

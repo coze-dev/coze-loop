@@ -12,6 +12,10 @@ on:
       - 'backend/**'
       - '.github/workflows/backend-ci.yaml'
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   golang-lint:
     name: Golang CI Lint
@@ -33,10 +37,10 @@ jobs:
         run: |
           # Install golangci-lint
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.2.1
-          
+
           # Add golangci-lint to PATH
           export PATH=$PATH:$(go env GOPATH)/bin
-          
+
           # Run golangci-lint
           golangci-lint run --config ../.github/.golangci.yaml
 
