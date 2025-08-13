@@ -208,25 +208,12 @@ func generateForFoundation(db *gorm.DB) {
 	path := "modules/foundation/infra/repo/mysql/gorm_gen"
 	g := gen.NewGenerator(getGenerateConfig(path))
 	g.UseDB(db)
-	tables := []string{
-		"space",
-		"space_user",
-		"user",
-		"api_key",
-	}
 
-	var models []any
-	titleCaser := cases.Title(language.English)
-	for _, tn := range tables {
-		parts := strings.Split(tn, "_")
-		for i := range parts {
-			if len(parts[i]) > 0 {
-				parts[i] = titleCaser.String(parts[i])
-			}
-		}
-		name := strings.Join(parts, "")
-		models = append(models, g.GenerateModelAs(tn, name))
-	}
-	g.ApplyBasic(models...)
+	spaceModel := g.GenerateModelAs("space", "Space")
+	spaceUserModel := g.GenerateModelAs("space_user", "SpaceUser")
+	userModel := g.GenerateModelAs("user", "User")
+	apiKeyModel := g.GenerateModelAs("api_key", "APIKey")
+
+	g.ApplyBasic(spaceModel, spaceUserModel, userModel, apiKeyModel)
 	g.Execute()
 }
