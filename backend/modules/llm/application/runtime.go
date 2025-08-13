@@ -10,10 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/cozeloop-go"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
-	"github.com/pkg/errors"
-
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
@@ -31,6 +27,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/coze-dev/cozeloop-go"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 type runtimeApp struct {
@@ -56,9 +54,10 @@ func NewRuntimeApplication(
 
 func (r *runtimeApp) Chat(ctx context.Context, req *runtime.ChatRequest) (resp *runtime.ChatResponse, err error) {
 	resp = runtime.NewChatResponse()
-	if err = r.validateChatReq(ctx, req); err != nil {
+	if err := req.IsValid(); err != nil {
 		return resp, errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
+
 	// 1. 模型信息获取
 	model, err := r.manageSrv.GetModelByID(ctx, req.GetModelConfig().GetModelID())
 	if err != nil {
@@ -116,9 +115,10 @@ func (r *runtimeApp) Chat(ctx context.Context, req *runtime.ChatRequest) (resp *
 
 func (r *runtimeApp) ChatStream(ctx context.Context, req *runtime.ChatRequest, stream runtime.LLMRuntimeService_ChatStreamServer) (err error) {
 	// 参数校验
-	if err = r.validateChatReq(ctx, req); err != nil {
+	if err := req.IsValid(); err != nil {
 		return errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
+
 	// 1. 模型信息获取
 	model, err := r.manageSrv.GetModelByID(ctx, req.GetModelConfig().GetModelID())
 	if err != nil {
@@ -344,29 +344,4 @@ func (r *runtimeApp) setAndFinishSpan(ctx context.Context, span looptracer.Span,
 	}
 	span.SetTags(ctx, tags)
 	span.Finish(ctx)
-}
-
-func (r *runtimeApp) validateChatReq(ctx context.Context, req *runtime.ChatRequest) (err error) {
-	if req.GetModelConfig() == nil {
-		return errors.Errorf("model config is required")
-	}
-	if len(req.GetMessages()) == 0 {
-		return errors.Errorf("messages is required")
-	}
-	if req.GetBizParam() == nil {
-		return errors.Errorf("bizParam is required")
-	}
-	if !req.GetBizParam().IsSetScenario() {
-		return errors.Errorf("bizParam.scenario is required")
-	}
-	if !req.GetBizParam().IsSetScenarioEntityID() {
-		return errors.Errorf("bizParam.scenario_entity_id is required")
-	}
-	// if !req.GetBizParam().IsSetUserID() {
-	// 	return errors.Errorf("bizParam.user_id is required")
-	// }
-	if !req.GetBizParam().IsSetWorkspaceID() {
-		return errors.Errorf("bizParam.workspace_id is required")
-	}
-	return nil
 }

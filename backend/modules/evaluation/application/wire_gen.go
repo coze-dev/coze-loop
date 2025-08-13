@@ -7,6 +7,7 @@
 package application
 
 import (
+	"context"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -49,7 +50,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
-	"context"
 	"github.com/google/wire"
 )
 
