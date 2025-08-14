@@ -1,10 +1,9 @@
 ![Image](https://p9-arcosite.byteimg.com/tos-cn-i-goo7wpa0wc/11faa43b83754c089d2ec953306d3e63~tplv-goo7wpa0wc-image.image)
 
-
 <div align="center">
 <a href="#what-can-coze-loop-do">Coze Loop</a> •
 <a href="#feature-list">Feature list</a> •
-<a href="#quickstart">Quick start</a> •
+<a href="#quick-start">Quick start</a> •
 <a href="#developer-guide">Developer guide</a>
 </p>
 <p>
@@ -23,50 +22,94 @@ English | [中文](README.cn.md)
 Based on the commercial version, Coze Loop introduces an open-source edition that offers developers free access to core foundational feature modules. By sharing its core technology framework in an open-source model, developers can customize and extend according to business needs, facilitating community co-construction, sharing, and exchange, helping developers participate in AI agent exploration and practice with zero barriers.
 
 ## What can Coze Loop do?
-Coze Loop helps developers efficiently develop and operate AI agents by providing full-lifecycle management capabilities. Whether it's prompt engineering, AI agent evaluation, or monitoring and optimization after deployment, Coze Loop offers powerful tools and intelligent support, significantly simplifying the AI agent development process and improving the performance and stability of AI agents.
+Coze Loop helps developers develop and operate AI Agent more efficiently by providing full lifecycle management capabilities. Whether it is prompt engineering, AI Agent evaluation, or monitoring and optimization after deployment, Coze Loop provides powerful tools and intelligent support, greatly simplifying the development process of AI Agents and enhancing their operational performance and stability.
 
-* **Prompt development**: Coze Loop's prompt development module provides developers with full-process support from writing, debugging, and optimization to version management. With a visual Playground, developers can conduct real-time interactive testing of prompts, enabling intuitive comparisons of the output effects of different LLMs.
-* **Evaluation**: Coze Loop's evaluation module provides developers with systematic evaluation capabilities, enabling multi-dimensional automated testing of the output effects of prompts and Coze agents, such as accuracy, conciseness, and compliance.
-* **Observation**: Coze Loop provides developers with visual observation capabilities for the full-chain execution process, fully recording each processing step from user input to AI output. This includes key nodes such as prompt parsing, model invocation, and tool execution, while automatically capturing intermediate results and abnormal states.
+* **Prompt development**: The Prompt development module of Coze Loop provides developers with end-to-end support for writing, debugging, optimizing, and version management. Through a visual Playground, it enables real-time interactive testing of prompts, allowing developers to intuitively compare the output of different LLMs.
+* **Evaluation**: The Coze Loop evaluation module provides developers with systematic evaluation capabilities, enabling automated multi-dimensional testing of prompts and Coze agents' output, such as accuracy, conciseness, compliance, and more.
+* **Observability**: Coze Loop provides developers with observability for the entire execution process, fully recording every stage from user input to AI output, including key stages such as prompt parsing, model invocation, and tool execution, and automatically capturing intermediate results and exceptions.
 
 ## Feature list
-
-| **Module**       | **Function**                          |
-|--------------------|----------------------------------------------|
-| Prompt Debugging   | * Playground debugging and comparison <br> * Prompt version management |
-| Evaluation         | * Manage evaluation sets <br> * Manage evaluators <br> * Manage experiments |
-| Observation        | * SDK reporting of Trace <br> * Trace data observation |
-| Model              | Support for integrating models such as OpenAI and Volcengine Ark |
-
+| **Feature** | **Functional points** |
+| --- | --- |
+| Prompt debugging | * Playground debugging and comparison <br> * Prompt version management |
+| Evaluation | * Manage evaluation sets <br> Management evaluator <br> * Manage experiments |
+| Observation | SDK trace reporting <br> * Trace data observation |
+| Model | Support integration with OpenAI, Volcengine Ark, and other models |
 ## Quick Start
-> Refer to [Quick Start](https://github.com/coze-dev/coze-loop/wiki/2.-Quickstart) for detailed instructions on how to install and deploy the latest version of Coze Loop.
+> Refer to [Quick Start](https://github.com/coze-dev/coze-loop/wiki/2.-Quickstart) to learn in detail how to install and deploy the latest version of Coze Loop.
 
-**Environment Requirements:**
-* Install Docker and Docker Compose in advance, and start the Docker service.
+### Deployment method 1: Docker deployment (Docker Compose)
+> Please install and start Docker Engine before you start.
 
-**Operation Steps:**
-1. Get the source code. Execute the following command to get the latest version of the Coze Loop source code.
+Procedure:
+
+1. Clone the source code.
+   Run the following command to obtain the latest version of the Coze Loop source code.
    ```Bash
    # Clone the code
    git clone https://github.com/coze-dev/coze-loop.git
-   # Enter the Coze Loop directory
-   cd coze-loop
+   
+   # Enter the coze-loop directory
+   cd coze-loop 
    ```
-2. Configure the model. Go to the `conf/default/app/runtime/` directory, edit the `model_config.yaml` file, and modify the `api_key` and `model` fields. Taking Volcengine Ark as an example:
-    * `api_key`: Volcengine Ark API Key. For users in China, refer to the [Volcengine Ark document](https://www.volcengine.com/docs/82379/1541594); for users outside China, refer to the [BytePlus ModelArk document](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
-    * `model`: The Endpoint ID of the Volcengine Ark model access point. For users in China, refer to the [Volcengine Ark document](https://www.volcengine.com/docs/82379/1099522); for users outside China, refer to the [BytePlus ModelArk document](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
-3. Start the service. Execute the following command to quickly deploy the Coze Loop open-source edition using Docker Compose.
-   ```Bash
-   # Start the service, default is development mode
-   docker compose up --build
-   ```
-4. Access the Coze Loop open-source edition by visiting `http://localhost:8082` in your browser.
 
-## Using Coze Loop Open-source Edition
+2. Configure a model.
+   1. Enter the `coze-loop` directory.
+   2. Edit the file `release/deployment/docker-compose/conf/model_config.yaml`.
+   3. Modify the api_key and model fields. Take Volcengine Ark as an example:
+      * api_key: Volcengine Ark API Key. Users in China can refer to the [Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1541594), while users outside China can refer to the [BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
+      * model: The Endpoint ID of the Volcengine Ark model access point. Users within China can refer to [the Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1099522); users outside China can refer to [the BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
+3. Start the service.
+   Run the following commands to quickly deploy the open-source version of Coze Loop using Docker Compose.
+   ```Bash
+   # Start the service (default: development mode)
+   # Run in the coze-loop/ directory
+   make compose-up 
+   ```
+
+4. Access the Coze Loop open-source version through your browser `http://localhost:8082`.
+
+### Deployment method 2: Kubernetes deployment using Helm Chart
+
+> * The Kubernetes cluster has been prepared, the Nginx Ingress add-ons have been enabled, and the Kubectl and Helm tools have been installed.
+> * To quickly try it out locally, you can deploy a Kubernetes cluster using Minikube. For detailed steps, refer to [Quick Start](https://github.com/coze-dev/coze-loop/wiki/2.-Quickstart).
+
+Procedure:
+
+1. Run the following command to obtain the Helm Chart package.
+   ```Bash
+   helm pull oci://docker.io/cozedev/coze-loop --version 1.0.0-helm
+   tar -zxvf coze-loop-1.0.0-helm.tgz && cd coze-loop && rm -f ../coze-loop-1.0.0-helm.tgz
+   ```
+
+2. Configure a model.
+   Go to the `coze-loop` directory and edit the `release/deployment/docker-compose/conf/model_config.yaml` file. Configure the following fields, using Volcengine Ark as an example:
+   * api_key: Volcengine Ark API Key. Users in mainland China can refer to the [Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1541594), while users outside mainland China can refer to the [BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
+   * model: The Endpoint ID of the Volcengine Ark model access point. Users in China can refer to the [Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1099522), while users outside China can refer to the [BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
+3. Configure Ingress rules.
+   Ingress is used to expose services to external networks. You need to configure the `templates/ingress.yaml` file in the project directory according to the actual cluster situation, manually modify parameters such as ingressClassName, and configure elements such as class, instance, host, and IP allocation.
+4. Deploy and start the service.
+   Execute the following commands to quickly deploy the open-source version of Coze Loop using Helm.
+   ```Bash
+   # Run in the coze-loop/ directory
+   make helm-up
+   # After the service deployment is complete, check the status of the cluster pods
+   make helm-pod
+   # Check the service startup logs. If both the app and nginx are running normally, the deployment is successful
+   make helm-logf-app
+   make helm-logf-nginx
+   ```
+
+5. Access the Coze Loop open source edition via a browser.
+   The access domain name and URL depend on the domain name and URL assigned to your cluster.
+6. Start customizing your Coze Loop project.
+   Refer to the examples in the `examples/` directory. Modify `values.yaml` to override the default settings. After making changes, rerun `make helm-up` for the changes to take effect.
+
+## Use the Coze Loop open source version
 
 * [Prompt development and debugging](https://loop.coze.cn/open/docs/cozeloop/create-prompt): Coze Loop provides a complete prompt development workflow.
-* [Evaluation](https://loop.coze.cn/open/docs/cozeloop/evaluation-quick-start): Coze Loop's evaluation functionality offers standardized evaluation data management, automated assessment engines, and comprehensive experimental result statistics.
-* [Trace reporting and querying](https://loop.coze.cn/open/docs/cozeloop/trace_integrate): Coze Loop supports automatic Trace reporting for prompt debugging conducted on the platform, enabling real-time tracking of each Trace data.
+* [Evaluation](https://loop.coze.cn/open/docs/cozeloop/evaluation-quick-start): The evaluation functionality of Coze Loop provides standard evaluation data management, an automated evaluation engine, and comprehensive statistics on experimental results.
+* [Trace reporting and query](https://loop.coze.cn/open/docs/cozeloop/trace_integrate): Coze Loop supports automatic reporting of traces from prompt debugging sessions created on the platform, enabling real-time tracking of each trace.
 * [Open-source Edition usage of the Coze Loop SDK](https://github.com/coze-dev/coze-loop/wiki/8.-Open-source-edition-uses-CozeLoop-SDK): The Coze Loop SDK in three languages is suitable for both commercial and open-source editions. For the Open-source Edition, developers only need to modify some parameter configurations during initialization.
 
 ## Developer guide
@@ -117,3 +160,4 @@ Thanks to all developers and community members who contributed to the Coze Loop 
 * LLM integration support provided by the [Eino](https://github.com/cloudwego/eino) framework team
 * High-performance frameworks developed by the [CloudWeGo](https://www.cloudwego.io) team
 * All users who participated in testing and feedback
+
