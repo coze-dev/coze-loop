@@ -2,15 +2,16 @@ name: CI@backend
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "release/**"]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yaml'
   pull_request:
-    branches: ["main"]
+    branches: ["main", "release/**"]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yaml'
+  workflow_dispatch:
 
 permissions:
   contents: read
