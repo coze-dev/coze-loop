@@ -12,12 +12,6 @@ import (
 )
 
 func TestNewTestDB(t *testing.T) {
-	type somePO struct {
-		ID          int
-		Name        string
-		Description string
-	}
-
 	var (
 		db      = NewTestDB(t, &somePO{})
 		session = db.NewSession(context.TODO())

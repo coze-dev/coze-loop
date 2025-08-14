@@ -10,6 +10,12 @@ import (
 
 	"github.com/cloudwego/gopkg/protocol/thrift"
 	kutils "github.com/cloudwego/kitex/pkg/utils"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
+)
+
+var (
+	_ = annotation.KitexUnusedProtection
 )
 
 // unused protection
@@ -559,6 +565,20 @@ func (p *OutputSpan) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 104:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField104(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -896,6 +916,31 @@ func (p *OutputSpan) FastReadField103(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *OutputSpan) FastReadField104(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*annotation.Annotation, 0, size)
+	values := make([]annotation.Annotation, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Annotations = _field
+	return offset, nil
+}
+
 func (p *OutputSpan) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -919,6 +964,7 @@ func (p *OutputSpan) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
+		offset += p.fastWriteField104(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -943,6 +989,7 @@ func (p *OutputSpan) BLength() int {
 		l += p.field101Length()
 		l += p.field102Length()
 		l += p.field103Length()
+		l += p.field104Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1084,6 +1131,22 @@ func (p *OutputSpan) fastWriteField103(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *OutputSpan) fastWriteField104(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAnnotations() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 104)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Annotations {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *OutputSpan) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -1216,6 +1279,19 @@ func (p *OutputSpan) field103Length() int {
 	return l
 }
 
+func (p *OutputSpan) field104Length() int {
+	l := 0
+	if p.IsSetAnnotations() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Annotations {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *OutputSpan) DeepCopy(s interface{}) error {
 	src, ok := s.(*OutputSpan)
 	if !ok {
@@ -1305,6 +1381,21 @@ func (p *OutputSpan) DeepCopy(s interface{}) error {
 			}
 
 			p.SystemTags[_key] = _val
+		}
+	}
+
+	if src.Annotations != nil {
+		p.Annotations = make([]*annotation.Annotation, 0, len(src.Annotations))
+		for _, elem := range src.Annotations {
+			var _elem *annotation.Annotation
+			if elem != nil {
+				_elem = &annotation.Annotation{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.Annotations = append(p.Annotations, _elem)
 		}
 	}
 

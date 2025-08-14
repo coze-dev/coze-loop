@@ -4,6 +4,7 @@
 package convertor
 
 import (
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
@@ -11,6 +12,27 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
+
+func BatchBasicAndDraftPO2PromptDO(basicPOs []*model.PromptBasic, draftPOMap map[mysql.PromptIDUserIDPair]*model.PromptUserDraft, UserID string) []*entity.Prompt {
+	if len(basicPOs) <= 0 {
+		return nil
+	}
+	promptDOs := make([]*entity.Prompt, 0, len(basicPOs))
+	for _, basicPO := range basicPOs {
+		promptDO := PromptPO2DO(basicPO, nil, draftPOMap[mysql.PromptIDUserIDPair{
+			PromptID: basicPO.ID,
+			UserID:   UserID,
+		}])
+		if promptDO == nil {
+			continue
+		}
+		promptDOs = append(promptDOs, promptDO)
+	}
+	if len(promptDOs) <= 0 {
+		return nil
+	}
+	return promptDOs
+}
 
 func BatchBasicPO2PromptDO(basicPOs []*model.PromptBasic) []*entity.Prompt {
 	if len(basicPOs) <= 0 {

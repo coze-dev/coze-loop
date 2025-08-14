@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	gslice "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -156,7 +157,7 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
-		locked, ctx, unlock, err := e.Mutex.LockWithRenew(ctx, e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID), time.Second*20, time.Second*60*3)
+		locked, ctx, unlock, err := e.Mutex.LockWithRenew(ctx, e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID), time.Second*20, time.Second*60*5)
 		if err != nil {
 			return err
 		}
@@ -238,9 +239,13 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	e.handleZombies(ctx, event, incomplete)
+	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete)
+	if err != nil {
+		return err
+	}
 
-	if err = e.recordEvalItemRunLogs(ctx, event, complete); err != nil {
+	complete = append(complete, zombies...)
+	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode); err != nil {
 		return err
 	}
 
@@ -263,18 +268,50 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	return mode.NextTick(ctx, event, nextTick)
 }
 
-func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem) error {
+func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode) error {
 	for _, item := range completeItems {
 		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)
 		}
+		var turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef
 		if err := backoff.RetryFiveMin(ctx, func() error {
-			return e.ResultSvc.RecordItemRunLogs(ctx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID, event.Session)
+			var err error
+			turnEvaluatorRefs, err = e.ResultSvc.RecordItemRunLogs(ctx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID)
+			return err
 		}); err != nil {
 			return err
 		}
 		time.Sleep(time.Millisecond * 50)
+		err := mode.PublishResult(ctx, turnEvaluatorRefs, event)
+		if err != nil {
+			logs.CtxError(ctx, "publish online result fail, err: %v", err)
+		}
 	}
+	if len(completeItems) == 0 {
+		return nil
+	}
+	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 {
+		return item.ItemID
+	}))
+	if err != nil {
+		logs.CtxError(ctx, "UpsertExptTurnResultFilter fail, err: %v", err)
+	}
+	err = e.Publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+		ExperimentID: event.ExptID,
+		SpaceID:      event.SpaceID,
+		ItemID: gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 {
+			return item.ItemID
+		}),
+		RetryTimes: ptr.Of(int32(0)),
+		FilterType: ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
+	}, ptr.Of(10*time.Second))
+	if err != nil {
+		return err
+	}
+
+	logs.CtxInfo(ctx, "ExptSchedulerImpl recordEvalItemRunLogs UpsertExptTurnResultFilter done, expt_id: %v, item_ids: %v", event.ExptID, gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 {
+		return item.ItemID
+	}))
 	return nil
 }
 
@@ -321,19 +358,25 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 		return err
 	}
 
+	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs)
+	if err != nil {
+		logs.CtxError(ctx, "ExptSubmitExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+	}
+	logs.CtxInfo(ctx, "ExptSchedulerImpl handleToSubmits UpsertExptTurnResultFilter success, expt_id: %v", event.ExptID)
+
 	if err := e.ExptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, itemIDs, event.SpaceID, map[string]any{"status": int32(entity.TurnRunState_Processing)}); err != nil {
 		return err
 	}
 
-	turnResults, err := e.ExptTurnResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, itemIDs)
+	itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, itemIDs)
 	if err != nil {
 		return err
 	}
 
 	if err := e.ExptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
-		OpStatusCnt: map[entity.TurnRunState]int{
-			entity.TurnRunState_Processing: len(turnResults),
-			entity.TurnRunState_Queueing:   0 - len(turnResults),
+		OpStatusCnt: map[entity.ItemRunState]int{
+			entity.ItemRunState_Processing: len(itemResults),
+			entity.ItemRunState_Queueing:   0 - len(itemResults),
 		},
 	}); err != nil {
 		return err
@@ -342,23 +385,35 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	return nil
 }
 
-func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem) {
-	var (
-		zombies      []*entity.ExptEvalItem
-		zombieSecond = e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetZombieSecond()
-	)
-
+func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem) (alives, zombies []*entity.ExptEvalItem, err error) {
+	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetZombieSecond()
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {
-				zombies = append(zombies, item)
-				continue
+				zombies = append(zombies, item.SetState(entity.ItemRunState_Fail))
+			} else {
+				alives = append(alives, item)
 			}
 		}
 	}
 
-	if len(zombies) > 0 {
-		logs.CtxWarn(ctx, "[ExptEval] found zombie items: %v, expt_id: %v, expt_run_id: %v",
-			gslice.Transform(zombies, func(e *entity.ExptEvalItem, _ int) int64 { return e.ItemID }), event.ExptID, event.ExptRunID)
+	zombieItemIDs := gslice.Transform(zombies, func(e *entity.ExptEvalItem, _ int) int64 { return e.ItemID })
+
+	if len(zombies) == 0 {
+		return alives, zombies, nil
 	}
+
+	logs.CtxWarn(ctx, "[ExptEval] found zombie items, set failure state, expt_id: %v, expt_run_id: %v, item_ids: %v, zombie_second: %v", event.ExptID, event.ExptRunID, zombieItemIDs, zombieSecond)
+
+	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{"status": int32(entity.ItemRunState_Fail)}, event.SpaceID); err != nil {
+		return nil, nil, err
+	}
+
+	if err := e.ExptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, entity.TurnRunState_Fail); err != nil {
+		return nil, nil, err
+	}
+
+	time.Sleep(time.Millisecond * 1500)
+
+	return alives, zombies, nil
 }

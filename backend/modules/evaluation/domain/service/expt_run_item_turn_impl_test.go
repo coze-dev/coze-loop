@@ -475,3 +475,127 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
+	s := &DefaultExptTurnEvaluationImpl{}
+
+	type args struct {
+		content  *entity.Content
+		jsonPath string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *entity.Content
+		wantErr bool
+	}{
+		{
+			name: "正常-json",
+			args: args{
+				content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Text:        gptr.Of(`{"key": "value"}`),
+				},
+				jsonPath: "$.key",
+			},
+			want: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of(`{"key": "value"}`),
+			},
+			wantErr: false,
+		},
+		{
+			name: "正常-嵌套json",
+			args: args{
+				content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Text:        gptr.Of(`{"key": {"inner_key": "inner_value"}}`),
+				},
+				jsonPath: "$.key.inner_key",
+			},
+			want: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of(""),
+			},
+			wantErr: false,
+		},
+		{
+			name: "正常-返回整个json",
+			args: args{
+				content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Text:        gptr.Of(`{"key": "value"}`),
+				},
+				jsonPath: "$",
+			},
+			want: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of(`{"key": "value"}`),
+			},
+			wantErr: false,
+		},
+		{
+			name:    "异常-content为nil",
+			args:    args{content: nil, jsonPath: "$.key"},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "异常-contentType为nil",
+			args: args{
+				content:  &entity.Content{ContentType: nil, Text: gptr.Of(`{"key": "value"}`)},
+				jsonPath: "$.key",
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "异常-contentType非text",
+			args: args{
+				content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeImage),
+					Text:        gptr.Of(`{"key": "value"}`),
+				},
+				jsonPath: "$.key",
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "正常-json字符串",
+			args: args{
+				content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Text:        gptr.Of("{\"age\":18,\"msg\":[{\"role\":1,\"query\":\"hi\"}],\"name\":\"dsf\"}"),
+				},
+				jsonPath: "parameter",
+			},
+			want: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("{\"age\":18,\"msg\":[{\"role\":1,\"query\":\"hi\"}],\"name\":\"dsf\"}"),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := s.getContentByJsonPath(tt.args.content, tt.args.jsonPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getContentByJsonPath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else if tt.name == "正常-返回整个json" && tt.want.Text != nil && got != nil && got.Text != nil {
+				assert.JSONEq(t, *tt.want.Text, *got.Text)
+				tmpWant := *tt.want
+				tmpGot := *got
+				tmpWant.Text = nil
+				tmpGot.Text = nil
+				assert.Equal(t, tmpWant, tmpGot)
+			} else {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}

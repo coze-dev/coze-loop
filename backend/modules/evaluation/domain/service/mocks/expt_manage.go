@@ -5,12 +5,12 @@
 package mocks
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 
-	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
 // MockIExptManager is a mock of IExptManager interface.
@@ -354,31 +354,31 @@ func (mr *MockIExptManagerMockRecorder) PendRun(arg0, arg1, arg2, arg3, arg4 int
 }
 
 // RetryUnSuccess mocks base method.
-func (m *MockIExptManager) RetryUnSuccess(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session) error {
+func (m *MockIExptManager) RetryUnSuccess(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session, arg5 map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetryUnSuccess", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "RetryUnSuccess", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RetryUnSuccess indicates an expected call of RetryUnSuccess.
-func (mr *MockIExptManagerMockRecorder) RetryUnSuccess(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) RetryUnSuccess(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryUnSuccess", reflect.TypeOf((*MockIExptManager)(nil).RetryUnSuccess), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryUnSuccess", reflect.TypeOf((*MockIExptManager)(nil).RetryUnSuccess), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // Run mocks base method.
-func (m *MockIExptManager) Run(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session, arg5 entity.ExptRunMode) error {
+func (m *MockIExptManager) Run(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session, arg5 entity.ExptRunMode, arg6 map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "Run", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockIExptManagerMockRecorder) Run(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) Run(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockIExptManager)(nil).Run), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockIExptManager)(nil).Run), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // Update mocks base method.

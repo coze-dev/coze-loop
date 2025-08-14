@@ -28,9 +28,10 @@ type EvaluationSet struct {
 }
 
 type DatasetSpec struct {
-	MaxItemCount  int64 `json:"max_item_count,omitempty"`
-	MaxFieldCount int32 `json:"max_field_count,omitempty"`
-	MaxItemSize   int64 `json:"max_item_size,omitempty"`
+	MaxItemCount           int64 `json:"max_item_count,omitempty"`
+	MaxFieldCount          int32 `json:"max_field_count,omitempty"`
+	MaxItemSize            int64 `json:"max_item_size,omitempty"`
+	MaxItemDataNestedDepth int32 `json:"max_item_data_nested_depth,omitempty"`
 }
 
 type DatasetFeatures struct {

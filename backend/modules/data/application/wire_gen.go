@@ -7,8 +7,6 @@
 package application
 
 import (
-	"github.com/google/wire"
-
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
@@ -16,9 +14,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/service"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/entity"
+	service2 "github.com/coze-dev/coze-loop/backend/modules/data/domain/tag/service"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/mq/producer"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset"
@@ -26,15 +28,17 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/mysql"
 	oss2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/oss"
 	redis2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/redis"
+	tag2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/vfs/oss"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/vfs/unionfs"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
 
-func InitDatasetApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, authClient authservice.Client) (IDatasetApplication, error) {
+func InitDatasetApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, configLoader conf.IConfigLoader, mqFactory mq.IFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, authClient authservice.Client) (IDatasetApplication, error) {
 	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iDatasetDAO := mysql.NewDatasetDAO(db2, cmdable)
 	iSchemaDAO := mysql.NewDatasetSchemaDAO(db2, cmdable)
@@ -47,10 +51,7 @@ func InitDatasetApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable 
 	iioJobDAO := mysql.NewDatasetIOJobDAO(db2, cmdable)
 	v := NewItemProviderDAO(batchObjectStorage)
 	iDatasetAPI := dataset.NewDatasetRepo(idgen2, db2, iDatasetDAO, iSchemaDAO, datasetDAO, iVersionDAO, versionDAO, operationDAO, iItemDAO, iItemSnapshotDAO, iioJobDAO, v)
-	iConfig, err := conf2.NewConfiger(configFactory)
-	if err != nil {
-		return nil, err
-	}
+	iConfig := conf2.NewConfiger(configLoader)
 	iDatasetJobPublisher, err := producer.NewDatasetJobPublisher(iConfig, mqFactory)
 	if err != nil {
 		return nil, err
@@ -63,11 +64,27 @@ func InitDatasetApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable 
 	return iDatasetApplication, nil
 }
 
+func InitTagApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable redis.Cmdable, configLoader conf.IConfigLoader, userClient userservice.Client, authClient authservice.Client) (tag.TagService, error) {
+	iTagAPI := tag2.NewTagRepoImpl(db2, idgen2)
+	iLocker := lock.NewRedisLocker(cmdable)
+	iConfig := conf2.NewConfiger(configLoader)
+	iTagService := service2.NewTagServiceImpl(iTagAPI, db2, iLocker, iConfig)
+	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
+	iUserProvider := foundation.NewUserRPCProvider(userClient)
+	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
+	tagService := NewTagApplicationImpl(iTagService, iTagAPI, iAuthProvider, userInfoService)
+	return tagService, nil
+}
+
 // wire.go:
 
 var (
 	datasetSet = wire.NewSet(
 		NewDatasetApplicationImpl, service.NewDatasetServiceImpl, dataset.NewDatasetRepo, mysql.NewDatasetDAO, mysql.NewDatasetItemDAO, mysql.NewDatasetVersionDAO, mysql.NewDatasetItemSnapshotDAO, mysql.NewDatasetSchemaDAO, mysql.NewDatasetIOJobDAO, redis2.NewOperationDAO, redis2.NewDatasetDAO, redis2.NewVersionDAO, conf2.NewConfiger, producer.NewDatasetJobPublisher, foundation.NewAuthRPCProvider, oss.NewClient, unionfs.NewUnionFS, lock.NewRedisLocker, NewItemProviderDAO,
+	)
+
+	tagSet = wire.NewSet(
+		NewTagApplicationImpl, service2.NewTagServiceImpl, tag2.NewTagRepoImpl, conf2.NewConfiger, foundation.NewAuthRPCProvider, userinfo.NewUserInfoServiceImpl, foundation.NewUserRPCProvider, lock.NewRedisLocker,
 	)
 )
 

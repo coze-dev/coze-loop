@@ -87,6 +87,14 @@ const (
 	ParseModelRespFailedCode              = 601505010
 	parseModelRespFailedMessage           = "parse model response failed"
 	parseModelRespFailedNoAffectStability = false
+
+	RiskContentDetectedCode              = 601505011
+	riskContentDetectedMessage           = "risk content is detected"
+	riskContentDetectedNoAffectStability = true
+
+	CallModelTimeoutCode              = 601505012
+	callModelTimeoutMessage           = "call model timeout"
+	callModelTimeoutNoAffectStability = true
 )
 
 func init() {
@@ -209,6 +217,18 @@ func init() {
 		ParseModelRespFailedCode,
 		parseModelRespFailedMessage,
 		code.WithAffectStability(!parseModelRespFailedNoAffectStability),
+	)
+
+	code.Register(
+		RiskContentDetectedCode,
+		riskContentDetectedMessage,
+		code.WithAffectStability(!riskContentDetectedNoAffectStability),
+	)
+
+	code.Register(
+		CallModelTimeoutCode,
+		callModelTimeoutMessage,
+		code.WithAffectStability(!callModelTimeoutNoAffectStability),
 	)
 
 }

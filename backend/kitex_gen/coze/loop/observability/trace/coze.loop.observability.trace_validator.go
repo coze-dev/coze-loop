@@ -197,3 +197,104 @@ func (p *ListViewsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreateManualAnnotationRequest) IsValid() error {
+	if p.Annotation != nil {
+		if err := p.Annotation.IsValid(); err != nil {
+			return fmt.Errorf("field Annotation not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateManualAnnotationResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateManualAnnotationRequest) IsValid() error {
+	if p.Annotation != nil {
+		if err := p.Annotation.IsValid(); err != nil {
+			return fmt.Errorf("field Annotation not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateManualAnnotationResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteManualAnnotationRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.TraceID) < int(1) {
+		return fmt.Errorf("field TraceID min_len rule failed, current value: %d", len(p.TraceID))
+	}
+	if len(p.SpanID) < int(1) {
+		return fmt.Errorf("field SpanID min_len rule failed, current value: %d", len(p.SpanID))
+	}
+	if p.StartTime <= int64(0) {
+		return fmt.Errorf("field StartTime gt rule failed, current value: %v", p.StartTime)
+	}
+	if len(p.AnnotationKey) < int(1) {
+		return fmt.Errorf("field AnnotationKey min_len rule failed, current value: %d", len(p.AnnotationKey))
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteManualAnnotationResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListAnnotationsRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.SpanID) < int(1) {
+		return fmt.Errorf("field SpanID min_len rule failed, current value: %d", len(p.SpanID))
+	}
+	if len(p.TraceID) < int(1) {
+		return fmt.Errorf("field TraceID min_len rule failed, current value: %d", len(p.TraceID))
+	}
+	if p.StartTime <= int64(0) {
+		return fmt.Errorf("field StartTime gt rule failed, current value: %v", p.StartTime)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListAnnotationsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

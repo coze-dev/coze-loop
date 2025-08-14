@@ -5,25 +5,32 @@ package experiment
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/bytedance/gg/gptr"
+
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func NewExptTurnResultRepo(exptTurnResultDAO mysql.ExptTurnResultDAO, exptTurnEvaluatorResultRefDAO mysql.IExptTurnEvaluatorResultRefDAO) repo.IExptTurnResultRepo {
+func NewExptTurnResultRepo(idgen idgen.IIDGenerator, exptTurnResultDAO mysql.ExptTurnResultDAO, exptTurnEvaluatorResultRefDAO mysql.IExptTurnEvaluatorResultRefDAO) repo.IExptTurnResultRepo {
 	return &ExptTurnResultRepoImpl{
+		idgen:                         idgen,
 		exptTurnResultDAO:             exptTurnResultDAO,
 		exptTurnEvaluatorResultRefDAO: exptTurnEvaluatorResultRefDAO,
 	}
 }
 
 type ExptTurnResultRepoImpl struct {
+	idgen                         idgen.IIDGenerator
 	exptTurnResultDAO             mysql.ExptTurnResultDAO
 	exptTurnEvaluatorResultRefDAO mysql.IExptTurnEvaluatorResultRefDAO
 }
@@ -135,6 +142,46 @@ func (r *ExptTurnResultRepoImpl) SaveTurnRunLogs(ctx context.Context, runLogs []
 	return nil
 }
 
+func (r *ExptTurnResultRepoImpl) UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any) error {
+	return r.exptTurnResultDAO.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
+}
+
+func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, status entity.TurnRunState) error {
+	// runlog might be not created, creating ignore existed
+	turnResults, err := r.exptTurnResultDAO.BatchGet(ctx, spaceID, exptID, itemIDs)
+	if err != nil {
+		return err
+	}
+
+	ids, err := r.idgen.GenMultiIDs(ctx, len(turnResults))
+	if err != nil {
+		return err
+	}
+	runlogs := make([]*model.ExptTurnResultRunLog, 0, len(turnResults))
+	for idx := range turnResults {
+		runlogs = append(runlogs, &model.ExptTurnResultRunLog{
+			ID:        ids[idx],
+			SpaceID:   spaceID,
+			ExptID:    exptID,
+			ExptRunID: exptRunID,
+			ItemID:    turnResults[idx].ItemID,
+			TurnID:    turnResults[idx].TurnID,
+			Status:    int32(status),
+			ErrMsg:    gptr.Of([]byte(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", fmt.Errorf("turn result failure with timeout"))))),
+		})
+	}
+
+	if err := r.exptTurnResultDAO.BatchCreateNXRunLog(ctx, runlogs); err != nil {
+		return err
+	}
+
+	if err := r.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, map[string]any{"status": int32(status)}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *ExptTurnResultRepoImpl) GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64) ([]*entity.ExptTurnResult, error) {
 	exptTurnResultPOs, err := r.exptTurnResultDAO.GetItemTurnResults(ctx, exptID, itemID, spaceID)
 	if err != nil {
@@ -204,6 +251,21 @@ func (r *ExptTurnResultRepoImpl) ListTurnResult(ctx context.Context, spaceID, ex
 	exptTurnResultPOs, total, err := r.exptTurnResultDAO.ListTurnResult(ctx, spaceID, exptID, filter, page, desc)
 	if err != nil {
 		return nil, 0, errorx.Wrapf(err, "ListTurnResult fail, spaceID: %v, exptID: %v, filters: %v, page: %v", spaceID, exptID, filter, page)
+	}
+
+	exptTurnResults := make([]*entity.ExptTurnResult, 0, len(exptTurnResultPOs))
+	for _, exptTurnResultPO := range exptTurnResultPOs {
+		exptTurnResult := convert.NewExptTurnResultConvertor().PO2DO(exptTurnResultPO, nil)
+		exptTurnResults = append(exptTurnResults, exptTurnResult)
+	}
+	return exptTurnResults, total, nil
+}
+
+// nolint: byted_s_too_many_lines_in_func
+func (r *ExptTurnResultRepoImpl) ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error) {
+	exptTurnResultPOs, total, err := r.exptTurnResultDAO.ListTurnResultByItemIDs(ctx, spaceID, exptID, itemIDs, page, desc)
+	if err != nil {
+		return nil, 0, errorx.Wrapf(err, "ListTurnResult fail, spaceID: %v, exptID: %v, itemIDs: %v", spaceID, exptID, itemIDs)
 	}
 
 	exptTurnResults := make([]*entity.ExptTurnResult, 0, len(exptTurnResultPOs))

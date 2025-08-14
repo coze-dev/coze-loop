@@ -228,3 +228,14 @@ func (p *ChatMessagePart) IsBinary() bool {
 	}
 	return true
 }
+
+type ResponseFormatType string
+
+const (
+	ResponseFormatTypeText ResponseFormatType = "text"
+	ResponseFormatTypeJSON ResponseFormatType = "json_object"
+)
+
+type ResponseFormat struct {
+	Type ResponseFormatType `json:"type,omitempty"`
+}

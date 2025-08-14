@@ -240,11 +240,11 @@ func (e *ExptUpdateFields) ToFieldMap() (map[string]any, error) {
 }
 
 type ExptCalculateStats struct {
-	PendingTurnCnt    int
-	FailTurnCnt       int
-	SuccessTurnCnt    int
-	ProcessingTurnCnt int
-	TerminatedTurnCnt int
+	PendingItemCnt    int
+	FailItemCnt       int
+	SuccessItemCnt    int
+	ProcessingItemCnt int
+	TerminatedItemCnt int
 
 	IncompleteTurnIDs []*ItemTurnID
 }
@@ -255,7 +255,7 @@ type ItemTurnID struct {
 }
 
 type StatsCntArithOp struct {
-	OpStatusCnt map[TurnRunState]int
+	OpStatusCnt map[ItemRunState]int
 }
 
 type TupleExpt struct {

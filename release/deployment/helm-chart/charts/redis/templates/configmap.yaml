@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "configmap.name" . }}
+data:
+  entrypoint.sh: |-
+{{ .Files.Get "bootstrap/entrypoint.sh" | nindent 4 }}
+  healthcheck.sh: |-
+{{ .Files.Get "bootstrap/healthcheck.sh" | nindent 4 }}

@@ -6,7 +6,6 @@ package config
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -25,12 +24,20 @@ type SpanTransHandlerConfig struct {
 	PlatformCfg map[string]loop_span.SpanTransCfgList `mapstructure:"platform_cfg" json:"platform_cfg"`
 }
 
-type TraceMqProducerCfg struct {
+type MqProducerCfg struct {
 	Addr          []string `mapstructure:"addr" json:"addr"`
 	Timeout       int      `mapstructure:"timeout" json:"timeout"` // ms
 	RetryTimes    int      `mapstructure:"retry_times" json:"retry_times"`
 	Topic         string   `mapstructure:"topic" json:"topic"`
 	ProducerGroup string   `mapstructure:"producer_group" json:"producer_group"`
+}
+
+type MqConsumerCfg struct {
+	Addr          []string `mapstructure:"addr" json:"addr"`
+	Timeout       int      `mapstructure:"timeout" json:"timeout"` // ms
+	Topic         string   `mapstructure:"topic" json:"topic"`
+	ConsumerGroup string   `mapstructure:"consumer_group" json:"consumer_group"`
+	WorkerNum     int      `mapstructure:"worker_num" json:"worker_num"`
 }
 
 type TraceCKCfg struct {
@@ -43,9 +50,15 @@ type TraceCKCfg struct {
 	SuperFields map[string]bool `mapstructure:"super_fields" json:"super_fields"`
 }
 
+type TableCfg struct {
+	SpanTable string `mapstructure:"span_table" json:"span_table"`
+	AnnoTable string `mapstructure:"anno_table" json:"anno_table"`
+}
+
 type TenantCfg struct {
-	QueryTables map[string][]string              `mapstructure:"query_tables" json:"query_tables"`
-	InsertTable map[string]map[entity.TTL]string `mapstructure:"insert_table" json:"insert_table"`
+	TenantTables             map[string]map[loop_span.TTL]TableCfg `mapstructure:"tenant_table" json:"tenant_table"`
+	DefaultIngestTenant      string                                `mapstructure:"default_ingest_tenant" json:"default_ingest_tenant"`
+	TenantsSupportAnnotation map[string]bool                       `mapstructure:"tenants_support_annotation" json:"tenants_support_annotation"`
 }
 
 type FieldMeta struct {
@@ -68,17 +81,27 @@ type TraceFieldMetaInfoCfg struct {
 	FieldMetas      map[loop_span.PlatformType]map[loop_span.SpanListType][]string `mapstructure:"field_metas" json:"field_metas"`
 }
 
+type AnnotationSourceConfig struct {
+	SourceCfg map[string]AnnotationConfig `mapstructure:"source_cfg" json:"source_cfg"`
+}
+
+type AnnotationConfig struct {
+	Tenants        []string `mapstructure:"tenant" json:"tenant"`
+	AnnotationType string   `mapstructure:"annotation_type" json:"annotation_type"`
+}
+
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
 	GetPlatformTenants(ctx context.Context) (*PlatformTenantsCfg, error)
 	GetPlatformSpansTrans(ctx context.Context) (*SpanTransHandlerConfig, error)
-	GetTraceMqProducerCfg(ctx context.Context) (*TraceMqProducerCfg, error)
+	GetTraceMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
+	GetAnnotationMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetTraceCkCfg(ctx context.Context) (*TraceCKCfg, error)
 	GetTenantConfig(ctx context.Context) (*TenantCfg, error)
 	GetTraceFieldMetaInfo(ctx context.Context) (*TraceFieldMetaInfoCfg, error)
-	GetTraceAttrTosCfg(ctx context.Context) (*TraceAttrTosCfg, error)
 	GetTraceDataMaxDurationDay(ctx context.Context, platformType *string) int64
 	GetDefaultTraceTenant(ctx context.Context) string
+	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	conf.IConfigLoader
 }

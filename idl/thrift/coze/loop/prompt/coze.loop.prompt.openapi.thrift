@@ -4,12 +4,12 @@ include "../../../base.thrift"
 include "./domain/prompt.thrift"
 
 service PromptOpenAPIService {
-    BatchGetPromptByPromptKeyResponse BatchGetPromptByPromptKey(1: BatchGetPromptByPromptKeyRequest req) (api.post='/v1/loop/prompts/mget')
+    BatchGetPromptByPromptKeyResponse BatchGetPromptByPromptKey(1: BatchGetPromptByPromptKeyRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/mget')
 }
 
 struct BatchGetPromptByPromptKeyRequest {
-    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional list<PromptQuery> queries
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional list<PromptQuery> queries (api.body="queries")
 
     255: optional base.Base Base
 }

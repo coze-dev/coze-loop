@@ -31,14 +31,14 @@ export function ExecuteArea() {
       streaming: state.streaming,
     })),
   );
-  const { messageList } = usePromptStore(
+  const { messageList, variables } = usePromptStore(
     useShallow(state => ({
       modelConfig: state.modelConfig,
       messageList: state.messageList,
+      variables: state.variables,
     })),
   );
   const {
-    mockVariables,
     setHistoricMessage,
     historicMessage = [],
     toolCalls,
@@ -46,7 +46,6 @@ export function ExecuteArea() {
     userDebugConfig,
   } = usePromptMockDataStore(
     useShallow(state => ({
-      mockVariables: state.mockVariables,
       setHistoricMessage: state.setHistoricMessage,
       historicMessage: state.historicMessage,
       toolCalls: state.toolCalls,
@@ -113,9 +112,7 @@ export function ExecuteArea() {
 
     const placeholderHasError = messageList?.some(message => {
       if (message.role === Role.Placeholder) {
-        return Boolean(
-          getPlaceholderErrorContent(message, mockVariables || []),
-        );
+        return Boolean(getPlaceholderErrorContent(message, variables || []));
       }
       return false;
     });
@@ -173,12 +170,12 @@ export function ExecuteArea() {
 
     const placeholderHasError = messageList?.some(msg => {
       if (msg.role === Role.Placeholder) {
-        return Boolean(getPlaceholderErrorContent(msg, mockVariables || []));
+        return Boolean(getPlaceholderErrorContent(msg, variables || []));
       }
       return false;
     });
     if (placeholderHasError) {
-      return Toast.error(I18n.t('placeholder_var_create_error'));
+      return Toast.error(I18n.t('placeholder_var_execute_error'));
     }
     const chatArray = historicMessage.filter(v => Boolean(v));
     const historyHasEmpty = Boolean(

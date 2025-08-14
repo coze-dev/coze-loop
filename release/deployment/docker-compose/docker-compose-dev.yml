@@ -1,0 +1,7 @@
+services:
+
+  app:
+    build:
+      context: ../../..
+      dockerfile: ./release/image/Dockerfile
+    image: "coze-dev/coze-loop:dev"

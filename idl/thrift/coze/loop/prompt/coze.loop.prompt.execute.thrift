@@ -13,6 +13,7 @@ struct ExecuteInternalRequest {
     3: optional string version (vt.not_nil='true', vt.min_size='1')
     4: optional list<prompt.Message> messages
     5: optional list<prompt.VariableVal> variable_vals
+    6: optional prompt.OverridePromptParams override_prompt_params
 
     101: optional prompt.Scenario scenario
 

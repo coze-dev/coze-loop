@@ -3,7 +3,9 @@
 
 package consts
 
-import "math"
+import (
+	"math"
+)
 
 const (
 	TypeString  = "string"
@@ -19,4 +21,6 @@ const MaxVersionNum int64 = math.MaxUint16
 
 const (
 	DataConfigFileName = "data.yaml"
+
+	FallbackTagValueDefaultName = "其他「系统自动生成」"
 )

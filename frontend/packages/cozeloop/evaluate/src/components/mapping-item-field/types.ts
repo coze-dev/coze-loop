@@ -16,5 +16,5 @@ export interface OptionGroup {
 
 export const schemaSourceTypeMap = {
   set: I18n.t('evaluation_set'),
-  target: 'evaluation_object',
+  target: I18n.t('evaluation_object'),
 };

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "application.name" . }}
+  labels:
+    app: {{ include "application.name" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: broker
+      port: {{ .Values.service.port }}
+      targetPort: {{.Values.service.targetPort}}
+  selector:
+    app: {{ include "application.name" . }}

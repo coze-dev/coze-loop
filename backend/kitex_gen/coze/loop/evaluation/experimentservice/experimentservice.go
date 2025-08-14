@@ -133,6 +133,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpsertExptTurnResultFilter": kitex.NewMethodInfo(
+		upsertExptTurnResultFilterHandler,
+		newExperimentServiceUpsertExptTurnResultFilterArgs,
+		newExperimentServiceUpsertExptTurnResultFilterResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -489,6 +496,25 @@ func newExperimentServiceListExperimentStatsResult() interface{} {
 	return expt.NewExperimentServiceListExperimentStatsResult()
 }
 
+func upsertExptTurnResultFilterHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpsertExptTurnResultFilterArgs)
+	realResult := result.(*expt.ExperimentServiceUpsertExptTurnResultFilterResult)
+	success, err := handler.(expt.ExperimentService).UpsertExptTurnResultFilter(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpsertExptTurnResultFilterArgs() interface{} {
+	return expt.NewExperimentServiceUpsertExptTurnResultFilterArgs()
+}
+
+func newExperimentServiceUpsertExptTurnResultFilterResult() interface{} {
+	return expt.NewExperimentServiceUpsertExptTurnResultFilterResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -666,6 +692,16 @@ func (p *kClient) ListExperimentStats(ctx context.Context, req *expt.ListExperim
 	_args.Req = req
 	var _result expt.ExperimentServiceListExperimentStatsResult
 	if err = p.c.Call(ctx, "ListExperimentStats", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest) (r *expt.UpsertExptTurnResultFilterResponse, err error) {
+	var _args expt.ExperimentServiceUpsertExptTurnResultFilterArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpsertExptTurnResultFilterResult
+	if err = p.c.Call(ctx, "UpsertExptTurnResultFilter", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

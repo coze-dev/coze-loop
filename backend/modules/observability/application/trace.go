@@ -7,6 +7,8 @@ import (
 	"context"
 	"strconv"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
@@ -19,12 +21,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	commdo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -35,23 +38,31 @@ const (
 	QueryLimitDefault = 100
 )
 
-type ITraceApplication = trace.TraceService
+type ITraceApplication interface {
+	trace.TraceService
+}
 
 func NewTraceApplication(
 	traceService service.ITraceService,
 	viewRepo repo.IViewRepo,
-	authService rpc.IAuthProvider,
 	benefitService benefit.IBenefitService,
 	traceMetrics metrics.ITraceMetrics,
 	traceConfig config.ITraceConfig,
+	authService rpc.IAuthProvider,
+	evalService rpc.IEvaluatorRPCAdapter,
+	userService rpc.IUserProvider,
+	tagService rpc.ITagRPCAdapter,
 ) (ITraceApplication, error) {
 	return &TraceApplication{
 		traceService: traceService,
 		viewRepo:     viewRepo,
 		traceConfig:  traceConfig,
-		auth:         authService,
 		metrics:      traceMetrics,
 		benefit:      benefitService,
+		authSvc:      authService,
+		evalSvc:      evalService,
+		userSvc:      userService,
+		tagSvc:       tagService,
 	}, nil
 }
 
@@ -59,32 +70,39 @@ type TraceApplication struct {
 	traceService service.ITraceService
 	viewRepo     repo.IViewRepo
 	traceConfig  config.ITraceConfig
-	auth         rpc.IAuthProvider
 	metrics      metrics.ITraceMetrics
 	benefit      benefit.IBenefitService
+	authSvc      rpc.IAuthProvider
+	evalSvc      rpc.IEvaluatorRPCAdapter
+	userSvc      rpc.IUserProvider
+	tagSvc       rpc.ITagRPCAdapter
 }
 
 func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRequest) (*trace.ListSpansResponse, error) {
 	if err := t.validateListSpansReq(ctx, req); err != nil {
 		return nil, err
 	}
-	if err := t.auth.CheckWorkspacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
 	}
 	sReq, err := t.buildListSpansSvcReq(req)
 	if err != nil {
-		logs.CtxInfo(ctx, "invalid list spans request: %v", err)
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
 	}
 	sResp, err := t.traceService.ListSpans(ctx, sReq)
 	if err != nil {
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
+	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
+		req.GetWorkspaceID(),
+		nil,
+		sResp.Spans.GetEvaluatorVersionIDs(),
+		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.ListSpansResponse{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}, nil
@@ -154,12 +172,11 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 	if err := t.validateGetTraceReq(ctx, req); err != nil {
 		return nil, err
 	}
-	if err := t.auth.CheckWorkspacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Get trace request: %+v", req)
 	sReq := t.buildGetTraceSvcReq(req)
 	sResp, err := t.traceService.GetTrace(ctx, sReq)
 	if err != nil {
@@ -167,11 +184,16 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 	}
 	inTokens, outTokens, err := sResp.Spans.Stat(ctx)
 	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	logs.CtxInfo(ctx, "Get trace successfully, spans count %d", len(sResp.Spans))
+	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
+		req.GetWorkspaceID(),
+		sResp.Spans.GetUserIDs(),
+		sResp.Spans.GetEvaluatorVersionIDs(),
+		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.GetTraceResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -210,6 +232,7 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) *serv
 		TraceID:     req.GetTraceID(),
 		StartTime:   req.GetStartTime(),
 		EndTime:     req.GetEndTime(),
+		SpanIDs:     req.GetSpanIds(),
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
@@ -223,7 +246,7 @@ func (t *TraceApplication) BatchGetTracesAdvanceInfo(ctx context.Context, req *t
 	if err := t.validateGetTracesAdvanceInfoReq(ctx, req); err != nil {
 		return nil, err
 	}
-	if err := t.auth.CheckWorkspacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
@@ -286,57 +309,6 @@ func (t *TraceApplication) buildBatchGetTraceAdvanceInfoSvcReq(req *trace.BatchG
 	return ret
 }
 
-func (t *TraceApplication) IngestTraces(ctx context.Context, req *trace.IngestTracesRequest) (*trace.IngestTracesResponse, error) {
-	if err := t.validateIngestTracesReq(ctx, req); err != nil {
-		return nil, err
-	}
-	workspaceId := req.GetSpans()[0].WorkspaceID
-	if err := t.auth.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceIngest,
-		workspaceId); err != nil {
-		return nil, err
-	}
-	workSpaceIdNum, err := strconv.ParseInt(workspaceId, 10, 64)
-	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	}
-	connectorUid := session.UserIDInCtxOrEmpty(ctx)
-	benefitRes, err := t.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-		ConnectorUID: connectorUid,
-		SpaceID:      workSpaceIdNum,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "Fail to check benefit, %v", err)
-	}
-	if benefitRes == nil {
-		benefitRes = &benefit.CheckTraceBenefitResult{
-			AccountAvailable: true,
-			IsEnough:         true,
-			StorageDuration:  3,
-			WhichIsEnough:    -1,
-		}
-	}
-	if !benefitRes.IsEnough {
-		return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
-	} else if !benefitRes.AccountAvailable {
-		return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
-	}
-	spans := tconv.SpanListDTO2DO(req.Spans)
-	for _, s := range spans {
-		s.CallType = "Custom"
-	}
-	if err := t.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-		TTL:              entity.TTLFromInteger(benefitRes.StorageDuration),
-		WhichIsEnough:    benefitRes.WhichIsEnough,
-		CozeAccountId:    connectorUid,
-		VolcanoAccountID: benefitRes.VolcanoAccountID,
-		Spans:            spans,
-	}); err != nil {
-		return nil, err
-	}
-	return trace.NewIngestTracesResponse(), nil
-}
-
 func (t *TraceApplication) IngestTracesInner(ctx context.Context, req *trace.IngestTracesRequest) (r *trace.IngestTracesResponse, err error) {
 	if err := t.validateIngestTracesInnerReq(ctx, req); err != nil {
 		return nil, err
@@ -392,7 +364,7 @@ func (t *TraceApplication) IngestTracesInner(ctx context.Context, req *trace.Ing
 				}
 			}
 			if err := t.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-				TTL:              entity.TTLFromInteger(benefitRes.StorageDuration),
+				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
 				WhichIsEnough:    benefitRes.WhichIsEnough,
 				CozeAccountId:    userId,
 				VolcanoAccountID: benefitRes.VolcanoAccountID,
@@ -416,25 +388,8 @@ func (t *TraceApplication) validateIngestTracesInnerReq(ctx context.Context, req
 	return nil
 }
 
-func (t *TraceApplication) validateIngestTracesReq(ctx context.Context, req *trace.IngestTracesRequest) error {
-	if req == nil {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
-	} else if len(req.Spans) > MaxSpanLength {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("max span length exceeded"))
-	} else if len(req.Spans) < 1 {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no spans provided"))
-	}
-	workspaceId := req.Spans[0].WorkspaceID
-	for i := 1; i < len(req.Spans); i++ {
-		if req.Spans[i].WorkspaceID != workspaceId {
-			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("spans space id is not the same"))
-		}
-	}
-	return nil
-}
-
 func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.GetTracesMetaInfoRequest) (*trace.GetTracesMetaInfoResponse, error) {
-	if err := t.auth.CheckWorkspacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
@@ -499,7 +454,7 @@ func (t *TraceApplication) CreateView(ctx context.Context, req *trace.CreateView
 	} else if req.ViewName == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid view_name"))
 	}
-	if err := t.auth.CheckWorkspacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceViewCreate,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
@@ -509,12 +464,10 @@ func (t *TraceApplication) CreateView(ctx context.Context, req *trace.CreateView
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
 	viewPO := tconv.CreateViewDTO2PO(req, userID)
-	logs.CtxInfo(ctx, "Create view %v", *viewPO)
 	id, err := t.viewRepo.CreateView(ctx, viewPO)
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Create view successfully")
 	return &trace.CreateViewResponse{
 		ID: id,
 	}, nil
@@ -526,7 +479,7 @@ func (t *TraceApplication) UpdateView(ctx context.Context, req *trace.UpdateView
 	} else if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.auth.CheckViewPermission(ctx,
+	if err := t.authSvc.CheckViewPermission(ctx,
 		rpc.AuthActionTraceViewEdit,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		strconv.FormatInt(req.GetID(), 10)); err != nil {
@@ -557,7 +510,6 @@ func (t *TraceApplication) UpdateView(ctx context.Context, req *trace.UpdateView
 	if err := t.viewRepo.UpdateView(ctx, viewDo); err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Update view successfully")
 	return trace.NewUpdateViewResponse(), nil
 }
 
@@ -567,7 +519,7 @@ func (t *TraceApplication) DeleteView(ctx context.Context, req *trace.DeleteView
 	} else if req.GetID() <= 0 || req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.auth.CheckViewPermission(ctx,
+	if err := t.authSvc.CheckViewPermission(ctx,
 		rpc.AuthActionTraceViewEdit,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		strconv.FormatInt(req.GetID(), 10)); err != nil {
@@ -581,7 +533,6 @@ func (t *TraceApplication) DeleteView(ctx context.Context, req *trace.DeleteView
 	if err := t.viewRepo.DeleteView(ctx, req.GetID(), req.GetWorkspaceID(), userID); err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Delete view successfully")
 	return trace.NewDeleteViewResponse(), nil
 }
 
@@ -591,7 +542,7 @@ func (t *TraceApplication) ListViews(ctx context.Context, req *trace.ListViewsRe
 	} else if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.auth.CheckWorkspacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceViewList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
@@ -609,7 +560,6 @@ func (t *TraceApplication) ListViews(ctx context.Context, req *trace.ListViewsRe
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "List views successfully")
 	return &trace.ListViewsResponse{
 		Views:    append(systemViews, tconv.BatchViewPO2DTO(viewList)...),
 		BaseResp: nil,
@@ -633,4 +583,162 @@ func (t *TraceApplication) getSystemViews(ctx context.Context) ([]*view.View, er
 		})
 	}
 	return ret, nil
+}
+
+func (t *TraceApplication) CreateManualAnnotation(ctx context.Context, req *trace.CreateManualAnnotationRequest) (*trace.CreateManualAnnotationResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionAnnotationCreate,
+		req.GetAnnotation().GetWorkspaceID()); err != nil {
+		return nil, err
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	annotation, err := tconv.AnnotationDTO2DO(req.Annotation)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	workspaceId, err := strconv.ParseInt(annotation.WorkspaceID, 10, 64)
+	if err != nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	tagInfo, err := t.tagSvc.GetTagInfo(ctx, workspaceId, annotation.Key)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	} else if err = tagInfo.CheckAnnotation(annotation); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	resp, err := t.traceService.CreateManualAnnotation(ctx, &service.CreateManualAnnotationReq{
+		PlatformType: platformType,
+		Annotation:   annotation,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &trace.CreateManualAnnotationResponse{
+		AnnotationID: ptr.Of(resp.AnnotationID),
+	}, nil
+}
+
+func (t *TraceApplication) UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest) (*trace.UpdateManualAnnotationResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionAnnotationCreate,
+		req.GetAnnotation().GetWorkspaceID()); err != nil {
+		return nil, err
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	annotation, err := tconv.AnnotationDTO2DO(req.Annotation)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	workspaceId, err := strconv.ParseInt(annotation.WorkspaceID, 10, 64)
+	if err != nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	tagInfo, err := t.tagSvc.GetTagInfo(ctx, workspaceId, annotation.Key)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	} else if err = tagInfo.CheckAnnotation(annotation); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	err = t.traceService.UpdateManualAnnotation(ctx, &service.UpdateManualAnnotationReq{
+		AnnotationID: req.AnnotationID,
+		PlatformType: platformType,
+		Annotation:   annotation,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &trace.UpdateManualAnnotationResponse{}, nil
+}
+
+func (t *TraceApplication) DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest) (*trace.DeleteManualAnnotationResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionAnnotationCreate,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	if _, err := t.tagSvc.GetTagInfo(ctx, req.WorkspaceID, req.AnnotationKey); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	err := t.traceService.DeleteManualAnnotation(ctx, &service.DeleteManualAnnotationReq{
+		AnnotationID:  req.AnnotationID,
+		WorkspaceID:   req.WorkspaceID,
+		TraceID:       req.TraceID,
+		SpanID:        req.SpanID,
+		StartTime:     req.StartTime,
+		AnnotationKey: req.AnnotationKey,
+		PlatformType:  platformType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &trace.DeleteManualAnnotationResponse{}, nil
+}
+
+func (t *TraceApplication) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest) (*trace.ListAnnotationsResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	resp, err := t.traceService.ListAnnotations(ctx, &service.ListAnnotationsReq{
+		WorkspaceID:     req.WorkspaceID,
+		SpanID:          req.SpanID,
+		TraceID:         req.TraceID,
+		StartTime:       req.StartTime,
+		DescByUpdatedAt: ptr.From(req.DescByUpdatedAt),
+		PlatformType:    platformType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
+		req.GetWorkspaceID(),
+		resp.Annotations.GetUserIDs(),
+		resp.Annotations.GetEvaluatorVersionIDs(),
+		resp.Annotations.GetAnnotationTagIDs())
+	return &trace.ListAnnotationsResponse{
+		Annotations: tconv.AnnotationListDO2DTO(resp.Annotations, userMap, evalMap, tagMap),
+	}, nil
+}
+
+func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId int64, userIds []string, evalIds []int64, tagKeyIds []string,
+) (userMap map[string]*commdo.UserInfo, evalMap map[int64]*rpc.Evaluator, tagMap map[int64]*rpc.TagInfo) {
+	if len(userIds) == 0 && len(tagKeyIds) == 0 && len(evalIds) == 0 {
+		return
+	}
+	g := errgroup.Group{}
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		_, userMap, _ = t.userSvc.GetUserInfo(ctx, userIds)
+		return nil
+	})
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		_, evalMap, _ = t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         workspaceId,
+			EvaluatorVersionIds: evalIds,
+		})
+		return nil
+	})
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		tagMap, _ = t.tagSvc.BatchGetTagInfo(ctx, workspaceId, tagKeyIds)
+		return nil
+	})
+	_ = g.Wait()
+	return
 }

@@ -14,13 +14,16 @@ type Client interface {
 	ListSpans(ctx context.Context, req *trace.ListSpansRequest, callOptions ...callopt.Option) (r *trace.ListSpansResponse, err error)
 	GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error)
 	BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (r *trace.BatchGetTracesAdvanceInfoResponse, err error)
-	IngestTraces(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (r *trace.IngestTracesResponse, err error)
 	IngestTracesInner(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (r *trace.IngestTracesResponse, err error)
 	GetTracesMetaInfo(ctx context.Context, req *trace.GetTracesMetaInfoRequest, callOptions ...callopt.Option) (r *trace.GetTracesMetaInfoResponse, err error)
 	CreateView(ctx context.Context, req *trace.CreateViewRequest, callOptions ...callopt.Option) (r *trace.CreateViewResponse, err error)
 	UpdateView(ctx context.Context, req *trace.UpdateViewRequest, callOptions ...callopt.Option) (r *trace.UpdateViewResponse, err error)
 	DeleteView(ctx context.Context, req *trace.DeleteViewRequest, callOptions ...callopt.Option) (r *trace.DeleteViewResponse, err error)
 	ListViews(ctx context.Context, req *trace.ListViewsRequest, callOptions ...callopt.Option) (r *trace.ListViewsResponse, err error)
+	CreateManualAnnotation(ctx context.Context, req *trace.CreateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.CreateManualAnnotationResponse, err error)
+	UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.UpdateManualAnnotationResponse, err error)
+	DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.DeleteManualAnnotationResponse, err error)
+	ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -67,11 +70,6 @@ func (p *kTraceServiceClient) BatchGetTracesAdvanceInfo(ctx context.Context, req
 	return p.kClient.BatchGetTracesAdvanceInfo(ctx, req)
 }
 
-func (p *kTraceServiceClient) IngestTraces(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (r *trace.IngestTracesResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.IngestTraces(ctx, req)
-}
-
 func (p *kTraceServiceClient) IngestTracesInner(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (r *trace.IngestTracesResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.IngestTracesInner(ctx, req)
@@ -100,4 +98,24 @@ func (p *kTraceServiceClient) DeleteView(ctx context.Context, req *trace.DeleteV
 func (p *kTraceServiceClient) ListViews(ctx context.Context, req *trace.ListViewsRequest, callOptions ...callopt.Option) (r *trace.ListViewsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListViews(ctx, req)
+}
+
+func (p *kTraceServiceClient) CreateManualAnnotation(ctx context.Context, req *trace.CreateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.CreateManualAnnotationResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateManualAnnotation(ctx, req)
+}
+
+func (p *kTraceServiceClient) UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.UpdateManualAnnotationResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateManualAnnotation(ctx, req)
+}
+
+func (p *kTraceServiceClient) DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.DeleteManualAnnotationResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteManualAnnotation(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListAnnotations(ctx, req)
 }

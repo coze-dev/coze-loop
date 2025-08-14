@@ -1,0 +1,41 @@
+# 基础服务：自定义连接源 & 基础镜像 混用
+ingress:
+  host: open.coze-loop.minikube
+  type: nginx
+  className: nginx
+
+custom: &custom
+  image:
+    registry: "docker.io"
+  mysql:
+    disabled: false
+    domain: "***"
+    port: "***"
+    user: "***"
+    password: "***"
+    database: "***"
+  clickhouse:
+    disabled: false
+    domain: "***"
+    port: "***"
+    user: "***"
+    password: "***"
+    database: "***"
+
+# 固定，不要动，用于传递全局变量
+coze-loop-app:
+  custom: *custom
+coze-loop-nginx:
+  custom: *custom
+coze-loop-redis:
+  custom: *custom
+coze-loop-mysql:
+  custom: *custom
+coze-loop-clickhouse:
+  custom: *custom
+coze-loop-minio:
+  custom: *custom
+coze-loop-rmq-namesrv:
+  custom: *custom
+coze-loop-rmq-broker:
+  custom: *custom

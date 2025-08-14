@@ -6,7 +6,6 @@ package clickhouseexporter
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/consumer"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -29,7 +28,7 @@ func (c *ckExporter) Shutdown(ctx context.Context) error {
 }
 
 func (c *ckExporter) ConsumeTraces(ctx context.Context, td consumer.Traces) error {
-	tracesMap := make(map[entity.TTL]loop_span.SpanList)
+	tracesMap := make(map[loop_span.TTL]loop_span.SpanList)
 	for _, td := range td.TraceData {
 		ttl := td.TenantInfo.TTL
 		if tracesMap[ttl] == nil {

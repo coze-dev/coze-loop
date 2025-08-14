@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type AuditRPCAdapter struct {
@@ -62,8 +63,10 @@ func (a *AuditRPCAdapter) AuditPrompt(ctx context.Context, promptDO *entity.Prom
 		ReqID:     encoding.Encode(ctx, auditingData),
 	}
 	record, err := a.client.Audit(ctx, auditParam)
+	// 审核服务不可用，默认通过
 	if err != nil {
-		return err
+		logs.CtxError(ctx, "audit: failed to audit, err=%v", err)
+		return nil
 	}
 	if record.AuditStatus != audit.AuditStatus_Approved {
 		return errorx.NewByCode(prompterr.RiskContentDetectedCode, errorx.WithExtraMsg(ptr.From(record.FailedReason)))

@@ -116,3 +116,19 @@ func ListExperimentStats(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// UpsertExptTurnResultFilter .
+// @router /api/evaluation/v1/experiments/turn_result_filter [POST]
+func UpsertExptTurnResultFilter(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.UpsertExptTurnResultFilterRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.UpsertExptTurnResultFilterResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

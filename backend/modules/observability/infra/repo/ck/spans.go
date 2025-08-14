@@ -1,7 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// ignore_security_alert_file SQL_INJECTION
 package ck
 
 import (
@@ -31,6 +30,7 @@ const (
 type QueryParam struct {
 	QueryType        string // for sql optimization
 	Tables           []string
+	AnnoTableMap     map[string]string
 	StartTime        int64 // us
 	EndTime          int64 // us
 	Filters          *loop_span.FilterFields
@@ -84,14 +84,14 @@ func (s *SpansCkDaoImpl) Insert(ctx context.Context, param *InsertParam) error {
 func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.ObservabilitySpan, error) {
 	sql, err := s.buildSql(ctx, param)
 	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get trace request"))
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get trace request"))
 	}
 	logs.CtxInfo(ctx, "Get Trace SQL: %s", sql.ToSQL(func(tx *gorm.DB) *gorm.DB {
 		return tx.Find(nil)
 	}))
 	spans := make([]*model.ObservabilitySpan, 0)
 	if err := sql.Find(&spans).Error; err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonRPCErrorCodeCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
 	return spans, nil
 }

@@ -1,0 +1,36 @@
+service:
+  type: ClusterIP
+  port: 9000
+  targetPort: 9000
+
+image:
+  registry: "docker.io"
+  repository: "clickhouse"
+  image: "clickhouse-server"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: "coze-loop-image-secret"
+
+deployment:
+  replicaCount: 1
+  dataMountPath: "/var/lib/clickhouse"
+  terminationGracePeriodSeconds: 10
+
+liveness:
+  startSeconds: 5
+  intervalSeconds: 5
+  timeoutSeconds: 3
+  shutdownFailureTimes: 5
+
+auth:
+  user: "default"
+  password: "coze-loop"
+
+database:
+  name: "coze-loop"
+
+# customization
+custom:
+  image:
+    registry:
+    pullSecrets:

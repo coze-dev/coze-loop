@@ -5,11 +5,12 @@
 package mocks
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
 // MockExptResultService is a mock of ExptResultService interface.
@@ -48,6 +49,20 @@ func (m *MockExptResultService) CalculateStats(arg0 context.Context, arg1, arg2 
 func (mr *MockExptResultServiceMockRecorder) CalculateStats(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateStats", reflect.TypeOf((*MockExptResultService)(nil).CalculateStats), arg0, arg1, arg2, arg3)
+}
+
+// CompareExptTurnResultFilters mocks base method.
+func (m *MockExptResultService) CompareExptTurnResultFilters(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompareExptTurnResultFilters", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CompareExptTurnResultFilters indicates an expected call of CompareExptTurnResultFilters.
+func (mr *MockExptResultServiceMockRecorder) CompareExptTurnResultFilters(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareExptTurnResultFilters", reflect.TypeOf((*MockExptResultService)(nil).CompareExptTurnResultFilters), arg0, arg1, arg2, arg3, arg4)
 }
 
 // CreateStats mocks base method.
@@ -94,6 +109,20 @@ func (mr *MockExptResultServiceMockRecorder) GetStats(arg0, arg1, arg2, arg3 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockExptResultService)(nil).GetStats), arg0, arg1, arg2, arg3)
 }
 
+// InsertExptTurnResultFilterKeyMappings mocks base method.
+func (m *MockExptResultService) InsertExptTurnResultFilterKeyMappings(arg0 context.Context, arg1 []*entity.ExptTurnResultFilterKeyMapping) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertExptTurnResultFilterKeyMappings", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InsertExptTurnResultFilterKeyMappings indicates an expected call of InsertExptTurnResultFilterKeyMappings.
+func (mr *MockExptResultServiceMockRecorder) InsertExptTurnResultFilterKeyMappings(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertExptTurnResultFilterKeyMappings", reflect.TypeOf((*MockExptResultService)(nil).InsertExptTurnResultFilterKeyMappings), arg0, arg1)
+}
+
 // MGetExperimentResult mocks base method.
 func (m *MockExptResultService) MGetExperimentResult(arg0 context.Context, arg1 *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ItemResult, int64, error) {
 	m.ctrl.T.Helper()
@@ -127,18 +156,47 @@ func (mr *MockExptResultServiceMockRecorder) MGetStats(arg0, arg1, arg2, arg3 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetStats", reflect.TypeOf((*MockExptResultService)(nil).MGetStats), arg0, arg1, arg2, arg3)
 }
 
-// RecordItemRunLogs mocks base method.
-func (m *MockExptResultService) RecordItemRunLogs(arg0 context.Context, arg1, arg2, arg3, arg4 int64, arg5 *entity.Session) error {
+// ManualUpsertExptTurnResultFilter mocks base method.
+func (m *MockExptResultService) ManualUpsertExptTurnResultFilter(arg0 context.Context, arg1, arg2 int64, arg3 []int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordItemRunLogs", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "ManualUpsertExptTurnResultFilter", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RecordItemRunLogs indicates an expected call of RecordItemRunLogs.
-func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+// ManualUpsertExptTurnResultFilter indicates an expected call of ManualUpsertExptTurnResultFilter.
+func (mr *MockExptResultServiceMockRecorder) ManualUpsertExptTurnResultFilter(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManualUpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).ManualUpsertExptTurnResultFilter), arg0, arg1, arg2, arg3)
+}
+
+// RecordItemRunLogs mocks base method.
+func (m *MockExptResultService) RecordItemRunLogs(arg0 context.Context, arg1, arg2, arg3, arg4 int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordItemRunLogs", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].([]*entity.ExptTurnEvaluatorResultRef)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecordItemRunLogs indicates an expected call of RecordItemRunLogs.
+func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), arg0, arg1, arg2, arg3, arg4)
+}
+
+// UpsertExptTurnResultFilter mocks base method.
+func (m *MockExptResultService) UpsertExptTurnResultFilter(arg0 context.Context, arg1, arg2 int64, arg3 []int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertExptTurnResultFilter", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertExptTurnResultFilter indicates an expected call of UpsertExptTurnResultFilter.
+func (mr *MockExptResultServiceMockRecorder) UpsertExptTurnResultFilter(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).UpsertExptTurnResultFilter), arg0, arg1, arg2, arg3)
 }
 
 // MockExptAggrResultService is a mock of ExptAggrResultService interface.

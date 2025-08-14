@@ -16,6 +16,8 @@ type ISourceEvalTargetOperateService interface {
 	BuildBySource(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, opts ...entity.Option) (*entity.EvalTarget, error)
 	// ListSource 查询source target列表
 	ListSource(ctx context.Context, param *entity.ListSourceParam) (targets []*entity.EvalTarget, nextCursor string, hasMore bool, err error)
+	// BatchGetSource 查询source target列表
+	BatchGetSource(ctx context.Context, spaceID int64, ids []string) (targets []*entity.EvalTarget, err error)
 	// ListSourceVersion 查询source target版本列表
 	ListSourceVersion(ctx context.Context, param *entity.ListSourceVersionParam) (versions []*entity.EvalTargetVersion, nextCursor string, hasMore bool, err error)
 	// PackSourceInfo 拼装源信息

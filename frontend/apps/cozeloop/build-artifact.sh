@@ -16,7 +16,7 @@ rm -rf dist
 # install without hooks
 rush install --to . --ignore-hooks
 
-export BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "branch404")
+export BUILD_BRANCH=branch404
 
 # rebuild with timeline and without rush hooks
 rush rebuild --to . --ignore-hooks --timeline

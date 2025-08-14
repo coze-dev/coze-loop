@@ -27,7 +27,7 @@ type EvaluatorVersionDAO interface {
 	BatchDeleteEvaluatorVersionByEvaluatorIDs(ctx context.Context, evaluatorIDs []int64, userID string, opts ...db.Option) error
 
 	ListEvaluatorVersion(ctx context.Context, req *ListEvaluatorVersionRequest, opts ...db.Option) (*ListEvaluatorVersionResponse, error)
-	BatchGetEvaluatorVersionByID(ctx context.Context, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error)
+	BatchGetEvaluatorVersionByID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error)
 	BatchGetEvaluatorDraftByEvaluatorID(ctx context.Context, evaluatorIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error)
 	BatchGetEvaluatorVersionsByEvaluatorIDs(ctx context.Context, evaluatorIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error)
 	CheckVersionExist(ctx context.Context, evaluatorID int64, version string, opts ...db.Option) (bool, error)
@@ -183,7 +183,7 @@ func (dao *EvaluatorVersionDAOImpl) GetEvaluatorVersionByID(ctx context.Context,
 }
 
 // BatchGetEvaluatorVersionByID 根据 ID 获取 Evaluator 记录
-func (dao *EvaluatorVersionDAOImpl) BatchGetEvaluatorVersionByID(ctx context.Context, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error) {
+func (dao *EvaluatorVersionDAOImpl) BatchGetEvaluatorVersionByID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -193,6 +193,9 @@ func (dao *EvaluatorVersionDAOImpl) BatchGetEvaluatorVersionByID(ctx context.Con
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	query := dbsession.WithContext(ctx).Where("id in (?)", ids)
+	if spaceID != nil {
+		query = query.Where("space_id =?", *spaceID)
+	}
 	if includeDeleted {
 		query = query.Unscoped() // 解除软删除过滤
 	}

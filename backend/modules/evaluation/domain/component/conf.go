@@ -15,4 +15,6 @@ type IConfiger interface {
 	GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl
 	GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf
 	GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf
+	GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg
+	GetCKDBName(ctx context.Context) *entity.CKDBConfig
 }

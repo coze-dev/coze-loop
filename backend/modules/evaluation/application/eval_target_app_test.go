@@ -853,6 +853,14 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 				PromptID: 789,
 				Version:  "v2.0",
 			},
+		}, {
+			ID:             2,
+			SpaceID:        validSpaceID,
+			EvalTargetType: 4,
+			CozeWorkflow: &entity.CozeWorkflow{
+				ID:      "123",
+				Version: "v2.0",
+			},
 		},
 	}
 
@@ -893,12 +901,20 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 							PromptID: 789,
 							Version:  "v2.0",
 						},
+					}, {
+						ID:      2,
+						SpaceID: validSpaceID,
+						CozeWorkflow: &entity.CozeWorkflow{
+							ID:      "123",
+							Version: "v2.0",
+						},
 					}}, "", false, nil)
 			},
 			wantResp: &eval_target.ListSourceEvalTargetVersionsResponse{
 				Versions: []*domain_eval_target.EvalTargetVersion{
 					target.EvalTargetVersionDO2DTO(validEvalTargets[0]),
 					target.EvalTargetVersionDO2DTO(validEvalTargets[1]),
+					target.EvalTargetVersionDO2DTO(validEvalTargets[2]),
 				},
 			},
 			wantErr: false,
@@ -939,6 +955,155 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, len(tt.wantResp.Versions), len(resp.Versions))
+			}
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth: mockAuth,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+
+	// Test data
+	validSpaceID := int64(123)
+	validEvalTargetType := domain_eval_target.EvalTargetType(1)
+	unsupportedEvalTargetType := domain_eval_target.EvalTargetType(99)
+	validSourceTargetIDs := []string{"source-1", "source-2"}
+	validEvalTargets := []*entity.EvalTarget{
+		{
+			ID:             1,
+			SpaceID:        validSpaceID,
+			SourceTargetID: "source-1",
+			EvalTargetType: 1,
+		},
+		{
+			ID:             2,
+			SpaceID:        validSpaceID,
+			SourceTargetID: "source-2",
+			EvalTargetType: 1,
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *eval_target.BatchGetSourceEvalTargetsRequest
+		mockSetup   func()
+		wantResp    *eval_target.BatchGetSourceEvalTargetsResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+				WorkspaceID:     validSpaceID,
+				TargetType:      &validEvalTargetType,
+				SourceTargetIds: validSourceTargetIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockTypedOperator.EXPECT().
+					BatchGetSource(gomock.Any(), validSpaceID, validSourceTargetIDs).
+					Return(validEvalTargets, nil)
+			},
+			wantResp: &eval_target.BatchGetSourceEvalTargetsResponse{
+				EvalTargets: []*domain_eval_target.EvalTarget{
+					target.EvalTargetDO2DTO(validEvalTargets[0]),
+					target.EvalTargetDO2DTO(validEvalTargets[1]),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - nil target type",
+			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+				WorkspaceID:     validSpaceID,
+				SourceTargetIds: validSourceTargetIDs,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+				WorkspaceID:     validSpaceID,
+				TargetType:      &validEvalTargetType,
+				SourceTargetIds: validSourceTargetIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - unsupported target type",
+			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+				WorkspaceID:     validSpaceID,
+				TargetType:      &unsupportedEvalTargetType,
+				SourceTargetIds: validSourceTargetIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - service failure",
+			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+				WorkspaceID:     validSpaceID,
+				TargetType:      &validEvalTargetType,
+				SourceTargetIds: validSourceTargetIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockTypedOperator.EXPECT().
+					BatchGetSource(gomock.Any(), validSpaceID, validSourceTargetIDs).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.BatchGetSourceEvalTargets(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, len(tt.wantResp.EvalTargets), len(resp.EvalTargets))
+				for i, trgt := range tt.wantResp.EvalTargets {
+					assert.Equal(t, trgt.ID, resp.EvalTargets[i].ID)
+					assert.Equal(t, trgt.SourceTargetID, resp.EvalTargets[i].SourceTargetID)
+				}
 			}
 		})
 	}

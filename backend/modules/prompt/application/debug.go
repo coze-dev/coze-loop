@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 	"github.com/coze-dev/cozeloop-go"
 	loopentity "github.com/coze-dev/cozeloop-go/entity"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
@@ -243,7 +245,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		}()
 		defer func() {
 			// 写入调试记录
-			logErr := p.saveDebugLog(ctx, saveDebugLogParam{
+			logErr := p.saveDebugLog(context.WithoutCancel(ctx), saveDebugLogParam{
 				prompt:          prompt,
 				startTime:       startTime,
 				result:          aggregatedReply,
@@ -292,7 +294,12 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		}
 		err = stream.Send(ctx, chunk)
 		if err != nil {
-			logs.CtxError(ctx, "send chunk failed, err=%v", err)
+			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+				err = nil
+				logs.CtxWarn(ctx, "debug streaming canceled")
+			} else {
+				logs.CtxError(ctx, "send chunk failed, err=%v", err)
+			}
 			return nil, err
 		}
 	}
@@ -301,7 +308,12 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if !ok {
 			logs.CtxInfo(ctx, "debug streaming finished")
 		} else {
-			logs.CtxError(ctx, "execute failed, err=%v", err)
+			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+				err = nil
+				logs.CtxWarn(ctx, "debug streaming canceled")
+			} else {
+				logs.CtxError(ctx, "debug streaming failed, err=%v", err)
+			}
 		}
 		return aggregatedReply, err
 	}

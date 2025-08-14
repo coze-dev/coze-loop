@@ -50,7 +50,7 @@ func (v *ViewDaoImpl) GetView(ctx context.Context, id int64, workspaceID *int64,
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("view not found"))
 		} else {
-			return nil, errorx.NewByCode(obErrorx.CommonMySqlErrorCode)
+			return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 		}
 	}
 	return viewPo, nil
@@ -67,7 +67,7 @@ func (v *ViewDaoImpl) ListViews(ctx context.Context, workspaceID int64, userID s
 	}
 	results, err := qd.Limit(100).Find()
 	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommonMySqlErrorCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
 	return results, nil
 }
@@ -78,7 +78,7 @@ func (v *ViewDaoImpl) CreateView(ctx context.Context, po *model.ObservabilityVie
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return 0, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("view duplicate key"))
 		} else {
-			return 0, errorx.NewByCode(obErrorx.CommonMySqlErrorCode)
+			return 0, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 		}
 	} else {
 		return po.ID, nil
@@ -88,7 +88,7 @@ func (v *ViewDaoImpl) CreateView(ctx context.Context, po *model.ObservabilityVie
 func (v *ViewDaoImpl) UpdateView(ctx context.Context, po *model.ObservabilityView) error {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityView
 	if err := q.WithContext(ctx).Save(po); err != nil {
-		return errorx.NewByCode(obErrorx.CommonMySqlErrorCode)
+		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	} else {
 		return nil
 	}
@@ -99,7 +99,7 @@ func (v *ViewDaoImpl) DeleteView(ctx context.Context, id int64, workspaceID int6
 	qd := q.WithContext(ctx).Where(q.ID.Eq(id)).Where(q.WorkspaceID.Eq(workspaceID)).Where(q.CreatedBy.Eq(userID))
 	info, err := qd.Delete()
 	if err != nil {
-		return errorx.NewByCode(obErrorx.CommonMySqlErrorCode)
+		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
 	logs.CtxInfo(ctx, "%d rows deleted", info.RowsAffected)
 	return nil

@@ -40,3 +40,11 @@ error_code:
     code: 5010
     message: parse model response failed
     no_affect_stability: false
+  - name: RiskContentDetected
+    code: 5011
+    message: risk content is detected
+    no_affect_stability: true
+  - name: CallModelTimeout
+    code: 5012
+    message: call model timeout
+    no_affect_stability: true

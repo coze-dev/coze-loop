@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -135,6 +136,7 @@ func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx, history []*entity.Message, spaceID int64) (record *entity.EvalTargetRecord, err error) {
+	logs.CtxInfo(ctx, "[ExptTurnEval] call target, etec: %v", etec)
 	defer e.metric.EmitTurnExecTargetResult(etec.Event.SpaceID, err != nil)
 
 	turn := etec.Turn
@@ -151,7 +153,19 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	fieldConfs := targetConf.IngressConf.EvalSetAdapter.FieldConfs
 	fields := make(map[string]*entity.Content, len(fieldConfs))
 	for _, fc := range fieldConfs {
-		fields[fc.FieldName] = turnFields[fc.FromField]
+		firstField, err := json.GetFirstJSONPathField(fc.FromField)
+		if err != nil {
+			return nil, err
+		}
+		if firstField == fc.FromField { // 没有下钻字段
+			fields[fc.FieldName] = turnFields[fc.FromField]
+			continue
+		}
+		content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
+		if err != nil {
+			return nil, err
+		}
+		fields[fc.FieldName] = content
 	}
 
 	targetRecord, err := e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, &entity.ExecuteTargetCtx{
@@ -161,6 +175,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}, &entity.EvalTargetInputData{
 		HistoryMessages: history,
 		InputFields:     fields,
+		Ext:             etec.Ext,
 	})
 	if err != nil {
 		return nil, err
@@ -206,6 +221,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
 	targetResult *entity.EvalTargetRecord, history []*entity.Message,
 ) (map[int64]*entity.EvaluatorRecord, error) {
+	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators, etec: %v", etec)
+	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators, target_result: %v", json.Jsonify(targetResult))
 	var (
 		recordMap      sync.Map
 		item           = etec.EvalSetItem
@@ -247,10 +264,34 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		curFields := make(map[string]*entity.Content)
 
 		for _, fc := range ec.IngressConf.TargetAdapter.FieldConfs {
-			curFields[fc.FieldName] = targetFields[fc.FromField]
+			firstField, err := json.GetFirstJSONPathField(fc.FromField)
+			if err != nil {
+				return nil, err
+			}
+			if firstField == fc.FromField { // 没有下钻字段
+				curFields[fc.FieldName] = targetFields[fc.FromField]
+				continue
+			}
+			content, err := e.getContentByJsonPath(targetFields[firstField], fc.FromField)
+			if err != nil {
+				return nil, err
+			}
+			curFields[fc.FieldName] = content
 		}
 		for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {
-			curFields[fc.FieldName] = turnFields[fc.FromField]
+			firstField, err := json.GetFirstJSONPathField(fc.FromField)
+			if err != nil {
+				return nil, err
+			}
+			if firstField == fc.FromField { // 没有下钻字段
+				curFields[fc.FieldName] = turnFields[fc.FromField]
+				continue
+			}
+			content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
+			if err != nil {
+				return nil, err
+			}
+			curFields[fc.FieldName] = content
 		}
 
 		pool.Add(func() error {
@@ -294,4 +335,29 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	})
 
 	return records, err
+}
+
+// 注意此函数有特化逻辑不可直接服用, 删除了jsonpath的第一级
+func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Content, jsonPath string) (*entity.Content, error) {
+	logs.CtxInfo(context.Background(), "getContentByJsonPath, content: %v, jsonPath: %v", json.Jsonify(content), jsonPath)
+	if content == nil {
+		return nil, nil
+	}
+	if content.ContentType == nil || ptr.From(content.ContentType) != entity.ContentTypeText {
+		return nil, nil
+	}
+	jsonPath, err := json.RemoveFirstJSONPathLevel(jsonPath)
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(context.Background(), "RemoveFirstJSONPathLevel, jsonPath: %v", jsonPath)
+	text, err := json.GetStringByJSONPath(ptr.From(content.Text), jsonPath)
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(context.Background(), "getContentByJsonPath, text: %v", text)
+	return &entity.Content{
+		ContentType: ptr.Of(entity.ContentTypeText),
+		Text:        ptr.Of(text),
+	}, nil
 }

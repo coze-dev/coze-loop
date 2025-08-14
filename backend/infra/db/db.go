@@ -87,6 +87,7 @@ func NewDBFromConfig(cfg *Config, opts ...gorm.Option) (Provider, error) {
 	if !utils.Contains(mysql.UpdateClauses, "RETURNING") {
 		mysql.UpdateClauses = append(mysql.UpdateClauses, "RETURNING")
 	}
+	// Known issue: this option will make the opts using gorm.Config not working.
 	opts = append(opts, &gorm.Config{
 		TranslateError: true,
 	})

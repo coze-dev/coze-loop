@@ -10,6 +10,7 @@ import (
 
 type option struct {
 	kiteXSvrMWCompat bool
+	wrapErrorCode    int32
 }
 
 type Option func(ws *option)
@@ -20,20 +21,30 @@ func WithKiteXSvrMWCompat() Option {
 	}
 }
 
+func WithKiteXWrapErrCode(code int32) Option {
+	return func(o *option) {
+		o.wrapErrorCode = code
+	}
+}
+
 func NewServerSuite(opts ...Option) server.Suite {
 	opt := &option{}
 	for _, o := range opts {
 		o(opt)
 	}
-	return &serverSuite{opt.kiteXSvrMWCompat}
+	return &serverSuite{
+		kiteXSvrMWCompat: opt.kiteXSvrMWCompat,
+		wrapErrorCode:    opt.wrapErrorCode,
+	}
 }
 
 type serverSuite struct {
 	kiteXSvrMWCompat bool
+	wrapErrorCode    int32
 }
 
 func (suite *serverSuite) Options() []server.Option {
-	opts := []server.Option{server.WithMiddleware(KiteXSvrErrorWrapMW())}
+	opts := []server.Option{server.WithMiddleware(KiteXSvrErrorWrapMW(WithWrapErrorCode(suite.wrapErrorCode)))}
 	if suite.kiteXSvrMWCompat {
 		opts = append(opts, server.WithMiddleware(KiteXSvrCompatMW()))
 	}

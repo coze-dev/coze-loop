@@ -61,9 +61,9 @@ type user struct {
 	UserVerified field.Bool   // User Verification Status
 	CountryCode  field.Int64  // Country Code
 	SessionKey   field.String // Session Key
-	DeletedAt    field.Int64
-	CreatedAt    field.Time
-	UpdatedAt    field.Time
+	DeletedAt    field.Int64  // 删除时间
+	CreatedAt    field.Time   // 创建时间
+	UpdatedAt    field.Time   // 更新时间
 
 	fieldMap map[string]field.Expr
 }

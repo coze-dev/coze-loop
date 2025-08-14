@@ -96,19 +96,19 @@ func newInMemDB() (*inMemDB, error) {
 }
 
 func newInMemServer(cfg *Config) (*server.Server, error) {
-	// Build config.
+	// BuildItemResults config.
 	config := server.Config{
 		Protocol: "tcp",
 		Address:  fmt.Sprintf("%s:%s", cfg.DBHostname, cfg.DBPort),
 	}
 
-	// Build engine.
+	// BuildItemResults engine.
 	db := memory.NewDatabase(cfg.DBName)
 	db.EnablePrimaryKeyIndexes()
 	provider := memory.NewDBProvider(db)
 	engine := sqle.NewDefault(provider)
 
-	// Build session.
+	// BuildItemResults session.
 	builder := func(ctx context.Context, conn *vmysql.Conn, addr string) (sql.Session, error) {
 		host := config.Address
 		user := cfg.User

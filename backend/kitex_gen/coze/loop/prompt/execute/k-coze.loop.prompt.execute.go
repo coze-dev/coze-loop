@@ -116,6 +116,20 @@ func (p *ExecuteInternalRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 101:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField101(buf[offset:])
@@ -254,6 +268,18 @@ func (p *ExecuteInternalRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExecuteInternalRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+	_field := prompt.NewOverridePromptParams()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.OverridePromptParams = _field
+	return offset, nil
+}
+
 func (p *ExecuteInternalRequest) FastReadField101(buf []byte) (int, error) {
 	offset := 0
 
@@ -292,6 +318,7 @@ func (p *ExecuteInternalRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -307,6 +334,7 @@ func (p *ExecuteInternalRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field101Length()
 		l += p.field255Length()
 	}
@@ -369,6 +397,15 @@ func (p *ExecuteInternalRequest) fastWriteField5(buf []byte, w thrift.NocopyWrit
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *ExecuteInternalRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOverridePromptParams() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 6)
+		offset += p.OverridePromptParams.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -444,6 +481,15 @@ func (p *ExecuteInternalRequest) field5Length() int {
 	return l
 }
 
+func (p *ExecuteInternalRequest) field6Length() int {
+	l := 0
+	if p.IsSetOverridePromptParams() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.OverridePromptParams.BLength()
+	}
+	return l
+}
+
 func (p *ExecuteInternalRequest) field101Length() int {
 	l := 0
 	if p.IsSetScenario() {
@@ -515,6 +561,15 @@ func (p *ExecuteInternalRequest) DeepCopy(s interface{}) error {
 			p.VariableVals = append(p.VariableVals, _elem)
 		}
 	}
+
+	var _overridePromptParams *prompt.OverridePromptParams
+	if src.OverridePromptParams != nil {
+		_overridePromptParams = &prompt.OverridePromptParams{}
+		if err := _overridePromptParams.DeepCopy(src.OverridePromptParams); err != nil {
+			return err
+		}
+	}
+	p.OverridePromptParams = _overridePromptParams
 
 	if src.Scenario != nil {
 		tmp := *src.Scenario

@@ -39,8 +39,8 @@ type IExptConfigManager interface {
 // IExptExecutionManager 实验执行控制接口（负责实验的运行、监控和状态管理）
 type IExptExecutionManager interface {
 	CheckRun(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.ExptRunCheckOptionFn) error
-	Run(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, runMode entity.ExptRunMode) error
-	RetryUnSuccess(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session) error
+	Run(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error
+	RetryUnSuccess(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, ext map[string]string) error
 
 	Invoke(ctx context.Context, invokeExptReq *entity.InvokeExptReq) error
 	Finish(ctx context.Context, exptID *entity.Experiment, exptRunID int64, session *entity.Session) error

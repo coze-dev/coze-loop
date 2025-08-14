@@ -389,6 +389,29 @@ func (l *LocalExperimentService) ListExperimentStats(ctx context.Context, req *e
 	return result.GetSuccess(), nil
 }
 
+// UpsertExptTurnResultFilter
+// 更新报告ck
+func (l *LocalExperimentService) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (*expt.UpsertExptTurnResultFilterResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceUpsertExptTurnResultFilterArgs)
+		result := out.(*expt.ExperimentServiceUpsertExptTurnResultFilterResult)
+		resp, err := l.impl.UpsertExptTurnResultFilter(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceUpsertExptTurnResultFilterArgs{Req: req}
+	result := &expt.ExperimentServiceUpsertExptTurnResultFilterResult{}
+	ctx = l.injectRPCInfo(ctx, "UpsertExptTurnResultFilter")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

@@ -19,7 +19,8 @@ const (
 	// Prompt
 	EvalTargetType_CozeLoopPrompt EvalTargetType = 2
 	// Trace
-	EvalTargetType_Trace EvalTargetType = 3
+	EvalTargetType_Trace        EvalTargetType = 3
+	EvalTargetType_CozeWorkflow EvalTargetType = 4
 )
 
 func (p EvalTargetType) String() string {
@@ -30,6 +31,8 @@ func (p EvalTargetType) String() string {
 		return "CozeLoopPrompt"
 	case EvalTargetType_Trace:
 		return "Trace"
+	case EvalTargetType_CozeWorkflow:
+		return "CozeWorkflow"
 	}
 	return "<UNSET>"
 }
@@ -42,6 +45,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_CozeLoopPrompt, nil
 	case "Trace":
 		return EvalTargetType_Trace, nil
+	case "CozeWorkflow":
+		return EvalTargetType_CozeWorkflow, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }
@@ -1371,6 +1376,8 @@ type EvalTargetContent struct {
 	CozeBot *CozeBot `thrift:"coze_bot,101,optional" frugal:"101,optional,CozeBot" form:"coze_bot" json:"coze_bot,omitempty" query:"coze_bot"`
 	// EvalTargetType=1 时，传参此字段。 评测对象为 EvalPrompt 时, 需要设置 Prompt 信息
 	Prompt *EvalPrompt `thrift:"prompt,102,optional" frugal:"102,optional,EvalPrompt" form:"prompt" json:"prompt,omitempty" query:"prompt"`
+	// EvalTargetType=4 时，传参此字段。 评测对象为 CozeWorkflow 时, 需要设置 CozeWorkflow 信息
+	CozeWorkflow *CozeWorkflow `thrift:"coze_workflow,103,optional" frugal:"103,optional,CozeWorkflow" form:"coze_workflow" json:"coze_workflow,omitempty" query:"coze_workflow"`
 }
 
 func NewEvalTargetContent() *EvalTargetContent {
@@ -1427,6 +1434,18 @@ func (p *EvalTargetContent) GetPrompt() (v *EvalPrompt) {
 	}
 	return p.Prompt
 }
+
+var EvalTargetContent_CozeWorkflow_DEFAULT *CozeWorkflow
+
+func (p *EvalTargetContent) GetCozeWorkflow() (v *CozeWorkflow) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCozeWorkflow() {
+		return EvalTargetContent_CozeWorkflow_DEFAULT
+	}
+	return p.CozeWorkflow
+}
 func (p *EvalTargetContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
 }
@@ -1439,12 +1458,16 @@ func (p *EvalTargetContent) SetCozeBot(val *CozeBot) {
 func (p *EvalTargetContent) SetPrompt(val *EvalPrompt) {
 	p.Prompt = val
 }
+func (p *EvalTargetContent) SetCozeWorkflow(val *CozeWorkflow) {
+	p.CozeWorkflow = val
+}
 
 var fieldIDToName_EvalTargetContent = map[int16]string{
 	1:   "input_schemas",
 	2:   "output_schemas",
 	101: "coze_bot",
 	102: "prompt",
+	103: "coze_workflow",
 }
 
 func (p *EvalTargetContent) IsSetInputSchemas() bool {
@@ -1461,6 +1484,10 @@ func (p *EvalTargetContent) IsSetCozeBot() bool {
 
 func (p *EvalTargetContent) IsSetPrompt() bool {
 	return p.Prompt != nil
+}
+
+func (p *EvalTargetContent) IsSetCozeWorkflow() bool {
+	return p.CozeWorkflow != nil
 }
 
 func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
@@ -1508,6 +1535,14 @@ func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
 		case 102:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField102(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 103:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField103(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1604,6 +1639,14 @@ func (p *EvalTargetContent) ReadField102(iprot thrift.TProtocol) error {
 	p.Prompt = _field
 	return nil
 }
+func (p *EvalTargetContent) ReadField103(iprot thrift.TProtocol) error {
+	_field := NewCozeWorkflow()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CozeWorkflow = _field
+	return nil
+}
 
 func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1625,6 +1668,10 @@ func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField102(oprot); err != nil {
 			fieldId = 102
+			goto WriteFieldError
+		}
+		if err = p.writeField103(oprot); err != nil {
+			fieldId = 103
 			goto WriteFieldError
 		}
 	}
@@ -1733,6 +1780,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
 }
+func (p *EvalTargetContent) writeField103(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCozeWorkflow() {
+		if err = oprot.WriteFieldBegin("coze_workflow", thrift.STRUCT, 103); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CozeWorkflow.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
+}
 
 func (p *EvalTargetContent) String() string {
 	if p == nil {
@@ -1758,6 +1823,9 @@ func (p *EvalTargetContent) DeepEqual(ano *EvalTargetContent) bool {
 		return false
 	}
 	if !p.Field102DeepEqual(ano.Prompt) {
+		return false
+	}
+	if !p.Field103DeepEqual(ano.CozeWorkflow) {
 		return false
 	}
 	return true
@@ -1799,6 +1867,574 @@ func (p *EvalTargetContent) Field101DeepEqual(src *CozeBot) bool {
 func (p *EvalTargetContent) Field102DeepEqual(src *EvalPrompt) bool {
 
 	if !p.Prompt.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetContent) Field103DeepEqual(src *CozeWorkflow) bool {
+
+	if !p.CozeWorkflow.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type CozeWorkflow struct {
+	ID      *string `thrift:"id,1,optional" frugal:"1,optional,string" form:"id" json:"id,omitempty" query:"id"`
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	// DTO使用，不存数据库
+	Name *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// DTO使用，不存数据库
+	AvatarURL *string `thrift:"avatar_url,4,optional" frugal:"4,optional,string" form:"avatar_url" json:"avatar_url,omitempty" query:"avatar_url"`
+	// DTO使用，不存数据库
+	Description *string          `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	BaseInfo    *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" json:"base_info" form:"base_info" query:"base_info"`
+}
+
+func NewCozeWorkflow() *CozeWorkflow {
+	return &CozeWorkflow{}
+}
+
+func (p *CozeWorkflow) InitDefault() {
+}
+
+var CozeWorkflow_ID_DEFAULT string
+
+func (p *CozeWorkflow) GetID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return CozeWorkflow_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var CozeWorkflow_Version_DEFAULT string
+
+func (p *CozeWorkflow) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return CozeWorkflow_Version_DEFAULT
+	}
+	return *p.Version
+}
+
+var CozeWorkflow_Name_DEFAULT string
+
+func (p *CozeWorkflow) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return CozeWorkflow_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var CozeWorkflow_AvatarURL_DEFAULT string
+
+func (p *CozeWorkflow) GetAvatarURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAvatarURL() {
+		return CozeWorkflow_AvatarURL_DEFAULT
+	}
+	return *p.AvatarURL
+}
+
+var CozeWorkflow_Description_DEFAULT string
+
+func (p *CozeWorkflow) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return CozeWorkflow_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var CozeWorkflow_BaseInfo_DEFAULT *common.BaseInfo
+
+func (p *CozeWorkflow) GetBaseInfo() (v *common.BaseInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseInfo() {
+		return CozeWorkflow_BaseInfo_DEFAULT
+	}
+	return p.BaseInfo
+}
+func (p *CozeWorkflow) SetID(val *string) {
+	p.ID = val
+}
+func (p *CozeWorkflow) SetVersion(val *string) {
+	p.Version = val
+}
+func (p *CozeWorkflow) SetName(val *string) {
+	p.Name = val
+}
+func (p *CozeWorkflow) SetAvatarURL(val *string) {
+	p.AvatarURL = val
+}
+func (p *CozeWorkflow) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *CozeWorkflow) SetBaseInfo(val *common.BaseInfo) {
+	p.BaseInfo = val
+}
+
+var fieldIDToName_CozeWorkflow = map[int16]string{
+	1:   "id",
+	2:   "version",
+	3:   "name",
+	4:   "avatar_url",
+	5:   "description",
+	100: "base_info",
+}
+
+func (p *CozeWorkflow) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *CozeWorkflow) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *CozeWorkflow) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *CozeWorkflow) IsSetAvatarURL() bool {
+	return p.AvatarURL != nil
+}
+
+func (p *CozeWorkflow) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *CozeWorkflow) IsSetBaseInfo() bool {
+	return p.BaseInfo != nil
+}
+
+func (p *CozeWorkflow) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CozeWorkflow[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CozeWorkflow) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *CozeWorkflow) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+func (p *CozeWorkflow) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *CozeWorkflow) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AvatarURL = _field
+	return nil
+}
+func (p *CozeWorkflow) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *CozeWorkflow) ReadField100(iprot thrift.TProtocol) error {
+	_field := common.NewBaseInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseInfo = _field
+	return nil
+}
+
+func (p *CozeWorkflow) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CozeWorkflow"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CozeWorkflow) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CozeWorkflow) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CozeWorkflow) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CozeWorkflow) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAvatarURL() {
+		if err = oprot.WriteFieldBegin("avatar_url", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AvatarURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *CozeWorkflow) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *CozeWorkflow) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseInfo() {
+		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+
+func (p *CozeWorkflow) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CozeWorkflow(%+v)", *p)
+
+}
+
+func (p *CozeWorkflow) DeepEqual(ano *CozeWorkflow) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AvatarURL) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.BaseInfo) {
+		return false
+	}
+	return true
+}
+
+func (p *CozeWorkflow) Field1DeepEqual(src *string) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CozeWorkflow) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CozeWorkflow) Field3DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CozeWorkflow) Field4DeepEqual(src *string) bool {
+
+	if p.AvatarURL == src {
+		return true
+	} else if p.AvatarURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AvatarURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CozeWorkflow) Field5DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CozeWorkflow) Field100DeepEqual(src *common.BaseInfo) bool {
+
+	if !p.BaseInfo.DeepEqual(src) {
 		return false
 	}
 	return true

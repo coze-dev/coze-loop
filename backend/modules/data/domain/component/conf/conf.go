@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/entity"
 	common_entity "github.com/coze-dev/coze-loop/backend/modules/data/domain/entity"
+	entity2 "github.com/coze-dev/coze-loop/backend/modules/data/domain/tag/entity"
 )
 
 //go:generate mockgen -destination=mocks/conf.go -package=mocks . IConfig
@@ -18,6 +19,7 @@ type IConfig interface {
 	GetProducerConfig() *ProducerConfig
 	GetSnapshotRetry() *SnapshotRetry
 	GetConsumerConfigs() *ConsumerConfig
+	GetTagSpec() *TagSpec
 }
 
 type DatasetFeature struct {
@@ -69,6 +71,11 @@ type ConsumerConfig struct {
 	ConsumeTimeout time.Duration `mapstructure:"consume_timeout"`
 }
 
+type TagSpec struct {
+	DefaultSpec  *entity2.TagSpec           `mapstructure:"default_spec" json:"default_spec"`
+	SpecsBySpace map[int64]*entity2.TagSpec `mapstructure:"space_specs" json:"space_specs"`
+}
+
 func (s *DatasetSpec) GetSpecByCategory(category entity.DatasetCategory) *entity.DatasetSpec {
 	if s == nil {
 		return nil
@@ -102,4 +109,20 @@ func (c *SnapshotRetry) GetMaxProcessingTime() time.Duration {
 		return defaultTTL
 	}
 	return time.Duration(c.MaxProcessingTimeS) * time.Second
+}
+
+func (t *TagSpec) GetSpecBySpace(spaceID int64) *entity2.TagSpec {
+	if t == nil {
+		return nil
+	}
+	if s, ok := t.SpecsBySpace[spaceID]; ok {
+		return s
+	}
+	if t.DefaultSpec == nil {
+		return &entity2.TagSpec{
+			MaxHeight: 1,
+			MaxWidth:  20,
+		}
+	}
+	return t.DefaultSpec
 }

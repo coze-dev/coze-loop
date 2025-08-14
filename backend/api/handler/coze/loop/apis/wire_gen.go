@@ -8,6 +8,7 @@ package apis
 
 import (
 	"context"
+
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -21,6 +22,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
@@ -28,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	application5 "github.com/coze-dev/coze-loop/backend/modules/data/application"
+	conf2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
 	application4 "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
@@ -76,20 +80,20 @@ var (
 	_wireValue = []endpoint.Middleware(nil)
 )
 
-func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, configFactory conf.IConfigLoaderFactory, limiterFactory limiter.IRateLimiterFactory, benefitSvc benefit.IBenefitService, llmClient llmruntimeservice.Client, authClient authservice.Client, fileClient fileservice.Client, userClient userservice.Client, auditClient audit.IAuditService) (*PromptHandler, error) {
-	promptManageService, err := application2.InitPromptManageApplication(idgen2, db2, redisCli, configFactory, llmClient, authClient, fileClient, userClient, auditClient)
+func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, meter metrics.Meter, configFactory conf.IConfigLoaderFactory, limiterFactory limiter.IRateLimiterFactory, benefitSvc benefit.IBenefitService, llmClient llmruntimeservice.Client, authClient authservice.Client, fileClient fileservice.Client, userClient userservice.Client, auditClient audit.IAuditService) (*PromptHandler, error) {
+	promptManageService, err := application2.InitPromptManageApplication(idgen2, db2, redisCli, meter, configFactory, llmClient, authClient, fileClient, userClient, auditClient)
 	if err != nil {
 		return nil, err
 	}
-	promptDebugService, err := application2.InitPromptDebugApplication(idgen2, db2, redisCli, configFactory, llmClient, authClient, fileClient, benefitSvc)
+	promptDebugService, err := application2.InitPromptDebugApplication(idgen2, db2, redisCli, meter, configFactory, llmClient, authClient, fileClient, benefitSvc)
 	if err != nil {
 		return nil, err
 	}
-	promptExecuteService, err := application2.InitPromptExecuteApplication(idgen2, db2, redisCli, configFactory, llmClient, fileClient)
+	promptExecuteService, err := application2.InitPromptExecuteApplication(idgen2, db2, redisCli, meter, configFactory, llmClient, fileClient)
 	if err != nil {
 		return nil, err
 	}
-	promptOpenAPIService, err := application2.InitPromptOpenAPIApplication(idgen2, db2, redisCli, configFactory, limiterFactory, llmClient, authClient, fileClient)
+	promptOpenAPIService, err := application2.InitPromptOpenAPIApplication(idgen2, db2, redisCli, meter, configFactory, limiterFactory, llmClient, authClient, fileClient)
 	if err != nil {
 		return nil, err
 	}
@@ -110,14 +114,14 @@ func InitLLMHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provi
 	return llmHandler, nil
 }
 
-func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, client datasetservice.Client, promptClient promptmanageservice.Client, pec promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, auditClient audit.IAuditService, llmClient llmruntimeservice.Client, userClient userservice.Client, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory) (*EvaluationHandler, error) {
+func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, ckDb ck.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, client datasetservice.Client, promptClient promptmanageservice.Client, pec promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, auditClient audit.IAuditService, llmClient llmruntimeservice.Client, userClient userservice.Client, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory) (*EvaluationHandler, error) {
 	evaluationSetService := application4.InitEvaluationSetApplication(client, authClient, meter, userClient)
 	evaluatorService, err := application4.InitEvaluatorApplication(ctx, idgen2, authClient, db2, configFactory, mqFactory, llmClient, meter, userClient, auditClient, cmdable, benefitSvc, limiterFactory)
 	if err != nil {
 		return nil, err
 	}
 	evalTargetService := application4.InitEvalTargetApplication(ctx, idgen2, db2, promptClient, pec, authClient, cmdable, meter)
-	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc)
+	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb)
 	if err != nil {
 		return nil, err
 	}
@@ -125,17 +129,25 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 	return evaluationHandler, nil
 }
 
-func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, auth authservice.Client) (*DataHandler, error) {
-	iDatasetApplication, err := application5.InitDatasetApplication(idgen2, db2, redisCli, configFactory, mqFactory, objectStorage, batchObjectStorage, auditClient, auth)
+func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, auth authservice.Client, userClient userservice.Client) (*DataHandler, error) {
+	iConfigLoader, err := conf2.NewConfigerFactory(configFactory)
 	if err != nil {
 		return nil, err
 	}
-	dataHandler := NewDataHandler(iDatasetApplication)
+	iDatasetApplication, err := application5.InitDatasetApplication(idgen2, db2, redisCli, configFactory, iConfigLoader, mqFactory, objectStorage, batchObjectStorage, auditClient, auth)
+	if err != nil {
+		return nil, err
+	}
+	tagService, err := application5.InitTagApplication(idgen2, db2, redisCli, iConfigLoader, userClient, auth)
+	if err != nil {
+		return nil, err
+	}
+	dataHandler := NewDataHandler(iDatasetApplication, tagService)
 	return dataHandler, nil
 }
 
-func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client) (*ObservabilityHandler, error) {
-	v, err := application6.InitTraceApplication(db2, mqFactory, configFactory, fileClient, ckDb, benefit2, authCli, meter)
+func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, tagClient tagservice.Client) (*ObservabilityHandler, error) {
+	iTraceApplication, err := application6.InitTraceApplication(db2, ckDb, meter, mqFactory, configFactory, fileClient, benefit2, authCli, userClient, evalClient, tagClient)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +155,11 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	observabilityHandler := NewObservabilityHandler(v, iTraceIngestionApplication)
+	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, authCli, meter)
+	if err != nil {
+		return nil, err
+	}
+	observabilityHandler := NewObservabilityHandler(iTraceApplication, iTraceIngestionApplication, iObservabilityOpenAPIApplication)
 	return observabilityHandler, nil
 }
 
@@ -162,10 +178,10 @@ var (
 	evaluationSet = wire.NewSet(
 		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication,
 	)
-	datasetSet = wire.NewSet(
-		NewDataHandler, application5.InitDatasetApplication,
+	dataSet = wire.NewSet(
+		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(
-		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication,
+		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication,
 	)
 )

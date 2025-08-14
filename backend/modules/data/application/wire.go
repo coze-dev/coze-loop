@@ -16,9 +16,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
+	tag2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/service"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/entity"
+	service2 "github.com/coze-dev/coze-loop/backend/modules/data/domain/tag/service"
 	dataset_config "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/mq/producer"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset"
@@ -26,6 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/mysql"
 	oss_dao "github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/oss"
 	redis2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/redis"
+	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/vfs/oss"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/vfs/unionfs"
@@ -54,6 +59,17 @@ var (
 		lock.NewRedisLocker,
 		NewItemProviderDAO,
 	)
+
+	tagSet = wire.NewSet(
+		NewTagApplicationImpl,
+		service2.NewTagServiceImpl,
+		tag.NewTagRepoImpl,
+		dataset_config.NewConfiger,
+		foundation.NewAuthRPCProvider,
+		userinfo.NewUserInfoServiceImpl,
+		foundation.NewUserRPCProvider,
+		lock.NewRedisLocker,
+	)
 )
 
 func NewItemProviderDAO(batchObjectStorage fileserver.BatchObjectStorage) map[entity.Provider]item_dao.ItemDAO {
@@ -67,6 +83,7 @@ func InitDatasetApplication(
 	db db.Provider,
 	cmdable redis.Cmdable,
 	configFactory conf.IConfigLoaderFactory,
+	configLoader conf.IConfigLoader,
 	mqFactory mq.IFactory,
 	objectStorage fileserver.ObjectStorage,
 	batchObjectStorage fileserver.BatchObjectStorage,
@@ -76,5 +93,15 @@ func InitDatasetApplication(
 	wire.Build(
 		datasetSet,
 	)
+	return nil, nil
+}
+
+func InitTagApplication(idgen idgen.IIDGenerator,
+	db db.Provider,
+	cmdable redis.Cmdable,
+	configLoader conf.IConfigLoader,
+	userClient userservice.Client,
+	authClient authservice.Client) (tag2.TagService, error) {
+	wire.Build(tagSet)
 	return nil, nil
 }

@@ -54,6 +54,7 @@
   "no_draft_change": "Currently no draft changes",
   "submitted": "Submitted",
   "placeholder_var_create_error": "The Placeholder variable name does not exist or is named incorrectly, so creation failed.",
+  "placeholder_var_execute_error": "The Placeholder variable name does not exist or is named incorrectly",
   "model_id": "Model ID",
   "model_name": "Model name",
   "submission_no_version_diff": "There is no version difference in this submission.",

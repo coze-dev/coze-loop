@@ -52,18 +52,18 @@ func (mr *MockEvaluatorServiceMockRecorder) BatchGetEvaluator(arg0, arg1, arg2, 
 }
 
 // BatchGetEvaluatorVersion mocks base method.
-func (m *MockEvaluatorService) BatchGetEvaluatorVersion(arg0 context.Context, arg1 []int64, arg2 bool) ([]*entity.Evaluator, error) {
+func (m *MockEvaluatorService) BatchGetEvaluatorVersion(arg0 context.Context, arg1 *int64, arg2 []int64, arg3 bool) ([]*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetEvaluatorVersion", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorVersion", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.Evaluator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetEvaluatorVersion indicates an expected call of BatchGetEvaluatorVersion.
-func (mr *MockEvaluatorServiceMockRecorder) BatchGetEvaluatorVersion(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockEvaluatorServiceMockRecorder) BatchGetEvaluatorVersion(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).BatchGetEvaluatorVersion), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).BatchGetEvaluatorVersion), arg0, arg1, arg2, arg3)
 }
 
 // CheckNameExist mocks base method.

@@ -22,6 +22,11 @@ var (
 )
 
 func (p *ModelConfig) IsValid() error {
+	if p.ResponseFormat != nil {
+		if err := p.ResponseFormat.IsValid(); err != nil {
+			return fmt.Errorf("field ResponseFormat not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *Message) IsValid() error {
@@ -69,5 +74,8 @@ func (p *Tool) IsValid() error {
 	return nil
 }
 func (p *BizParam) IsValid() error {
+	return nil
+}
+func (p *ResponseFormat) IsValid() error {
 	return nil
 }

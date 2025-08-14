@@ -425,6 +425,18 @@ const (
 	FieldType_ExptType           FieldType = 30
 	FieldType_SourceType         FieldType = 31
 	FieldType_SourceID           FieldType = 32
+	FieldType_KeywordSearch      FieldType = 41
+	// 使用二级key，column_key
+	FieldType_EvalSetColumn FieldType = 42
+	// 使用二级key, Annotation_key（具体参考人工标注设计）
+	FieldType_Annotation FieldType = 43
+	// 使用二级key，目前使用固定key：content
+	FieldType_ActualOutput            FieldType = 44
+	FieldType_EvaluatorScoreCorrected FieldType = 45
+	// 使用二级key，evaluator_version_id
+	FieldType_Evaluator    FieldType = 46
+	FieldType_ItemID       FieldType = 47
+	FieldType_ItemRunState FieldType = 48
 )
 
 func (p FieldType) String() string {
@@ -461,6 +473,22 @@ func (p FieldType) String() string {
 		return "SourceType"
 	case FieldType_SourceID:
 		return "SourceID"
+	case FieldType_KeywordSearch:
+		return "KeywordSearch"
+	case FieldType_EvalSetColumn:
+		return "EvalSetColumn"
+	case FieldType_Annotation:
+		return "Annotation"
+	case FieldType_ActualOutput:
+		return "ActualOutput"
+	case FieldType_EvaluatorScoreCorrected:
+		return "EvaluatorScoreCorrected"
+	case FieldType_Evaluator:
+		return "Evaluator"
+	case FieldType_ItemID:
+		return "ItemID"
+	case FieldType_ItemRunState:
+		return "ItemRunState"
 	}
 	return "<UNSET>"
 }
@@ -499,6 +527,22 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_SourceType, nil
 	case "SourceID":
 		return FieldType_SourceID, nil
+	case "KeywordSearch":
+		return FieldType_KeywordSearch, nil
+	case "EvalSetColumn":
+		return FieldType_EvalSetColumn, nil
+	case "Annotation":
+		return FieldType_Annotation, nil
+	case "ActualOutput":
+		return FieldType_ActualOutput, nil
+	case "EvaluatorScoreCorrected":
+		return FieldType_EvaluatorScoreCorrected, nil
+	case "Evaluator":
+		return FieldType_Evaluator, nil
+	case "ItemID":
+		return FieldType_ItemID, nil
+	case "ItemRunState":
+		return FieldType_ItemRunState, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }
@@ -538,6 +582,14 @@ const (
 	FilterOperatorType_In FilterOperatorType = 7
 	// 不包含
 	FilterOperatorType_NotIn FilterOperatorType = 8
+	// 全文搜索
+	FilterOperatorType_Like FilterOperatorType = 9
+	// 全文搜索反选
+	FilterOperatorType_NotLike FilterOperatorType = 10
+	// 为空
+	FilterOperatorType_IsNull FilterOperatorType = 11
+	//非空
+	FilterOperatorType_IsNotNull FilterOperatorType = 12
 )
 
 func (p FilterOperatorType) String() string {
@@ -560,6 +612,14 @@ func (p FilterOperatorType) String() string {
 		return "In"
 	case FilterOperatorType_NotIn:
 		return "NotIn"
+	case FilterOperatorType_Like:
+		return "Like"
+	case FilterOperatorType_NotLike:
+		return "NotLike"
+	case FilterOperatorType_IsNull:
+		return "IsNull"
+	case FilterOperatorType_IsNotNull:
+		return "IsNotNull"
 	}
 	return "<UNSET>"
 }
@@ -584,6 +644,14 @@ func FilterOperatorTypeFromString(s string) (FilterOperatorType, error) {
 		return FilterOperatorType_In, nil
 	case "NotIn":
 		return FilterOperatorType_NotIn, nil
+	case "Like":
+		return FilterOperatorType_Like, nil
+	case "NotLike":
+		return FilterOperatorType_NotLike, nil
+	case "IsNull":
+		return FilterOperatorType_IsNull, nil
+	case "IsNotNull":
+		return FilterOperatorType_IsNotNull, nil
 	}
 	return FilterOperatorType(0), fmt.Errorf("not a valid FilterOperatorType string")
 }
@@ -6011,6 +6079,8 @@ type ColumnEvalSetField struct {
 	Name        *string             `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Description *string             `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	ContentType *common.ContentType `thrift:"content_type,4,optional" frugal:"4,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
+	//    5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat
+	TextSchema *string `thrift:"text_schema,6,optional" frugal:"6,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
 }
 
 func NewColumnEvalSetField() *ColumnEvalSetField {
@@ -6067,6 +6137,18 @@ func (p *ColumnEvalSetField) GetContentType() (v common.ContentType) {
 	}
 	return *p.ContentType
 }
+
+var ColumnEvalSetField_TextSchema_DEFAULT string
+
+func (p *ColumnEvalSetField) GetTextSchema() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTextSchema() {
+		return ColumnEvalSetField_TextSchema_DEFAULT
+	}
+	return *p.TextSchema
+}
 func (p *ColumnEvalSetField) SetKey(val *string) {
 	p.Key = val
 }
@@ -6079,12 +6161,16 @@ func (p *ColumnEvalSetField) SetDescription(val *string) {
 func (p *ColumnEvalSetField) SetContentType(val *common.ContentType) {
 	p.ContentType = val
 }
+func (p *ColumnEvalSetField) SetTextSchema(val *string) {
+	p.TextSchema = val
+}
 
 var fieldIDToName_ColumnEvalSetField = map[int16]string{
 	1: "key",
 	2: "name",
 	3: "description",
 	4: "content_type",
+	6: "text_schema",
 }
 
 func (p *ColumnEvalSetField) IsSetKey() bool {
@@ -6101,6 +6187,10 @@ func (p *ColumnEvalSetField) IsSetDescription() bool {
 
 func (p *ColumnEvalSetField) IsSetContentType() bool {
 	return p.ContentType != nil
+}
+
+func (p *ColumnEvalSetField) IsSetTextSchema() bool {
+	return p.TextSchema != nil
 }
 
 func (p *ColumnEvalSetField) Read(iprot thrift.TProtocol) (err error) {
@@ -6148,6 +6238,14 @@ func (p *ColumnEvalSetField) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6226,6 +6324,17 @@ func (p *ColumnEvalSetField) ReadField4(iprot thrift.TProtocol) error {
 	p.ContentType = _field
 	return nil
 }
+func (p *ColumnEvalSetField) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TextSchema = _field
+	return nil
+}
 
 func (p *ColumnEvalSetField) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6247,6 +6356,10 @@ func (p *ColumnEvalSetField) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -6339,6 +6452,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ColumnEvalSetField) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTextSchema() {
+		if err = oprot.WriteFieldBegin("text_schema", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TextSchema); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ColumnEvalSetField) String() string {
 	if p == nil {
@@ -6364,6 +6495,9 @@ func (p *ColumnEvalSetField) DeepEqual(ano *ColumnEvalSetField) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ContentType) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TextSchema) {
 		return false
 	}
 	return true
@@ -6413,6 +6547,18 @@ func (p *ColumnEvalSetField) Field4DeepEqual(src *common.ContentType) bool {
 		return false
 	}
 	if strings.Compare(*p.ContentType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvalSetField) Field6DeepEqual(src *string) bool {
+
+	if p.TextSchema == src {
+		return true
+	} else if p.TextSchema == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TextSchema, *src) != 0 {
 		return false
 	}
 	return true
@@ -9065,8 +9211,288 @@ func (p *ExperimentTurnPayload) Field5DeepEqual(src *TurnSystemInfo) bool {
 	return true
 }
 
+type KeywordSearch struct {
+	Keyword      *string        `thrift:"keyword,1,optional" frugal:"1,optional,string" form:"keyword" json:"keyword,omitempty" query:"keyword"`
+	FilterFields []*FilterField `thrift:"filter_fields,2,optional" frugal:"2,optional,list<FilterField>" form:"filter_fields" json:"filter_fields,omitempty" query:"filter_fields"`
+}
+
+func NewKeywordSearch() *KeywordSearch {
+	return &KeywordSearch{}
+}
+
+func (p *KeywordSearch) InitDefault() {
+}
+
+var KeywordSearch_Keyword_DEFAULT string
+
+func (p *KeywordSearch) GetKeyword() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetKeyword() {
+		return KeywordSearch_Keyword_DEFAULT
+	}
+	return *p.Keyword
+}
+
+var KeywordSearch_FilterFields_DEFAULT []*FilterField
+
+func (p *KeywordSearch) GetFilterFields() (v []*FilterField) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterFields() {
+		return KeywordSearch_FilterFields_DEFAULT
+	}
+	return p.FilterFields
+}
+func (p *KeywordSearch) SetKeyword(val *string) {
+	p.Keyword = val
+}
+func (p *KeywordSearch) SetFilterFields(val []*FilterField) {
+	p.FilterFields = val
+}
+
+var fieldIDToName_KeywordSearch = map[int16]string{
+	1: "keyword",
+	2: "filter_fields",
+}
+
+func (p *KeywordSearch) IsSetKeyword() bool {
+	return p.Keyword != nil
+}
+
+func (p *KeywordSearch) IsSetFilterFields() bool {
+	return p.FilterFields != nil
+}
+
+func (p *KeywordSearch) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_KeywordSearch[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *KeywordSearch) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Keyword = _field
+	return nil
+}
+func (p *KeywordSearch) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*FilterField, 0, size)
+	values := make([]FilterField, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FilterFields = _field
+	return nil
+}
+
+func (p *KeywordSearch) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("KeywordSearch"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *KeywordSearch) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKeyword() {
+		if err = oprot.WriteFieldBegin("keyword", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Keyword); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *KeywordSearch) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterFields() {
+		if err = oprot.WriteFieldBegin("filter_fields", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FilterFields)); err != nil {
+			return err
+		}
+		for _, v := range p.FilterFields {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *KeywordSearch) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("KeywordSearch(%+v)", *p)
+
+}
+
+func (p *KeywordSearch) DeepEqual(ano *KeywordSearch) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Keyword) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FilterFields) {
+		return false
+	}
+	return true
+}
+
+func (p *KeywordSearch) Field1DeepEqual(src *string) bool {
+
+	if p.Keyword == src {
+		return true
+	} else if p.Keyword == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Keyword, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *KeywordSearch) Field2DeepEqual(src []*FilterField) bool {
+
+	if len(p.FilterFields) != len(src) {
+		return false
+	}
+	for i, v := range p.FilterFields {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type ExperimentFilter struct {
-	Filters *Filters `thrift:"filters,1,optional" frugal:"1,optional,Filters" form:"filters" json:"filters,omitempty" query:"filters"`
+	Filters       *Filters       `thrift:"filters,1,optional" frugal:"1,optional,Filters" form:"filters" json:"filters,omitempty" query:"filters"`
+	KeywordSearch *KeywordSearch `thrift:"keyword_search,2,optional" frugal:"2,optional,KeywordSearch" form:"keyword_search" json:"keyword_search,omitempty" query:"keyword_search"`
 }
 
 func NewExperimentFilter() *ExperimentFilter {
@@ -9087,16 +9513,36 @@ func (p *ExperimentFilter) GetFilters() (v *Filters) {
 	}
 	return p.Filters
 }
+
+var ExperimentFilter_KeywordSearch_DEFAULT *KeywordSearch
+
+func (p *ExperimentFilter) GetKeywordSearch() (v *KeywordSearch) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetKeywordSearch() {
+		return ExperimentFilter_KeywordSearch_DEFAULT
+	}
+	return p.KeywordSearch
+}
 func (p *ExperimentFilter) SetFilters(val *Filters) {
 	p.Filters = val
+}
+func (p *ExperimentFilter) SetKeywordSearch(val *KeywordSearch) {
+	p.KeywordSearch = val
 }
 
 var fieldIDToName_ExperimentFilter = map[int16]string{
 	1: "filters",
+	2: "keyword_search",
 }
 
 func (p *ExperimentFilter) IsSetFilters() bool {
 	return p.Filters != nil
+}
+
+func (p *ExperimentFilter) IsSetKeywordSearch() bool {
+	return p.KeywordSearch != nil
 }
 
 func (p *ExperimentFilter) Read(iprot thrift.TProtocol) (err error) {
@@ -9120,6 +9566,14 @@ func (p *ExperimentFilter) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9162,6 +9616,14 @@ func (p *ExperimentFilter) ReadField1(iprot thrift.TProtocol) error {
 	p.Filters = _field
 	return nil
 }
+func (p *ExperimentFilter) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewKeywordSearch()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.KeywordSearch = _field
+	return nil
+}
 
 func (p *ExperimentFilter) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -9171,6 +9633,10 @@ func (p *ExperimentFilter) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -9209,6 +9675,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ExperimentFilter) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKeywordSearch() {
+		if err = oprot.WriteFieldBegin("keyword_search", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.KeywordSearch.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *ExperimentFilter) String() string {
 	if p == nil {
@@ -9227,12 +9711,22 @@ func (p *ExperimentFilter) DeepEqual(ano *ExperimentFilter) bool {
 	if !p.Field1DeepEqual(ano.Filters) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.KeywordSearch) {
+		return false
+	}
 	return true
 }
 
 func (p *ExperimentFilter) Field1DeepEqual(src *Filters) bool {
 
 	if !p.Filters.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExperimentFilter) Field2DeepEqual(src *KeywordSearch) bool {
+
+	if !p.KeywordSearch.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -9520,7 +10014,8 @@ func (p *Filters) Field2DeepEqual(src *FilterLogicOp) bool {
 
 type FilterField struct {
 	FieldType FieldType `thrift:"field_type,1,required" frugal:"1,required,FieldType" form:"field_type,required" json:"field_type,required" query:"field_type,required"`
-	FieldKey  *string   `thrift:"field_key,2,optional" frugal:"2,optional,string" form:"field_key" json:"field_key,omitempty" query:"field_key"`
+	// 二级key放此字段里
+	FieldKey *string `thrift:"field_key,2,optional" frugal:"2,optional,string" form:"field_key" json:"field_key,omitempty" query:"field_key"`
 }
 
 func NewFilterField() *FilterField {

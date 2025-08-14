@@ -6,17 +6,23 @@ package trace
 import (
 	"strconv"
 
-	"github.com/samber/lo"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
+	"github.com/samber/lo"
 )
 
-func SpanDO2DTO(s *loop_span.Span) *span.OutputSpan {
+func SpanDO2DTO(
+	s *loop_span.Span,
+	userMap map[string]*common.UserInfo,
+	evalMap map[int64]*rpc.Evaluator,
+	tagMap map[int64]*rpc.TagInfo,
+) *span.OutputSpan {
 	outSpan := &span.OutputSpan{
 		TraceID:         s.TraceID,
 		SpanID:          s.SpanID,
@@ -68,6 +74,12 @@ func SpanDO2DTO(s *loop_span.Span) *span.OutputSpan {
 	}
 	outSpan.SetSystemTags(systemTags)
 	outSpan.SetCustomTags(customTags)
+	if s.Annotations != nil {
+		annotationDTOList := AnnotationListDO2DTO(s.Annotations, userMap, evalMap, tagMap)
+		if len(annotationDTOList) > 0 {
+			outSpan.Annotations = annotationDTOList
+		}
+	}
 	return outSpan
 }
 
@@ -102,10 +114,15 @@ func SpanDTO2DO(span *span.InputSpan) *loop_span.Span {
 	return outSpan
 }
 
-func SpanListDO2DTO(spans loop_span.SpanList) []*span.OutputSpan {
+func SpanListDO2DTO(
+	spans loop_span.SpanList,
+	userMap map[string]*common.UserInfo,
+	evalMap map[int64]*rpc.Evaluator,
+	tagMap map[int64]*rpc.TagInfo,
+) []*span.OutputSpan {
 	ret := make([]*span.OutputSpan, len(spans))
 	for i, s := range spans {
-		ret[i] = SpanDO2DTO(s)
+		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap)
 	}
 	return ret
 }

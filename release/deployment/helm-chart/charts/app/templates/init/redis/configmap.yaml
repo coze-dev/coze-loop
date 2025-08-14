@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "redis-init-configmap"
+data:
+  entrypoint.sh: |-
+{{ .Files.Get "bootstrap/init/redis/entrypoint.sh" | nindent 4 }}

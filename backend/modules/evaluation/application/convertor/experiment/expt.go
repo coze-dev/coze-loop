@@ -213,11 +213,11 @@ func ToExptStatsDTO(stats *entity.ExptStats, aggrResult *entity.ExptAggregateRes
 		return nil
 	}
 	exptStatistics := &domain_expt.ExptStatistics{
-		PendingTurnCnt:    gcond.If(stats.PendingTurnCnt > 0, gptr.Of(stats.PendingTurnCnt), gptr.Of(int32(0))),
-		SuccessTurnCnt:    gcond.If(stats.SuccessTurnCnt > 0, gptr.Of(stats.SuccessTurnCnt), gptr.Of(int32(0))),
-		FailTurnCnt:       gcond.If(stats.FailTurnCnt > 0, gptr.Of(stats.FailTurnCnt), gptr.Of(int32(0))),
-		ProcessingTurnCnt: gcond.If(stats.ProcessingTurnCnt > 0, gptr.Of(stats.ProcessingTurnCnt), gptr.Of(int32(0))),
-		TerminatedTurnCnt: gcond.If(stats.TerminatedTurnCnt > 0, gptr.Of(stats.TerminatedTurnCnt), gptr.Of(int32(0))),
+		PendingTurnCnt:    gcond.If(stats.PendingItemCnt > 0, gptr.Of(stats.PendingItemCnt), gptr.Of(int32(0))),
+		SuccessTurnCnt:    gcond.If(stats.SuccessItemCnt > 0, gptr.Of(stats.SuccessItemCnt), gptr.Of(int32(0))),
+		FailTurnCnt:       gcond.If(stats.FailItemCnt > 0, gptr.Of(stats.FailItemCnt), gptr.Of(int32(0))),
+		ProcessingTurnCnt: gcond.If(stats.ProcessingItemCnt > 0, gptr.Of(stats.ProcessingItemCnt), gptr.Of(int32(0))),
+		TerminatedTurnCnt: gcond.If(stats.TerminatedItemCnt > 0, gptr.Of(stats.TerminatedItemCnt), gptr.Of(int32(0))),
 		CreditCost:        gptr.Of(stats.CreditCost),
 		TokenUsage: &domain_expt.TokenUsage{
 			InputTokens:  gptr.Of(stats.InputTokenCost),

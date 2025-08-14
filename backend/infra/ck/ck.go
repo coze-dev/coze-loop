@@ -35,6 +35,7 @@ func NewCKFromConfig(cfg *Config) (Provider, error) {
 		ReadTimeout: cfg.ReadTimeout,
 		Debug:       cfg.Debug,
 		HttpHeaders: cfg.HttpHeaders,
+		Settings:    cfg.Settings,
 	}
 	switch cfg.CompressionMethod {
 	case CompressionMethodLZ4:

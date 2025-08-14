@@ -34,6 +34,8 @@ type ExptExecMetrics interface {
 
 type ExptResultMetrics interface {
 	EmitGetExptResult(spaceID int64, isErr bool)
+	EmitExptTurnResultFilterCheck(spaceID int64, evaluatorScore, actualOutputDiff, diff bool)
+	EmitExptTurnResultFilterQueryLatency(spaceID, startTime int64, isErr bool)
 }
 
 type ExptAggrResultMetrics interface {

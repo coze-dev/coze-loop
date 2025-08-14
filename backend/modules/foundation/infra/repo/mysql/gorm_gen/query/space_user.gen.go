@@ -49,9 +49,9 @@ type spaceUser struct {
 	SpaceID   field.Int64 // Space ID
 	UserID    field.Int64 // User ID
 	RoleType  field.Int32 // Role Type: 1.owner 2.admin 3.member
-	DeletedAt field.Int64
-	CreatedAt field.Time
-	UpdatedAt field.Time
+	DeletedAt field.Int64 // 删除时间
+	CreatedAt field.Time  // 创建时间
+	UpdatedAt field.Time  // 更新时间
 
 	fieldMap map[string]field.Expr
 }

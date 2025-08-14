@@ -17,11 +17,8 @@
 </div>
 
 ## 什么是 Coze Loop
-
 [Coze Loop ](https://www.coze.cn/loop) 是一个面向开发者，专注于 AI Agent 开发与运维的平台级解决方案。 它可以解决 AI Agent 开发过程中面临的各种挑战，提供从开发、调试、评估、到监控的全生命周期管理能力。
-
 Coze Loop 在商业化版本的基础上，推出开源版免费对开发者开放核心基础功能模块，以开源模式共享核心技术框架，开发者可根据业务需求定制与扩展，便于社区共建、分享交流，助力开发者零门槛参与 AI Agent 的探索与实践。
-
 ## Coze Loop 能做什么？
 Coze Loop 通过提供全生命周期的管理能力，帮助开发者更高效地开发和运维 AI Agent。无论是提示词工程、AI Agent 评测，还是上线后的监控与调优，Coze Loop 都提供了强大的工具和智能化的支持，极大地简化了 AI Agent 的开发流程，提升了 AI Agent 的运行效果和稳定性。
 
@@ -30,35 +27,81 @@ Coze Loop 通过提供全生命周期的管理能力，帮助开发者更高效�
 * **观测**：Coze Loop 为开发者提供了全链路执行过程的可视化观测能力，完整记录从用户输入到 AI 输出的每个处理环节，包括 Prompt 解析、模型调用和工具执行等关键节点，并自动捕获中间结果和异常状态。
 
 ## 功能清单
-
 | **功能** | **功能点** |
 | --- | --- |
 | Prompt 调试 | * Playground 调试、对比 <br> * Prompt 版本管理 |
 | 评测 | * 管理评测集 <br> * 管理评估器 <br> * 管理实验 |
 | 观测 | * SDK 上报 Trace <br> * Trace 数据观测 |
 | 模型 | 支持接入 OpenAI、火山方舟等模型 |
-
 ## 快速开始
 > 参考[快速开始](https://github.com/coze-dev/coze-loop/wiki/2.-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B)，详细了解如何安装部署 Coze Loop 最新版本。
-环境要求：
-* 提前安装 Docker、Docker Compose，并启动 Docker 服务
+
+### 部署方式1：Docker 部署 (Docker Compose)
+> 请提前安装并启动 Docker Engine。
+
 操作步骤：
-1. 获取源码。执行以下命令，获取 Coze Loop 最新版本的源码。
+
+1. 获取源码。
+   执行以下命令，获取 Coze Loop 最新版本的源码。
    ```Bash
    # 克隆代码
    git clone https://github.com/coze-dev/coze-loop.git
-   # 进入Coze Loop目录下
-   cd coze-loop
+   
+   # 进入coze-loop目录下
+   cd coze-loop 
    ```
-2. 配置模型。进入目录 `conf/default/app/runtime/`，编辑文件 `model_config.yaml`，修改 api_key 和 model 字段。以火山方舟为例：
-   * api_key：火山方舟 API Key。中国境内用户参考[火山方舟文档](https://www.volcengine.com/docs/82379/1541594)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
-   * model：火山方舟模型接入点的 Endpoint ID。中国境内用户参考[火山方舟文档](https://www.volcengine.com/docs/82379/1099522)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
-3. 启动服务。执行以下命令，使用 Docker Compose 快速部署 Coze Loop 开源版。
+
+2. 配置模型。
+   1. 进入 `coze-loop` 目录。
+   2. 编辑文件 `release/deployment/docker-compose/conf/model_config.yaml`。
+   3. 修改 api_key 和 model 字段。以火山方舟为例：
+      * api_key：火山方舟 API Key。中国境内用户参考[火山方舟文档](https://www.volcengine.com/docs/82379/1541594)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
+      * model：火山方舟模型接入点的 Endpoint ID。中国境内用户参考参考[火山方舟文档](https://www.volcengine.com/docs/82379/1099522)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
+3. 启动服务。
+   执行以下命令，使用 Docker Compose 快速部署 Coze Loop 开源版。
    ```Bash
-   # 启动服务，默认为开发模式
-   docker compose up --build
+   # 启动服务，默认为开发模式 
+   # 在 coze-loop/目录下执行
+   make compose-up 
    ```
-4. 通过浏览器访问 `http://localhost:8082`，访问 Coze Loop 开源版。
+
+4. 通过浏览器访问 Coze Loop 开源版 `http://localhost:8082`。
+
+### 部署方式2：Kubernetes 部署（Helm Chart）
+
+> * 已准备 Kubernetes 集群、启用 Nginx Ingress Addons，并安装 Kubectl 和 Helm 工具。
+> * 如需在本地快速体验，可通过 Minikube 部署 Kubernetes 集群。详细步骤可参考[快速开始](https://github.com/coze-dev/coze-loop/wiki/2.-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B)。
+
+操作步骤：
+
+1. 执行以下命令获取 Helm Chart 包。
+   ```Bash
+   helm pull oci://docker.io/cozedev/coze-loop --version 1.0.0-helm
+   tar -zxvf coze-loop-1.0.0-helm.tgz && cd coze-loop && rm -f ../coze-loop-1.0.0-helm.tgz
+   ```
+
+2. 配置模型。
+   进入 `coze-loop` 目录，编辑文件 `release/deployment/docker-compose/conf/model_config.yaml`。配置以下字段，此处以火山方舟为例：
+   * api_key：火山方舟 API Key。中国境内用户参考[火山方舟文档](https://www.volcengine.com/docs/82379/1541594)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
+   * model：火山方舟模型接入点的 Endpoint ID。中国境内用户参考参考[火山方舟文档](https://www.volcengine.com/docs/82379/1099522)；非中国境内的用户可参考[BytePlus ModelArk 文档](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source)。
+3. 配置 Ingress 规则。
+   Ingress 用于暴露服务到外部，需根据集群实际情况配置项目目录下的`templates/ingress.yaml` 文件，自行修改 ingressClassName 等参数，配置 class、instance、host、ip 分配等要素。
+4. 部署并启动服务。
+   执行以下命令，使用 Helm 快速部署 Coze Loop 开源版。
+   ```Bash
+   # 在 coze-loop/目录下执行
+   make helm-up
+   # 等待服务部署完成后，查看集群pod状态
+   make helm-pod
+   # 查看服务启动日志，如果 app 和 nginx 均正常运行，表示部署成功
+   make helm-logf-app
+   make helm-logf-nginx
+   ```
+
+5. 通过浏览器访问 Coze Loop 开源版。
+   访问域名及 URL 取决于你的集群分配的域名以及 URL。
+6. 开始定制你的 Coze Loop 项目。
+   参考 `examples/` 目录示例，修改 `values.yaml` 即可覆盖默认设置，修改后重新执行 `make helm-up` 生效。
 
 ## 使用 Coze Loop 开源版
 
@@ -70,31 +113,25 @@ Coze Loop 通过提供全生命周期的管理能力，帮助开发者更高效�
 ## 开发指南
 
 * [系统架构](https://github.com/coze-dev/coze-loop/wiki/3.-%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84)：了解Coze Loop 开源版的技术架构与核心组件。
-* [启动模式](https://github.com/coze-dev/coze-loop/wiki/4.-%E6%9C%8D%E5%8A%A1%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F)：安装部署Coze Loop 开源版时，默认使用开发模式，此模式下修改后端文件无需重新部署服务。
+* [启动模式](https://github.com/coze-dev/coze-loop/wiki/4.-%E6%9C%8D%E5%8A%A1%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F)：安装部署Coze Loop 开源版时，默认使用稳定模式，直接通过镜像启动，无需额外编译构建步骤。
 * [模型配置](https://github.com/coze-dev/coze-loop/wiki/5.-%E6%A8%A1%E5%9E%8B%E9%85%8D%E7%BD%AE)：Coze Loop 开源版通过 Eino 框架支持多种 LLM 模型，参考此文档查看支持的模型列表，了解如何配置模型。
 * [代码开发与测试](https://github.com/coze-dev/coze-loop/wiki/6.-%E4%BB%A3%E7%A0%81%E5%BC%80%E5%8F%91%E4%B8%8E%E6%B5%8B%E8%AF%95)：了解如何基于Coze Loop 开源版进行二次开发与测试。
 * [故障排查](https://github.com/coze-dev/coze-loop/wiki/7.-%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5)：了解如何查看容器状态、系统日志。
 
 ## License
-
 本项目采用 Apache 2.0 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
-
 ## 社区贡献
 我们欢迎社区贡献，贡献指南参见 [CONTRIBUTING](CONTRIBUTING.md) 和 [Code of conduct](CODE_OF_CONDUCT.md)，期待您的贡献！
-
 ## 安全与隐私
-
 如果你在该项目中发现潜在的安全问题，或你认为可能发现了安全问题，请通过我们的[安全中心](https://security.bytedance.com/src) 或[漏洞报告邮箱](sec@bytedance.com)通知字节跳动安全团队。
 请**不要**创建公开的 GitHub Issue。
-
 ## 加入社区
-
 我们致力于构建一个开放、友好的开发者社区，欢迎所有对 AI Agent 开发感兴趣的开发者加入我们！
-
 ### 问题反馈与功能建议
 为了更高效地跟踪和解决问题，保证信息透明和便于协同，我们推荐通过以下方式参与：
-- **GitHub Issues**：[提交 Bug 报告或功能请求](https://github.com/coze-dev/coze-loop/issues)
-- **Pull Requests**：[贡献代码或文档改进](https://github.com/coze-dev/coze-loop/pulls)
+
+* **GitHub Issues**：[提交 Bug 报告或功能请求](https://github.com/coze-dev/coze-loop/issues)
+* **Pull Requests**：[贡献代码或文档改进](https://github.com/coze-dev/coze-loop/pulls)
 
 ### 技术交流与讨论
 加入我们的技术交流群，与其他开发者分享经验、获取项目最新动态：
@@ -104,7 +141,6 @@ Coze Loop 通过提供全生命周期的管理能力，帮助开发者更高效�
 ![Image](https://p9-arcosite.byteimg.com/tos-cn-i-goo7wpa0wc/818dd6ec45d24041873ca101681186c1~tplv-goo7wpa0wc-image.image)
 
 * Discord 服务器：[Coze Community](https://discord.gg/a6YtkysB)
-
 * Telegram 群组：[Coze](https://t.me/+pP9CkPnomDA0Mjgx)
 
 ## 致谢

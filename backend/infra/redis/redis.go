@@ -30,16 +30,16 @@ type provider struct {
 	cli *redis.Client
 }
 
-func (p *provider) Exists(ctx context.Context, keys ...string) *redis.IntCmd {
-	return p.cli.Exists(ctx, keys...)
-}
-
 var _ Cmdable = (*provider)(nil)
 
 // Raw returns the underlying Redis client.
 // Use with caution.
 func (p *provider) Raw() *redis.Client {
 	return p.cli
+}
+
+func (p *provider) Exists(ctx context.Context, keys ...string) *redis.IntCmd {
+	return p.cli.Exists(ctx, keys...)
 }
 
 func (p *provider) Decr(ctx context.Context, key string) *redis.IntCmd {

@@ -23,7 +23,7 @@ import (
 
 //go:generate mockgen -destination=mocks/prompt_commit_dao.go -package=mocks . IPromptCommitDAO
 type IPromptCommitDAO interface {
-	Create(ctx context.Context, promptCommitPO *model.PromptCommit, opts ...db.Option) (err error)
+	Create(ctx context.Context, promptCommitPO *model.PromptCommit, time time.Time, opts ...db.Option) (err error)
 	Get(ctx context.Context, promptID int64, commitVersion string, opts ...db.Option) (promptCommitPO *model.PromptCommit, err error)
 	MGet(ctx context.Context, pairs []PromptIDCommitVersionPair, opts ...db.Option) (pairCommitPOMap map[PromptIDCommitVersionPair]*model.PromptCommit, err error)
 	List(ctx context.Context, param ListCommitParam, opts ...db.Option) (commitPOs []*model.PromptCommit, err error)
@@ -54,13 +54,13 @@ type PromptIDCommitVersionPair struct {
 	CommitVersion string
 }
 
-func (d *PromptCommitDAOImpl) Create(ctx context.Context, promptCommitPO *model.PromptCommit, opts ...db.Option) (err error) {
+func (d *PromptCommitDAOImpl) Create(ctx context.Context, promptCommitPO *model.PromptCommit, timeNow time.Time, opts ...db.Option) (err error) {
 	if promptCommitPO == nil {
 		return errorx.New("promptCommitPO is empty")
 	}
 	q := query.Use(d.db.NewSession(ctx, opts...)).WithContext(ctx)
-	promptCommitPO.CreatedAt = time.Time{}
-	promptCommitPO.UpdatedAt = time.Time{}
+	promptCommitPO.CreatedAt = timeNow
+	promptCommitPO.UpdatedAt = timeNow
 	err = q.PromptCommit.Create(promptCommitPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {

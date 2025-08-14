@@ -26,20 +26,23 @@ type ExptSchedulerConsumer struct {
 }
 
 func (e *ExptSchedulerConsumer) HandleMessage(ctx context.Context, msg *mq.MessageExt) error {
-	event := &entity.ExptScheduleEvent{}
+	rawLogID := logs.GetLogID(ctx)
+	ctx = logs.SetLogID(ctx, logs.NewLogID())
+
 	body := msg.Body
+	event := &entity.ExptScheduleEvent{}
 	if err := json.Unmarshal(body, event); err != nil {
 		logs.CtxError(ctx, "ExptExecEvent json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(body), err)
 		return nil
 	}
-
-	logs.CtxInfo(ctx, "ExptSchedulerConsumer consume message, event: %v, msg_id: %v", conv.UnsafeBytesToString(body), msg.MsgID)
 
 	if event.Session != nil {
 		ctx = session.WithCtxUser(ctx, &session.User{
 			ID: event.Session.UserID,
 		})
 	}
+
+	logs.CtxInfo(ctx, "ExptSchedulerConsumer consume message, event: %v, msg_id: %v, rawlogid: %v", conv.UnsafeBytesToString(body), msg.MsgID, rawLogID)
 
 	return e.scheduler.Schedule(ctx, event)
 }

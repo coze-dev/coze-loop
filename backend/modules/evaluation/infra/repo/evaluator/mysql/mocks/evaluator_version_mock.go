@@ -77,10 +77,10 @@ func (mr *MockEvaluatorVersionDAOMockRecorder) BatchGetEvaluatorDraftByEvaluator
 }
 
 // BatchGetEvaluatorVersionByID mocks base method.
-func (m *MockEvaluatorVersionDAO) BatchGetEvaluatorVersionByID(arg0 context.Context, arg1 []int64, arg2 bool, arg3 ...db.Option) ([]*model.EvaluatorVersion, error) {
+func (m *MockEvaluatorVersionDAO) BatchGetEvaluatorVersionByID(arg0 context.Context, arg1 *int64, arg2 []int64, arg3 bool, arg4 ...db.Option) ([]*model.EvaluatorVersion, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []interface{}{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchGetEvaluatorVersionByID", varargs...)
@@ -90,9 +90,9 @@ func (m *MockEvaluatorVersionDAO) BatchGetEvaluatorVersionByID(arg0 context.Cont
 }
 
 // BatchGetEvaluatorVersionByID indicates an expected call of BatchGetEvaluatorVersionByID.
-func (mr *MockEvaluatorVersionDAOMockRecorder) BatchGetEvaluatorVersionByID(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+func (mr *MockEvaluatorVersionDAOMockRecorder) BatchGetEvaluatorVersionByID(arg0, arg1, arg2, arg3 interface{}, arg4 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersionByID", reflect.TypeOf((*MockEvaluatorVersionDAO)(nil).BatchGetEvaluatorVersionByID), varargs...)
 }
 

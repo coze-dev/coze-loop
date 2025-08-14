@@ -28,6 +28,18 @@ func ModelAndTools2OptionDOs(modelCfg *druntime.ModelConfig, tools []*druntime.T
 		if modelCfg.ToolChoice != nil {
 			opts = append(opts, entity.WithToolChoice(ToolChoiceDTO2DO(modelCfg.ToolChoice)))
 		}
+		if modelCfg.ResponseFormat != nil {
+			opts = append(opts, entity.WithResponseFormat(ResponseFormatDTO2DO(modelCfg.ResponseFormat)))
+		}
+		if modelCfg.TopK != nil {
+			opts = append(opts, entity.WithTopK(modelCfg.TopK))
+		}
+		if modelCfg.PresencePenalty != nil {
+			opts = append(opts, entity.WithPresencePenalty(float32(*modelCfg.PresencePenalty)))
+		}
+		if modelCfg.FrequencyPenalty != nil {
+			opts = append(opts, entity.WithFrequencyPenalty(float32(*modelCfg.FrequencyPenalty)))
+		}
 	}
 	if len(tools) > 0 {
 		toolsDTO := slices.Transform(tools, func(t *druntime.Tool, _ int) *entity.ToolInfo {
@@ -36,6 +48,15 @@ func ModelAndTools2OptionDOs(modelCfg *druntime.ModelConfig, tools []*druntime.T
 		opts = append(opts, entity.WithTools(toolsDTO))
 	}
 	return opts
+}
+
+func ResponseFormatDTO2DO(r *druntime.ResponseFormat) *entity.ResponseFormat {
+	if r == nil {
+		return nil
+	}
+	return &entity.ResponseFormat{
+		Type: entity.ResponseFormatType(r.GetType()),
+	}
 }
 
 func ToolsDTO2DO(ts []*druntime.Tool) []*entity.ToolInfo {

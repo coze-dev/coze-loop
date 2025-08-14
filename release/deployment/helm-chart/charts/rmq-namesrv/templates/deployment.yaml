@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "application.name" . }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "application.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "application.name" . }}
+    spec:
+      imagePullSecrets:
+        - name: {{ (.Values.custom.image.pullSecrets | default .Values.image.pullSecrets) | quote }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      volumes:
+        - name: data
+          emptyDir: { }
+        - name: bootstrap
+          configMap:
+            name: {{ include "configmap.name" . }}
+      containers:
+        - name: {{ include "application.name" . }}
+          image: {{ include "image.fullname" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.deployment.dataMountPath }}
+            - name: bootstrap
+              mountPath: {{ include "bootstrap.path" . }}
+              readOnly: true
+          command: [ "/bin/sh" ]
+          args: [ {{ include "entrypoint.path" . | quote }} ]
+          livenessProbe:
+            exec:
+              command: [ "/bin/sh", {{ include "healthcheck.path" . | quote }} ]
+            initialDelaySeconds: {{ .Values.liveness.startSeconds }}
+            periodSeconds: {{ .Values.liveness.intervalSeconds }}
+            timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.liveness.shutdownFailureTimes }}

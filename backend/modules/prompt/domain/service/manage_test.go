@@ -268,7 +268,7 @@ func TestPromptServiceImpl_MGetPromptIDs(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "prompt key not found",
+			name: "prompt key not found with enhanced error info",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
 				mockManageRepo.EXPECT().MGetPromptBasicByPromptKey(
@@ -292,7 +292,7 @@ func TestPromptServiceImpl_MGetPromptIDs(t *testing.T) {
 				promptKeys: []string{"test_prompt1", "test_prompt2"},
 			},
 			want:    nil,
-			wantErr: errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("prompt key: test_prompt2 not found")),
+			wantErr: errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("prompt key: test_prompt2 not found"), errorx.WithExtra(map[string]string{"prompt_key": "test_prompt2"})),
 		},
 		{
 			name: "database error",
@@ -433,7 +433,7 @@ func TestPromptServiceImpl_MParseCommitVersionByPromptKey(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "prompt not committed",
+			name: "prompt not committed with enhanced error info",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
 				mockManageRepo.EXPECT().MGetPromptBasicByPromptKey(
@@ -468,7 +468,7 @@ func TestPromptServiceImpl_MParseCommitVersionByPromptKey(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.NewByCode(prompterr.PromptUncommittedCode, errorx.WithExtraMsg("prompt not committed")),
+			wantErr: errorx.NewByCode(prompterr.PromptUncommittedCode, errorx.WithExtraMsg("prompt key: test_prompt2"), errorx.WithExtra(map[string]string{"prompt_key": "test_prompt2"})),
 		},
 		{
 			name: "database error",

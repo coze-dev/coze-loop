@@ -2716,12 +2716,16 @@ type FieldSchema struct {
 	DefaultDisplayFormat *dataset.FieldDisplayFormat `thrift:"default_display_format,5,optional" frugal:"5,optional,FieldDisplayFormat" form:"default_display_format" json:"default_display_format,omitempty" query:"default_display_format"`
 	// 当前列的状态
 	Status *dataset.FieldStatus `thrift:"status,6,optional" frugal:"6,optional,FieldStatus" form:"status" json:"status,omitempty" query:"status"`
+	// 是否必填
+	IsRequired *bool `thrift:"isRequired,7,optional" frugal:"7,optional,bool" form:"isRequired" json:"isRequired,omitempty" query:"isRequired"`
 	// [20,50) 内容格式限制相关
 	TextSchema *string `thrift:"text_schema,20,optional" frugal:"20,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
 	// 多模态规格限制
 	MultiModelSpec *dataset.MultiModalSpec `thrift:"multi_model_spec,21,optional" frugal:"21,optional,dataset.MultiModalSpec" form:"multi_model_spec" json:"multi_model_spec,omitempty" query:"multi_model_spec"`
 	// 用户是否不可见
 	Hidden *bool `thrift:"hidden,50,optional" frugal:"50,optional,bool" form:"hidden" json:"hidden,omitempty" query:"hidden"`
+	// 默认的预置转换配置，目前在数据校验后执行
+	DefaultTransformations []*dataset.FieldTransformationConfig `thrift:"default_transformations,55,optional" frugal:"55,optional,list<dataset.FieldTransformationConfig>" form:"default_transformations" json:"default_transformations,omitempty" query:"default_transformations"`
 }
 
 func NewFieldSchema() *FieldSchema {
@@ -2803,6 +2807,18 @@ func (p *FieldSchema) GetStatus() (v dataset.FieldStatus) {
 	return *p.Status
 }
 
+var FieldSchema_IsRequired_DEFAULT bool
+
+func (p *FieldSchema) GetIsRequired() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsRequired() {
+		return FieldSchema_IsRequired_DEFAULT
+	}
+	return *p.IsRequired
+}
+
 var FieldSchema_TextSchema_DEFAULT string
 
 func (p *FieldSchema) GetTextSchema() (v string) {
@@ -2838,6 +2854,18 @@ func (p *FieldSchema) GetHidden() (v bool) {
 	}
 	return *p.Hidden
 }
+
+var FieldSchema_DefaultTransformations_DEFAULT []*dataset.FieldTransformationConfig
+
+func (p *FieldSchema) GetDefaultTransformations() (v []*dataset.FieldTransformationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDefaultTransformations() {
+		return FieldSchema_DefaultTransformations_DEFAULT
+	}
+	return p.DefaultTransformations
+}
 func (p *FieldSchema) SetKey(val *string) {
 	p.Key = val
 }
@@ -2856,6 +2884,9 @@ func (p *FieldSchema) SetDefaultDisplayFormat(val *dataset.FieldDisplayFormat) {
 func (p *FieldSchema) SetStatus(val *dataset.FieldStatus) {
 	p.Status = val
 }
+func (p *FieldSchema) SetIsRequired(val *bool) {
+	p.IsRequired = val
+}
 func (p *FieldSchema) SetTextSchema(val *string) {
 	p.TextSchema = val
 }
@@ -2865,6 +2896,9 @@ func (p *FieldSchema) SetMultiModelSpec(val *dataset.MultiModalSpec) {
 func (p *FieldSchema) SetHidden(val *bool) {
 	p.Hidden = val
 }
+func (p *FieldSchema) SetDefaultTransformations(val []*dataset.FieldTransformationConfig) {
+	p.DefaultTransformations = val
+}
 
 var fieldIDToName_FieldSchema = map[int16]string{
 	1:  "key",
@@ -2873,9 +2907,11 @@ var fieldIDToName_FieldSchema = map[int16]string{
 	4:  "content_type",
 	5:  "default_display_format",
 	6:  "status",
+	7:  "isRequired",
 	20: "text_schema",
 	21: "multi_model_spec",
 	50: "hidden",
+	55: "default_transformations",
 }
 
 func (p *FieldSchema) IsSetKey() bool {
@@ -2902,6 +2938,10 @@ func (p *FieldSchema) IsSetStatus() bool {
 	return p.Status != nil
 }
 
+func (p *FieldSchema) IsSetIsRequired() bool {
+	return p.IsRequired != nil
+}
+
 func (p *FieldSchema) IsSetTextSchema() bool {
 	return p.TextSchema != nil
 }
@@ -2912,6 +2952,10 @@ func (p *FieldSchema) IsSetMultiModelSpec() bool {
 
 func (p *FieldSchema) IsSetHidden() bool {
 	return p.Hidden != nil
+}
+
+func (p *FieldSchema) IsSetDefaultTransformations() bool {
+	return p.DefaultTransformations != nil
 }
 
 func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -2980,6 +3024,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField20(iprot); err != nil {
@@ -2999,6 +3051,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 55:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField55(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3101,6 +3161,17 @@ func (p *FieldSchema) ReadField6(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *FieldSchema) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsRequired = _field
+	return nil
+}
 func (p *FieldSchema) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -3129,6 +3200,29 @@ func (p *FieldSchema) ReadField50(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.Hidden = _field
+	return nil
+}
+func (p *FieldSchema) ReadField55(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.FieldTransformationConfig, 0, size)
+	values := make([]dataset.FieldTransformationConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DefaultTransformations = _field
 	return nil
 }
 
@@ -3162,6 +3256,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 6
 			goto WriteFieldError
 		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
 			goto WriteFieldError
@@ -3172,6 +3270,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField55(oprot); err != nil {
+			fieldId = 55
 			goto WriteFieldError
 		}
 	}
@@ -3300,6 +3402,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *FieldSchema) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsRequired() {
+		if err = oprot.WriteFieldBegin("isRequired", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsRequired); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *FieldSchema) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTextSchema() {
 		if err = oprot.WriteFieldBegin("text_schema", thrift.STRING, 20); err != nil {
@@ -3354,6 +3474,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
+func (p *FieldSchema) writeField55(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDefaultTransformations() {
+		if err = oprot.WriteFieldBegin("default_transformations", thrift.LIST, 55); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DefaultTransformations)); err != nil {
+			return err
+		}
+		for _, v := range p.DefaultTransformations {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 55 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 55 end error: ", p), err)
+}
 
 func (p *FieldSchema) String() string {
 	if p == nil {
@@ -3387,6 +3533,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 	if !p.Field6DeepEqual(ano.Status) {
 		return false
 	}
+	if !p.Field7DeepEqual(ano.IsRequired) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.TextSchema) {
 		return false
 	}
@@ -3394,6 +3543,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.Hidden) {
+		return false
+	}
+	if !p.Field55DeepEqual(ano.DefaultTransformations) {
 		return false
 	}
 	return true
@@ -3471,6 +3623,18 @@ func (p *FieldSchema) Field6DeepEqual(src *dataset.FieldStatus) bool {
 	}
 	return true
 }
+func (p *FieldSchema) Field7DeepEqual(src *bool) bool {
+
+	if p.IsRequired == src {
+		return true
+	} else if p.IsRequired == nil || src == nil {
+		return false
+	}
+	if *p.IsRequired != *src {
+		return false
+	}
+	return true
+}
 func (p *FieldSchema) Field20DeepEqual(src *string) bool {
 
 	if p.TextSchema == src {
@@ -3499,6 +3663,19 @@ func (p *FieldSchema) Field50DeepEqual(src *bool) bool {
 	}
 	if *p.Hidden != *src {
 		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field55DeepEqual(src []*dataset.FieldTransformationConfig) bool {
+
+	if len(p.DefaultTransformations) != len(src) {
+		return false
+	}
+	for i, v := range p.DefaultTransformations {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

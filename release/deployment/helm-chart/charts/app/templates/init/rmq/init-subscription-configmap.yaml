@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "rmq-init-subscription-configmap"
+data:
+{{- range $path, $file := .Files.Glob "bootstrap/init/rmq/init-subscription/*.cfg" }}
+  {{ base $path }}: |-
+{{ $file | toString | indent 4 }}
+{{- end }}

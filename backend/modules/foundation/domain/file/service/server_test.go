@@ -184,6 +184,10 @@ func TestFileServiceImpl_UploadLoopFile(t *testing.T) {
 }
 
 func TestFileServiceImpl_SignUploadFile(t *testing.T) {
+	_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "http")
+	_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "cozeloop-minio")
+	_ = os.Setenv("COZE_LOOP_OSS_PORT", "19000")
+
 	type fields struct {
 		storage fileserver.BatchObjectStorage
 	}
@@ -328,6 +332,10 @@ func TestFileServiceImpl_SignUploadFile(t *testing.T) {
 }
 
 func TestFileServiceImpl_SignDownloadFile(t *testing.T) {
+	_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "http")
+	_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "cozeloop-minio")
+	_ = os.Setenv("COZE_LOOP_OSS_PORT", "19000")
+
 	type fields struct {
 		storage fileserver.BatchObjectStorage
 	}
@@ -335,7 +343,6 @@ func TestFileServiceImpl_SignDownloadFile(t *testing.T) {
 		ctx context.Context
 		req *file.SignDownloadFileRequest
 	}
-
 	tests := []struct {
 		name         string
 		fieldsGetter func(ctrl *gomock.Controller) fields

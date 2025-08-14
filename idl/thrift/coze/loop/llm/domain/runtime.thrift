@@ -9,6 +9,10 @@ struct ModelConfig {
     4: optional double top_p
     5: optional list<string> stop
     6: optional ToolChoice tool_choice
+    7: optional ResponseFormat response_format // support json
+    8: optional i32 top_k
+    9: optional double presence_penalty
+    10: optional double frequency_penalty
 }
 
 struct Message {
@@ -73,9 +77,18 @@ struct BizParam {
     1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional string user_id
     3: optional common.Scenario scenario // 使用场景
-    4: optional string scenario_entity_id // 场景实体id, prompt场景需要传prompt key
+    4: optional string scenario_entity_id // 场景实体id(非必填)
     5: optional string scenario_entity_version // 场景实体version(非必填)
+    6: optional string scenario_entity_key // 场景实体key(非必填), prompt场景需要传prompt key
 }
+
+struct ResponseFormat {
+    1: optional ResponseFormatType type
+}
+
+typedef string ResponseFormatType
+const ResponseFormatType response_format_json_object  = "json_object"
+const ResponseFormatType response_format_text  = "text"
 
 typedef string ToolChoice (ts.enum="true")
 const ToolChoice tool_choice_auto = "auto"

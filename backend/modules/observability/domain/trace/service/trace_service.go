@@ -10,8 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
@@ -26,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
+	"golang.org/x/sync/errgroup"
 )
 
 type ListSpansReq struct {
@@ -52,6 +52,7 @@ type GetTraceReq struct {
 	StartTime    int64 // ms
 	EndTime      int64 // ms
 	PlatformType loop_span.PlatformType
+	SpanIDs      []string
 }
 
 type GetTraceResp struct {
@@ -76,7 +77,7 @@ type GetTracesAdvanceInfoResp struct {
 }
 
 type IngestTracesReq struct {
-	TTL              entity.TTL
+	TTL              loop_span.TTL
 	WhichIsEnough    int
 	CozeAccountId    string
 	VolcanoAccountID int64
@@ -95,6 +96,67 @@ type GetTracesMetaInfoResp struct {
 	FilesMetas map[string]*config.FieldMeta
 }
 
+type CreateAnnotationReq struct {
+	WorkspaceID   int64
+	SpanID        string
+	TraceID       string
+	AnnotationKey string
+	AnnotationVal loop_span.AnnotationValue
+	Reasoning     string
+	QueryDays     int64
+	Caller        string
+}
+type DeleteAnnotationReq struct {
+	WorkspaceID   int64
+	SpanID        string
+	TraceID       string
+	AnnotationKey string
+	QueryDays     int64
+	Caller        string
+}
+
+type CreateManualAnnotationReq struct {
+	PlatformType loop_span.PlatformType
+	Annotation   *loop_span.Annotation
+}
+
+type CreateManualAnnotationResp struct {
+	AnnotationID string
+}
+
+type UpdateManualAnnotationReq struct {
+	AnnotationID string
+	Annotation   *loop_span.Annotation
+	PlatformType loop_span.PlatformType
+}
+
+type DeleteManualAnnotationReq struct {
+	AnnotationID  string
+	WorkspaceID   int64
+	TraceID       string
+	SpanID        string
+	StartTime     int64 // ms
+	AnnotationKey string
+	PlatformType  loop_span.PlatformType
+}
+
+type ListAnnotationsReq struct {
+	WorkspaceID     int64
+	TraceID         string
+	SpanID          string
+	StartTime       int64
+	DescByUpdatedAt bool
+	PlatformType    loop_span.PlatformType
+}
+
+type ListAnnotationsResp struct {
+	Annotations loop_span.AnnotationList
+}
+
+type IAnnotationEvent interface {
+	Send(ctx context.Context, msg *entity.AnnotationEvent) error
+}
+
 //go:generate mockgen -destination=mocks/trace_service.go -package=mocks . ITraceService
 type ITraceService interface {
 	ListSpans(ctx context.Context, req *ListSpansReq) (*ListSpansResp, error)
@@ -102,30 +164,40 @@ type ITraceService interface {
 	GetTracesAdvanceInfo(ctx context.Context, req *GetTracesAdvanceInfoReq) (*GetTracesAdvanceInfoResp, error)
 	IngestTraces(ctx context.Context, req *IngestTracesReq) error
 	GetTracesMetaInfo(ctx context.Context, req *GetTracesMetaInfoReq) (*GetTracesMetaInfoResp, error)
+	ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error)
+	CreateAnnotation(ctx context.Context, req *CreateAnnotationReq) error
+	DeleteAnnotation(ctx context.Context, req *DeleteAnnotationReq) error
+	CreateManualAnnotation(ctx context.Context, req *CreateManualAnnotationReq) (*CreateManualAnnotationResp, error)
+	UpdateManualAnnotation(ctx context.Context, req *UpdateManualAnnotationReq) error
+	DeleteManualAnnotation(ctx context.Context, req *DeleteManualAnnotationReq) error
+	IAnnotationEvent
 }
 
 func NewTraceServiceImpl(
 	tRepo repo.ITraceRepo,
 	traceConfig config.ITraceConfig,
 	traceProducer mq.ITraceProducer,
+	annotationProducer mq.IAnnotationProducer,
 	metrics metrics.ITraceMetrics,
 	buildHelper TraceFilterProcessorBuilder,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
-		traceRepo:     tRepo,
-		traceConfig:   traceConfig,
-		traceProducer: traceProducer,
-		buildHelper:   buildHelper,
-		metrics:       metrics,
+		traceRepo:          tRepo,
+		traceConfig:        traceConfig,
+		traceProducer:      traceProducer,
+		annotationProducer: annotationProducer,
+		buildHelper:        buildHelper,
+		metrics:            metrics,
 	}, nil
 }
 
 type TraceServiceImpl struct {
-	traceRepo     repo.ITraceRepo
-	traceConfig   config.ITraceConfig
-	traceProducer mq.ITraceProducer
-	metrics       metrics.ITraceMetrics
-	buildHelper   TraceFilterProcessorBuilder
+	traceRepo          repo.ITraceRepo
+	traceConfig        config.ITraceConfig
+	traceProducer      mq.ITraceProducer
+	annotationProducer mq.IAnnotationProducer
+	metrics            metrics.ITraceMetrics
+	buildHelper        TraceFilterProcessorBuilder
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -140,6 +212,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		StartAt: req.StartTime,
 		EndAt:   req.EndTime,
 		Limit:   1000,
+		SpanIDs: req.SpanIDs,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -152,7 +225,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		QueryEndTime:   req.EndTime,
 	})
 	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	for _, p := range processors {
 		spans, err = p.Transform(ctx, spans)
@@ -169,7 +242,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 
 func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*ListSpansResp, error) {
 	if err := req.Filters.Traverse(processSpecificFilter); err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
 	}
 	platformFilter, err := r.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
 	if err != nil {
@@ -200,6 +273,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	if err != nil {
 		return nil, err
 	}
+	spans := tRes.Spans
 	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
@@ -207,9 +281,8 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		QueryEndTime:   req.EndTime,
 	})
 	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	spans := tRes.Spans
 	for _, p := range processors {
 		spans, err = p.Transform(ctx, spans)
 		if err != nil {
@@ -268,11 +341,12 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 		g.Go(func() error {
 			defer goroutine.Recovery(ctx)
 			qReq := &repo.GetTraceParam{
-				Tenants: tenants,
-				TraceID: v.TraceID,
-				StartAt: v.StartTime,
-				EndAt:   v.StartTime + defaultTimeRange,
-				Limit:   1000,
+				Tenants:            tenants,
+				TraceID:            v.TraceID,
+				StartAt:            v.StartTime,
+				EndAt:              v.StartTime + defaultTimeRange,
+				Limit:              1000,
+				NotQueryAnnotation: true, // no need to query annotation
 			}
 			st := time.Now()
 			spans, err := r.traceRepo.GetTrace(ctx, qReq)
@@ -313,7 +387,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTracesMetaInfoReq) (*GetTracesMetaInfoResp, error) {
 	cfg, err := r.traceConfig.GetTraceFieldMetaInfo(ctx)
 	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	fields, ok := cfg.FieldMetas[req.PlatformType][req.SpanListType]
 	if !ok {
@@ -330,6 +404,369 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	return &GetTracesMetaInfoResp{
 		FilesMetas: fieldMetas,
 	}, nil
+}
+
+func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	annotations, err := r.traceRepo.ListAnnotations(ctx, &repo.ListAnnotationsParam{
+		Tenants:         tenants,
+		SpanID:          req.SpanID,
+		TraceID:         req.TraceID,
+		WorkspaceId:     req.WorkspaceID,
+		DescByUpdatedAt: req.DescByUpdatedAt,
+		StartAt:         req.StartTime - time.Second.Milliseconds(),
+		EndAt:           req.StartTime + time.Second.Milliseconds(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &ListAnnotationsResp{
+		Annotations: annotations,
+	}, nil
+}
+
+func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *CreateManualAnnotationReq) (*CreateManualAnnotationResp, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	span, err := r.getSpan(ctx,
+		tenants,
+		req.Annotation.SpanID,
+		req.Annotation.TraceID,
+		req.Annotation.WorkspaceID,
+		req.Annotation.StartTime.Add(-time.Second).UnixMilli(),
+		req.Annotation.StartTime.Add(time.Second).UnixMilli(),
+	)
+	if err != nil {
+		return nil, err
+	} else if span == nil {
+		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.Annotation.SpanID, req.Annotation.TraceID)
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	annotation, err := span.BuildFeedback(
+		loop_span.AnnotationTypeManualFeedback,
+		req.Annotation.Key,
+		req.Annotation.Value,
+		req.Annotation.Reasoning,
+		session.UserIDInCtxOrEmpty(ctx),
+		false,
+	)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
+	}
+	if err := r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
+		Tenant:     span.GetTenant(),
+		TTL:        span.GetTTL(ctx),
+		Annotation: annotation,
+	}); err != nil {
+		return nil, err
+	}
+	return &CreateManualAnnotationResp{
+		AnnotationID: annotation.ID,
+	}, nil
+}
+
+func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *UpdateManualAnnotationReq) error {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return err
+	}
+	span, err := r.getSpan(ctx,
+		tenants,
+		req.Annotation.SpanID,
+		req.Annotation.TraceID,
+		req.Annotation.WorkspaceID,
+		req.Annotation.StartTime.Add(-time.Second).UnixMilli(),
+		req.Annotation.StartTime.Add(time.Second).UnixMilli(),
+	)
+	if err != nil {
+		return err
+	} else if span == nil {
+		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.Annotation.SpanID, req.Annotation.TraceID)
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	annotation, err := span.BuildFeedback(
+		loop_span.AnnotationTypeManualFeedback,
+		req.Annotation.Key,
+		req.Annotation.Value,
+		req.Annotation.Reasoning,
+		session.UserIDInCtxOrEmpty(ctx),
+		false,
+	)
+	fmt.Println(annotation.ID, req.AnnotationID)
+	if err != nil || annotation.ID != req.AnnotationID {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	existedAnno, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
+		Tenants: tenants,
+		ID:      req.AnnotationID,
+		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
+		EndAt:   time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
+	})
+	if err != nil {
+		logs.CtxError(ctx, "get annotation %s err %v", req.AnnotationID, err)
+		return err
+	} else if existedAnno != nil {
+		annotation.CreatedBy = existedAnno.CreatedBy
+		annotation.CreatedAt = existedAnno.CreatedAt
+	}
+	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
+		Tenant:     span.GetTenant(),
+		TTL:        span.GetTTL(ctx),
+		Annotation: annotation,
+	})
+}
+
+func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *DeleteManualAnnotationReq) error {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return err
+	}
+	span, err := r.getSpan(ctx,
+		tenants,
+		req.SpanID,
+		req.TraceID,
+		strconv.FormatInt(req.WorkspaceID, 10),
+		req.StartTime-time.Second.Milliseconds(),
+		req.StartTime+time.Second.Milliseconds(),
+	)
+	if err != nil {
+		return err
+	} else if span == nil {
+		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.SpanID, req.TraceID)
+		return errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	annotation, err := span.BuildFeedback(
+		loop_span.AnnotationTypeManualFeedback,
+		req.AnnotationKey,
+		loop_span.AnnotationValue{},
+		"",
+		session.UserIDInCtxOrEmpty(ctx),
+		true,
+	)
+	if err != nil || annotation.ID != req.AnnotationID {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
+	}
+	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
+		Tenant:     span.GetTenant(),
+		TTL:        span.GetTTL(ctx),
+		Annotation: annotation,
+	})
+}
+
+func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnnotationReq) error {
+	cfg, err := r.getAnnotationCallerCfg(ctx, req.Caller)
+	if err != nil {
+		return err
+	}
+	span, err := r.getSpan(ctx,
+		cfg.Tenants,
+		req.SpanID,
+		req.TraceID,
+		strconv.FormatInt(req.WorkspaceID, 10),
+		time.Now().Add(-time.Duration(req.QueryDays)*24*time.Hour).UnixMilli(),
+		time.Now().UnixMilli(),
+	)
+	if err != nil {
+		return err
+	} else if span == nil {
+		return r.annotationProducer.SendAnnotation(ctx, &entity.AnnotationEvent{
+			Annotation: &loop_span.Annotation{
+				SpanID:         req.SpanID,
+				TraceID:        req.TraceID,
+				WorkspaceID:    strconv.FormatInt(req.WorkspaceID, 10),
+				AnnotationType: loop_span.AnnotationType(cfg.AnnotationType),
+				Key:            req.AnnotationKey,
+				Value:          req.AnnotationVal,
+				Reasoning:      req.Reasoning,
+				Status:         loop_span.AnnotationStatusNormal,
+				CreatedAt:      time.Now(),
+				UpdatedAt:      time.Now(),
+			},
+			Caller:     req.Caller,
+			StartAt:    time.Now().Add(-24 * time.Hour).UnixMilli(),
+			EndAt:      time.Now().Add(1 * time.Hour).UnixMilli(),
+			RetryTimes: 3,
+		})
+	}
+	annotation, err := span.BuildFeedback(
+		loop_span.AnnotationType(cfg.AnnotationType),
+		req.AnnotationKey,
+		req.AnnotationVal,
+		req.Reasoning, "", false,
+	)
+	if err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
+	}
+	existedAnno, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
+		Tenants: cfg.Tenants,
+		ID:      annotation.ID,
+		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
+		EndAt:   time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
+	})
+	if err != nil {
+		return err
+	} else if existedAnno != nil {
+		annotation.CreatedBy = existedAnno.CreatedBy
+		annotation.CreatedAt = existedAnno.CreatedAt
+	}
+	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
+		Tenant:     span.GetTenant(),
+		TTL:        span.GetTTL(ctx),
+		Annotation: annotation,
+	})
+}
+
+func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnnotationReq) error {
+	cfg, err := r.getAnnotationCallerCfg(ctx, req.Caller)
+	if err != nil {
+		return err
+	}
+	span, err := r.getSpan(ctx,
+		cfg.Tenants,
+		req.SpanID,
+		req.TraceID,
+		strconv.FormatInt(req.WorkspaceID, 10),
+		time.Now().Add(-time.Duration(req.QueryDays)*24*time.Hour).UnixMilli(),
+		time.Now().UnixMilli(),
+	)
+	if err != nil {
+		return err
+	} else if span == nil {
+		return r.annotationProducer.SendAnnotation(ctx, &entity.AnnotationEvent{
+			Annotation: &loop_span.Annotation{
+				SpanID:         req.SpanID,
+				TraceID:        req.TraceID,
+				WorkspaceID:    strconv.FormatInt(req.WorkspaceID, 10),
+				AnnotationType: loop_span.AnnotationType(cfg.AnnotationType),
+				Key:            req.AnnotationKey,
+				Status:         loop_span.AnnotationStatusDeleted,
+				CreatedAt:      time.Now(),
+				UpdatedAt:      time.Now(),
+				IsDeleted:      true,
+			},
+			Caller:     req.Caller,
+			StartAt:    time.Now().Add(-24 * time.Hour).UnixMilli(),
+			EndAt:      time.Now().Add(1 * time.Hour).UnixMilli(),
+			RetryTimes: 3,
+		})
+	}
+	annotation, err := span.BuildFeedback(
+		loop_span.AnnotationType(cfg.AnnotationType),
+		req.AnnotationKey,
+		loop_span.AnnotationValue{}, "", "",
+		true,
+	)
+	if err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
+	}
+	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
+		Tenant:     span.GetTenant(),
+		TTL:        span.GetTTL(ctx),
+		Annotation: annotation,
+	})
+}
+
+func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEvent) error {
+	shouldReSend := false
+	defer func() {
+		event.RetryTimes--
+		// resend if not success
+		if !shouldReSend || event.RetryTimes <= 0 {
+			return
+		}
+		logs.CtxInfo(ctx, "resend annotation event")
+		_ = r.annotationProducer.SendAnnotation(ctx, event)
+	}()
+	cfg, err := r.getAnnotationCallerCfg(ctx, event.Caller)
+	if err != nil { // retry
+		return err
+	}
+	span, err := r.getSpan(ctx,
+		cfg.Tenants,
+		event.Annotation.SpanID,
+		event.Annotation.TraceID,
+		event.Annotation.WorkspaceID,
+		event.StartAt,
+		event.EndAt,
+	)
+	if err != nil || span == nil { // retry if not found yet
+		shouldReSend = true
+		return nil
+	}
+	event.Annotation.StartTime = time.UnixMicro(span.StartTime)
+	if err := event.Annotation.GenID(); err != nil {
+		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
+		return nil
+	}
+	// retry if failed
+	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
+		Tenant:     span.GetTenant(),
+		TTL:        span.GetTTL(ctx),
+		Annotation: event.Annotation,
+	})
+}
+
+func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId, traceId, workspaceId string, startAt, endAt int64) (*loop_span.Span, error) {
+	if spanId == "" || traceId == "" || workspaceId == "" {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		Tenants: tenants,
+		Filters: &loop_span.FilterFields{
+			FilterFields: []*loop_span.FilterField{
+				{
+					FieldName: loop_span.SpanFieldSpanId,
+					FieldType: loop_span.FieldTypeString,
+					Values:    []string{spanId},
+					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+				},
+				{
+					FieldName: loop_span.SpanFieldSpaceId,
+					FieldType: loop_span.FieldTypeString,
+					Values:    []string{workspaceId},
+					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+				},
+				{
+					FieldName: loop_span.SpanFieldTraceId,
+					FieldType: loop_span.FieldTypeString,
+					Values:    []string{traceId},
+					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+				},
+			},
+		},
+		StartAt:            startAt,
+		EndAt:              endAt,
+		NotQueryAnnotation: true,
+		Limit:              2,
+	})
+	if err != nil {
+		logs.CtxError(ctx, "failed to list span, %v", err)
+		return nil, err
+	} else if len(res.Spans) == 0 {
+		return nil, nil
+	}
+	return res.Spans[0], nil
+}
+
+func (r *TraceServiceImpl) getAnnotationCallerCfg(ctx context.Context, caller string) (*config.AnnotationConfig, error) {
+	cfg, err := r.traceConfig.GetAnnotationSourceCfg(ctx)
+	if err != nil {
+		return nil, err
+	}
+	callerCfg, ok := cfg.SourceCfg[caller]
+	if ok {
+		return &callerCfg, nil
+	}
+	callerCfg, ok = cfg.SourceCfg["default"]
+	if ok {
+		return &callerCfg, nil
+	}
+	return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 }
 
 func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
@@ -397,7 +834,7 @@ func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.Pl
 	cfg, err := r.traceConfig.GetPlatformTenants(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get platform tenants, %v", err)
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	if tenants, ok := cfg.Config[string(platform)]; ok {
 		return tenants, nil

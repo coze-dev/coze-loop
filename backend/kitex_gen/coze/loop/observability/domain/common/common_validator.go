@@ -24,3 +24,19 @@ var (
 func (p *OrderBy) IsValid() error {
 	return nil
 }
+func (p *UserInfo) IsValid() error {
+	return nil
+}
+func (p *BaseInfo) IsValid() error {
+	if p.CreatedBy != nil {
+		if err := p.CreatedBy.IsValid(); err != nil {
+			return fmt.Errorf("field CreatedBy not valid, %w", err)
+		}
+	}
+	if p.UpdatedBy != nil {
+		if err := p.UpdatedBy.IsValid(); err != nil {
+			return fmt.Errorf("field UpdatedBy not valid, %w", err)
+		}
+	}
+	return nil
+}

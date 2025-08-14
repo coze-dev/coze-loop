@@ -22,7 +22,7 @@ type IEvaluatorRepo interface {
 	UpdateEvaluatorMeta(ctx context.Context, id int64, name, description, userID string) error
 
 	BatchGetEvaluatorMetaByID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
-	BatchGetEvaluatorByVersionID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
+	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorDraftByEvaluatorID(ctx context.Context, spaceID int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorVersionsByEvaluatorIDs(ctx context.Context, evaluatorIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	ListEvaluator(ctx context.Context, req *ListEvaluatorRequest) (*ListEvaluatorResponse, error)

@@ -114,21 +114,21 @@ func uploadFile(ctx context.Context, fileName string, reader io.Reader, form map
 
 	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
-		return errorx.Wrapf(err, fmt.Sprintf("create form file: %v", err))
+		return errorx.Wrapf(err, "create form file: %v", fileName)
 	}
 
 	if _, err = io.Copy(part, reader); err != nil {
-		return errorx.Wrapf(err, fmt.Sprintf("copy file content: %v", err))
+		return errorx.Wrapf(err, "copy file content")
 	}
 
 	for key, value := range form {
 		if err := writer.WriteField(key, value); err != nil {
-			return errorx.Wrapf(err, fmt.Sprintf("write field %s: %v", key, err))
+			return errorx.Wrapf(err, "write field %s", key)
 		}
 	}
 
 	if err := writer.Close(); err != nil {
-		return errorx.Wrapf(err, fmt.Sprintf("close multipart writer: %v", err))
+		return errorx.Wrapf(err, "close multipart writer")
 	}
 
 	contentType := writer.FormDataContentType()
@@ -139,11 +139,11 @@ func uploadFile(ctx context.Context, fileName string, reader io.Reader, form map
 	logs.CtxDebug(ctx, "span client upload file, content type:%s, response: %#v", contentType, resp)
 	if err != nil {
 		logger.CtxErrorf(ctx, fmt.Sprintf("http client UploadFile failed, err: %v", err))
-		return errorx.Wrapf(err, fmt.Sprintf("http client UploadFile failed, err: %v", err))
+		return errorx.Wrapf(err, "http client UploadFile failed")
 	}
 	if resp == nil || resp.GetCode() != 0 {
 		logger.CtxErrorf(ctx, fmt.Sprintf("http client UploadFile failed, resp: %#v", resp))
-		return errorx.Wrapf(err, fmt.Sprintf("http client UploadFile failed, resp: %#v", resp))
+		return errorx.Wrapf(err, "http client UploadFile failed, resp: %#v", resp)
 	}
 
 	return nil

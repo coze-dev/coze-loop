@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	prompt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -38,6 +39,21 @@ func NewMockIConfigProvider(ctrl *gomock.Controller) *MockIConfigProvider {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockIConfigProvider) EXPECT() *MockIConfigProviderMockRecorder {
 	return m.recorder
+}
+
+// GetPromptDefaultConfig mocks base method.
+func (m *MockIConfigProvider) GetPromptDefaultConfig(ctx context.Context) (*prompt.PromptDetail, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPromptDefaultConfig", ctx)
+	ret0, _ := ret[0].(*prompt.PromptDetail)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPromptDefaultConfig indicates an expected call of GetPromptDefaultConfig.
+func (mr *MockIConfigProviderMockRecorder) GetPromptDefaultConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPromptDefaultConfig", reflect.TypeOf((*MockIConfigProvider)(nil).GetPromptDefaultConfig), ctx)
 }
 
 // GetPromptHubMaxQPSBySpace mocks base method.

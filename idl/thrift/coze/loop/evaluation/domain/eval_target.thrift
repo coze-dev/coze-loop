@@ -37,12 +37,26 @@ struct EvalTargetContent {
     101: optional CozeBot coze_bot
     // EvalTargetType=1 时，传参此字段。 评测对象为 EvalPrompt 时, 需要设置 Prompt 信息
     102: optional EvalPrompt prompt
+    // EvalTargetType=4 时，传参此字段。 评测对象为 CozeWorkflow 时, 需要设置 CozeWorkflow 信息
+    103: optional CozeWorkflow coze_workflow
 }
 
 enum EvalTargetType {
     CozeBot = 1 // CozeBot
     CozeLoopPrompt = 2 // Prompt
     Trace = 3 // Trace
+    CozeWorkflow = 4
+}
+
+struct CozeWorkflow {
+    1: optional string id
+    2: optional string version
+
+    3: optional string name    // DTO使用，不存数据库
+    4: optional string avatar_url // DTO使用，不存数据库
+    5: optional string description // DTO使用，不存数据库
+
+    100: optional common.BaseInfo base_info (go.tag='json:\"base_info\"')
 }
 
 struct EvalPrompt{

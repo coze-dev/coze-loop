@@ -9,11 +9,13 @@ import (
 	"gorm.io/gen"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -22,6 +24,7 @@ import (
 //go:generate  mockgen -destination=mocks/expt_turn_result.go  -package mocks . ExptTurnResultDAO
 type ExptTurnResultDAO interface {
 	ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error)
+	ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
 	CreateTurnEvaluatorRefs(ctx context.Context, turnResults []*model.ExptTurnEvaluatorResultRef, opts ...db.Option) error
 	BatchCreateNX(ctx context.Context, turnResults []*model.ExptTurnResult, opts ...db.Option) error
@@ -35,6 +38,7 @@ type ExptTurnResultDAO interface {
 	GetItemTurnRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, error)
 	MGetItemTurnRunLogs(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, error)
 	SaveTurnRunLogs(ctx context.Context, turnResults []*model.ExptTurnResultRunLog, opts ...db.Option) error
+	UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error
 	ScanTurnRunLogs(ctx context.Context, exptID, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, int64, error)
 }
 
@@ -182,6 +186,21 @@ func (dao *ExptTurnResultDAOImpl) SaveTurnResults(ctx context.Context, turnResul
 	return nil
 }
 
+func (dao *ExptTurnResultDAOImpl) UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error {
+	q := query.Use(dao.provider.NewSession(ctx, opts...)).ExptTurnResultRunLog
+	if _, err := q.WithContext(ctx).
+		Where(
+			q.SpaceID.Eq(spaceID),
+			q.ExptID.Eq(exptID),
+			q.ExptRunID.Eq(exptRunID),
+			q.ItemID.In(itemIDs...),
+		).
+		Updates(ufields); err != nil {
+		return errorx.Wrapf(err, "UpdateTurnRunLogWithItemIDs fail, exptID: %v, itemIDs: %v, ufields: %v", exptID, itemIDs, ufields)
+	}
+	return nil
+}
+
 func (dao *ExptTurnResultDAOImpl) SaveTurnRunLogs(ctx context.Context, runLogs []*model.ExptTurnResultRunLog, opts ...db.Option) error {
 	db := dao.provider.NewSession(ctx, opts...)
 	if err := query.Use(db).ExptTurnResultRunLog.WithContext(ctx).Save(runLogs...); err != nil {
@@ -297,6 +316,53 @@ func (dao *ExptTurnResultDAOImpl) ListTurnResult(ctx context.Context, spaceID, e
 	db = db.Count(&total)
 	// 分页
 	db = db.Offset(page.Offset()).Limit(page.Limit())
+	err := db.Find(&finds).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	filtered := make([]*model.ExptTurnResult, 0, len(finds))
+	for _, got := range finds {
+		if got != nil {
+			filtered = append(filtered, got)
+		}
+	}
+
+	logs.CtxInfo(ctx, "ListTurnResult done, finds len: %v, got len: %v", len(finds), len(filtered))
+
+	return finds, total, nil
+}
+
+// nolint: byted_s_too_many_lines_in_func
+func (dao *ExptTurnResultDAOImpl) ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error) {
+	var (
+		finds []*model.ExptTurnResult
+		total int64
+	)
+
+	db := dao.provider.NewSession(ctx, opts...)
+	db = db.Table("expt_turn_result")
+
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
+	if spaceID != 0 {
+		db = db.Where("space_id = ?", spaceID)
+	}
+	if exptID != 0 {
+		db = db.Where("expt_id = ?", exptID)
+	}
+	if len(itemIDs) > 0 {
+		db = db.Where("item_id IN (?)", itemIDs)
+	}
+
+	// 总记录数
+	db = db.Count(&total)
+	// 分页
+	if page.Offset() > 0 && page.Limit() > 0 {
+		db = db.Offset(page.Offset()).Limit(page.Limit())
+	}
+
 	err := db.Find(&finds).Error
 	if err != nil {
 		return nil, 0, err

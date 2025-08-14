@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
@@ -27,7 +28,7 @@ func (f *Factory) NewProducer(config mq.ProducerConfig) (mq.IProducer, error) {
 		return nil, errors.New("addr is empty")
 	}
 	opts := []producer.Option{
-		producer.WithNsResolver(NewCustomResolver(config.Addr)),
+		producer.WithNsResolver(NewCustomResolver([]string{fmt.Sprintf("%s:%s", getRmqNamesrvDomain(), getRmqNamesrvPort())})),
 		producer.WithRetry(config.RetryTimes),
 	}
 	if config.ProduceTimeout > 0 {
@@ -41,6 +42,12 @@ func (f *Factory) NewProducer(config mq.ProducerConfig) (mq.IProducer, error) {
 	}
 	if config.ProducerGroup != nil {
 		opts = append(opts, producer.WithGroupName(*config.ProducerGroup))
+	}
+	if getRmqNamesrvUser() != "" && getRmqNamesrvPassword() != "" {
+		opts = append(opts, producer.WithCredentials(primitive.Credentials{
+			AccessKey: getRmqNamesrvUser(),
+			SecretKey: getRmqNamesrvPassword(),
+		}))
 	}
 
 	p, err := rocketmq.NewProducer(opts...)
@@ -62,7 +69,7 @@ func (f *Factory) NewConsumer(config mq.ConsumerConfig) (mq.IConsumer, error) {
 	}
 
 	opts := []consumer.Option{
-		consumer.WithNsResolver(NewCustomResolver(config.Addr)),
+		consumer.WithNsResolver(NewCustomResolver([]string{fmt.Sprintf("%s:%s", getRmqNamesrvDomain(), getRmqNamesrvPort())})),
 		consumer.WithGroupName(config.ConsumerGroup),
 		consumer.WithConsumerOrder(config.Orderly),
 	}
@@ -120,4 +127,20 @@ func (c *customResolver) Resolve() []string {
 
 func (c *customResolver) Description() string {
 	return fmt.Sprintf("custom resolver: %v", c.addrs)
+}
+
+func getRmqNamesrvDomain() string {
+	return os.Getenv("COZE_LOOP_RMQ_NAMESRV_DOMAIN")
+}
+
+func getRmqNamesrvPort() string {
+	return os.Getenv("COZE_LOOP_RMQ_NAMESRV_PORT")
+}
+
+func getRmqNamesrvUser() string {
+	return os.Getenv("COZE_LOOP_RMQ_NAMESRV_USER")
+}
+
+func getRmqNamesrvPassword() string {
+	return os.Getenv("COZE_LOOP_RMQ_NAMESRV_PASSWORD")
 }

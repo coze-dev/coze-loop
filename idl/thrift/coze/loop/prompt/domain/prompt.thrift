@@ -232,3 +232,7 @@ struct DebugLog {
 typedef string Scenario (ts.enum="true")
 const Scenario Scenario_Default = "default"
 const Scenario Scenario_EvalTarget = "eval_target"
+
+struct OverridePromptParams {
+    1: optional ModelConfig model_config
+}

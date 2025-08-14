@@ -6,6 +6,8 @@ package conf
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
+
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -40,4 +42,8 @@ func (c *PromptConfigProvider) GetPromptHubMaxQPSBySpace(ctx context.Context, sp
 		return qps, nil
 	}
 	return config.DefaultMaxQPS, nil
+}
+
+func (c *PromptConfigProvider) GetPromptDefaultConfig(ctx context.Context) (config *prompt.PromptDetail, err error) {
+	return nil, nil
 }

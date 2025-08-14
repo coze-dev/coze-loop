@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
@@ -23,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
+	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/debug"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
@@ -32,6 +34,7 @@ import (
 
 var (
 	_ = dataset.KitexUnusedProtection
+	_ = tag.KitexUnusedProtection
 	_ = eval_set.KitexUnusedProtection
 	_ = eval_target.KitexUnusedProtection
 	_ = evaluator.KitexUnusedProtection
@@ -44,6 +47,7 @@ var (
 	_ = user.KitexUnusedProtection
 	_ = manage0.KitexUnusedProtection
 	_ = runtime.KitexUnusedProtection
+	_ = openapi1.KitexUnusedProtection
 	_ = trace.KitexUnusedProtection
 	_ = debug.KitexUnusedProtection
 	_ = execute.KitexUnusedProtection

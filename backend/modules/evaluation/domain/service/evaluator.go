@@ -32,7 +32,7 @@ type EvaluatorService interface {
 	// GetEvaluatorVersion 按 version id 单个查询 evaluator_version version
 	GetEvaluatorVersion(ctx context.Context, evaluatorVersionID int64, includeDeleted bool) (*entity.Evaluator, error)
 	// BatchGetEvaluatorVersion 按 version id 批量查询 evaluator_version version
-	BatchGetEvaluatorVersion(ctx context.Context, evaluatorVersionIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
+	BatchGetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	// ListEvaluatorVersion 按条件查询 evaluator_version version
 	ListEvaluatorVersion(ctx context.Context, request *entity.ListEvaluatorVersionRequest) (evaluatorVersions []*entity.Evaluator, total int64, err error)
 	// SubmitEvaluatorVersion 提交 evaluator_version 版本

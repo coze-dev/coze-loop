@@ -55,9 +55,9 @@ type space struct {
 	SpaceType   field.Int32  // Space Type, 1: Personal, 2: Team
 	IconURI     field.String // Icon URI
 	CreatedBy   field.Int64  // Creator ID
-	DeletedAt   field.Int64
-	CreatedAt   field.Time
-	UpdatedAt   field.Time
+	DeletedAt   field.Int64  // 删除时间
+	CreatedAt   field.Time   // 创建时间
+	UpdatedAt   field.Time   // 更新时间
 
 	fieldMap map[string]field.Expr
 }

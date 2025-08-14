@@ -26,19 +26,13 @@ func (c *ExpireErrorProcessor) Transform(ctx context.Context, spans loop_span.Sp
 	if len(spans) > 0 {
 		return spans, nil
 	}
-	if c.platformType != loop_span.PlatformCozeLoop &&
-		c.platformType != loop_span.PlatformPrompt &&
-		c.platformType != loop_span.PlatformEvalTarget &&
-		c.platformType != loop_span.PlatformEvaluator {
-		return spans, nil
-	}
 	res, err := c.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 		ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
 		SpaceID:      c.workspaceId,
 	})
 	if err != nil {
 		logs.CtxWarn(ctx, "fail to check trace benefit, %v", err)
-		return nil, errorx.NewByCode(obErrorx.ExpiredTraceErrorCode)
+		return nil, errorx.WrapByCode(err, obErrorx.ExpiredTraceErrorCode)
 	} else if res == nil {
 		logs.CtxWarn(ctx, "fail to get trace benefit, got nil response")
 		return nil, errorx.NewByCode(obErrorx.ExpiredTraceErrorCode)

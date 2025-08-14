@@ -170,6 +170,22 @@ func (mr *MockIExptItemResultDAOMockRecorder) GetMaxItemIdxByExptID(arg0, arg1, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxItemIdxByExptID", reflect.TypeOf((*MockIExptItemResultDAO)(nil).GetMaxItemIdxByExptID), varargs...)
 }
 
+// ListItemResultsByExptID mocks base method.
+func (m *MockIExptItemResultDAO) ListItemResultsByExptID(arg0 context.Context, arg1, arg2 int64, arg3 entity.Page, arg4 bool) ([]*model.ExptItemResult, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListItemResultsByExptID", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].([]*model.ExptItemResult)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListItemResultsByExptID indicates an expected call of ListItemResultsByExptID.
+func (mr *MockIExptItemResultDAOMockRecorder) ListItemResultsByExptID(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItemResultsByExptID", reflect.TypeOf((*MockIExptItemResultDAO)(nil).ListItemResultsByExptID), arg0, arg1, arg2, arg3, arg4)
+}
+
 // MGetItemRunLog mocks base method.
 func (m *MockIExptItemResultDAO) MGetItemRunLog(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 int64, arg5 ...db.Option) ([]*model.ExptItemResultRunLog, error) {
 	m.ctrl.T.Helper()

@@ -276,7 +276,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 	evaluatorVersionIDs := maps.ToSlice(evaluatorVersionIDMap, func(k int64, v bool) int64 {
 		return k
 	})
-	evaluatorVersionList, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, evaluatorVersionIDs, true)
+	evaluatorVersionList, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, nil, evaluatorVersionIDs, true)
 	// evaluators, err := e.evalCall.BatchGetEvaluatorVersion(ctx, spaceID, evaluatorVersionIDs, true)
 	if err != nil {
 		return nil, err

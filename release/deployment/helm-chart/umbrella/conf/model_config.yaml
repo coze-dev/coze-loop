@@ -1,0 +1,31 @@
+models:
+  - id: 1
+    name: "doubao"
+    frame: "eino"
+    protocol: "ark"
+    protocol_config:
+      api_key: "***"
+      model: "***"
+    param_config:
+      param_schemas:
+        - name: "temperature"
+          label: "temperature"
+          desc: "Increasing temperature makes model output more diverse and creative, while decreasing it makes output more focused on instructions but less diverse. It's recommended not to adjust this simultaneously with 'Top p'."
+          type: "float"
+          min: "0"
+          max: "1.0"
+          default_val: "0.7"
+        - name: "max_tokens"
+          label: "max_tokens"
+          desc: "Controls the maximum number of tokens in model output. Typically, 100 tokens equals about 150 Chinese characters."
+          type: "int"
+          min: "1"
+          max: "4096"
+          default_val: "2048"
+        - name: "top_p"
+          label: "top_p"
+          desc: "Selects the minimum token set with cumulative probability reaching top_p during generation, excluding tokens outside the set, balancing diversity and reasonableness."
+          type: "float"
+          min: "0.001"
+          max: "1.0"
+          default_val: "0.7"

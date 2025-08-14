@@ -77,6 +77,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 
 	type fields struct {
 		manager              *svcmocks.MockIExptManager
+		resultSvc            *svcmocks.MockExptResultService
 		exptRepo             *mock_repo.MockIExperimentRepo
 		exptItemResultRepo   *mock_repo.MockIExptItemResultRepo
 		exptTurnResultRepo   *mock_repo.MockIExptTurnResultRepo
@@ -121,6 +122,8 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ZombieIntervalSecond: math.MaxInt}).AnyTimes()
 				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{}).AnyTimes()
 				f.idGen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2, 3}, nil).AnyTimes()
+				f.publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 				mode := entitymocks.NewMockExptSchedulerMode(ctrl)
 				mode.EXPECT().ExptStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -165,6 +168,8 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				mode.EXPECT().ScheduleStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				mode.EXPECT().ScanEvalItems(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvalItem{}, []*entity.ExptEvalItem{}, []*entity.ExptEvalItem{}, nil).Times(1)
 				mode.EXPECT().ScheduleEnd(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test error")).Times(1)
+				f.publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.schedulerModeFactory.EXPECT().
 					NewSchedulerMode(gomock.Any()).
 					Return(mode, nil).Times(1)
@@ -195,6 +200,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				evalSetItemSvc:       svcmocks.NewMockEvaluationSetItemService(ctrl),
 				mutex:                lockmocks.NewMockILocker(ctrl),
 				schedulerModeFactory: svcmocks.NewMockSchedulerModeFactory(ctrl),
+				resultSvc:            svcmocks.NewMockExptResultService(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -214,6 +220,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				evaluationSetItemService: f.evalSetItemSvc,
 				Mutex:                    f.mutex,
 				schedulerModeFactory:     f.schedulerModeFactory,
+				ResultSvc:                f.resultSvc,
 			}
 			svc.Endpoints = SchedulerChain(
 				svc.HandleEventErr,
@@ -232,10 +239,14 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 }
 
 func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	testUserID := "test_user_id_123"
 
 	type fields struct {
 		ResultSvc *svcmocks.MockExptResultService
+		Publisher *eventmocks.MockExptEventPublisher
 	}
 
 	type args struct {
@@ -243,6 +254,8 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 		event         *entity.ExptScheduleEvent
 		completeItems []*entity.ExptEvalItem
 	}
+
+	mockMode := entitymocks.NewMockExptSchedulerMode(ctrl)
 
 	tests := []struct {
 		name        string
@@ -268,7 +281,10 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // 修改点：添加 ctrl 参数
-				f.ResultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.ResultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				mockMode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.ResultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.Publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantErr: false,
 			assertErr: func(t *testing.T, err error) {
@@ -279,11 +295,9 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
 			f := &fields{
 				ResultSvc: svcmocks.NewMockExptResultService(ctrl),
+				Publisher: eventmocks.NewMockExptEventPublisher(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -292,9 +306,10 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 
 			svc := &ExptSchedulerImpl{
 				ResultSvc: f.ResultSvc,
+				Publisher: f.Publisher,
 			}
 
-			err := svc.recordEvalItemRunLogs(tt.args.ctx, tt.args.event, tt.args.completeItems)
+			err := svc.recordEvalItemRunLogs(tt.args.ctx, tt.args.event, tt.args.completeItems, mockMode)
 			if tt.assertErr != nil {
 				tt.assertErr(t, err)
 			}
@@ -312,6 +327,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 		configer           *configmocks.MockIConfiger
 		publisher          *eventmocks.MockExptEventPublisher
 		metric             *metricsmocks.MockExptMetric
+		resultSvc          *svcmocks.MockExptResultService
 	}
 
 	type args struct {
@@ -354,6 +370,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // 修改点：添加 ctrl 参数
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, nil).AnyTimes()
 				f.publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -366,6 +383,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{}).AnyTimes()
 				f.exptStatsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantErr: false,
 			assertErr: func(t *testing.T, err error) {
@@ -386,6 +404,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				configer:           configmocks.NewMockIConfiger(ctrl),
 				publisher:          eventmocks.NewMockExptEventPublisher(ctrl),
 				metric:             metricsmocks.NewMockExptMetric(ctrl),
+				resultSvc:          svcmocks.NewMockExptResultService(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -399,163 +418,13 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				Configer:           f.configer,
 				Publisher:          f.publisher,
 				Metric:             f.metric,
+				ResultSvc:          f.resultSvc,
 			}
 
 			err := svc.handleToSubmits(tt.args.ctx, tt.args.event, tt.args.toSubmits)
 			if tt.assertErr != nil {
 				tt.assertErr(t, err)
 			}
-		})
-	}
-}
-
-func TestExptSchedulerImpl_handleZombieItems(t *testing.T) {
-	testUserID := "test_user_id_123"
-	now := time.Now()
-	zombieTime := now.Add(-time.Hour)   // 1 hour ago, exceeds zombie time
-	recentTime := now.Add(-time.Minute) // 1 minute ago, within zombie time
-
-	type fields struct {
-		exptItemResultRepo *mock_repo.MockIExptItemResultRepo
-		exptTurnResultRepo *mock_repo.MockIExptTurnResultRepo
-		configer           *configmocks.MockIConfiger
-		metric             *metricsmocks.MockExptMetric
-	}
-
-	type args struct {
-		ctx   context.Context
-		event *entity.ExptScheduleEvent
-		expt  *entity.Experiment
-		items []*entity.ExptEvalItem
-	}
-
-	tests := []struct {
-		name        string
-		prepareMock func(f *fields, ctrl *gomock.Controller, args args)
-		args        args
-	}{
-		{
-			name: "no zombie items",
-			args: args{
-				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
-				event: &entity.ExptScheduleEvent{
-					ExptID:      1,
-					ExptRunID:   2,
-					SpaceID:     3,
-					ExptRunMode: 1,
-					Session:     &entity.Session{UserID: testUserID},
-				},
-				expt: &entity.Experiment{
-					ID:       1,
-					SpaceID:  3,
-					ExptType: entity.ExptType_Offline,
-				},
-				items: []*entity.ExptEvalItem{
-					{ItemID: 1, State: entity.ItemRunState_Queueing, UpdatedAt: &recentTime},
-					{ItemID: 2, State: entity.ItemRunState_Processing, UpdatedAt: &recentTime},
-					{ItemID: 3, State: entity.ItemRunState_Success, UpdatedAt: &zombieTime}, // completed item won't be processed
-				},
-			},
-			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
-					ExptExecConf: &entity.ExptExecConf{
-						ExptItemEvalConf: &entity.ExptItemEvalConf{
-							ZombieSecond: 1800, // 30 minutes
-						},
-					},
-				}).Times(1)
-			},
-		},
-		{
-			name: "UpdatedAt is nil",
-			args: args{
-				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
-				event: &entity.ExptScheduleEvent{
-					ExptID:      1,
-					ExptRunID:   2,
-					SpaceID:     3,
-					ExptRunMode: 1,
-					Session:     &entity.Session{UserID: testUserID},
-				},
-				expt: &entity.Experiment{
-					ID:       1,
-					SpaceID:  3,
-					ExptType: entity.ExptType_Offline,
-				},
-				items: []*entity.ExptEvalItem{
-					{ItemID: 1, State: entity.ItemRunState_Queueing, UpdatedAt: nil}, // UpdatedAt is nil, won't be processed as zombie
-					{ItemID: 2, State: entity.ItemRunState_Processing, UpdatedAt: &zombieTime},
-				},
-			},
-			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
-					ExptExecConf: &entity.ExptExecConf{
-						ExptItemEvalConf: &entity.ExptItemEvalConf{
-							ZombieSecond: 1800, // 30 minutes
-						},
-					},
-				}).Times(1)
-			},
-		},
-		{
-			name: "UpdatedAt is zero value",
-			args: args{
-				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
-				event: &entity.ExptScheduleEvent{
-					ExptID:      1,
-					ExptRunID:   2,
-					SpaceID:     3,
-					ExptRunMode: 1,
-					Session:     &entity.Session{UserID: testUserID},
-				},
-				expt: &entity.Experiment{
-					ID:       1,
-					SpaceID:  3,
-					ExptType: entity.ExptType_Offline,
-				},
-				items: []*entity.ExptEvalItem{
-					{ItemID: 1, State: entity.ItemRunState_Queueing, UpdatedAt: &time.Time{}}, // UpdatedAt is zero value, won't be processed as zombie
-					{ItemID: 2, State: entity.ItemRunState_Processing, UpdatedAt: &zombieTime},
-				},
-			},
-			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
-					ExptExecConf: &entity.ExptExecConf{
-						ExptItemEvalConf: &entity.ExptItemEvalConf{
-							ZombieSecond: 1800, // 30 minutes
-						},
-					},
-				}).Times(1)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			f := &fields{
-				exptItemResultRepo: mock_repo.NewMockIExptItemResultRepo(ctrl),
-				exptTurnResultRepo: mock_repo.NewMockIExptTurnResultRepo(ctrl),
-				configer:           configmocks.NewMockIConfiger(ctrl),
-				metric:             metricsmocks.NewMockExptMetric(ctrl),
-			}
-
-			if tt.prepareMock != nil {
-				tt.prepareMock(f, ctrl, tt.args)
-			}
-
-			svc := &ExptSchedulerImpl{
-				ExptItemResultRepo: f.exptItemResultRepo,
-				ExptTurnResultRepo: f.exptTurnResultRepo,
-				Configer:           f.configer,
-				Metric:             f.metric,
-			}
-
-			assert.NotPanics(t, func() {
-				svc.handleZombies(tt.args.ctx, tt.args.event, tt.args.items)
-			})
 		})
 	}
 }
@@ -793,6 +662,510 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestExptSchedulerImpl_handleZombies(t *testing.T) {
+	testUserID := "test_user_id_123"
+
+	type fields struct {
+		configer           *configmocks.MockIConfiger
+		exptItemResultRepo *mock_repo.MockIExptItemResultRepo
+		exptTurnResultRepo *mock_repo.MockIExptTurnResultRepo
+	}
+
+	type args struct {
+		ctx   context.Context
+		event *entity.ExptScheduleEvent
+		items []*entity.ExptEvalItem
+	}
+
+	now := time.Now()
+	zombieTime := now.Add(-10 * time.Minute)
+	aliveTime := now.Add(-1 * time.Minute)
+
+	tests := []struct {
+		name        string
+		prepareMock func(f *fields, ctrl *gomock.Controller, args args)
+		args        args
+		wantAlives  []*entity.ExptEvalItem
+		wantZombies []*entity.ExptEvalItem
+		wantErr     bool
+		assertErr   func(t *testing.T, err error)
+	}{
+		{
+			name: "Normal case - no zombie tasks",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &aliveTime,
+					},
+					{
+						ExptID:    1,
+						ItemID:    2,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &aliveTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+			},
+			wantAlives: []*entity.ExptEvalItem{
+				{
+					ExptID:    1,
+					ItemID:    1,
+					State:     entity.ItemRunState_Processing,
+					UpdatedAt: &aliveTime,
+				},
+				{
+					ExptID:    1,
+					ItemID:    2,
+					State:     entity.ItemRunState_Processing,
+					UpdatedAt: &aliveTime,
+				},
+			},
+			wantZombies: []*entity.ExptEvalItem{},
+			wantErr:     false,
+			assertErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "Normal case - zombie tasks need to be handled",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &zombieTime,
+					},
+					{
+						ExptID:    1,
+						ItemID:    2,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &aliveTime,
+					},
+					{
+						ExptID:    1,
+						ItemID:    3,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &zombieTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+					gomock.Any(),
+					int64(1),
+					int64(2),
+					[]int64{1, 3},
+					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					int64(3),
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1, 3},
+					entity.TurnRunState_Fail,
+				).Return(nil).Times(1)
+			},
+			wantAlives: []*entity.ExptEvalItem{
+				{
+					ExptID:    1,
+					ItemID:    2,
+					State:     entity.ItemRunState_Processing,
+					UpdatedAt: &aliveTime,
+				},
+			},
+			wantZombies: []*entity.ExptEvalItem{
+				{
+					ExptID:    1,
+					ItemID:    1,
+					State:     entity.ItemRunState_Fail,
+					UpdatedAt: &zombieTime,
+				},
+				{
+					ExptID:    1,
+					ItemID:    3,
+					State:     entity.ItemRunState_Fail,
+					UpdatedAt: &zombieTime,
+				},
+			},
+			wantErr: false,
+			assertErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "Error case - UpdateItemRunLog failed",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &zombieTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+					gomock.Any(),
+					int64(1),
+					int64(2),
+					[]int64{1},
+					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					int64(3),
+				).Return(errors.New("update item run log failed")).Times(1)
+			},
+			wantAlives:  nil,
+			wantZombies: nil,
+			wantErr:     true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "update item run log failed")
+			},
+		},
+		{
+			name: "Error case - UpdateTurnRunLog failed",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &zombieTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+					gomock.Any(),
+					int64(1),
+					int64(2),
+					[]int64{1},
+					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					int64(3),
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1},
+					entity.TurnRunState_Fail,
+				).Return(errors.New("update turn run log failed")).Times(1)
+			},
+			wantAlives:  nil,
+			wantZombies: nil,
+			wantErr:     true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "update turn run log failed")
+			},
+		},
+		{
+			name: "Edge case - all tasks are zombies",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &zombieTime,
+					},
+					{
+						ExptID:    1,
+						ItemID:    2,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &zombieTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+					gomock.Any(),
+					int64(1),
+					int64(2),
+					[]int64{1, 2},
+					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					int64(3),
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1, 2},
+					entity.TurnRunState_Fail,
+				).Return(nil).Times(1)
+			},
+			wantAlives: []*entity.ExptEvalItem{},
+			wantZombies: []*entity.ExptEvalItem{
+				{
+					ExptID:    1,
+					ItemID:    1,
+					State:     entity.ItemRunState_Fail,
+					UpdatedAt: &zombieTime,
+				},
+				{
+					ExptID:    1,
+					ItemID:    2,
+					State:     entity.ItemRunState_Fail,
+					UpdatedAt: &zombieTime,
+				},
+			},
+			wantErr: false,
+			assertErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "Edge case - task update time is nil",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: nil,
+					},
+					{
+						ExptID:    1,
+						ItemID:    2,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &time.Time{},
+					},
+					{
+						ExptID:    1,
+						ItemID:    3,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &aliveTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+			},
+			wantAlives: []*entity.ExptEvalItem{
+				{
+					ExptID:    1,
+					ItemID:    3,
+					State:     entity.ItemRunState_Processing,
+					UpdatedAt: &aliveTime,
+				},
+			},
+			wantZombies: []*entity.ExptEvalItem{},
+			wantErr:     false,
+			assertErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "Edge case - tasks with non-Processing state",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
+					Session:   &entity.Session{UserID: testUserID},
+				},
+				items: []*entity.ExptEvalItem{
+					{
+						ExptID:    1,
+						ItemID:    1,
+						State:     entity.ItemRunState_Queueing,
+						UpdatedAt: &zombieTime,
+					},
+					{
+						ExptID:    1,
+						ItemID:    2,
+						State:     entity.ItemRunState_Success,
+						UpdatedAt: &zombieTime,
+					},
+					{
+						ExptID:    1,
+						ItemID:    3,
+						State:     entity.ItemRunState_Processing,
+						UpdatedAt: &aliveTime,
+					},
+				},
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+					SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+						3: {
+							ExptItemEvalConf: &entity.ExptItemEvalConf{
+								ZombieSecond: 300,
+							},
+						},
+					},
+				}).Times(1)
+			},
+			wantAlives: []*entity.ExptEvalItem{
+				{
+					ExptID:    1,
+					ItemID:    3,
+					State:     entity.ItemRunState_Processing,
+					UpdatedAt: &aliveTime,
+				},
+			},
+			wantZombies: []*entity.ExptEvalItem{},
+			wantErr:     false,
+			assertErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			f := &fields{
+				configer:           configmocks.NewMockIConfiger(ctrl),
+				exptItemResultRepo: mock_repo.NewMockIExptItemResultRepo(ctrl),
+				exptTurnResultRepo: mock_repo.NewMockIExptTurnResultRepo(ctrl),
+			}
+
+			if tt.prepareMock != nil {
+				tt.prepareMock(f, ctrl, tt.args)
+			}
+
+			svc := &ExptSchedulerImpl{
+				Configer:           f.configer,
+				ExptItemResultRepo: f.exptItemResultRepo,
+				ExptTurnResultRepo: f.exptTurnResultRepo,
+			}
+
+			alives, zombies, err := svc.handleZombies(tt.args.ctx, tt.args.event, tt.args.items)
+
+			if tt.assertErr != nil {
+				tt.assertErr(t, err)
+			}
+
+			if !tt.wantErr {
+				assert.Equal(t, len(tt.wantAlives), len(alives), "alives count should match")
+				assert.Equal(t, len(tt.wantZombies), len(zombies), "zombies count should match")
+
+				for i, expectedAlive := range tt.wantAlives {
+					if i < len(alives) {
+						assert.Equal(t, expectedAlive.ItemID, alives[i].ItemID, "alive item ID should match")
+						assert.Equal(t, expectedAlive.State, alives[i].State, "alive item state should match")
+					}
+				}
+
+				for i, expectedZombie := range tt.wantZombies {
+					if i < len(zombies) {
+						assert.Equal(t, expectedZombie.ItemID, zombies[i].ItemID, "zombie item ID should match")
+						assert.Equal(t, expectedZombie.State, zombies[i].State, "zombie item state should be Fail")
+					}
+				}
 			}
 		})
 	}

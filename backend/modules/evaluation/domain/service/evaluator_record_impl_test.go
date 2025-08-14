@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks" // 假设gomock生成的mock在此路径
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 // TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord 用于测试 CorrectEvaluatorRecord 方法
@@ -33,6 +34,7 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 		mockEvaluatorRecordRepo     *repo_mocks.MockIEvaluatorRecordRepo // evaluatorRecordRepo 的 mock 对象
 		mockExptEventPublisher      *mocks.MockExptEventPublisher        // exptPublisher 的 mock 对象
 		mockEvaluatorEventPublisher *mocks.MockEvaluatorEventPublisher   // evaluatorPublisher 的 mock 对象
+		mockExptRepo                *repo_mocks.MockIExperimentRepo      // exptRepo 的 mock 对象
 	}
 	type args struct {
 		ctx               context.Context
@@ -75,6 +77,13 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.AssignableToTypeOf(&entity.EvaluatorRecord{})).Return(nil).Times(1)
 				f.mockExptEventPublisher.EXPECT().PublishExptAggrCalculateEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.mockEvaluatorEventPublisher.EXPECT().PublishEvaluatorRecordCorrection(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.mockExptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+					ID:       200,
+					ExptType: entity.ExptType_Online,
+				}, nil).Times(1)
+				// 补充 PublishExptTurnResultFilterEvent 的模拟调用
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil).Times(1)
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), ptr.Of(10*time.Second)).Return(nil).Times(1)
 			},
 			wantErr: false,
 			checkSideEffects: func(t *testing.T, args args) {
@@ -104,6 +113,13 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.mockExptEventPublisher.EXPECT().PublishExptAggrCalculateEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.mockEvaluatorEventPublisher.EXPECT().PublishEvaluatorRecordCorrection(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.mockExptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+					ID:       201,
+					ExptType: entity.ExptType_Online,
+				}, nil).Times(1)
+				// 补充 PublishExptTurnResultFilterEvent 的模拟调用
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil).Times(1)
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), ptr.Of(10*time.Second)).Return(nil).Times(1)
 			},
 			wantErr: false,
 			checkSideEffects: func(t *testing.T, args args) {
@@ -130,6 +146,8 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Return(errors.New("db error")).Times(1)
 				f.mockExptEventPublisher.EXPECT().PublishExptAggrCalculateEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				f.mockEvaluatorEventPublisher.EXPECT().PublishEvaluatorRecordCorrection(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				// 因为 CorrectEvaluatorRecord 失败，不会调用 PublishExptTurnResultFilterEvent
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr:     true,
 			expectedErr: errors.New("db error"),
@@ -150,12 +168,13 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.mockExptEventPublisher.EXPECT().PublishExptAggrCalculateEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish aggr error")).Times(1)
 				f.mockEvaluatorEventPublisher.EXPECT().PublishEvaluatorRecordCorrection(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				// 对于日志的 mock，如果 logs.CtxError 是一个全局可 mock 的函数或接口方法，可以继续 mock
-				// 如果不是，或者不方便 mock，可以考虑验证其产生的副作用（如日志输出到特定writer）
-				// 这里我们假设 logs.CtxError 仍然可以被 mock，但 mockey 不再使用
-				// 如果 logs.CtxError 是一个全局变量函数，可以使用 testify/mock 或其他方式
-				// 鉴于当前没有提供 logs.CtxError 的 mock 方式，暂时移除对它的直接 mock 和验证
-				// 如果需要验证日志，需要提供 logs 包的 mock 机制
+				f.mockExptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+					ID:       202,
+					ExptType: entity.ExptType_Online,
+				}, nil).Times(1)
+				// 补充 PublishExptTurnResultFilterEvent 的模拟调用
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil).Times(1)
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), ptr.Of(10*time.Second)).Return(nil).Times(1)
 			},
 			wantErr: false, // PublishExptAggrCalculateEvent 错误被捕获并记录日志，不向上层返回错误
 			checkSideEffects: func(t *testing.T, args args) {
@@ -179,6 +198,12 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.mockExptEventPublisher.EXPECT().PublishExptAggrCalculateEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.mockEvaluatorEventPublisher.EXPECT().PublishEvaluatorRecordCorrection(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish correction error")).Times(1)
+				f.mockExptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+					ID:       202,
+					ExptType: entity.ExptType_Online,
+				}, nil).Times(1)
+				// 因为 PublishEvaluatorRecordCorrection 失败，后面的 PublishExptTurnResultFilterEvent 不会调用
+				f.mockExptEventPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr:     true,
 			expectedErr: errors.New("publish correction error"),
@@ -195,6 +220,7 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				mockEvaluatorRecordRepo:     repo_mocks.NewMockIEvaluatorRecordRepo(ctrl),
 				mockExptEventPublisher:      mocks.NewMockExptEventPublisher(ctrl),
 				mockEvaluatorEventPublisher: mocks.NewMockEvaluatorEventPublisher(ctrl),
+				mockExptRepo:                repo_mocks.NewMockIExperimentRepo(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -205,6 +231,7 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 				evaluatorRecordRepo: f.mockEvaluatorRecordRepo,
 				exptPublisher:       f.mockExptEventPublisher,
 				evaluatorPublisher:  f.mockEvaluatorEventPublisher,
+				exptRepo:            f.mockExptRepo,
 			}
 
 			err := s.CorrectEvaluatorRecord(tt.args.ctx, tt.args.evaluatorRecordDO, tt.args.correctionDO)
@@ -236,12 +263,15 @@ func TestNewEvaluatorRecordServiceImpl(t *testing.T) {
 	mockEvaluatorEventPublisher := mocks.NewMockEvaluatorEventPublisher(ctrl)
 	mockUserInfoService := userinfo_mocks.NewMockUserInfoService(ctrl)
 
+	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
+
 	service := NewEvaluatorRecordServiceImpl(
 		mockIdgen,
 		mockEvaluatorRecordRepo,
 		mockExptEventPublisher,
 		mockEvaluatorEventPublisher,
 		mockUserInfoService,
+		mockExptRepo,
 	)
 	assert.NotNil(t, service)
 }

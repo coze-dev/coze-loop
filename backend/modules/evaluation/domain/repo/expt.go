@@ -9,7 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
@@ -36,6 +36,7 @@ type IExptItemResultRepo interface {
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptItemResult, error)
 	BatchCreateNX(ctx context.Context, itemResults []*entity.ExptItemResult) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64) (results []*entity.ExptItemResult, ncursor int64, err error)
+	ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*entity.ExptItemResult, int64, error)
 	GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) (itemIDList []int64, err error)
 	SaveItemResults(ctx context.Context, itemResults []*entity.ExptItemResult) error
 	GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64) ([]*entity.ExptTurnResult, error)
@@ -51,6 +52,7 @@ type IExptItemResultRepo interface {
 
 type IExptTurnResultRepo interface {
 	ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
+	ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error)
 	CreateTurnEvaluatorRefs(ctx context.Context, turnResults []*entity.ExptTurnEvaluatorResultRef) error
 	BatchCreateNX(ctx context.Context, turnResults []*entity.ExptTurnResult) error
@@ -64,6 +66,7 @@ type IExptTurnResultRepo interface {
 	GetItemTurnRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnResultRunLog, error)
 	MGetItemTurnRunLogs(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptTurnResultRunLog, error)
 	SaveTurnRunLogs(ctx context.Context, turnResults []*entity.ExptTurnResultRunLog) error
+	CreateOrUpdateItemsTurnRunLogStatus(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, status entity.TurnRunState) error
 	ScanTurnRunLogs(ctx context.Context, exptID, cursor, limit, spaceID int64) ([]*entity.ExptTurnResultRunLog, int64, error)
 
 	BatchGetTurnEvaluatorResultRef(ctx context.Context, spaceID int64, exptTurnResultIDs []int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
@@ -90,4 +93,12 @@ type IExptAggrResultRepo interface {
 
 type QuotaRepo interface {
 	CreateOrUpdate(ctx context.Context, spaceID int64, updater func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), session *entity.Session) error
+}
+
+type IExptTurnResultFilterRepo interface {
+	Save(ctx context.Context, filters []*entity.ExptTurnResultFilterEntity) error
+	QueryItemIDStates(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator) (map[int64]entity.ItemRunState, int64, error)
+	GetExptTurnResultFilterKeyMappings(ctx context.Context, spaceID, exptID int64) ([]*entity.ExptTurnResultFilterKeyMapping, error)
+	InsertExptTurnResultFilterKeyMappings(ctx context.Context, mappings []*entity.ExptTurnResultFilterKeyMapping) error
+	GetByExptIDItemIDs(ctx context.Context, spaceID, exptID, createdDate string, itemIDs []string) ([]*entity.ExptTurnResultFilterEntity, error)
 }

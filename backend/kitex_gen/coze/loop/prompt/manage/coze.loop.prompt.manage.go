@@ -4041,14 +4041,15 @@ func (p *PromptResult_) Field2DeepEqual(src *prompt.Prompt) bool {
 }
 
 type ListPromptRequest struct {
-	WorkspaceID *int64             `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	KeyWord     *string            `thrift:"key_word,11,optional" frugal:"11,optional,string" form:"key_word" json:"key_word,omitempty" query:"key_word"`
-	CreatedBys  []string           `thrift:"created_bys,12,optional" frugal:"12,optional,list<string>" form:"created_bys" json:"created_bys,omitempty" query:"created_bys"`
-	PageNum     *int32             `thrift:"page_num,127,optional" frugal:"127,optional,i32" form:"page_num" json:"page_num,omitempty" query:"page_num"`
-	PageSize    *int32             `thrift:"page_size,128,optional" frugal:"128,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
-	OrderBy     *ListPromptOrderBy `thrift:"order_by,129,optional" frugal:"129,optional,string" form:"order_by" json:"order_by,omitempty" query:"order_by"`
-	Asc         *bool              `thrift:"asc,130,optional" frugal:"130,optional,bool" form:"asc" json:"asc,omitempty" query:"asc"`
-	Base        *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID   *int64             `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	KeyWord       *string            `thrift:"key_word,11,optional" frugal:"11,optional,string" form:"key_word" json:"key_word,omitempty" query:"key_word"`
+	CreatedBys    []string           `thrift:"created_bys,12,optional" frugal:"12,optional,list<string>" form:"created_bys" json:"created_bys,omitempty" query:"created_bys"`
+	CommittedOnly *bool              `thrift:"committed_only,13,optional" frugal:"13,optional,bool" form:"committed_only" json:"committed_only,omitempty" query:"committed_only"`
+	PageNum       *int32             `thrift:"page_num,127,optional" frugal:"127,optional,i32" form:"page_num" json:"page_num,omitempty" query:"page_num"`
+	PageSize      *int32             `thrift:"page_size,128,optional" frugal:"128,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
+	OrderBy       *ListPromptOrderBy `thrift:"order_by,129,optional" frugal:"129,optional,string" form:"order_by" json:"order_by,omitempty" query:"order_by"`
+	Asc           *bool              `thrift:"asc,130,optional" frugal:"130,optional,bool" form:"asc" json:"asc,omitempty" query:"asc"`
+	Base          *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListPromptRequest() *ListPromptRequest {
@@ -4092,6 +4093,18 @@ func (p *ListPromptRequest) GetCreatedBys() (v []string) {
 		return ListPromptRequest_CreatedBys_DEFAULT
 	}
 	return p.CreatedBys
+}
+
+var ListPromptRequest_CommittedOnly_DEFAULT bool
+
+func (p *ListPromptRequest) GetCommittedOnly() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCommittedOnly() {
+		return ListPromptRequest_CommittedOnly_DEFAULT
+	}
+	return *p.CommittedOnly
 }
 
 var ListPromptRequest_PageNum_DEFAULT int32
@@ -4162,6 +4175,9 @@ func (p *ListPromptRequest) SetKeyWord(val *string) {
 func (p *ListPromptRequest) SetCreatedBys(val []string) {
 	p.CreatedBys = val
 }
+func (p *ListPromptRequest) SetCommittedOnly(val *bool) {
+	p.CommittedOnly = val
+}
 func (p *ListPromptRequest) SetPageNum(val *int32) {
 	p.PageNum = val
 }
@@ -4182,6 +4198,7 @@ var fieldIDToName_ListPromptRequest = map[int16]string{
 	1:   "workspace_id",
 	11:  "key_word",
 	12:  "created_bys",
+	13:  "committed_only",
 	127: "page_num",
 	128: "page_size",
 	129: "order_by",
@@ -4199,6 +4216,10 @@ func (p *ListPromptRequest) IsSetKeyWord() bool {
 
 func (p *ListPromptRequest) IsSetCreatedBys() bool {
 	return p.CreatedBys != nil
+}
+
+func (p *ListPromptRequest) IsSetCommittedOnly() bool {
+	return p.CommittedOnly != nil
 }
 
 func (p *ListPromptRequest) IsSetPageNum() bool {
@@ -4258,6 +4279,14 @@ func (p *ListPromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4377,6 +4406,17 @@ func (p *ListPromptRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.CreatedBys = _field
 	return nil
 }
+func (p *ListPromptRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommittedOnly = _field
+	return nil
+}
 func (p *ListPromptRequest) ReadField127(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -4446,6 +4486,10 @@ func (p *ListPromptRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 		if err = p.writeField127(oprot); err != nil {
@@ -4547,6 +4591,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+func (p *ListPromptRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommittedOnly() {
+		if err = oprot.WriteFieldBegin("committed_only", thrift.BOOL, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.CommittedOnly); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 func (p *ListPromptRequest) writeField127(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageNum() {
@@ -4662,6 +4724,9 @@ func (p *ListPromptRequest) DeepEqual(ano *ListPromptRequest) bool {
 	if !p.Field12DeepEqual(ano.CreatedBys) {
 		return false
 	}
+	if !p.Field13DeepEqual(ano.CommittedOnly) {
+		return false
+	}
 	if !p.Field127DeepEqual(ano.PageNum) {
 		return false
 	}
@@ -4714,6 +4779,18 @@ func (p *ListPromptRequest) Field12DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *ListPromptRequest) Field13DeepEqual(src *bool) bool {
+
+	if p.CommittedOnly == src {
+		return true
+	} else if p.CommittedOnly == nil || src == nil {
+		return false
+	}
+	if *p.CommittedOnly != *src {
+		return false
 	}
 	return true
 }

@@ -166,10 +166,18 @@ func (p *ExperimentTurnPayload) IsValid() error {
 	}
 	return nil
 }
+func (p *KeywordSearch) IsValid() error {
+	return nil
+}
 func (p *ExperimentFilter) IsValid() error {
 	if p.Filters != nil {
 		if err := p.Filters.IsValid(); err != nil {
 			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	if p.KeywordSearch != nil {
+		if err := p.KeywordSearch.IsValid(); err != nil {
+			return fmt.Errorf("field KeywordSearch not valid, %w", err)
 		}
 	}
 	return nil

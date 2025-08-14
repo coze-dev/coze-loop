@@ -13,3 +13,8 @@ const (
 	DefaultEvaluatorToolKey         = "score_range"
 	DefaultEvaluatorPromptSuffixKey = "content"
 )
+
+const (
+	DefaultListEvaluatorVersionPageNum  = 1
+	DefaultListEvaluatorVersionPageSize = 10
+)
