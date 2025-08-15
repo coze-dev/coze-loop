@@ -94,7 +94,10 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/nikolalohinski/gonja/v2 v2.3.1
+require (
+	github.com/coreos/go-semver v0.3.0
+	github.com/nikolalohinski/gonja/v2 v2.3.1
+)
 
 require (
 	cloud.google.com/go v0.116.0 // indirect
