@@ -8,7 +8,7 @@
 </p>
 <p>
   <img alt="License" src="https://img.shields.io/badge/license-apache2.0-blue.svg">
-  <img alt="Go Version" src="https://img.shields.io/badge/go-%3E%3D%201.23.4-blue">
+  <img alt="Go Version" src="https://img.shields.io/badge/go-%3E%3D%201.24.0-blue">
 </p>
 
 English | [中文](README.cn.md)
