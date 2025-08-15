@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/service"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/entity"
@@ -64,15 +65,14 @@ func InitDatasetApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable 
 	return iDatasetApplication, nil
 }
 
-func InitTagApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable redis.Cmdable, configLoader conf.IConfigLoader, userClient userservice.Client, authClient authservice.Client) (tag.TagService, error) {
+func InitTagApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, cmdable redis.Cmdable, configLoader conf.IConfigLoader, userClient userservice.Client, authAdapter rpc.IAuthProvider) (tag.TagService, error) {
 	iTagAPI := tag2.NewTagRepoImpl(db2, idgen2)
 	iLocker := lock.NewRedisLocker(cmdable)
 	iConfig := conf2.NewConfiger(configLoader)
 	iTagService := service2.NewTagServiceImpl(iTagAPI, db2, iLocker, iConfig)
-	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
-	tagService := NewTagApplicationImpl(iTagService, iTagAPI, iAuthProvider, userInfoService)
+	tagService := NewTagApplicationImpl(iTagService, iTagAPI, authAdapter, userInfoService)
 	return tagService, nil
 }
 
@@ -84,7 +84,7 @@ var (
 	)
 
 	tagSet = wire.NewSet(
-		NewTagApplicationImpl, service2.NewTagServiceImpl, tag2.NewTagRepoImpl, conf2.NewConfiger, foundation.NewAuthRPCProvider, userinfo.NewUserInfoServiceImpl, foundation.NewUserRPCProvider, lock.NewRedisLocker,
+		NewTagApplicationImpl, service2.NewTagServiceImpl, tag2.NewTagRepoImpl, conf2.NewConfiger, userinfo.NewUserInfoServiceImpl, foundation.NewUserRPCProvider, lock.NewRedisLocker,
 	)
 )
 

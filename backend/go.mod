@@ -35,7 +35,6 @@ require (
 	github.com/cloudwego/hertz v0.9.7
 	github.com/cloudwego/kitex v0.13.1
 	github.com/coocood/freecache v1.2.4
-	github.com/coreos/go-semver v0.3.0
 	github.com/coze-dev/cozeloop-go v0.1.7
 	github.com/coze-dev/cozeloop-go/spec v0.1.2
 	github.com/deatil/go-encoding v1.0.3003

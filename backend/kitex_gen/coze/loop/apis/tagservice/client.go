@@ -18,6 +18,7 @@ type Client interface {
 	GetTagDetail(ctx context.Context, req *tag.GetTagDetailRequest, callOptions ...callopt.Option) (r *tag.GetTagDetailResponse, err error)
 	GetTagSpec(ctx context.Context, req *tag.GetTagSpecRequest, callOptions ...callopt.Option) (r *tag.GetTagSpecResponse, err error)
 	BatchGetTags(ctx context.Context, req *tag.BatchGetTagsRequest, callOptions ...callopt.Option) (r *tag.BatchGetTagsResponse, err error)
+	ArchiveOptionTag(ctx context.Context, request *tag.ArchiveOptionTagRequest, callOptions ...callopt.Option) (r *tag.ArchiveOptionTagResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -82,4 +83,9 @@ func (p *kTagServiceClient) GetTagSpec(ctx context.Context, req *tag.GetTagSpecR
 func (p *kTagServiceClient) BatchGetTags(ctx context.Context, req *tag.BatchGetTagsRequest, callOptions ...callopt.Option) (r *tag.BatchGetTagsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetTags(ctx, req)
+}
+
+func (p *kTagServiceClient) ArchiveOptionTag(ctx context.Context, request *tag.ArchiveOptionTagRequest, callOptions ...callopt.Option) (r *tag.ArchiveOptionTagResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ArchiveOptionTag(ctx, request)
 }

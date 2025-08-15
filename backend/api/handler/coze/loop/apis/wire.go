@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
+	"github.com/coze-dev/coze-loop/backend/modules/data/infra/rpc/foundation"
 	evaluationapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
@@ -82,6 +83,7 @@ var (
 		NewDataHandler,
 		dataapp.InitDatasetApplication,
 		dataapp.InitTagApplication,
+		foundation.NewAuthRPCProvider,
 		conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(

@@ -56,3 +56,9 @@ func GetTagSpec(ctx context.Context, c *app.RequestContext) {
 func BatchGetTags(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localTagClient.BatchGetTags)
 }
+
+// ArchiveOptionTag .
+// @router /api/data/v1/tags/:tag_key_id/archive_option_tag [POST]
+func ArchiveOptionTag(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localTagClient.ArchiveOptionTag)
+}

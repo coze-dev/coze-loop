@@ -78,6 +78,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_tags.POST("/search", append(_searchtagsMw(handler), apis.SearchTags)...)
 				_tags.PATCH("/:tag_key_id", append(_tag_key_idMw(handler), apis.UpdateTag)...)
 				_tag_key_id := _tags.Group("/:tag_key_id", _tag_key_idMw(handler)...)
+				_tag_key_id.POST("/archive_option_tag", append(_archiveoptiontagMw(handler), apis.ArchiveOptionTag)...)
 				_tag_key_id.POST("/detail", append(_gettagdetailMw(handler), apis.GetTagDetail)...)
 				{
 					_dataset_io_jobs := _v10.Group("/dataset_io_jobs", _dataset_io_jobsMw(handler)...)

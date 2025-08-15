@@ -32,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	application5 "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
+	"github.com/coze-dev/coze-loop/backend/modules/data/infra/rpc/foundation"
 	application4 "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
@@ -138,7 +139,8 @@ func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Prov
 	if err != nil {
 		return nil, err
 	}
-	tagService, err := application5.InitTagApplication(idgen2, db2, redisCli, iConfigLoader, userClient, auth)
+	iAuthProvider := foundation.NewAuthRPCProvider(auth)
+	tagService, err := application5.InitTagApplication(idgen2, db2, redisCli, iConfigLoader, userClient, iAuthProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +181,7 @@ var (
 		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication,
 	)
 	dataSet = wire.NewSet(
-		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, conf2.NewConfigerFactory,
+		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, foundation.NewAuthRPCProvider, conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(
 		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication,

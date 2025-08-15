@@ -62,6 +62,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ArchiveOptionTag": kitex.NewMethodInfo(
+		archiveOptionTagHandler,
+		newTagServiceArchiveOptionTagArgs,
+		newTagServiceArchiveOptionTagResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -228,6 +235,25 @@ func newTagServiceBatchGetTagsResult() interface{} {
 	return tag.NewTagServiceBatchGetTagsResult()
 }
 
+func archiveOptionTagHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*tag.TagServiceArchiveOptionTagArgs)
+	realResult := result.(*tag.TagServiceArchiveOptionTagResult)
+	success, err := handler.(tag.TagService).ArchiveOptionTag(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTagServiceArchiveOptionTagArgs() interface{} {
+	return tag.NewTagServiceArchiveOptionTagArgs()
+}
+
+func newTagServiceArchiveOptionTagResult() interface{} {
+	return tag.NewTagServiceArchiveOptionTagResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -305,6 +331,16 @@ func (p *kClient) BatchGetTags(ctx context.Context, req *tag.BatchGetTagsRequest
 	_args.Req = req
 	var _result tag.TagServiceBatchGetTagsResult
 	if err = p.c.Call(ctx, "BatchGetTags", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ArchiveOptionTag(ctx context.Context, request *tag.ArchiveOptionTagRequest) (r *tag.ArchiveOptionTagResponse, err error) {
+	var _args tag.TagServiceArchiveOptionTagArgs
+	_args.Request = request
+	var _result tag.TagServiceArchiveOptionTagResult
+	if err = p.c.Call(ctx, "ArchiveOptionTag", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

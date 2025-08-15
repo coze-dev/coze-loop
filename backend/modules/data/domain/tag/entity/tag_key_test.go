@@ -13,6 +13,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/tag/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/consts"
 )
 
 func TestTagKey_ToPO(t *testing.T) {
@@ -764,6 +765,557 @@ func TestTagKey_CalculateChangeLogs(t *testing.T) {
 			assert.Equal(t, len(res), len(tt.want))
 			for i := 0; i < len(res); i++ {
 				assert.Equal(t, res[i], tt.want[i])
+			}
+		})
+	}
+}
+
+func TestTagKey_RetainTagKeyID(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *TagKey
+	}{
+		{
+			name: "nil tag key",
+			req:  nil,
+		},
+		{
+			name: "normal case",
+			req: &TagKey{
+				ID:             123,
+				AppID:          456,
+				SpaceID:        789,
+				Version:        gptr.Of("v1.0"),
+				VersionNum:     gptr.Of(int32(1)),
+				TagKeyID:       999,
+				TagKeyName:     "test_tag",
+				Description:    gptr.Of("test description"),
+				Status:         TagStatusActive,
+				TagType:        TagTypeTag,
+				TagTargetType:  []TagTargetType{TagTargetTypeObserve},
+				ParentKeyID:    gptr.Of(int64(111)),
+				TagValues:      []*TagValue{{TagValueName: "value1"}},
+				ChangeLogs:     []*ChangeLog{{Operation: TagOperationTypeCreate}},
+				CreatedBy:      gptr.Of("user1"),
+				UpdatedBy:      gptr.Of("user2"),
+				TagContentType: TagContentTypeCategorical,
+				ContentSpec:    &TagContentSpec{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalTagKeyID := int64(0)
+			if tt.req != nil {
+				originalTagKeyID = tt.req.TagKeyID
+			}
+
+			tt.req.RetainTagKeyID()
+
+			if tt.req == nil {
+				return
+			}
+
+			// Verify only TagKeyID is retained
+			assert.Equal(t, originalTagKeyID, tt.req.TagKeyID)
+
+			// Verify all other fields are cleared
+			assert.Equal(t, int64(0), tt.req.ID)
+			assert.Equal(t, int32(0), tt.req.AppID)
+			assert.Equal(t, int64(0), tt.req.SpaceID)
+			assert.Nil(t, tt.req.Version)
+			assert.Nil(t, tt.req.VersionNum)
+			assert.Equal(t, "", tt.req.TagKeyName)
+			assert.Nil(t, tt.req.Description)
+			assert.Equal(t, TagStatus(""), tt.req.Status)
+			assert.Equal(t, TagType(""), tt.req.TagType)
+			assert.Nil(t, tt.req.TagTargetType)
+			assert.Nil(t, tt.req.ParentKeyID)
+			assert.Nil(t, tt.req.TagValues)
+			assert.Nil(t, tt.req.ChangeLogs)
+			assert.Nil(t, tt.req.CreatedBy)
+			assert.Nil(t, tt.req.UpdatedBy)
+			assert.Equal(t, TagContentType(""), tt.req.TagContentType)
+			assert.Nil(t, tt.req.ContentSpec)
+		})
+	}
+}
+
+func TestTagKey_validateContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     *TagKey
+		wantErr bool
+	}{
+		{
+			name:    "nil tag key",
+			req:     nil,
+			wantErr: false,
+		},
+		{
+			name: "continuous number with empty tag values - valid",
+			req: &TagKey{
+				TagContentType: TagContentTypeContinuousNumber,
+				TagValues:      []*TagValue{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "free text with empty tag values - valid",
+			req: &TagKey{
+				TagContentType: TagContentTypeFreeText,
+				TagValues:      []*TagValue{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "continuous number with non-empty tag values - invalid",
+			req: &TagKey{
+				TagContentType: TagContentTypeContinuousNumber,
+				TagValues:      []*TagValue{{TagValueName: "value1"}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "free text with non-empty tag values - invalid",
+			req: &TagKey{
+				TagContentType: TagContentTypeFreeText,
+				TagValues:      []*TagValue{{TagValueName: "value1"}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "boolean with exactly 2 tag values - valid",
+			req: &TagKey{
+				TagContentType: TagContentTypeBoolean,
+				TagValues: []*TagValue{
+					{TagValueName: "true"},
+					{TagValueName: "false"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "boolean with 1 tag value - invalid",
+			req: &TagKey{
+				TagContentType: TagContentTypeBoolean,
+				TagValues:      []*TagValue{{TagValueName: "true"}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "boolean with 3 tag values - invalid",
+			req: &TagKey{
+				TagContentType: TagContentTypeBoolean,
+				TagValues: []*TagValue{
+					{TagValueName: "true"},
+					{TagValueName: "false"},
+					{TagValueName: "maybe"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "categorical with tag values - valid",
+			req: &TagKey{
+				TagContentType: TagContentTypeCategorical,
+				TagValues:      []*TagValue{{TagValueName: "category1"}},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.validateContent()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateContent() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateTagValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		values    []*TagValue
+		maxHeight int
+		maxWidth  int
+		wantErr   bool
+	}{
+		{
+			name:      "empty values",
+			values:    []*TagValue{},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   false,
+		},
+		{
+			name: "single level values within limits",
+			values: []*TagValue{
+				{TagValueName: "value1"},
+				{TagValueName: "value2"},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   false,
+		},
+		{
+			name: "width exceeds limit",
+			values: []*TagValue{
+				{TagValueName: "value1"},
+				{TagValueName: "value2"},
+				{TagValueName: "value3"},
+				{TagValueName: "value4"},
+				{TagValueName: "value5"},
+				{TagValueName: "value6"}, // exceeds maxWidth=5
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   true,
+		},
+		{
+			name: "height exceeds limit",
+			values: []*TagValue{
+				{
+					TagValueName: "level1",
+					Children: []*TagValue{
+						{
+							TagValueName: "level2",
+							Children: []*TagValue{
+								{
+									TagValueName: "level3",
+									Children: []*TagValue{
+										{TagValueName: "level4"}, // exceeds maxHeight=3
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   true,
+		},
+		{
+			name: "duplicate tag value names",
+			values: []*TagValue{
+				{TagValueName: "duplicate"},
+				{TagValueName: "duplicate"},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   true,
+		},
+		{
+			name: "empty tag value name",
+			values: []*TagValue{
+				{TagValueName: ""},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   true,
+		},
+		{
+			name: "multiple fallback values",
+			values: []*TagValue{
+				{TagValueName: consts.FallbackTagValueDefaultName, IsSystem: false},
+				{TagValueName: consts.FallbackTagValueDefaultName, IsSystem: false},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   true,
+		},
+		{
+			name: "system values are ignored in validation",
+			values: []*TagValue{
+				{TagValueName: consts.FallbackTagValueDefaultName, IsSystem: true},
+				{TagValueName: "normal_value", IsSystem: false},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   false,
+		},
+		{
+			name: "complex nested structure within limits",
+			values: []*TagValue{
+				{
+					TagValueName: "parent1",
+					Children: []*TagValue{
+						{TagValueName: "child1"},
+						{TagValueName: "child2"},
+					},
+				},
+				{
+					TagValueName: "parent2",
+					Children: []*TagValue{
+						{TagValueName: "child3"},
+					},
+				},
+			},
+			maxHeight: 3,
+			maxWidth:  5,
+			wantErr:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateTagValues(tt.values, tt.maxHeight, tt.maxWidth)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateTagValues() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestChangeLog_ToDTO(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *ChangeLog
+		want *tag.ChangeLog
+	}{
+		{
+			name: "nil change log",
+			req:  nil,
+			want: nil,
+		},
+		{
+			name: "normal change log",
+			req: &ChangeLog{
+				ChangeTarget: TagChangeTargetTypeTag,
+				Operation:    TagOperationTypeCreate,
+				BeforeValue:  "before",
+				AfterValue:   "after",
+				TargetValue:  "target",
+			},
+			want: &tag.ChangeLog{
+				Target:      gptr.Of(tag.ChangeTargetTypeTag),
+				Operation:   gptr.Of(tag.OperationTypeCreate),
+				BeforeValue: gptr.Of("before"),
+				AfterValue:  gptr.Of("after"),
+				TargetValue: gptr.Of("target"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.req.ToDTO()
+			if result == nil {
+				assert.Equal(t, tt.want, result)
+			} else {
+				assert.Equal(t, tt.want.Target, result.Target)
+				assert.Equal(t, tt.want.Operation, result.Operation)
+				assert.Equal(t, tt.want.BeforeValue, result.BeforeValue)
+				assert.Equal(t, tt.want.AfterValue, result.AfterValue)
+				assert.Equal(t, tt.want.TargetValue, result.TargetValue)
+			}
+		})
+	}
+}
+
+func TestTagContentSpec_ToDTO(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *TagContentSpec
+		want *tag.TagContentSpec
+	}{
+		{
+			name: "nil content spec",
+			req:  nil,
+			want: nil,
+		},
+		{
+			name: "content spec with continuous number spec",
+			req: &TagContentSpec{
+				ContinuousNumberSpec: &ContinuousNumberSpec{
+					MinValue:     gptr.Of(1.0),
+					MinValueDesc: gptr.Of("min"),
+					MaxValue:     gptr.Of(10.0),
+					MaxValueDesc: gptr.Of("max"),
+				},
+			},
+			want: &tag.TagContentSpec{
+				ContinuousNumberSpec: &tag.ContinuousNumberSpec{
+					MinValue:            gptr.Of(1.0),
+					MinValueDescription: gptr.Of("min"),
+					MaxValue:            gptr.Of(10.0),
+					MaxValueDescription: gptr.Of("max"),
+				},
+			},
+		},
+		{
+			name: "content spec with nil continuous number spec",
+			req: &TagContentSpec{
+				ContinuousNumberSpec: nil,
+			},
+			want: &tag.TagContentSpec{
+				ContinuousNumberSpec: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.req.ToDTO()
+			if result == nil {
+				assert.Equal(t, tt.want, result)
+			} else {
+				if tt.want.ContinuousNumberSpec == nil {
+					assert.Nil(t, result.ContinuousNumberSpec)
+				} else {
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MinValue, result.ContinuousNumberSpec.MinValue)
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MinValueDescription, result.ContinuousNumberSpec.MinValueDescription)
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MaxValue, result.ContinuousNumberSpec.MaxValue)
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MaxValueDescription, result.ContinuousNumberSpec.MaxValueDescription)
+				}
+			}
+		})
+	}
+}
+
+func TestContinuousNumberSpec_ToDTO(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *ContinuousNumberSpec
+		want *tag.ContinuousNumberSpec
+	}{
+		{
+			name: "nil continuous number spec",
+			req:  nil,
+			want: nil,
+		},
+		{
+			name: "normal continuous number spec",
+			req: &ContinuousNumberSpec{
+				MinValue:     gptr.Of(0.5),
+				MinValueDesc: gptr.Of("minimum value"),
+				MaxValue:     gptr.Of(100.5),
+				MaxValueDesc: gptr.Of("maximum value"),
+			},
+			want: &tag.ContinuousNumberSpec{
+				MinValue:            gptr.Of(0.5),
+				MinValueDescription: gptr.Of("minimum value"),
+				MaxValue:            gptr.Of(100.5),
+				MaxValueDescription: gptr.Of("maximum value"),
+			},
+		},
+		{
+			name: "continuous number spec with nil values",
+			req: &ContinuousNumberSpec{
+				MinValue:     nil,
+				MinValueDesc: nil,
+				MaxValue:     nil,
+				MaxValueDesc: nil,
+			},
+			want: &tag.ContinuousNumberSpec{
+				MinValue:            nil,
+				MinValueDescription: nil,
+				MaxValue:            nil,
+				MaxValueDescription: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.req.ToDTO()
+			if result == nil {
+				assert.Equal(t, tt.want, result)
+			} else {
+				assert.Equal(t, tt.want.MinValue, result.MinValue)
+				assert.Equal(t, tt.want.MinValueDescription, result.MinValueDescription)
+				assert.Equal(t, tt.want.MaxValue, result.MaxValue)
+				assert.Equal(t, tt.want.MaxValueDescription, result.MaxValueDescription)
+			}
+		})
+	}
+}
+
+func TestNewTagContentSpec(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *tag.TagContentSpec
+		want *TagContentSpec
+	}{
+		{
+			name: "nil input",
+			req:  nil,
+			want: nil,
+		},
+		{
+			name: "normal input",
+			req: &tag.TagContentSpec{
+				ContinuousNumberSpec: &tag.ContinuousNumberSpec{
+					MinValue:            gptr.Of(1.0),
+					MinValueDescription: gptr.Of("min"),
+					MaxValue:            gptr.Of(10.0),
+					MaxValueDescription: gptr.Of("max"),
+				},
+			},
+			want: &TagContentSpec{
+				ContinuousNumberSpec: &ContinuousNumberSpec{
+					MinValue:     gptr.Of(1.0),
+					MinValueDesc: gptr.Of("min"),
+					MaxValue:     gptr.Of(10.0),
+					MaxValueDesc: gptr.Of("max"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewTagContentSpec(tt.req)
+			if result == nil {
+				assert.Equal(t, tt.want, result)
+			} else {
+				if tt.want.ContinuousNumberSpec == nil {
+					assert.Nil(t, result.ContinuousNumberSpec)
+				} else {
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MinValue, result.ContinuousNumberSpec.MinValue)
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MinValueDesc, result.ContinuousNumberSpec.MinValueDesc)
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MaxValue, result.ContinuousNumberSpec.MaxValue)
+					assert.Equal(t, tt.want.ContinuousNumberSpec.MaxValueDesc, result.ContinuousNumberSpec.MaxValueDesc)
+				}
+			}
+		})
+	}
+}
+
+func TestNewContinuousNumberSpecFromDTO(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *tag.ContinuousNumberSpec
+		want *ContinuousNumberSpec
+	}{
+		{
+			name: "nil input",
+			req:  nil,
+			want: nil,
+		},
+		{
+			name: "normal input",
+			req: &tag.ContinuousNumberSpec{
+				MinValue:            gptr.Of(2.5),
+				MinValueDescription: gptr.Of("minimum"),
+				MaxValue:            gptr.Of(50.5),
+				MaxValueDescription: gptr.Of("maximum"),
+			},
+			want: &ContinuousNumberSpec{
+				MinValue:     gptr.Of(2.5),
+				MinValueDesc: gptr.Of("minimum"),
+				MaxValue:     gptr.Of(50.5),
+				MaxValueDesc: gptr.Of("maximum"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewContinuousNumberSpecFromDTO(tt.req)
+			if result == nil {
+				assert.Equal(t, tt.want, result)
+			} else {
+				assert.Equal(t, tt.want.MinValue, result.MinValue)
+				assert.Equal(t, tt.want.MinValueDesc, result.MinValueDesc)
+				assert.Equal(t, tt.want.MaxValue, result.MaxValue)
+				assert.Equal(t, tt.want.MaxValueDesc, result.MaxValueDesc)
 			}
 		})
 	}
