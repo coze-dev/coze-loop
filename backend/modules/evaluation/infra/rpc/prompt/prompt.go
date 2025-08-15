@@ -40,6 +40,7 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		VariableVals: nil,
 		Scenario:     gptr.Of(prompt.ScenarioEvalTarget),
 	}
+	// logs.CtxInfo(ctx, "ExecutePrompt History=%v, Variables=%v", json.Jsonify(param.History), json.Jsonify(param.Variables))
 	req.VariableVals = ConvertVariables2Prompt(param.Variables)
 	req.Messages = ConvertMessages2Prompt(param.History)
 

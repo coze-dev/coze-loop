@@ -54,6 +54,8 @@ struct PromptTemplate {
 
 typedef string TemplateType
 const TemplateType TemplateType_Normal = "normal"
+const TemplateType TemplateType_Jinja2 = "jinja2"
+
 
 typedef string ToolChoiceType
 const ToolChoiceType ToolChoiceType_Auto = "auto"
@@ -76,6 +78,15 @@ struct VariableDef {
 
 typedef string VariableType
 const VariableType VariableType_String = "string"
+const VariableType VariableType_Boolean = "boolean"
+const VariableType VariableType_Integer = "integer"
+const VariableType VariableType_Float = "float"
+const VariableType VariableType_Object = "object"
+const VariableType VariableType_Array_String = "array<string>"
+const VariableType VariableType_Array_Boolean = "array<boolean>"
+const VariableType VariableType_Array_Integer = "array<integer>"
+const VariableType VariableType_Array_Float = "array<float>"
+const VariableType VariableType_Array_Object = "array<object>"
 const VariableType VariableType_Placeholder = "placeholder"
 
 typedef string Role

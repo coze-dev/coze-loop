@@ -13,11 +13,31 @@ import (
 const (
 	TemplateTypeNormal = "normal"
 
+	TemplateTypeJinja2 = "jinja2"
+
 	ToolChoiceTypeAuto = "auto"
 
 	ToolChoiceTypeNone = "none"
 
 	VariableTypeString = "string"
+
+	VariableTypeBoolean = "boolean"
+
+	VariableTypeInteger = "integer"
+
+	VariableTypeFloat = "float"
+
+	VariableTypeObject = "object"
+
+	VariableTypeArrayString = "array<string>"
+
+	VariableTypeArrayBoolean = "array<boolean>"
+
+	VariableTypeArrayInteger = "array<integer>"
+
+	VariableTypeArrayFloat = "array<float>"
+
+	VariableTypeArrayObject = "array<object>"
 
 	VariableTypePlaceholder = "placeholder"
 

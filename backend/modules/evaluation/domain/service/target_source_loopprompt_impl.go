@@ -82,9 +82,16 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 			// placeholder
 			placeholder := make([]*entity.Message, 0)
 			if content.Text != nil {
+				// 如果能反序列化成placeholder就传递给PE
 				err = json.Unmarshal([]byte(*content.Text), &placeholder)
 				if err == nil {
-					variable.PlaceholderMessages = placeholder
+					placeholderMessages := make([]*entity.Message, 0)
+					for _, message := range placeholder {
+						if message != nil && message.Content != nil {
+							placeholderMessages = append(placeholderMessages, message)
+						}
+					}
+					variable.PlaceholderMessages = placeholderMessages
 				}
 			}
 			vals = append(vals, variable)
@@ -146,11 +153,35 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 	if prompt.PromptCommit != nil && prompt.PromptCommit.Detail != nil && prompt.PromptCommit.Detail.PromptTemplate != nil {
 		inputSchema = make([]*entity.ArgsSchema, 0)
 		for _, p := range prompt.PromptCommit.Detail.PromptTemplate.VariableDefs {
+			var jsonschema string
+			switch gptr.Indirect(p.Type) {
+			case rpc.VariableTypeString:
+				jsonschema = consts.StringJsonSchema
+			case rpc.VariableTypeInteger:
+				jsonschema = consts.IntegerJsonSchema
+			case rpc.VariableTypeFloat:
+				jsonschema = consts.NumberJsonSchema
+			case rpc.VariableTypeBoolean:
+				jsonschema = consts.BooleanJsonSchema
+			case rpc.VariableTypeObject:
+				jsonschema = consts.ObjectJsonSchema
+			case rpc.VariableTypeArrayString:
+				jsonschema = consts.ArrayStringJsonSchema
+			case rpc.VariableTypeArrayInteger:
+				jsonschema = consts.ArrayIntegerJsonSchema
+			case rpc.VariableTypeArrayFloat:
+				jsonschema = consts.ArrayNumberJsonSchema
+			case rpc.VariableTypeArrayBoolean:
+				jsonschema = consts.ArrayBooleanJsonSchema
+			case rpc.VariableTypeArrayObject:
+				jsonschema = consts.ArrayObjectJsonSchema
+			default:
+				jsonschema = consts.StringJsonSchema // 默认是string，例如placeholder，评测不严格规定placeholder的类型
+			}
 			inputSchema = append(inputSchema, &entity.ArgsSchema{
-				Key: p.Key,
-				// 目前prompt变量只支持text string类型，后续可以拓展其他类型
+				Key:                 p.Key,
 				SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
-				JsonSchema:          gptr.Of(consts.StringJsonSchema),
+				JsonSchema:          gptr.Of(jsonschema),
 			})
 		}
 	}

@@ -96,6 +96,7 @@ func PromptDetailDTO2DO(dto *prompt.PromptDetail) *entity.PromptDetail {
 		Tools:          BatchToolDTO2DO(dto.Tools),
 		ToolCallConfig: ToolCallConfigDTO2DO(dto.ToolCallConfig),
 		ModelConfig:    ModelConfigDTO2DO(dto.ModelConfig),
+		ExtInfos:       dto.ExtInfos,
 	}
 }
 
@@ -113,6 +114,10 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 
 func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 	switch dto {
+	case prompt.TemplateTypeNormal:
+		return entity.TemplateTypeNormal
+	case prompt.TemplateTypeJinja2:
+		return entity.TemplateTypeJinja2
 	default:
 		return entity.TemplateTypeNormal
 	}
@@ -232,9 +237,10 @@ func VariableDefDTO2DO(dto *prompt.VariableDef) *entity.VariableDef {
 	}
 
 	return &entity.VariableDef{
-		Key:  dto.GetKey(),
-		Desc: dto.GetDesc(),
-		Type: VariableTypeDTO2DO(dto.GetType()),
+		Key:      dto.GetKey(),
+		Desc:     dto.GetDesc(),
+		Type:     VariableTypeDTO2DO(dto.GetType()),
+		TypeTags: dto.TypeTags,
 	}
 }
 
@@ -244,6 +250,24 @@ func VariableTypeDTO2DO(dto prompt.VariableType) entity.VariableType {
 		return entity.VariableTypeString
 	case prompt.VariableTypePlaceholder:
 		return entity.VariableTypePlaceholder
+	case prompt.VariableTypeBoolean:
+		return entity.VariableTypeBoolean
+	case prompt.VariableTypeFloat:
+		return entity.VariableTypeFloat
+	case prompt.VariableTypeInteger:
+		return entity.VariableTypeInteger
+	case prompt.VariableTypeObject:
+		return entity.VariableTypeObject
+	case prompt.VariableTypeArrayString:
+		return entity.VariableTypeArrayString
+	case prompt.VariableTypeArrayInteger:
+		return entity.VariableTypeArrayInteger
+	case prompt.VariableTypeArrayFloat:
+		return entity.VariableTypeArrayFloat
+	case prompt.VariableTypeArrayBoolean:
+		return entity.VariableTypeArrayBoolean
+	case prompt.VariableTypeArrayObject:
+		return entity.VariableTypeArrayObject
 	default:
 		return entity.VariableTypeString
 	}
@@ -724,6 +748,7 @@ func PromptDetailDO2DTO(do *entity.PromptDetail) *prompt.PromptDetail {
 		Tools:          BatchToolDO2DTO(do.Tools),
 		ToolCallConfig: ToolCallConfigDO2DTO(do.ToolCallConfig),
 		ModelConfig:    ModelConfigDO2DTO(do.ModelConfig),
+		ExtInfos:       do.ExtInfos,
 	}
 }
 
@@ -817,8 +842,9 @@ func VariableDefDO2DTO(do *entity.VariableDef) *prompt.VariableDef {
 		return nil
 	}
 	return &prompt.VariableDef{
-		Key:  ptr.Of(do.Key),
-		Desc: ptr.Of(do.Desc),
-		Type: ptr.Of(prompt.VariableType(do.Type)),
+		Key:      ptr.Of(do.Key),
+		Desc:     ptr.Of(do.Desc),
+		Type:     ptr.Of(prompt.VariableType(do.Type)),
+		TypeTags: do.TypeTags,
 	}
 }

@@ -1488,6 +1488,20 @@ func (p *GetPromptRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 11:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField11(buf[offset:])
@@ -1590,6 +1604,20 @@ func (p *GetPromptRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetPromptRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return offset, nil
+}
+
 func (p *GetPromptRequest) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
@@ -1666,6 +1694,7 @@ func (p *GetPromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
@@ -1680,6 +1709,7 @@ func (p *GetPromptRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field21Length()
@@ -1695,6 +1725,15 @@ func (p *GetPromptRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) in
 	if p.IsSetPromptID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.PromptID)
+	}
+	return offset
+}
+
+func (p *GetPromptRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkspaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
 	}
 	return offset
 }
@@ -1747,6 +1786,15 @@ func (p *GetPromptRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) 
 func (p *GetPromptRequest) field1Length() int {
 	l := 0
 	if p.IsSetPromptID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *GetPromptRequest) field2Length() int {
+	l := 0
+	if p.IsSetWorkspaceID() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -1807,6 +1855,11 @@ func (p *GetPromptRequest) DeepCopy(s interface{}) error {
 	if src.PromptID != nil {
 		tmp := *src.PromptID
 		p.PromptID = &tmp
+	}
+
+	if src.WorkspaceID != nil {
+		tmp := *src.WorkspaceID
+		p.WorkspaceID = &tmp
 	}
 
 	if src.WithCommit != nil {

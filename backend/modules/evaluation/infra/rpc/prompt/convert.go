@@ -40,7 +40,9 @@ func ConvertToLoopPrompt(p *prompt.Prompt) *rpc.LoopPrompt {
 				PromptTemplate: &rpc.PromptTemplate{
 					VariableDefs: gslice.Map(p.GetPromptCommit().GetDetail().GetPromptTemplate().GetVariableDefs(), func(p *prompt.VariableDef) *rpc.VariableDef {
 						return &rpc.VariableDef{
-							Key: gptr.Of(p.GetKey()),
+							Key:      gptr.Of(p.GetKey()),
+							Type:     gptr.Of(p.GetType()),
+							TypeTags: p.TypeTags,
 						}
 					}),
 				},
@@ -78,6 +80,9 @@ func ConvertMessages2Prompt(fromMsg []*entity.Message) (toMsg []*prompt.Message)
 	}
 	toMsg = make([]*prompt.Message, 0)
 	for _, m := range fromMsg {
+		if m == nil || m.Content == nil {
+			continue
+		}
 		toMsg = append(toMsg, &prompt.Message{
 			Role:    gptr.Of(Role2PromptRole(m.Role)),
 			Content: m.Content.Text,

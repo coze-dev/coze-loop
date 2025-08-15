@@ -4,10 +4,10 @@
 package convertor
 
 import (
-	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -189,6 +189,10 @@ func PromptDO2CommitPO(do *entity.Prompt) *model.PromptCommit {
 					po.VariableDefs = ptr.Of(json.Jsonify(do.PromptCommit.PromptDetail.PromptTemplate.VariableDefs))
 				}
 			}
+			// 序列化ExtInfos到ExtInfo字段
+			if do.PromptCommit.PromptDetail.ExtInfos != nil {
+				po.ExtInfo = ptr.Of(json.Jsonify(do.PromptCommit.PromptDetail.ExtInfos))
+			}
 		}
 	}
 
@@ -224,6 +228,10 @@ func PromptDO2DraftPO(promptDO *entity.Prompt) *model.PromptUserDraft {
 			}
 			if detailDO.ToolCallConfig != nil {
 				po.ToolCallConfig = ptr.Of(json.Jsonify(detailDO.ToolCallConfig))
+			}
+			// 序列化ExtInfos到ExtInfo字段
+			if detailDO.ExtInfos != nil {
+				po.ExtInfo = ptr.Of(json.Jsonify(detailDO.ExtInfos))
 			}
 		}
 		infoDO := promptDO.PromptDraft.DraftInfo
@@ -265,6 +273,7 @@ func PromptUserDraftPO2PromptDetailDO(draftPO *model.PromptUserDraft) *entity.Pr
 		Tools:          UnmarshalToolDOs(draftPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(draftPO.ToolCallConfig),
 		ModelConfig:    UnmarshalModelConfig(draftPO.ModelConfig),
+		ExtInfos:       UnmarshalExtInfos(draftPO.ExtInfo),
 	}
 }
 
@@ -281,6 +290,7 @@ func PromptCommitPO2PromptDetailDO(commitPO *model.PromptCommit) *entity.PromptD
 		Tools:          UnmarshalToolDOs(commitPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(commitPO.ToolCallConfig),
 		ModelConfig:    UnmarshalModelConfig(commitPO.ModelConfig),
+		ExtInfos:       UnmarshalExtInfos(commitPO.ExtInfo),
 	}
 }
 
@@ -334,6 +344,15 @@ func UnmarshalToolDOs(text *string) []*entity.Tool {
 	tools := make([]*entity.Tool, 0)
 	_ = json.Unmarshal([]byte(*text), &tools)
 	return tools
+}
+
+func UnmarshalExtInfos(text *string) map[string]string {
+	if text == nil {
+		return nil
+	}
+	extInfos := make(map[string]string)
+	_ = json.Unmarshal([]byte(*text), &extInfos)
+	return extInfos
 }
 
 func UnmarshalBool(val int32) bool {

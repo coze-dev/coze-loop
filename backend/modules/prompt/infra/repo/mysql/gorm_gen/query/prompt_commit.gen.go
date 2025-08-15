@@ -41,6 +41,7 @@ func newPromptCommit(db *gorm.DB, opts ...gen.DOOption) promptCommit {
 	_promptCommit.BaseVersion = field.NewString(tableName, "base_version")
 	_promptCommit.CommittedBy = field.NewString(tableName, "committed_by")
 	_promptCommit.Description = field.NewString(tableName, "description")
+	_promptCommit.ExtInfo = field.NewString(tableName, "ext_info")
 	_promptCommit.CreatedAt = field.NewTime(tableName, "created_at")
 	_promptCommit.UpdatedAt = field.NewTime(tableName, "updated_at")
 
@@ -68,6 +69,7 @@ type promptCommit struct {
 	BaseVersion    field.String // 来源版本
 	CommittedBy    field.String // 提交人
 	Description    field.String // 提交版本描述
+	ExtInfo        field.String // 扩展字段
 	CreatedAt      field.Time   // 创建时间
 	UpdatedAt      field.Time   // 更新时间
 
@@ -100,6 +102,7 @@ func (p *promptCommit) updateTableName(table string) *promptCommit {
 	p.BaseVersion = field.NewString(table, "base_version")
 	p.CommittedBy = field.NewString(table, "committed_by")
 	p.Description = field.NewString(table, "description")
+	p.ExtInfo = field.NewString(table, "ext_info")
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
 
@@ -130,7 +133,7 @@ func (p *promptCommit) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (p *promptCommit) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 16)
+	p.fieldMap = make(map[string]field.Expr, 17)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -145,6 +148,7 @@ func (p *promptCommit) fillFieldMap() {
 	p.fieldMap["base_version"] = p.BaseVersion
 	p.fieldMap["committed_by"] = p.CommittedBy
 	p.fieldMap["description"] = p.Description
+	p.fieldMap["ext_info"] = p.ExtInfo
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
 }

@@ -11,6 +11,8 @@ import (
 const (
 	TemplateTypeNormal = "normal"
 
+	TemplateTypeJinja2 = "jinja2"
+
 	ToolTypeFunction = "function"
 
 	ToolChoiceTypeNone = "none"
@@ -32,6 +34,24 @@ const (
 	ContentTypeImageURL = "image_url"
 
 	VariableTypeString = "string"
+
+	VariableTypeBoolean = "boolean"
+
+	VariableTypeInteger = "integer"
+
+	VariableTypeFloat = "float"
+
+	VariableTypeObject = "object"
+
+	VariableTypeArrayString = "array<string>"
+
+	VariableTypeArrayBoolean = "array<boolean>"
+
+	VariableTypeArrayInteger = "array<integer>"
+
+	VariableTypeArrayFloat = "array<float>"
+
+	VariableTypeArrayObject = "array<object>"
 
 	VariableTypePlaceholder = "placeholder"
 
@@ -2779,10 +2799,11 @@ func (p *DraftInfo) Field12DeepEqual(src *int64) bool {
 }
 
 type PromptDetail struct {
-	PromptTemplate *PromptTemplate `thrift:"prompt_template,1,optional" frugal:"1,optional,PromptTemplate" form:"prompt_template" json:"prompt_template,omitempty" query:"prompt_template"`
-	Tools          []*Tool         `thrift:"tools,2,optional" frugal:"2,optional,list<Tool>" form:"tools" json:"tools,omitempty" query:"tools"`
-	ToolCallConfig *ToolCallConfig `thrift:"tool_call_config,3,optional" frugal:"3,optional,ToolCallConfig" form:"tool_call_config" json:"tool_call_config,omitempty" query:"tool_call_config"`
-	ModelConfig    *ModelConfig    `thrift:"model_config,4,optional" frugal:"4,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+	PromptTemplate *PromptTemplate   `thrift:"prompt_template,1,optional" frugal:"1,optional,PromptTemplate" form:"prompt_template" json:"prompt_template,omitempty" query:"prompt_template"`
+	Tools          []*Tool           `thrift:"tools,2,optional" frugal:"2,optional,list<Tool>" form:"tools" json:"tools,omitempty" query:"tools"`
+	ToolCallConfig *ToolCallConfig   `thrift:"tool_call_config,3,optional" frugal:"3,optional,ToolCallConfig" form:"tool_call_config" json:"tool_call_config,omitempty" query:"tool_call_config"`
+	ModelConfig    *ModelConfig      `thrift:"model_config,4,optional" frugal:"4,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+	ExtInfos       map[string]string `thrift:"ext_infos,255,optional" frugal:"255,optional,map<string:string>" form:"ext_infos" json:"ext_infos,omitempty" query:"ext_infos"`
 }
 
 func NewPromptDetail() *PromptDetail {
@@ -2839,6 +2860,18 @@ func (p *PromptDetail) GetModelConfig() (v *ModelConfig) {
 	}
 	return p.ModelConfig
 }
+
+var PromptDetail_ExtInfos_DEFAULT map[string]string
+
+func (p *PromptDetail) GetExtInfos() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtInfos() {
+		return PromptDetail_ExtInfos_DEFAULT
+	}
+	return p.ExtInfos
+}
 func (p *PromptDetail) SetPromptTemplate(val *PromptTemplate) {
 	p.PromptTemplate = val
 }
@@ -2851,12 +2884,16 @@ func (p *PromptDetail) SetToolCallConfig(val *ToolCallConfig) {
 func (p *PromptDetail) SetModelConfig(val *ModelConfig) {
 	p.ModelConfig = val
 }
+func (p *PromptDetail) SetExtInfos(val map[string]string) {
+	p.ExtInfos = val
+}
 
 var fieldIDToName_PromptDetail = map[int16]string{
-	1: "prompt_template",
-	2: "tools",
-	3: "tool_call_config",
-	4: "model_config",
+	1:   "prompt_template",
+	2:   "tools",
+	3:   "tool_call_config",
+	4:   "model_config",
+	255: "ext_infos",
 }
 
 func (p *PromptDetail) IsSetPromptTemplate() bool {
@@ -2873,6 +2910,10 @@ func (p *PromptDetail) IsSetToolCallConfig() bool {
 
 func (p *PromptDetail) IsSetModelConfig() bool {
 	return p.ModelConfig != nil
+}
+
+func (p *PromptDetail) IsSetExtInfos() bool {
+	return p.ExtInfos != nil
 }
 
 func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
@@ -2920,6 +2961,14 @@ func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField255(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3001,6 +3050,35 @@ func (p *PromptDetail) ReadField4(iprot thrift.TProtocol) error {
 	p.ModelConfig = _field
 	return nil
 }
+func (p *PromptDetail) ReadField255(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.ExtInfos = _field
+	return nil
+}
 
 func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3022,6 +3100,10 @@ func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
 			goto WriteFieldError
 		}
 	}
@@ -3122,6 +3204,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *PromptDetail) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtInfos() {
+		if err = oprot.WriteFieldBegin("ext_infos", thrift.MAP, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.ExtInfos)); err != nil {
+			return err
+		}
+		for k, v := range p.ExtInfos {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
 
 func (p *PromptDetail) String() string {
 	if p == nil {
@@ -3147,6 +3258,9 @@ func (p *PromptDetail) DeepEqual(ano *PromptDetail) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ModelConfig) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.ExtInfos) {
 		return false
 	}
 	return true
@@ -3183,6 +3297,19 @@ func (p *PromptDetail) Field4DeepEqual(src *ModelConfig) bool {
 
 	if !p.ModelConfig.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+func (p *PromptDetail) Field255DeepEqual(src map[string]string) bool {
+
+	if len(p.ExtInfos) != len(src) {
+		return false
+	}
+	for k, v := range p.ExtInfos {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
@@ -6906,9 +7033,10 @@ func (p *FunctionCall) Field2DeepEqual(src *string) bool {
 }
 
 type VariableDef struct {
-	Key  *string       `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
-	Desc *string       `thrift:"desc,2,optional" frugal:"2,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
-	Type *VariableType `thrift:"type,3,optional" frugal:"3,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	Key      *string       `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
+	Desc     *string       `thrift:"desc,2,optional" frugal:"2,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
+	Type     *VariableType `thrift:"type,3,optional" frugal:"3,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	TypeTags []string      `thrift:"type_tags,4,optional" frugal:"4,optional,list<string>" form:"type_tags" json:"type_tags,omitempty" query:"type_tags"`
 }
 
 func NewVariableDef() *VariableDef {
@@ -6953,6 +7081,18 @@ func (p *VariableDef) GetType() (v VariableType) {
 	}
 	return *p.Type
 }
+
+var VariableDef_TypeTags_DEFAULT []string
+
+func (p *VariableDef) GetTypeTags() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTypeTags() {
+		return VariableDef_TypeTags_DEFAULT
+	}
+	return p.TypeTags
+}
 func (p *VariableDef) SetKey(val *string) {
 	p.Key = val
 }
@@ -6962,11 +7102,15 @@ func (p *VariableDef) SetDesc(val *string) {
 func (p *VariableDef) SetType(val *VariableType) {
 	p.Type = val
 }
+func (p *VariableDef) SetTypeTags(val []string) {
+	p.TypeTags = val
+}
 
 var fieldIDToName_VariableDef = map[int16]string{
 	1: "key",
 	2: "desc",
 	3: "type",
+	4: "type_tags",
 }
 
 func (p *VariableDef) IsSetKey() bool {
@@ -6979,6 +7123,10 @@ func (p *VariableDef) IsSetDesc() bool {
 
 func (p *VariableDef) IsSetType() bool {
 	return p.Type != nil
+}
+
+func (p *VariableDef) IsSetTypeTags() bool {
+	return p.TypeTags != nil
 }
 
 func (p *VariableDef) Read(iprot thrift.TProtocol) (err error) {
@@ -7018,6 +7166,14 @@ func (p *VariableDef) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7085,6 +7241,29 @@ func (p *VariableDef) ReadField3(iprot thrift.TProtocol) error {
 	p.Type = _field
 	return nil
 }
+func (p *VariableDef) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TypeTags = _field
+	return nil
+}
 
 func (p *VariableDef) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7102,6 +7281,10 @@ func (p *VariableDef) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -7176,6 +7359,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *VariableDef) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTypeTags() {
+		if err = oprot.WriteFieldBegin("type_tags", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.TypeTags)); err != nil {
+			return err
+		}
+		for _, v := range p.TypeTags {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *VariableDef) String() string {
 	if p == nil {
@@ -7198,6 +7407,9 @@ func (p *VariableDef) DeepEqual(ano *VariableDef) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.TypeTags) {
 		return false
 	}
 	return true
@@ -7236,6 +7448,19 @@ func (p *VariableDef) Field3DeepEqual(src *VariableType) bool {
 	}
 	if strings.Compare(*p.Type, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *VariableDef) Field4DeepEqual(src []string) bool {
+
+	if len(p.TypeTags) != len(src) {
+		return false
+	}
+	for i, v := range p.TypeTags {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

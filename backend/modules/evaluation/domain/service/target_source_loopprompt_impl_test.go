@@ -51,6 +51,10 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 							ContentType: gptr.Of(entity.ContentTypeText),
 							Text:        gptr.Of("test input"),
 						},
+						"var2": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("[{\"content\":{}}]"),
+						},
 					},
 					HistoryMessages: []*entity.Message{
 						{
@@ -66,25 +70,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockPromptRPCAdapter.EXPECT().
-					ExecutePrompt(gomock.Any(), int64(123), &rpc.ExecutePromptParam{
-						PromptID:      456,
-						PromptVersion: "v1",
-						Variables: []*entity.VariableVal{
-							{
-								Key:   gptr.Of("var1"),
-								Value: gptr.Of("test input"),
-							},
-						},
-						History: []*entity.Message{
-							{
-								Role: entity.RoleUser,
-								Content: &entity.Content{
-									ContentType: gptr.Of(entity.ContentTypeText),
-									Text:        gptr.Of("test message"),
-								},
-							},
-						},
-					}).
+					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
 						Content: gptr.Of("test output"),
 						TokenUsage: &entity.TokenUsage{
@@ -261,8 +247,16 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 						Detail: &rpc.PromptDetail{
 							PromptTemplate: &rpc.PromptTemplate{
 								VariableDefs: []*rpc.VariableDef{
-									{Key: gptr.Of("var1")},
-									{Key: gptr.Of("var2")},
+									{Key: gptr.Of("var1"), Type: gptr.Of(rpc.VariableTypeString)},
+									{Key: gptr.Of("var2"), Type: gptr.Of(rpc.VariableTypeInteger)},
+									{Key: gptr.Of("var3"), Type: gptr.Of(rpc.VariableTypeBoolean)},
+									{Key: gptr.Of("var4"), Type: gptr.Of(rpc.VariableTypeFloat)},
+									{Key: gptr.Of("var5"), Type: gptr.Of(rpc.VariableTypeObject)},
+									{Key: gptr.Of("var6"), Type: gptr.Of(rpc.VariableTypeArrayInteger)},
+									{Key: gptr.Of("var7"), Type: gptr.Of(rpc.VariableTypeArrayString)},
+									{Key: gptr.Of("var8"), Type: gptr.Of(rpc.VariableTypeArrayFloat)},
+									{Key: gptr.Of("var9"), Type: gptr.Of(rpc.VariableTypeArrayBoolean)},
+									{Key: gptr.Of("var10"), Type: gptr.Of(rpc.VariableTypeArrayObject)},
 								},
 							},
 						},
@@ -296,8 +290,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				assert.Equal(t, defaultSourceTargetIDInt, evalTarget.EvalTargetVersion.Prompt.PromptID)
 				assert.Equal(t, defaultSourceTargetVersion, evalTarget.EvalTargetVersion.Prompt.Version)
 
-				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 2)
-				if len(evalTarget.EvalTargetVersion.InputSchema) == 2 {
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 10)
+				if len(evalTarget.EvalTargetVersion.InputSchema) == 10 {
 					assert.Equal(t, "var1", *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
