@@ -766,11 +766,6 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetVersionID int64) error {
 	exptResultBuilder := b.ExptResultBuilders[0]
 	b.ExptTurnResultFilters = make([]*entity.ExptTurnResultFilterEntity, 0)
-	// 处理 createdDate，只保留到天级别的日期
-	if createdDate != nil {
-		truncatedDate := createdDate.Truncate(24 * time.Hour)
-		createdDate = &truncatedDate
-	}
 	itemID2ItemIdx := make(map[int64]*entity.ExptItemResult)
 	for _, itemResult := range b.BaseExptItemResultDO {
 		itemID2ItemIdx[itemResult.ItemID] = itemResult
