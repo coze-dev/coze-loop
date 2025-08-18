@@ -4,10 +4,9 @@
 package trace
 
 import (
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
-
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func VariableValsToSpanPromptVariables(variables []*entity.VariableVal) []*tracespec.PromptArgument {
@@ -119,6 +118,8 @@ func ContentTypeToSpanPartType(partType entity.ContentType) tracespec.ModelMessa
 		return tracespec.ModelMessagePartTypeText
 	case entity.ContentTypeImageURL:
 		return tracespec.ModelMessagePartTypeImage
+	case entity.ContentTypeMultiPartVariable:
+		return "MultiPartVariable"
 	default:
 		return tracespec.ModelMessagePartType(partType)
 	}

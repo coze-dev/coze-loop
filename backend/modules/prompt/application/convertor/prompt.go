@@ -201,6 +201,8 @@ func ContentTypeDTO2DO(dto prompt.ContentType) entity.ContentType {
 		return entity.ContentTypeText
 	case prompt.ContentTypeImageURL:
 		return entity.ContentTypeImageURL
+	case prompt.ContentTypeMultiPartVariable:
+		return entity.ContentTypeMultiPartVariable
 	default:
 		return entity.ContentTypeText
 	}
@@ -268,6 +270,8 @@ func VariableTypeDTO2DO(dto prompt.VariableType) entity.VariableType {
 		return entity.VariableTypeArrayBoolean
 	case prompt.VariableTypeArrayObject:
 		return entity.VariableTypeArrayObject
+	case prompt.ContentTypeMultiPartVariable:
+		return entity.VariableTypeMultiPart
 	default:
 		return entity.VariableTypeString
 	}
@@ -415,6 +419,7 @@ func VariableValDTO2DO(dto *prompt.VariableVal) *entity.VariableVal {
 		Key:                 dto.GetKey(),
 		Value:               dto.Value,
 		PlaceholderMessages: BatchMessageDTO2DO(dto.PlaceholderMessages),
+		MultiPartValues:     BatchContentPartDTO2DO(dto.MultiPartValues),
 	}
 }
 
@@ -530,6 +535,8 @@ func ContentTypeDO2DTO(do entity.ContentType) prompt.ContentType {
 		return prompt.ContentTypeText
 	case entity.ContentTypeImageURL:
 		return prompt.ContentTypeImageURL
+	case entity.ContentTypeMultiPartVariable:
+		return prompt.ContentTypeMultiPartVariable
 	default:
 		return prompt.ContentTypeText
 	}
@@ -592,6 +599,7 @@ func VariableValDO2DTO(do *entity.VariableVal) *prompt.VariableVal {
 		Key:                 ptr.Of(do.Key),
 		Value:               do.Value,
 		PlaceholderMessages: BatchMessageDO2DTO(do.PlaceholderMessages),
+		MultiPartValues:     BatchContentPartDO2DTO(do.MultiPartValues),
 	}
 }
 
