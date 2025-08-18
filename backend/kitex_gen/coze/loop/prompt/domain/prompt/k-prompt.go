@@ -5330,6 +5330,20 @@ func (p *VariableVal) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -5401,6 +5415,31 @@ func (p *VariableVal) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *VariableVal) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*ContentPart, 0, size)
+	values := make([]ContentPart, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.MultiPartValues = _field
+	return offset, nil
+}
+
 func (p *VariableVal) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -5411,6 +5450,7 @@ func (p *VariableVal) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -5422,6 +5462,7 @@ func (p *VariableVal) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -5461,6 +5502,22 @@ func (p *VariableVal) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *VariableVal) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMultiPartValues() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 4)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.MultiPartValues {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *VariableVal) field1Length() int {
 	l := 0
 	if p.IsSetKey() {
@@ -5485,6 +5542,19 @@ func (p *VariableVal) field3Length() int {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
 		for _, v := range p.PlaceholderMessages {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *VariableVal) field4Length() int {
+	l := 0
+	if p.IsSetMultiPartValues() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.MultiPartValues {
 			_ = v
 			l += v.BLength()
 		}
@@ -5526,6 +5596,21 @@ func (p *VariableVal) DeepCopy(s interface{}) error {
 			}
 
 			p.PlaceholderMessages = append(p.PlaceholderMessages, _elem)
+		}
+	}
+
+	if src.MultiPartValues != nil {
+		p.MultiPartValues = make([]*ContentPart, 0, len(src.MultiPartValues))
+		for _, elem := range src.MultiPartValues {
+			var _elem *ContentPart
+			if elem != nil {
+				_elem = &ContentPart{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.MultiPartValues = append(p.MultiPartValues, _elem)
 		}
 	}
 
