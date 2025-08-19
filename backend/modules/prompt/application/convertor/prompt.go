@@ -270,7 +270,7 @@ func VariableTypeDTO2DO(dto prompt.VariableType) entity.VariableType {
 		return entity.VariableTypeArrayBoolean
 	case prompt.VariableTypeArrayObject:
 		return entity.VariableTypeArrayObject
-	case prompt.ContentTypeMultiPartVariable:
+	case prompt.VariableTypeMultiPart:
 		return entity.VariableTypeMultiPart
 	default:
 		return entity.VariableTypeString
