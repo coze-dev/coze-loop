@@ -119,7 +119,7 @@ func ContentTypeToSpanPartType(partType entity.ContentType) tracespec.ModelMessa
 	case entity.ContentTypeImageURL:
 		return tracespec.ModelMessagePartTypeImage
 	case entity.ContentTypeMultiPartVariable:
-		return "MultiPartVariable"
+		return "multi_part_variable"
 	default:
 		return tracespec.ModelMessagePartType(partType)
 	}
