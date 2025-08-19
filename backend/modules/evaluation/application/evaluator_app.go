@@ -50,6 +50,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	auditClient audit.IAuditService,
 	benefitService benefit.IBenefitService,
 	fileProvider rpc.IFileProvider,
+	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                  idgen,
@@ -62,22 +63,24 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		userInfoService:        userInfoService,
 		benefitService:         benefitService,
 		fileProvider:           fileProvider,
+		evaluatorSourceServices: evaluatorSourceServices,
 	}
 	return handler
 }
 
 // EvaluatorHandlerImpl 实现 EvaluatorService 接口
 type EvaluatorHandlerImpl struct {
-	idgen                  idgen.IIDGenerator
-	auth                   rpc.IAuthProvider
-	auditClient            audit.IAuditService
-	configer               conf.IConfiger
-	evaluatorService       service.EvaluatorService
-	evaluatorRecordService service.EvaluatorRecordService
-	metrics                metrics.EvaluatorExecMetrics
-	userInfoService        userinfo.UserInfoService
-	benefitService         benefit.IBenefitService
+	idgen                   idgen.IIDGenerator
+	auth                    rpc.IAuthProvider
+	auditClient             audit.IAuditService
+	configer                conf.IConfiger
+	evaluatorService        service.EvaluatorService
+	evaluatorRecordService  service.EvaluatorRecordService
+	metrics                 metrics.EvaluatorExecMetrics
+	userInfoService         userinfo.UserInfoService
+	benefitService          benefit.IBenefitService
 	fileProvider           rpc.IFileProvider
+	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -947,4 +950,62 @@ func (e *EvaluatorHandlerImpl) fillURLs(uriToContentMap map[string][]*evaluatorc
 			}
 		}
 	}
+}
+
+// ValidateEvaluator 验证评估器
+func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *evaluatorservice.ValidateEvaluatorRequest) (resp *evaluatorservice.ValidateEvaluatorResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("validateLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换请求参数
+	evaluator, err := evaluatorconvertor.ConvertEvaluatorContent2DO(request.EvaluatorContent, request.EvaluatorType)
+	if err != nil {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(err.Error()),
+		}, nil
+	}
+
+	// 设置基本信息
+	evaluator.SpaceID = request.WorkspaceID
+
+	// 验证基本信息
+	if err := evaluator.ValidateBaseInfo(); err != nil {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(err.Error()),
+		}, nil
+	}
+
+	// 获取评估器源服务
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluator.EvaluatorType]
+	if !ok {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(fmt.Sprintf("unsupported evaluator type: %d", evaluator.EvaluatorType)),
+		}, nil
+	}
+
+	// 验证评估器（语法检查等）
+	if err := evaluatorSourceService.Validate(ctx, evaluator); err != nil {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(err.Error()),
+		}, nil
+	}
+
+
+	// 构造响应
+	response := &evaluatorservice.ValidateEvaluatorResponse{
+		Valid: gptr.Of(true),
+	}
+
+	return response, nil
 }

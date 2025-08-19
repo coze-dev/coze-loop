@@ -99,6 +99,8 @@ require (
 
 require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 
+require github.com/brianvoe/gofakeit/v6 v6.28.0
+
 require (
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/ai v0.8.0 // indirect

@@ -213,14 +213,14 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
 
 	for _, evaluatorVersion := range expt.Evaluators {
-		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersion().GetID())
+		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
 		if existResult != nil && existResult.Status == entity.EvaluatorRunStatusSuccess {
 			evaluatorResults[existResult.ID] = existResult
 			continue
 		}
 
-		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersion().GetID())
+		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersionID())
 	}
 
 	logs.CtxInfo(ctx, "CallEvaluators with pending evaluator version ids: %v", pendingEvaluatorVersionIDs)
@@ -273,7 +273,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 	for idx := range expt.Evaluators {
 		ev := expt.Evaluators[idx]
-		versionID := ev.GetEvaluatorVersion().GetID()
+		versionID := ev.GetEvaluatorVersionID()
 
 		if !execEvalVerIDMap[versionID] {
 			continue
@@ -329,7 +329,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
 				SpaceID:            spaceID,
 				Name:               "",
-				EvaluatorVersionID: ev.GetEvaluatorVersion().GetID(),
+				EvaluatorVersionID: ev.GetEvaluatorVersionID(),
 				InputData: &entity.EvaluatorInputData{
 					HistoryMessages: nil,
 					InputFields:     inputFields,
@@ -344,7 +344,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 				return err
 			}
 
-			recordMap.Store(ev.GetEvaluatorVersion().GetID(), evaluatorRecord)
+			recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
 			return nil
 		})
 	}

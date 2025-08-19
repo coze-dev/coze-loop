@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
-	"github.com/bytedance/gg/gslice"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -40,20 +39,18 @@ func NewEvaluatorServiceImpl(
 	evaluatorRecordRepo repo.IEvaluatorRecordRepo,
 	idem idem.IdempotentService,
 	configer conf.IConfiger,
-	evaluatorSourceServices []EvaluatorSourceService,
+	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService,
 ) EvaluatorService {
 	onceEvaluatorService.Do(func() {
 		singletonEvaluatorService = &EvaluatorServiceImpl{
-			limiter:             limiter,
-			mqFactory:           mqFactory,
-			evaluatorRepo:       evaluatorRepo,
-			evaluatorRecordRepo: evaluatorRecordRepo,
-			idgen:               idgen,
-			idem:                idem,
-			configer:            configer,
-			evaluatorSourceServices: gslice.ToMap(evaluatorSourceServices, func(t EvaluatorSourceService) (entity.EvaluatorType, EvaluatorSourceService) {
-				return t.EvaluatorType(), t
-			}),
+			limiter:                 limiter,
+			mqFactory:               mqFactory,
+			evaluatorRepo:           evaluatorRepo,
+			evaluatorRecordRepo:     evaluatorRecordRepo,
+			idgen:                   idgen,
+			idem:                    idem,
+			configer:                configer,
+			evaluatorSourceServices: evaluatorSourceServices,
 		}
 	})
 	return singletonEvaluatorService
@@ -70,6 +67,8 @@ type EvaluatorServiceImpl struct {
 	configer                conf.IConfiger
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService
 }
+
+
 
 // ListEvaluator 按查询条件查询 evaluator_version
 func (e *EvaluatorServiceImpl) ListEvaluator(ctx context.Context, request *entity.ListEvaluatorRequest) ([]*entity.Evaluator, int64, error) {
@@ -103,10 +102,11 @@ func (e *EvaluatorServiceImpl) ListEvaluator(ctx context.Context, request *entit
 	}
 	// 组装版本信息
 	for _, evaluatorVersion := range evaluatorVersions {
-		evaluatorDO, ok := evaluatorID2DO[evaluatorVersion.GetEvaluatorVersion().GetEvaluatorID()]
+		evaluatorDO, ok := evaluatorID2DO[evaluatorVersion.GetEvaluatorID()]
 		if !ok {
 			continue
 		}
+		// 设置 Evaluator.ID 为评估器ID（不是评估器版本ID）
 		evaluatorVersion.ID = evaluatorDO.ID
 		evaluatorVersion.SpaceID = evaluatorDO.SpaceID
 		evaluatorVersion.Description = evaluatorDO.Description
@@ -342,7 +342,7 @@ func (e *EvaluatorServiceImpl) SubmitEvaluatorVersion(ctx context.Context, evalu
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 
-	if err = evaluatorDO.GetEvaluatorVersion().ValidateBaseInfo(); err != nil {
+	if err = evaluatorDO.ValidateBaseInfo(); err != nil {
 		return nil, err
 	}
 	versionExist, err := e.evaluatorRepo.CheckVersionExist(ctx, evaluatorDO.ID, version)
@@ -352,9 +352,9 @@ func (e *EvaluatorServiceImpl) SubmitEvaluatorVersion(ctx context.Context, evalu
 	if versionExist {
 		return nil, errorx.NewByCode(errno.EvaluatorVersionExistCode, errorx.WithExtraMsg("version already exists"))
 	}
-	evaluatorDO.GetEvaluatorVersion().SetID(versionID)
-	evaluatorDO.GetEvaluatorVersion().SetVersion(version)
-	evaluatorDO.GetEvaluatorVersion().SetDescription(description)
+	evaluatorDO.SetEvaluatorVersionID(versionID)
+	evaluatorDO.SetVersion(version)
+	evaluatorDO.SetEvaluatorVersionDescription(description)
 	// 回传提交后的状态
 	evaluatorDO.BaseInfo = &entity.BaseInfo{
 		UpdatedBy: &entity.UserInfo{
@@ -362,7 +362,7 @@ func (e *EvaluatorServiceImpl) SubmitEvaluatorVersion(ctx context.Context, evalu
 		},
 		UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 	}
-	evaluatorDO.GetEvaluatorVersion().SetBaseInfo(&entity.BaseInfo{
+	evaluatorDO.SetBaseInfo(&entity.BaseInfo{
 		CreatedBy: &entity.UserInfo{
 			UserID: gptr.Of(userIDInContext),
 		},
@@ -442,7 +442,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 
 // DebugEvaluator 调试 evaluator_version
 func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, error) {
-	if evaluatorDO == nil || evaluatorDO.GetEvaluatorVersion() == nil {
+	if evaluatorDO == nil || (evaluatorDO.EvaluatorType == entity.EvaluatorTypePrompt && evaluatorDO.PromptEvaluatorVersion == nil) {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
 	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
@@ -473,7 +473,7 @@ func (e *EvaluatorServiceImpl) injectUserInfo(ctx context.Context, evaluatorDO *
 		CreatedAt: gptr.Of(time.Now().UnixMilli()),
 		UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 	}
-	evaluatorDO.GetEvaluatorVersion().SetBaseInfo(&entity.BaseInfo{
+	evaluatorDO.SetBaseInfo(&entity.BaseInfo{
 		CreatedBy: &entity.UserInfo{
 			UserID: gptr.Of(userIDInContext),
 		},

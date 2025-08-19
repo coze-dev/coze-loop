@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	"github.com/coze-dev/coze-loop/backend/infra/http"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -33,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	componentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -60,6 +62,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -126,6 +129,12 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
+		http.NewHTTPClient,
+		runtime.NewRuntimeFactory,
+		runtime.NewRuntimeManager,
+
+		wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)),
+		service.NewCodeBuilderFactory,
 		evaluatorrepo.NewEvaluatorRepo,
 		evaluatorrepo.NewEvaluatorRecordRepo,
 		evaluatormysql.NewEvaluatorDAO,
@@ -276,8 +285,21 @@ func InitEvalTargetApplication(ctx context.Context,
 	return nil
 }
 
-func NewEvaluatorSourceServices(llmProvider componentrpc.ILLMProvider, metric mtr.EvaluatorExecMetrics, config evalconf.IConfiger) []domainservice.EvaluatorSourceService {
-	return []domainservice.EvaluatorSourceService{
+func NewEvaluatorSourceServices(
+	llmProvider componentrpc.ILLMProvider,
+	metric mtr.EvaluatorExecMetrics,
+	config evalconf.IConfiger,
+	runtimeManager component.IRuntimeManager,
+	codeBuilderFactory service.CodeBuilderFactory,
+) map[entity.EvaluatorType]domainservice.EvaluatorSourceService {
+	services := []domainservice.EvaluatorSourceService{
 		domainservice.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config),
+		domainservice.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric),
 	}
+
+	serviceMap := make(map[entity.EvaluatorType]domainservice.EvaluatorSourceService)
+	for _, svc := range services {
+		serviceMap[svc.EvaluatorType()] = svc
+	}
+	return serviceMap
 }

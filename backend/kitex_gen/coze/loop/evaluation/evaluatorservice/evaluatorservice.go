@@ -154,6 +154,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ValidateEvaluator": kitex.NewMethodInfo(
+		validateEvaluatorHandler,
+		newEvaluatorServiceValidateEvaluatorArgs,
+		newEvaluatorServiceValidateEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -567,6 +574,25 @@ func newEvaluatorServiceBatchGetEvaluatorRecordsResult() interface{} {
 	return evaluator.NewEvaluatorServiceBatchGetEvaluatorRecordsResult()
 }
 
+func validateEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceValidateEvaluatorArgs)
+	realResult := result.(*evaluator.EvaluatorServiceValidateEvaluatorResult)
+	success, err := handler.(evaluator.EvaluatorService).ValidateEvaluator(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceValidateEvaluatorArgs() interface{} {
+	return evaluator.NewEvaluatorServiceValidateEvaluatorArgs()
+}
+
+func newEvaluatorServiceValidateEvaluatorResult() interface{} {
+	return evaluator.NewEvaluatorServiceValidateEvaluatorResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -774,6 +800,16 @@ func (p *kClient) BatchGetEvaluatorRecords(ctx context.Context, req *evaluator.B
 	_args.Req = req
 	var _result evaluator.EvaluatorServiceBatchGetEvaluatorRecordsResult
 	if err = p.c.Call(ctx, "BatchGetEvaluatorRecords", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ValidateEvaluator(ctx context.Context, request *evaluator.ValidateEvaluatorRequest) (r *evaluator.ValidateEvaluatorResponse, err error) {
+	var _args evaluator.EvaluatorServiceValidateEvaluatorArgs
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceValidateEvaluatorResult
+	if err = p.c.Call(ctx, "ValidateEvaluator", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

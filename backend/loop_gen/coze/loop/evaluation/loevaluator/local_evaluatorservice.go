@@ -452,6 +452,29 @@ func (l *LocalEvaluatorService) BatchGetEvaluatorRecords(ctx context.Context, re
 	return result.GetSuccess(), nil
 }
 
+// ValidateEvaluator
+// 评估器验证
+func (l *LocalEvaluatorService) ValidateEvaluator(ctx context.Context, request *evaluator.ValidateEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.ValidateEvaluatorResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceValidateEvaluatorArgs)
+		result := out.(*evaluator.EvaluatorServiceValidateEvaluatorResult)
+		resp, err := l.impl.ValidateEvaluator(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceValidateEvaluatorArgs{Request: request}
+	result := &evaluator.EvaluatorServiceValidateEvaluatorResult{}
+	ctx = l.injectRPCInfo(ctx, "ValidateEvaluator")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluatorService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

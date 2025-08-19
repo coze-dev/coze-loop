@@ -5,13 +5,12 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
-	"time"
+	context "context"
+	reflect "reflect"
+	time "time"
 
-	"go.uber.org/mock/gomock"
-
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockEvaluatorEventPublisher is a mock of EvaluatorEventPublisher interface.

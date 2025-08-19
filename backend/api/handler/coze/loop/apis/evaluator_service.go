@@ -9,8 +9,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/evaluatorservice"
+	evaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 )
 
 var localEvaluatorSvc evaluatorservice.Client
@@ -139,4 +141,20 @@ func UpdateEvaluatorRecord(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluationv3/evaluator_records/get_batch [POST]
 func BatchGetEvaluatorRecords(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvaluatorSvc.BatchGetEvaluatorRecords)
+}
+
+// ValidateEvaluator .
+// @router /api/evaluation/v1/evaluators/validate [POST]
+func ValidateEvaluator(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.ValidateEvaluatorRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.ValidateEvaluatorResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

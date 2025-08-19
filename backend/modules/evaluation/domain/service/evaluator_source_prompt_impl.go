@@ -107,14 +107,14 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 		})
 	}()
 
-	err = evaluator.GetEvaluatorVersion().ValidateBaseInfo()
+	err = evaluator.ValidateBaseInfo()
 	if err != nil {
 		logs.CtxInfo(ctx, "[RunEvaluator] ValidateBaseInfo fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
 		return nil, runStatus, traceID
 	}
 	// 校验输入数据
-	err = evaluator.GetEvaluatorVersion().ValidateInput(input)
+	err = evaluator.ValidateInput(input)
 	if err != nil {
 		logs.CtxInfo(ctx, "[RunEvaluator] ValidateInput fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
@@ -531,12 +531,12 @@ func (p *EvaluatorSourcePromptServiceImpl) injectPromptTools(ctx context.Context
 	// 注入默认工具
 	tools := make([]*entity.Tool, 0, len(p.configer.GetEvaluatorToolConf(ctx)))
 
-	if toolKey, ok := p.configer.GetEvaluatorToolMapping(ctx)[evaluatorDO.GetEvaluatorVersion().GetPromptTemplateKey()]; ok {
+	if toolKey, ok := p.configer.GetEvaluatorToolMapping(ctx)[evaluatorDO.GetPromptTemplateKey()]; ok {
 		tools = append(tools, evaluator.ConvertToolDTO2DO(p.configer.GetEvaluatorToolConf(ctx)[toolKey]))
 	} else {
 		tools = append(tools, evaluator.ConvertToolDTO2DO(p.configer.GetEvaluatorToolConf(ctx)[consts.DefaultEvaluatorToolKey]))
 	}
-	evaluatorDO.GetEvaluatorVersion().SetTools(tools)
+	evaluatorDO.SetTools(tools)
 }
 
 func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, evaluatorDO *entity.Evaluator) {
@@ -544,12 +544,13 @@ func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, 
 	if evaluatorDO.GetEvaluatorVersion() == nil || evaluatorDO.GetEvaluatorVersion().GetModelConfig() == nil {
 		return
 	}
-	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetEvaluatorVersion().GetModelConfig().ModelID, 10)]; ok {
-		evaluatorDO.GetEvaluatorVersion().SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[suffixKey])
-		evaluatorDO.GetEvaluatorVersion().SetParseType(entity.ParseType(suffixKey))
+
+	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetModelConfig().ModelID, 10)]; ok {
+		evaluatorDO.SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[suffixKey])
+		evaluatorDO.SetParseType(entity.ParseType(suffixKey))
 	} else {
-		evaluatorDO.GetEvaluatorVersion().SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[consts.DefaultEvaluatorPromptSuffixKey])
-		evaluatorDO.GetEvaluatorVersion().SetParseType(entity.ParseTypeContent)
+		evaluatorDO.SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[consts.DefaultEvaluatorPromptSuffixKey])
+		evaluatorDO.SetParseType(entity.ParseTypeContent)
 	}
 }
 
@@ -645,4 +646,10 @@ func expandMultiPartVariable(variablePart *entity.Content, inputFields map[strin
 		res = append(res, part)
 	}
 	return res, nil
+}
+
+// Validate 验证Prompt评估器（Prompt评估器暂时提供空实现）
+func (p *EvaluatorSourcePromptServiceImpl) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
+	// Prompt评估器暂时提供空实现，返回nil表示验证通过
+	return nil
 }
