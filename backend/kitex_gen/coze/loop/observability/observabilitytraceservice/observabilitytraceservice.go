@@ -35,13 +35,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"IngestTraces": kitex.NewMethodInfo(
-		ingestTracesHandler,
-		newTraceServiceIngestTracesArgs,
-		newTraceServiceIngestTracesResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"IngestTracesInner": kitex.NewMethodInfo(
 		ingestTracesInnerHandler,
 		newTraceServiceIngestTracesInnerArgs,
@@ -81,6 +74,34 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		listViewsHandler,
 		newTraceServiceListViewsArgs,
 		newTraceServiceListViewsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateManualAnnotation": kitex.NewMethodInfo(
+		createManualAnnotationHandler,
+		newTraceServiceCreateManualAnnotationArgs,
+		newTraceServiceCreateManualAnnotationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateManualAnnotation": kitex.NewMethodInfo(
+		updateManualAnnotationHandler,
+		newTraceServiceUpdateManualAnnotationArgs,
+		newTraceServiceUpdateManualAnnotationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteManualAnnotation": kitex.NewMethodInfo(
+		deleteManualAnnotationHandler,
+		newTraceServiceDeleteManualAnnotationArgs,
+		newTraceServiceDeleteManualAnnotationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListAnnotations": kitex.NewMethodInfo(
+		listAnnotationsHandler,
+		newTraceServiceListAnnotationsArgs,
+		newTraceServiceListAnnotationsResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -172,25 +193,6 @@ func newTraceServiceBatchGetTracesAdvanceInfoArgs() interface{} {
 
 func newTraceServiceBatchGetTracesAdvanceInfoResult() interface{} {
 	return trace.NewTraceServiceBatchGetTracesAdvanceInfoResult()
-}
-
-func ingestTracesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceIngestTracesArgs)
-	realResult := result.(*trace.TraceServiceIngestTracesResult)
-	success, err := handler.(trace.TraceService).IngestTraces(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceIngestTracesArgs() interface{} {
-	return trace.NewTraceServiceIngestTracesArgs()
-}
-
-func newTraceServiceIngestTracesResult() interface{} {
-	return trace.NewTraceServiceIngestTracesResult()
 }
 
 func ingestTracesInnerHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -307,6 +309,82 @@ func newTraceServiceListViewsResult() interface{} {
 	return trace.NewTraceServiceListViewsResult()
 }
 
+func createManualAnnotationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceCreateManualAnnotationArgs)
+	realResult := result.(*trace.TraceServiceCreateManualAnnotationResult)
+	success, err := handler.(trace.TraceService).CreateManualAnnotation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceCreateManualAnnotationArgs() interface{} {
+	return trace.NewTraceServiceCreateManualAnnotationArgs()
+}
+
+func newTraceServiceCreateManualAnnotationResult() interface{} {
+	return trace.NewTraceServiceCreateManualAnnotationResult()
+}
+
+func updateManualAnnotationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceUpdateManualAnnotationArgs)
+	realResult := result.(*trace.TraceServiceUpdateManualAnnotationResult)
+	success, err := handler.(trace.TraceService).UpdateManualAnnotation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceUpdateManualAnnotationArgs() interface{} {
+	return trace.NewTraceServiceUpdateManualAnnotationArgs()
+}
+
+func newTraceServiceUpdateManualAnnotationResult() interface{} {
+	return trace.NewTraceServiceUpdateManualAnnotationResult()
+}
+
+func deleteManualAnnotationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceDeleteManualAnnotationArgs)
+	realResult := result.(*trace.TraceServiceDeleteManualAnnotationResult)
+	success, err := handler.(trace.TraceService).DeleteManualAnnotation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceDeleteManualAnnotationArgs() interface{} {
+	return trace.NewTraceServiceDeleteManualAnnotationArgs()
+}
+
+func newTraceServiceDeleteManualAnnotationResult() interface{} {
+	return trace.NewTraceServiceDeleteManualAnnotationResult()
+}
+
+func listAnnotationsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListAnnotationsArgs)
+	realResult := result.(*trace.TraceServiceListAnnotationsResult)
+	success, err := handler.(trace.TraceService).ListAnnotations(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListAnnotationsArgs() interface{} {
+	return trace.NewTraceServiceListAnnotationsArgs()
+}
+
+func newTraceServiceListAnnotationsResult() interface{} {
+	return trace.NewTraceServiceListAnnotationsResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -344,16 +422,6 @@ func (p *kClient) BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.Batc
 	_args.Req = req
 	var _result trace.TraceServiceBatchGetTracesAdvanceInfoResult
 	if err = p.c.Call(ctx, "BatchGetTracesAdvanceInfo", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) IngestTraces(ctx context.Context, req *trace.IngestTracesRequest) (r *trace.IngestTracesResponse, err error) {
-	var _args trace.TraceServiceIngestTracesArgs
-	_args.Req = req
-	var _result trace.TraceServiceIngestTracesResult
-	if err = p.c.Call(ctx, "IngestTraces", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -414,6 +482,46 @@ func (p *kClient) ListViews(ctx context.Context, req *trace.ListViewsRequest) (r
 	_args.Req = req
 	var _result trace.TraceServiceListViewsResult
 	if err = p.c.Call(ctx, "ListViews", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateManualAnnotation(ctx context.Context, req *trace.CreateManualAnnotationRequest) (r *trace.CreateManualAnnotationResponse, err error) {
+	var _args trace.TraceServiceCreateManualAnnotationArgs
+	_args.Req = req
+	var _result trace.TraceServiceCreateManualAnnotationResult
+	if err = p.c.Call(ctx, "CreateManualAnnotation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest) (r *trace.UpdateManualAnnotationResponse, err error) {
+	var _args trace.TraceServiceUpdateManualAnnotationArgs
+	_args.Req = req
+	var _result trace.TraceServiceUpdateManualAnnotationResult
+	if err = p.c.Call(ctx, "UpdateManualAnnotation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest) (r *trace.DeleteManualAnnotationResponse, err error) {
+	var _args trace.TraceServiceDeleteManualAnnotationArgs
+	_args.Req = req
+	var _result trace.TraceServiceDeleteManualAnnotationResult
+	if err = p.c.Call(ctx, "DeleteManualAnnotation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest) (r *trace.ListAnnotationsResponse, err error) {
+	var _args trace.TraceServiceListAnnotationsArgs
+	_args.Req = req
+	var _result trace.TraceServiceListAnnotationsResult
+	if err = p.c.Call(ctx, "ListAnnotations", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -40,6 +40,11 @@ func (p *ExecuteInternalRequest) IsValid() error {
 	if len(*p.Version) < int(1) {
 		return fmt.Errorf("field Version min_len rule failed, current value: %d", len(*p.Version))
 	}
+	if p.OverridePromptParams != nil {
+		if err := p.OverridePromptParams.IsValid(); err != nil {
+			return fmt.Errorf("field OverridePromptParams not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

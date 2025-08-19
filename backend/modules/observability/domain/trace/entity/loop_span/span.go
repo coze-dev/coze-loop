@@ -11,8 +11,9 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/samber/lo"
 )
 
 const (
@@ -46,6 +47,7 @@ const (
 	SpanFieldMessageID               = "message_id"
 	SpanFieldUserID                  = "user_id"
 	SpanFieldPromptKey               = "prompt_key"
+	SpanFieldTenant                  = "tenant"
 
 	SpanTypePrompt = "prompt"
 	SpanTypeModel  = "model"
@@ -57,6 +59,17 @@ const (
 	MaxKeySize         = 100
 	MaxTextSize        = 1024 * 1024
 	MaxCommonValueSize = 1024
+)
+
+type TTL string
+
+const (
+	TTL3d   TTL = "3d"
+	TTL7d   TTL = "7d"
+	TTL30d  TTL = "30d"
+	TTL90d  TTL = "90d"
+	TTL180d TTL = "180d"
+	TTL365d TTL = "365d"
 )
 
 var TimeTagSlice = []string{
@@ -99,8 +112,9 @@ type Span struct {
 	TagsBool map[string]bool   `json:"tags_bool"`
 	TagsByte map[string]string `json:"tags_byte"`
 
-	AttrTos         *AttrTos `json:"-"`
-	LogicDeleteTime int64    `json:"-"` // us
+	AttrTos         *AttrTos       `json:"-"`
+	LogicDeleteTime int64          `json:"-"` // us
+	Annotations     AnnotationList `json:"-"`
 }
 
 type ObjectStorage struct {
@@ -292,6 +306,49 @@ func (s *Span) IsValidSpan() error {
 	return nil
 }
 
+func (s *Span) GetTenant() string {
+	return s.SystemTagsString[SpanFieldTenant]
+}
+
+func (s *Span) GetTTL(ctx context.Context) TTL {
+	tStart := time.UnixMicro(s.StartTime)
+	tEnd := time.UnixMicro(s.LogicDeleteTime)
+	if s.DurationMicros > 0 {
+		tStart = time.UnixMicro(s.StartTime + s.DurationMicros)
+	}
+	duration := tEnd.Sub(tStart)
+	days := int64(duration.Hours() / 24)
+	ttl := TTLFromInteger(days)
+	logs.CtxInfo(ctx, "get ttl for span_id %s is %s", s.SpanID, ttl)
+	return ttl
+}
+
+func (s *Span) BuildFeedback(t AnnotationType, key string, value AnnotationValue, reasoning, userID string, deleted bool) (*Annotation, error) {
+	a := &Annotation{
+		SpanID:         s.SpanID,
+		TraceID:        s.TraceID,
+		StartTime:      time.UnixMicro(s.StartTime),
+		WorkspaceID:    s.WorkspaceID,
+		AnnotationType: t,
+		Key:            key,
+		Value:          value,
+		Reasoning:      reasoning,
+		Status:         AnnotationStatusNormal,
+		CreatedAt:      time.Now(),
+		CreatedBy:      userID,
+		UpdatedAt:      time.Now(),
+		UpdatedBy:      userID,
+		IsDeleted:      deleted,
+	}
+	if deleted {
+		a.Status = AnnotationStatusDeleted
+	}
+	if err := a.GenID(); err != nil {
+		return nil, fmt.Errorf("fail to generate annotation id: %v", err)
+	}
+	return a, nil
+}
+
 func validField(clipFields *[]string, key, value string) string {
 	if key == SpanFieldInput || key == SpanFieldOutput {
 		if len(value) > MaxTextSize {
@@ -460,6 +517,66 @@ func (s SpanList) SortByStartTime(desc bool) {
 		return s[i].StartTime < s[j].StartTime
 	}
 	sort.Slice(s, sortByStartTime)
+}
+
+func (s SpanList) SetAnnotations(annotations AnnotationList) {
+	// spanId&traceId
+	annotationMap := make(map[string]map[string]AnnotationList)
+	for _, anno := range annotations {
+		if annotationMap[anno.SpanID] == nil {
+			annotationMap[anno.SpanID] = make(map[string]AnnotationList)
+		}
+		annotationMap[anno.SpanID][anno.TraceID] = append(annotationMap[anno.SpanID][anno.TraceID], anno)
+	}
+	for i := range s {
+		s[i].Annotations = annotationMap[s[i].SpanID][s[i].TraceID]
+	}
+}
+
+func (s SpanList) GetUserIDs() []string {
+	ret := make([]string, 0)
+	for _, span := range s {
+		ret = append(ret, span.Annotations.GetUserIDs()...)
+	}
+	return lo.Uniq(ret)
+}
+
+func (s SpanList) GetAnnotationTagIDs() []string {
+	ret := make([]string, 0)
+	for _, span := range s {
+		ret = append(ret, span.Annotations.GetAnnotationTagIDs()...)
+	}
+	return lo.Uniq(ret)
+}
+
+func (s SpanList) GetEvaluatorVersionIDs() []int64 {
+	ret := make([]int64, 0)
+	for _, span := range s {
+		ret = append(ret, span.Annotations.GetEvaluatorVersionIDs()...)
+	}
+	return lo.Uniq(ret)
+}
+
+func (s SpanList) Uniq() SpanList {
+	return lo.UniqBy(s, func(item *Span) string {
+		return fmt.Sprintf("%s_%s", item.SpanID, item.TraceID)
+	})
+}
+
+func TTLFromInteger(i int64) TTL {
+	if i <= 4 {
+		return TTL3d
+	} else if i <= 8 {
+		return TTL7d
+	} else if i <= 31 {
+		return TTL30d
+	} else if i <= 91 {
+		return TTL90d
+	} else if i <= 181 {
+		return TTL180d
+	} else {
+		return TTL365d
+	}
 }
 
 var SystemTagKeys = map[string]bool{

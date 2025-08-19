@@ -244,7 +244,18 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 						validWorkspaceID,
 						&entity.Session{UserID: "789"},
 						gomock.Any(),
+						gomock.Any(),
 					).Return(nil)
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				}).AnyTimes()
 			},
 			wantResp: &exptpb.SubmitExperimentResponse{
 				Experiment: &expt.Experiment{
@@ -317,6 +328,7 @@ func TestExperimentApplication_CheckExperimentName(t *testing.T) {
 	defer ctrl.Finish()
 
 	// 创建 mock 对象
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 
 	// 测试数据
@@ -340,6 +352,16 @@ func TestExperimentApplication_CheckExperimentName(t *testing.T) {
 				mockManager.EXPECT().
 					CheckName(gomock.Any(), validName, validWorkspaceID, &entity.Session{}).
 					Return(true, nil)
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				})
 			},
 			wantResp: &exptpb.CheckExperimentNameResponse{
 				Pass:    gptr.Of(true),
@@ -357,6 +379,16 @@ func TestExperimentApplication_CheckExperimentName(t *testing.T) {
 				mockManager.EXPECT().
 					CheckName(gomock.Any(), validName, validWorkspaceID, &entity.Session{}).
 					Return(false, nil)
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				})
 			},
 			wantResp: &exptpb.CheckExperimentNameResponse{
 				Pass:    gptr.Of(false),
@@ -374,6 +406,7 @@ func TestExperimentApplication_CheckExperimentName(t *testing.T) {
 			// 创建被测试对象
 			app := &experimentApplication{
 				manager: mockManager,
+				auth:    mockAuth,
 			}
 
 			// 执行测试
@@ -1555,6 +1588,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validWorkspaceID,
 						&entity.Session{UserID: strconv.FormatInt(validUserID, 10)},
 						entity.EvaluationModeSubmit,
+						gomock.Any(),
 					).Return(nil)
 			},
 			wantResp: &exptpb.RunExperimentResponse{
@@ -1599,6 +1633,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validWorkspaceID,
 						&entity.Session{UserID: strconv.FormatInt(validUserID, 10)},
 						entity.EvaluationModeSubmit,
+						gomock.Any(),
 					).Return(errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantErr: true,
@@ -1685,7 +1720,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any()).Return(nil)
 
 				// 重试失败的实验
-				mockManager.EXPECT().RetryUnSuccess(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any()).Return(nil)
+				mockManager.EXPECT().RetryUnSuccess(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantResp: &exptpb.RetryExperimentResponse{
 				RunID:    gptr.Of(validRunID),
@@ -1856,6 +1891,7 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 	defer ctrl.Finish()
 
 	// 创建 mock 对象
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 
 	// 测试数据
@@ -1879,6 +1915,17 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 				PageSize:      gptr.Of(int32(10)),
 			},
 			mockSetup: func() {
+				// 模拟权限验证
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				})
 				mockResultSvc.EXPECT().MGetExperimentResult(
 					gomock.Any(),
 					gomock.Any(),
@@ -1946,6 +1993,16 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				})
 				// 不应该调用 MGetExperimentResult
 			},
 			wantResp: nil,
@@ -1957,6 +2014,7 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := &experimentApplication{
 				resultSvc: mockResultSvc,
+				auth:      mockAuth,
 			}
 
 			if tt.mockSetup != nil {
@@ -2031,6 +2089,7 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 	defer ctrl.Finish()
 
 	// 创建 mock 对象
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockAggrResultSvc := servicemocks.NewMockExptAggrResultService(ctrl)
 
 	// 测试数据
@@ -2052,6 +2111,17 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 				ExperimentIds: []int64{validExptID},
 			},
 			mockSetup: func() {
+				// 模拟权限验证
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				})
 				mockAggrResultSvc.EXPECT().BatchGetExptAggrResultByExperimentIDs(
 					gomock.Any(),
 					validWorkspaceID,
@@ -2113,6 +2183,17 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 				ExperimentIds: []int64{validExptID},
 			},
 			mockSetup: func() {
+				// 模拟权限验证
+				mockAuth.EXPECT().
+					Authorization(
+						gomock.Any(),
+						gomock.Any(),
+					).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+					assert.Equal(t, strconv.FormatInt(validWorkspaceID, 10), param.ObjectID)
+					assert.Equal(t, validWorkspaceID, param.SpaceID)
+					assert.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+					return nil
+				})
 				mockAggrResultSvc.EXPECT().BatchGetExptAggrResultByExperimentIDs(
 					gomock.Any(),
 					validWorkspaceID,
@@ -2128,6 +2209,7 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := &experimentApplication{
 				ExptAggrResultService: mockAggrResultSvc,
+				auth:                  mockAuth,
 			}
 
 			if tt.mockSetup != nil {
@@ -2282,11 +2364,13 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 	mockEvalSetItemService := servicemocks.NewMockEvaluationSetItemService(ctrl)
+	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 
 	app := &experimentApplication{
 		auth:                     mockAuth,
 		manager:                  mockManager,
 		evaluationSetItemService: mockEvalSetItemService,
+		resultSvc:                mockResultSvc,
 	}
 
 	validSpaceID := int64(1001)
@@ -2378,6 +2462,9 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 						}
 						return nil
 					})
+
+				// Mock UpsertExptTurnResultFilter
+				mockResultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantResp: &exptpb.InvokeExperimentResponse{
 				AddedItems: map[int64]int64{int64(0): 6001, int64(1): 6002},

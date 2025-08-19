@@ -28,9 +28,10 @@ const (
 )
 
 const (
-	InputSchemaKey   = "input"
-	OutputSchemaKey  = "actual_output"
-	StringJsonSchema = "{\"type\":\"string\"}"
+	InputSchemaKey      = "input"
+	OutputSchemaKey     = "actual_output"
+	StringJsonSchema    = "{\"type\":\"string\"}"
+	MapStringJsonSchema = "{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}"
 )
 
 const ClusterNameConsumer = "consumer"

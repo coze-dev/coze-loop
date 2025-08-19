@@ -20,6 +20,7 @@ func main() {
 	generateForEvaluationEvaluator(db)
 	generateForEvaluationExpt(db)
 	generateForObservability(db)
+	generateForFoundation(db)
 }
 
 func initDB() *gorm.DB {
@@ -74,7 +75,7 @@ func generateForPrompt(db *gorm.DB) {
 	g.Execute()
 }
 
-func generateForData(db *gorm.DB) {
+func generateForDataset(db *gorm.DB) {
 	path := "modules/data/infra/repo/dataset/mysql/gorm_gen"
 	g := gen.NewGenerator(getGenerateConfig(path))
 	g.UseDB(db)
@@ -130,6 +131,35 @@ func generateForData(db *gorm.DB) {
 		datasetItemSnapshot,
 	)
 	g.Execute()
+}
+
+func generateForTag(db *gorm.DB) {
+	path := "modules/data/infra/repo/tag/mysql/gorm_gen"
+	g := gen.NewGenerator(getGenerateConfig(path))
+	g.UseDB(db)
+
+	tagKey := g.GenerateModelAs("tag_key", "TagKey",
+		gen.FieldType("app_id", "int32"),
+		gen.FieldType("change_log", "datatypes.JSON"),
+		gen.FieldType("version_num", "*int32"),
+		gen.FieldType("spec", "datatypes.JSON"),
+	)
+
+	tagValue := g.GenerateModelAs("tag_value", "TagValue",
+		gen.FieldType("app_id", "int32"),
+		gen.FieldType("version_num", "*int32"),
+	)
+
+	g.ApplyBasic(
+		tagKey,
+		tagValue,
+	)
+	g.Execute()
+}
+
+func generateForData(db *gorm.DB) {
+	generateForDataset(db)
+	generateForTag(db)
 }
 
 func generateForEvaluationTarget(db *gorm.DB) {
@@ -200,5 +230,22 @@ func generateForObservability(db *gorm.DB) {
 	observabilityView := g.GenerateModelAs("observability_view", "ObservabilityView")
 
 	g.ApplyBasic(observabilityView)
+	g.Execute()
+}
+
+func generateForFoundation(db *gorm.DB) {
+	path := "modules/foundation/infra/repo/mysql/gorm_gen"
+	g := gen.NewGenerator(getGenerateConfig(path))
+	g.UseDB(db)
+
+	userModel := g.GenerateModelAs("user", "User")
+	spaceModel := g.GenerateModelAs("space", "Space")
+	spaceUserModel := g.GenerateModelAs("space_user", "SpaceUser")
+	apikeyModel := g.GenerateModelAs("api_key", "APIKey")
+	g.ApplyBasic(
+		userModel,
+		spaceModel,
+		spaceUserModel,
+		apikeyModel)
 	g.Execute()
 }

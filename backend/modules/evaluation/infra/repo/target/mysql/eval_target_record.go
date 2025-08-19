@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -57,6 +58,9 @@ func (e *EvalTargetRecordDAOImpl) GetByIDAndSpaceID(ctx context.Context, recordI
 
 func (e *EvalTargetRecordDAOImpl) ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error) {
 	q := e.query
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
 	records, err := q.WithContext(ctx).TargetRecord.Where(q.TargetRecord.ID.In(recordIDs...), q.TargetRecord.SpaceID.Eq(spaceID)).Find()
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil

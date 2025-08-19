@@ -12,7 +12,7 @@ import (
 )
 
 func IsFullUrl(url string) bool {
-	return strings.Index(url, "http://") == 0
+	return strings.Index(url, "http://") == 0 || strings.Index(url, "https://") == 0
 }
 
 func ImageURLToBase64(url string) (base64Str string, mimeType string, err error) {

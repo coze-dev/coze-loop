@@ -126,6 +126,7 @@ struct ListPromptRequest {
 
     11: optional string key_word
     12: optional list<string> created_bys
+    13: optional bool committed_only
 
     127: optional i32 page_num (vt.not_nil="true", vt.gt="0")
     128: optional i32 page_size (vt.not_nil="true", vt.gt="0", vt.le="100")

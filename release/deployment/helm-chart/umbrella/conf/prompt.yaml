@@ -1,0 +1,4 @@
+prompt_hub_rate_limit_config:
+  default_max_qps: 500
+  space_max_qps:
+    123456: 1000

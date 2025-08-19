@@ -48,3 +48,11 @@ func (c *configer) GetErrCtrl(ctx context.Context) (eec *entity.ExptErrCtrl) {
 	const key = "expt_err_ctrl"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &eec) == nil, eec, entity.DefaultExptErrCtrl())
 }
+
+func (c *configer) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
+	return nil
+}
+
+func (c *configer) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
+	return nil
+}

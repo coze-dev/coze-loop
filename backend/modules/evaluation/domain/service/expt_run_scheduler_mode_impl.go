@@ -21,17 +21,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt_scheduler.go  --package mocks . SchedulerModeFactory
-//type ExptSchedulerMode interface {
-//	Mode() entity.ExptRunMode
-//	ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error
-//	ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error)
-//	ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error)
-//	ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error
-//	ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error
-//	NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error
-//}
-
 // SchedulerModeFactory 定义创建 ExptSchedulerMode 实例的接口
 type SchedulerModeFactory interface {
 	NewSchedulerMode(
@@ -50,6 +39,8 @@ func NewSchedulerModeFactory(
 	idem idem.IdempotentService,
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
+	resultSvc ExptResultService,
 ) SchedulerModeFactory {
 	return &DefaultSchedulerModeFactory{
 		manager:                  manager,
@@ -62,6 +53,8 @@ func NewSchedulerModeFactory(
 		idem:                     idem,
 		configer:                 configer,
 		publisher:                publisher,
+		evaluatorRecordService:   evaluatorRecordService,
+		resultSvc:                resultSvc,
 	}
 }
 
@@ -77,6 +70,8 @@ type DefaultSchedulerModeFactory struct {
 	idem                     idem.IdempotentService
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
+	evaluatorRecordService   EvaluatorRecordService
+	resultSvc                ExptResultService
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -84,11 +79,11 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 ) (entity.ExptSchedulerMode, error) {
 	switch mode {
 	case entity.EvaluationModeSubmit:
-		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher), nil
+		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc), nil
 	case entity.EvaluationModeFailRetry:
-		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher), nil
+		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService), nil
 	case entity.EvaluationModeAppend:
-		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher), nil
+		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService), nil
 	default:
 		return nil, fmt.Errorf("NewSchedulerMode with unknown mode: %v", mode)
 	}
@@ -105,6 +100,8 @@ type ExptSubmitExec struct {
 	idem                     idem.IdempotentService
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
+	evaluatorRecordService   EvaluatorRecordService
+	resultSvc                ExptResultService
 }
 
 func NewExptSubmitMode(
@@ -118,6 +115,8 @@ func NewExptSubmitMode(
 	idem idem.IdempotentService,
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
+	resultSvc ExptResultService,
 ) *ExptSubmitExec {
 	return &ExptSubmitExec{
 		manager:                  manager,
@@ -130,6 +129,8 @@ func NewExptSubmitMode(
 		idem:                     idem,
 		configer:                 configer,
 		publisher:                publisher,
+		evaluatorRecordService:   evaluatorRecordService,
+		resultSvc:                resultSvc,
 	}
 }
 
@@ -158,13 +159,13 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 
 		page     = int32(1)
 		pageSize = int32(100)
-		cnt      = 0
+		itemCnt  = 0
 		total    = int64(0)
 	)
 
 	for i := 0; i < maxLoop; i++ {
 		logs.CtxInfo(ctx, "ExptSubmitExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, cnt, total)
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
 
 		items, t, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 			SpaceID:         event.SpaceID,
@@ -177,7 +178,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 			return err
 		}
 
-		cnt += len(items)
+		itemCnt += len(items)
 		page++
 		total = gptr.Indirect(t)
 
@@ -228,20 +229,22 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 			return err
 		}
 
-		if cnt >= int(total) || len(items) == 0 {
+		if itemCnt >= int(total) || len(items) == 0 {
 			break
 		}
 
 		time.Sleep(time.Millisecond * 30)
 	}
-
-	logs.CtxInfo(ctx, "ExptSubmitExec.ExptStart ListEvaluationSetItem done, expt_id: %v, cnt: %v, total: %v", event.ExptID, cnt, total)
-
+	err = e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, nil)
+	if err != nil {
+		logs.CtxError(ctx, "ExptSubmitExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+	}
+	logs.CtxInfo(ctx, "ExptSubmitExec ExptStart UpsertExptTurnResultFilter done, expt_id: %v, err: %v", event.ExptID, err)
 	if err := e.exptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID,
 		&entity.ExptStats{
 			ExptID:         event.ExptID,
 			SpaceID:        event.SpaceID,
-			PendingTurnCnt: int32(cnt),
+			PendingItemCnt: int32(itemCnt),
 		}); err != nil {
 		return err
 	}
@@ -303,13 +306,13 @@ func (e *ExptSubmitExec) createItemTurnResults(ctx context.Context, eirs []*enti
 }
 
 func (e *ExptSubmitExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo).ScanEvalItems(ctx, event, expt)
+	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).ScanEvalItems(ctx, event, expt)
 }
 
 func (e *ExptSubmitExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo).exptEnd(ctx, event, expt)
+		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
 	}
 	return true, nil
 }
@@ -331,16 +334,21 @@ func (e *ExptSubmitExec) NextTick(ctx context.Context, event *entity.ExptSchedul
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
 
+func (e *ExptSubmitExec) PublishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
+	return nil
+}
+
 type ExptFailRetryExec struct {
-	manager            IExptManager
-	exptTurnResultRepo repo.IExptTurnResultRepo
-	exptItemResultRepo repo.IExptItemResultRepo
-	exptStatsRepo      repo.IExptStatsRepo
-	idgenerator        idgen.IIDGenerator
-	exptRepo           repo.IExperimentRepo
-	idem               idem.IdempotentService
-	configer           component.IConfiger
-	publisher          events.ExptEventPublisher
+	manager                IExptManager
+	exptTurnResultRepo     repo.IExptTurnResultRepo
+	exptItemResultRepo     repo.IExptItemResultRepo
+	exptStatsRepo          repo.IExptStatsRepo
+	idgenerator            idgen.IIDGenerator
+	exptRepo               repo.IExperimentRepo
+	idem                   idem.IdempotentService
+	configer               component.IConfiger
+	publisher              events.ExptEventPublisher
+	evaluatorRecordService EvaluatorRecordService
 }
 
 func NewExptFailRetryMode(
@@ -353,17 +361,19 @@ func NewExptFailRetryMode(
 	idem idem.IdempotentService,
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
 ) *ExptFailRetryExec {
 	return &ExptFailRetryExec{
-		manager:            manager,
-		exptItemResultRepo: exptItemResultRepo,
-		exptStatsRepo:      exptStatsRepo,
-		exptTurnResultRepo: exptTurnResultRepo,
-		idgenerator:        idgenerator,
-		exptRepo:           exptRepo,
-		idem:               idem,
-		configer:           configer,
-		publisher:          publisher,
+		manager:                manager,
+		exptItemResultRepo:     exptItemResultRepo,
+		exptStatsRepo:          exptStatsRepo,
+		exptTurnResultRepo:     exptTurnResultRepo,
+		idgenerator:            idgenerator,
+		exptRepo:               exptRepo,
+		idem:                   idem,
+		configer:               configer,
+		publisher:              publisher,
+		evaluatorRecordService: evaluatorRecordService,
 	}
 }
 
@@ -458,11 +468,11 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		return err
 	}
 
-	pendingCnt := got.PendingTurnCnt + got.FailTurnCnt + got.TerminatedTurnCnt + got.ProcessingTurnCnt
-	got.PendingTurnCnt = pendingCnt
-	got.FailTurnCnt = 0
-	got.TerminatedTurnCnt = 0
-	got.ProcessingTurnCnt = 0
+	pendingCnt := got.PendingItemCnt + got.FailItemCnt + got.TerminatedItemCnt + got.ProcessingItemCnt
+	got.PendingItemCnt = pendingCnt
+	got.FailItemCnt = 0
+	got.TerminatedItemCnt = 0
+	got.ProcessingItemCnt = 0
 
 	if err := e.exptStatsRepo.Save(ctx, got); err != nil {
 		return err
@@ -491,13 +501,13 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 }
 
 func (e *ExptFailRetryExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo).ScanEvalItems(ctx, event, expt)
+	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).ScanEvalItems(ctx, event, expt)
 }
 
 func (e *ExptFailRetryExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo).exptEnd(ctx, event, expt)
+		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
 	}
 	return true, nil
 }
@@ -519,6 +529,13 @@ func (e *ExptFailRetryExec) NextTick(ctx context.Context, event *entity.ExptSche
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
 
+func (e *ExptFailRetryExec) PublishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
+	if event.ExptType != entity.ExptType_Offline { // 不等于offline用于兼容历史数据，不带type的都先放行
+		return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).publishResult(ctx, turnEvaluatorRefs, event)
+	}
+	return nil
+}
+
 type ExptAppendExec struct {
 	manager                  IExptManager
 	exptRepo                 repo.IExperimentRepo
@@ -530,6 +547,7 @@ type ExptAppendExec struct {
 	idem                     idem.IdempotentService
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
+	evaluatorRecordService   EvaluatorRecordService
 }
 
 func NewExptAppendMode(
@@ -543,6 +561,7 @@ func NewExptAppendMode(
 	idem idem.IdempotentService,
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
 ) *ExptAppendExec {
 	return &ExptAppendExec{
 		manager:                  manager,
@@ -555,6 +574,7 @@ func NewExptAppendMode(
 		idem:                     idem,
 		configer:                 configer,
 		publisher:                publisher,
+		evaluatorRecordService:   evaluatorRecordService,
 	}
 }
 
@@ -563,7 +583,7 @@ func (e *ExptAppendExec) Mode() entity.ExptRunMode {
 }
 
 func (e *ExptAppendExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	toSubmit, incomplete, complete, err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo).ScanEvalItems(ctx, event, expt)
+	toSubmit, incomplete, complete, err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).ScanEvalItems(ctx, event, expt)
 	if err != nil {
 		logs.CtxError(ctx, "[ExptEval] expt daemon scan eval items failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 	}
@@ -573,7 +593,7 @@ func (e *ExptAppendExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 && expt.Status == entity.ExptStatus_Draining {
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo).exptEnd(ctx, event, expt); err != nil {
+		if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
 			logs.CtxError(ctx, "[ExptEval] expt daemon end failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 		}
 		return false, nil
@@ -638,11 +658,17 @@ func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptSchedul
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
 
+func (e *ExptAppendExec) PublishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
+	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).publishResult(ctx, turnEvaluatorRefs, event)
+}
+
 type exptBaseExec struct {
-	Manager            IExptManager
-	idem               idem.IdempotentService
-	configer           component.IConfiger
-	exptItemResultRepo repo.IExptItemResultRepo
+	Manager                IExptManager
+	idem                   idem.IdempotentService
+	configer               component.IConfiger
+	exptItemResultRepo     repo.IExptItemResultRepo
+	evaluatorRecordService EvaluatorRecordService
+	publisher              events.ExptEventPublisher
 }
 
 func newExptBaseExec(
@@ -650,12 +676,16 @@ func newExptBaseExec(
 	idem idem.IdempotentService,
 	configer component.IConfiger,
 	exptItemResultRepo repo.IExptItemResultRepo,
+	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
 ) *exptBaseExec {
 	return &exptBaseExec{
-		Manager:            manager,
-		idem:               idem,
-		configer:           configer,
-		exptItemResultRepo: exptItemResultRepo,
+		Manager:                manager,
+		idem:                   idem,
+		configer:               configer,
+		exptItemResultRepo:     exptItemResultRepo,
+		evaluatorRecordService: evaluatorRecordService,
+		publisher:              publisher,
 	}
 }
 
@@ -736,6 +766,54 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
 	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
 		logs.CtxError(ctx, "ExptSchedulerImpl set end idem key fail, err: %v", err)
+	}
+	return nil
+}
+
+func (e *exptBaseExec) publishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
+	if len(turnEvaluatorRefs) == 0 {
+		return nil
+	}
+	exptID := turnEvaluatorRefs[0].ExptID
+	evaluatorResultIDs := make([]int64, 0, len(turnEvaluatorRefs))
+	for _, ref := range turnEvaluatorRefs {
+		evaluatorResultIDs = append(evaluatorResultIDs, ref.EvaluatorResultID)
+	}
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, true)
+	if err != nil {
+		return err
+	}
+	onlineExptTurnEvalResults := make([]*entity.OnlineExptTurnEvalResult, 0, len(evaluatorRecords))
+	for _, record := range evaluatorRecords {
+		onlineExptTurnEvalResult := &entity.OnlineExptTurnEvalResult{
+			EvaluatorVersionId: record.EvaluatorVersionID,
+			EvaluatorRecordId:  record.ID,
+			Status:             int32(record.Status),
+			Ext:                record.Ext,
+			BaseInfo:           record.BaseInfo,
+		}
+		if record.EvaluatorOutputData != nil {
+			if record.Status == entity.EvaluatorRunStatusFail && record.EvaluatorOutputData.EvaluatorRunError != nil {
+				onlineExptTurnEvalResult.EvaluatorRunError = &entity.EvaluatorRunError{
+					Code:    record.EvaluatorOutputData.EvaluatorRunError.Code,
+					Message: record.EvaluatorOutputData.EvaluatorRunError.Message,
+				}
+			} else if record.Status == entity.EvaluatorRunStatusSuccess && record.EvaluatorOutputData.EvaluatorResult != nil {
+				onlineExptTurnEvalResult.Score = gptr.Indirect(record.EvaluatorOutputData.EvaluatorResult.Score)
+				onlineExptTurnEvalResult.Reasoning = record.EvaluatorOutputData.EvaluatorResult.Reasoning
+			}
+		}
+
+		onlineExptTurnEvalResults = append(onlineExptTurnEvalResults, onlineExptTurnEvalResult)
+	}
+
+	// 发送评估结果Event
+	err = e.publisher.PublishExptOnlineEvalResult(ctx, &entity.OnlineExptEvalResultEvent{
+		ExptId:          exptID,
+		TurnEvalResults: onlineExptTurnEvalResults,
+	}, gptr.Of(time.Second*3))
+	if err != nil {
+		return err
 	}
 	return nil
 }

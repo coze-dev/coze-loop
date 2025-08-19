@@ -12,16 +12,16 @@ const TableNameSpace = "space"
 
 // Space Space Table
 type Space struct {
-	ID          int64     `gorm:"column:id;type:bigint unsigned;primaryKey;comment:Primary Key ID, Space ID" json:"id"`                                 // Primary Key ID, Space ID
-	OwnerID     int64     `gorm:"column:owner_id;type:bigint unsigned;not null;index:idx_owner_id,priority:1;comment:Owner ID" json:"owner_id"`         // Owner ID
-	Name        string    `gorm:"column:name;type:varchar(200);not null;comment:Space Name" json:"name"`                                                // Space Name
-	Description string    `gorm:"column:description;type:varchar(2000);not null;comment:Space Description" json:"description"`                          // Space Description
-	SpaceType   int32     `gorm:"column:space_type;type:tinyint;not null;comment:Space Type, 1: Personal, 2: Team" json:"space_type"`                   // Space Type, 1: Personal, 2: Team
-	IconURI     string    `gorm:"column:icon_uri;type:varchar(200);not null;comment:Icon URI" json:"icon_uri"`                                          // Icon URI
-	CreatedBy   int64     `gorm:"column:created_by;type:bigint unsigned;not null;index:idx_creator_id,priority:1;comment:Creator ID" json:"created_by"` // Creator ID
-	DeletedAt   int64     `gorm:"column:deleted_at;type:bigint;not null" json:"deleted_at"`
-	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	ID          int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:Primary Key ID, Space ID" json:"id"`                                 // Primary Key ID, Space ID
+	OwnerID     int64     `gorm:"column:owner_id;type:bigint(20) unsigned;not null;index:idx_owner_id,priority:1;comment:Owner ID" json:"owner_id"`         // Owner ID
+	Name        string    `gorm:"column:name;type:varchar(200);not null;comment:Space Name" json:"name"`                                                    // Space Name
+	Description string    `gorm:"column:description;type:varchar(2000);not null;comment:Space Description" json:"description"`                              // Space Description
+	SpaceType   int32     `gorm:"column:space_type;type:tinyint(4);not null;comment:Space Type, 1: Personal, 2: Team" json:"space_type"`                    // Space Type, 1: Personal, 2: Team
+	IconURI     string    `gorm:"column:icon_uri;type:varchar(200);not null;comment:Icon URI" json:"icon_uri"`                                              // Icon URI
+	CreatedBy   int64     `gorm:"column:created_by;type:bigint(20) unsigned;not null;index:idx_creator_id,priority:1;comment:Creator ID" json:"created_by"` // Creator ID
+	DeletedAt   int64     `gorm:"column:deleted_at;type:bigint(20);not null;comment:删除时间" json:"deleted_at"`                                                // 删除时间
+	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                        // 创建时间
+	UpdatedAt   time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                        // 更新时间
 }
 
 // TableName Space's table name

@@ -70,6 +70,15 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_datasets.GET("/:dataset_id", append(_getdatasetMw(handler), apis.GetDataset)...)
 				_datasets.PATCH("/:dataset_id", append(_updatedatasetMw(handler), apis.UpdateDataset)...)
 				_datasets.POST("/list", append(_listdatasetsMw(handler), apis.ListDatasets)...)
+				_v10.GET("/tag_spec", append(_gettagspecMw(handler), apis.GetTagSpec)...)
+				_v10.POST("/tags", append(_tagsMw(handler), apis.CreateTag)...)
+				_tags := _v10.Group("/tags", _tagsMw(handler)...)
+				_tags.POST("/batch_get", append(_batchgettagsMw(handler), apis.BatchGetTags)...)
+				_tags.POST("/batch_update_status", append(_batchupdatetagstatusMw(handler), apis.BatchUpdateTagStatus)...)
+				_tags.POST("/search", append(_searchtagsMw(handler), apis.SearchTags)...)
+				_tags.PATCH("/:tag_key_id", append(_tag_key_idMw(handler), apis.UpdateTag)...)
+				_tag_key_id := _tags.Group("/:tag_key_id", _tag_key_idMw(handler)...)
+				_tag_key_id.POST("/detail", append(_gettagdetailMw(handler), apis.GetTagDetail)...)
 				{
 					_dataset_io_jobs := _v10.Group("/dataset_io_jobs", _dataset_io_jobsMw(handler)...)
 					_dataset_io_jobs.GET("/:job_id", append(_getdatasetiojobMw(handler), apis.GetDatasetIOJob)...)
@@ -88,6 +97,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_v11.POST("/eval_targets", append(_eval_targetsMw(handler), apis.CreateEvalTarget)...)
 				_eval_targets := _v11.Group("/eval_targets", _eval_targetsMw(handler)...)
 				_eval_targets.POST("/batch_get_by_source", append(_batchgetevaltargetsbysourceMw(handler), apis.BatchGetEvalTargetsBySource)...)
+				_eval_targets.POST("/batch_get_source", append(_batchgetsourceevaltargetsMw(handler), apis.BatchGetSourceEvalTargets)...)
 				_eval_targets.POST("/list_source", append(_listsourceevaltargetsMw(handler), apis.ListSourceEvalTargets)...)
 				_eval_targets.POST("/list_source_version", append(_listsourceevaltargetversionsMw(handler), apis.ListSourceEvalTargetVersions)...)
 				{
@@ -154,9 +164,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_evaluator_records := _v11.Group("/evaluator_records", _evaluator_recordsMw(handler)...)
-					_evaluator_records.GET("/:evaluator_record_id", append(_getevaluatorrecordMw(handler), apis.GetEvaluatorRecord)...)
 					_evaluator_records.PATCH("/:evaluator_record_id", append(_updateevaluatorrecordMw(handler), apis.UpdateEvaluatorRecord)...)
-					_evaluator_records.POST("/get_batch", append(_batchgetevaluatorrecordsMw(handler), apis.BatchGetEvaluatorRecords)...)
 				}
 				{
 					_evaluators0 := _v11.Group("/evaluators", _evaluators0Mw(handler)...)
@@ -234,6 +242,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			_observability := _api.Group("/observability", _observabilityMw(handler)...)
 			{
 				_v14 := _observability.Group("/v1", _v14Mw(handler)...)
+				_v14.POST("/annotations", append(_annotationsMw(handler), apis.CreateManualAnnotation)...)
+				_annotations := _v14.Group("/annotations", _annotationsMw(handler)...)
+				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
+				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
+				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
 				_v14.POST("/views", append(_viewsMw(handler), apis.CreateView)...)
 				_views := _v14.Group("/views", _viewsMw(handler)...)
 				_views.POST("/list", append(_listviewsMw(handler), apis.ListViews)...)

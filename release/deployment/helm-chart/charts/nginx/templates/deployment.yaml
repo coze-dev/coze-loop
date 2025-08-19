@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "application.name" . }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "application.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "application.name" . }}
+    spec:
+      imagePullSecrets:
+        - name: {{ (.Values.custom.image.pullSecrets | default .Values.image.pullSecrets) | quote }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      volumes:
+        - name: resources
+          emptyDir: { }
+        - name: bootstrap
+          configMap:
+            name: {{ include "configmap.name" . }}
+      initContainers:
+        - name: transfer-resources
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.app.registry) .Values.init_image.app.repository .Values.init_image.app.image .Values.init_image.app.tag }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: resources
+              mountPath: {{ .Values.deployment.resourcesMountPath }}
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - >
+              set -ex;
+              cp -r /coze-loop/resources/* {{ .Values.deployment.resourcesMountPath | quote }};
+      containers:
+        - name: {{ include "application.name" . }}
+          image: {{ include "image.fullname" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: resources
+              mountPath: {{ .Values.deployment.resourcesMountPath }}
+              readOnly: true
+            - name: bootstrap
+              mountPath: {{ include "bootstrap.path" . }}
+              readOnly: true
+          env:
+            - name: COZE_LOOP_OSS_PROTOCOL
+              value: {{ (.Values.custom.oss.protocol | default .Values.proxy.oss.protocol) | quote }}
+            - name: COZE_LOOP_OSS_DOMAIN
+              value: {{ (.Values.custom.oss.domain | default .Values.proxy.oss.domain) | quote }}
+            - name: COZE_LOOP_OSS_PORT
+              value: {{ ternary .Values.custom.oss.port .Values.proxy.oss.port (eq .Values.custom.oss.disabled false) | quote }}
+            - name: COZE_LOOP_OSS_BUCKET
+              value: {{ (.Values.custom.oss.bucket | default .Values.proxy.oss.bucket) | quote }}
+          command: [ "/bin/sh" ]
+          args: [ {{ include "entrypoint.path" . | quote }} ]
+          livenessProbe:
+            exec:
+              command: [ "/bin/sh", {{ include "healthcheck.path" . | quote }} ]
+            initialDelaySeconds: {{ .Values.liveness.startSeconds }}
+            periodSeconds: {{ .Values.liveness.intervalSeconds }}
+            timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.liveness.shutdownFailureTimes }}

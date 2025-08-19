@@ -56,6 +56,36 @@ func (mr *MockITraceConfigMockRecorder) Get(ctx, key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockITraceConfig)(nil).Get), ctx, key)
 }
 
+// GetAnnotationMqProducerCfg mocks base method.
+func (m *MockITraceConfig) GetAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnnotationMqProducerCfg", ctx)
+	ret0, _ := ret[0].(*config.MqProducerCfg)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnnotationMqProducerCfg indicates an expected call of GetAnnotationMqProducerCfg.
+func (mr *MockITraceConfigMockRecorder) GetAnnotationMqProducerCfg(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationMqProducerCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationMqProducerCfg), ctx)
+}
+
+// GetAnnotationSourceCfg mocks base method.
+func (m *MockITraceConfig) GetAnnotationSourceCfg(ctx context.Context) (*config.AnnotationSourceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnnotationSourceCfg", ctx)
+	ret0, _ := ret[0].(*config.AnnotationSourceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnnotationSourceCfg indicates an expected call of GetAnnotationSourceCfg.
+func (mr *MockITraceConfigMockRecorder) GetAnnotationSourceCfg(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationSourceCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationSourceCfg), ctx)
+}
+
 // GetDefaultTraceTenant mocks base method.
 func (m *MockITraceConfig) GetDefaultTraceTenant(ctx context.Context) string {
 	m.ctrl.T.Helper()
@@ -190,10 +220,10 @@ func (mr *MockITraceConfigMockRecorder) GetTraceFieldMetaInfo(ctx any) *gomock.C
 }
 
 // GetTraceMqProducerCfg mocks base method.
-func (m *MockITraceConfig) GetTraceMqProducerCfg(ctx context.Context) (*config.TraceMqProducerCfg, error) {
+func (m *MockITraceConfig) GetTraceMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTraceMqProducerCfg", ctx)
-	ret0, _ := ret[0].(*config.TraceMqProducerCfg)
+	ret0, _ := ret[0].(*config.MqProducerCfg)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

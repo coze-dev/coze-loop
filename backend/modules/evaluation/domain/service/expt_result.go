@@ -13,13 +13,18 @@ import (
 type ExptResultService interface {
 	MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ItemResult, int64, error)
 	// RecordItemRunLogs 将 run_log 表结果同步到 result 表
-	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID int64, spaceID int64, session *entity.Session) error
+	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetExptItemTurnResults(ctx context.Context, exptID, itemID int64, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error)
 
 	CreateStats(ctx context.Context, exptStats *entity.ExptStats, session *entity.Session) error
 	GetStats(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) (*entity.ExptStats, error)
 	MGetStats(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptStats, error)
 	CalculateStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptCalculateStats, error)
+
+	ManualUpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemIDs []int64) error
+	UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemID []int64) error
+	InsertExptTurnResultFilterKeyMappings(ctx context.Context, mappings []*entity.ExptTurnResultFilterKeyMapping) error
+	CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error
 }
 
 type ExptAggrResultService interface {

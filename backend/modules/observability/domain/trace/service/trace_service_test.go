@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -23,6 +24,8 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
 	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -31,6 +34,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 		traceRepo     repo.ITraceRepo
 		traceConfig   config.ITraceConfig
 		traceProducer mq.ITraceProducer
+		annoProducer  mq.IAnnotationProducer
 		metrics       metrics.ITraceMetrics
 		buildHelper   TraceFilterProcessorBuilder
 	}
@@ -185,6 +189,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 				fields.traceRepo,
 				fields.traceConfig,
 				fields.traceProducer,
+				fields.annoProducer,
 				fields.metrics,
 				fields.buildHelper)
 			got, err := r.GetTracesAdvanceInfo(tt.args.ctx, tt.args.req)
@@ -227,7 +232,7 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				req: &IngestTracesReq{
-					TTL: entity.TTL3d,
+					TTL: loop_span.TTL3d,
 					Spans: loop_span.SpanList{{
 						TraceID:     "123",
 						SpanID:      "234",
@@ -252,7 +257,7 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				req: &IngestTracesReq{
-					TTL: entity.TTL3d,
+					TTL: loop_span.TTL3d,
 					Spans: loop_span.SpanList{{
 						TraceID:     "123",
 						SpanID:      "234",
@@ -369,6 +374,556 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 			got, err := r.GetTracesMetaInfo(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, got, tt.want)
+		})
+	}
+}
+
+func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
+	type fields struct {
+		traceRepo   repo.ITraceRepo
+		traceConfig config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *ListAnnotationsReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *ListAnnotationsResp
+		wantErr      bool
+	}{
+		{
+			name: "list annotations successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(loop_span.AnnotationList{{
+					ID:      "anno-123",
+					TraceID: "123",
+					SpanID:  "234",
+				}}, nil)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationsReq{
+					WorkspaceID:  1,
+					TraceID:      "123",
+					SpanID:       "234",
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListAnnotationsResp{
+				Annotations: loop_span.AnnotationList{{
+					ID:      "anno-123",
+					TraceID: "123",
+					SpanID:  "234",
+				}},
+			},
+		},
+		{
+			name: "list annotations failed due to repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationsReq{
+					WorkspaceID:  1,
+					TraceID:      "123",
+					SpanID:       "234",
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "list annotations failed due to config error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				return fields{
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationsReq{
+					WorkspaceID:  1,
+					TraceID:      "123",
+					SpanID:       "234",
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r := &TraceServiceImpl{
+				traceRepo:   fields.traceRepo,
+				traceConfig: fields.traceConfig,
+			}
+			got, err := r.ListAnnotations(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		traceProducer      mq.ITraceProducer
+		annotationProducer mq.IAnnotationProducer
+		metrics            metrics.ITraceMetrics
+		buildHelper        TraceFilterProcessorBuilder
+	}
+	type args struct {
+		ctx context.Context
+		req *UpdateManualAnnotationReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "update manual annotation successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(
+					&loop_span.Annotation{
+						TraceID: "test-trace-id",
+						SpanID:  "test-span-id",
+					}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &UpdateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					AnnotationID: "829c8de8be8aea88af058cac0a5578e5184f3f6c9b21d08ccfafca0d27f49de4",
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "update manual annotation failed because of invalid id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &UpdateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					AnnotationID: "829c8de8be8aea88af058cac0a5578e5184f3f6c9b21d08ccfafca0d27f49",
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get tenants failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				return fields{
+					traceRepo:          repomocks.NewMockITraceRepo(ctrl),
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &UpdateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation:   &loop_span.Annotation{StartTime: time.Now()},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get span failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &UpdateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, _ := NewTraceServiceImpl(
+				fields.traceRepo,
+				fields.traceConfig,
+				fields.traceProducer,
+				fields.annotationProducer,
+				fields.metrics,
+				fields.buildHelper,
+			)
+			err := r.UpdateManualAnnotation(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
+func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		traceProducer      mq.ITraceProducer
+		annotationProducer mq.IAnnotationProducer
+		metrics            metrics.ITraceMetrics
+		buildHelper        TraceFilterProcessorBuilder
+	}
+	type args struct {
+		ctx context.Context
+		req *CreateManualAnnotationReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *CreateManualAnnotationResp
+		wantErr      bool
+	}{
+		{
+			name: "create manual annotation successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "get tenants failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				return fields{
+					traceRepo:          repomocks.NewMockITraceRepo(ctrl),
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation:   &loop_span.Annotation{StartTime: time.Now()},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get span failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "span not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{}, nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "insert annotation failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(errorx.WrapByCode(fmt.Errorf("insert error"), obErrorx.CommercialCommonRPCErrorCodeCode))
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					traceProducer:      mqmocks.NewMockITraceProducer(ctrl),
+					annotationProducer: mqmocks.NewMockIAnnotationProducer(ctrl),
+					metrics:            metricmocks.NewMockITraceMetrics(ctrl),
+					buildHelper:        NewTraceFilterProcessorBuilder(filtermocks.NewMockPlatformFilterFactory(ctrl), []span_processor.Factory{}, []span_processor.Factory{}, []span_processor.Factory{}),
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Annotation: &loop_span.Annotation{
+						SpanID:      "test-span-id",
+						TraceID:     "test-trace-id",
+						WorkspaceID: "1",
+						StartTime:   time.Now(),
+						Key:         "test-key",
+						Value:       loop_span.AnnotationValue{StringValue: "test-value"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, _ := NewTraceServiceImpl(
+				fields.traceRepo,
+				fields.traceConfig,
+				fields.traceProducer,
+				fields.annotationProducer,
+				fields.metrics,
+				fields.buildHelper)
+			got, err := r.CreateManualAnnotation(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.NotNil(t, got)
+			}
 		})
 	}
 }
@@ -812,6 +1367,663 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 	}
 }
 
+func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		traceProducer      mq.ITraceProducer
+		annotationProducer mq.IAnnotationProducer
+		metrics            metrics.ITraceMetrics
+		buildHelper        TraceFilterProcessorBuilder
+	}
+	type args struct {
+		ctx context.Context
+		req *CreateAnnotationReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "create annotation successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					AnnotationVal: loop_span.AnnotationValue{StringValue: "test-value"},
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "get caller config failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				return fields{
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					Caller: "test-caller",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get span failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeCozeFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					WorkspaceID: 1,
+					SpanID:      "test-span-id",
+					TraceID:     "test-trace-id",
+					Caller:      "test-caller",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "span not found, send to mq",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+				annoProducerMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					WorkspaceID: 1,
+					SpanID:      "test-span-id",
+					TraceID:     "test-trace-id",
+					Caller:      "test-caller",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "insert annotation failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					AnnotationVal: loop_span.AnnotationValue{StringValue: "test-value"},
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, _ := NewTraceServiceImpl(
+				fields.traceRepo,
+				fields.traceConfig,
+				fields.traceProducer,
+				fields.annotationProducer,
+				fields.metrics,
+				fields.buildHelper)
+			err := r.CreateAnnotation(tt.args.ctx, tt.args.req)
+			t.Log(err)
+			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
+func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		traceProducer      mq.ITraceProducer
+		annotationProducer mq.IAnnotationProducer
+		metrics            metrics.ITraceMetrics
+		buildHelper        TraceFilterProcessorBuilder
+	}
+	type args struct {
+		ctx context.Context
+		req *DeleteAnnotationReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "delete annotation successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "get caller config failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				return fields{
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					Caller: "test-caller",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get span failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					WorkspaceID: 1,
+					SpanID:      "test-span-id",
+					TraceID:     "test-trace-id",
+					Caller:      "test-caller",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "span not found, send to mq",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationCorrectionTypeManual),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+				annoProducerMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					WorkspaceID: 1,
+					SpanID:      "test-span-id",
+					TraceID:     "test-trace-id",
+					Caller:      "test-caller",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "insert annotation failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, _ := NewTraceServiceImpl(
+				fields.traceRepo,
+				fields.traceConfig,
+				fields.traceProducer,
+				fields.annotationProducer,
+				fields.metrics,
+				fields.buildHelper)
+			err := r.DeleteAnnotation(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
+func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		traceProducer      mq.ITraceProducer
+		annotationProducer mq.IAnnotationProducer
+		metrics            metrics.ITraceMetrics
+		buildHelper        TraceFilterProcessorBuilder
+	}
+	type args struct {
+		ctx context.Context
+		req *DeleteManualAnnotationReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "delete manual annotation successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteManualAnnotationReq{
+					PlatformType:  loop_span.PlatformCozeLoop,
+					AnnotationID:  "829c8de8be8aea88af058cac0a5578e5184f3f6c9b21d08ccfafca0d27f49de4",
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					WorkspaceID:   1,
+					StartTime:     time.Now().UnixMilli(),
+					AnnotationKey: "test-key",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "get tenants failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				return fields{
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteManualAnnotationReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get span failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteManualAnnotationReq{
+					AnnotationID: "123",
+					TraceID:      "test-trace-id",
+					WorkspaceID:  1,
+					SpanID:       "test-span-id",
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "span not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteManualAnnotationReq{
+					AnnotationID: "123",
+					TraceID:      "test-trace-id",
+					WorkspaceID:  1,
+					SpanID:       "test-span-id",
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "insert annotation failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteManualAnnotationReq{
+					PlatformType:  loop_span.PlatformCozeLoop,
+					AnnotationID:  "829c8de8be8aea88af058cac0a5578e5184f3f6c9b21d08ccfafca0d27f49de4",
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					WorkspaceID:   1,
+					StartTime:     time.Now().UnixMilli(),
+					AnnotationKey: "test-key",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid annotation id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetPlatformTenants(gomock.Any()).Return(&config.PlatformTenantsCfg{
+					Config: map[string][]string{
+						string(loop_span.PlatformCozeLoop): {"spans"},
+					},
+				}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:     "test-trace-id",
+							SpanID:      "test-span-id",
+							WorkspaceID: "1",
+							SystemTagsString: map[string]string{
+								loop_span.SpanFieldTenant: "spans",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteManualAnnotationReq{
+					PlatformType:  loop_span.PlatformCozeLoop,
+					AnnotationID:  "invalid-id",
+					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					WorkspaceID:   1,
+					StartTime:     time.Now().UnixMilli(),
+					AnnotationKey: "test-key",
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, _ := NewTraceServiceImpl(
+				fields.traceRepo,
+				fields.traceConfig,
+				fields.traceProducer,
+				fields.annotationProducer,
+				fields.metrics,
+				fields.buildHelper)
+			err := r.DeleteManualAnnotation(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
 func TestTraceServiceImpl_GetTrace(t *testing.T) {
 	type fields struct {
 		traceRepo     repo.ITraceRepo
@@ -991,6 +2203,115 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 			got, err := r.GetTrace(tt.args.ctx, tt.args.req)
 			assert.Equal(t, err != nil, tt.wantErr)
 			assert.Equal(t, got, tt.want)
+		})
+	}
+}
+
+func TestTraceServiceImpl_Send(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		annotationProducer mq.IAnnotationProducer
+	}
+	type args struct {
+		ctx   context.Context
+		event *entity.AnnotationEvent
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "span not found, return nil & retry",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{}, nil)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"caller1": {
+							AnnotationType: "test",
+							Tenants:        []string{"spans"},
+						},
+					},
+				}, nil)
+				annoMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				annoMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				event: &entity.AnnotationEvent{
+					Annotation: &loop_span.Annotation{
+						SpanID:      "span1",
+						TraceID:     "trace1",
+						WorkspaceID: "workspace1",
+					},
+					Caller:     "caller1",
+					RetryTimes: 2,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "insert error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{},
+					},
+				}, nil)
+				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"caller1": {
+							AnnotationType: "test",
+							Tenants:        []string{"spans"},
+						},
+					},
+				}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				event: &entity.AnnotationEvent{
+					Annotation: &loop_span.Annotation{
+						SpanID:         "span1",
+						TraceID:        "trace1",
+						WorkspaceID:    "workspace1",
+						AnnotationType: "123",
+						Key:            "12",
+					},
+					Caller:     "caller1",
+					RetryTimes: 2,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			s := &TraceServiceImpl{
+				traceRepo:          fields.traceRepo,
+				traceConfig:        fields.traceConfig,
+				annotationProducer: fields.annotationProducer,
+			}
+			err := s.Send(tt.args.ctx, tt.args.event)
+			assert.Equal(t, err != nil, tt.wantErr)
 		})
 	}
 }

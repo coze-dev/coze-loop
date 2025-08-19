@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-locales-configmap" (include "application.name" .) }}
+data:
+  en-US.yaml: |-
+{{ .Files.Get "conf/locales/en-US.yaml" | nindent 4 }}
+  zh-CN.yaml: |-
+{{ .Files.Get "conf/locales/zh-CN.yaml" | nindent 4 }}

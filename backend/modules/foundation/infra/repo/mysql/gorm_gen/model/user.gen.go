@@ -12,7 +12,7 @@ const TableNameUser = "user"
 
 // User User Table
 type User struct {
-	ID           int64     `gorm:"column:id;type:bigint;primaryKey;comment:Primary Key ID" json:"id"`                                                                // Primary Key ID
+	ID           int64     `gorm:"column:id;type:bigint(20);primaryKey;comment:Primary Key ID" json:"id"`                                                            // Primary Key ID
 	Name         string    `gorm:"column:name;type:varchar(128);not null;comment:User Nickname" json:"name"`                                                         // User Nickname
 	UniqueName   string    `gorm:"column:unique_name;type:varchar(128);not null;uniqueIndex:idx_unique_name,priority:1;comment:User Unique Name" json:"unique_name"` // User Unique Name
 	Email        string    `gorm:"column:email;type:varchar(128);not null;uniqueIndex:idx_email,priority:1;comment:Email" json:"email"`                              // Email
@@ -20,11 +20,11 @@ type User struct {
 	Description  string    `gorm:"column:description;type:varchar(512);not null;comment:User Description" json:"description"`                                        // User Description
 	IconURI      string    `gorm:"column:icon_uri;type:varchar(512);not null;comment:Avatar URI" json:"icon_uri"`                                                    // Avatar URI
 	UserVerified bool      `gorm:"column:user_verified;type:tinyint(1);not null;comment:User Verification Status" json:"user_verified"`                              // User Verification Status
-	CountryCode  int64     `gorm:"column:country_code;type:bigint;not null;comment:Country Code" json:"country_code"`                                                // Country Code
+	CountryCode  int64     `gorm:"column:country_code;type:bigint(20);not null;comment:Country Code" json:"country_code"`                                            // Country Code
 	SessionKey   string    `gorm:"column:session_key;type:varchar(512);not null;index:idx_session_key,priority:1;comment:Session Key" json:"session_key"`            // Session Key
-	DeletedAt    int64     `gorm:"column:deleted_at;type:bigint;not null" json:"deleted_at"`
-	CreatedAt    time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt    time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	DeletedAt    int64     `gorm:"column:deleted_at;type:bigint(20);not null;comment:删除时间" json:"deleted_at"`                                                        // 删除时间
+	CreatedAt    time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                // 创建时间
+	UpdatedAt    time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                // 更新时间
 }
 
 // TableName User's table name

@@ -20,7 +20,6 @@ import (
 type MockIConfig struct {
 	ctrl     *gomock.Controller
 	recorder *MockIConfigMockRecorder
-	isgomock struct{}
 }
 
 // MockIConfigMockRecorder is the mock recorder for MockIConfig.
@@ -122,4 +121,18 @@ func (m *MockIConfig) GetSnapshotRetry() *conf.SnapshotRetry {
 func (mr *MockIConfigMockRecorder) GetSnapshotRetry() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotRetry", reflect.TypeOf((*MockIConfig)(nil).GetSnapshotRetry))
+}
+
+// GetTagSpec mocks base method.
+func (m *MockIConfig) GetTagSpec() *conf.TagSpec {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTagSpec")
+	ret0, _ := ret[0].(*conf.TagSpec)
+	return ret0
+}
+
+// GetTagSpec indicates an expected call of GetTagSpec.
+func (mr *MockIConfigMockRecorder) GetTagSpec() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTagSpec", reflect.TypeOf((*MockIConfig)(nil).GetTagSpec))
 }

@@ -170,7 +170,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.Run(ctx, tt.exptID, tt.runID, tt.spaceID, session, tt.runMode)
+			err := mgr.Run(ctx, tt.exptID, tt.runID, tt.spaceID, session, tt.runMode, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -252,7 +252,7 @@ func TestExptMangerImpl_RetryUnSuccess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.RetryUnSuccess(ctx, tt.exptID, tt.runID, tt.spaceID, session)
+			err := mgr.RetryUnSuccess(ctx, tt.exptID, tt.runID, tt.spaceID, session, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RetryUnSuccess() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -340,20 +340,7 @@ func TestExptMangerImpl_Invoke(t *testing.T) {
 					Return(nil)
 
 				// 模拟更新统计信息
-				mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
-					EXPECT().
-					ArithOperateCount(
-						gomock.Any(),
-						int64(1),
-						int64(1),
-						&entity.StatsCntArithOp{
-							OpStatusCnt: map[entity.TurnRunState]int{
-								entity.TurnRunState_Queueing: 3,
-							},
-						},
-					).
-					Return(nil)
-
+				mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				// 模拟发布事件
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
@@ -645,11 +632,11 @@ func TestExptMangerImpl_PendExpt(t *testing.T) {
 					EXPECT().
 					CalculateStats(gomock.Any(), int64(1), int64(100), session).
 					Return(&entity.ExptCalculateStats{
-						SuccessTurnCnt:    10,
-						PendingTurnCnt:    2,
-						FailTurnCnt:       1,
-						ProcessingTurnCnt: 3,
-						TerminatedTurnCnt: 1,
+						SuccessItemCnt:    10,
+						PendingItemCnt:    2,
+						FailItemCnt:       1,
+						ProcessingItemCnt: 3,
+						TerminatedItemCnt: 1,
 					}, nil)
 
 				// 模拟更新统计信息
@@ -660,11 +647,11 @@ func TestExptMangerImpl_PendExpt(t *testing.T) {
 						int64(1),
 						int64(100),
 						&entity.ExptStats{
-							SuccessTurnCnt:    10,
-							PendingTurnCnt:    2,
-							FailTurnCnt:       1,
-							ProcessingTurnCnt: 3,
-							TerminatedTurnCnt: 1,
+							SuccessItemCnt:    10,
+							PendingItemCnt:    2,
+							FailItemCnt:       1,
+							ProcessingItemCnt: 3,
+							TerminatedItemCnt: 1,
 						},
 					).
 					Return(nil)
@@ -694,11 +681,11 @@ func TestExptMangerImpl_PendExpt(t *testing.T) {
 					EXPECT().
 					CalculateStats(gomock.Any(), int64(1), int64(100), session).
 					Return(&entity.ExptCalculateStats{
-						SuccessTurnCnt:    10,
-						PendingTurnCnt:    2,
-						FailTurnCnt:       1,
-						ProcessingTurnCnt: 3,
-						TerminatedTurnCnt: 1,
+						SuccessItemCnt:    10,
+						PendingItemCnt:    2,
+						FailItemCnt:       1,
+						ProcessingItemCnt: 3,
+						TerminatedItemCnt: 1,
 					}, nil)
 
 				// 模拟更新统计信息失败
@@ -920,11 +907,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					CalculateStats(gomock.Any(), int64(1), int64(100), session).
 					Return(&entity.ExptCalculateStats{
-						SuccessTurnCnt:    10,
-						PendingTurnCnt:    0,
-						FailTurnCnt:       0,
-						ProcessingTurnCnt: 0,
-						TerminatedTurnCnt: 0,
+						SuccessItemCnt:    10,
+						PendingItemCnt:    0,
+						FailItemCnt:       0,
+						ProcessingItemCnt: 0,
+						TerminatedItemCnt: 0,
 					}, nil)
 
 				// 模拟更新统计信息
@@ -935,11 +922,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 						int64(1),
 						int64(100),
 						&entity.ExptStats{
-							SuccessTurnCnt:    10,
-							PendingTurnCnt:    0,
-							FailTurnCnt:       0,
-							ProcessingTurnCnt: 0,
-							TerminatedTurnCnt: 0,
+							SuccessItemCnt:    10,
+							PendingItemCnt:    0,
+							FailItemCnt:       0,
+							ProcessingItemCnt: 0,
+							TerminatedItemCnt: 0,
 						},
 					).
 					Return(nil)

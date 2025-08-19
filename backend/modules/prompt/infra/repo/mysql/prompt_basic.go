@@ -41,8 +41,9 @@ type IPromptBasicDAO interface {
 type ListPromptBasicParam struct {
 	SpaceID int64
 
-	KeyWord    string
-	CreatedBys []string
+	KeyWord       string
+	CreatedBys    []string
+	CommittedOnly bool
 
 	Offset  int
 	Limit   int
@@ -183,6 +184,9 @@ func (d *PromptBasicDAOImpl) List(ctx context.Context, param ListPromptBasicPara
 			q.PromptBasic.Name.Like(fmt.Sprintf("%%%s%%", param.KeyWord)),
 		)
 		tx = tx.Where(likeExpr)
+	}
+	if param.CommittedOnly {
+		tx = tx.Where(q.PromptBasic.LatestVersion.Neq(""))
 	}
 	total, err = tx.Count()
 	if err != nil {

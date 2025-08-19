@@ -11,7 +11,7 @@
   "dependencies": {
     "@commitlint/cli": "^17.2.0",
     "@commitlint/config-conventional": "^17.2.0",
-    "@rushstack/rush-sdk": "5.100.2",
+    "@rushstack/rush-sdk": "5.147.2",
     "commitizen": "^4.2.6",
     "cz-customizable": "^7.2.1"
   },

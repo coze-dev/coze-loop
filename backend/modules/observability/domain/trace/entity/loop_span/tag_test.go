@@ -33,6 +33,6 @@ func TestTagToAttr(t *testing.T) {
 	}
 	tmp2 := s{}
 	if err := tags.toAttr(context.Background(), tmp2); err == nil {
-		t.Fatal("should fail, should pass ptr of struct")
+		t.Fatal("should fail, should pass ptrutil of struct")
 	}
 }

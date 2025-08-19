@@ -284,6 +284,22 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasets(arg0, arg1 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ListDatasets), arg0, arg1)
 }
 
+// QueryItemSnapshotMappings mocks base method.
+func (m *MockIDatasetRPCAdapter) QueryItemSnapshotMappings(arg0 context.Context, arg1, arg2 int64, arg3 *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*entity.ItemSnapshotFieldMapping)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// QueryItemSnapshotMappings indicates an expected call of QueryItemSnapshotMappings.
+func (mr *MockIDatasetRPCAdapterMockRecorder) QueryItemSnapshotMappings(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).QueryItemSnapshotMappings), arg0, arg1, arg2, arg3)
+}
+
 // UpdateDataset mocks base method.
 func (m *MockIDatasetRPCAdapter) UpdateDataset(arg0 context.Context, arg1, arg2 int64, arg3, arg4 *string) error {
 	m.ctrl.T.Helper()

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bytedance/gg/gslice"
+	"github.com/bytedance/gg/gvalue"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -102,16 +104,6 @@ func MaybeAddLteToWhere[T comparable](b *WhereBuilder, value T, column string, o
 	b.AddWhere(&clause.Lte{Column: column, Value: value})
 }
 
-func AddCursorToWhere(b *WhereBuilder, cursor int64, column string, opt ...func(builder *WhereBuilder)) {
-	for _, o := range opt {
-		o(b)
-	}
-	b.where.Exprs = append(b.where.Exprs, &clause.Lt{
-		Column: column,
-		Value:  cursor,
-	})
-}
-
 // MaybeAddLikeToWhere 模糊搜索，字符串为空时不添加。会对原字符串中的通配符进行转义，如 % 转义为 \%。
 func MaybeAddLikeToWhere(b *WhereBuilder, fieldLike string, column string, opt ...func(builder *WhereBuilder)) {
 	if fieldLike == "" {
@@ -123,6 +115,34 @@ func MaybeAddLikeToWhere(b *WhereBuilder, fieldLike string, column string, opt .
 	b.where.Exprs = append(b.where.Exprs, &clause.Expr{
 		SQL:  fmt.Sprintf("%s LIKE ? ESCAPE '\\\\'", column),
 		Vars: []interface{}{"%" + escapeLikeWildcard(fieldLike) + "%"},
+	})
+}
+
+// MaybeAddMultiLikeToWhere 某个字段多个模糊搜索条件.
+func MaybeAddMultiLikeToWhere(b *WhereBuilder, fieldLikes []string, column string, opt ...func(builder *WhereBuilder)) {
+	fieldLikes = gslice.Filter(fieldLikes, func(val string) bool {
+		return gvalue.IsNotZero(val)
+	})
+	if len(fieldLikes) == 0 {
+		return
+	}
+	for _, o := range opt {
+		if o != nil {
+			o(b)
+		}
+	}
+	var sql string
+	var vars []interface{}
+	for i, fieldLike := range fieldLikes {
+		sql = sql + fmt.Sprintf("%s LIKE ? ESCAPE '\\\\'", column)
+		vars = append(vars, "%"+escapeLikeWildcard(fieldLike)+"%")
+		if i != len(fieldLikes)-1 {
+			sql = sql + " OR "
+		}
+	}
+	b.where.Exprs = append(b.where.Exprs, &clause.Expr{
+		SQL:  sql,
+		Vars: vars,
 	})
 }
 

@@ -11,6 +11,8 @@ import (
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
+
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 const (
@@ -39,9 +41,14 @@ func KiteXSvrCompatMW() endpoint.Middleware {
 	}
 }
 
-func KiteXSvrErrorWrapMW() endpoint.Middleware {
+func KiteXSvrErrorWrapMW(opts ...KiteXSvrErrorWrapOptionFn) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, req, resp interface{}) (err error) {
+			o := &kiteXSvrErrorWrapOption{}
+			for _, opt := range opts {
+				opt(o)
+			}
+
 			err = next(ctx, req, resp)
 			if err == nil {
 				return nil
@@ -51,7 +58,7 @@ func KiteXSvrErrorWrapMW() endpoint.Middleware {
 				return err
 			}
 
-			be := getBizStatusError(err)
+			be := getBizStatusError(err, o.getWrapErrorCode())
 
 			ri := rpcinfo.GetRPCInfo(ctx)
 			if setter, ok := ri.Invocation().(rpcinfo.InvocationSetter); ok {
@@ -64,11 +71,34 @@ func KiteXSvrErrorWrapMW() endpoint.Middleware {
 	}
 }
 
-func getBizStatusError(err error) kerrors.BizStatusErrorIface {
+func getBizStatusError(err error, wrapCode int32) kerrors.BizStatusErrorIface {
 	var detailedErr *kerrors.DetailedError
 	if errors.As(err, &detailedErr) {
 		unknownErr := detailedErr.Unwrap()
-		return kerrors.NewBizStatusError(ServiceInternalErrorCode, fmt.Sprintf("%s:%v", DefaultErrorMsg, unknownErr))
+		return kerrors.NewBizStatusError(wrapCode, fmt.Sprintf("%s:%s", DefaultErrorMsg, errorx.ErrorWithoutStack(unknownErr)))
 	}
-	return kerrors.NewBizStatusError(ServiceInternalErrorCode, fmt.Sprintf("%s:%v", DefaultErrorMsg, err))
+	statusErr, ok := kerrors.FromBizStatusError(errorx.NewByCode(wrapCode))
+	if ok {
+		return statusErr
+	}
+	return kerrors.NewBizStatusError(wrapCode, fmt.Sprintf("%s:%v", DefaultErrorMsg, errorx.ErrorWithoutStack(err)))
+}
+
+type kiteXSvrErrorWrapOption struct {
+	WrapErrorCode int32
+}
+
+func (k *kiteXSvrErrorWrapOption) getWrapErrorCode() int32 {
+	if k.WrapErrorCode > 0 {
+		return k.WrapErrorCode
+	}
+	return ServiceInternalErrorCode
+}
+
+type KiteXSvrErrorWrapOptionFn func(opt *kiteXSvrErrorWrapOption)
+
+func WithWrapErrorCode(code int32) KiteXSvrErrorWrapOptionFn {
+	return func(c *kiteXSvrErrorWrapOption) {
+		c.WrapErrorCode = code
+	}
 }

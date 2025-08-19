@@ -54,6 +54,7 @@
   "no_draft_change": "当前无草稿变更",
   "submitted": "已提交",
   "placeholder_var_create_error": "Placeholder 变量名不存在或命名错误，无法创建",
+  "placeholder_var_execute_error": "Placeholder 变量名不存在或命名错误",
   "model_id": "模型 ID",
   "model_name": "模型名称",
   "submission_no_version_diff": "本次提交无版本差异",

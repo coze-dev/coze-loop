@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
+
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/coze-dev/cozeloop-go"
 	goredis "github.com/redis/go-redis/v9"
@@ -59,7 +61,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := registry.NewConsumerRegistry(c.mqFactory).Register(mustInitConsumerWorkers(c.cfgFactory, handler, handler)).StartAll(ctx); err != nil {
+	if err := registry.NewConsumerRegistry(c.mqFactory).Register(mustInitConsumerWorkers(c.cfgFactory, handler, handler, handler)).StartAll(ctx); err != nil {
 		panic(err)
 	}
 
@@ -85,6 +87,7 @@ type ComponentConfig struct {
 		Bucket          string `mapstructure:"bucket"`
 		AccessKey       string `mapstructure:"access_key"`
 		SecretAccessKey string `mapstructure:"secret_access_key"`
+		ForcePathStyle  *bool  `mapstructure:"force_path_style"`
 	} `mapstructure:"s3_config"`
 	CKConfig struct {
 		Host        string `mapstructure:"host"`
@@ -169,8 +172,8 @@ func newComponent(ctx context.Context) (*component, error) {
 		logs.SetLogLevel(logs.FatalLevel)
 	}
 	cmdable, err := redis.NewClient(&goredis.Options{
-		Addr:     fmt.Sprintf("%s:%d", componentConfig.Redis.Host, componentConfig.Redis.Port),
-		Password: componentConfig.Redis.Password,
+		Addr:     fmt.Sprintf("%s:%s", getRedisDomain(), getRedisPort()),
+		Password: getRedisPassword(),
 	})
 	if err != nil {
 		return nil, err
@@ -182,11 +185,11 @@ func newComponent(ctx context.Context) (*component, error) {
 	}
 
 	db, err := db.NewDBFromConfig(&db.Config{
-		User:         componentConfig.RDS.User,
-		Password:     componentConfig.RDS.Password,
-		DBHostname:   componentConfig.RDS.Host,
-		DBPort:       componentConfig.RDS.Port,
-		DBName:       componentConfig.RDS.DB,
+		DBHostname:   getMysqlDomain(),
+		DBPort:       getMysqlPort(),
+		User:         getMysqlUser(),
+		Password:     getMysqlPassword(),
+		DBName:       getMysqlDatabase(),
 		Loc:          "Local",
 		DBCharset:    "utf8mb4",
 		Timeout:      time.Minute,
@@ -199,11 +202,17 @@ func newComponent(ctx context.Context) (*component, error) {
 	}
 
 	s3Config := fileserver.NewS3Config(func(cfg *fileserver.S3Config) {
-		cfg.Endpoint = componentConfig.S3Config.Endpoint
-		cfg.Region = componentConfig.S3Config.Region
-		cfg.Bucket = componentConfig.S3Config.Bucket
-		cfg.AccessKeyID = componentConfig.S3Config.AccessKey
-		cfg.SecretAccessKey = componentConfig.S3Config.SecretAccessKey
+		cfg.Endpoint = func() string {
+			if getOssPort() == "" {
+				return fmt.Sprintf("%s://%s", getOssProtocol(), getOssDomain())
+			}
+			return fmt.Sprintf("%s://%s:%s", getOssProtocol(), getOssDomain(), getOssPort())
+		}()
+		cfg.Region = getOssRegion()
+		cfg.AccessKeyID = getOssUser()
+		cfg.SecretAccessKey = getOssPassword()
+		cfg.Bucket = getOssBucket()
+		cfg.ForcePathStyle = getOssForcePathStyle()
 	})
 	objectStorage, err := fileserver.NewS3Client(s3Config)
 	if err != nil {
@@ -211,11 +220,11 @@ func newComponent(ctx context.Context) (*component, error) {
 	}
 
 	ckDb, err := ck.NewCKFromConfig(&ck.Config{
-		Host:              componentConfig.CKConfig.Host,
-		Database:          componentConfig.CKConfig.Database,
-		Username:          componentConfig.CKConfig.UserName,
-		Password:          componentConfig.CKConfig.Password,
-		CompressionMethod: ck.CompressionMethodZSTD,
+		Host:              fmt.Sprintf("%s:%s", getClickhouseDomain(), getClickhousePort()),
+		Username:          getClickhouseUser(),
+		Password:          getClickhousePassword(),
+		Database:          getClickhouseDatabase(),
+		CompressionMethod: ck.CompressionMethodLZ4,
 		CompressionLevel:  3,
 		Protocol:          ck.ProtocolNative,
 		DialTimeout:       time.Duration(componentConfig.CKConfig.DialTimeout) * time.Second,
@@ -230,7 +239,7 @@ func newComponent(ctx context.Context) (*component, error) {
 		return nil, err
 	}
 
-	localeDir, err := file.FindSubDir(os.Getenv("PWD"), "runtime/locales")
+	localeDir, err := file.FindSubDir(os.Getenv("PWD"), "conf/locales")
 	if err != nil {
 		return nil, err
 	}
@@ -254,4 +263,91 @@ func newComponent(ctx context.Context) (*component, error) {
 		ckDb:               ckDb,
 		translater:         translater,
 	}, nil
+}
+
+func getRedisDomain() string {
+	return os.Getenv("COZE_LOOP_REDIS_DOMAIN")
+}
+
+func getRedisPort() string {
+	return os.Getenv("COZE_LOOP_REDIS_PORT")
+}
+
+func getRedisPassword() string {
+	return os.Getenv("COZE_LOOP_REDIS_PASSWORD")
+}
+
+func getMysqlDomain() string {
+	return os.Getenv("COZE_LOOP_MYSQL_DOMAIN")
+}
+
+func getMysqlPort() string {
+	return os.Getenv("COZE_LOOP_MYSQL_PORT")
+}
+
+func getMysqlUser() string {
+	return os.Getenv("COZE_LOOP_MYSQL_USER")
+}
+
+func getMysqlPassword() string {
+	return os.Getenv("COZE_LOOP_MYSQL_PASSWORD")
+}
+
+func getMysqlDatabase() string {
+	return os.Getenv("COZE_LOOP_MYSQL_DATABASE")
+}
+
+func getClickhouseDomain() string {
+	return os.Getenv("COZE_LOOP_CLICKHOUSE_DOMAIN")
+}
+
+func getClickhousePort() string {
+	return os.Getenv("COZE_LOOP_CLICKHOUSE_PORT")
+}
+
+func getClickhouseUser() string {
+	return os.Getenv("COZE_LOOP_CLICKHOUSE_USER")
+}
+
+func getClickhousePassword() string {
+	return os.Getenv("COZE_LOOP_CLICKHOUSE_PASSWORD")
+}
+
+func getClickhouseDatabase() string {
+	return os.Getenv("COZE_LOOP_CLICKHOUSE_DATABASE")
+}
+
+func getOssProtocol() string {
+	return os.Getenv("COZE_LOOP_OSS_PROTOCOL")
+}
+
+func getOssDomain() string {
+	return os.Getenv("COZE_LOOP_OSS_DOMAIN")
+}
+
+func getOssPort() string {
+	return os.Getenv("COZE_LOOP_OSS_PORT")
+}
+
+func getOssUser() string {
+	return os.Getenv("COZE_LOOP_OSS_USER")
+}
+
+func getOssPassword() string {
+	return os.Getenv("COZE_LOOP_OSS_PASSWORD")
+}
+
+func getOssRegion() string {
+	return os.Getenv("COZE_LOOP_OSS_REGION")
+}
+
+func getOssBucket() string {
+	return os.Getenv("COZE_LOOP_OSS_BUCKET")
+}
+
+func getOssForcePathStyle() *bool {
+	if getOssDomain() == "coze-loop-minio" {
+		return gptr.Of(true)
+	}
+	return gptr.Of(false)
 }

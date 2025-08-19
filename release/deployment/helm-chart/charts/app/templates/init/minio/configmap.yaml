@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "minio-init-configmap"
+data:
+  entrypoint.sh: |-
+{{ .Files.Get "bootstrap/init/minio/entrypoint.sh" | nindent 4 }}

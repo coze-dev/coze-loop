@@ -57,6 +57,10 @@ const (
 	TurnRunState_Terminal TurnRunState = 4
 )
 
+func IsTurnRunFinished(state TurnRunState) bool {
+	return state == TurnRunState_Success || state == TurnRunState_Fail || state == TurnRunState_Terminal
+}
+
 func IsExptFinished(status ExptStatus) bool {
 	return status == ExptStatus_Success || status == ExptStatus_Failed || status == ExptStatus_Terminated || status == ExptStatus_SystemTerminated
 }
@@ -403,4 +407,10 @@ type ExptSchedulerMode interface {
 	ScheduleStart(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) error
 	ScheduleEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) error
 	NextTick(ctx context.Context, event *ExptScheduleEvent, nextTick bool) error
+	PublishResult(ctx context.Context, turnEvaluatorRefs []*ExptTurnEvaluatorResultRef, event *ExptScheduleEvent) error
+}
+
+type CKDBConfig struct {
+	ExptTurnResultFilterDBName string `json:"expt_turn_result_filter_db_name" mapstructure:"expt_turn_result_filter_db_name"`
+	DatasetItemsSnapshotDBName string `json:"dataset_items_snapshot_db_name" mapstructure:"dataset_items_snapshot_db_name"`
 }

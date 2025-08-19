@@ -55,6 +55,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BatchGetSourceEvalTargets": kitex.NewMethodInfo(
+		batchGetSourceEvalTargetsHandler,
+		newEvalTargetServiceBatchGetSourceEvalTargetsArgs,
+		newEvalTargetServiceBatchGetSourceEvalTargetsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ExecuteEvalTarget": kitex.NewMethodInfo(
 		executeEvalTargetHandler,
 		newEvalTargetServiceExecuteEvalTargetArgs,
@@ -223,6 +230,25 @@ func newEvalTargetServiceListSourceEvalTargetVersionsResult() interface{} {
 	return eval_target.NewEvalTargetServiceListSourceEvalTargetVersionsResult()
 }
 
+func batchGetSourceEvalTargetsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceBatchGetSourceEvalTargetsArgs)
+	realResult := result.(*eval_target.EvalTargetServiceBatchGetSourceEvalTargetsResult)
+	success, err := handler.(eval_target.EvalTargetService).BatchGetSourceEvalTargets(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceBatchGetSourceEvalTargetsArgs() interface{} {
+	return eval_target.NewEvalTargetServiceBatchGetSourceEvalTargetsArgs()
+}
+
+func newEvalTargetServiceBatchGetSourceEvalTargetsResult() interface{} {
+	return eval_target.NewEvalTargetServiceBatchGetSourceEvalTargetsResult()
+}
+
 func executeEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_target.EvalTargetServiceExecuteEvalTargetArgs)
 	realResult := result.(*eval_target.EvalTargetServiceExecuteEvalTargetResult)
@@ -347,6 +373,16 @@ func (p *kClient) ListSourceEvalTargetVersions(ctx context.Context, request *eva
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceListSourceEvalTargetVersionsResult
 	if err = p.c.Call(ctx, "ListSourceEvalTargetVersions", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetSourceEvalTargets(ctx context.Context, request *eval_target.BatchGetSourceEvalTargetsRequest) (r *eval_target.BatchGetSourceEvalTargetsResponse, err error) {
+	var _args eval_target.EvalTargetServiceBatchGetSourceEvalTargetsArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceBatchGetSourceEvalTargetsResult
+	if err = p.c.Call(ctx, "BatchGetSourceEvalTargets", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

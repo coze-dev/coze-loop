@@ -70,3 +70,30 @@ func (e *EvaluatorRecord) GetBaseInfo() *BaseInfo {
 func (e *EvaluatorRecord) SetBaseInfo(info *BaseInfo) {
 	e.BaseInfo = info
 }
+
+func (e *EvaluatorRecord) GetScore() *float64 {
+	if e.EvaluatorOutputData == nil || e.EvaluatorOutputData.EvaluatorResult == nil {
+		return nil
+	}
+	if e.EvaluatorOutputData.EvaluatorResult.Correction != nil {
+		return e.EvaluatorOutputData.EvaluatorResult.Correction.Score
+	}
+	return e.EvaluatorOutputData.EvaluatorResult.Score
+}
+
+func (e *EvaluatorRecord) GetReasoning() string {
+	if e.EvaluatorOutputData == nil || e.EvaluatorOutputData.EvaluatorResult == nil {
+		return ""
+	}
+	if e.EvaluatorOutputData.EvaluatorResult.Correction != nil {
+		return e.EvaluatorOutputData.EvaluatorResult.Correction.Explain
+	}
+	return e.EvaluatorOutputData.EvaluatorResult.Reasoning
+}
+
+func (e *EvaluatorRecord) GetCorrected() bool {
+	if e.EvaluatorOutputData == nil || e.EvaluatorOutputData.EvaluatorResult == nil {
+		return false
+	}
+	return e.EvaluatorOutputData.EvaluatorResult.Correction != nil
+}

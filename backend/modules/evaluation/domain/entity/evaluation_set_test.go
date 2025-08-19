@@ -57,12 +57,21 @@ func TestItemErrorType_String_FromString(t *testing.T) {
 	assert.Equal(t, "MalformedFile", ItemErrorType_MalformedFile.String())
 	assert.Equal(t, "IllegalContent", ItemErrorType_IllegalContent.String())
 	assert.Equal(t, "InternalError", ItemErrorType_InternalError.String())
+	assert.Equal(t, "MissingRequiredField", ItemErrorType_MissingRequiredField.String())
+	assert.Equal(t, "ExceedMaxNestedDepth", ItemErrorType_ExceedMaxNestedDepth.String())
+	assert.Equal(t, "TransformItemFailed", ItemErrorType_TransformItemFailed.String())
 	var unknown ItemErrorType = 99
 	assert.Equal(t, "<UNSET>", unknown.String())
 
 	typ, err := ItemErrorTypeFromString("EmptyData")
 	assert.NoError(t, err)
 	assert.Equal(t, ItemErrorType_EmptyData, typ)
+	typ1, err := ItemErrorTypeFromString("MissingRequiredField")
+	assert.NoError(t, err)
+	assert.Equal(t, ItemErrorType_MissingRequiredField, typ1)
+	typ2, err := ItemErrorTypeFromString("ExceedMaxNestedDepth")
+	assert.NoError(t, err)
+	assert.Equal(t, ItemErrorType_ExceedMaxNestedDepth, typ2)
 	_, err = ItemErrorTypeFromString("not-exist")
 	assert.Error(t, err)
 }

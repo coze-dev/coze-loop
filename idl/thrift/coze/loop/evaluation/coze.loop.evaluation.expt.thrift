@@ -60,6 +60,8 @@ struct SubmitExperimentRequest {
     32: optional expt.SourceType source_type (api.body = 'source_type')
     33: optional string source_id (api.body = 'source_id')
 
+    100: optional map<string, string> ext (api.body = 'ext')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -146,6 +148,8 @@ struct RunExperimentRequest {
     3: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
     10: optional expt.ExptType expt_type (api.body = 'expt_type')
 
+    100: optional map<string, string> ext (api.body = 'ext')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -162,6 +166,8 @@ struct RetryExperimentRequest {
     2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     3: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
     4: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+
+    100: optional map<string, string> ext (api.body = 'ext')
 
     255: optional base.Base Base
 }
@@ -205,6 +211,8 @@ struct BatchGetExperimentResultRequest {
 
     20: optional i32 page_number (api.query="page_number", go.tag='json:"page_number"')
     21: optional i32 page_size (api.query="page_size", go.tag='json:"page_size"')
+
+    30: optional bool use_accelerator (api.query="use_accelerator", go.tag='json:"use_accelerator"')
 
     255: optional base.Base Base
 }
@@ -309,6 +317,27 @@ struct ListExperimentStatsResponse {
     255: base.BaseResp BaseResp
 }
 
+typedef string UpsertExptTurnResultFilterType (ts.enum="true")           // 标签状态
+const UpsertExptTurnResultFilterType UpsertExptTurnResultFilterType_MANUAL = "manual"         // 启用
+const UpsertExptTurnResultFilterType UpsertExptTurnResultFilterType_AUTO = "auto"     // 禁用
+const UpsertExptTurnResultFilterType UpsertExptTurnResultFilterType_CHECK = "check" // 旧版本状态
+
+
+struct UpsertExptTurnResultFilterRequest {
+    1: optional i64 workspace_id
+    2: optional i64 experiment_id
+    3: optional list<i64> item_ids
+    4: optional UpsertExptTurnResultFilterType filter_type
+    5: optional i32 retry_times
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct UpsertExptTurnResultFilterResponse {
+    255: base.BaseResp BaseResp
+}
+
 service ExperimentService {
 
     CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (api.post = '/api/evaluation/v1/experiments/check_name')
@@ -349,5 +378,9 @@ service ExperimentService {
     FinishExperimentResponse FinishExperiment(1: FinishExperimentRequest req)
 
     ListExperimentStatsResponse ListExperimentStats(1: ListExperimentStatsRequest req)
+
+    // 更新报告ck
+    UpsertExptTurnResultFilterResponse UpsertExptTurnResultFilter(1: UpsertExptTurnResultFilterRequest req)
+
 }
 

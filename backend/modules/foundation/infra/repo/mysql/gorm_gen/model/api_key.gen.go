@@ -12,16 +12,16 @@ const TableNameAPIKey = "api_key"
 
 // APIKey api key table
 type APIKey struct {
-	ID         int64     `gorm:"column:id;type:bigint unsigned;primaryKey;comment:Primary Key ID" json:"id"`                                // Primary Key ID
+	ID         int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:Primary Key ID" json:"id"`                            // Primary Key ID
 	Key        string    `gorm:"column:key;type:varchar(255);not null;comment:API Key hash" json:"key"`                                     // API Key hash
 	Name       string    `gorm:"column:name;type:varchar(255);not null;comment:API Key Name" json:"name"`                                   // API Key Name
-	Status     int32     `gorm:"column:status;type:tinyint;not null;comment:0 normal, 1 deleted" json:"status"`                             // 0 normal, 1 deleted
-	UserID     int64     `gorm:"column:user_id;type:bigint;not null;comment:API Key Owner" json:"user_id"`                                  // API Key Owner
-	ExpiredAt  int64     `gorm:"column:expired_at;type:bigint;not null;comment:API Key Expired Time" json:"expired_at"`                     // API Key Expired Time
+	Status     int32     `gorm:"column:status;type:tinyint(4);not null;comment:0 normal, 1 deleted" json:"status"`                          // 0 normal, 1 deleted
+	UserID     int64     `gorm:"column:user_id;type:bigint(20);not null;comment:API Key Owner" json:"user_id"`                              // API Key Owner
+	ExpiredAt  int64     `gorm:"column:expired_at;type:bigint(20);not null;comment:API Key Expired Time" json:"expired_at"`                 // API Key Expired Time
 	CreatedAt  time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:Created Time" json:"created_at"` // Created Time
 	UpdatedAt  time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:Updated Time" json:"updated_at"` // Updated Time
-	DeletedAt  int64     `gorm:"column:deleted_at;type:bigint;not null;comment:Deleted Time" json:"deleted_at"`                             // Deleted Time
-	LastUsedAt int64     `gorm:"column:last_used_at;type:bigint;not null;comment:Last Used Time" json:"last_used_at"`                       // Last Used Time
+	DeletedAt  int64     `gorm:"column:deleted_at;type:bigint(20);not null;comment:Deleted Time" json:"deleted_at"`                         // Deleted Time
+	LastUsedAt int64     `gorm:"column:last_used_at;type:bigint(20);not null;comment:Last Used Time" json:"last_used_at"`                   // Last Used Time
 }
 
 // TableName APIKey's table name

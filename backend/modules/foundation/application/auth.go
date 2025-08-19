@@ -48,7 +48,7 @@ func (a *AuthApplicationImpl) MCheckPermission(ctx context.Context, request *aut
 		return nil, err
 	}
 
-	authRes := make([]*authModel.SubjectActionObjectAuthRes, len(request.Auths))
+	authRes := make([]*authModel.SubjectActionObjectAuthRes, 0, len(request.Auths))
 	for _, authObject := range request.Auths {
 		isAllowed := true
 		for _, object := range authObject.Objects {

@@ -11,10 +11,12 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 )
 
 var (
 	_ = dataset.KitexUnusedProtection
+	_ = tag.KitexUnusedProtection
 )
 
 // unused protection

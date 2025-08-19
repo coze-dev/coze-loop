@@ -12,13 +12,13 @@ const TableNameSpaceUser = "space_user"
 
 // SpaceUser Space Member Table
 type SpaceUser struct {
-	ID        int64     `gorm:"column:id;type:bigint unsigned;primaryKey;autoIncrement:true;comment:Primary Key ID, Auto Increment" json:"id"`                                 // Primary Key ID, Auto Increment
-	SpaceID   int64     `gorm:"column:space_id;type:bigint unsigned;not null;uniqueIndex:uk_space_user,priority:1;comment:Space ID" json:"space_id"`                           // Space ID
-	UserID    int64     `gorm:"column:user_id;type:bigint unsigned;not null;uniqueIndex:uk_space_user,priority:2;index:idx_user_id,priority:1;comment:User ID" json:"user_id"` // User ID
-	RoleType  int32     `gorm:"column:role_type;type:int;not null;default:3;comment:Role Type: 1.owner 2.admin 3.member" json:"role_type"`                                     // Role Type: 1.owner 2.admin 3.member
-	DeletedAt int64     `gorm:"column:deleted_at;type:bigint;not null" json:"deleted_at"`
-	CreatedAt time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	ID        int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;autoIncrement:true;comment:Primary Key ID, Auto Increment" json:"id"`                                 // Primary Key ID, Auto Increment
+	SpaceID   int64     `gorm:"column:space_id;type:bigint(20) unsigned;not null;uniqueIndex:uk_space_user,priority:1;comment:Space ID" json:"space_id"`                           // Space ID
+	UserID    int64     `gorm:"column:user_id;type:bigint(20) unsigned;not null;uniqueIndex:uk_space_user,priority:2;index:idx_user_id,priority:1;comment:User ID" json:"user_id"` // User ID
+	RoleType  int32     `gorm:"column:role_type;type:int(11);not null;default:3;comment:Role Type: 1.owner 2.admin 3.member" json:"role_type"`                                     // Role Type: 1.owner 2.admin 3.member
+	DeletedAt int64     `gorm:"column:deleted_at;type:bigint(20);not null;comment:删除时间" json:"deleted_at"`                                                                         // 删除时间
+	CreatedAt time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                 // 创建时间
+	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                 // 更新时间
 }
 
 // TableName SpaceUser's table name

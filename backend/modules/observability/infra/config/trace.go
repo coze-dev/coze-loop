@@ -13,16 +13,16 @@ import (
 )
 
 const (
-	systemViewsCfgKey         = "trace_system_view_cfg"
-	platformTenantCfgKey      = "trace_platform_tenants"
-	platformSpanHandlerCfgKey = "trace_platform_span_handler_config"
-	traceMqProducerCfgKey     = "trace_mq_producer_config"
-	tenantTablesCfgKey        = "trace_tenant_tables_cfg"
-	traceCkCfgKey             = "trace_ck_cfg"
-	traceFieldMetaInfoCfgKey  = "trace_field_meta_info"
-	traceAttrTosCfgKey        = "trace_attr_tos_cfg"
-	traceMaxDurationDay       = "trace_max_duration_day"
-	traceDefaultTenant        = "trace_default_tenant"
+	systemViewsCfgKey          = "trace_system_view_cfg"
+	platformTenantCfgKey       = "trace_platform_tenants"
+	platformSpanHandlerCfgKey  = "trace_platform_span_handler_config"
+	traceMqProducerCfgKey      = "trace_mq_producer_config"
+	annotationMqProducerCfgKey = "annotation_mq_producer_config"
+	tenantTablesCfgKey         = "trace_tenant_cfg"
+	traceCkCfgKey              = "trace_ck_cfg"
+	traceFieldMetaInfoCfgKey   = "trace_field_meta_info"
+	traceMaxDurationDay        = "trace_max_duration_day"
+	annotationSourceCfgKey     = "annotation_source_cfg"
 )
 
 type TraceConfigCenter struct {
@@ -55,9 +55,17 @@ func (t *TraceConfigCenter) GetPlatformSpansTrans(ctx context.Context) (*config.
 	return cfg, nil
 }
 
-func (t *TraceConfigCenter) GetTraceMqProducerCfg(ctx context.Context) (*config.TraceMqProducerCfg, error) {
-	cfg := new(config.TraceMqProducerCfg)
+func (t *TraceConfigCenter) GetTraceMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	cfg := new(config.MqProducerCfg)
 	if err := t.UnmarshalKey(context.Background(), traceMqProducerCfgKey, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func (t *TraceConfigCenter) GetAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	cfg := new(config.MqProducerCfg)
+	if err := t.UnmarshalKey(context.Background(), annotationMqProducerCfgKey, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil
@@ -87,14 +95,6 @@ func (t *TraceConfigCenter) GetTraceFieldMetaInfo(ctx context.Context) (*config.
 	return traceFieldMetaInfoCfg, nil
 }
 
-func (t *TraceConfigCenter) GetTraceAttrTosCfg(ctx context.Context) (*config.TraceAttrTosCfg, error) {
-	traceAttrTosCfg := new(config.TraceAttrTosCfg)
-	if err := t.UnmarshalKey(ctx, traceAttrTosCfgKey, &traceAttrTosCfg); err != nil {
-		return nil, err
-	}
-	return traceAttrTosCfg, nil
-}
-
 func (t *TraceConfigCenter) GetTraceDataMaxDurationDay(ctx context.Context, platformPtr *string) int64 {
 	defaultDuration := int64(7)
 	if platformPtr == nil {
@@ -122,17 +122,21 @@ func (t *TraceConfigCenter) getDefaultTraceTenant(ctx context.Context) (string, 
 	if t.traceDefaultTenant != "" {
 		return t.traceDefaultTenant, nil
 	}
-	val := t.Get(ctx, traceDefaultTenant)
-	if val == nil {
-		return "", fmt.Errorf("trace tenant not configured")
+	cfg, err := t.GetTenantConfig(ctx)
+	if err != nil {
+		return "", err
+	} else if cfg.DefaultIngestTenant == "" {
+		return "", fmt.Errorf("default trace tenant not exist")
 	}
-	ret, ok := val.(string)
-	if !ok {
-		return "", fmt.Errorf("trace tenant not string type")
-	} else if ret == "" {
-		return "", fmt.Errorf("trace tenant is empty")
+	return cfg.DefaultIngestTenant, nil
+}
+
+func (t *TraceConfigCenter) GetAnnotationSourceCfg(ctx context.Context) (*config.AnnotationSourceConfig, error) {
+	annotationSourceCfg := new(config.AnnotationSourceConfig)
+	if err := t.UnmarshalKey(ctx, annotationSourceCfgKey, &annotationSourceCfg); err != nil {
+		return nil, err
 	}
-	return ret, nil
+	return annotationSourceCfg, nil
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
@@ -143,6 +147,7 @@ func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
 	if err != nil {
 		panic(err)
 	}
+	logs.Info("default trace ingest tenant is  %s", tenant)
 	ret.traceDefaultTenant = tenant
 	return ret
 }

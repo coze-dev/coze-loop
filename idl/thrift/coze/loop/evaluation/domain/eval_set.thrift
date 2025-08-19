@@ -67,12 +67,15 @@ struct FieldSchema {
     4: optional common.ContentType content_type,                // 类型，如 文本，图片，etc.
     5: optional dataset.FieldDisplayFormat default_display_format, // 默认渲染格式，如 code, json, etc.mai
     6: optional dataset.FieldStatus status,                     // 当前列的状态
+    7: optional bool isRequired                                 // 是否必填
 
     // [20,50) 内容格式限制相关
     20: optional string text_schema,                             // 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification
     21: optional dataset.MultiModalSpec multi_model_spec,         // 多模态规格限制
 
     50: optional bool hidden,                                   // 用户是否不可见
+
+    55: optional list<dataset.FieldTransformationConfig> default_transformations                 // 默认的预置转换配置，目前在数据校验后执行
 }
 
 struct EvaluationSetItem {

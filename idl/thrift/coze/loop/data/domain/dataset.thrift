@@ -116,6 +116,7 @@ struct DatasetSpec {
     1: optional i64 max_item_count (api.js_conv="true", go.tag='json:"max_item_count"')  // 条数上限
     2: optional i32 max_field_count // 字段数量上限
     3: optional i64 max_item_size (api.js_conv="true", go.tag='json:"max_item_size"')   // 单条数据字数上限
+    4: optional i32 max_item_data_nested_depth
 }
 
 // DatasetVersion 数据集版本元信息，不包含数据本身
@@ -173,6 +174,16 @@ struct FieldSchema {
     21: optional MultiModalSpec multi_model_spec                       // 多模态规格限制
     50: optional bool hidden                                         // 用户是否不可见
     51: optional FieldStatus status                                  // 当前列的状态，创建/更新时可以不传
+
+    55: optional list<FieldTransformationConfig> default_transformations                 // 默认的预置转换配置，目前在数据校验后执行
+}
+
+enum FieldTransformationType {
+    RemoveExtraFields = 1 // 移除未在当前列的 jsonSchema 中定义的字段（包括 properties 和 patternProperties），仅在列类型为 struct 时有效
+}
+struct FieldTransformationConfig {
+    1: optional FieldTransformationType transType // 预置的转换类型
+    2: optional bool global                       // 当前转换配置在这一列上的数据及其嵌套的子结构上均生效
 }
 
 struct MultiModalSpec {
@@ -246,6 +257,9 @@ enum ItemErrorType {
     ExceedDatasetCapacity = 4 // 数据集容量超限
     MalformedFile = 5         // 文件格式错误
     IllegalContent = 6        // 包含非法内容
+    MissingRequiredField = 7  // 缺少必填字段
+    ExceedMaxNestedDepth = 8  // 数据嵌套层数超限
+    TransformItemFailed = 9   // 数据转换失败
 
     /* system error*/
     InternalError = 100

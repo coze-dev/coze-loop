@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -31,6 +32,7 @@ func NewEvaluatorRecordServiceImpl(idgen idgen.IIDGenerator,
 	exptPublisher events.ExptEventPublisher,
 	evaluatorPublisher events.EvaluatorEventPublisher,
 	userInfoService userinfo.UserInfoService,
+	exptRepo repo.IExperimentRepo,
 ) EvaluatorRecordService {
 	evaluatorRecordServiceOnce.Do(func() {
 		singletonEvaluatorRecordService = &EvaluatorRecordServiceImpl{
@@ -39,6 +41,7 @@ func NewEvaluatorRecordServiceImpl(idgen idgen.IIDGenerator,
 			exptPublisher:       exptPublisher,
 			evaluatorPublisher:  evaluatorPublisher,
 			userInfoService:     userInfoService,
+			exptRepo:            exptRepo,
 		}
 	})
 	return singletonEvaluatorRecordService
@@ -51,6 +54,7 @@ type EvaluatorRecordServiceImpl struct {
 	exptPublisher       events.ExptEventPublisher
 	evaluatorPublisher  events.EvaluatorEventPublisher
 	userInfoService     userinfo.UserInfoService
+	exptRepo            repo.IExperimentRepo
 }
 
 // CorrectEvaluatorRecord 创建 evaluator_version 运行结果
@@ -75,6 +79,10 @@ func (s *EvaluatorRecordServiceImpl) CorrectEvaluatorRecord(ctx context.Context,
 	if err != nil {
 		return err
 	}
+	expt, err := s.exptRepo.GetByID(ctx, evaluatorRecordDO.ExperimentID, evaluatorRecordDO.SpaceID)
+	if err != nil {
+		return err
+	}
 	// 发送聚合报告计算消息
 	evaluatorVersionIDStr := strconv.FormatInt(evaluatorRecordDO.EvaluatorVersionID, 10)
 	if err = s.exptPublisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{{
@@ -88,16 +96,39 @@ func (s *EvaluatorRecordServiceImpl) CorrectEvaluatorRecord(ctx context.Context,
 	}}, gptr.Of(time.Second*3)); err != nil {
 		logs.CtxError(ctx, "Failed to send AggrCalculateEvent, evaluatorVersionIDStr: %s, experimentID: %s, err: %v", evaluatorVersionIDStr, evaluatorRecordDO.ExperimentID, err)
 	}
-	if err = s.evaluatorPublisher.PublishEvaluatorRecordCorrection(ctx, &entity.EvaluatorRecordCorrectionEvent{
-		EvaluatorResult:    evaluatorRecordDO.EvaluatorOutputData.EvaluatorResult,
-		EvaluatorRecordID:  evaluatorRecordDO.ID,
-		EvaluatorVersionID: evaluatorRecordDO.EvaluatorVersionID,
-		Ext:                evaluatorRecordDO.Ext,
-		CreatedAt:          gptr.Indirect(evaluatorRecordDO.BaseInfo.CreatedAt),
-		UpdatedAt:          gptr.Indirect(evaluatorRecordDO.BaseInfo.UpdatedAt),
-	}, gptr.Of(time.Second*3)); err != nil {
+	if expt.ExptType == entity.ExptType_Online {
+		// 发送在线实验结果变更消息
+		if err = s.evaluatorPublisher.PublishEvaluatorRecordCorrection(ctx, &entity.EvaluatorRecordCorrectionEvent{
+			EvaluatorResult:    evaluatorRecordDO.EvaluatorOutputData.EvaluatorResult,
+			EvaluatorRecordID:  evaluatorRecordDO.ID,
+			EvaluatorVersionID: evaluatorRecordDO.EvaluatorVersionID,
+			Ext:                evaluatorRecordDO.Ext,
+			CreatedAt:          gptr.Indirect(evaluatorRecordDO.BaseInfo.CreatedAt),
+			UpdatedAt:          gptr.Indirect(evaluatorRecordDO.BaseInfo.UpdatedAt),
+		}, gptr.Of(time.Second*3)); err != nil {
+			return err
+		}
+	}
+
+	if err = s.exptPublisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+		ExperimentID: evaluatorRecordDO.ExperimentID,
+		SpaceID:      evaluatorRecordDO.SpaceID,
+		ItemID:       []int64{evaluatorRecordDO.ItemID},
+	}, nil); err != nil {
+		logs.CtxError(ctx, "Failed to send ExptTurnResultFilterEvent, err: %v", err)
+	}
+
+	err = s.exptPublisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+		ExperimentID: evaluatorRecordDO.ExperimentID,
+		SpaceID:      evaluatorRecordDO.SpaceID,
+		ItemID:       []int64{evaluatorRecordDO.ItemID},
+		RetryTimes:   ptr.Of(int32(0)),
+		FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
+	}, ptr.Of(10*time.Second))
+	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

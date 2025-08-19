@@ -12,13 +12,14 @@ import (
 )
 
 type ExecuteInternalRequest struct {
-	PromptID     *int64                `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" form:"prompt_id" query:"prompt_id"`
-	WorkspaceID  *int64                `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	Version      *string               `thrift:"version,3,optional" frugal:"3,optional,string" form:"version" json:"version,omitempty" query:"version"`
-	Messages     []*prompt.Message     `thrift:"messages,4,optional" frugal:"4,optional,list<prompt.Message>" form:"messages" json:"messages,omitempty" query:"messages"`
-	VariableVals []*prompt.VariableVal `thrift:"variable_vals,5,optional" frugal:"5,optional,list<prompt.VariableVal>" form:"variable_vals" json:"variable_vals,omitempty" query:"variable_vals"`
-	Scenario     *prompt.Scenario      `thrift:"scenario,101,optional" frugal:"101,optional,string" form:"scenario" json:"scenario,omitempty" query:"scenario"`
-	Base         *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID             *int64                       `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" form:"prompt_id" query:"prompt_id"`
+	WorkspaceID          *int64                       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	Version              *string                      `thrift:"version,3,optional" frugal:"3,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	Messages             []*prompt.Message            `thrift:"messages,4,optional" frugal:"4,optional,list<prompt.Message>" form:"messages" json:"messages,omitempty" query:"messages"`
+	VariableVals         []*prompt.VariableVal        `thrift:"variable_vals,5,optional" frugal:"5,optional,list<prompt.VariableVal>" form:"variable_vals" json:"variable_vals,omitempty" query:"variable_vals"`
+	OverridePromptParams *prompt.OverridePromptParams `thrift:"override_prompt_params,6,optional" frugal:"6,optional,prompt.OverridePromptParams" form:"override_prompt_params" json:"override_prompt_params,omitempty" query:"override_prompt_params"`
+	Scenario             *prompt.Scenario             `thrift:"scenario,101,optional" frugal:"101,optional,string" form:"scenario" json:"scenario,omitempty" query:"scenario"`
+	Base                 *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExecuteInternalRequest() *ExecuteInternalRequest {
@@ -88,6 +89,18 @@ func (p *ExecuteInternalRequest) GetVariableVals() (v []*prompt.VariableVal) {
 	return p.VariableVals
 }
 
+var ExecuteInternalRequest_OverridePromptParams_DEFAULT *prompt.OverridePromptParams
+
+func (p *ExecuteInternalRequest) GetOverridePromptParams() (v *prompt.OverridePromptParams) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOverridePromptParams() {
+		return ExecuteInternalRequest_OverridePromptParams_DEFAULT
+	}
+	return p.OverridePromptParams
+}
+
 var ExecuteInternalRequest_Scenario_DEFAULT prompt.Scenario
 
 func (p *ExecuteInternalRequest) GetScenario() (v prompt.Scenario) {
@@ -126,6 +139,9 @@ func (p *ExecuteInternalRequest) SetMessages(val []*prompt.Message) {
 func (p *ExecuteInternalRequest) SetVariableVals(val []*prompt.VariableVal) {
 	p.VariableVals = val
 }
+func (p *ExecuteInternalRequest) SetOverridePromptParams(val *prompt.OverridePromptParams) {
+	p.OverridePromptParams = val
+}
 func (p *ExecuteInternalRequest) SetScenario(val *prompt.Scenario) {
 	p.Scenario = val
 }
@@ -139,6 +155,7 @@ var fieldIDToName_ExecuteInternalRequest = map[int16]string{
 	3:   "version",
 	4:   "messages",
 	5:   "variable_vals",
+	6:   "override_prompt_params",
 	101: "scenario",
 	255: "Base",
 }
@@ -161,6 +178,10 @@ func (p *ExecuteInternalRequest) IsSetMessages() bool {
 
 func (p *ExecuteInternalRequest) IsSetVariableVals() bool {
 	return p.VariableVals != nil
+}
+
+func (p *ExecuteInternalRequest) IsSetOverridePromptParams() bool {
+	return p.OverridePromptParams != nil
 }
 
 func (p *ExecuteInternalRequest) IsSetScenario() bool {
@@ -224,6 +245,14 @@ func (p *ExecuteInternalRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -353,6 +382,14 @@ func (p *ExecuteInternalRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.VariableVals = _field
 	return nil
 }
+func (p *ExecuteInternalRequest) ReadField6(iprot thrift.TProtocol) error {
+	_field := prompt.NewOverridePromptParams()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.OverridePromptParams = _field
+	return nil
+}
 func (p *ExecuteInternalRequest) ReadField101(iprot thrift.TProtocol) error {
 
 	var _field *prompt.Scenario
@@ -397,6 +434,10 @@ func (p *ExecuteInternalRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -531,6 +572,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExecuteInternalRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOverridePromptParams() {
+		if err = oprot.WriteFieldBegin("override_prompt_params", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.OverridePromptParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ExecuteInternalRequest) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetScenario() {
 		if err = oprot.WriteFieldBegin("scenario", thrift.STRING, 101); err != nil {
@@ -595,6 +654,9 @@ func (p *ExecuteInternalRequest) DeepEqual(ano *ExecuteInternalRequest) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.VariableVals) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.OverridePromptParams) {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.Scenario) {
@@ -665,6 +727,13 @@ func (p *ExecuteInternalRequest) Field5DeepEqual(src []*prompt.VariableVal) bool
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ExecuteInternalRequest) Field6DeepEqual(src *prompt.OverridePromptParams) bool {
+
+	if !p.OverridePromptParams.DeepEqual(src) {
+		return false
 	}
 	return true
 }

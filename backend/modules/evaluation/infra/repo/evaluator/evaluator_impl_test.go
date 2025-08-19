@@ -367,7 +367,7 @@ func TestEvaluatorRepoImpl_BatchGetEvaluatorByVersionID(t *testing.T) {
 			mockSetup: func() {
 				// 设置获取评估器版本的期望
 				mockEvaluatorVersionDAO.EXPECT().
-					BatchGetEvaluatorVersionByID(gomock.Any(), []int64{1, 2}, false).
+					BatchGetEvaluatorVersionByID(gomock.Any(), gomock.Any(), []int64{1, 2}, false).
 					Return([]*model.EvaluatorVersion{
 						{
 							ID:            1,
@@ -425,7 +425,7 @@ func TestEvaluatorRepoImpl_BatchGetEvaluatorByVersionID(t *testing.T) {
 			includeDeleted: false,
 			mockSetup: func() {
 				mockEvaluatorVersionDAO.EXPECT().
-					BatchGetEvaluatorVersionByID(gomock.Any(), []int64{1, 2}, false).
+					BatchGetEvaluatorVersionByID(gomock.Any(), gomock.Any(), []int64{1, 2}, false).
 					Return(nil, assert.AnError)
 			},
 			expectedResult: nil,
@@ -445,7 +445,7 @@ func TestEvaluatorRepoImpl_BatchGetEvaluatorByVersionID(t *testing.T) {
 				lwt:                 mockLWT,
 			}
 
-			result, err := repo.BatchGetEvaluatorByVersionID(context.Background(), tt.ids, tt.includeDeleted)
+			result, err := repo.BatchGetEvaluatorByVersionID(context.Background(), nil, tt.ids, tt.includeDeleted)
 			assert.Equal(t, tt.expectedError, err)
 			if err == nil {
 				assert.Equal(t, len(tt.expectedResult), len(result))
@@ -1038,7 +1038,7 @@ func TestEvaluatorRepoImpl_BatchGetEvaluatorDraft(t *testing.T) {
 
 				// 设置获取评估器版本的期望
 				mockEvaluatorVersionDAO.EXPECT().
-					BatchGetEvaluatorVersionByID(gomock.Any(), []int64{1, 2}, false).
+					BatchGetEvaluatorVersionByID(gomock.Any(), gomock.Any(), []int64{1, 2}, false).
 					Return([]*model.EvaluatorVersion{
 						{
 							ID:            1,

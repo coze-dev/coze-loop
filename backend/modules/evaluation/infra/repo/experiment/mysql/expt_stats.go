@@ -106,7 +106,7 @@ func (e *exptStatsDAOImpl) ArithOperateCount(ctx context.Context, exptID, spaceI
 		Where("space_id = ? AND expt_id = ?", spaceID, exptID).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 
 	for status, opCnt := range cntArithOp.OpStatusCnt {
-		col := TurnRunStateStatsField(status)
+		col := ItemRunStateStatsField(status)
 		if len(col) == 0 || opCnt == 0 {
 			continue
 		}
@@ -139,6 +139,23 @@ func TurnRunStateStatsField(state entity.TurnRunState) string {
 	case entity.TurnRunState_Processing:
 		return "processing_cnt"
 	case entity.TurnRunState_Terminal:
+		return "terminated_cnt"
+	default:
+		return ""
+	}
+}
+
+func ItemRunStateStatsField(state entity.ItemRunState) string {
+	switch state {
+	case entity.ItemRunState_Queueing:
+		return "pending_cnt"
+	case entity.ItemRunState_Fail:
+		return "fail_cnt"
+	case entity.ItemRunState_Success:
+		return "success_cnt"
+	case entity.ItemRunState_Processing:
+		return "processing_cnt"
+	case entity.ItemRunState_Terminal:
 		return "terminated_cnt"
 	default:
 		return ""

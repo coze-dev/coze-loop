@@ -48,11 +48,11 @@ func (a *AuthProviderImpl) CheckWorkspacePermission(ctx context.Context, action,
 	}
 	resp, err := a.cli.MCheckPermission(ctx, req)
 	if err != nil {
-		return errorx.NewByCode(errno.CommonRPCErrorCode)
+		return errorx.NewByCode(errno.CommonRPCErrorCode, errorx.WithExtraMsg(err.Error()))
 	} else if resp == nil {
 		return errorx.NewByCode(errno.CommonRPCErrorCode)
 	} else if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
-		return errorx.NewByCode(errno.CommonRPCErrorCode)
+		return errorx.NewByCode(errno.CommonRPCErrorCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
 	for _, r := range resp.AuthRes {
 		if r != nil && !r.GetIsAllowed() {

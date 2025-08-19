@@ -40,7 +40,7 @@ func NewS3Client(cfg *S3Config) (*S3Client, error) {
 		Region:           lo.ToPtr(cfg.Region),
 		Endpoint:         lo.ToPtr(cfg.Endpoint),
 		Credentials:      credentials.NewStaticCredentials(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
-		S3ForcePathStyle: lo.ToPtr(true),
+		S3ForcePathStyle: cfg.ForcePathStyle,
 	})
 	if err != nil {
 		return nil, errors.WithMessagef(err, "create aws session")

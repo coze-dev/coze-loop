@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	mysql "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
@@ -44,9 +45,9 @@ func (m *MockIPromptCommitDAO) EXPECT() *MockIPromptCommitDAOMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockIPromptCommitDAO) Create(ctx context.Context, promptCommitPO *model.PromptCommit, opts ...db.Option) error {
+func (m *MockIPromptCommitDAO) Create(ctx context.Context, promptCommitPO *model.PromptCommit, arg2 time.Time, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, promptCommitPO}
+	varargs := []any{ctx, promptCommitPO, arg2}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -56,9 +57,9 @@ func (m *MockIPromptCommitDAO) Create(ctx context.Context, promptCommitPO *model
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockIPromptCommitDAOMockRecorder) Create(ctx, promptCommitPO any, opts ...any) *gomock.Call {
+func (mr *MockIPromptCommitDAOMockRecorder) Create(ctx, promptCommitPO, arg2 any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, promptCommitPO}, opts...)
+	varargs := append([]any{ctx, promptCommitPO, arg2}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockIPromptCommitDAO)(nil).Create), varargs...)
 }
 

@@ -7,6 +7,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -133,6 +135,9 @@ func (e *EvalTargetRepoImpl) GetEvalTargetVersion(ctx context.Context, spaceID, 
 	var versionOpts []db.Option
 	if e.lwt.CheckWriteFlagByID(ctx, platestwrite.ResourceTypeTargetVersion, versionID) {
 		versionOpts = append(versionOpts, db.WithMaster())
+		logs.CtxInfo(ctx, "GetEvalTargetVersion CheckWriteFlagByID true")
+	} else {
+		logs.CtxInfo(ctx, "GetEvalTargetVersion CheckWriteFlagByID false")
 	}
 	versionPO, err := e.evalTargetVersionDao.GetEvalTargetVersion(ctx, spaceID, versionID, versionOpts...)
 	if err != nil {

@@ -47,7 +47,7 @@ func (r *RuntimeImpl) Generate(ctx context.Context, model *entity.Model, input [
 	if err := r.ValidModelAndRequest(ctx, model, input, opts...); err != nil {
 		return nil, err
 	}
-	llm, err := r.buildLLM(ctx, model)
+	llm, err := r.buildLLM(ctx, model, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -60,15 +60,15 @@ func (r *RuntimeImpl) Stream(ctx context.Context, model *entity.Model, input []*
 	if err := r.ValidModelAndRequest(ctx, model, input, opts...); err != nil {
 		return nil, err
 	}
-	llm, err := r.buildLLM(ctx, model)
+	llm, err := r.buildLLM(ctx, model, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return llm.Stream(ctx, input, opts...)
 }
 
-func (r *RuntimeImpl) buildLLM(ctx context.Context, model *entity.Model) (llminterface.ILLM, error) {
-	llm, err := r.llmFact.CreateLLM(ctx, model)
+func (r *RuntimeImpl) buildLLM(ctx context.Context, model *entity.Model, opts ...entity.Option) (llminterface.ILLM, error) {
+	llm, err := r.llmFact.CreateLLM(ctx, model, opts...)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, llm_errorx.BuildLLMFailedCode)
 	}

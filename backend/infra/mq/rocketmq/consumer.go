@@ -6,6 +6,7 @@ package rocketmq
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
@@ -51,11 +52,10 @@ func (c *Consumer) Start() error {
 		}
 		return consumer.ConsumeSuccess, nil
 	})
-
-	if err == nil {
-		err = c.consumer.Start()
+	if err != nil {
+		return fmt.Errorf("consumer subscribe err: %w", err)
 	}
-	return err
+	return c.consumer.Start()
 }
 
 func (c *Consumer) Close() error {

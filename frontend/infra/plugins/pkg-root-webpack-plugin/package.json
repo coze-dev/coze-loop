@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@coze-arch/pkg-root-webpack-plugin-origin": "npm:@coze-arch/pkg-root-webpack-plugin@1.0.0-alpha.74b402",
-    "@rushstack/rush-sdk": "5.100.2"
+    "@rushstack/rush-sdk": "5.147.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.2",
@@ -33,4 +33,3 @@
     "webpack": "~5.89.0"
   }
 }
-

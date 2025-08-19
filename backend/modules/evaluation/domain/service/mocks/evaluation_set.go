@@ -111,6 +111,22 @@ func (mr *MockIEvaluationSetServiceMockRecorder) ListEvaluationSets(arg0, arg1 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationSets", reflect.TypeOf((*MockIEvaluationSetService)(nil).ListEvaluationSets), arg0, arg1)
 }
 
+// QueryItemSnapshotMappings mocks base method.
+func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(arg0 context.Context, arg1, arg2 int64, arg3 *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*entity.ItemSnapshotFieldMapping)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// QueryItemSnapshotMappings indicates an expected call of QueryItemSnapshotMappings.
+func (mr *MockIEvaluationSetServiceMockRecorder) QueryItemSnapshotMappings(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIEvaluationSetService)(nil).QueryItemSnapshotMappings), arg0, arg1, arg2, arg3)
+}
+
 // UpdateEvaluationSet mocks base method.
 func (m *MockIEvaluationSetService) UpdateEvaluationSet(arg0 context.Context, arg1 *entity.UpdateEvaluationSetParam) error {
 	m.ctrl.T.Helper()

@@ -17,6 +17,7 @@ type ExptEventPublisher interface {
 	BatchPublishExptRecordEvalEvent(ctx context.Context, events []*entity.ExptItemEvalEvent, duration *time.Duration) error
 	PublishExptAggrCalculateEvent(ctx context.Context, events []*entity.AggrCalculateEvent, duration *time.Duration) error
 	PublishExptOnlineEvalResult(ctx context.Context, events *entity.OnlineExptEvalResultEvent, duration *time.Duration) error
+	PublishExptTurnResultFilterEvent(ctx context.Context, event *entity.ExptTurnResultFilterEvent, duration *time.Duration) error
 }
 
 //go:generate mockgen -destination mocks/evaluator_event_publisher_mock.go -package mocks . EvaluatorEventPublisher

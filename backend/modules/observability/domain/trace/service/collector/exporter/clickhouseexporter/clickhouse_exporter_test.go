@@ -88,7 +88,7 @@ func TestCkExporter_ConsumeTraces(t *testing.T) {
 			},
 			input: consumer.Traces{
 				TraceData: []*entity.TraceData{{
-					TenantInfo: entity.TenantInfo{TTL: entity.TTL3d},
+					TenantInfo: entity.TenantInfo{TTL: loop_span.TTL3d},
 					SpanList: loop_span.SpanList{{
 						TraceID: "123",
 						SpanID:  "456",
@@ -108,7 +108,7 @@ func TestCkExporter_ConsumeTraces(t *testing.T) {
 			},
 			input: consumer.Traces{
 				TraceData: []*entity.TraceData{{
-					TenantInfo: entity.TenantInfo{TTL: entity.TTL3d},
+					TenantInfo: entity.TenantInfo{TTL: loop_span.TTL3d},
 					SpanList: loop_span.SpanList{{
 						TraceID: "123",
 						SpanID:  "456",

@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<clickhouse>
-    <user>${USER}</user>
-    <password>${PASSWORD}</password>
-    <host>localhost</host>
-    <port>9008</port>
-</clickhouse>

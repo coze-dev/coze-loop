@@ -16,14 +16,14 @@ import (
 
 //go:generate mockgen -destination=mocks/factory.go -package=mocks . IFactory
 type IFactory interface {
-	CreateLLM(ctx context.Context, model *entity.Model) (llminterface.ILLM, error)
+	CreateLLM(ctx context.Context, model *entity.Model, opts ...entity.Option) (llminterface.ILLM, error)
 }
 
 type FactoryImpl struct{}
 
 var _ IFactory = (*FactoryImpl)(nil)
 
-func (f *FactoryImpl) CreateLLM(ctx context.Context, model *entity.Model) (llminterface.ILLM, error) {
+func (f *FactoryImpl) CreateLLM(ctx context.Context, model *entity.Model, opts ...entity.Option) (llminterface.ILLM, error) {
 	// 根据frame和protocol导航到不同的frame factory
 	frame, err := f.getFrameByModel(model)
 	if err != nil {
@@ -32,7 +32,7 @@ func (f *FactoryImpl) CreateLLM(ctx context.Context, model *entity.Model) (llmin
 	// 用该frame factory创建llm接口的实现
 	switch frame {
 	case entity.FrameEino:
-		return eino.NewLLM(ctx, model)
+		return eino.NewLLM(ctx, model, opts...)
 	default:
 		return nil, errorx.NewByCode(llm_errorx.ModelInvalidCode, errorx.WithExtraMsg(fmt.Sprintf("[CreateLLM] frame:%s is not supported", frame)))
 	}

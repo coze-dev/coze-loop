@@ -41,6 +41,21 @@ func (m *MockISourceEvalTargetOperateService) EXPECT() *MockISourceEvalTargetOpe
 	return m.recorder
 }
 
+// BatchGetSource mocks base method.
+func (m *MockISourceEvalTargetOperateService) BatchGetSource(ctx context.Context, spaceID int64, ids []string) ([]*entity.EvalTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetSource", ctx, spaceID, ids)
+	ret0, _ := ret[0].([]*entity.EvalTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetSource indicates an expected call of BatchGetSource.
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) BatchGetSource(ctx, spaceID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSource", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).BatchGetSource), ctx, spaceID, ids)
+}
+
 // BuildBySource mocks base method.
 func (m *MockISourceEvalTargetOperateService) BuildBySource(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, opts ...entity.Option) (*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()

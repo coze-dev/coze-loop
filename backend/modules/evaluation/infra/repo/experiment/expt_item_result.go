@@ -116,6 +116,18 @@ func (e ExptItemResultRepoImpl) GetItemIDListByExptID(ctx context.Context, exptI
 	return e.exptItemResultDAO.GetItemIDListByExptID(ctx, exptID, spaceID)
 }
 
+func (e ExptItemResultRepoImpl) ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*entity.ExptItemResult, int64, error) {
+	pos, total, err := e.exptItemResultDAO.ListItemResultsByExptID(ctx, exptID, spaceID, page, desc)
+	if err != nil {
+		return nil, 0, errorx.Wrapf(err, "ListItemResultsByExptID fail, exptID=%d, spaceID=%d, page=%v, desc=%v", exptID, spaceID, page, desc)
+	}
+	results := make([]*entity.ExptItemResult, 0)
+	for _, po := range pos {
+		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+	}
+	return results, total, nil
+}
+
 func (e ExptItemResultRepoImpl) ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64) ([]*entity.ExptItemResultRunLog, int64, error) {
 	pos, ncursor, err := e.exptItemResultDAO.ScanItemRunLogs(ctx, exptID, exptRunID, filter, cursor, limit, spaceID)
 	if err != nil {

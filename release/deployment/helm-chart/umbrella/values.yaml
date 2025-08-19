@@ -1,0 +1,32 @@
+custom: &custom
+  image:
+    registry: "docker.io"
+    pullSecrets: "***"
+  redis:
+    disabled: true
+  mysql:
+    disabled: true
+  clickhouse:
+    disabled: true
+  oss:
+    disabled: true
+  rmq:
+    disabled: true
+
+# 固定，不要动，用于传递全局变量
+coze-loop-app:
+  custom: *custom
+coze-loop-nginx:
+  custom: *custom
+coze-loop-redis:
+  custom: *custom
+coze-loop-mysql:
+  custom: *custom
+coze-loop-clickhouse:
+  custom: *custom
+coze-loop-minio:
+  custom: *custom
+coze-loop-rmq-namesrv:
+  custom: *custom
+coze-loop-rmq-broker:
+  custom: *custom

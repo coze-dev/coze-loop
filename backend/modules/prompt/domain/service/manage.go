@@ -27,7 +27,9 @@ func (p *PromptServiceImpl) MGetPromptIDs(ctx context.Context, spaceID int64, pr
 	}
 	for _, promptKey := range promptKeys {
 		if _, ok := promptKeyIDMap[promptKey]; !ok {
-			return nil, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("prompt key: %s not found", promptKey)))
+			return nil, errorx.NewByCode(prompterr.ResourceNotFoundCode,
+				errorx.WithExtraMsg(fmt.Sprintf("prompt key: %s not found", promptKey)),
+				errorx.WithExtra(map[string]string{"prompt_key": promptKey}))
 		}
 	}
 	return promptKeyIDMap, nil
@@ -54,7 +56,7 @@ func (p *PromptServiceImpl) MParseCommitVersionByPromptKey(ctx context.Context, 
 		if basic != nil && basic.PromptBasic != nil {
 			lastestCommitVersion := basic.PromptBasic.LatestVersion
 			if lastestCommitVersion == "" {
-				return nil, errorx.NewByCode(prompterr.PromptUncommittedCode, errorx.WithExtraMsg(fmt.Sprintf("prompt key: %s", basic.PromptKey)))
+				return nil, errorx.NewByCode(prompterr.PromptUncommittedCode, errorx.WithExtraMsg(fmt.Sprintf("prompt key: %s", basic.PromptKey)), errorx.WithExtra(map[string]string{"prompt_key": basic.PromptKey}))
 			}
 			promptKeyCommitVersionMap[PromptKeyVersionPair{PromptKey: basic.PromptKey}] = lastestCommitVersion
 		}

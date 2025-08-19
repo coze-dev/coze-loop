@@ -16,12 +16,13 @@ const (
 )
 
 const (
-	SpanTagCallType        = "call_type"
-	SpanTagDebugID         = "debug_id"
-	SpanTagPromptVariables = "prompt_variables"
-	SpanTagMessages        = "messages"
-	SpanTagPromptTemplate  = "prompt_template"
-	SpanTagPromptID        = "prompt_id"
+	SpanTagCallType             = "call_type"
+	SpanTagDebugID              = "debug_id"
+	SpanTagPromptVariables      = "prompt_variables"
+	SpanTagMessages             = "messages"
+	SpanTagPromptTemplate       = "prompt_template"
+	SpanTagPromptID             = "prompt_id"
+	SpanTagOverridePromptParams = "override_prompt_params"
 )
 
 const (

@@ -44,6 +44,7 @@ const AuthEntityType AuthEntityType_Evaluator = "Evaluator"
 const AuthEntityType AuthEntityType_EvaluationTarget = "EvaluationTarget"
 const AuthEntityType AuthEntityType_TraceView = "TraceView"
 const AuthEntityType AuthEntityType_Model = "Model"
+const AuthEntityType AuthEntityType_Annotation = "Annotation"
 
 // 鉴权资源，客体
 struct AuthEntity {

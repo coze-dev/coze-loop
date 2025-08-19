@@ -1001,6 +1001,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 				// The hasMore logic is len(info) == int(gptr.Indirect(param.PageSize)), so len(info) == 0.
 				// If ListPromptVersion returns 1 item, hasMore will be 1 == 0 -> false.
 				// If ListPromptVersion returns 0 items, hasMore will be 0 == 0 -> true.
+				// Let's assume the test case returns 1 prompt, so 1 != 0, hasMore = false.
 				adapter.EXPECT().ListPromptVersion(ctx, &rpc.ListPromptVersionParam{
 					PromptID: defaultPromptIDInt,
 					SpaceID:  gptr.Of(defaultSpaceID),
@@ -1446,6 +1447,154 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 
 			if tt.wantCheck != nil {
 				tt.wantCheck(t, tt.dos)
+			}
+		})
+	}
+}
+
+func TestPromptSourceEvalTargetServiceImpl_BatchGetSource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+	service := NewPromptSourceEvalTargetServiceImpl(mockAdapter)
+
+	validSpaceID := int64(123)
+	validIDs := []string{"1", "2"}
+
+	prompt1 := &rpc.LoopPrompt{
+		ID: 1,
+		PromptBasic: &rpc.PromptBasic{
+			DisplayName: gptr.Of("Prompt 1"),
+			Description: gptr.Of("Desc 1"),
+		},
+	}
+	prompt2 := &rpc.LoopPrompt{
+		ID: 2,
+		PromptBasic: &rpc.PromptBasic{
+			DisplayName: gptr.Of("Prompt 2"),
+			Description: gptr.Of("Desc 2"),
+		},
+	}
+
+	tests := []struct {
+		name        string
+		spaceID     int64
+		ids         []string
+		mockSetup   func()
+		wantTargets []*entity.EvalTarget
+		wantErr     bool
+	}{
+		{
+			name:    "success - get multiple prompts",
+			spaceID: validSpaceID,
+			ids:     validIDs,
+			mockSetup: func() {
+				mockAdapter.EXPECT().
+					MGetPrompt(gomock.Any(), validSpaceID, gomock.Any()).
+					Return([]*rpc.LoopPrompt{prompt1, prompt2}, nil)
+			},
+			wantTargets: []*entity.EvalTarget{
+				{
+					SpaceID:        validSpaceID,
+					SourceTargetID: "1",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						Prompt: &entity.LoopPrompt{
+							PromptID:    1,
+							Name:        "Prompt 1",
+							Description: "Desc 1",
+						},
+					},
+				},
+				{
+					SpaceID:        validSpaceID,
+					SourceTargetID: "2",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						Prompt: &entity.LoopPrompt{
+							PromptID:    2,
+							Name:        "Prompt 2",
+							Description: "Desc 2",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "success - get partial prompts",
+			spaceID: validSpaceID,
+			ids:     validIDs,
+			mockSetup: func() {
+				mockAdapter.EXPECT().
+					MGetPrompt(gomock.Any(), validSpaceID, gomock.Any()).
+					Return([]*rpc.LoopPrompt{prompt1}, nil)
+			},
+			wantTargets: []*entity.EvalTarget{
+				{
+					SpaceID:        validSpaceID,
+					SourceTargetID: "1",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						Prompt: &entity.LoopPrompt{
+							PromptID:    1,
+							Name:        "Prompt 1",
+							Description: "Desc 1",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "success - get no prompts",
+			spaceID: validSpaceID,
+			ids:     validIDs,
+			mockSetup: func() {
+				mockAdapter.EXPECT().
+					MGetPrompt(gomock.Any(), validSpaceID, gomock.Any()).
+					Return([]*rpc.LoopPrompt{}, nil)
+			},
+			wantTargets: []*entity.EvalTarget{},
+			wantErr:     false,
+		},
+		{
+			name:    "error - rpc call failed",
+			spaceID: validSpaceID,
+			ids:     validIDs,
+			mockSetup: func() {
+				mockAdapter.EXPECT().
+					MGetPrompt(gomock.Any(), validSpaceID, gomock.Any()).
+					Return(nil, assert.AnError)
+			},
+			wantTargets: nil,
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			targets, err := service.BatchGetSource(context.Background(), tt.spaceID, tt.ids)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, targets)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, len(tt.wantTargets), len(targets))
+				for i, want := range tt.wantTargets {
+					got := targets[i]
+					assert.Equal(t, want.SpaceID, got.SpaceID)
+					assert.Equal(t, want.SourceTargetID, got.SourceTargetID)
+					assert.Equal(t, want.EvalTargetType, got.EvalTargetType)
+					assert.NotNil(t, got.EvalTargetVersion)
+					assert.NotNil(t, got.EvalTargetVersion.Prompt)
+					assert.Equal(t, want.EvalTargetVersion.Prompt.PromptID, got.EvalTargetVersion.Prompt.PromptID)
+					assert.Equal(t, want.EvalTargetVersion.Prompt.Name, got.EvalTargetVersion.Prompt.Name)
+					assert.Equal(t, want.EvalTargetVersion.Prompt.Description, got.EvalTargetVersion.Prompt.Description)
+				}
 			}
 		})
 	}

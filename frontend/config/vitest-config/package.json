@@ -18,7 +18,7 @@
     "@types/node": "^18",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "~3.0.5",
-    "happy-dom": "^12.10.3",
+    "happy-dom": "^15.10.2",
     "sucrase": "^3.32.0",
     "vitest": "~3.0.5"
   }

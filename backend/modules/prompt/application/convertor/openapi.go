@@ -71,9 +71,6 @@ func OpenAPIMessageDO2DTO(do *entity.Message) *openapi.Message {
 }
 
 func OpenAPIBatchVariableDefDO2DTO(dos []*entity.VariableDef) []*openapi.VariableDef {
-	if len(dos) == 0 {
-		return nil
-	}
 	dtos := make([]*openapi.VariableDef, 0, len(dos))
 	for _, do := range dos {
 		if do == nil {
@@ -96,7 +93,7 @@ func OpenAPIVariableDefDO2DTO(do *entity.VariableDef) *openapi.VariableDef {
 }
 
 func OpenAPIBatchToolDO2DTO(dos []*entity.Tool) []*openapi.Tool {
-	if len(dos) == 0 {
+	if dos == nil {
 		return nil
 	}
 	dtos := make([]*openapi.Tool, 0, len(dos))

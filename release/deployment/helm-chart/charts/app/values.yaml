@@ -1,0 +1,122 @@
+service:
+  type: ClusterIP
+  port: 8888
+  targetPort: 8888
+
+image:
+  registry: "docker.io"
+  repository: "cozedev"
+  image: "coze-loop"
+  tag: "1.0.0"
+  pullPolicy: Always
+  pullSecrets: "coze-loop-image-secret"
+
+init_image:
+  redis:
+    registry: "docker.io"
+    repository: "library"
+    image: "redis"
+    tag: "8.2.0"
+  mysql:
+    registry: "docker.iom"
+    repository: "library"
+    image: "mysql"
+    tag: "8.4.6"
+  clickhouse:
+    registry: "docker.io"
+    repository: "clickhouse"
+    image: "clickhouse-server"
+    tag: "latest"
+  minio:
+    registry: "docker.io"
+    repository: "minio"
+    image: "minio"
+    tag: "RELEASE.2025-06-13T11-33-47Z"
+  rmq:
+    registry: "docker.io"
+    repository: "apache"
+    image: "rocketmq"
+    tag: "5.3.3"
+
+deployment:
+  replicaCount: 1
+  terminationGracePeriodSeconds: 5
+
+liveness:
+  startSeconds: 10
+  intervalSeconds: 10
+  timeoutSeconds: 30
+  shutdownFailureTimes: 30
+
+env:
+  redis:
+    domain: "coze-loop-redis"
+    port: "6379"
+    password: "coze-loop"
+  mysql:
+    domain: "coze-loop-mysql"
+    port: "3306"
+    user: "root"
+    password: "coze-loop"
+    database: "coze-loop"
+  clickhouse:
+    domain: "coze-loop-clickhouse"
+    port: "9000"
+    user: "default"
+    password: "coze-loop"
+    database: "coze-loop"
+  oss:
+    protocol: "http"
+    domain: "coze-loop-minio"
+    port: "9000"
+    region: "us-east-1"
+    user: "root"
+    password: "coze-loop"
+    bucket: "coze-loop"
+  rmq:
+    namesrv:
+      domain: "coze-loop-rmq-namesrv"
+      port: "9876"
+      user: ""
+      password: ""
+
+# customization
+custom:
+  image:
+    registry:
+    pullSecrets:
+  redis:
+    disabled: true
+    domain:
+    port:
+    password:
+  mysql:
+    disabled: true
+    domain:
+    port:
+    user:
+    password:
+    database:
+  clickhouse:
+    disabled: true
+    domain:
+    port:
+    user:
+    password:
+    database:
+  oss:
+    disabled: true
+    protocol:
+    domain:
+    port:
+    region:
+    user:
+    password:
+    bucket:
+  rmq:
+    disabled: true
+    namesrv:
+      domain:
+      port:
+      user:
+      password:

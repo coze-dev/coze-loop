@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	arkmodel "github.com/volcengine/volcengine-go-sdk/service/arkruntime/model"
+
 	ori_qianfan "github.com/baidubce/bce-qianfan-sdk/go/qianfan"
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/eino-ext/components/model/ark"
@@ -30,29 +32,29 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-func NewLLM(ctx context.Context, model *entity.Model) (*LLM, error) {
+func NewLLM(ctx context.Context, model *entity.Model, opts ...entity.Option) (*LLM, error) {
 	// 根据protocol导航到不同的builder
 	var err error
 	var chatModel einoModel.ToolCallingChatModel
 	switch model.Protocol {
 	case entity.ProtocolArk:
-		chatModel, err = arkBuilder(ctx, model)
+		chatModel, err = arkBuilder(ctx, model, opts...)
 	case entity.ProtocolOpenAI:
-		chatModel, err = openAIBuilder(ctx, model)
+		chatModel, err = openAIBuilder(ctx, model, opts...)
 	case entity.ProtocolClaude:
-		chatModel, err = claudeBuilder(ctx, model)
+		chatModel, err = claudeBuilder(ctx, model, opts...)
 	case entity.ProtocolDeepseek:
-		chatModel, err = deepSeekBuilder(ctx, model)
+		chatModel, err = deepSeekBuilder(ctx, model, opts...)
 	case entity.ProtocolOllama:
-		chatModel, err = ollamaBuilder(ctx, model)
+		chatModel, err = ollamaBuilder(ctx, model, opts...)
 	case entity.ProtocolGemini:
-		chatModel, err = geminiBuilder(ctx, model)
+		chatModel, err = geminiBuilder(ctx, model, opts...)
 	case entity.ProtocolQwen:
-		chatModel, err = qwenBuilder(ctx, model)
+		chatModel, err = qwenBuilder(ctx, model, opts...)
 	case entity.ProtocolQianfan:
-		chatModel, err = qianfanBuilder(ctx, model)
+		chatModel, err = qianfanBuilder(ctx, model, opts...)
 	case entity.ProtocolArkBot:
-		chatModel, err = arkBotBuilder(ctx, model)
+		chatModel, err = arkBotBuilder(ctx, model, opts...)
 	default:
 		err = errors.Errorf("eino unsupport the protocol:%s", model.Protocol)
 	}
@@ -66,22 +68,24 @@ func NewLLM(ctx context.Context, model *entity.Model) (*LLM, error) {
 	}, nil
 }
 
-func arkBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func arkBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &ark.ChatModelConfig{
 		BaseURL:          p.BaseURL,
 		APIKey:           p.APIKey,
 		Model:            p.Model,
-		MaxTokens:        cp.MaxTokens,
-		Temperature:      cp.Temperature,
-		TopP:             cp.TopP,
-		Stop:             cp.Stop,
-		FrequencyPenalty: cp.FrequencyPenalty,
-		PresencePenalty:  cp.PresencePenalty,
+		MaxTokens:        ops.MaxTokens,
+		Temperature:      ops.Temperature,
+		TopP:             ops.TopP,
+		Stop:             ops.Stop,
+		FrequencyPenalty: ops.FrequencyPenalty,
+		PresencePenalty:  ops.PresencePenalty,
 	}
 	if p.TimeoutMs != nil {
 		cfg.Timeout = ptr.Of(time.Duration(*p.TimeoutMs) * time.Millisecond)
@@ -95,25 +99,30 @@ func arkBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCalling
 		}
 		cfg.CustomHeader = arkCfg.CustomHeaders
 	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormat = &ark.ResponseFormat{Type: arkmodel.ResponseFormatType(ops.ResponseFormat.Type)}
+	}
 	return ark.NewChatModel(ctx, cfg)
 }
 
-func openAIBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func openAIBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &openai.ChatModelConfig{
 		APIKey:           p.APIKey,
 		BaseURL:          p.BaseURL,
 		Model:            p.Model,
-		MaxTokens:        cp.MaxTokens,
-		Temperature:      cp.Temperature,
-		TopP:             cp.TopP,
-		Stop:             cp.Stop,
-		FrequencyPenalty: cp.FrequencyPenalty,
-		PresencePenalty:  cp.PresencePenalty,
+		MaxTokens:        ops.MaxTokens,
+		Temperature:      ops.Temperature,
+		TopP:             ops.TopP,
+		Stop:             ops.Stop,
+		FrequencyPenalty: ops.FrequencyPenalty,
+		PresencePenalty:  ops.PresencePenalty,
 	}
 	if p.TimeoutMs != nil {
 		cfg.Timeout = time.Duration(*p.TimeoutMs) * time.Millisecond
@@ -132,30 +141,36 @@ func openAIBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 			JSONSchema: &js,
 		}
 	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
+			Type: acl_openai.ChatCompletionResponseFormatType(ops.ResponseFormat.Type),
+		}
+	}
 	return openai.NewChatModel(ctx, cfg)
 }
 
-func claudeBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func claudeBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &claude.Config{
 		APIKey:        p.APIKey,
 		Model:         p.Model,
-		Temperature:   cp.Temperature,
-		TopP:          cp.TopP,
-		StopSequences: cp.Stop,
+		Temperature:   ops.Temperature,
+		TopP:          ops.TopP,
+		StopSequences: ops.Stop,
 	}
 	if p.BaseURL != "" {
 		cfg.BaseURL = &p.BaseURL
 	}
-	if cp.MaxTokens != nil {
-		cfg.MaxTokens = *cp.MaxTokens
+	if ops.MaxTokens != nil {
+		cfg.MaxTokens = *ops.MaxTokens
 	}
-	if cp.TopK != nil {
-		cfg.TopK = ptr.Of(int32(*cp.TopK))
+	if ops.TopK != nil {
+		cfg.TopK = ptr.Of(*ops.TopK)
 	}
 	if pc := p.ProtocolConfigClaude; pc != nil {
 		cfg.ByBedrock = pc.ByBedrock
@@ -167,38 +182,41 @@ func claudeBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 	return claude.NewChatModel(ctx, cfg)
 }
 
-func deepSeekBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func deepSeekBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &deepseek.ChatModelConfig{
 		APIKey:  p.APIKey,
 		BaseURL: p.BaseURL,
 		Model:   p.Model,
-		Stop:    cp.Stop,
+		Stop:    ops.Stop,
 	}
 	if p.TimeoutMs != nil {
 		cfg.Timeout = time.Duration(*p.TimeoutMs) * time.Millisecond
 	}
-	if cp.Temperature != nil {
-		cfg.Temperature = *cp.Temperature
+	if ops.Temperature != nil {
+		cfg.Temperature = *ops.Temperature
 	}
-	if cp.FrequencyPenalty != nil {
-		cfg.FrequencyPenalty = *cp.FrequencyPenalty
+	if ops.FrequencyPenalty != nil {
+		cfg.FrequencyPenalty = *ops.FrequencyPenalty
 	}
-	if cp.PresencePenalty != nil {
-		cfg.PresencePenalty = *cp.PresencePenalty
+	if ops.PresencePenalty != nil {
+		cfg.PresencePenalty = *ops.PresencePenalty
 	}
-	if cp.MaxTokens != nil {
-		cfg.MaxTokens = *cp.MaxTokens
+	if ops.MaxTokens != nil {
+		cfg.MaxTokens = *ops.MaxTokens
 	}
-	if cp.TopP != nil {
-		cfg.TopP = *cp.TopP
+	if ops.TopP != nil {
+		cfg.TopP = *ops.TopP
 	}
 	if pc := p.ProtocolConfigDeepSeek; pc != nil {
 		cfg.ResponseFormatType = deepseek.ResponseFormatType(pc.ResponseFormatType)
+	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormatType = deepseek.ResponseFormatType(ops.ResponseFormat.Type)
 	}
 	return deepseek.NewChatModel(ctx, cfg)
 }
@@ -210,12 +228,14 @@ func checkModelBeforeBuild(model *entity.Model) error {
 	return nil
 }
 
-func geminiBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func geminiBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cli, err := genai.NewClient(ctx, option.WithAPIKey(p.APIKey))
 	if err != nil {
 		return nil, err
@@ -223,12 +243,12 @@ func geminiBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 	cfg := &gemini.Config{
 		Client:      cli,
 		Model:       p.Model,
-		MaxTokens:   cp.MaxTokens,
-		Temperature: cp.Temperature,
-		TopP:        cp.TopP,
+		MaxTokens:   ops.MaxTokens,
+		Temperature: ops.Temperature,
+		TopP:        ops.TopP,
 	}
-	if cp.TopK != nil {
-		cfg.TopK = ptr.Of(int32(*cp.TopK))
+	if ops.TopK != nil {
+		cfg.TopK = ptr.Of(*ops.TopK)
 	}
 	if pc := p.ProtocolConfigGemini; pc != nil {
 		if pc.ResponseSchema != nil && *pc.ResponseSchema != "" {
@@ -247,12 +267,14 @@ func geminiBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 	return gemini.NewChatModel(ctx, cfg)
 }
 
-func ollamaBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func ollamaBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &ollama.ChatModelConfig{
 		BaseURL:   p.BaseURL,
 		Model:     p.Model,
@@ -262,16 +284,16 @@ func ollamaBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 			// NumKeep:          0,
 			// Seed:             0,
 			// NumPredict:       0,
-			TopK: ptr.From(cp.TopK),
-			TopP: ptr.From(cp.TopP),
+			TopK: int(ptr.From(ops.TopK)),
+			TopP: ptr.From(ops.TopP),
 			// MinP:             0,
 			// TypicalP:         0,
 			// RepeatLastN:      0,
-			Temperature:      ptr.From(cp.Temperature),
+			Temperature:      ptr.From(ops.Temperature),
 			RepeatPenalty:    0,
-			PresencePenalty:  ptr.From(cp.PresencePenalty),
-			FrequencyPenalty: ptr.From(cp.FrequencyPenalty),
-			Stop:             cp.Stop,
+			PresencePenalty:  ptr.From(ops.PresencePenalty),
+			FrequencyPenalty: ptr.From(ops.FrequencyPenalty),
+			Stop:             ops.Stop,
 		},
 	}
 	if p.TimeoutMs != nil {
@@ -288,22 +310,24 @@ func ollamaBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 	return ollama.NewChatModel(ctx, cfg)
 }
 
-func qwenBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func qwenBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &qwen.ChatModelConfig{
 		APIKey:           p.APIKey,
 		BaseURL:          p.BaseURL,
 		Model:            p.Model,
-		MaxTokens:        cp.MaxTokens,
-		Temperature:      cp.Temperature,
-		TopP:             cp.TopP,
-		Stop:             cp.Stop,
-		PresencePenalty:  cp.PresencePenalty,
-		FrequencyPenalty: cp.FrequencyPenalty,
+		MaxTokens:        ops.MaxTokens,
+		Temperature:      ops.Temperature,
+		TopP:             ops.TopP,
+		Stop:             ops.Stop,
+		PresencePenalty:  ops.PresencePenalty,
+		FrequencyPenalty: ops.FrequencyPenalty,
 	}
 	if p.TimeoutMs != nil {
 		cfg.Timeout = time.Duration(*p.TimeoutMs) * time.Millisecond
@@ -322,27 +346,34 @@ func qwenBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallin
 			}
 		}
 	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
+			Type: acl_openai.ChatCompletionResponseFormatType(ops.ResponseFormat.Type),
+		}
+	}
 	return qwen.NewChatModel(ctx, cfg)
 }
 
-func qianfanBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func qianfanBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &qianfan.ChatModelConfig{
 		Model:               p.Model,
-		Temperature:         cp.Temperature,
-		TopP:                cp.TopP,
-		MaxCompletionTokens: cp.MaxTokens,
-		Stop:                cp.Stop,
+		Temperature:         ops.Temperature,
+		TopP:                ops.TopP,
+		MaxCompletionTokens: ops.MaxTokens,
+		Stop:                ops.Stop,
 	}
-	if cp.FrequencyPenalty != nil {
-		cfg.FrequencyPenalty = ptr.Of(float64(*cp.FrequencyPenalty))
+	if ops.FrequencyPenalty != nil {
+		cfg.FrequencyPenalty = ptr.Of(float64(*ops.FrequencyPenalty))
 	}
-	if cp.PresencePenalty != nil {
-		cfg.PresencePenalty = ptr.Of(float64(*cp.PresencePenalty))
+	if ops.PresencePenalty != nil {
+		cfg.PresencePenalty = ptr.Of(float64(*ops.PresencePenalty))
 	}
 	if pc := p.ProtocolConfigQianfan; pc != nil {
 		cfg.LLMRetryCount = pc.LLMRetryCount
@@ -361,27 +392,33 @@ func qianfanBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCal
 				JsonSchema: &js,
 			}
 		}
-
+	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormat = &ori_qianfan.ResponseFormat{
+			FormatType: string(ops.ResponseFormat.Type),
+		}
 	}
 	return qianfan.NewChatModel(ctx, cfg)
 }
 
-func arkBotBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCallingChatModel, error) {
+func arkBotBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
 	p := model.ProtocolConfig
-	cp := model.ParamConfig.GetCommonParamDefaultVal()
+	// 不再从default val里拿，而是从opts里拿这些参数
+	// cp := model.ParamConfig.GetCommonParamDefaultVal()
+	ops := entity.ApplyOptions(nil, opts...)
 	cfg := &arkbot.Config{
 		BaseURL:          p.BaseURL,
 		APIKey:           p.APIKey,
 		Model:            p.Model,
-		MaxTokens:        cp.MaxTokens,
-		Temperature:      cp.Temperature,
-		TopP:             cp.TopP,
-		Stop:             cp.Stop,
-		FrequencyPenalty: cp.FrequencyPenalty,
-		PresencePenalty:  cp.PresencePenalty,
+		MaxTokens:        ops.MaxTokens,
+		Temperature:      ops.Temperature,
+		TopP:             ops.TopP,
+		Stop:             ops.Stop,
+		FrequencyPenalty: ops.FrequencyPenalty,
+		PresencePenalty:  ops.PresencePenalty,
 	}
 	if p.TimeoutMs != nil {
 		cfg.Timeout = ptr.Of(time.Duration(*p.TimeoutMs) * time.Millisecond)
@@ -394,6 +431,11 @@ func arkBotBuilder(ctx context.Context, model *entity.Model) (einoModel.ToolCall
 			cfg.RetryTimes = ptr.Of(int(*arkCfg.RetryTimes))
 		}
 		cfg.CustomHeader = arkCfg.CustomHeaders
+	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormat = &arkbot.ResponseFormat{
+			Type: arkmodel.ResponseFormatType(ops.ResponseFormat.Type),
+		}
 	}
 	return arkbot.NewChatModel(ctx, cfg)
 }

@@ -22,6 +22,11 @@ var (
 )
 
 func (p *ModelConfig) IsValid() error {
+	if p.ResponseFormat != nil {
+		if err := p.ResponseFormat.IsValid(); err != nil {
+			return fmt.Errorf("field ResponseFormat not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *Message) IsValid() error {
@@ -78,5 +83,8 @@ func (p *BizParam) IsValid() error {
 	if p.ScenarioEntityID == nil {
 		return fmt.Errorf("field ScenarioEntityID not_nil rule failed")
 	}
+	return nil
+}
+func (p *ResponseFormat) IsValid() error {
 	return nil
 }

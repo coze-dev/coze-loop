@@ -27,21 +27,23 @@ type ExptRecordEvalConsumer struct {
 }
 
 func (e *ExptRecordEvalConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
-	body := ext.Body
+	rawLogID := logs.GetLogID(ctx)
+	ctx = logs.SetLogID(ctx, logs.NewLogID())
 
+	body := ext.Body
 	event := &entity.ExptItemEvalEvent{}
 	if err := sonic.Unmarshal(body, event); err != nil {
 		logs.CtxError(ctx, "ExptItemEvalEvent json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(body), err)
 		return nil
 	}
 
-	logs.CtxInfo(ctx, "ExptRecordEvalConsumer consume message, event: %v, msg_id: %v", conv.UnsafeBytesToString(body), ext.MsgID)
-
 	if event.Session != nil {
 		ctx = session.WithCtxUser(ctx, &session.User{
 			ID: event.Session.UserID,
 		})
 	}
+
+	logs.CtxInfo(ctx, "ExptRecordEvalConsumer consume message, event: %v, msg_id: %v, rawlogid: %v", conv.UnsafeBytesToString(body), ext.MsgID, rawLogID)
 
 	return e.Eval(ctx, event)
 }

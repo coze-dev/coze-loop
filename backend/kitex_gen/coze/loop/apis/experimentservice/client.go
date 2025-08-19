@@ -28,6 +28,7 @@ type Client interface {
 	InvokeExperiment(ctx context.Context, req *expt.InvokeExperimentRequest, callOptions ...callopt.Option) (r *expt.InvokeExperimentResponse, err error)
 	FinishExperiment(ctx context.Context, req *expt.FinishExperimentRequest, callOptions ...callopt.Option) (r *expt.FinishExperimentResponse, err error)
 	ListExperimentStats(ctx context.Context, req *expt.ListExperimentStatsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentStatsResponse, err error)
+	UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (r *expt.UpsertExptTurnResultFilterResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -142,4 +143,9 @@ func (p *kExperimentServiceClient) FinishExperiment(ctx context.Context, req *ex
 func (p *kExperimentServiceClient) ListExperimentStats(ctx context.Context, req *expt.ListExperimentStatsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentStatsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListExperimentStats(ctx, req)
+}
+
+func (p *kExperimentServiceClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (r *expt.UpsertExptTurnResultFilterResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpsertExptTurnResultFilter(ctx, req)
 }

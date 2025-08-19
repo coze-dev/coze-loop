@@ -58,6 +58,19 @@ func (p *EvalTargetContent) IsValid() error {
 			return fmt.Errorf("field Prompt not valid, %w", err)
 		}
 	}
+	if p.CozeWorkflow != nil {
+		if err := p.CozeWorkflow.IsValid(); err != nil {
+			return fmt.Errorf("field CozeWorkflow not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CozeWorkflow) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvalPrompt) IsValid() error {

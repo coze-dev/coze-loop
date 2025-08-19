@@ -348,7 +348,7 @@ service EvaluatorService {
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 修正evaluator运行分数
-    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req) (api.get="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 按id查询单个evaluator运行结果
-    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req) (api.post="/api/evaluation/v1/evaluator_records/get_batch") // 按id批量查询evaluator运行结果
+    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
+    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
 
 } (api.js_conv="true" )

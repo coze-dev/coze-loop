@@ -1,0 +1,271 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "application.name" . }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "application.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "application.name" . }}
+    spec:
+      imagePullSecrets:
+        - name: {{ (.Values.custom.image.pullSecrets | default .Values.image.pullSecrets) | quote }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      volumes:
+        {{- if .Values.custom.redis.disabled }}
+        - name: redis-init
+          configMap:
+            name: redis-init-configmap
+        {{- end }}
+        {{- if .Values.custom.mysql.disabled }}
+        - name: mysql-init
+          configMap:
+            name: mysql-init-configmap
+        - name: mysql-init-sql
+          configMap:
+            name: mysql-init-sql-configmap
+        {{- end }}
+        {{- if .Values.custom.clickhouse.disabled }}
+        - name: clickhouse-init
+          configMap:
+            name: clickhouse-init-configmap
+        - name: clickhouse-init-sql
+          configMap:
+            name: clickhouse-init-sql-configmap
+        {{- end }}
+        {{- if .Values.custom.oss.disabled }}
+        - name: minio-init
+          configMap:
+            name: minio-init-configmap
+        {{- end }}
+        {{- if .Values.custom.rmq.disabled }}
+        - name: rmq-init
+          configMap:
+            name: rmq-init-configmap
+        - name: rmq-init-subscription
+          configMap:
+            name: rmq-init-subscription-configmap
+        {{- end }}
+        - name: bootstrap
+          configMap:
+            name: {{ include "configmap.name" . }}
+        - name: runtime-config
+          configMap:
+            name: "coze-loop-runtime-configmap"
+        - name: locales-config
+          configMap:
+            name: "coze-loop-locales-configmap"
+      initContainers:
+        {{- if .Values.custom.redis.disabled }}
+        - name: wait-for-redis-init
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.redis.registry) .Values.init_image.redis.repository .Values.init_image.redis.image .Values.init_image.redis.tag }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: redis-init
+              mountPath: "/coze-loop-redis-init/bootstrap"
+              readOnly: true
+          env:
+            - name: COZE_LOOP_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: redis-password
+          command: [ "/bin/sh", "/coze-loop-redis-init/bootstrap/entrypoint.sh" ]
+        {{- end }}
+        {{- if .Values.custom.mysql.disabled }}
+        - name: wait-for-mysql-init
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.mysql.registry) .Values.init_image.mysql.repository .Values.init_image.mysql.image .Values.init_image.mysql.tag }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: mysql-init
+              mountPath: "/coze-loop-mysql-init/bootstrap"
+              readOnly: true
+            - name: mysql-init-sql
+              mountPath: "/coze-loop-mysql-init/bootstrap/init-sql"
+              readOnly: true
+          env:
+            - name: COZE_LOOP_MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: mysql-user
+            - name: COZE_LOOP_MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: mysql-password
+            - name: COZE_LOOP_MYSQL_DATABASE
+              value: {{ .Values.env.mysql.database }}
+          command: [ "/bin/sh", "/coze-loop-mysql-init/bootstrap/entrypoint.sh" ]
+        {{- end }}
+        {{- if .Values.custom.clickhouse.disabled }}
+        - name: wait-for-clickhouse-init
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.clickhouse.registry) .Values.init_image.clickhouse.repository .Values.init_image.clickhouse.image .Values.init_image.clickhouse.tag }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: clickhouse-init
+              mountPath: "/coze-loop-clickhouse-init/bootstrap"
+              readOnly: true
+            - name: clickhouse-init-sql
+              mountPath: "/coze-loop-clickhouse-init/bootstrap/init-sql"
+              readOnly: true
+          env:
+            - name: COZE_LOOP_CLICKHOUSE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: clickhouse-user
+            - name: COZE_LOOP_CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: clickhouse-password
+            - name: COZE_LOOP_CLICKHOUSE_DATABASE
+              value: {{ .Values.env.clickhouse.database }}
+          command: [ "/bin/sh", "/coze-loop-clickhouse-init/bootstrap/entrypoint.sh" ]
+        {{- end }}
+        {{- if .Values.custom.oss.disabled }}
+        - name: wait-for-minio-init
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.minio.registry) .Values.init_image.minio.repository .Values.init_image.minio.image .Values.init_image.minio.tag }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: minio-init
+              mountPath: "/coze-loop-minio-init/bootstrap"
+              readOnly: true
+          env:
+            - name: COZE_LOOP_OSS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: oss-user
+            - name: COZE_LOOP_OSS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: oss-password
+            - name: COZE_LOOP_OSS_BUCKET
+              value: {{ .Values.env.oss.bucket }}
+          command: [ "/bin/sh", "/coze-loop-minio-init/bootstrap/entrypoint.sh" ]
+        {{- end }}
+        {{- if .Values.custom.rmq.disabled }}
+        - name: wait-for-rmq-init
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.rmq.registry) .Values.init_image.rmq.repository .Values.init_image.rmq.image .Values.init_image.rmq.tag }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: rmq-init
+              mountPath: "/coze-loop-rmq-init/bootstrap"
+              readOnly: true
+            - name: rmq-init-subscription
+              mountPath: "/coze-loop-rmq-init/bootstrap/init-subscription"
+              readOnly: true
+          command: [ "/bin/bash", "/coze-loop-rmq-init/bootstrap/entrypoint.sh" ]
+        {{- end }}
+      containers:
+        - name: {{ include "application.name" . }}
+          image: {{ include "image.fullname" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: bootstrap
+              mountPath: "/coze-loop/bootstrap"
+              readOnly: true
+            - name: runtime-config
+              mountPath: "/coze-loop/conf"
+              readOnly: true
+            - name: locales-config
+              mountPath: "/coze-loop/conf/locales"
+              readOnly: true
+          env:
+            # redis
+            - name: COZE_LOOP_REDIS_DOMAIN
+              value: {{ (.Values.custom.redis.domain | default .Values.env.redis.domain) | quote }}
+            - name: COZE_LOOP_REDIS_PORT
+              value: {{ (.Values.custom.redis.port | default .Values.env.redis.port) | quote }}
+            - name: COZE_LOOP_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: redis-password
+            # mysql
+            - name: COZE_LOOP_MYSQL_DOMAIN
+              value: {{ (.Values.custom.mysql.domain | default .Values.env.mysql.domain) | quote }}
+            - name: COZE_LOOP_MYSQL_PORT
+              value: {{ (.Values.custom.mysql.port | default .Values.env.mysql.port) | quote }}
+            - name: COZE_LOOP_MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: mysql-user
+            - name: COZE_LOOP_MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: mysql-password
+            - name: COZE_LOOP_MYSQL_DATABASE
+              value: {{ (.Values.custom.mysql.database | default .Values.env.mysql.database) | quote }}
+            # clickhouse
+            - name: COZE_LOOP_CLICKHOUSE_DOMAIN
+              value: {{ (.Values.custom.clickhouse.domain | default .Values.env.clickhouse.domain) | quote }}
+            - name: COZE_LOOP_CLICKHOUSE_PORT
+              value: {{ (.Values.custom.clickhouse.port | default .Values.env.clickhouse.port) | quote }}
+            - name: COZE_LOOP_CLICKHOUSE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: clickhouse-user
+            - name: COZE_LOOP_CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: clickhouse-password
+            - name: COZE_LOOP_CLICKHOUSE_DATABASE
+              value: {{ (.Values.custom.clickhouse.database | default .Values.env.clickhouse.database) | quote }}
+            # oss
+            - name: COZE_LOOP_OSS_PROTOCOL
+              value: {{ (.Values.custom.oss.protocol | default .Values.env.oss.protocol) | quote }}
+            - name: COZE_LOOP_OSS_DOMAIN
+              value: {{ (.Values.custom.oss.domain | default .Values.env.oss.domain) | quote }}
+            - name: COZE_LOOP_OSS_PORT
+              value: {{ ternary .Values.custom.oss.port .Values.env.oss.port (eq .Values.custom.oss.disabled false) | quote }}
+            - name: COZE_LOOP_OSS_REGION
+              value: {{ (.Values.custom.oss.region | default .Values.env.oss.region) | quote }}
+            - name: COZE_LOOP_OSS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: oss-user
+            - name: COZE_LOOP_OSS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: oss-password
+            - name: COZE_LOOP_OSS_BUCKET
+              value: {{ (.Values.custom.oss.bucket | default .Values.env.oss.bucket) | quote }}
+            # rmq
+            - name: COZE_LOOP_RMQ_NAMESRV_DOMAIN
+              value: {{ (.Values.custom.rmq.namesrv.domain | default .Values.env.rmq.namesrv.domain) | quote }}
+            - name: COZE_LOOP_RMQ_NAMESRV_PORT
+              value: {{ (.Values.custom.rmq.namesrv.port | default .Values.env.rmq.namesrv.port) | quote }}
+            - name: COZE_LOOP_RMQ_NAMESRV_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: rmq-namesrv-user
+            - name: COZE_LOOP_RMQ_NAMESRV_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "secret.name" . }}
+                  key: rmq-namesrv-password
+          command: [ "/bin/sh", "/coze-loop/bootstrap/entrypoint.sh" ]
+          livenessProbe:
+            exec:
+              command: [ "/bin/sh", "/coze-loop/bootstrap/healthcheck.sh" ]
+            initialDelaySeconds: {{ .Values.liveness.startSeconds }}
+            periodSeconds: {{ .Values.liveness.intervalSeconds }}
+            timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.liveness.shutdownFailureTimes }}

@@ -11870,3 +11870,176 @@ func (p *DebugLog) Field14DeepEqual(src *int64) bool {
 	}
 	return true
 }
+
+type OverridePromptParams struct {
+	ModelConfig *ModelConfig `thrift:"model_config,1,optional" frugal:"1,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+}
+
+func NewOverridePromptParams() *OverridePromptParams {
+	return &OverridePromptParams{}
+}
+
+func (p *OverridePromptParams) InitDefault() {
+}
+
+var OverridePromptParams_ModelConfig_DEFAULT *ModelConfig
+
+func (p *OverridePromptParams) GetModelConfig() (v *ModelConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelConfig() {
+		return OverridePromptParams_ModelConfig_DEFAULT
+	}
+	return p.ModelConfig
+}
+func (p *OverridePromptParams) SetModelConfig(val *ModelConfig) {
+	p.ModelConfig = val
+}
+
+var fieldIDToName_OverridePromptParams = map[int16]string{
+	1: "model_config",
+}
+
+func (p *OverridePromptParams) IsSetModelConfig() bool {
+	return p.ModelConfig != nil
+}
+
+func (p *OverridePromptParams) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_OverridePromptParams[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *OverridePromptParams) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewModelConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ModelConfig = _field
+	return nil
+}
+
+func (p *OverridePromptParams) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("OverridePromptParams"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *OverridePromptParams) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelConfig() {
+		if err = oprot.WriteFieldBegin("model_config", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ModelConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *OverridePromptParams) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("OverridePromptParams(%+v)", *p)
+
+}
+
+func (p *OverridePromptParams) DeepEqual(ano *OverridePromptParams) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ModelConfig) {
+		return false
+	}
+	return true
+}
+
+func (p *OverridePromptParams) Field1DeepEqual(src *ModelConfig) bool {
+
+	if !p.ModelConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}

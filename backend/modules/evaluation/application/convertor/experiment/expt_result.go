@@ -28,6 +28,7 @@ func ColumnEvalSetFieldsDO2DTO(from *entity.ColumnEvalSetField) *domain_expt.Col
 		Name:        from.Name,
 		Description: from.Description,
 		ContentType: &contentType,
+		TextSchema:  from.TextSchema,
 	}
 }
 

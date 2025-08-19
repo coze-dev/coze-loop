@@ -83,6 +83,9 @@ func (p *FieldSchema) IsValid() error {
 	}
 	return nil
 }
+func (p *FieldTransformationConfig) IsValid() error {
+	return nil
+}
 func (p *MultiModalSpec) IsValid() error {
 	return nil
 }

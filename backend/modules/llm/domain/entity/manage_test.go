@@ -320,3 +320,98 @@ func TestSupportImageURL(t *testing.T) {
 		})
 	}
 }
+
+func TestParamConfig_GetCommonParamDefaultVal(t *testing.T) {
+	type fields struct {
+		ParamSchemas []*ParamSchema
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   CommonParam
+	}{
+		{
+			name: "test get common param default val",
+			fields: fields{
+				ParamSchemas: []*ParamSchema{
+					{
+						Name:         "max_tokens",
+						Label:        "max_tokens",
+						Desc:         "max_tokens",
+						Type:         ParamTypeInt,
+						Min:          "1",
+						Max:          "1000",
+						DefaultValue: "100",
+						Options:      nil,
+					},
+					{
+						Name:         "temperature",
+						Label:        "temperature",
+						Desc:         "temperature",
+						Type:         ParamTypeFloat,
+						Min:          "0",
+						Max:          "1",
+						DefaultValue: "0.7",
+						Options:      nil,
+					},
+					{
+						Name:         "top_p",
+						Label:        "top_p",
+						Desc:         "top_p",
+						Type:         ParamTypeFloat,
+						Min:          "0",
+						Max:          "1",
+						DefaultValue: "0.7",
+						Options:      nil,
+					},
+					{
+						Name:         "top_k",
+						Label:        "top_k",
+						Desc:         "top_k",
+						Type:         ParamTypeInt,
+						Min:          "0",
+						Max:          "100",
+						DefaultValue: "0",
+						Options:      nil,
+					},
+					{
+						Name:         "frequency_penalty",
+						Label:        "frequency_penalty",
+						Desc:         "frequency_penalty",
+						Type:         ParamTypeFloat,
+						Min:          "0",
+						Max:          "1",
+						DefaultValue: "0",
+						Options:      nil,
+					},
+					{
+						Name:         "presence_penalty",
+						Label:        "presence_penalty",
+						Desc:         "presence_penalty",
+						Type:         ParamTypeFloat,
+						Min:          "0",
+						Max:          "1",
+						DefaultValue: "0",
+						Options:      nil,
+					},
+				},
+			},
+			want: CommonParam{
+				MaxTokens:        ptr.Of(100),
+				Temperature:      ptr.Of(float32(0.7)),
+				TopP:             ptr.Of(float32(0.7)),
+				TopK:             ptr.Of(0),
+				FrequencyPenalty: ptr.Of(float32(0)),
+				PresencePenalty:  ptr.Of(float32(0)),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &ParamConfig{
+				ParamSchemas: tt.fields.ParamSchemas,
+			}
+			assert.Equalf(t, tt.want, p.GetCommonParamDefaultVal(), "GetCommonParamDefaultVal()")
+		})
+	}
+}

@@ -425,10 +425,7 @@ interface I18nTranslateFn {
   /** 删除 Prompt 模板 */
   (key: 'delete_prompt_template', fallbackText?: string): string;
   /** 确定删除当前 Prompt 模板？ */
-  (
-    key: 'confirm_delete_current_prompt_template',
-    fallbackText?: string,
-  ): string;
+  (key: 'confirm_delete_current_prompt_template', fallbackText?: string): string;
   /** 模拟值 */
   (key: 'mock_value', fallbackText?: string): string;
   /** 已深度思考 */
@@ -487,6 +484,8 @@ interface I18nTranslateFn {
   (key: 'submitted', fallbackText?: string): string;
   /** Placeholder 变量名不存在或命名错误，无法创建 */
   (key: 'placeholder_var_create_error', fallbackText?: string): string;
+  /** Placeholder 变量名不存在或命名错误 */
+  (key: 'placeholder_var_execute_error', fallbackText?: string): string;
   /** 模型 ID */
   (key: 'model_id', fallbackText?: string): string;
   /** 模型名称 */
@@ -848,10 +847,7 @@ interface I18nTranslateFn {
   /** 未能找到相关结果 */
   (key: 'failed_to_find_related_results', fallbackText?: string): string;
   /** 请尝试其他关键词或修改筛选项 */
-  (
-    key: 'try_other_keywords_or_modify_filter_options',
-    fallbackText?: string,
-  ): string;
+  (key: 'try_other_keywords_or_modify_filter_options', fallbackText?: string): string;
   /** 暂无评估器 */
   (key: 'no_evaluator', fallbackText?: string): string;
   /** 点击右上角创建按钮进行创建 */
@@ -1290,10 +1286,7 @@ interface I18nTranslateFn {
   /** 正在加载 Prompt 详情 */
   (key: 'loading_prompt_detail', fallbackText?: string): string;
   /** 请选择评估器和版本号后再查看 */
-  (
-    key: 'select_evaluator_and_version_number_to_view',
-    fallbackText?: string,
-  ): string;
+  (key: 'select_evaluator_and_version_number_to_view', fallbackText?: string): string;
   /** 模型 */
   (key: 'model', fallbackText?: string): string;
   /** 通过 Function Call 从 LLM 中提取数据，固定评估器输出格式为“得分-原因”。 */
@@ -1421,10 +1414,7 @@ interface I18nTranslateFn {
   /** 预期理想输出，可作为评估时的参考标准 */
   (key: 'expected_ideal_output', fallbackText?: string): string;
   /** 评测集字段到评测对象字段的映射，用于评测对象准确获取输入。 */
-  (
-    key: 'evaluation_set_field_to_evaluation_object_field_mapping',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluation_set_field_to_evaluation_object_field_mapping', fallbackText?: string): string;
   /** 获取评测对象遇到错误 */
   (key: 'get_evaluation_object_error', fallbackText?: string): string;
   /** 仅评测集相同且已执行完成的实验可进行对比。目前选择的实验有关联评测集不同的情况，请重新选择。 */
@@ -1438,32 +1428,17 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 仅已执行完成的实验可进行对比，请重新选择。 */
-  (
-    key: 'only_completed_experiments_can_be_compared',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_completed_experiments_can_be_compared', fallbackText?: string): string;
   /** 实验对比发起失败 */
-  (
-    key: 'experiment_comparison_initiation_failure',
-    fallbackText?: string,
-  ): string;
+  (key: 'experiment_comparison_initiation_failure', fallbackText?: string): string;
   /** 实验组 */
   (key: 'experimental_group', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文开头 */
-  (
-    key: 'only_support_english_letters_numbers_and_chinese_at_the_beginning',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_support_english_letters_numbers_and_chinese_at_the_beginning', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (
-    key: 'only_support_english_letters_numbers_and_chinese_and_',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_support_english_letters_numbers_and_chinese_and_', fallbackText?: string): string;
   /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (
-    key: 'only_support_english_numbers_and_underscores_and_start_with_a_letter',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_support_english_numbers_and_underscores_and_start_with_a_letter', fallbackText?: string): string;
   /** 图片不可访问 */
   (key: 'analytics_image_error', fallbackText?: string): string;
   /** Arguments */

@@ -2940,6 +2940,20 @@ func (p *ListPromptRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField127(buf[offset:])
@@ -3080,6 +3094,20 @@ func (p *ListPromptRequest) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListPromptRequest) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.CommittedOnly = _field
+	return offset, nil
+}
+
 func (p *ListPromptRequest) FastReadField127(buf []byte) (int, error) {
 	offset := 0
 
@@ -3156,6 +3184,7 @@ func (p *ListPromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField127(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
 		offset += p.fastWriteField130(buf[offset:], w)
@@ -3174,6 +3203,7 @@ func (p *ListPromptRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 		l += p.field127Length()
 		l += p.field128Length()
 		l += p.field129Length()
@@ -3214,6 +3244,15 @@ func (p *ListPromptRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) 
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *ListPromptRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCommittedOnly() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 13)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.CommittedOnly)
 	}
 	return offset
 }
@@ -3294,6 +3333,15 @@ func (p *ListPromptRequest) field12Length() int {
 	return l
 }
 
+func (p *ListPromptRequest) field13Length() int {
+	l := 0
+	if p.IsSetCommittedOnly() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListPromptRequest) field127Length() int {
 	l := 0
 	if p.IsSetPageNum() {
@@ -3367,6 +3415,11 @@ func (p *ListPromptRequest) DeepCopy(s interface{}) error {
 			}
 			p.CreatedBys = append(p.CreatedBys, _elem)
 		}
+	}
+
+	if src.CommittedOnly != nil {
+		tmp := *src.CommittedOnly
+		p.CommittedOnly = &tmp
 	}
 
 	if src.PageNum != nil {

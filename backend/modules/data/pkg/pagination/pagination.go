@@ -135,7 +135,6 @@ func (p *Paginator) Find(ctx context.Context, tx *gorm.DB, dest any, conds ...an
 	if p.cursor != nil || p.offset == 0 {
 		return p.findByCursor(tx, dest, conds...)
 	}
-
 	return p.findByOffset(tx, dest, conds...)
 }
 

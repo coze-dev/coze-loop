@@ -138,7 +138,7 @@ func validTraceData() []byte {
 	td := entity.TraceData{
 		Tenant: "a",
 		TenantInfo: entity.TenantInfo{
-			TTL: entity.TTL30d,
+			TTL: loop_span.TTL30d,
 		},
 		SpanList: loop_span.SpanList{
 			{

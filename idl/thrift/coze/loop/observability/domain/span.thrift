@@ -1,5 +1,6 @@
 namespace go coze.loop.observability.domain.span
 
+include "annotation.thrift"
 
 typedef string SpanStatus (ts.enum="true")
 const SpanStatus SpanStatus_Success = "success"
@@ -35,6 +36,7 @@ struct OutputSpan {
     101: optional map<string, string> custom_tags
     102: optional AttrTos attr_tos
     103: optional map<string, string> system_tags
+    104: optional list<annotation.Annotation> annotations
 }
 
 struct InputSpan {

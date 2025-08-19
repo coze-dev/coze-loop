@@ -1,0 +1,32 @@
+service:
+  type: ClusterIP
+  port: 6379
+  targetPort: 6379
+
+image:
+  registry: "docker.io"
+  repository: "library"
+  image: "redis"
+  tag: "8.2.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: "coze-loop-image-secret"
+
+deployment:
+  replicaCount: 1
+  dataMountPath: "/data"
+  terminationGracePeriodSeconds: 5
+
+liveness:
+  startSeconds: 3
+  intervalSeconds: 5
+  timeoutSeconds: 3
+  shutdownFailureTimes: 5
+
+auth:
+  password: "coze-loop"
+
+# customization
+custom:
+  image:
+    registry:
+    pullSecrets:

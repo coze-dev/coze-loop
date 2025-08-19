@@ -566,6 +566,44 @@ func (p *FieldStatus) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type FieldTransformationType int64
+
+const (
+	// 移除未在当前列的 jsonSchema 中定义的字段（包括 properties 和 patternProperties），仅在列类型为 struct 时有效
+	FieldTransformationType_RemoveExtraFields FieldTransformationType = 1
+)
+
+func (p FieldTransformationType) String() string {
+	switch p {
+	case FieldTransformationType_RemoveExtraFields:
+		return "RemoveExtraFields"
+	}
+	return "<UNSET>"
+}
+
+func FieldTransformationTypeFromString(s string) (FieldTransformationType, error) {
+	switch s {
+	case "RemoveExtraFields":
+		return FieldTransformationType_RemoveExtraFields, nil
+	}
+	return FieldTransformationType(0), fmt.Errorf("not a valid FieldTransformationType string")
+}
+
+func FieldTransformationTypePtr(v FieldTransformationType) *FieldTransformationType { return &v }
+func (p *FieldTransformationType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = FieldTransformationType(result.Int64)
+	return
+}
+
+func (p *FieldTransformationType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type ItemErrorType int64
 
 const (
@@ -581,6 +619,12 @@ const (
 	ItemErrorType_MalformedFile ItemErrorType = 5
 	// 包含非法内容
 	ItemErrorType_IllegalContent ItemErrorType = 6
+	// 缺少必填字段
+	ItemErrorType_MissingRequiredField ItemErrorType = 7
+	// 数据嵌套层数超限
+	ItemErrorType_ExceedMaxNestedDepth ItemErrorType = 8
+	// 数据转换失败
+	ItemErrorType_TransformItemFailed ItemErrorType = 9
 	/* system error*/
 	ItemErrorType_InternalError ItemErrorType = 100
 )
@@ -599,6 +643,12 @@ func (p ItemErrorType) String() string {
 		return "MalformedFile"
 	case ItemErrorType_IllegalContent:
 		return "IllegalContent"
+	case ItemErrorType_MissingRequiredField:
+		return "MissingRequiredField"
+	case ItemErrorType_ExceedMaxNestedDepth:
+		return "ExceedMaxNestedDepth"
+	case ItemErrorType_TransformItemFailed:
+		return "TransformItemFailed"
 	case ItemErrorType_InternalError:
 		return "InternalError"
 	}
@@ -619,6 +669,12 @@ func ItemErrorTypeFromString(s string) (ItemErrorType, error) {
 		return ItemErrorType_MalformedFile, nil
 	case "IllegalContent":
 		return ItemErrorType_IllegalContent, nil
+	case "MissingRequiredField":
+		return ItemErrorType_MissingRequiredField, nil
+	case "ExceedMaxNestedDepth":
+		return ItemErrorType_ExceedMaxNestedDepth, nil
+	case "TransformItemFailed":
+		return ItemErrorType_TransformItemFailed, nil
 	case "InternalError":
 		return ItemErrorType_InternalError, nil
 	}
@@ -2826,7 +2882,8 @@ type DatasetSpec struct {
 	// 字段数量上限
 	MaxFieldCount *int32 `thrift:"max_field_count,2,optional" frugal:"2,optional,i32" form:"max_field_count" json:"max_field_count,omitempty" query:"max_field_count"`
 	// 单条数据字数上限
-	MaxItemSize *int64 `thrift:"max_item_size,3,optional" frugal:"3,optional,i64" json:"max_item_size" form:"max_item_size" query:"max_item_size"`
+	MaxItemSize            *int64 `thrift:"max_item_size,3,optional" frugal:"3,optional,i64" json:"max_item_size" form:"max_item_size" query:"max_item_size"`
+	MaxItemDataNestedDepth *int32 `thrift:"max_item_data_nested_depth,4,optional" frugal:"4,optional,i32" form:"max_item_data_nested_depth" json:"max_item_data_nested_depth,omitempty" query:"max_item_data_nested_depth"`
 }
 
 func NewDatasetSpec() *DatasetSpec {
@@ -2871,6 +2928,18 @@ func (p *DatasetSpec) GetMaxItemSize() (v int64) {
 	}
 	return *p.MaxItemSize
 }
+
+var DatasetSpec_MaxItemDataNestedDepth_DEFAULT int32
+
+func (p *DatasetSpec) GetMaxItemDataNestedDepth() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxItemDataNestedDepth() {
+		return DatasetSpec_MaxItemDataNestedDepth_DEFAULT
+	}
+	return *p.MaxItemDataNestedDepth
+}
 func (p *DatasetSpec) SetMaxItemCount(val *int64) {
 	p.MaxItemCount = val
 }
@@ -2880,11 +2949,15 @@ func (p *DatasetSpec) SetMaxFieldCount(val *int32) {
 func (p *DatasetSpec) SetMaxItemSize(val *int64) {
 	p.MaxItemSize = val
 }
+func (p *DatasetSpec) SetMaxItemDataNestedDepth(val *int32) {
+	p.MaxItemDataNestedDepth = val
+}
 
 var fieldIDToName_DatasetSpec = map[int16]string{
 	1: "max_item_count",
 	2: "max_field_count",
 	3: "max_item_size",
+	4: "max_item_data_nested_depth",
 }
 
 func (p *DatasetSpec) IsSetMaxItemCount() bool {
@@ -2897,6 +2970,10 @@ func (p *DatasetSpec) IsSetMaxFieldCount() bool {
 
 func (p *DatasetSpec) IsSetMaxItemSize() bool {
 	return p.MaxItemSize != nil
+}
+
+func (p *DatasetSpec) IsSetMaxItemDataNestedDepth() bool {
+	return p.MaxItemDataNestedDepth != nil
 }
 
 func (p *DatasetSpec) Read(iprot thrift.TProtocol) (err error) {
@@ -2936,6 +3013,14 @@ func (p *DatasetSpec) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3003,6 +3088,17 @@ func (p *DatasetSpec) ReadField3(iprot thrift.TProtocol) error {
 	p.MaxItemSize = _field
 	return nil
 }
+func (p *DatasetSpec) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxItemDataNestedDepth = _field
+	return nil
+}
 
 func (p *DatasetSpec) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3020,6 +3116,10 @@ func (p *DatasetSpec) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -3094,6 +3194,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *DatasetSpec) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxItemDataNestedDepth() {
+		if err = oprot.WriteFieldBegin("max_item_data_nested_depth", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxItemDataNestedDepth); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *DatasetSpec) String() string {
 	if p == nil {
@@ -3116,6 +3234,9 @@ func (p *DatasetSpec) DeepEqual(ano *DatasetSpec) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.MaxItemSize) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MaxItemDataNestedDepth) {
 		return false
 	}
 	return true
@@ -3153,6 +3274,18 @@ func (p *DatasetSpec) Field3DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.MaxItemSize != *src {
+		return false
+	}
+	return true
+}
+func (p *DatasetSpec) Field4DeepEqual(src *int32) bool {
+
+	if p.MaxItemDataNestedDepth == src {
+		return true
+	} else if p.MaxItemDataNestedDepth == nil || src == nil {
+		return false
+	}
+	if *p.MaxItemDataNestedDepth != *src {
 		return false
 	}
 	return true
@@ -5316,6 +5449,8 @@ type FieldSchema struct {
 	Hidden *bool `thrift:"hidden,50,optional" frugal:"50,optional,bool" form:"hidden" json:"hidden,omitempty" query:"hidden"`
 	// 当前列的状态，创建/更新时可以不传
 	Status *FieldStatus `thrift:"status,51,optional" frugal:"51,optional,FieldStatus" form:"status" json:"status,omitempty" query:"status"`
+	// 默认的预置转换配置，目前在数据校验后执行
+	DefaultTransformations []*FieldTransformationConfig `thrift:"default_transformations,55,optional" frugal:"55,optional,list<FieldTransformationConfig>" form:"default_transformations" json:"default_transformations,omitempty" query:"default_transformations"`
 }
 
 func NewFieldSchema() *FieldSchema {
@@ -5444,6 +5579,18 @@ func (p *FieldSchema) GetStatus() (v FieldStatus) {
 	}
 	return *p.Status
 }
+
+var FieldSchema_DefaultTransformations_DEFAULT []*FieldTransformationConfig
+
+func (p *FieldSchema) GetDefaultTransformations() (v []*FieldTransformationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDefaultTransformations() {
+		return FieldSchema_DefaultTransformations_DEFAULT
+	}
+	return p.DefaultTransformations
+}
 func (p *FieldSchema) SetKey(val *string) {
 	p.Key = val
 }
@@ -5474,6 +5621,9 @@ func (p *FieldSchema) SetHidden(val *bool) {
 func (p *FieldSchema) SetStatus(val *FieldStatus) {
 	p.Status = val
 }
+func (p *FieldSchema) SetDefaultTransformations(val []*FieldTransformationConfig) {
+	p.DefaultTransformations = val
+}
 
 var fieldIDToName_FieldSchema = map[int16]string{
 	1:  "key",
@@ -5486,6 +5636,7 @@ var fieldIDToName_FieldSchema = map[int16]string{
 	21: "multi_model_spec",
 	50: "hidden",
 	51: "status",
+	55: "default_transformations",
 }
 
 func (p *FieldSchema) IsSetKey() bool {
@@ -5526,6 +5677,10 @@ func (p *FieldSchema) IsSetHidden() bool {
 
 func (p *FieldSchema) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *FieldSchema) IsSetDefaultTransformations() bool {
+	return p.DefaultTransformations != nil
 }
 
 func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -5621,6 +5776,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 51:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField51(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 55:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField55(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5766,6 +5929,29 @@ func (p *FieldSchema) ReadField51(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *FieldSchema) ReadField55(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*FieldTransformationConfig, 0, size)
+	values := make([]FieldTransformationConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DefaultTransformations = _field
+	return nil
+}
 
 func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5811,6 +5997,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField51(oprot); err != nil {
 			fieldId = 51
+			goto WriteFieldError
+		}
+		if err = p.writeField55(oprot); err != nil {
+			fieldId = 55
 			goto WriteFieldError
 		}
 	}
@@ -6011,6 +6201,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
 }
+func (p *FieldSchema) writeField55(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDefaultTransformations() {
+		if err = oprot.WriteFieldBegin("default_transformations", thrift.LIST, 55); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DefaultTransformations)); err != nil {
+			return err
+		}
+		for _, v := range p.DefaultTransformations {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 55 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 55 end error: ", p), err)
+}
 
 func (p *FieldSchema) String() string {
 	if p == nil {
@@ -6054,6 +6270,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 		return false
 	}
 	if !p.Field51DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field55DeepEqual(ano.DefaultTransformations) {
 		return false
 	}
 	return true
@@ -6170,6 +6389,280 @@ func (p *FieldSchema) Field51DeepEqual(src *FieldStatus) bool {
 		return false
 	}
 	if *p.Status != *src {
+		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field55DeepEqual(src []*FieldTransformationConfig) bool {
+
+	if len(p.DefaultTransformations) != len(src) {
+		return false
+	}
+	for i, v := range p.DefaultTransformations {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+type FieldTransformationConfig struct {
+	// 预置的转换类型
+	TransType *FieldTransformationType `thrift:"transType,1,optional" frugal:"1,optional,FieldTransformationType" form:"transType" json:"transType,omitempty" query:"transType"`
+	// 当前转换配置在这一列上的数据及其嵌套的子结构上均生效
+	Global *bool `thrift:"global,2,optional" frugal:"2,optional,bool" form:"global" json:"global,omitempty" query:"global"`
+}
+
+func NewFieldTransformationConfig() *FieldTransformationConfig {
+	return &FieldTransformationConfig{}
+}
+
+func (p *FieldTransformationConfig) InitDefault() {
+}
+
+var FieldTransformationConfig_TransType_DEFAULT FieldTransformationType
+
+func (p *FieldTransformationConfig) GetTransType() (v FieldTransformationType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTransType() {
+		return FieldTransformationConfig_TransType_DEFAULT
+	}
+	return *p.TransType
+}
+
+var FieldTransformationConfig_Global_DEFAULT bool
+
+func (p *FieldTransformationConfig) GetGlobal() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetGlobal() {
+		return FieldTransformationConfig_Global_DEFAULT
+	}
+	return *p.Global
+}
+func (p *FieldTransformationConfig) SetTransType(val *FieldTransformationType) {
+	p.TransType = val
+}
+func (p *FieldTransformationConfig) SetGlobal(val *bool) {
+	p.Global = val
+}
+
+var fieldIDToName_FieldTransformationConfig = map[int16]string{
+	1: "transType",
+	2: "global",
+}
+
+func (p *FieldTransformationConfig) IsSetTransType() bool {
+	return p.TransType != nil
+}
+
+func (p *FieldTransformationConfig) IsSetGlobal() bool {
+	return p.Global != nil
+}
+
+func (p *FieldTransformationConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FieldTransformationConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FieldTransformationConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *FieldTransformationType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := FieldTransformationType(v)
+		_field = &tmp
+	}
+	p.TransType = _field
+	return nil
+}
+func (p *FieldTransformationConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Global = _field
+	return nil
+}
+
+func (p *FieldTransformationConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("FieldTransformationConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FieldTransformationConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTransType() {
+		if err = oprot.WriteFieldBegin("transType", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.TransType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *FieldTransformationConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGlobal() {
+		if err = oprot.WriteFieldBegin("global", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Global); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *FieldTransformationConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FieldTransformationConfig(%+v)", *p)
+
+}
+
+func (p *FieldTransformationConfig) DeepEqual(ano *FieldTransformationConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TransType) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Global) {
+		return false
+	}
+	return true
+}
+
+func (p *FieldTransformationConfig) Field1DeepEqual(src *FieldTransformationType) bool {
+
+	if p.TransType == src {
+		return true
+	} else if p.TransType == nil || src == nil {
+		return false
+	}
+	if *p.TransType != *src {
+		return false
+	}
+	return true
+}
+func (p *FieldTransformationConfig) Field2DeepEqual(src *bool) bool {
+
+	if p.Global == src {
+		return true
+	} else if p.Global == nil || src == nil {
+		return false
+	}
+	if *p.Global != *src {
 		return false
 	}
 	return true

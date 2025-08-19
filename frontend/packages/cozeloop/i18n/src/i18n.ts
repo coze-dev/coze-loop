@@ -24,6 +24,7 @@ async function initIntl(options: IntlClientOptions = {}) {
       lookupCookie: 'i18next',
       lookupLocalStorage: 'i18next',
       caches: ['cookie'],
+      ...options.detection,
     },
     resources: {
       'zh-CN': {
@@ -35,9 +36,5 @@ async function initIntl(options: IntlClientOptions = {}) {
     },
   });
 }
-
-I18n.t('please_add');
-
-I18n.t('Confirm');
 
 export { I18n, initIntl };

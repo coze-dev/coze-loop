@@ -17,6 +17,7 @@ type IEvaluationSetService interface {
 	GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (set []*entity.EvaluationSet, err error)
 	ListEvaluationSets(ctx context.Context, param *entity.ListEvaluationSetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
+	QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
 }
 
 //type CreateEvaluationSetParam struct {

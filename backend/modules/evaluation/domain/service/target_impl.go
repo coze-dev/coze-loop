@@ -256,6 +256,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 	}
 	outputData, runStatus, err = e.typedOperators[evalTargetDO.EvalTargetType].Execute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		TargetID:            targetID,
+		VersionID:           targetVersionID,
 		SourceTargetID:      evalTargetDO.SourceTargetID,
 		SourceTargetVersion: evalTargetDO.EvalTargetVersion.SourceTargetVersion,
 		Input:               inputData,

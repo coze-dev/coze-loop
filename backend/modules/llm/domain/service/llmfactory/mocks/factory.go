@@ -43,16 +43,21 @@ func (m *MockIFactory) EXPECT() *MockIFactoryMockRecorder {
 }
 
 // CreateLLM mocks base method.
-func (m *MockIFactory) CreateLLM(ctx context.Context, model *entity.Model) (llminterface.ILLM, error) {
+func (m *MockIFactory) CreateLLM(ctx context.Context, model *entity.Model, opts ...entity.Option) (llminterface.ILLM, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateLLM", ctx, model)
+	varargs := []any{ctx, model}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateLLM", varargs...)
 	ret0, _ := ret[0].(llminterface.ILLM)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateLLM indicates an expected call of CreateLLM.
-func (mr *MockIFactoryMockRecorder) CreateLLM(ctx, model any) *gomock.Call {
+func (mr *MockIFactoryMockRecorder) CreateLLM(ctx, model any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLLM", reflect.TypeOf((*MockIFactory)(nil).CreateLLM), ctx, model)
+	varargs := append([]any{ctx, model}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLLM", reflect.TypeOf((*MockIFactory)(nil).CreateLLM), varargs...)
 }

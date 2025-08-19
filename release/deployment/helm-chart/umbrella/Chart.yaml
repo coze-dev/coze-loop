@@ -1,0 +1,40 @@
+apiVersion: v2
+name: coze-loop
+description: Cozeloop Umbrella Helm chart
+type: application
+version: 1.0.0
+appVersion: latest
+
+dependencies:
+  - name: coze-loop-app
+    version: 1.0.0
+    repository: "file://../charts/app"
+
+  - name: coze-loop-nginx
+    version: 1.0.0
+    repository: "file://../charts/nginx"
+
+  - name: coze-loop-redis
+    version: 1.0.0
+    repository: "file://../charts/redis"
+    condition: custom.redis.disabled
+  - name: coze-loop-mysql
+    version: 1.0.0
+    repository: "file://../charts/mysql"
+    condition: custom.mysql.disabled
+  - name: coze-loop-clickhouse
+    version: 1.0.0
+    repository: "file://../charts/clickhouse"
+    condition: custom.clickhouse.disabled
+  - name: coze-loop-minio
+    version: 1.0.0
+    repository: "file://../charts/minio"
+    condition: custom.oss.disabled
+  - name: coze-loop-rmq-namesrv
+    version: 1.0.0
+    repository: "file://../charts/rmq-namesrv"
+    condition: custom.rmq.disabled
+  - name: coze-loop-rmq-broker
+    version: 1.0.0
+    repository: "file://../charts/rmq-broker"
+    condition: custom.rmq.disabled

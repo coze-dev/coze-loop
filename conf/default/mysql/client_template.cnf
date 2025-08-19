@@ -1,4 +1,0 @@
-[client]
-user=${USER}
-password=${PASSWORD}
-host=127.0.0.1

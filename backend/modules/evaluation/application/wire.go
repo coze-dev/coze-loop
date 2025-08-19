@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/wire"
 
+	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -44,6 +45,7 @@ import (
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	evaluatormysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
+	exptck "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
 	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	exptredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem"
@@ -77,6 +79,7 @@ var (
 		experiment.NewExptItemResultRepo,
 		experiment.NewExptTurnResultRepo,
 		experiment.NewExptRunLogRepo,
+		experiment.NewExptTurnResultFilterRepo,
 		experiment.NewQuotaService,
 		idem.NewIdempotentService,
 		exptmysql.NewExptDAO,
@@ -86,9 +89,11 @@ var (
 		exptmysql.NewExptTurnResultDAO,
 		exptmysql.NewExptItemResultDAO,
 		exptmysql.NewExptTurnEvaluatorResultRefDAO,
+		exptmysql.NewExptTurnResultFilterKeyMappingDAO,
 		exptmysql.NewExptAggrResultDAO,
 		exptredis.NewQuotaDAO,
 		iredis.NewIdemDAO,
+		exptck.NewExptTurnResultFilterDAO,
 		evalconf.NewExptConfiger,
 		rmqproducer.NewExptEventPublisher,
 		exptmtr.NewExperimentMetric,
@@ -129,6 +134,9 @@ var (
 		rmqproducer.NewExptEventPublisher,
 		evaluatorDomainService,
 		flagSet,
+		experiment.NewExptRepo,
+		exptmysql.NewExptDAO,
+		exptmysql.NewExptEvaluatorRefDAO,
 	)
 
 	evalSetDomainService = wire.NewSet(
@@ -197,6 +205,7 @@ func InitExperimentApplication(
 	limiterFactory limiter.IRateLimiterFactory,
 	llmcli llmruntimeservice.Client,
 	benefitSvc benefit.IBenefitService,
+	ckDb ck.Provider,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
