@@ -994,7 +994,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvaluatorService.EXPECT().
-					BatchGetEvaluatorVersion(gomock.Any(), validEvaluatorVersionIDs, false).
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), validEvaluatorVersionIDs, false).
 					Return(validEvaluators, nil)
 
 				mockAuth.EXPECT().
@@ -1024,7 +1024,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvaluatorService.EXPECT().
-					BatchGetEvaluatorVersion(gomock.Any(), validEvaluatorVersionIDs, false).
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), validEvaluatorVersionIDs, false).
 					Return([]*entity.Evaluator{}, nil)
 			},
 			wantResp: &evaluatorservice.BatchGetEvaluatorVersionsResponse{},

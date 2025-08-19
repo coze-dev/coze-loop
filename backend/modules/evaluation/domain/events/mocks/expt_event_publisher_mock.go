@@ -106,3 +106,17 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptScheduleEvent(arg0, arg
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptScheduleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptScheduleEvent), arg0, arg1, arg2)
 }
+
+// PublishExptTurnResultFilterEvent mocks base method.
+func (m *MockExptEventPublisher) PublishExptTurnResultFilterEvent(arg0 context.Context, arg1 *entity.ExptTurnResultFilterEvent, arg2 *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptTurnResultFilterEvent", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptTurnResultFilterEvent indicates an expected call of PublishExptTurnResultFilterEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishExptTurnResultFilterEvent(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptTurnResultFilterEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptTurnResultFilterEvent), arg0, arg1, arg2)
+}

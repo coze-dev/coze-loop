@@ -1,0 +1,321 @@
+services:
+
+  app:
+    profiles: [ "app", "nginx" ]
+    container_name: "coze-loop-app"
+    image: "${COZE_LOOP_APP_IMAGE_REGISTRY}/${COZE_LOOP_APP_IMAGE_REPOSITORY}/${COZE_LOOP_APP_IMAGE_NAME}:${COZE_LOOP_APP_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_APP_OPENAPI_PORT}:8888"
+    volumes:
+      - nginx_data:/coze-loop/resources
+      - ./bootstrap/app:/coze-loop/bootstrap
+      - ./conf:/coze-loop/conf
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      mysql-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+      clickhouse-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      rocketmq-namesrv:
+        condition: service_healthy
+      rocketmq-broker:
+        condition: service_healthy
+      rocketmq-init:
+        condition: service_completed_successfully
+    environment:
+      # redis
+      COZE_LOOP_REDIS_DOMAIN: "${COZE_LOOP_REDIS_DOMAIN}"
+      COZE_LOOP_REDIS_PORT: "${COZE_LOOP_REDIS_PORT}"
+      COZE_LOOP_REDIS_PASSWORD: "${COZE_LOOP_REDIS_PASSWORD}"
+      # mysql
+      COZE_LOOP_MYSQL_DOMAIN: "${COZE_LOOP_MYSQL_DOMAIN}"
+      COZE_LOOP_MYSQL_PORT: "${COZE_LOOP_MYSQL_PORT}"
+      COZE_LOOP_MYSQL_USER: "${COZE_LOOP_MYSQL_USER}"
+      COZE_LOOP_MYSQL_PASSWORD: "${COZE_LOOP_MYSQL_PASSWORD}"
+      COZE_LOOP_MYSQL_DATABASE: "${COZE_LOOP_MYSQL_DATABASE}"
+      # clickhouse
+      COZE_LOOP_CLICKHOUSE_DOMAIN: "${COZE_LOOP_CLICKHOUSE_DOMAIN}"
+      COZE_LOOP_CLICKHOUSE_PORT: "${COZE_LOOP_CLICKHOUSE_PORT}"
+      COZE_LOOP_CLICKHOUSE_USER: "${COZE_LOOP_CLICKHOUSE_USER}"
+      COZE_LOOP_CLICKHOUSE_PASSWORD: "${COZE_LOOP_CLICKHOUSE_PASSWORD}"
+      COZE_LOOP_CLICKHOUSE_DATABASE: "${COZE_LOOP_CLICKHOUSE_DATABASE}"
+      # oss
+      COZE_LOOP_OSS_PROTOCOL: "${COZE_LOOP_OSS_PROTOCOL}"
+      COZE_LOOP_OSS_DOMAIN: "${COZE_LOOP_OSS_DOMAIN}"
+      COZE_LOOP_OSS_PORT:  "${COZE_LOOP_OSS_PORT}"
+      COZE_LOOP_OSS_USER: "${COZE_LOOP_OSS_USER}"
+      COZE_LOOP_OSS_PASSWORD: "${COZE_LOOP_OSS_PASSWORD}"
+      COZE_LOOP_OSS_REGION: "${COZE_LOOP_OSS_REGION}"
+      COZE_LOOP_OSS_BUCKET: "${COZE_LOOP_OSS_BUCKET}"
+      # rmq
+      COZE_LOOP_RMQ_NAMESRV_DOMAIN: "${COZE_LOOP_RMQ_NAMESRV_DOMAIN}"
+      COZE_LOOP_RMQ_NAMESRV_PORT: "${COZE_LOOP_RMQ_NAMESRV_PORT}"
+    entrypoint: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
+      interval: 15s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  redis:
+    profiles: [ "redis" ]
+    container_name: "coze-loop-redis"
+    image: "${COZE_LOOP_REDIS_IMAGE_REGISTRY}/${COZE_LOOP_REDIS_IMAGE_REPOSITORY}/${COZE_LOOP_REDIS_IMAGE_NAME}:${COZE_LOOP_REDIS_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    volumes:
+      - redis_data:/data # 挂载宿主机以持久化
+      - ./bootstrap/redis:/coze-loop-redis/bootstrap
+    environment:
+      COZE_LOOP_REDIS_PASSWORD: "${COZE_LOOP_REDIS_PASSWORD}"
+    entrypoint: [ "sh", "/coze-loop-redis/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-redis/bootstrap/healthcheck.sh" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  mysql:
+    profiles: [ "mysql" ]
+    container_name: "coze-loop-mysql"
+    image: "${COZE_LOOP_MYSQL_IMAGE_REGISTRY}/${COZE_LOOP_MYSQL_IMAGE_REPOSITORY}/${COZE_LOOP_MYSQL_IMAGE_NAME}:${COZE_LOOP_MYSQL_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    volumes:
+      - mysql_data:/var/lib/mysql # 挂载宿主机以持久化
+      - ./bootstrap/mysql:/coze-loop-mysql/bootstrap
+    environment:
+      COZE_LOOP_MYSQL_USER: "${COZE_LOOP_MYSQL_USER}"
+      COZE_LOOP_MYSQL_PASSWORD: "${COZE_LOOP_MYSQL_PASSWORD}"
+      COZE_LOOP_MYSQL_DATABASE: "${COZE_LOOP_MYSQL_DATABASE}"
+    entrypoint: [ "sh", "/coze-loop-mysql/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-mysql/bootstrap/healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  mysql-init:
+    profiles: [ "mysql" ]
+    container_name: "coze-loop-mysql-init"
+    image: "${COZE_LOOP_MYSQL_IMAGE_REGISTRY}/${COZE_LOOP_MYSQL_IMAGE_REPOSITORY}/${COZE_LOOP_MYSQL_IMAGE_NAME}:${COZE_LOOP_MYSQL_IMAGE_TAG}"
+    restart: no
+    networks:
+      - coze-loop-network
+    volumes:
+      - ./bootstrap/mysql-init:/coze-loop-mysql-init/bootstrap
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      COZE_LOOP_MYSQL_USER: "${COZE_LOOP_MYSQL_USER}"
+      COZE_LOOP_MYSQL_PASSWORD: "${COZE_LOOP_MYSQL_PASSWORD}"
+      COZE_LOOP_MYSQL_DATABASE: "${COZE_LOOP_MYSQL_DATABASE}"
+    entrypoint: [ "sh", "/coze-loop-mysql-init/bootstrap/entrypoint.sh" ]
+
+  clickhouse:
+    profiles: [ "clickhouse" ]
+    container_name: "coze-loop-clickhouse"
+    image: "${COZE_LOOP_CLICKHOUSE_IMAGE_REGISTRY}/${COZE_LOOP_CLICKHOUSE_IMAGE_REPOSITORY}/${COZE_LOOP_CLICKHOUSE_IMAGE_NAME}:${COZE_LOOP_CLICKHOUSE_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse # 挂载宿主机以持久化
+      - ./bootstrap/clickhouse:/coze-loop-clickhouse/bootstrap
+    user: "101:101"
+    environment:
+      COZE_LOOP_CLICKHOUSE_USER: "${COZE_LOOP_CLICKHOUSE_USER}"
+      COZE_LOOP_CLICKHOUSE_PASSWORD: "${COZE_LOOP_CLICKHOUSE_PASSWORD}"
+    entrypoint: [ "sh", "/coze-loop-clickhouse/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-clickhouse/bootstrap/healthcheck.sh" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  clickhouse-init:
+    profiles: [ "clickhouse" ]
+    container_name: "coze-loop-clickhouse-init"
+    image: "${COZE_LOOP_CLICKHOUSE_IMAGE_REGISTRY}/${COZE_LOOP_CLICKHOUSE_IMAGE_REPOSITORY}/${COZE_LOOP_CLICKHOUSE_IMAGE_NAME}:${COZE_LOOP_CLICKHOUSE_IMAGE_TAG}"
+    restart: no
+    networks:
+      - coze-loop-network
+    volumes:
+      - ./bootstrap/clickhouse-init:/coze-loop-clickhouse-init/bootstrap
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    environment:
+      COZE_LOOP_CLICKHOUSE_USER: "${COZE_LOOP_CLICKHOUSE_USER}"
+      COZE_LOOP_CLICKHOUSE_PASSWORD: "${COZE_LOOP_CLICKHOUSE_PASSWORD}"
+      COZE_LOOP_CLICKHOUSE_DATABASE: "${COZE_LOOP_CLICKHOUSE_DATABASE}"
+    entrypoint: [ "sh", "/coze-loop-clickhouse-init/bootstrap/entrypoint.sh" ]
+
+  minio:
+    profiles: [ "minio" ]
+    container_name: "coze-loop-minio"
+    image: "${COZE_LOOP_OSS_IMAGE_REGISTRY}/${COZE_LOOP_OSS_IMAGE_REPOSITORY}/${COZE_LOOP_OSS_IMAGE_NAME}:${COZE_LOOP_OSS_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_OSS_PORT}:9000"
+    volumes:
+      - minio_data:/minio_data # 挂载宿主机以持久化
+      - minio_config:/root/.minio # 挂载宿主机以持久化
+      - ./bootstrap/minio:/coze-loop-minio/bootstrap
+    environment:
+      COZE_LOOP_OSS_USER: "${COZE_LOOP_OSS_USER}"
+      COZE_LOOP_OSS_PASSWORD: "${COZE_LOOP_OSS_PASSWORD}"
+    entrypoint: [ "sh", "/coze-loop-minio/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-minio/bootstrap/healthcheck.sh" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio-init:
+    profiles: [ "minio" ]
+    container_name: "coze-loop-minio-init"
+    image: "${COZE_LOOP_OSS_IMAGE_REGISTRY}/${COZE_LOOP_OSS_IMAGE_REPOSITORY}/${COZE_LOOP_OSS_IMAGE_NAME}:${COZE_LOOP_OSS_IMAGE_TAG}"
+    restart: no
+    networks:
+      - coze-loop-network
+    volumes:
+      - ./bootstrap/minio-init:/coze-loop-minio-init/bootstrap
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      COZE_LOOP_OSS_USER: "${COZE_LOOP_OSS_USER}"
+      COZE_LOOP_OSS_PASSWORD: "${COZE_LOOP_OSS_PASSWORD}"
+      COZE_LOOP_OSS_BUCKET: "${COZE_LOOP_OSS_BUCKET}"
+    entrypoint: [ "sh", "/coze-loop-minio-init/bootstrap/entrypoint.sh" ]
+
+  rocketmq-namesrv:
+    profiles: [ "rmq" ]
+    container_name: "coze-loop-rmq-namesrv"
+    image: "${COZE_LOOP_RMQ_IMAGE_REGISTRY}/${COZE_LOOP_RMQ_IMAGE_REPOSITORY}/${COZE_LOOP_RMQ_IMAGE_NAME}:${COZE_LOOP_RMQ_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    volumes:
+      - rmq_namesrv_data:/store # 挂载宿主机以持久化
+      - ./bootstrap/rmq-namesrv:/coze-loop-rmq-namesrv/bootstrap
+    user: "0:0"
+    entrypoint: [ "sh", "/coze-loop-rmq-namesrv/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-rmq-namesrv/bootstrap/healthcheck.sh" ]
+      interval: 15s
+      timeout: 15s
+      retries: 5
+      start_period: 10s
+
+  rocketmq-broker:
+    profiles: [ "rmq" ]
+    container_name: "coze-loop-rmq-broker"
+    image: "${COZE_LOOP_RMQ_IMAGE_REGISTRY}/${COZE_LOOP_RMQ_IMAGE_REPOSITORY}/${COZE_LOOP_RMQ_IMAGE_NAME}:${COZE_LOOP_RMQ_IMAGE_TAG}"
+    restart: no
+    networks:
+      - coze-loop-network
+    volumes:
+      - rmq_broker_data:/store
+      - ./bootstrap/rmq-broker:/coze-loop-rmq-broker/bootstrap
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_healthy
+    user: "0:0"
+    entrypoint: [ "sh", "/coze-loop-rmq-broker/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-rmq-broker/bootstrap/healthcheck.sh" ]
+      interval: 15s
+      timeout: 15s
+      retries: 5
+      start_period: 20s
+
+  rocketmq-init:
+    profiles: [ "rmq" ]
+    container_name: "coze-loop-rmq-init"
+    image: "${COZE_LOOP_RMQ_IMAGE_REGISTRY}/${COZE_LOOP_RMQ_IMAGE_REPOSITORY}/${COZE_LOOP_RMQ_IMAGE_NAME}:${COZE_LOOP_RMQ_IMAGE_TAG}"
+    restart: no
+    networks:
+      - coze-loop-network
+    volumes:
+      - ./bootstrap/rmq-init:/coze-loop-rmq-init/bootstrap
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_healthy
+      rocketmq-broker:
+        condition: service_healthy
+    entrypoint: [ "bash", "/coze-loop-rmq-init/bootstrap/entrypoint.sh" ]
+
+  nginx:
+    profiles: [ "nginx", "app" ]
+    container_name: "coze-loop-nginx"
+    image: "${COZE_LOOP_NGINX_IMAGE_REGISTRY}/${COZE_LOOP_NGINX_IMAGE_REPOSITORY}/${COZE_LOOP_NGINX_IMAGE_NAME}:${COZE_LOOP_NGINX_IMAGE_TAG}"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_NGINX_PORT}:80"
+    volumes:
+      - nginx_data:/usr/share/nginx/html:ro
+      - ./bootstrap/nginx:/coze-loop-nginx/bootstrap
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      COZE_LOOP_OSS_PROTOCOL: "${COZE_LOOP_OSS_PROTOCOL}"
+      COZE_LOOP_OSS_DOMAIN: "${COZE_LOOP_OSS_DOMAIN}"
+      COZE_LOOP_OSS_PORT: "${COZE_LOOP_OSS_PORT}"
+      COZE_LOOP_OSS_BUCKET: "${COZE_LOOP_OSS_BUCKET}"
+    entrypoint: [ "sh", "/coze-loop-nginx/bootstrap/entrypoint.sh" ]
+    healthcheck:
+      test: [ "CMD", "sh", "/coze-loop-nginx/bootstrap/healthcheck.sh" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  redis_data:
+    name: coze-loop_redis_data
+  mysql_data:
+    name: coze-loop_mysql_data
+  clickhouse_data:
+    name: coze-loop_clickhouse_data
+  minio_data:
+    name: coze-loop_minio_data
+  minio_config:
+    name: coze-loop_minio_config
+  rmq_namesrv_data:
+    name: coze-loop_rmqnamesrv_data
+  rmq_broker_data:
+    name: coze-loop_rocketmq_broker_data
+  nginx_data:
+    name: coze-loop_nginx_data
+
+networks:
+  coze-loop-network:
+    name: coze-loop-network
+    driver: bridge

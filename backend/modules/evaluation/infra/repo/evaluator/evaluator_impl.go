@@ -75,7 +75,7 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorDraft(ctx context.Context, evaluator 
 	return r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
 		opt := db.WithTransaction(tx)
 		// 更新Evaluator最新版本
-		err := r.evaluatorDao.UpdateEvaluatorDraftSubmitted(ctx, po.ID, false, gptr.Indirect(evaluator.BaseInfo.UpdatedBy.UserID), opt)
+		err := r.evaluatorDao.UpdateEvaluatorDraftSubmitted(ctx, po.EvaluatorID, false, gptr.Indirect(evaluator.BaseInfo.UpdatedBy.UserID), opt)
 		if err != nil {
 			return err
 		}
@@ -100,8 +100,8 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorMetaByID(ctx context.Context, ids [
 	return evaluatorDOs, nil
 }
 
-func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
-	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, ids, includeDeleted)
+func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
+	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, spaceID, ids, includeDeleted)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorDraft(ctx context.Context, ids []in
 	if err != nil {
 		return nil, err
 	}
-	evaluatorVersionPOList, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, ids, includeDeleted)
+	evaluatorVersionPOList, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, nil, ids, includeDeleted)
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ type ExptScheduleEvent struct {
 	ExptID      int64
 	ExptRunID   int64
 	ExptRunMode ExptRunMode
+	ExptType    ExptType
 
 	CreatedAt int64
 	Ext       map[string]string
@@ -93,4 +94,21 @@ type EvaluatorRecordCorrectionEvent struct {
 
 	CreatedAt int64 `json:"created_at"`
 	UpdatedAt int64 `json:"updated_at"`
+}
+
+type UpsertExptTurnResultFilterType string
+
+const (
+	UpsertExptTurnResultFilterTypeAuto   UpsertExptTurnResultFilterType = "auto"
+	UpsertExptTurnResultFilterTypeCheck  UpsertExptTurnResultFilterType = "check"
+	UpsertExptTurnResultFilterTypeManual UpsertExptTurnResultFilterType = "manual"
+)
+
+type ExptTurnResultFilterEvent struct {
+	ExperimentID int64
+	SpaceID      int64
+	ItemID       []int64
+
+	RetryTimes *int32
+	FilterType *UpsertExptTurnResultFilterType
 }

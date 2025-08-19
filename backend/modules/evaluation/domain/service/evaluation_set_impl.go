@@ -85,3 +85,7 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		OrderBys:         param.OrderBys,
 	})
 }
+
+func (d *EvaluationSetServiceImpl) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
+	return d.datasetRPCAdapter.QueryItemSnapshotMappings(ctx, spaceID, datasetID, versionID)
+}

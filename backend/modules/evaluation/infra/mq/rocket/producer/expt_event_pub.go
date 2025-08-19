@@ -50,6 +50,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptRecordEvalEventRMQKey,
 		rocket.ExptAggrCalculateEventRMQKey,
 		rocket.ExptOnlineEvalResultRMQKey,
+		rocket.ExptTurnResultFilterRMQKey,
 	} {
 		p := &producer{}
 
@@ -127,6 +128,10 @@ func (e *exptEventPublisher) PublishExptOnlineEvalResult(ctx context.Context, ev
 	}
 	logs.CtxInfo(ctx, "Publishing ExptOnlineEvalResult event, expt_id: %v, evaluator_record_ids: %v", event.ExptId, evaluatorRecordIDs)
 	return e.batchSend(ctx, rocket.ExptOnlineEvalResultRMQKey, []any{event}, duration)
+}
+
+func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Context, event *entity.ExptTurnResultFilterEvent, duration *time.Duration) error {
+	return e.batchSend(ctx, rocket.ExptTurnResultFilterRMQKey, []any{event}, duration)
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {

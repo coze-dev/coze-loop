@@ -175,6 +175,27 @@ func (mr *MockExptTurnResultDAOMockRecorder) ListTurnResult(arg0, arg1, arg2, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTurnResult", reflect.TypeOf((*MockExptTurnResultDAO)(nil).ListTurnResult), varargs...)
 }
 
+// ListTurnResultByItemIDs mocks base method.
+func (m *MockExptTurnResultDAO) ListTurnResultByItemIDs(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 entity.Page, arg5 bool, arg6 ...db.Option) ([]*model.ExptTurnResult, int64, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4, arg5}
+	for _, a := range arg6 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListTurnResultByItemIDs", varargs...)
+	ret0, _ := ret[0].([]*model.ExptTurnResult)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListTurnResultByItemIDs indicates an expected call of ListTurnResultByItemIDs.
+func (mr *MockExptTurnResultDAOMockRecorder) ListTurnResultByItemIDs(arg0, arg1, arg2, arg3, arg4, arg5 interface{}, arg6 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4, arg5}, arg6...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTurnResultByItemIDs", reflect.TypeOf((*MockExptTurnResultDAO)(nil).ListTurnResultByItemIDs), varargs...)
+}
+
 // MGetItemTurnRunLogs mocks base method.
 func (m *MockExptTurnResultDAO) MGetItemTurnRunLogs(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 int64, arg5 ...db.Option) ([]*model.ExptTurnResultRunLog, error) {
 	m.ctrl.T.Helper()
@@ -311,4 +332,23 @@ func (mr *MockExptTurnResultDAOMockRecorder) UpdateTurnResultsWithItemIDs(arg0, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTurnResultsWithItemIDs", reflect.TypeOf((*MockExptTurnResultDAO)(nil).UpdateTurnResultsWithItemIDs), varargs...)
+}
+
+// UpdateTurnRunLogWithItemIDs mocks base method.
+func (m *MockExptTurnResultDAO) UpdateTurnRunLogWithItemIDs(arg0 context.Context, arg1, arg2, arg3 int64, arg4 []int64, arg5 map[string]interface{}, arg6 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4, arg5}
+	for _, a := range arg6 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateTurnRunLogWithItemIDs", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTurnRunLogWithItemIDs indicates an expected call of UpdateTurnRunLogWithItemIDs.
+func (mr *MockExptTurnResultDAOMockRecorder) UpdateTurnRunLogWithItemIDs(arg0, arg1, arg2, arg3, arg4, arg5 interface{}, arg6 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4, arg5}, arg6...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTurnRunLogWithItemIDs", reflect.TypeOf((*MockExptTurnResultDAO)(nil).UpdateTurnRunLogWithItemIDs), varargs...)
 }

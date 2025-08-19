@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -273,7 +274,7 @@ func (e *ExptMangerImpl) getExptTupleByID(ctx context.Context, exptTupleID *enti
 	if len(exptTupleID.EvaluatorVersionIDs) > 0 {
 		pool.Add(func() error {
 			var poolErr error
-			evaluators, poolErr = e.evaluatorService.BatchGetEvaluatorVersion(ctx, exptTupleID.EvaluatorVersionIDs, false)
+			evaluators, poolErr = e.evaluatorService.BatchGetEvaluatorVersion(ctx, nil, exptTupleID.EvaluatorVersionIDs, false)
 			if poolErr != nil {
 				return poolErr
 			}
@@ -383,7 +384,7 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 	if len(evaluatorVersionIDs) > 0 {
 		pool.Add(func() error {
 			var poolErr error
-			evaluators, poolErr = e.evaluatorService.BatchGetEvaluatorVersion(ctx, evaluatorVersionIDs, true)
+			evaluators, poolErr = e.evaluatorService.BatchGetEvaluatorVersion(ctx, nil, evaluatorVersionIDs, true)
 			if poolErr != nil {
 				return poolErr
 			}
@@ -481,10 +482,18 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	}
 
 	evaluatorRefs := make([]*entity.ExptEvaluatorVersionRef, 0)
-	for _, es := range tuple.Evaluators {
+	exptTurnResultFilterKeyMappings := make([]*entity.ExptTurnResultFilterKeyMapping, 0)
+	for i, es := range tuple.Evaluators {
 		evaluatorRefs = append(evaluatorRefs, &entity.ExptEvaluatorVersionRef{
 			EvaluatorID:        es.ID,
 			EvaluatorVersionID: es.GetEvaluatorVersion().GetID(),
+		})
+		exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+			SpaceID:   req.WorkspaceID,
+			ExptID:    ids[0],
+			FromField: strconv.FormatInt(es.GetEvaluatorVersion().GetID(), 10),
+			ToKey:     "key" + strconv.Itoa(i+1),
+			FieldType: entity.FieldTypeEvaluator,
 		})
 	}
 	// toEntity, err := experiment.NewEvalConfConvert().ConvertToEntity(req)
@@ -531,6 +540,10 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		ExptID:  do.ID,
 	}
 	if err := e.exptResultService.CreateStats(ctx, stats, session); err != nil {
+		return nil, err
+	}
+
+	if err := e.exptResultService.InsertExptTurnResultFilterKeyMappings(ctx, exptTurnResultFilterKeyMappings); err != nil {
 		return nil, err
 	}
 

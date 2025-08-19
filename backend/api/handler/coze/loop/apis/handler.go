@@ -19,6 +19,7 @@ import (
 	logmw "github.com/coze-dev/coze-loop/backend/infra/middleware/logs"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/validator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
@@ -32,12 +33,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	llmmanage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
+	traceopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/debug"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lodataset"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lotag"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_set"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_target"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loevaluator"
@@ -48,6 +51,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/lospace"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/louser"
 	lollmmanage "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/llm/lomanage"
+	looptraceopenapi "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/loopenapi"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotrace"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lodebug"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lomanage"
@@ -105,7 +109,6 @@ func NewFoundationHandler(
 		FileService:              fileApp,
 		FoundationOpenAPIService: foundationOpenApiApp,
 	}
-
 	bindLocalCallClient(foundationopenapi.FoundationOpenAPIService(h), &foundationOpenAPIClient, foundationloopenapi.NewLocalFoundationOpenAPIService)
 	bindLocalCallClient(file.FileService(h), &foundationFileClient, foundationlofile.NewLocalFileService)
 	bindLocalCallClient(space.SpaceService(h), &localSpaceClient, lospace.NewLocalSpaceService)
@@ -135,11 +138,13 @@ func NewEvaluationHandler(
 
 type DataHandler struct {
 	dataapp.IDatasetApplication
+	tag.TagService
 }
 
-func NewDataHandler(dataApp dataapp.IDatasetApplication) *DataHandler {
-	h := &DataHandler{IDatasetApplication: dataApp}
+func NewDataHandler(dataApp dataapp.IDatasetApplication, tagApp tag.TagService) *DataHandler {
+	h := &DataHandler{IDatasetApplication: dataApp, TagService: tagApp}
 	bindLocalCallClient(dataset.DatasetService(h), &localDataSvc, lodataset.NewLocalDatasetService)
+	bindLocalCallClient(tag.TagService(h), &localTagClient, lotag.NewLocalTagService)
 	return h
 }
 
@@ -188,17 +193,21 @@ func NewLLMHandler(
 type ObservabilityHandler struct {
 	obapp.ITraceApplication
 	obapp.ITraceIngestionApplication
+	obapp.IObservabilityOpenAPIApplication
 }
 
 func NewObservabilityHandler(
 	traceApp obapp.ITraceApplication,
 	ingestApp obapp.ITraceIngestionApplication,
+	openAPIApp obapp.IObservabilityOpenAPIApplication,
 ) *ObservabilityHandler {
 	h := &ObservabilityHandler{
-		ITraceApplication:          traceApp,
-		ITraceIngestionApplication: ingestApp,
+		ITraceApplication:                traceApp,
+		ITraceIngestionApplication:       ingestApp,
+		IObservabilityOpenAPIApplication: openAPIApp,
 	}
 	bindLocalCallClient(trace.TraceService(h), &observabilityClient, lotrace.NewLocalTraceService)
+	bindLocalCallClient(traceopenapi.OpenAPIService(h), &observabilityOpenAPIClient, looptraceopenapi.NewLocalOpenAPIService)
 	return h
 }
 

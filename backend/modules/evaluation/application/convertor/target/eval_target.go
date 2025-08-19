@@ -149,6 +149,26 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				Description:  &targetVersionDO.Prompt.Description,
 			}
 		}
+	case do.EvalTargetTypeCozeWorkflow:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.CozeWorkflow != nil {
+			targetVersionDTO.EvalTargetContent.CozeWorkflow = &dto.CozeWorkflow{
+				ID:          &targetVersionDO.CozeWorkflow.ID,
+				Version:     &targetVersionDO.CozeWorkflow.Version,
+				Name:        &targetVersionDO.CozeWorkflow.Name,
+				AvatarURL:   &targetVersionDO.CozeWorkflow.AvatarURL,
+				Description: &targetVersionDO.CozeWorkflow.Description,
+				BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.CozeWorkflow.BaseInfo),
+			}
+		}
+	default:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
 	}
 	for _, v := range targetVersionDO.InputSchema {
 		targetVersionDTO.EvalTargetContent.InputSchemas = append(targetVersionDTO.EvalTargetContent.InputSchemas, commonconvertor.ConvertArgsSchemaDO2DTO(v))

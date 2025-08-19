@@ -103,6 +103,7 @@ func WithCozeBotInfoType(botInfoType CozeBotInfoType) Option {
 
 type ExecuteEvalTargetParam struct {
 	TargetID            int64
+	VersionID           int64
 	SourceTargetID      string
 	SourceTargetVersion string
 	Input               *EvalTargetInputData

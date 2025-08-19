@@ -5,6 +5,7 @@ package entity
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -159,6 +160,11 @@ type ExptEvalItem struct {
 	UpdatedAt        *time.Time
 }
 
+func (e *ExptEvalItem) SetState(state ItemRunState) *ExptEvalItem {
+	e.State = state
+	return e
+}
+
 type ExptEvalTurn struct {
 	ExptID    int64
 	ExptRunID int64
@@ -170,14 +176,16 @@ type ExptStats struct {
 	ID                int64
 	SpaceID           int64
 	ExptID            int64
-	PendingTurnCnt    int32
-	SuccessTurnCnt    int32
-	FailTurnCnt       int32
-	ProcessingTurnCnt int32
-	TerminatedTurnCnt int32
+	PendingItemCnt    int32
+	SuccessItemCnt    int32
+	FailItemCnt       int32
+	ProcessingItemCnt int32
+	TerminatedItemCnt int32
 	CreditCost        float64
 	InputTokenCost    int64
 	OutputTokenCost   int64
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type ExptTurnResult struct {
@@ -229,11 +237,13 @@ func (e *EvaluatorResults) Serialize() ([]byte, error) {
 }
 
 type MGetExperimentResultParam struct {
-	SpaceID    int64
-	ExptIDs    []int64
-	BaseExptID *int64
-	Filters    map[int64]*ExptTurnResultFilter
-	Page       Page
+	SpaceID            int64
+	ExptIDs            []int64
+	BaseExptID         *int64
+	Filters            map[int64]*ExptTurnResultFilter
+	FilterAccelerators map[int64]*ExptTurnResultFilterAccelerator
+	UseAccelerator     bool
+	Page               Page
 }
 
 type ExptTurnResultRunLog struct {
@@ -371,9 +381,79 @@ func NewSession(ctx context.Context) *Session {
 	}
 }
 
+type ExptTurnResultFilterMapCond struct {
+	EvalTargetDataFilters   []*FieldFilter
+	EvaluatorScoreFilters   []*FieldFilter
+	AnnotationFloatFilters  []*FieldFilter
+	AnnotationBoolFilters   []*FieldFilter
+	AnnotationStringFilters []*FieldFilter
+}
+
+type FieldFilter struct {
+	Key    string
+	Op     string // =, >, >=, <, <=, BETWEEN, LIKE
+	Values []any
+}
+
+type ItemSnapshotFilter struct {
+	BoolMapFilters   []*FieldFilter
+	FloatMapFilters  []*FieldFilter
+	IntMapFilters    []*FieldFilter
+	StringMapFilters []*FieldFilter
+}
+
+type KeywordFilter struct {
+	ItemSnapshotFilter    *ItemSnapshotFilter
+	EvalTargetDataFilters []*FieldFilter
+	Keyword               *string
+}
+
 type ExptTurnResultFilter struct {
 	TrunRunStateFilters []*TurnRunStateFilter
 	ScoreFilters        []*ScoreFilter
+}
+
+// ExptTurnResultFilterAccelerator 用于业务层组合主表字段和map字段的多条件查询
+// 其中map字段支持等值、范围、模糊等多种组合
+// 例如：EvalTargetDataFilters、EvaluatorScoreFilters等
+// 具体用法参考DAO层QueryItemIDs的参数
+type ExptTurnResultFilterAccelerator struct {
+	// 必带字段
+	SpaceID     int64     `json:"space_id"`
+	ExptID      int64     `json:"expt_id"`
+	CreatedDate time.Time `json:"created_date"`
+	// 基础查询
+	EvaluatorScoreCorrected *FieldFilter   `json:"evaluator_score_corrected"`
+	ItemIDs                 []*FieldFilter `json:"item_id"`
+	ItemRunStatus           []*FieldFilter `json:"item_status"`
+	TurnRunStatus           []*FieldFilter `json:"turn_status"`
+	// map类查询条件
+	MapCond          *ExptTurnResultFilterMapCond `json:"map_cond,omitempty"`
+	ItemSnapshotCond *ItemSnapshotFilter          `json:"item_snapshot_cond,omitempty"`
+	// keyword search
+	KeywordSearch     *KeywordFilter `json:"keyword_search"`
+	Page              Page           `json:"page"`
+	EvalSetSyncCkDate string
+}
+
+// FieldTypeMapping 定义 ExptTurnResultFilterKeyMapping 中 FieldType 的常量
+type FieldTypeMapping int32
+
+const (
+	// FieldTypeUnknown 未知类型
+	FieldTypeUnknown FieldTypeMapping = 0
+	// FieldTypeEvaluator 评估器类型
+	FieldTypeEvaluator FieldTypeMapping = 1
+	// FieldTypeManualAnnotation 人工标注类型
+	FieldTypeManualAnnotation FieldTypeMapping = 2
+)
+
+type ExptTurnResultFilterKeyMapping struct {
+	SpaceID   int64            `json:"space_id"`   // 空间id
+	ExptID    int64            `json:"expt_id"`    // 实验id
+	FromField string           `json:"from_field"` // 筛选项唯一键，评估器: evaluator_version_id，人工标准：tag_key_id
+	ToKey     string           `json:"to_key"`     // ck侧的map key，评估器：key1 ~ key10，人工标准：key1 ~ key100
+	FieldType FieldTypeMapping `json:"field_type"` // 映射类型，Evaluator —— 1，人工标注—— 2
 }
 
 type ScoreFilter struct {
@@ -454,6 +534,7 @@ type ColumnEvalSetField struct {
 	Name        *string
 	Description *string
 	ContentType ContentType
+	TextSchema  *string
 }
 
 type ColumnEvaluator struct {
@@ -463,4 +544,44 @@ type ColumnEvaluator struct {
 	Name               *string
 	Version            *string
 	Description        *string
+}
+
+type ExptTurnResultFilterEntity struct {
+	SpaceID                 int64              `json:"space_id"`
+	ExptID                  int64              `json:"expt_id"`
+	ItemID                  int64              `json:"item_id"`
+	ItemIdx                 int32              `json:"item_idx"`
+	TurnID                  int64              `json:"turn_id"`
+	Status                  ItemRunState       `json:"status"`
+	EvalTargetData          map[string]string  `json:"eval_target_data"`
+	EvaluatorScore          map[string]float64 `json:"evaluator_score"`
+	AnnotationFloat         map[string]float64 `json:"annotation_float"`
+	AnnotationBool          map[string]bool    `json:"annotation_bool"`
+	AnnotationString        map[string]string  `json:"annotation_string"`
+	CreatedDate             time.Time          `json:"created_date"`
+	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
+	EvalSetVersionID        int64              `json:"eval_set_version_id"`
+	CreatedAt               time.Time          `json:"created_at"`
+	UpdatedAt               time.Time          `json:"updated_at"`
+}
+
+type BmqProducerCfg struct {
+	Topic   string `json:"topic"`
+	Cluster string `json:"cluster"`
+}
+
+// IntersectInt64String 返回两个集合的交集（int64和string）
+func IntersectInt64String(a []int64, b []string) []int64 {
+	bSet := make(map[string]struct{}, len(b))
+	for _, s := range b {
+		bSet[s] = struct{}{}
+	}
+	var res []int64
+	for _, v := range a {
+		vs := strconv.FormatInt(v, 10)
+		if _, ok := bSet[vs]; ok {
+			res = append(res, v)
+		}
+	}
+	return res
 }

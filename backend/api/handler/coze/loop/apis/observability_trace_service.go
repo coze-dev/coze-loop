@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilitytraceservice"
 )
 
@@ -31,12 +30,6 @@ func GetTrace(ctx context.Context, c *app.RequestContext) {
 // @router /api/observability/v1/traces/batch_get_advance_info [POST]
 func BatchGetTracesAdvanceInfo(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.BatchGetTracesAdvanceInfo)
-}
-
-// IngestTraces .
-// @router /v1/loop/traces/ingest [POST]
-func IngestTraces(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.IngestTraces)
 }
 
 // GetTracesMetaInfo .
@@ -67,4 +60,28 @@ func DeleteView(ctx context.Context, c *app.RequestContext) {
 // @router /api/observability/v1/views/list_view [POST]
 func ListViews(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListViews)
+}
+
+// CreateManualAnnotation .
+// @router /api/observability/v1/annotations [POST]
+func CreateManualAnnotation(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.CreateManualAnnotation)
+}
+
+// UpdateManualAnnotation .
+// @router /api/observability/v1/annotations/:annotation_id [PUT]
+func UpdateManualAnnotation(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.UpdateManualAnnotation)
+}
+
+// DeleteManualAnnotation .
+// @router /api/observability/v1/annotations/:annotation_id [DELETE]
+func DeleteManualAnnotation(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.DeleteManualAnnotation)
+}
+
+// ListAnnotations .
+// @router /api/observability/v1/annotations/list [POST]
+func ListAnnotations(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.ListAnnotations)
 }

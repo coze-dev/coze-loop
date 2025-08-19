@@ -1,0 +1,29 @@
+service:
+  type: ClusterIP
+  port: 10911
+  targetPort: 10911
+
+image:
+  registry: "docker.io"
+  repository: "apache"
+  image: "rocketmq"
+  tag: "5.3.3"
+  pullPolicy: IfNotPresent
+  pullSecrets: "coze-loop-image-secret"
+
+deployment:
+  replicaCount: 1
+  dataMountPath: "/store"
+  terminationGracePeriodSeconds: 5
+
+liveness:
+  startSeconds: 10
+  intervalSeconds: 8
+  timeoutSeconds: 15
+  shutdownFailureTimes: 5
+
+# customization
+custom:
+  image:
+    registry:
+    pullSecrets:

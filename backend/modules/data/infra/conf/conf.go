@@ -8,57 +8,63 @@ import (
 
 	"github.com/samber/lo"
 
-	dataset_conf "github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
+	dataconf "github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
 
-func NewConfiger(configFactory conf.IConfigLoaderFactory) (dataset_conf.IConfig, error) {
-	loader, err := configFactory.NewConfigLoader(consts.DataConfigFileName)
-	if err != nil {
-		return nil, err
-	}
+func NewConfigerFactory(configerFactory conf.IConfigLoaderFactory) (conf.IConfigLoader, error) {
+	return configerFactory.NewConfigLoader(consts.DataConfigFileName)
+}
+
+func NewConfiger(configLoader conf.IConfigLoader) dataconf.IConfig {
 	return &configer{
-		loader: loader,
-	}, nil
+		loader: configLoader,
+	}
 }
 
 type configer struct {
 	loader conf.IConfigLoader
 }
 
-func (c *configer) GetConsumerConfigs() *dataset_conf.ConsumerConfig {
+func (c *configer) GetConsumerConfigs() *dataconf.ConsumerConfig {
 	const key = "consumer_configs"
-	var conf *dataset_conf.ConsumerConfig
-	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataset_conf.ConsumerConfig{})
+	var conf *dataconf.ConsumerConfig
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.ConsumerConfig{})
 }
 
-func (c *configer) GetSnapshotRetry() *dataset_conf.SnapshotRetry {
+func (c *configer) GetSnapshotRetry() *dataconf.SnapshotRetry {
 	const key = "snapshot_retry"
-	var conf *dataset_conf.SnapshotRetry
-	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataset_conf.SnapshotRetry{})
+	var conf *dataconf.SnapshotRetry
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.SnapshotRetry{})
 }
 
-func (c *configer) GetProducerConfig() *dataset_conf.ProducerConfig {
+func (c *configer) GetProducerConfig() *dataconf.ProducerConfig {
 	const key = "job_mq_producer"
-	var conf *dataset_conf.ProducerConfig
-	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataset_conf.ProducerConfig{})
+	var conf *dataconf.ProducerConfig
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.ProducerConfig{})
 }
 
-func (c *configer) GetDatasetFeature() *dataset_conf.DatasetFeature {
+func (c *configer) GetDatasetFeature() *dataconf.DatasetFeature {
 	const key = "default_dataset_feature"
-	var conf *dataset_conf.DatasetFeature
-	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataset_conf.DatasetFeature{})
+	var conf *dataconf.DatasetFeature
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.DatasetFeature{})
 }
 
-func (c *configer) GetDatasetItemStorage() *dataset_conf.DatasetItemStorage {
+func (c *configer) GetDatasetItemStorage() *dataconf.DatasetItemStorage {
 	const key = "dataset_item_storage"
-	var conf *dataset_conf.DatasetItemStorage
-	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataset_conf.DatasetItemStorage{})
+	var conf *dataconf.DatasetItemStorage
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.DatasetItemStorage{})
 }
 
-func (c *configer) GetDatasetSpec() *dataset_conf.DatasetSpec {
+func (c *configer) GetDatasetSpec() *dataconf.DatasetSpec {
 	const key = "default_dataset_spec"
-	var conf *dataset_conf.DatasetSpec
-	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) != nil, conf, &dataset_conf.DatasetSpec{})
+	var conf *dataconf.DatasetSpec
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.DatasetSpec{})
+}
+
+func (c *configer) GetTagSpec() *dataconf.TagSpec {
+	const key = "default_tag_spec"
+	var conf *dataconf.TagSpec
+	return lo.Ternary(c.loader.UnmarshalKey(context.Background(), key, &conf) == nil, conf, &dataconf.TagSpec{})
 }

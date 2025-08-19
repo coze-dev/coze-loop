@@ -42,6 +42,21 @@ func (m *MockITraceRepo) EXPECT() *MockITraceRepoMockRecorder {
 	return m.recorder
 }
 
+// GetAnnotation mocks base method.
+func (m *MockITraceRepo) GetAnnotation(arg0 context.Context, arg1 *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnnotation", arg0, arg1)
+	ret0, _ := ret[0].(*loop_span.Annotation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnnotation indicates an expected call of GetAnnotation.
+func (mr *MockITraceRepoMockRecorder) GetAnnotation(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotation", reflect.TypeOf((*MockITraceRepo)(nil).GetAnnotation), arg0, arg1)
+}
+
 // GetTrace mocks base method.
 func (m *MockITraceRepo) GetTrace(arg0 context.Context, arg1 *repo.GetTraceParam) (loop_span.SpanList, error) {
 	m.ctrl.T.Helper()
@@ -57,6 +72,20 @@ func (mr *MockITraceRepoMockRecorder) GetTrace(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrace", reflect.TypeOf((*MockITraceRepo)(nil).GetTrace), arg0, arg1)
 }
 
+// InsertAnnotation mocks base method.
+func (m *MockITraceRepo) InsertAnnotation(arg0 context.Context, arg1 *repo.InsertAnnotationParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertAnnotation", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InsertAnnotation indicates an expected call of InsertAnnotation.
+func (mr *MockITraceRepoMockRecorder) InsertAnnotation(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertAnnotation", reflect.TypeOf((*MockITraceRepo)(nil).InsertAnnotation), arg0, arg1)
+}
+
 // InsertSpans mocks base method.
 func (m *MockITraceRepo) InsertSpans(arg0 context.Context, arg1 *repo.InsertTraceParam) error {
 	m.ctrl.T.Helper()
@@ -69,6 +98,21 @@ func (m *MockITraceRepo) InsertSpans(arg0 context.Context, arg1 *repo.InsertTrac
 func (mr *MockITraceRepoMockRecorder) InsertSpans(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertSpans", reflect.TypeOf((*MockITraceRepo)(nil).InsertSpans), arg0, arg1)
+}
+
+// ListAnnotations mocks base method.
+func (m *MockITraceRepo) ListAnnotations(arg0 context.Context, arg1 *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAnnotations", arg0, arg1)
+	ret0, _ := ret[0].(loop_span.AnnotationList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAnnotations indicates an expected call of ListAnnotations.
+func (mr *MockITraceRepoMockRecorder) ListAnnotations(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotations", reflect.TypeOf((*MockITraceRepo)(nil).ListAnnotations), arg0, arg1)
 }
 
 // ListSpans mocks base method.

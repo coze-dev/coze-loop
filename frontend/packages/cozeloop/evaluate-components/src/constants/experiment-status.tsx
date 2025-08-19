@@ -108,14 +108,14 @@ export const experimentItemRunStatusInfoList: ExperimentItemRunStatusInfo[] = [
     icon: <IconCozLoading />,
   },
   {
-    name: I18n.t('abort'),
+    name: I18n.t('to_be_executed'),
     status: TurnRunState.Queueing,
     color: 'grey',
     tagColor: 'primary',
     icon: <IconCozClockFill />,
   },
   {
-    name: I18n.t('to_be_executed'),
+    name: I18n.t('abort'),
     status: TurnRunState.Terminal,
     color: 'orange',
     tagColor: 'yellow',

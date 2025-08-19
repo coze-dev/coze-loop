@@ -53,6 +53,7 @@ func (p *PromptExecuteApplicationImpl) ExecuteInternal(ctx context.Context, req 
 		reqPromptVersion: req.GetVersion(),
 		messages:         convertor.BatchMessageDTO2DO(req.Messages),
 		variableVals:     convertor.BatchVariableValDTO2DO(req.VariableVals),
+		overrideParams:   overrideParamsConvert(req.OverridePromptParams),
 	})
 	var promptDO *entity.Prompt
 	var reply *entity.Reply
@@ -61,14 +62,11 @@ func (p *PromptExecuteApplicationImpl) ExecuteInternal(ctx context.Context, req 
 	}()
 	// 内部接口不鉴权
 	// retrieve prompt
-	promptDO, err = p.manageRepo.GetPrompt(ctx, repo.GetPromptParam{
-		PromptID:      req.GetPromptID(),
-		WithCommit:    true,
-		CommitVersion: req.GetVersion(),
-	})
+	promptDO, err = p.getPromptByID(ctx, req.GetWorkspaceID(), req.GetPromptID(), req.GetVersion())
 	if err != nil {
 		return r, err
 	}
+	overridePromptParams(promptDO, req.OverridePromptParams)
 	// execute
 	reply, err = p.promptService.Execute(ctx, service.ExecuteParam{
 		Prompt:       promptDO,
@@ -97,12 +95,26 @@ type startPromptExecutorSpanParam struct {
 	reqPromptVersion string
 	messages         []*entity.Message
 	variableVals     []*entity.VariableVal
+	overrideParams   *overrideParams
+}
+
+type overrideParams struct {
+	ModelConfig *entity.ModelConfig `json:"model_config"`
+}
+
+func overrideParamsConvert(dto *prompt.OverridePromptParams) *overrideParams {
+	if dto == nil {
+		return nil
+	}
+	return &overrideParams{
+		ModelConfig: convertor.ModelConfigDTO2DO(dto.GetModelConfig()),
+	}
 }
 
 func (p *PromptExecuteApplicationImpl) startPromptExecutorSpan(ctx context.Context, param startPromptExecutorSpanParam) (context.Context, cozeloop.Span) {
 	// 上游已经设置call_type过则不再设置
 	var hasSetCallType bool
-	if parentSpan := cozeloop.GetSpanFromContext(ctx); parentSpan != nil {
+	if parentSpan := cozeloop.GetSpanFromContext(ctx); parentSpan != nil && parentSpan.GetSpanID() != "" {
 		for k, v := range parentSpan.GetBaggage() {
 			if k == consts.SpanTagCallType && v != "" {
 				hasSetCallType = true
@@ -119,9 +131,10 @@ func (p *PromptExecuteApplicationImpl) startPromptExecutorSpan(ctx context.Conte
 			span.SetCallType(consts.SpanTagCallTypeEvaluation)
 		}
 		intput := map[string]any{
-			tracespec.PromptVersion:       param.reqPromptVersion,
-			consts.SpanTagPromptVariables: trace.VariableValsToSpanPromptVariables(param.variableVals),
-			consts.SpanTagMessages:        trace.MessagesToSpanMessages(param.messages),
+			tracespec.PromptVersion:            param.reqPromptVersion,
+			consts.SpanTagPromptVariables:      trace.VariableValsToSpanPromptVariables(param.variableVals),
+			consts.SpanTagMessages:             trace.MessagesToSpanMessages(param.messages),
+			consts.SpanTagOverridePromptParams: param.overrideParams,
 		}
 		if param.reqPromptKey != "" {
 			intput[tracespec.PromptKey] = param.reqPromptKey
@@ -163,4 +176,40 @@ func (p *PromptExecuteApplicationImpl) finishPromptExecutorSpan(ctx context.Cont
 		span.SetError(ctx, errors.New(errorx.ErrorWithoutStack(err)))
 	}
 	span.Finish(ctx)
+}
+
+func (p *PromptExecuteApplicationImpl) getPromptByID(ctx context.Context, spaceID int64, promptID int64, version string) (prompt *entity.Prompt, err error) {
+	var span looptracer.Span
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptHub, tracespec.VPromptHubSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	if span != nil {
+		span.SetInput(ctx, json.Jsonify(map[string]any{
+			consts.SpanTagPromptID:  strconv.FormatInt(promptID, 10),
+			tracespec.PromptVersion: version,
+		}))
+		defer func() {
+			if prompt != nil {
+				span.SetPrompt(ctx, loopentity.Prompt{PromptKey: prompt.PromptKey, Version: prompt.GetVersion()})
+				span.SetOutput(ctx, json.Jsonify(trace.PromptToSpanPrompt(prompt)))
+			}
+			if err != nil {
+				span.SetStatusCode(ctx, int(traceutil.GetTraceStatusCode(err)))
+				span.SetError(ctx, errors.New(errorx.ErrorWithoutStack(err)))
+			}
+			span.Finish(ctx)
+		}()
+	}
+	return p.manageRepo.GetPrompt(ctx, repo.GetPromptParam{
+		PromptID:      promptID,
+		WithCommit:    true,
+		CommitVersion: version,
+	})
+}
+
+func overridePromptParams(promptDO *entity.Prompt, overrideParams *prompt.OverridePromptParams) {
+	if promptDO == nil || overrideParams == nil {
+		return
+	}
+	if promptDO.GetPromptDetail() != nil && overrideParams.ModelConfig != nil {
+		promptDO.PromptCommit.PromptDetail.ModelConfig = convertor.ModelConfigDTO2DO(overrideParams.ModelConfig)
+	}
 }

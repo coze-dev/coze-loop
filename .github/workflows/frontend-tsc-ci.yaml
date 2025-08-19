@@ -2,16 +2,20 @@ name: CI@frontend - TS Check
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "release/**"]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-tsc-ci.yaml'
   pull_request:
-    branches: ["main"]
+    branches: ["main", "release/**"]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-tsc-ci.yaml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   setup:
@@ -19,19 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_VERSION: '18'
-      # should be ci trigger user
-      GIT_USER_NAME: 'mocayo'
-      GIT_USER_EMAIL: 'qihai@bytedance.com'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Config Git User
-        run: |
-          git config --local user.name ${{ env.GIT_USER_NAME }}
-          git config --local user.email ${{ env.GIT_USER_EMAIL }}
 
       - name: Setup Node
         uses: actions/setup-node@v3

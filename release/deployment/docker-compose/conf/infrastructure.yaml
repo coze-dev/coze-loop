@@ -1,0 +1,29 @@
+infra:
+  redis:
+    host: "cozeloop-redis"
+    port: 6379
+    password: "cozeloop-redis"
+  rds:
+    host: "cozeloop-mysql"
+    port: 3306
+    user: "root"
+    password: "cozeloop-mysql"
+    db: "cozeloop-mysql"
+  s3_config:
+    region: 'us-east-1'
+    endpoint: 'http://cozeloop-minio:19000'
+    bucket: 'cozeloop-minio'
+    access_key: 'root'
+    secret_access_key: 'cozeloop-minio'
+    force_path_style: false
+  ck_config:
+    host: "cozeloop-clickhouse:9008"
+    username: "default"
+    password: "cozeloop-clickhouse"
+    database: "cozeloop-clickhouse"
+    dial_timeout: 30
+    read_timeout: 60
+  idgen:
+    server_ids:
+      - 1
+  log_level: "info"

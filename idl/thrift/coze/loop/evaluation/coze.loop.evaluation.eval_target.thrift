@@ -70,7 +70,7 @@ struct BatchGetEvalTargetsBySourceResponse {
 
 struct ExecuteEvalTargetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
-    2: required i64 eval_target_id (api.path ='eval_target_version_id', api.js_conv="true", go.tag = 'json:"eval_target_id"')
+    2: required i64 eval_target_id (api.path ='eval_target_id', api.js_conv="true", go.tag = 'json:"eval_target_id"')
     3: required i64 eval_target_version_id (api.path ='eval_target_version_id', api.js_conv="true", go.tag = 'json:"eval_target_version_id"')
     4: required eval_target.EvalTargetInputData input_data
     5: optional i64 experiment_run_id (api.js_conv="true", go.tag = 'json:"experiment_run_id"')
@@ -145,6 +145,20 @@ struct ListSourceEvalTargetsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct BatchGetSourceEvalTargetsRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: optional list<string> source_target_ids
+    3: optional eval_target.EvalTargetType target_type
+
+    255: optional base.Base Base
+}
+
+struct BatchGetSourceEvalTargetsResponse {
+    1: optional list<eval_target.EvalTarget> eval_targets
+
+    255: base.BaseResp BaseResp
+}
+
 struct ListSourceEvalTargetVersionsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
     2: required string source_target_id
@@ -178,7 +192,7 @@ service EvalTargetService {
     ListSourceEvalTargetsResponse ListSourceEvalTargets(1: ListSourceEvalTargetsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/list_source")
     // Source评测对象版本列表
     ListSourceEvalTargetVersionsResponse ListSourceEvalTargetVersions(1: ListSourceEvalTargetVersionsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/list_source_version")
-
+    BatchGetSourceEvalTargetsResponse BatchGetSourceEvalTargets (1: BatchGetSourceEvalTargetsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_source")
     // 执行
     ExecuteEvalTargetResponse ExecuteEvalTarget(1: ExecuteEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/:eval_target_id/versions/:eval_target_version_id/execute")
     GetEvalTargetRecordResponse GetEvalTargetRecord(1: GetEvalTargetRecordRequest request) (api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_records/:eval_target_record_id")

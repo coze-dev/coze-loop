@@ -6,7 +6,7 @@ package loop_span
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -92,7 +92,6 @@ func (c *InputFilter) transform(ctx context.Context, span *Span) {
 		logs.CtxWarn(ctx, "fail to trans input %s into map", span.Input)
 		return
 	}
-	fmt.Println("===", out, c.keyWhiteListMap)
 	for key := range out {
 		if !c.keyWhiteListMap[key] {
 			delete(out, key)
@@ -180,10 +179,15 @@ func (p SpanTransCfgList) satisfyFilter(span *Span) bool {
 }
 
 func (p SpanTransCfgList) doFilter(ctx context.Context, spans SpanList) (SpanList, error) {
+	st := time.Now().UnixMicro()
 	out := make(SpanList, 0, len(spans))
 	redirectMap := make(map[string]string)
 	for _, span := range spans {
 		if !p.satisfyFilter(span) { // 不满足条件, 去除该Span
+			redirectMap[span.SpanID] = span.ParentID
+			continue
+		} else if span.LogicDeleteTime > 0 && span.LogicDeleteTime < st {
+			logs.CtxInfo(ctx, "span_id %s delete time %d reached, just drop the span", span.SpanID, span.LogicDeleteTime)
 			redirectMap[span.SpanID] = span.ParentID
 			continue
 		}
@@ -229,9 +233,6 @@ func (p SpanTransCfgList) doProcess(ctx context.Context, spans SpanList) (SpanLi
 }
 
 func (p SpanTransCfgList) Transform(ctx context.Context, spans SpanList) (SpanList, error) {
-	if len(p) == 0 {
-		return spans, nil
-	}
 	p.init()
 	spans, err := p.doFilter(ctx, spans)
 	if err != nil {

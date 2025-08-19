@@ -3,7 +3,9 @@
 
 package rpc
 
-import "context"
+import (
+	"context"
+)
 
 const (
 	AuthActionFileUpload        = "uploadFile"

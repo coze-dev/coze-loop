@@ -7,6 +7,7 @@ include "./coze.loop.foundation.user.thrift"
 include "./coze.loop.foundation.file.thrift"
 include "./coze.loop.foundation.openapi.thrift"
 
+
 service AuthService extends coze.loop.foundation.auth.AuthService{}
 service AuthNService extends coze.loop.foundation.authn.AuthNService{}
 service UserService extends coze.loop.foundation.user.UserService{}

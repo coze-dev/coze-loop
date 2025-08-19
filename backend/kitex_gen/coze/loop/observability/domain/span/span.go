@@ -5,6 +5,7 @@ package span
 import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"strings"
 )
 
@@ -392,22 +393,23 @@ func (p *AttrTos) Field3DeepEqual(src map[string]string) bool {
 }
 
 type OutputSpan struct {
-	TraceID         string            `thrift:"trace_id,1,required" frugal:"1,required,string" form:"trace_id,required" json:"trace_id,required" query:"trace_id,required"`
-	SpanID          string            `thrift:"span_id,2,required" frugal:"2,required,string" form:"span_id,required" json:"span_id,required" query:"span_id,required"`
-	ParentID        string            `thrift:"parent_id,3,required" frugal:"3,required,string" form:"parent_id,required" json:"parent_id,required" query:"parent_id,required"`
-	SpanName        string            `thrift:"span_name,4,required" frugal:"4,required,string" form:"span_name,required" json:"span_name,required" query:"span_name,required"`
-	SpanType        string            `thrift:"span_type,5,required" frugal:"5,required,string" form:"span_type,required" json:"span_type,required" query:"span_type,required"`
-	Type            SpanType          `thrift:"type,6,required" frugal:"6,required,string" form:"type,required" json:"type,required" query:"type,required"`
-	StartedAt       int64             `thrift:"started_at,7,required" frugal:"7,required,i64" json:"started_at" form:"started_at,required" query:"started_at,required"`
-	Duration        int64             `thrift:"duration,8,required" frugal:"8,required,i64" json:"duration" form:"duration,required" query:"duration,required"`
-	Status          SpanStatus        `thrift:"status,9,required" frugal:"9,required,string" form:"status,required" json:"status,required" query:"status,required"`
-	StatusCode      int32             `thrift:"status_code,10,required" frugal:"10,required,i32" form:"status_code,required" json:"status_code,required" query:"status_code,required"`
-	Input           string            `thrift:"input,11,required" frugal:"11,required,string" form:"input,required" json:"input,required" query:"input,required"`
-	Output          string            `thrift:"output,12,required" frugal:"12,required,string" form:"output,required" json:"output,required" query:"output,required"`
-	LogicDeleteDate *int64            `thrift:"logic_delete_date,13,optional" frugal:"13,optional,i64" json:"logic_delete_date" form:"logic_delete_date" query:"logic_delete_date"`
-	CustomTags      map[string]string `thrift:"custom_tags,101,optional" frugal:"101,optional,map<string:string>" form:"custom_tags" json:"custom_tags,omitempty" query:"custom_tags"`
-	AttrTos         *AttrTos          `thrift:"attr_tos,102,optional" frugal:"102,optional,AttrTos" form:"attr_tos" json:"attr_tos,omitempty" query:"attr_tos"`
-	SystemTags      map[string]string `thrift:"system_tags,103,optional" frugal:"103,optional,map<string:string>" form:"system_tags" json:"system_tags,omitempty" query:"system_tags"`
+	TraceID         string                   `thrift:"trace_id,1,required" frugal:"1,required,string" form:"trace_id,required" json:"trace_id,required" query:"trace_id,required"`
+	SpanID          string                   `thrift:"span_id,2,required" frugal:"2,required,string" form:"span_id,required" json:"span_id,required" query:"span_id,required"`
+	ParentID        string                   `thrift:"parent_id,3,required" frugal:"3,required,string" form:"parent_id,required" json:"parent_id,required" query:"parent_id,required"`
+	SpanName        string                   `thrift:"span_name,4,required" frugal:"4,required,string" form:"span_name,required" json:"span_name,required" query:"span_name,required"`
+	SpanType        string                   `thrift:"span_type,5,required" frugal:"5,required,string" form:"span_type,required" json:"span_type,required" query:"span_type,required"`
+	Type            SpanType                 `thrift:"type,6,required" frugal:"6,required,string" form:"type,required" json:"type,required" query:"type,required"`
+	StartedAt       int64                    `thrift:"started_at,7,required" frugal:"7,required,i64" json:"started_at" form:"started_at,required" query:"started_at,required"`
+	Duration        int64                    `thrift:"duration,8,required" frugal:"8,required,i64" json:"duration" form:"duration,required" query:"duration,required"`
+	Status          SpanStatus               `thrift:"status,9,required" frugal:"9,required,string" form:"status,required" json:"status,required" query:"status,required"`
+	StatusCode      int32                    `thrift:"status_code,10,required" frugal:"10,required,i32" form:"status_code,required" json:"status_code,required" query:"status_code,required"`
+	Input           string                   `thrift:"input,11,required" frugal:"11,required,string" form:"input,required" json:"input,required" query:"input,required"`
+	Output          string                   `thrift:"output,12,required" frugal:"12,required,string" form:"output,required" json:"output,required" query:"output,required"`
+	LogicDeleteDate *int64                   `thrift:"logic_delete_date,13,optional" frugal:"13,optional,i64" json:"logic_delete_date" form:"logic_delete_date" query:"logic_delete_date"`
+	CustomTags      map[string]string        `thrift:"custom_tags,101,optional" frugal:"101,optional,map<string:string>" form:"custom_tags" json:"custom_tags,omitempty" query:"custom_tags"`
+	AttrTos         *AttrTos                 `thrift:"attr_tos,102,optional" frugal:"102,optional,AttrTos" form:"attr_tos" json:"attr_tos,omitempty" query:"attr_tos"`
+	SystemTags      map[string]string        `thrift:"system_tags,103,optional" frugal:"103,optional,map<string:string>" form:"system_tags" json:"system_tags,omitempty" query:"system_tags"`
+	Annotations     []*annotation.Annotation `thrift:"annotations,104,optional" frugal:"104,optional,list<annotation.Annotation>" form:"annotations" json:"annotations,omitempty" query:"annotations"`
 }
 
 func NewOutputSpan() *OutputSpan {
@@ -548,6 +550,18 @@ func (p *OutputSpan) GetSystemTags() (v map[string]string) {
 	}
 	return p.SystemTags
 }
+
+var OutputSpan_Annotations_DEFAULT []*annotation.Annotation
+
+func (p *OutputSpan) GetAnnotations() (v []*annotation.Annotation) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAnnotations() {
+		return OutputSpan_Annotations_DEFAULT
+	}
+	return p.Annotations
+}
 func (p *OutputSpan) SetTraceID(val string) {
 	p.TraceID = val
 }
@@ -596,6 +610,9 @@ func (p *OutputSpan) SetAttrTos(val *AttrTos) {
 func (p *OutputSpan) SetSystemTags(val map[string]string) {
 	p.SystemTags = val
 }
+func (p *OutputSpan) SetAnnotations(val []*annotation.Annotation) {
+	p.Annotations = val
+}
 
 var fieldIDToName_OutputSpan = map[int16]string{
 	1:   "trace_id",
@@ -614,6 +631,7 @@ var fieldIDToName_OutputSpan = map[int16]string{
 	101: "custom_tags",
 	102: "attr_tos",
 	103: "system_tags",
+	104: "annotations",
 }
 
 func (p *OutputSpan) IsSetLogicDeleteDate() bool {
@@ -630,6 +648,10 @@ func (p *OutputSpan) IsSetAttrTos() bool {
 
 func (p *OutputSpan) IsSetSystemTags() bool {
 	return p.SystemTags != nil
+}
+
+func (p *OutputSpan) IsSetAnnotations() bool {
+	return p.Annotations != nil
 }
 
 func (p *OutputSpan) Read(iprot thrift.TProtocol) (err error) {
@@ -797,6 +819,14 @@ func (p *OutputSpan) Read(iprot thrift.TProtocol) (err error) {
 		case 103:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 104:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField104(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1101,6 +1131,29 @@ func (p *OutputSpan) ReadField103(iprot thrift.TProtocol) error {
 	p.SystemTags = _field
 	return nil
 }
+func (p *OutputSpan) ReadField104(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*annotation.Annotation, 0, size)
+	values := make([]annotation.Annotation, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Annotations = _field
+	return nil
+}
 
 func (p *OutputSpan) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1170,6 +1223,10 @@ func (p *OutputSpan) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField103(oprot); err != nil {
 			fieldId = 103
+			goto WriteFieldError
+		}
+		if err = p.writeField104(oprot); err != nil {
+			fieldId = 104
 			goto WriteFieldError
 		}
 	}
@@ -1476,6 +1533,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
 }
+func (p *OutputSpan) writeField104(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAnnotations() {
+		if err = oprot.WriteFieldBegin("annotations", thrift.LIST, 104); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Annotations)); err != nil {
+			return err
+		}
+		for _, v := range p.Annotations {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 104 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
+}
 
 func (p *OutputSpan) String() string {
 	if p == nil {
@@ -1537,6 +1620,9 @@ func (p *OutputSpan) DeepEqual(ano *OutputSpan) bool {
 		return false
 	}
 	if !p.Field103DeepEqual(ano.SystemTags) {
+		return false
+	}
+	if !p.Field104DeepEqual(ano.Annotations) {
 		return false
 	}
 	return true
@@ -1666,6 +1752,19 @@ func (p *OutputSpan) Field103DeepEqual(src map[string]string) bool {
 	for k, v := range p.SystemTags {
 		_src := src[k]
 		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field104DeepEqual(src []*annotation.Annotation) bool {
+
+	if len(p.Annotations) != len(src) {
+		return false
+	}
+	for i, v := range p.Annotations {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}

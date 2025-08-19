@@ -9,8 +9,10 @@ import (
 	"math/rand"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTrans(t *testing.T) {
@@ -172,6 +174,152 @@ func TestTrans(t *testing.T) {
 				}
 			}
 		}
+	}
+
+	st := time.Now().UnixMicro()
+	tests := []struct {
+		InputSpans  SpanList
+		OutputSpans SpanList
+	}{
+		{
+			InputSpans: SpanList{
+				{
+					SpanID:          "A",
+					ParentID:        "0",
+					LogicDeleteTime: st - time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "B",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "C",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "D",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "E",
+					ParentID:        "B",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+			},
+			OutputSpans: SpanList{
+				{
+					SpanID:          "B",
+					ParentID:        "0",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "C",
+					ParentID:        "0",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "D",
+					ParentID:        "0",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "E",
+					ParentID:        "B",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+			},
+		},
+		{
+			InputSpans: SpanList{
+				{
+					SpanID:          "A",
+					ParentID:        "0",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "B",
+					ParentID:        "A",
+					LogicDeleteTime: st - time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "C",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "D",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "E",
+					ParentID:        "B",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+			},
+			OutputSpans: SpanList{
+				{
+					SpanID:          "A",
+					ParentID:        "0",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "C",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "D",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+				{
+					SpanID:          "E",
+					ParentID:        "A",
+					LogicDeleteTime: st + time.Minute.Microseconds(),
+				},
+			},
+		},
+		{
+			InputSpans: SpanList{
+				{
+					SpanID:   "A",
+					ParentID: "0",
+				},
+				{
+					SpanID:   "C",
+					ParentID: "A",
+				},
+				{
+					SpanID:   "D",
+					ParentID: "A",
+				},
+			},
+			OutputSpans: SpanList{
+				{
+					SpanID:   "A",
+					ParentID: "0",
+				},
+				{
+					SpanID:   "C",
+					ParentID: "A",
+				},
+				{
+					SpanID:   "D",
+					ParentID: "A",
+				},
+			},
+		},
+	}
+	ctx := context.Background()
+	for _, tc := range tests {
+		var nilCfg SpanTransCfgList
+		out, err := nilCfg.Transform(ctx, tc.InputSpans)
+		assert.Nil(t, err)
+		assert.Equal(t, tc.OutputSpans, out)
 	}
 }
 

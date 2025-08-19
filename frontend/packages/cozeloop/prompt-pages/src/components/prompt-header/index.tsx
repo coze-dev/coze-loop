@@ -538,7 +538,7 @@ export function PromptHeader() {
         onCacnel={deleteModal.close}
         onOk={() => {
           deleteModal.close();
-          navigate('pe/prompts');
+          navigate(`${baseURL}/pe/prompts`);
         }}
       />
     </div>

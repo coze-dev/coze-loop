@@ -25,11 +25,6 @@ func LogTrafficMW(next endpoint.Endpoint) endpoint.Endpoint {
 	}
 
 	return func(ctx context.Context, req, resp any) (err error) {
-		err = next(ctx, req, resp)
-		if err == nil && disabled() {
-			return err
-		}
-
 		var (
 			info   = rpcinfo.GetRPCInfo(ctx)
 			bizErr kerrors.BizStatusErrorIface
@@ -38,6 +33,16 @@ func LogTrafficMW(next endpoint.Endpoint) endpoint.Endpoint {
 		if info != nil && info.To() != nil {
 			to = info.To().Method()
 		}
+
+		logs.CtxInfo(ctx, "[%s] start", to)
+		defer func() {
+			logs.CtxInfo(ctx, "[%s] end", to)
+		}()
+		err = next(ctx, req, resp)
+		if err == nil && disabled() {
+			return err
+		}
+
 		if info != nil && info.Invocation() != nil && info.Invocation().BizStatusErr() != nil {
 			bizErr = info.Invocation().BizStatusErr()
 		}

@@ -386,3 +386,44 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceVersionInfo(ctx context.Co
 	}
 	return nil
 }
+
+func (t *PromptSourceEvalTargetServiceImpl) BatchGetSource(ctx context.Context, spaceID int64, ids []string) (targets []*entity.EvalTarget, err error) {
+	promptQueries := make([]*rpc.MGetPromptQuery, 0)
+	for _, id := range ids {
+		promptID, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			logs.CtxError(ctx, "buildQueries ParseInt err=%v", err)
+			continue
+		}
+		promptQueries = append(promptQueries, &rpc.MGetPromptQuery{
+			PromptID: promptID,
+			Version:  nil,
+		})
+	}
+	if len(promptQueries) == 0 {
+		return nil, nil
+	}
+	prompts, err := t.promptRPCAdapter.MGetPrompt(ctx, spaceID, promptQueries)
+	if err != nil {
+		return nil, err
+	}
+	targets = make([]*entity.EvalTarget, 0)
+	for _, p := range prompts {
+		targets = append(targets, &entity.EvalTarget{
+			SpaceID:        spaceID,
+			SourceTargetID: fmt.Sprintf("%v", p.ID),
+			EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SpaceID:        spaceID,
+				EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+				Prompt: &entity.LoopPrompt{
+					PromptID:    p.ID,
+					Name:        gptr.Indirect(p.PromptBasic.DisplayName),
+					PromptKey:   p.PromptKey,
+					Description: gptr.Indirect(p.PromptBasic.Description),
+				},
+			},
+		})
+	}
+	return targets, nil
+}

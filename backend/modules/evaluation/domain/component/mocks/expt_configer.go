@@ -36,6 +36,20 @@ func (m *MockIConfiger) EXPECT() *MockIConfigerMockRecorder {
 	return m.recorder
 }
 
+// GetCKDBName mocks base method.
+func (m *MockIConfiger) GetCKDBName(arg0 context.Context) *entity.CKDBConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCKDBName", arg0)
+	ret0, _ := ret[0].(*entity.CKDBConfig)
+	return ret0
+}
+
+// GetCKDBName indicates an expected call of GetCKDBName.
+func (mr *MockIConfigerMockRecorder) GetCKDBName(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCKDBName", reflect.TypeOf((*MockIConfiger)(nil).GetCKDBName), arg0)
+}
+
 // GetConsumerConf mocks base method.
 func (m *MockIConfiger) GetConsumerConf(arg0 context.Context) *entity.ExptConsumerConf {
 	m.ctrl.T.Helper()
@@ -90,4 +104,18 @@ func (m *MockIConfiger) GetExptExecConf(arg0 context.Context, arg1 int64) *entit
 func (mr *MockIConfigerMockRecorder) GetExptExecConf(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExecConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptExecConf), arg0, arg1)
+}
+
+// GetExptTurnResultFilterBmqProducerCfg mocks base method.
+func (m *MockIConfiger) GetExptTurnResultFilterBmqProducerCfg(arg0 context.Context) *entity.BmqProducerCfg {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExptTurnResultFilterBmqProducerCfg", arg0)
+	ret0, _ := ret[0].(*entity.BmqProducerCfg)
+	return ret0
+}
+
+// GetExptTurnResultFilterBmqProducerCfg indicates an expected call of GetExptTurnResultFilterBmqProducerCfg.
+func (mr *MockIConfigerMockRecorder) GetExptTurnResultFilterBmqProducerCfg(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnResultFilterBmqProducerCfg", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnResultFilterBmqProducerCfg), arg0)
 }

@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 )
 
 type EvaluationSetSchema struct {
@@ -19,15 +21,17 @@ type EvaluationSetSchema struct {
 }
 
 type FieldSchema struct {
-	Key                  string             `json:"key,omitempty"`
-	Name                 string             `json:"name,omitempty"`
-	Description          string             `json:"description,omitempty"`
-	ContentType          ContentType        `json:"content_type,omitempty"`
-	DefaultDisplayFormat FieldDisplayFormat `json:"default_display_format,omitempty"`
-	Status               FieldStatus        `json:"status,omitempty"`
-	TextSchema           string             `json:"text_schema,omitempty"`
-	MultiModelSpec       *MultiModalSpec    `json:"multi_model_spec,omitempty"`
-	Hidden               bool               `json:"hidden,omitempty"`
+	Key                    string                               `json:"key,omitempty"`
+	Name                   string                               `json:"name,omitempty"`
+	Description            string                               `json:"description,omitempty"`
+	ContentType            ContentType                          `json:"content_type,omitempty"`
+	DefaultDisplayFormat   FieldDisplayFormat                   `json:"default_display_format,omitempty"`
+	Status                 FieldStatus                          `json:"status,omitempty"`
+	TextSchema             string                               `json:"text_schema,omitempty"`
+	MultiModelSpec         *MultiModalSpec                      `json:"multi_model_spec,omitempty"`
+	Hidden                 bool                                 `json:"hidden,omitempty"`
+	IsRequired             bool                                 `json:"is_required,omitempty"`
+	DefaultTransformations []*dataset.FieldTransformationConfig `json:"default_transformations,omitempty"`
 }
 
 type MultiModalSpec struct {

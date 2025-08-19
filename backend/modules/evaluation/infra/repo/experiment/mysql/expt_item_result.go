@@ -10,12 +10,14 @@ import (
 
 	"gorm.io/gen"
 	"gorm.io/gorm/clause"
+	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -27,6 +29,7 @@ type IExptItemResultDAO interface {
 	BatchCreateNX(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error)
 	GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) (itemIDList []int64, err error)
+	ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*model.ExptItemResult, int64, error)
 	SaveItemResults(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
 	UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any, opts ...db.Option) error
@@ -51,6 +54,9 @@ func NewExptItemResultDAO(db db.Provider) IExptItemResultDAO {
 
 func (dao *exptItemResultDAOImpl) BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResult
 	finds, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...)).Find()
 	if err != nil {
@@ -182,6 +188,37 @@ func (dao *exptItemResultDAOImpl) ScanItemResults(ctx context.Context, exptID, c
 	}
 
 	return res, res[len(res)-1].ID, nil
+}
+
+func (dao *exptItemResultDAOImpl) ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*model.ExptItemResult, int64, error) {
+	db := dao.provider.NewSession(ctx)
+	q := query.Use(db).ExptItemResult
+	conds := []gen.Condition{
+		q.SpaceID.Eq(spaceID),
+		q.ExptID.Eq(exptID),
+	}
+
+	query := q.WithContext(ctx).
+		Where(conds...).
+		Order(q.ID.Asc())
+	total, err := query.Count()
+	if err != nil {
+		return nil, 0, errorx.Wrapf(err, "ListItemResultsByExptID fail, exptID=%d, spaceID=%d, page=%v, desc=%v", exptID, spaceID, page, desc)
+	}
+	if desc {
+		query = query.Order(q.ID.Desc())
+	}
+	if page.Limit() > 0 {
+		query = query.Limit(page.Limit())
+	}
+	if page.Offset() > 0 {
+		query = query.Offset(page.Offset())
+	}
+	res, err := query.Find()
+	if err != nil {
+		return nil, 0, errorx.Wrapf(err, "ListItemResultsByExptID fail, exptID=%d, spaceID=%d, page=%v, desc=%v", exptID, spaceID, page, desc)
+	}
+	return res, total, nil
 }
 
 func (dao *exptItemResultDAOImpl) GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) (itemIDList []int64, err error) {

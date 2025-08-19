@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -253,6 +254,11 @@ func (e *EvaluatorServiceImpl) validateUpdateEvaluatorMetaRequest(ctx context.Co
 
 // UpdateEvaluatorDraft 修改 evaluator_version
 func (e *EvaluatorServiceImpl) UpdateEvaluatorDraft(ctx context.Context, versionDO *entity.Evaluator) error {
+	versionDO.BaseInfo.SetUpdatedAt(gptr.Of(time.Now().UnixMilli()))
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	versionDO.BaseInfo.SetUpdatedBy(&entity.UserInfo{
+		UserID: gptr.Of(userIDInContext),
+	})
 	return e.evaluatorRepo.UpdateEvaluatorDraft(ctx, versionDO)
 }
 
@@ -310,7 +316,7 @@ func buildListEvaluatorVersionRequest(ctx context.Context, request *entity.ListE
 // GetEvaluatorVersion 按 id 和版本号单个查询 evaluator_version version
 func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, evaluatorVersionID int64, includeDeleted bool) (*entity.Evaluator, error) {
 	// 获取 evaluator_version 元信息和版本内容
-	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, []int64{evaluatorVersionID}, includeDeleted)
+	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{evaluatorVersionID}, includeDeleted)
 	if err != nil {
 		return nil, err
 	}
@@ -320,8 +326,8 @@ func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, evaluato
 	return evaluatorDOList[0], nil
 }
 
-func (e *EvaluatorServiceImpl) BatchGetEvaluatorVersion(ctx context.Context, evaluatorVersionIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
-	return e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, evaluatorVersionIDs, includeDeleted)
+func (e *EvaluatorServiceImpl) BatchGetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
+	return e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, spaceID, evaluatorVersionIDs, includeDeleted)
 }
 
 // SubmitEvaluatorVersion 提交 evaluator_version 版本
@@ -377,7 +383,7 @@ func (e *EvaluatorServiceImpl) makeSubmitIdemKey(cid string) string {
 
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
-	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, []int64{request.EvaluatorVersionID}, false)
+	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, ptr.Of(request.SpaceID), []int64{request.EvaluatorVersionID}, false)
 	if err != nil {
 		return nil, err
 	}

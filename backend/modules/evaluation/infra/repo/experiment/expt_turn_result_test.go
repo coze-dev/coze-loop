@@ -12,9 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
+	mysqlMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
@@ -22,8 +23,8 @@ func TestExptTurnResultRepoImpl_UpdateTurnResultsWithItemIDs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -93,8 +94,8 @@ func TestExptTurnResultRepoImpl_UpdateTurnResults(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -176,8 +177,8 @@ func TestExptTurnResultRepoImpl_ScanTurnResults(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -272,8 +273,8 @@ func TestExptTurnResultRepoImpl_ScanTurnRunLogs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -368,8 +369,8 @@ func TestExptTurnResultRepoImpl_BatchCreateNX(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -440,8 +441,8 @@ func TestExptTurnResultRepoImpl_CreateTurnEvaluatorRefs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -512,8 +513,8 @@ func TestExptTurnResultRepoImpl_BatchGet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -616,8 +617,8 @@ func TestExptTurnResultRepoImpl_SaveTurnResults(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -688,8 +689,8 @@ func TestExptTurnResultRepoImpl_SaveTurnRunLogs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -760,8 +761,8 @@ func TestExptTurnResultRepoImpl_GetItemTurnResults(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -846,8 +847,8 @@ func TestExptTurnResultRepoImpl_GetItemTurnRunLogs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -940,8 +941,8 @@ func TestExptTurnResultRepoImpl_MGetItemTurnRunLogs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -1053,8 +1054,8 @@ func TestExptTurnResultRepoImpl_BatchCreateNXRunLog(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -1125,8 +1126,8 @@ func TestExptTurnResultRepoImpl_ListTurnResult(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -1270,8 +1271,8 @@ func TestExptTurnResultRepoImpl_BatchGetTurnEvaluatorResultRef(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -1373,8 +1374,8 @@ func TestExptTurnResultRepoImpl_GetTurnEvaluatorResultRefByExptID(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -1460,8 +1461,8 @@ func TestExptTurnResultRepoImpl_GetTurnEvaluatorResultRefByEvaluatorVersionID(t 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptTurnResultDAO := mocks.NewMockExptTurnResultDAO(ctrl)
-	mockExptTurnEvaluatorResultRefDAO := mocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
 
 	repo := &ExptTurnResultRepoImpl{
 		exptTurnResultDAO:             mockExptTurnResultDAO,
@@ -1542,6 +1543,315 @@ func TestExptTurnResultRepoImpl_GetTurnEvaluatorResultRefByEvaluatorVersionID(t 
 				assert.Equal(t, tt.want[0].ExptTurnResultID, got[0].ExptTurnResultID)
 				assert.Equal(t, tt.want[0].EvaluatorVersionID, got[0].EvaluatorVersionID)
 				assert.Equal(t, tt.want[0].EvaluatorResultID, got[0].EvaluatorResultID)
+			}
+		})
+	}
+}
+
+func TestExptTurnResultRepoImpl_CreateOrUpdateItemsTurnRunLogStatus(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+	mockIDGen := mocks.NewMockIIDGenerator(ctrl)
+
+	repo := &ExptTurnResultRepoImpl{
+		idgen:                         mockIDGen,
+		exptTurnResultDAO:             mockExptTurnResultDAO,
+		exptTurnEvaluatorResultRefDAO: mockExptTurnEvaluatorResultRefDAO,
+	}
+
+	tests := []struct {
+		name      string
+		spaceID   int64
+		exptID    int64
+		exptRunID int64
+		itemIDs   []int64
+		status    entity.TurnRunState
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name:      "Normal: create new run logs",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{1, 2},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				turnResults := []*model.ExptTurnResult{
+					{
+						ID:      1,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  1,
+						TurnID:  10,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+					{
+						ID:      2,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  2,
+						TurnID:  20,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+				}
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{1, 2}).
+					Return(turnResults, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 2).
+					Return([]int64{1001, 1002}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, runlogs []*model.ExptTurnResultRunLog, opts ...interface{}) error {
+						assert.Len(t, runlogs, 2)
+						assert.Equal(t, int64(1001), runlogs[0].ID)
+						assert.Equal(t, int64(1), runlogs[0].SpaceID)
+						assert.Equal(t, int64(100), runlogs[0].ExptID)
+						assert.Equal(t, int64(200), runlogs[0].ExptRunID)
+						assert.Equal(t, int64(1), runlogs[0].ItemID)
+						assert.Equal(t, int64(10), runlogs[0].TurnID)
+						assert.Equal(t, int32(entity.TurnRunState_Success), runlogs[0].Status)
+						assert.NotNil(t, runlogs[0].ErrMsg)
+						return nil
+					})
+
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{1, 2}, map[string]any{"status": int32(entity.TurnRunState_Success)}).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:      "Normal: update existing run logs",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{3},
+			status:    entity.TurnRunState_Fail,
+			mockSetup: func() {
+				turnResults := []*model.ExptTurnResult{
+					{
+						ID:      3,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  3,
+						TurnID:  30,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+				}
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{3}).
+					Return(turnResults, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1003}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{3}, map[string]any{"status": int32(entity.TurnRunState_Fail)}).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:      "Error: BatchGet failed",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{1, 2},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{1, 2}).
+					Return(nil, errorx.New("BatchGet failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:      "Error: ID generation failed",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{1},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				turnResults := []*model.ExptTurnResult{
+					{
+						ID:      1,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  1,
+						TurnID:  10,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+				}
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{1}).
+					Return(turnResults, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return(nil, errorx.New("ID generation failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:      "Error: BatchCreateNXRunLog failed",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{1},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				turnResults := []*model.ExptTurnResult{
+					{
+						ID:      1,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  1,
+						TurnID:  10,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+				}
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{1}).
+					Return(turnResults, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1001}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					Return(errorx.New("BatchCreateNXRunLog failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:      "Error: UpdateTurnRunLogWithItemIDs failed",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{1},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				turnResults := []*model.ExptTurnResult{
+					{
+						ID:      1,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  1,
+						TurnID:  10,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+				}
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{1}).
+					Return(turnResults, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1001}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{1}, map[string]any{"status": int32(entity.TurnRunState_Success)}).
+					Return(errorx.New("UpdateTurnRunLogWithItemIDs failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:      "Edge: empty itemIDs list",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{}).
+					Return([]*model.ExptTurnResult{}, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 0).
+					Return([]int64{}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, runlogs []*model.ExptTurnResultRunLog, opts ...interface{}) error {
+						assert.Len(t, runlogs, 0)
+						return nil
+					})
+
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{}, map[string]any{"status": int32(entity.TurnRunState_Success)}).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:      "Edge: Terminal state",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{1},
+			status:    entity.TurnRunState_Terminal,
+			mockSetup: func() {
+				turnResults := []*model.ExptTurnResult{
+					{
+						ID:      1,
+						SpaceID: 1,
+						ExptID:  100,
+						ItemID:  1,
+						TurnID:  10,
+						Status:  int32(entity.TurnRunState_Processing),
+					},
+				}
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{1}).
+					Return(turnResults, nil)
+
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1001}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, runlogs []*model.ExptTurnResultRunLog, opts ...interface{}) error {
+						assert.Equal(t, int32(entity.TurnRunState_Terminal), runlogs[0].Status)
+						return nil
+					})
+
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{1}, map[string]any{"status": int32(entity.TurnRunState_Terminal)}).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			err := repo.CreateOrUpdateItemsTurnRunLogStatus(context.Background(), tt.spaceID, tt.exptID, tt.exptRunID, tt.itemIDs, tt.status)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

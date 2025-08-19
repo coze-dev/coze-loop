@@ -15,12 +15,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/user"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
+	confmocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -34,6 +37,7 @@ func TestPromptManageApplicationImpl_ClonePrompt(t *testing.T) {
 		promptService   service.IPromptService
 		authRPCProvider rpc.IAuthProvider
 		userRPCProvider rpc.IUserProvider
+		configProvider  conf.IConfigProvider
 	}
 	type args struct {
 		ctx     context.Context
@@ -216,6 +220,7 @@ func TestPromptManageApplicationImpl_ClonePrompt(t *testing.T) {
 				promptService:   ttFields.promptService,
 				authRPCProvider: ttFields.authRPCProvider,
 				userRPCProvider: ttFields.userRPCProvider,
+				configProvider:  ttFields.configProvider,
 			}
 
 			got, err := d.ClonePrompt(tt.args.ctx, tt.args.request)
@@ -233,6 +238,7 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 		promptService   service.IPromptService
 		authRPCProvider rpc.IAuthProvider
 		userRPCProvider rpc.IUserProvider
+		configProvider  conf.IConfigProvider
 	}
 	type args struct {
 		ctx     context.Context
@@ -626,6 +632,297 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "get prompt with default config success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{
+					PromptID:  1,
+					WithDraft: true,
+					UserID:    "123",
+				}).Return(&entity.Prompt{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "test_key",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:       "test_name",
+						Description:       "test_description",
+						LatestVersion:     "1.0.0",
+						CreatedBy:         "test_creator",
+						UpdatedBy:         "test_updater",
+						CreatedAt:         now,
+						UpdatedAt:         now,
+						LatestCommittedAt: nil,
+					},
+					PromptDraft: &entity.PromptDraft{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleUser,
+										Content: ptr.Of("test content"),
+									},
+								},
+							},
+						},
+						DraftInfo: &entity.DraftInfo{
+							UserID:      "123",
+							BaseVersion: "1.0.0",
+							IsModified:  true,
+							CreatedAt:   now,
+							UpdatedAt:   now,
+						},
+					},
+				}, nil)
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockConfig := &prompt.PromptDetail{
+					PromptTemplate: &prompt.PromptTemplate{
+						TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+						Messages: []*prompt.Message{
+							{
+								Role:    ptr.Of(prompt.RoleSystem),
+								Content: ptr.Of("Default system message"),
+							},
+						},
+					},
+				}
+				mockConfigProvider := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfigProvider.EXPECT().GetPromptDefaultConfig(gomock.Any()).Return(mockConfig, nil)
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+					configProvider:  mockConfigProvider,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.GetPromptRequest{
+					PromptID:          ptr.Of(int64(1)),
+					WithDraft:         ptr.Of(true),
+					WithDefaultConfig: ptr.Of(true),
+				},
+			},
+			want: &manage.GetPromptResponse{
+				Prompt: &prompt.Prompt{
+					ID:          ptr.Of(int64(1)),
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptKey:   ptr.Of("test_key"),
+					PromptBasic: &prompt.PromptBasic{
+						DisplayName:       ptr.Of("test_name"),
+						Description:       ptr.Of("test_description"),
+						LatestVersion:     ptr.Of("1.0.0"),
+						CreatedBy:         ptr.Of("test_creator"),
+						UpdatedBy:         ptr.Of("test_updater"),
+						CreatedAt:         ptr.Of(now.UnixMilli()),
+						UpdatedAt:         ptr.Of(now.UnixMilli()),
+						LatestCommittedAt: nil,
+					},
+					PromptDraft: &prompt.PromptDraft{
+						Detail: &prompt.PromptDetail{
+							PromptTemplate: &prompt.PromptTemplate{
+								TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+								Messages: []*prompt.Message{
+									{
+										Role:    ptr.Of(prompt.RoleUser),
+										Content: ptr.Of("test content"),
+									},
+								},
+							},
+						},
+						DraftInfo: &prompt.DraftInfo{
+							UserID:      ptr.Of("123"),
+							BaseVersion: ptr.Of("1.0.0"),
+							IsModified:  ptr.Of(true),
+							CreatedAt:   ptr.Of(now.UnixMilli()),
+							UpdatedAt:   ptr.Of(now.UnixMilli()),
+						},
+					},
+				},
+				DefaultConfig: &prompt.PromptDetail{
+					PromptTemplate: &prompt.PromptTemplate{
+						TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+						Messages: []*prompt.Message{
+							{
+								Role:    ptr.Of(prompt.RoleSystem),
+								Content: ptr.Of("Default system message"),
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "get prompt with default config false",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{
+					PromptID:  1,
+					WithDraft: true,
+					UserID:    "123",
+				}).Return(&entity.Prompt{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "test_key",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:       "test_name",
+						Description:       "test_description",
+						LatestVersion:     "1.0.0",
+						CreatedBy:         "test_creator",
+						UpdatedBy:         "test_updater",
+						CreatedAt:         now,
+						UpdatedAt:         now,
+						LatestCommittedAt: nil,
+					},
+					PromptDraft: &entity.PromptDraft{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleUser,
+										Content: ptr.Of("test content"),
+									},
+								},
+							},
+						},
+						DraftInfo: &entity.DraftInfo{
+							UserID:      "123",
+							BaseVersion: "1.0.0",
+							IsModified:  true,
+							CreatedAt:   now,
+							UpdatedAt:   now,
+						},
+					},
+				}, nil)
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.GetPromptRequest{
+					PromptID:          ptr.Of(int64(1)),
+					WithDraft:         ptr.Of(true),
+					WithDefaultConfig: ptr.Of(false),
+				},
+			},
+			want: &manage.GetPromptResponse{
+				Prompt: &prompt.Prompt{
+					ID:          ptr.Of(int64(1)),
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptKey:   ptr.Of("test_key"),
+					PromptBasic: &prompt.PromptBasic{
+						DisplayName:       ptr.Of("test_name"),
+						Description:       ptr.Of("test_description"),
+						LatestVersion:     ptr.Of("1.0.0"),
+						CreatedBy:         ptr.Of("test_creator"),
+						UpdatedBy:         ptr.Of("test_updater"),
+						CreatedAt:         ptr.Of(now.UnixMilli()),
+						UpdatedAt:         ptr.Of(now.UnixMilli()),
+						LatestCommittedAt: nil,
+					},
+					PromptDraft: &prompt.PromptDraft{
+						Detail: &prompt.PromptDetail{
+							PromptTemplate: &prompt.PromptTemplate{
+								TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+								Messages: []*prompt.Message{
+									{
+										Role:    ptr.Of(prompt.RoleUser),
+										Content: ptr.Of("test content"),
+									},
+								},
+							},
+						},
+						DraftInfo: &prompt.DraftInfo{
+							UserID:      ptr.Of("123"),
+							BaseVersion: ptr.Of("1.0.0"),
+							IsModified:  ptr.Of(true),
+							CreatedAt:   ptr.Of(now.UnixMilli()),
+							UpdatedAt:   ptr.Of(now.UnixMilli()),
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "config provider error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{
+					PromptID:  1,
+					WithDraft: true,
+					UserID:    "123",
+				}).Return(&entity.Prompt{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "test_key",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:       "test_name",
+						Description:       "test_description",
+						LatestVersion:     "1.0.0",
+						CreatedBy:         "test_creator",
+						UpdatedBy:         "test_updater",
+						CreatedAt:         now,
+						UpdatedAt:         now,
+						LatestCommittedAt: nil,
+					},
+					PromptDraft: &entity.PromptDraft{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleUser,
+										Content: ptr.Of("test content"),
+									},
+								},
+							},
+						},
+						DraftInfo: &entity.DraftInfo{
+							UserID:      "123",
+							BaseVersion: "1.0.0",
+							IsModified:  true,
+							CreatedAt:   now,
+							UpdatedAt:   now,
+						},
+					},
+				}, nil)
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockConfigProvider := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfigProvider.EXPECT().GetPromptDefaultConfig(gomock.Any()).Return(nil, errorx.New("config provider error"))
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+					configProvider:  mockConfigProvider,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.GetPromptRequest{
+					PromptID:          ptr.Of(int64(1)),
+					WithDraft:         ptr.Of(true),
+					WithDefaultConfig: ptr.Of(true),
+				},
+			},
+			want:    manage.NewGetPromptResponse(),
+			wantErr: errorx.New("config provider error"),
+		},
 	}
 
 	for _, tt := range tests {
@@ -640,6 +937,7 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 				promptService:   ttFields.promptService,
 				authRPCProvider: ttFields.authRPCProvider,
 				userRPCProvider: ttFields.userRPCProvider,
+				configProvider:  ttFields.configProvider,
 			}
 
 			got, err := d.GetPrompt(tt.args.ctx, tt.args.request)
@@ -653,10 +951,12 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 
 func TestPromptManageApplicationImpl_RevertDraftFromCommit(t *testing.T) {
 	type fields struct {
-		manageRepo      repo.IManageRepo
-		promptService   service.IPromptService
-		authRPCProvider rpc.IAuthProvider
-		userRPCProvider rpc.IUserProvider
+		manageRepo       repo.IManageRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
 	}
 	type args struct {
 		ctx     context.Context
@@ -894,10 +1194,12 @@ func TestPromptManageApplicationImpl_RevertDraftFromCommit(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			app := &PromptManageApplicationImpl{
-				manageRepo:      ttFields.manageRepo,
-				promptService:   ttFields.promptService,
-				authRPCProvider: ttFields.authRPCProvider,
-				userRPCProvider: ttFields.userRPCProvider,
+				manageRepo:       ttFields.manageRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
 			}
 
 			got, err := app.RevertDraftFromCommit(tt.args.ctx, tt.args.request)
@@ -911,10 +1213,12 @@ func TestPromptManageApplicationImpl_RevertDraftFromCommit(t *testing.T) {
 
 func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 	type fields struct {
-		manageRepo      repo.IManageRepo
-		promptService   service.IPromptService
-		authRPCProvider rpc.IAuthProvider
-		userRPCProvider rpc.IUserProvider
+		manageRepo       repo.IManageRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
 	}
 	type args struct {
 		ctx     context.Context
@@ -1302,10 +1606,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			app := &PromptManageApplicationImpl{
-				manageRepo:      ttFields.manageRepo,
-				promptService:   ttFields.promptService,
-				authRPCProvider: ttFields.authRPCProvider,
-				userRPCProvider: ttFields.userRPCProvider,
+				manageRepo:       ttFields.manageRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
 			}
 
 			got, err := app.ListCommit(tt.args.ctx, tt.args.request)
@@ -1319,10 +1625,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 
 func TestPromptManageApplicationImpl_CommitDraft(t *testing.T) {
 	type fields struct {
-		manageRepo      repo.IManageRepo
-		promptService   service.IPromptService
-		authRPCProvider rpc.IAuthProvider
-		userRPCProvider rpc.IUserProvider
+		manageRepo       repo.IManageRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
 	}
 	type args struct {
 		ctx     context.Context
@@ -1500,13 +1808,474 @@ func TestPromptManageApplicationImpl_CommitDraft(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			app := &PromptManageApplicationImpl{
-				manageRepo:      ttFields.manageRepo,
-				promptService:   ttFields.promptService,
-				authRPCProvider: ttFields.authRPCProvider,
-				userRPCProvider: ttFields.userRPCProvider,
+				manageRepo:       ttFields.manageRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
 			}
 
 			got, err := app.CommitDraft(tt.args.ctx, tt.args.request)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
+	type fields struct {
+		manageRepo       repo.IManageRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
+	}
+	type args struct {
+		ctx     context.Context
+		request *manage.ListPromptRequest
+	}
+	now := time.Now()
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *manage.ListPromptResponse
+		wantErr      error
+	}{
+		{
+			name: "user not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.ListPromptRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PageNum:     ptr.Of(int32(1)),
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want:    manage.NewListPromptResponse(),
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found")),
+		},
+		{
+			name: "permission check error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(errorx.New("permission denied"))
+
+				return fields{
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.ListPromptRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PageNum:     ptr.Of(int32(1)),
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want:    manage.NewListPromptResponse(),
+			wantErr: errorx.New("permission denied"),
+		},
+		{
+			name: "list prompt with committed only true",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().ListPrompt(gomock.Any(), repo.ListPromptParam{
+					SpaceID:       100,
+					UserID:        "123",
+					CommittedOnly: true,
+					PageNum:       1,
+					PageSize:      10,
+					OrderBy:       mysql.ListPromptBasicOrderByID,
+					Asc:           false,
+				}).Return(&repo.ListPromptResult{
+					Total: 1,
+					PromptDOs: []*entity.Prompt{
+						{
+							ID:        1,
+							SpaceID:   100,
+							PromptKey: "test_key",
+							PromptBasic: &entity.PromptBasic{
+								DisplayName:       "test_name",
+								Description:       "test_description",
+								LatestVersion:     "1.0.0",
+								CreatedBy:         "test_creator",
+								UpdatedBy:         "test_updater",
+								CreatedAt:         now,
+								UpdatedAt:         now,
+								LatestCommittedAt: &now,
+							},
+						},
+					},
+				}, nil)
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), []string{"test_creator"}).Return([]*rpc.UserInfo{
+					{
+						UserID:   "test_creator",
+						UserName: "Test Creator",
+					},
+				}, nil)
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+					userRPCProvider: mockUser,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.ListPromptRequest{
+					WorkspaceID:   ptr.Of(int64(100)),
+					CommittedOnly: ptr.Of(true),
+					PageNum:       ptr.Of(int32(1)),
+					PageSize:      ptr.Of(int32(10)),
+				},
+			},
+			want: &manage.ListPromptResponse{
+				Total: ptr.Of(int32(1)),
+				Prompts: []*prompt.Prompt{
+					{
+						ID:          ptr.Of(int64(1)),
+						WorkspaceID: ptr.Of(int64(100)),
+						PromptKey:   ptr.Of("test_key"),
+						PromptBasic: &prompt.PromptBasic{
+							DisplayName:       ptr.Of("test_name"),
+							Description:       ptr.Of("test_description"),
+							LatestVersion:     ptr.Of("1.0.0"),
+							CreatedBy:         ptr.Of("test_creator"),
+							UpdatedBy:         ptr.Of("test_updater"),
+							CreatedAt:         ptr.Of(now.UnixMilli()),
+							UpdatedAt:         ptr.Of(now.UnixMilli()),
+							LatestCommittedAt: ptr.Of(now.UnixMilli()),
+						},
+					},
+				},
+				Users: []*user.UserInfoDetail{
+					{
+						UserID:    ptr.Of("test_creator"),
+						Name:      ptr.Of("Test Creator"),
+						NickName:  ptr.Of(""),
+						AvatarURL: ptr.Of(""),
+						Email:     ptr.Of(""),
+						Mobile:    ptr.Of(""),
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "list prompt with committed only false",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().ListPrompt(gomock.Any(), repo.ListPromptParam{
+					SpaceID:       100,
+					UserID:        "123",
+					CommittedOnly: false,
+					PageNum:       1,
+					PageSize:      10,
+					OrderBy:       mysql.ListPromptBasicOrderByID,
+					Asc:           false,
+				}).Return(&repo.ListPromptResult{
+					Total: 2,
+					PromptDOs: []*entity.Prompt{
+						{
+							ID:        1,
+							SpaceID:   100,
+							PromptKey: "test_key_1",
+							PromptBasic: &entity.PromptBasic{
+								DisplayName:       "test_name_1",
+								Description:       "test_description_1",
+								LatestVersion:     "1.0.0",
+								CreatedBy:         "test_creator",
+								UpdatedBy:         "test_updater",
+								CreatedAt:         now,
+								UpdatedAt:         now,
+								LatestCommittedAt: &now,
+							},
+						},
+						{
+							ID:        2,
+							SpaceID:   100,
+							PromptKey: "test_key_2",
+							PromptBasic: &entity.PromptBasic{
+								DisplayName:       "test_name_2",
+								Description:       "test_description_2",
+								LatestVersion:     "",
+								CreatedBy:         "test_creator",
+								UpdatedBy:         "test_updater",
+								CreatedAt:         now,
+								UpdatedAt:         now,
+								LatestCommittedAt: nil,
+							},
+						},
+					},
+				}, nil)
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), []string{"test_creator"}).Return([]*rpc.UserInfo{
+					{
+						UserID:   "test_creator",
+						UserName: "Test Creator",
+					},
+				}, nil)
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+					userRPCProvider: mockUser,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.ListPromptRequest{
+					WorkspaceID:   ptr.Of(int64(100)),
+					CommittedOnly: ptr.Of(false),
+					PageNum:       ptr.Of(int32(1)),
+					PageSize:      ptr.Of(int32(10)),
+				},
+			},
+			want: &manage.ListPromptResponse{
+				Total: ptr.Of(int32(2)),
+				Prompts: []*prompt.Prompt{
+					{
+						ID:          ptr.Of(int64(1)),
+						WorkspaceID: ptr.Of(int64(100)),
+						PromptKey:   ptr.Of("test_key_1"),
+						PromptBasic: &prompt.PromptBasic{
+							DisplayName:       ptr.Of("test_name_1"),
+							Description:       ptr.Of("test_description_1"),
+							LatestVersion:     ptr.Of("1.0.0"),
+							CreatedBy:         ptr.Of("test_creator"),
+							UpdatedBy:         ptr.Of("test_updater"),
+							CreatedAt:         ptr.Of(now.UnixMilli()),
+							UpdatedAt:         ptr.Of(now.UnixMilli()),
+							LatestCommittedAt: ptr.Of(now.UnixMilli()),
+						},
+					},
+					{
+						ID:          ptr.Of(int64(2)),
+						WorkspaceID: ptr.Of(int64(100)),
+						PromptKey:   ptr.Of("test_key_2"),
+						PromptBasic: &prompt.PromptBasic{
+							DisplayName:   ptr.Of("test_name_2"),
+							Description:   ptr.Of("test_description_2"),
+							LatestVersion: ptr.Of(""),
+							CreatedBy:     ptr.Of("test_creator"),
+							UpdatedBy:     ptr.Of("test_updater"),
+							CreatedAt:     ptr.Of(now.UnixMilli()),
+							UpdatedAt:     ptr.Of(now.UnixMilli()),
+						},
+					},
+				},
+				Users: []*user.UserInfoDetail{
+					{
+						UserID:    ptr.Of("test_creator"),
+						Name:      ptr.Of("Test Creator"),
+						NickName:  ptr.Of(""),
+						AvatarURL: ptr.Of(""),
+						Email:     ptr.Of(""),
+						Mobile:    ptr.Of(""),
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "list prompt with user draft association",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().ListPrompt(gomock.Any(), repo.ListPromptParam{
+					SpaceID:  100,
+					UserID:   "123",
+					KeyWord:  "draft",
+					PageNum:  1,
+					PageSize: 10,
+					OrderBy:  mysql.ListPromptBasicOrderByID,
+					Asc:      false,
+				}).Return(&repo.ListPromptResult{
+					Total: 1,
+					PromptDOs: []*entity.Prompt{
+						{
+							ID:        1,
+							SpaceID:   100,
+							PromptKey: "test_key",
+							PromptBasic: &entity.PromptBasic{
+								DisplayName:       "test_name",
+								Description:       "test_description",
+								LatestVersion:     "1.0.0",
+								CreatedBy:         "test_creator",
+								UpdatedBy:         "test_updater",
+								CreatedAt:         now,
+								UpdatedAt:         now,
+								LatestCommittedAt: &now,
+							},
+							PromptDraft: &entity.PromptDraft{
+								PromptDetail: &entity.PromptDetail{
+									PromptTemplate: &entity.PromptTemplate{
+										TemplateType: entity.TemplateTypeNormal,
+										Messages: []*entity.Message{
+											{
+												Role:    entity.RoleUser,
+												Content: ptr.Of("draft content"),
+											},
+										},
+									},
+								},
+								DraftInfo: &entity.DraftInfo{
+									UserID:      "123",
+									BaseVersion: "1.0.0",
+									IsModified:  true,
+									CreatedAt:   now,
+									UpdatedAt:   now,
+								},
+							},
+						},
+					},
+				}, nil)
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), []string{"test_creator"}).Return([]*rpc.UserInfo{
+					{
+						UserID:   "test_creator",
+						UserName: "Test Creator",
+					},
+				}, nil)
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+					userRPCProvider: mockUser,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.ListPromptRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					KeyWord:     ptr.Of("draft"),
+					PageNum:     ptr.Of(int32(1)),
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want: &manage.ListPromptResponse{
+				Total: ptr.Of(int32(1)),
+				Prompts: []*prompt.Prompt{
+					{
+						ID:          ptr.Of(int64(1)),
+						WorkspaceID: ptr.Of(int64(100)),
+						PromptKey:   ptr.Of("test_key"),
+						PromptBasic: &prompt.PromptBasic{
+							DisplayName:       ptr.Of("test_name"),
+							Description:       ptr.Of("test_description"),
+							LatestVersion:     ptr.Of("1.0.0"),
+							CreatedBy:         ptr.Of("test_creator"),
+							UpdatedBy:         ptr.Of("test_updater"),
+							CreatedAt:         ptr.Of(now.UnixMilli()),
+							UpdatedAt:         ptr.Of(now.UnixMilli()),
+							LatestCommittedAt: ptr.Of(now.UnixMilli()),
+						},
+						PromptDraft: &prompt.PromptDraft{
+							Detail: &prompt.PromptDetail{
+								PromptTemplate: &prompt.PromptTemplate{
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+									Messages: []*prompt.Message{
+										{
+											Role:    ptr.Of(prompt.RoleUser),
+											Content: ptr.Of("draft content"),
+										},
+									},
+								},
+							},
+							DraftInfo: &prompt.DraftInfo{
+								UserID:      ptr.Of("123"),
+								BaseVersion: ptr.Of("1.0.0"),
+								IsModified:  ptr.Of(true),
+								CreatedAt:   ptr.Of(now.UnixMilli()),
+								UpdatedAt:   ptr.Of(now.UnixMilli()),
+							},
+						},
+					},
+				},
+				Users: []*user.UserInfoDetail{
+					{
+						UserID:    ptr.Of("test_creator"),
+						Name:      ptr.Of("Test Creator"),
+						NickName:  ptr.Of(""),
+						AvatarURL: ptr.Of(""),
+						Email:     ptr.Of(""),
+						Mobile:    ptr.Of(""),
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "list prompt repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().ListPrompt(gomock.Any(), repo.ListPromptParam{
+					SpaceID:  100,
+					UserID:   "123",
+					PageNum:  1,
+					PageSize: 10,
+					OrderBy:  mysql.ListPromptBasicOrderByID,
+					Asc:      false,
+				}).Return(nil, errorx.New("list prompt error"))
+
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				return fields{
+					manageRepo:      mockRepo,
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.ListPromptRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PageNum:     ptr.Of(int32(1)),
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want:    manage.NewListPromptResponse(),
+			wantErr: errorx.New("list prompt error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ttFields := tt.fieldsGetter(ctrl)
+
+			app := &PromptManageApplicationImpl{
+				manageRepo:       ttFields.manageRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
+			}
+
+			got, err := app.ListPrompt(tt.args.ctx, tt.args.request)
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if err == nil {
 				assert.Equal(t, tt.want, got)

@@ -45,8 +45,8 @@ type Role = string
 type ToolType = string
 
 type BatchGetPromptByPromptKeyRequest struct {
-	WorkspaceID *int64         `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	Queries     []*PromptQuery `thrift:"queries,2,optional" frugal:"2,optional,list<PromptQuery>" form:"queries" json:"queries,omitempty" query:"queries"`
+	WorkspaceID *int64         `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	Queries     []*PromptQuery `thrift:"queries,2,optional" frugal:"2,optional,list<PromptQuery>" form:"queries" json:"queries,omitempty"`
 	Base        *base.Base     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 

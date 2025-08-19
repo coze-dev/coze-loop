@@ -294,7 +294,7 @@ func (e EvalTargetApplicationImpl) ExecuteEvalTarget(ctx context.Context, reques
 	}
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		ObjectID:      strconv.FormatInt(request.EvalTargetID, 10),
 		SpaceID:       request.WorkspaceID,
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
 	})
@@ -364,4 +364,38 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetRecords(ctx context.Context
 	}
 	resp.EvalTargetRecords = dtoList
 	return resp, nil
+}
+
+func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context, request *eval_target.BatchGetSourceEvalTargetsRequest) (r *eval_target.BatchGetSourceEvalTargetsResponse, err error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if request.TargetType == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type is nil"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var res []*entity.EvalTarget
+	if e.typedOperators[entity.EvalTargetType(request.GetTargetType())] == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+	res, err = e.typedOperators[entity.EvalTargetType(request.GetTargetType())].BatchGetSource(ctx, request.WorkspaceID, request.SourceTargetIds)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]*eval_target_dto.EvalTarget, 0)
+	for _, do := range res {
+		dtos = append(dtos, target.EvalTargetDO2DTO(do))
+	}
+	return &eval_target.BatchGetSourceEvalTargetsResponse{
+		EvalTargets: dtos,
+	}, nil
 }

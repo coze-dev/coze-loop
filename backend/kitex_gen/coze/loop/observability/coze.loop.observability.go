@@ -4,6 +4,7 @@ package observability
 
 import (
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 )
 
@@ -33,11 +34,46 @@ func NewObservabilityTraceServiceClient(c thrift.TClient) *ObservabilityTraceSer
 	}
 }
 
+type ObservabilityOpenAPIService interface {
+	openapi.OpenAPIService
+}
+
+type ObservabilityOpenAPIServiceClient struct {
+	*openapi.OpenAPIServiceClient
+}
+
+func NewObservabilityOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityOpenAPIServiceClient {
+	return &ObservabilityOpenAPIServiceClient{
+		OpenAPIServiceClient: openapi.NewOpenAPIServiceClientFactory(t, f),
+	}
+}
+
+func NewObservabilityOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityOpenAPIServiceClient {
+	return &ObservabilityOpenAPIServiceClient{
+		OpenAPIServiceClient: openapi.NewOpenAPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewObservabilityOpenAPIServiceClient(c thrift.TClient) *ObservabilityOpenAPIServiceClient {
+	return &ObservabilityOpenAPIServiceClient{
+		OpenAPIServiceClient: openapi.NewOpenAPIServiceClient(c),
+	}
+}
+
 type ObservabilityTraceServiceProcessor struct {
 	*trace.TraceServiceProcessor
 }
 
 func NewObservabilityTraceServiceProcessor(handler ObservabilityTraceService) *ObservabilityTraceServiceProcessor {
 	self := &ObservabilityTraceServiceProcessor{trace.NewTraceServiceProcessor(handler)}
+	return self
+}
+
+type ObservabilityOpenAPIServiceProcessor struct {
+	*openapi.OpenAPIServiceProcessor
+}
+
+func NewObservabilityOpenAPIServiceProcessor(handler ObservabilityOpenAPIService) *ObservabilityOpenAPIServiceProcessor {
+	self := &ObservabilityOpenAPIServiceProcessor{openapi.NewOpenAPIServiceProcessor(handler)}
 	return self
 }

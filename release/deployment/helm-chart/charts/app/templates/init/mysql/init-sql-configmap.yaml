@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "mysql-init-sql-configmap"
+data:
+{{- range $path, $file := .Files.Glob "bootstrap/init/mysql/init-sql/*.sql" }}
+  {{ base $path }}: |-
+{{ $file | toString | indent 4 }}
+{{- end }}

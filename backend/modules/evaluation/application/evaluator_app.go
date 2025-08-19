@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
@@ -21,7 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
@@ -36,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -356,11 +355,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	}
 	evaluatorDTO := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	evaluatorDTO.CurrentVersion.EvaluatorContent = request.EvaluatorContent
-	evaluatorDTO.BaseInfo.SetUpdatedAt(gptr.Of(time.Now().UnixMilli()))
-	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	evaluatorDTO.BaseInfo.SetUpdatedBy(&common.UserInfo{
-		UserID: gptr.Of(userIDInContext),
-	})
+	evaluatorDTO.DraftSubmitted = ptr.Of(false)
 	err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO))
 	if err != nil {
 		return nil, err
@@ -442,8 +437,16 @@ func buildListEvaluatorVersionRequest(request *evaluatorservice.ListEvaluatorVer
 	req := &entity.ListEvaluatorVersionRequest{
 		EvaluatorID:   request.GetEvaluatorID(),
 		QueryVersions: request.GetQueryVersions(),
-		PageSize:      request.GetPageSize(),
-		PageNum:       request.GetPageNumber(),
+	}
+	if request.PageSize == nil {
+		req.PageSize = consts.DefaultListEvaluatorVersionPageSize
+	} else {
+		req.PageSize = request.GetPageSize()
+	}
+	if request.PageNumber == nil {
+		req.PageNum = consts.DefaultListEvaluatorVersionPageNum
+	} else {
+		req.PageNum = request.GetPageNumber()
 	}
 	if len(request.GetOrderBys()) == 0 {
 		req.OrderBys = []*entity.OrderBy{
@@ -494,7 +497,7 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request 
 }
 
 func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersions(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorVersionsRequest) (resp *evaluatorservice.BatchGetEvaluatorVersionsResponse, err error) {
-	evaluatorDOList, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, request.GetEvaluatorVersionIds(), request.GetIncludeDeleted())
+	evaluatorDOList, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, ptr.Of(request.WorkspaceID), request.GetEvaluatorVersionIds(), request.GetIncludeDeleted())
 	if err != nil {
 		return nil, err
 	}

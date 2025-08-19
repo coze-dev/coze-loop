@@ -26,6 +26,8 @@ const (
 	AuthEntityTypeTraceView = "TraceView"
 
 	AuthEntityTypeModel = "Model"
+
+	AuthEntityTypeAnnotation = "Annotation"
 )
 
 // 主体类型

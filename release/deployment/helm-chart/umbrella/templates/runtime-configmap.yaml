@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-runtime-configmap" (include "application.name" .) }}
+data:
+  data.yaml: |-
+{{ .Files.Get "conf/data.yaml" | nindent 4 }}
+  evaluation.yaml: |-
+{{ .Files.Get "conf/evaluation.yaml" | nindent 4 }}
+  foundation.yaml: |-
+{{ .Files.Get "conf/foundation.yaml" | nindent 4 }}
+  infrastructure.yaml: |-
+{{ .Files.Get "conf/infrastructure.yaml" | nindent 4 }}
+  model_config.yaml: |-
+{{ .Files.Get "conf/model_config.yaml" | nindent 4 }}
+  model_runtime_config.yaml: |-
+{{ .Files.Get "conf/model_runtime_config.yaml" | nindent 4 }}
+  observability.yaml: |-
+{{ .Files.Get "conf/observability.yaml" | nindent 4 }}
+  prompt.yaml: |-
+{{ .Files.Get "conf/prompt.yaml" | nindent 4 }}

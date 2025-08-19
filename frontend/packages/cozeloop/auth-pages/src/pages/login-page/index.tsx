@@ -36,12 +36,12 @@ export function LoginPage() {
   };
 
   useEffect(() => {
-    const onApiError = (_msg: string) => {
+    const onApiError = (msg: string) => {
       Toast.error({
         className: 'api-error-toast',
         content: (
           <span className="inline-block max-w-[100%] break-all whitespace-normal">
-            {I18n.t('register_or_login_failed')}
+            {msg || I18n.t('register_or_login_failed')}
           </span>
         ),
       });

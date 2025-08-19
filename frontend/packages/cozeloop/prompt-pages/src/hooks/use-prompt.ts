@@ -134,9 +134,17 @@ export const usePrompt = ({
                 };
               });
               setHistoricMessage(historicMessage);
-              const mockVariables =
-                mockRes.debug_context?.debug_core?.mock_variables || [];
-              setMockVariables(mockVariables);
+              setMockVariables(array =>
+                array.map(it => {
+                  const mock = (
+                    mockRes.debug_context?.debug_core?.mock_variables || []
+                  ).find(v => v.key === it.key);
+                  return {
+                    ...it,
+                    value: mock?.value,
+                  };
+                }),
+              );
               const mockTools =
                 mockRes.debug_context?.debug_core?.mock_tools || [];
               setMockTools(mockTools);

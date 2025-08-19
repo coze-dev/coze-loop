@@ -6,6 +6,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/samber/lo"
@@ -14,8 +15,10 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
+	metricsinfra "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/gorm_gen/model"
@@ -37,11 +40,14 @@ type ManageRepoImpl struct {
 
 	promptBasicCacheDAO redis.IPromptBasicDAO
 	promptCacheDAO      redis.IPromptDAO
+
+	promptCacheMetrics *metricsinfra.PromptCacheMetrics
 }
 
 func NewManageRepo(
 	db db.Provider,
 	idgen idgen.IIDGenerator,
+	meter metrics.Meter,
 	promptBasicDao mysql.IPromptBasicDAO,
 	promptCommitDao mysql.IPromptCommitDAO,
 	promptDraftDao mysql.IPromptUserDraftDAO,
@@ -56,6 +62,7 @@ func NewManageRepo(
 		promptDraftDAO:      promptDraftDao,
 		promptBasicCacheDAO: promptBasicCacheDAO,
 		promptCacheDAO:      promptCacheDAO,
+		promptCacheMetrics:  metricsinfra.NewPromptCacheMetrics(meter),
 	}
 }
 
@@ -203,6 +210,12 @@ func (d *ManageRepoImpl) MGetPrompt(ctx context.Context, queries []repo.GetPromp
 		if cacheErr != nil {
 			logs.CtxError(ctx, "get prompt from cache error, queries=%s, err=%v", json.MarshalStringIgnoreErr(cacheQueries), cacheErr)
 		}
+		d.promptCacheMetrics.MEmit(ctx, metricsinfra.PromptCacheMetricsParam{
+			QueryType:  metricsinfra.QueryTypePromptID,
+			WithCommit: true,
+			HitNum:     len(cachedPromptMap),
+			MissNum:    len(cacheQueries) - len(cachedPromptMap),
+		})
 	}
 	var missedQueries []repo.GetPromptParam
 	for _, query := range queries {
@@ -310,7 +323,9 @@ func (d *ManageRepoImpl) mGetPromptFromDB(ctx context.Context, queries []repo.Ge
 				CommitVersion: query.CommitVersion,
 			}]
 			if promptCommitPO == nil {
-				return nil, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("prompt commit not found, prompt_id=%d, commit_version=%s", query.PromptID, query.CommitVersion)))
+				return nil, errorx.NewByCode(prompterr.PromptVersionNotExistCode,
+					errorx.WithExtraMsg(fmt.Sprintf("prompt commit not found, prompt_id=%d, commit_version=%s", query.PromptID, query.CommitVersion)),
+					errorx.WithExtra(map[string]string{"prompt_id": strconv.FormatInt(query.PromptID, 10), "version": query.CommitVersion}))
 			}
 		}
 		promptDOMap[query] = convertor.PromptPO2DO(promptBasicPO, promptCommitPO, promptDraftPO)
@@ -334,6 +349,12 @@ func (d *ManageRepoImpl) MGetPromptBasicByPromptKey(ctx context.Context, spaceID
 		if cacheErr != nil {
 			logs.CtxError(ctx, "get prompt basic from cache failed, space_id=%d, prompt_keys=%s, err=%v", spaceID, json.MarshalStringIgnoreErr(promptKeys), err)
 		}
+		d.promptCacheMetrics.MEmit(ctx, metricsinfra.PromptCacheMetricsParam{
+			QueryType:  metricsinfra.QueryTypePromptKey,
+			WithCommit: false,
+			HitNum:     len(cacheResultMap),
+			MissNum:    len(promptKeys) - len(cacheResultMap),
+		})
 	}
 
 	var missedPromptKeys []string
@@ -381,8 +402,9 @@ func (d *ManageRepoImpl) ListPrompt(ctx context.Context, param repo.ListPromptPa
 	listBasicParam := mysql.ListPromptBasicParam{
 		SpaceID: param.SpaceID,
 
-		KeyWord:    param.KeyWord,
-		CreatedBys: param.CreatedBys,
+		KeyWord:       param.KeyWord,
+		CreatedBys:    param.CreatedBys,
+		CommittedOnly: param.CommittedOnly,
 
 		Offset:  (param.PageNum - 1) * param.PageSize,
 		Limit:   param.PageSize,
@@ -393,9 +415,25 @@ func (d *ManageRepoImpl) ListPrompt(ctx context.Context, param repo.ListPromptPa
 	if err != nil {
 		return nil, err
 	}
+
+	draftPOMap := make(map[mysql.PromptIDUserIDPair]*model.PromptUserDraft)
+	if len(basicPOs) > 0 {
+		var promptDraftQueries []mysql.PromptIDUserIDPair
+		for _, basicPO := range basicPOs {
+			promptDraftQueries = append(promptDraftQueries, mysql.PromptIDUserIDPair{
+				PromptID: basicPO.ID,
+				UserID:   param.UserID,
+			})
+		}
+		draftPOMap, err = d.promptDraftDAO.MGet(ctx, promptDraftQueries)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &repo.ListPromptResult{
 		Total:     total,
-		PromptDOs: convertor.BatchBasicPO2PromptDO(basicPOs),
+		PromptDOs: convertor.BatchBasicAndDraftPO2PromptDO(basicPOs, draftPOMap, param.UserID),
 	}, nil
 }
 
@@ -578,7 +616,8 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 		promptDO.PromptCommit = commitDO
 		commitPO := convertor.PromptDO2CommitPO(promptDO)
 		commitPO.ID = commitID
-		err = d.promptCommitDAO.Create(ctx, commitPO, opt)
+		timeNow := time.Now()
+		err = d.promptCommitDAO.Create(ctx, commitPO, timeNow, opt)
 		if err != nil {
 			return err
 		}
@@ -588,7 +627,7 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 		}
 		q := query.Use(d.db.NewSession(ctx, opt))
 		err = d.promptBasicDAO.Update(ctx, basicPO.ID, map[string]interface{}{
-			q.PromptBasic.LatestCommitTime.ColumnName().String(): time.Now(),
+			q.PromptBasic.LatestCommitTime.ColumnName().String(): timeNow,
 			q.PromptBasic.LatestVersion.ColumnName().String():    param.CommitVersion,
 		}, opt)
 		if err != nil {

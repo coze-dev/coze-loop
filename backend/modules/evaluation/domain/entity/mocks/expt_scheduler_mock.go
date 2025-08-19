@@ -93,6 +93,20 @@ func (mr *MockExptSchedulerModeMockRecorder) NextTick(arg0, arg1, arg2 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextTick", reflect.TypeOf((*MockExptSchedulerMode)(nil).NextTick), arg0, arg1, arg2)
 }
 
+// PublishResult mocks base method.
+func (m *MockExptSchedulerMode) PublishResult(arg0 context.Context, arg1 []*entity.ExptTurnEvaluatorResultRef, arg2 *entity.ExptScheduleEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishResult", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishResult indicates an expected call of PublishResult.
+func (mr *MockExptSchedulerModeMockRecorder) PublishResult(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishResult", reflect.TypeOf((*MockExptSchedulerMode)(nil).PublishResult), arg0, arg1, arg2)
+}
+
 // ScanEvalItems mocks base method.
 func (m *MockExptSchedulerMode) ScanEvalItems(arg0 context.Context, arg1 *entity.ExptScheduleEvent, arg2 *entity.Experiment) ([]*entity.ExptEvalItem, []*entity.ExptEvalItem, []*entity.ExptEvalItem, error) {
 	m.ctrl.T.Helper()

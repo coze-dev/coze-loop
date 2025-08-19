@@ -1,0 +1,36 @@
+service:
+  type: ClusterIP
+  port: 3306
+  targetPort: 3306
+
+image:
+  registry: "docker.io"
+  repository: "library"
+  image: "mysql"
+  tag: "9.4.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: "coze-loop-image-secret"
+
+deployment:
+  replicaCount: 1
+  dataMountPath: "/var/lib/mysql"
+  terminationGracePeriodSeconds: 10
+
+liveness:
+  startSeconds: 5
+  intervalSeconds: 5
+  timeoutSeconds: 3
+  shutdownFailureTimes: 5
+
+auth:
+  user: "root"
+  password: "coze-loop"
+
+database:
+  name: "coze-loop"
+
+# customization
+custom:
+  image:
+    registry:
+    pullSecrets:

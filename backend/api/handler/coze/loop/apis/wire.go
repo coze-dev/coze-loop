@@ -24,6 +24,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
@@ -31,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
+	conf2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
 	evaluationapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
@@ -75,14 +78,17 @@ var (
 		evaluationapp.InitEvaluationSetApplication,
 		evaluationapp.InitEvalTargetApplication,
 	)
-	datasetSet = wire.NewSet(
+	dataSet = wire.NewSet(
 		NewDataHandler,
 		dataapp.InitDatasetApplication,
+		dataapp.InitTagApplication,
+		conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(
 		NewObservabilityHandler,
 		obapp.InitTraceApplication,
 		obapp.InitTraceIngestionApplication,
+		obapp.InitOpenAPIApplication,
 	)
 )
 
@@ -103,6 +109,7 @@ func InitPromptHandler(
 	idgen idgen.IIDGenerator,
 	db db.Provider,
 	redisCli redis.Cmdable,
+	meter metrics.Meter,
 	configFactory conf.IConfigLoaderFactory,
 	limiterFactory limiter.IRateLimiterFactory,
 	benefitSvc benefit.IBenefitService,
@@ -137,6 +144,7 @@ func InitEvaluationHandler(
 	ctx context.Context,
 	idgen idgen.IIDGenerator,
 	db db.Provider,
+	ckDb ck.Provider,
 	cmdable redis.Cmdable,
 	configFactory conf.IConfigLoaderFactory,
 	mqFactory mq.IFactory,
@@ -168,9 +176,10 @@ func InitDataHandler(
 	batchObjectStorage fileserver.BatchObjectStorage,
 	auditClient audit.IAuditService,
 	auth authservice.Client,
+	userClient userservice.Client,
 ) (*DataHandler, error) {
 	wire.Build(
-		datasetSet,
+		dataSet,
 	)
 	return nil, nil
 }
@@ -185,6 +194,9 @@ func InitObservabilityHandler(
 	benefit benefit.IBenefitService,
 	fileClient fileservice.Client,
 	authCli authservice.Client,
+	userClient userservice.Client,
+	evalClient evaluatorservice.Client,
+	tagClient tagservice.Client,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,

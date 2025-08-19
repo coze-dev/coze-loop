@@ -146,6 +146,7 @@ struct ColumnEvalSetField {
     3: optional string description
     4: optional common.ContentType content_type
 //    5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat
+    6: optional string text_schema
 }
 
 struct ItemResult {
@@ -206,8 +207,14 @@ struct ExperimentTurnPayload {
     5: optional TurnSystemInfo system_info
 }
 
+struct KeywordSearch {
+    1: optional string keyword
+    2: optional list<FilterField> filter_fields
+}
+
 struct ExperimentFilter {
     1: optional Filters filters
+    2: optional KeywordSearch keyword_search
 }
 
 struct Filters {
@@ -223,7 +230,7 @@ enum FilterLogicOp {
 
 struct FilterField {
     1: required FieldType field_type
-    2: optional string field_key
+    2: optional string field_key // 二级key放此字段里
 }
 
 enum FieldType {
@@ -245,6 +252,15 @@ enum FieldType {
     ExptType = 30
     SourceType = 31
     SourceID = 32
+
+    KeywordSearch = 41
+    EvalSetColumn = 42 // 使用二级key，column_key
+    Annotation = 43 // 使用二级key, Annotation_key（具体参考人工标注设计）
+    ActualOutput = 44 // 使用二级key，目前使用固定key：content
+    EvaluatorScoreCorrected = 45
+    Evaluator = 46 // 使用二级key，evaluator_version_id
+    ItemID = 47
+    ItemRunState = 48
 }
 
 // 字段过滤器
@@ -273,6 +289,11 @@ enum FilterOperatorType {
     LessOrEqual = 6 // 小于等于
     In = 7 // 包含
     NotIn = 8 // 不包含
+    Like = 9 // 全文搜索
+    NotLike = 10 // 全文搜索反选
+    IsNull = 11 // 为空
+    IsNotNull = 12 //非空
+
 }
 
 enum ExptAggregateCalculateStatus {

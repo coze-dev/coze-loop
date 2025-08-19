@@ -1,9 +1,0 @@
-requirepass ${PASSWORD}
-loglevel debug
-databases 16
-appendonly yes
-appendfilename appendonly.aof
-dbfilename dump.rdb
-logfile /data/redis.log
-notify-keyspace-events KEA
-acl-pubsub-default allchannels

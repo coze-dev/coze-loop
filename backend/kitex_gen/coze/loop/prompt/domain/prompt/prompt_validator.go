@@ -203,3 +203,11 @@ func (p *DebugConfig) IsValid() error {
 func (p *DebugLog) IsValid() error {
 	return nil
 }
+func (p *OverridePromptParams) IsValid() error {
+	if p.ModelConfig != nil {
+		if err := p.ModelConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ModelConfig not valid, %w", err)
+		}
+	}
+	return nil
+}

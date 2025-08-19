@@ -53,6 +53,11 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
+	case entity.EvalTargetTypeCozeWorkflow:
+		meta, err = json.Marshal(do.CozeWorkflow)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if do.InputSchema != nil {
 		inputSchema, err = json.Marshal(do.InputSchema)
@@ -178,6 +183,11 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			meta := &entity.LoopPrompt{}
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.Prompt = meta
+			}
+		case entity.EvalTargetTypeCozeWorkflow:
+			meta := &entity.CozeWorkflow{}
+			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
+				targetVersionDO.CozeWorkflow = meta
 			}
 		default:
 			// todo

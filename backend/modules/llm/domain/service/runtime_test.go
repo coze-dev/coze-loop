@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -146,7 +147,7 @@ func TestRuntimeImpl_Generate(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				factMock := llmfactorymocks.NewMockIFactory(ctrl)
 				llmMock := llmifacemocks.NewMockILLM(ctrl)
-				factMock.EXPECT().CreateLLM(gomock.Any(), gomock.Any()).Return(llmMock, nil)
+				factMock.EXPECT().CreateLLM(gomock.Any(), gomock.Any(), gomock.Any()).Return(llmMock, nil)
 				llmMock.EXPECT().Generate(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Message{
 					Role:    entity.RoleAssistant,
 					Content: "there is content",
@@ -250,6 +251,10 @@ func TestRuntimeImpl_Generate(t *testing.T) {
 }
 
 func TestRuntimeImpl_HandleMsgsPreCallModel(t *testing.T) {
+	_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "http")
+	_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "cozeloop-minio")
+	_ = os.Setenv("COZE_LOOP_OSS_PORT", "19000")
+
 	type fields struct {
 		llmFact     llmfactory.IFactory
 		idGen       idgen.IIDGenerator
@@ -467,7 +472,7 @@ func TestRuntimeImpl_Stream(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				factMock := llmfactorymocks.NewMockIFactory(ctrl)
 				llmMock := llmifacemocks.NewMockILLM(ctrl)
-				factMock.EXPECT().CreateLLM(gomock.Any(), gomock.Any()).Return(llmMock, nil)
+				factMock.EXPECT().CreateLLM(gomock.Any(), gomock.Any(), gomock.Any()).Return(llmMock, nil)
 				streamMock := &mockIStreamReader{
 					callTimes: 0,
 					recv: func(callTimes int) (*entity.Message, error) {

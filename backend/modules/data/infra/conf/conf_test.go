@@ -12,75 +12,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	dataset_conf "github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
-	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/consts"
-	mock_conf "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks" // 假设 mock 文件在此路径
+	mock_conf "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 )
-
-func TestNewConfiger(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockConfigFactory := mock_conf.NewMockIConfigLoaderFactory(ctrl)
-	mockConfigLoader := mock_conf.NewMockIConfigLoader(ctrl)
-
-	tests := []struct {
-		name              string
-		mockSetup         func()
-		expectedConfiger  dataset_conf.IConfig
-		expectedErr       error
-		checkConfigerFunc func(t *testing.T, c dataset_conf.IConfig)
-	}{
-		{
-			name: "正常创建 Configer",
-			mockSetup: func() {
-				mockConfigFactory.EXPECT().NewConfigLoader(consts.DataConfigFileName).Return(mockConfigLoader, nil)
-			},
-			expectedConfiger: &configer{
-				loader: mockConfigLoader,
-			},
-			expectedErr: nil,
-			checkConfigerFunc: func(t *testing.T, c dataset_conf.IConfig) {
-				assert.NotNil(t, c)
-				// 可以进一步检查 configer 内部的 loader 是否被正确设置
-				actualConf, ok := c.(*configer)
-				assert.True(t, ok)
-				assert.Equal(t, mockConfigLoader, actualConf.loader)
-			},
-		},
-		{
-			name: "异常场景 - NewConfigLoader 失败",
-			mockSetup: func() {
-				mockConfigFactory.EXPECT().NewConfigLoader(consts.DataConfigFileName).Return(nil, errors.New("failed to create loader"))
-			},
-			expectedConfiger: nil,
-			expectedErr:      errors.New("failed to create loader"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			configerInstance, err := NewConfiger(mockConfigFactory)
-
-			if tt.expectedErr != nil {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedErr.Error())
-				assert.Nil(t, configerInstance)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, configerInstance)
-				// 由于我们比较的是接口和具体类型的实例，直接 assert.Equal 可能不够准确
-				// 最好是类型断言后比较内部字段，或者像 expectedConfiger 一样创建一个期望的实例进行比较
-				if tt.checkConfigerFunc != nil {
-					tt.checkConfigerFunc(t, configerInstance)
-				} else {
-					assert.Equal(t, tt.expectedConfiger, configerInstance)
-				}
-			}
-		})
-	}
-}
 
 func TestConfiger_GetConsumerConfigs(t *testing.T) {
 	ctrl := gomock.NewController(t)

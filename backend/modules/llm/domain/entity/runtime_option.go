@@ -18,10 +18,20 @@ type Options struct {
 	Tools []*ToolInfo
 	// ToolChoice controls which tool is called by the model.
 	ToolChoice *ToolChoice
+	// ResponseFormat is the response format for the model. default is text
+	ResponseFormat *ResponseFormat
+	// TopK is the top k for the model, which controls the diversity of the model.
+	TopK *int32
+	// PresencePenalty is the presence penalty for the model, which controls the diversity of the model.
+	PresencePenalty *float32
+	// FrequencyPenalty is the frequency penalty for the model, which controls the diversity of the model.
+	FrequencyPenalty *float32
 }
 
 type Option struct {
 	apply func(opts *Options)
+
+	implSpecificOptFn any
 }
 
 func ApplyOptions(base *Options, opts ...Option) *Options {
@@ -29,8 +39,44 @@ func ApplyOptions(base *Options, opts ...Option) *Options {
 		base = &Options{}
 	}
 	for _, opt := range opts {
+		if opt.apply == nil {
+			continue
+		}
 		opt.apply(base)
 	}
+	return base
+}
+
+// WrapImplSpecificOptFn is the option to wrap the implementation specific option function.
+func WrapImplSpecificOptFn[T any](optFn func(*T)) Option {
+	return Option{
+		implSpecificOptFn: optFn,
+	}
+}
+
+// GetImplSpecificOptions extract the implementation specific options from Option list, optionally providing a base options with default values.
+// e.g.
+//
+//	myOption := &MyOption{
+//		Field1: "default_value",
+//	}
+//
+//	myOption := model.GetImplSpecificOptions(myOption, opts...)
+func GetImplSpecificOptions[T any](base *T, opts ...Option) *T {
+	if base == nil {
+		base = new(T)
+	}
+
+	for i := range opts {
+		opt := opts[i]
+		if opt.implSpecificOptFn != nil {
+			optFn, ok := opt.implSpecificOptFn.(func(*T))
+			if ok {
+				optFn(base)
+			}
+		}
+	}
+
 	return base
 }
 
@@ -86,6 +132,38 @@ func WithToolChoice(t *ToolChoice) Option {
 	return Option{
 		apply: func(opts *Options) {
 			opts.ToolChoice = t
+		},
+	}
+}
+
+func WithResponseFormat(r *ResponseFormat) Option {
+	return Option{
+		apply: func(opts *Options) {
+			opts.ResponseFormat = r
+		},
+	}
+}
+
+func WithTopK(t *int32) Option {
+	return Option{
+		apply: func(opts *Options) {
+			opts.TopK = t
+		},
+	}
+}
+
+func WithFrequencyPenalty(f float32) Option {
+	return Option{
+		apply: func(opts *Options) {
+			opts.FrequencyPenalty = &f
+		},
+	}
+}
+
+func WithPresencePenalty(p float32) Option {
+	return Option{
+		apply: func(opts *Options) {
+			opts.PresencePenalty = &p
 		},
 	}
 }

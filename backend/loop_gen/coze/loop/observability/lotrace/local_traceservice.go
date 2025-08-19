@@ -85,27 +85,6 @@ func (l *LocalTraceService) BatchGetTracesAdvanceInfo(ctx context.Context, req *
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalTraceService) IngestTraces(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (*trace.IngestTracesResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*trace.TraceServiceIngestTracesArgs)
-		result := out.(*trace.TraceServiceIngestTracesResult)
-		resp, err := l.impl.IngestTraces(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &trace.TraceServiceIngestTracesArgs{Req: req}
-	result := &trace.TraceServiceIngestTracesResult{}
-	ctx = l.injectRPCInfo(ctx, "IngestTraces")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 func (l *LocalTraceService) IngestTracesInner(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (*trace.IngestTracesResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*trace.TraceServiceIngestTracesInnerArgs)
@@ -226,6 +205,90 @@ func (l *LocalTraceService) ListViews(ctx context.Context, req *trace.ListViewsR
 	arg := &trace.TraceServiceListViewsArgs{Req: req}
 	result := &trace.TraceServiceListViewsResult{}
 	ctx = l.injectRPCInfo(ctx, "ListViews")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) CreateManualAnnotation(ctx context.Context, req *trace.CreateManualAnnotationRequest, callOptions ...callopt.Option) (*trace.CreateManualAnnotationResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceCreateManualAnnotationArgs)
+		result := out.(*trace.TraceServiceCreateManualAnnotationResult)
+		resp, err := l.impl.CreateManualAnnotation(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceCreateManualAnnotationArgs{Req: req}
+	result := &trace.TraceServiceCreateManualAnnotationResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateManualAnnotation")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest, callOptions ...callopt.Option) (*trace.UpdateManualAnnotationResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceUpdateManualAnnotationArgs)
+		result := out.(*trace.TraceServiceUpdateManualAnnotationResult)
+		resp, err := l.impl.UpdateManualAnnotation(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceUpdateManualAnnotationArgs{Req: req}
+	result := &trace.TraceServiceUpdateManualAnnotationResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateManualAnnotation")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest, callOptions ...callopt.Option) (*trace.DeleteManualAnnotationResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceDeleteManualAnnotationArgs)
+		result := out.(*trace.TraceServiceDeleteManualAnnotationResult)
+		resp, err := l.impl.DeleteManualAnnotation(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceDeleteManualAnnotationArgs{Req: req}
+	result := &trace.TraceServiceDeleteManualAnnotationResult{}
+	ctx = l.injectRPCInfo(ctx, "DeleteManualAnnotation")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (*trace.ListAnnotationsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceListAnnotationsArgs)
+		result := out.(*trace.TraceServiceListAnnotationsResult)
+		resp, err := l.impl.ListAnnotations(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceListAnnotationsArgs{Req: req}
+	result := &trace.TraceServiceListAnnotationsResult{}
+	ctx = l.injectRPCInfo(ctx, "ListAnnotations")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

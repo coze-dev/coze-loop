@@ -169,7 +169,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		}
 
 		if retryConf.IsInDebt {
-			completeCID := fmt.Sprintf("terminate:indebt:%d:%d", event.ExptRunID, event.EvalSetItemID)
+			completeCID := fmt.Sprintf("terminate:indebt:%d", event.ExptRunID)
 
 			if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.ExptRunMode, event.SpaceID, event.Session, entity.WithCID(completeCID)); err != nil {
 				return errorx.Wrapf(err, "terminate expt run fail, expt_id: %v", event.ExptID)
@@ -201,7 +201,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
-		locked, ctx, unlock, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*15)
+		locked, ctx, unlock, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*30)
 		if err != nil {
 			return err
 		}

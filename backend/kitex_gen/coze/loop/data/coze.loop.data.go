@@ -5,6 +5,7 @@ package data
 import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 )
 
 type DatasetService interface {
@@ -33,11 +34,46 @@ func NewDatasetServiceClient(c thrift.TClient) *DatasetServiceClient {
 	}
 }
 
+type TagService interface {
+	tag.TagService
+}
+
+type TagServiceClient struct {
+	*tag.TagServiceClient
+}
+
+func NewTagServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *TagServiceClient {
+	return &TagServiceClient{
+		TagServiceClient: tag.NewTagServiceClientFactory(t, f),
+	}
+}
+
+func NewTagServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *TagServiceClient {
+	return &TagServiceClient{
+		TagServiceClient: tag.NewTagServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewTagServiceClient(c thrift.TClient) *TagServiceClient {
+	return &TagServiceClient{
+		TagServiceClient: tag.NewTagServiceClient(c),
+	}
+}
+
 type DatasetServiceProcessor struct {
 	*dataset.DatasetServiceProcessor
 }
 
 func NewDatasetServiceProcessor(handler DatasetService) *DatasetServiceProcessor {
 	self := &DatasetServiceProcessor{dataset.NewDatasetServiceProcessor(handler)}
+	return self
+}
+
+type TagServiceProcessor struct {
+	*tag.TagServiceProcessor
+}
+
+func NewTagServiceProcessor(handler TagService) *TagServiceProcessor {
+	self := &TagServiceProcessor{tag.NewTagServiceProcessor(handler)}
 	return self
 }

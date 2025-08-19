@@ -69,7 +69,7 @@ func TestQueueProcessor(t *testing.T) {
 							{
 								Tenant: "default",
 								TenantInfo: entity.TenantInfo{
-									TTL: entity.TTL(tmp),
+									TTL: loop_span.TTL(tmp),
 								},
 								SpanList: spanList,
 							},

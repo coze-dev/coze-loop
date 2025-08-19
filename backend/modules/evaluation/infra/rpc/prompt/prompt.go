@@ -94,7 +94,7 @@ func (p PromptRPCAdapter) GetPrompt(ctx context.Context, spaceID, promptID int64
 }
 
 func (p PromptRPCAdapter) MGetPrompt(ctx context.Context, spaceID int64, promptQueries []*rpc.MGetPromptQuery) (prompts []*rpc.LoopPrompt, err error) {
-	queries := make([]*manage.PromptQuery, len(promptQueries))
+	queries := make([]*manage.PromptQuery, 0, len(promptQueries))
 	for _, query := range promptQueries {
 		promptQuery := &manage.PromptQuery{
 			PromptID: &query.PromptID,

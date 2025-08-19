@@ -347,7 +347,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 					},
 				}
 				mockEvaluatorService.EXPECT().
-					BatchGetEvaluatorVersion(gomock.Any(), []int64{1}, true).
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{1}, true).
 					Return([]*entity.Evaluator{evaluator}, nil)
 			},
 			want: []*entity.ExptAggregateResult{

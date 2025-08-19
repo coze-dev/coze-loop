@@ -1,0 +1,100 @@
+- id: 0 # required, must be unique and bigger than 0
+  name: "your model name" # required
+  desc: "" # optional, description
+  ability: # optional
+    max_context_tokens: 65536 # Optional. This parameter only indicates the model capability and will not have any practical effect for the time being.
+    max_input_tokens: 65536 # Optional. This parameter only indicates the model capability and will not have any practical effect for the time being.
+    max_output_tokens: 8192 # Optional. This parameter only indicates the model capability and will not have any practical effect for the time being.
+    function_call: true # Optional. Default value is false. If this model wants to use function call capability, please set it to true.
+    json_mode: false # Optional. This parameter only indicates the model capability and will not have any practical effect for the time being.
+    multi_modal: true # Optional. Default value is false. If this model wants to use multi modal capability, please set it to true.
+    ability_multi_modal:
+      image: true # Optional. Default value is false. If this model wants to use multi modal image capability, please set it to true.
+      ability_image:
+        url_enabled: true # Optional. Default value is false. If this model wants to use multi modal image url capability, please set it to true.
+        binary_enabled: true # Optional. Default value is false. If this model wants to use multi modal image binary capability, please set it to true.
+        max_image_size: 20 # Optional. Unit is MB. Default value is 0, which means size is not limited.
+        max_image_count: 20 # Optional. Default value is 0, which means count is not limited.
+  frame: "eino" # Required. Options Include [eino]
+  protocol: "qianfan" # Required. Options Include [ark, openai, deepseek, qwen, qianfan, ollama, gemini, claude, arkbot]
+  protocol_config: # Required.
+    base_url: "" # Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+    api_key: "" # optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+    model: "" # Required. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+    protocol_config_qianfan: #Optional
+      llm_retry_count: 0 # Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+      llm_retry_timeout: 0 # Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+      llm_retry_backoff_factor: 0 # Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+      parallel_tool_calls: false # Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+      response_format_type: ""# Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+      response_format_json_schema: ""# Optional. See Details in https://github.com/cloudwego/eino-ext/blob/main/components/model/qianfan/chatmodel.go
+  scenario_configs: # Optional. This is a map. Key is entity.Scenario, value is entity.ScenarioConfig.The scenario configuration has two functions: 1. Determine whether the model is available in the scenario; 2. Determine the qpm and tpm limits of the model in the scenario.
+    default:
+      scenario: "default"
+      quota:
+        qpm: 0 # Optional. Default value is 0, which means our system does not limit qpm.
+        tpm: 0 # Optional. Default value is 0, which means our system does not limit tpm.
+      unavailable: false # Optional. Default value is false.
+    prompt_debug:
+      scenario: "prompt_debug"
+      quota:
+        qpm: 0 # Optional. Default value is 0, which means our system does not limit qpm.
+        tpm: 0 # Optional. Default value is 0, which means our system does not limit tpm.
+      unavailable: false # Optional. Default value is false.
+    eval_target:
+      scenario: "eval_target"
+      quota:
+        qpm: 0 # Optional. Default value is 0, which means our system does not limit qpm.
+        tpm: 0 # Optional. Default value is 0, which means our system does not limit tpm.
+      unavailable: false # Optional. Default value is false.
+    evaluator:
+      scenario: "evaluator"
+      quota:
+        qpm: 0 # Optional. Default value is 0, which means our system does not limit qpm.
+        tpm: 0 # Optional. Default value is 0, which means our system does not limit tpm.
+      unavailable: false # Optional. Default value is false. If this model does not support function call, please set it to true because evaluator must use function call.
+  param_config: #Required.
+    param_schemas: #Required. This parameter determines which parameters of the model can be modified in the prompt and evaluator interface. Currently only supports following params.
+      - name: "temperature"
+        label: "temperature" # Displayed as a name on the front end
+        desc: "Increasing the temperature will make the model output more diverse and creative. Conversely, lowering the temperature will make the output more compliant with instructions but less diverse. It is recommended not to adjust together with 'Top p'." # Displayed as a description on the front end
+        type: "float" # Required. Must be float, int, bool, string
+        min: "0"
+        max: "1.0"
+        default_val: "0.7"
+      - name: "max_tokens"
+        label: "max_tokens"  # Displayed as a name on the front end
+        desc: "Controls the maximum length of tokens output by the model. Typically, 100 tokens are approximately equal to 150 Chinese characters." # Displayed as a description on the front end
+        type: "int" # Required. Must be float, int, bool, string
+        min: "1"
+        max: "4096"
+        default_val: "2048"
+      - name: "top_k"
+        label: "top_k"  # Displayed as a name on the front end
+        desc: "Samples from the top k tokens with the highest probability, limiting the candidate range and improving generation stability." # Displayed as a description on the front end
+        type: "int" # Required. Must be float, int, bool, string
+        min: "1"
+        max: "100"
+        default_val: "50"
+      - name: "top_p"
+        label: "top_p"  # Displayed as a name on the front end
+        desc: "During generation, selects the smallest set of tokens whose cumulative probability reaches top_p. Tokens outside the set are excluded, balancing diversity and reasonableness." # Displayed as a description on the front end
+        type: "float" # Required. Must be float, int, bool, string
+        min: "0.001"
+        max: "1.0"
+        default_val: "0.7"
+      - name: "frequency_penalty"
+        label: "frequency_penalty"  # Displayed as a name on the front end
+        desc: "Penalizes tokens that have already been generated. The higher the frequency, the greater the penalty, suppressing repeated content." # Displayed as a description on the front end
+        type: "float" # Required. Must be float, int, bool, string
+        min: "0"
+        max: "2.0"
+        default_val: "0"
+      - name: "presence_penalty"
+        label: "presence_penalty"  # Displayed as a name on the front end
+        desc: "Penalizes all tokens that have appeared, preventing the same content from appearing repeatedly and increasing content diversity." # Displayed as a description on the front end
+        type: "float" # Required. Must be float, int, bool, string
+        min: "0"
+        max: "2.0"
+        default_val: "0"
+

@@ -17,6 +17,7 @@ type Client interface {
 	BatchGetEvalTargetVersions(ctx context.Context, request *eval_target.BatchGetEvalTargetVersionsRequest, callOptions ...callopt.Option) (r *eval_target.BatchGetEvalTargetVersionsResponse, err error)
 	ListSourceEvalTargets(ctx context.Context, request *eval_target.ListSourceEvalTargetsRequest, callOptions ...callopt.Option) (r *eval_target.ListSourceEvalTargetsResponse, err error)
 	ListSourceEvalTargetVersions(ctx context.Context, request *eval_target.ListSourceEvalTargetVersionsRequest, callOptions ...callopt.Option) (r *eval_target.ListSourceEvalTargetVersionsResponse, err error)
+	BatchGetSourceEvalTargets(ctx context.Context, request *eval_target.BatchGetSourceEvalTargetsRequest, callOptions ...callopt.Option) (r *eval_target.BatchGetSourceEvalTargetsResponse, err error)
 	ExecuteEvalTarget(ctx context.Context, request *eval_target.ExecuteEvalTargetRequest, callOptions ...callopt.Option) (r *eval_target.ExecuteEvalTargetResponse, err error)
 	GetEvalTargetRecord(ctx context.Context, request *eval_target.GetEvalTargetRecordRequest, callOptions ...callopt.Option) (r *eval_target.GetEvalTargetRecordResponse, err error)
 	BatchGetEvalTargetRecords(ctx context.Context, request *eval_target.BatchGetEvalTargetRecordsRequest, callOptions ...callopt.Option) (r *eval_target.BatchGetEvalTargetRecordsResponse, err error)
@@ -79,6 +80,11 @@ func (p *kEvalTargetServiceClient) ListSourceEvalTargets(ctx context.Context, re
 func (p *kEvalTargetServiceClient) ListSourceEvalTargetVersions(ctx context.Context, request *eval_target.ListSourceEvalTargetVersionsRequest, callOptions ...callopt.Option) (r *eval_target.ListSourceEvalTargetVersionsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListSourceEvalTargetVersions(ctx, request)
+}
+
+func (p *kEvalTargetServiceClient) BatchGetSourceEvalTargets(ctx context.Context, request *eval_target.BatchGetSourceEvalTargetsRequest, callOptions ...callopt.Option) (r *eval_target.BatchGetSourceEvalTargetsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchGetSourceEvalTargets(ctx, request)
 }
 
 func (p *kEvalTargetServiceClient) ExecuteEvalTarget(ctx context.Context, request *eval_target.ExecuteEvalTargetRequest, callOptions ...callopt.Option) (r *eval_target.ExecuteEvalTargetResponse, err error) {

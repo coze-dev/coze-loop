@@ -6,13 +6,12 @@ package convertor
 import (
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-func SpanListDO2PO(spans loop_span.SpanList, TTL entity.TTL) []*model.ObservabilitySpan {
+func SpanListDO2PO(spans loop_span.SpanList, TTL loop_span.TTL) []*model.ObservabilitySpan {
 	ret := make([]*model.ObservabilitySpan, len(spans))
 	for i, span := range spans {
 		ret[i] = SpanDO2PO(span, TTL)
@@ -28,7 +27,7 @@ func SpanListPO2DO(spans []*model.ObservabilitySpan) loop_span.SpanList {
 	return ret
 }
 
-func SpanDO2PO(span *loop_span.Span, TTL entity.TTL) *model.ObservabilitySpan {
+func SpanDO2PO(span *loop_span.Span, TTL loop_span.TTL) *model.ObservabilitySpan {
 	ret := &model.ObservabilitySpan{
 		TraceID:          span.TraceID,
 		SpanID:           span.SpanID,
@@ -69,17 +68,17 @@ func SpanDO2PO(span *loop_span.Span, TTL entity.TTL) *model.ObservabilitySpan {
 		ret.ObjectStorage = ptr.Of(span.ObjectStorage)
 	}
 	switch TTL {
-	case entity.TTL3d:
+	case loop_span.TTL3d:
 		ret.LogicDeleteDate = time.Now().Add(3 * 24 * time.Hour).UnixMicro()
-	case entity.TTL7d:
+	case loop_span.TTL7d:
 		ret.LogicDeleteDate = time.Now().Add(7 * 24 * time.Hour).UnixMicro()
-	case entity.TTL30d:
+	case loop_span.TTL30d:
 		ret.LogicDeleteDate = time.Now().Add(30 * 24 * time.Hour).UnixMicro()
-	case entity.TTL90d:
+	case loop_span.TTL90d:
 		ret.LogicDeleteDate = time.Now().Add(90 * 24 * time.Hour).UnixMicro()
-	case entity.TTL180d:
+	case loop_span.TTL180d:
 		ret.LogicDeleteDate = time.Now().Add(180 * 24 * time.Hour).UnixMicro()
-	case entity.TTL365d:
+	case loop_span.TTL365d:
 		ret.LogicDeleteDate = time.Now().Add(365 * 24 * time.Hour).UnixMicro()
 	default:
 		ret.LogicDeleteDate = time.Now().Add(3 * 24 * time.Hour).UnixMicro()
@@ -88,6 +87,9 @@ func SpanDO2PO(span *loop_span.Span, TTL entity.TTL) *model.ObservabilitySpan {
 }
 
 func SpanPO2DO(span *model.ObservabilitySpan) *loop_span.Span {
+	if span == nil {
+		return nil
+	}
 	ret := &loop_span.Span{
 		TraceID:          span.TraceID,
 		SpanID:           span.SpanID,

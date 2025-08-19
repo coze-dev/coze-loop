@@ -30,9 +30,10 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 	var spec *dataset.DatasetSpec
 	if do.Spec != nil {
 		spec = &dataset.DatasetSpec{
-			MaxItemCount:  gptr.Of(do.Spec.MaxItemCount),
-			MaxFieldCount: gptr.Of(do.Spec.MaxFieldCount),
-			MaxItemSize:   gptr.Of(do.Spec.MaxItemSize),
+			MaxItemCount:           gptr.Of(do.Spec.MaxItemCount),
+			MaxFieldCount:          gptr.Of(do.Spec.MaxFieldCount),
+			MaxItemSize:            gptr.Of(do.Spec.MaxItemSize),
+			MaxItemDataNestedDepth: gptr.Of(do.Spec.MaxItemDataNestedDepth),
 		}
 	}
 	var features *dataset.DatasetFeatures

@@ -25,8 +25,9 @@ type EvalTargetVersion struct {
 
 	EvalTargetType EvalTargetType
 
-	CozeBot *CozeBot
-	Prompt  *LoopPrompt
+	CozeBot      *CozeBot
+	Prompt       *LoopPrompt
+	CozeWorkflow *CozeWorkflow
 
 	InputSchema  []*ArgsSchema
 	OutputSchema []*ArgsSchema
@@ -43,6 +44,8 @@ const (
 	EvalTargetTypeLoopPrompt EvalTargetType = 2
 	// Trace
 	EvalTargetTypeLoopTrace EvalTargetType = 3
+	// CozeWorkflow
+	EvalTargetTypeCozeWorkflow EvalTargetType = 4
 )
 
 func (p EvalTargetType) String() string {
@@ -53,6 +56,8 @@ func (p EvalTargetType) String() string {
 		return "LoopPrompt"
 	case EvalTargetTypeLoopTrace:
 		return "LoopTrace"
+	case EvalTargetTypeCozeWorkflow:
+		return "CozeWorkflow"
 	}
 	return "<UNSET>"
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
@@ -24,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
@@ -51,6 +53,7 @@ var (
 		rpc.NewFileRPCProvider,
 		rpc.NewUserRPCProvider,
 		rpc.NewAuditRPCProvider,
+		collector.NewEventCollectorProvider,
 	)
 	manageSet = wire.NewSet(
 		NewPromptManageApplication,
@@ -74,6 +77,7 @@ func InitPromptManageApplication(
 	idgen idgen.IIDGenerator,
 	db db.Provider,
 	redisCli redis.Cmdable,
+	meter metrics.Meter,
 	configFactory conf.IConfigLoaderFactory,
 	llmClient llmruntimeservice.Client,
 	authClient authservice.Client,
@@ -89,6 +93,7 @@ func InitPromptDebugApplication(
 	idgen idgen.IIDGenerator,
 	db db.Provider,
 	redisCli redis.Cmdable,
+	meter metrics.Meter,
 	configFactory conf.IConfigLoaderFactory,
 	llmClient llmruntimeservice.Client,
 	authClient authservice.Client,
@@ -103,6 +108,7 @@ func InitPromptExecuteApplication(
 	idgen idgen.IIDGenerator,
 	db db.Provider,
 	redisCli redis.Cmdable,
+	meter metrics.Meter,
 	configFactory conf.IConfigLoaderFactory,
 	llmClient llmruntimeservice.Client,
 	fileClient fileservice.Client,
@@ -115,6 +121,7 @@ func InitPromptOpenAPIApplication(
 	idgen idgen.IIDGenerator,
 	db db.Provider,
 	redisCli redis.Cmdable,
+	meter metrics.Meter,
 	configFactory conf.IConfigLoaderFactory,
 	limiterFactory limiter.IRateLimiterFactory,
 	llmClient llmruntimeservice.Client,

@@ -160,6 +160,27 @@ func (l *LocalEvalTargetService) ListSourceEvalTargetVersions(ctx context.Contex
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvalTargetService) BatchGetSourceEvalTargets(ctx context.Context, request *eval_target.BatchGetSourceEvalTargetsRequest, callOptions ...callopt.Option) (*eval_target.BatchGetSourceEvalTargetsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceBatchGetSourceEvalTargetsArgs)
+		result := out.(*eval_target.EvalTargetServiceBatchGetSourceEvalTargetsResult)
+		resp, err := l.impl.BatchGetSourceEvalTargets(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceBatchGetSourceEvalTargetsArgs{Request: request}
+	result := &eval_target.EvalTargetServiceBatchGetSourceEvalTargetsResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetSourceEvalTargets")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ExecuteEvalTarget
 // 执行
 func (l *LocalEvalTargetService) ExecuteEvalTarget(ctx context.Context, request *eval_target.ExecuteEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.ExecuteEvalTargetResponse, error) {

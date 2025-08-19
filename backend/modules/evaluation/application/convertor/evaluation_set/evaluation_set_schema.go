@@ -50,15 +50,17 @@ func FieldSchemaDTO2DO(dto *eval_set.FieldSchema) *entity.FieldSchema {
 		}
 	}
 	return &entity.FieldSchema{
-		Key:                  gptr.Indirect(dto.Key),
-		Name:                 gptr.Indirect(dto.Name),
-		Description:          gptr.Indirect(dto.Description),
-		ContentType:          common.ConvertContentTypeDTO2DO(gptr.Indirect(dto.ContentType)),
-		DefaultDisplayFormat: entity.FieldDisplayFormat(gptr.Indirect(dto.DefaultDisplayFormat)),
-		Status:               entity.FieldStatus(gptr.Indirect(dto.Status)),
-		TextSchema:           gptr.Indirect(dto.TextSchema),
-		MultiModelSpec:       multiModelSpec,
-		Hidden:               gptr.Indirect(dto.Hidden),
+		Key:                    gptr.Indirect(dto.Key),
+		Name:                   gptr.Indirect(dto.Name),
+		Description:            gptr.Indirect(dto.Description),
+		ContentType:            common.ConvertContentTypeDTO2DO(gptr.Indirect(dto.ContentType)),
+		DefaultDisplayFormat:   entity.FieldDisplayFormat(gptr.Indirect(dto.DefaultDisplayFormat)),
+		Status:                 entity.FieldStatus(gptr.Indirect(dto.Status)),
+		TextSchema:             gptr.Indirect(dto.TextSchema),
+		MultiModelSpec:         multiModelSpec,
+		Hidden:                 gptr.Indirect(dto.Hidden),
+		IsRequired:             gptr.Indirect(dto.IsRequired),
+		DefaultTransformations: dto.DefaultTransformations,
 	}
 }
 
@@ -100,14 +102,16 @@ func FieldSchemaDO2DTO(do *entity.FieldSchema) *eval_set.FieldSchema {
 		}
 	}
 	return &eval_set.FieldSchema{
-		Key:                  gptr.Of(do.Key),
-		Name:                 gptr.Of(do.Name),
-		Description:          gptr.Of(do.Description),
-		ContentType:          gptr.Of(common.ConvertContentTypeDO2DTO(do.ContentType)),
-		DefaultDisplayFormat: gptr.Of(dataset.FieldDisplayFormat(do.DefaultDisplayFormat)),
-		Status:               gptr.Of(dataset.FieldStatus(do.Status)),
-		TextSchema:           gptr.Of(do.TextSchema),
-		MultiModelSpec:       multiModelSpec,
-		Hidden:               gptr.Of(do.Hidden),
+		Key:                    gptr.Of(do.Key),
+		Name:                   gptr.Of(do.Name),
+		Description:            gptr.Of(do.Description),
+		ContentType:            gptr.Of(common.ConvertContentTypeDO2DTO(do.ContentType)),
+		DefaultDisplayFormat:   gptr.Of(dataset.FieldDisplayFormat(do.DefaultDisplayFormat)),
+		Status:                 gptr.Of(dataset.FieldStatus(do.Status)),
+		TextSchema:             gptr.Of(do.TextSchema),
+		MultiModelSpec:         multiModelSpec,
+		Hidden:                 gptr.Of(do.Hidden),
+		IsRequired:             gptr.Of(do.IsRequired),
+		DefaultTransformations: do.DefaultTransformations,
 	}
 }

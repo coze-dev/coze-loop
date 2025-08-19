@@ -5,6 +5,7 @@ package apis
 import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
@@ -17,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
+	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/debug"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
@@ -151,6 +153,32 @@ func NewDatasetServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol
 func NewDatasetServiceClient(c thrift.TClient) *DatasetServiceClient {
 	return &DatasetServiceClient{
 		DatasetServiceClient: dataset.NewDatasetServiceClient(c),
+	}
+}
+
+type TagService interface {
+	tag.TagService
+}
+
+type TagServiceClient struct {
+	*tag.TagServiceClient
+}
+
+func NewTagServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *TagServiceClient {
+	return &TagServiceClient{
+		TagServiceClient: tag.NewTagServiceClientFactory(t, f),
+	}
+}
+
+func NewTagServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *TagServiceClient {
+	return &TagServiceClient{
+		TagServiceClient: tag.NewTagServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewTagServiceClient(c thrift.TClient) *TagServiceClient {
+	return &TagServiceClient{
+		TagServiceClient: tag.NewTagServiceClient(c),
 	}
 }
 
@@ -333,6 +361,32 @@ func NewObservabilityTraceServiceClientProtocol(t thrift.TTransport, iprot thrif
 func NewObservabilityTraceServiceClient(c thrift.TClient) *ObservabilityTraceServiceClient {
 	return &ObservabilityTraceServiceClient{
 		TraceServiceClient: trace.NewTraceServiceClient(c),
+	}
+}
+
+type ObservabilityOpenAPIService interface {
+	openapi1.OpenAPIService
+}
+
+type ObservabilityOpenAPIServiceClient struct {
+	*openapi1.OpenAPIServiceClient
+}
+
+func NewObservabilityOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityOpenAPIServiceClient {
+	return &ObservabilityOpenAPIServiceClient{
+		OpenAPIServiceClient: openapi1.NewOpenAPIServiceClientFactory(t, f),
+	}
+}
+
+func NewObservabilityOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityOpenAPIServiceClient {
+	return &ObservabilityOpenAPIServiceClient{
+		OpenAPIServiceClient: openapi1.NewOpenAPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewObservabilityOpenAPIServiceClient(c thrift.TClient) *ObservabilityOpenAPIServiceClient {
+	return &ObservabilityOpenAPIServiceClient{
+		OpenAPIServiceClient: openapi1.NewOpenAPIServiceClient(c),
 	}
 }
 
@@ -537,6 +591,15 @@ func NewDatasetServiceProcessor(handler DatasetService) *DatasetServiceProcessor
 	return self
 }
 
+type TagServiceProcessor struct {
+	*tag.TagServiceProcessor
+}
+
+func NewTagServiceProcessor(handler TagService) *TagServiceProcessor {
+	self := &TagServiceProcessor{tag.NewTagServiceProcessor(handler)}
+	return self
+}
+
 type PromptManageServiceProcessor struct {
 	*manage.PromptManageServiceProcessor
 }
@@ -597,6 +660,15 @@ type ObservabilityTraceServiceProcessor struct {
 
 func NewObservabilityTraceServiceProcessor(handler ObservabilityTraceService) *ObservabilityTraceServiceProcessor {
 	self := &ObservabilityTraceServiceProcessor{trace.NewTraceServiceProcessor(handler)}
+	return self
+}
+
+type ObservabilityOpenAPIServiceProcessor struct {
+	*openapi1.OpenAPIServiceProcessor
+}
+
+func NewObservabilityOpenAPIServiceProcessor(handler ObservabilityOpenAPIService) *ObservabilityOpenAPIServiceProcessor {
+	self := &ObservabilityOpenAPIServiceProcessor{openapi1.NewOpenAPIServiceProcessor(handler)}
 	return self
 }
 

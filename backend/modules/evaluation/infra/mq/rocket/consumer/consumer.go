@@ -28,6 +28,7 @@ func NewConsumerWorkers(
 		newExptSchedulerEventConsumer(newExptSchedulerConsumer(exptApp), loader),
 		newExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
 		newExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
+		newExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 	}, nil
 }
 
@@ -36,6 +37,26 @@ func newExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.ICon
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
 	}
+}
+
+type ExptTurnResultFilterEventConsumer struct {
+	mq.IConsumerHandler
+	conf.IConfigLoader
+}
+
+func newExptTurnResultFilterEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+	return &ExptTurnResultFilterEventConsumer{
+		IConsumerHandler: handler,
+		IConfigLoader:    loader,
+	}
+}
+
+func (e *ExptTurnResultFilterEventConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
+	rmqCfg := &rocket.RMQConf{}
+	if err := e.UnmarshalKey(ctx, rocket.ExptTurnResultFilterRMQKey, rmqCfg); err != nil {
+		return nil, err
+	}
+	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
 }
 
 type ExptSchedulerEventConsumer struct {

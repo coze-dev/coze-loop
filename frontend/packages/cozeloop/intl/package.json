@@ -21,7 +21,7 @@
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
-    "@rushstack/rush-sdk": "5.100.2",
+    "@rushstack/rush-sdk": "5.147.2",
     "@types/jju": "^1.4.5",
     "@types/klaw": "^3.0.7",
     "@types/react": "18.2.37",

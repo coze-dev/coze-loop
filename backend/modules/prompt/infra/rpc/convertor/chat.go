@@ -4,6 +4,10 @@
 package convertor
 
 import (
+	"strconv"
+
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
 	runtimedto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/runtime"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
@@ -18,12 +22,12 @@ func LLMCallParamConvert(param rpc.LLMCallParam) *runtime.ChatRequest {
 		Messages:    BatchMessageDO2DTO(param.Messages),
 		Tools:       BatchToolDO2DTO(param.Tools),
 		BizParam: &runtimedto.BizParam{
-			WorkspaceID: ptr.Of(param.SpaceID),
-			UserID:      param.UserID,
-			Scenario:    ptr.Of(ScenarioDO2DTO(param.Scenario)),
-			// 这里传prompt key
-			ScenarioEntityID:      ptr.Of(param.PromptKey),
+			WorkspaceID:           ptr.Of(param.SpaceID),
+			UserID:                param.UserID,
+			Scenario:              ptr.Of(ScenarioDO2DTO(param.Scenario)),
+			ScenarioEntityID:      ptr.Of(strconv.FormatInt(param.PromptID, 10)),
 			ScenarioEntityVersion: ptr.Of(param.PromptVersion),
+			ScenarioEntityKey:     ptr.Of(param.PromptKey),
 		},
 	}
 }
@@ -40,12 +44,22 @@ func ModelConfigDO2DTO(modelConfig *entity.ModelConfig, toolCallConfig *entity.T
 	if toolCallConfig != nil {
 		toolChoice = ptr.Of(ToolChoiceTypeDO2DTO(toolCallConfig.ToolChoice))
 	}
+	var responseFormat *runtimedto.ResponseFormat
+	if modelConfig.JSONMode != nil && ptr.From(modelConfig.JSONMode) {
+		responseFormat = &runtimedto.ResponseFormat{
+			Type: gptr.Of(runtimedto.ResponseFormatJSONObject),
+		}
+	}
 	return &runtimedto.ModelConfig{
-		ModelID:     modelConfig.ModelID,
-		Temperature: modelConfig.Temperature,
-		MaxTokens:   maxTokens,
-		TopP:        modelConfig.TopP,
-		ToolChoice:  toolChoice,
+		ModelID:          modelConfig.ModelID,
+		Temperature:      modelConfig.Temperature,
+		MaxTokens:        maxTokens,
+		TopP:             modelConfig.TopP,
+		ToolChoice:       toolChoice,
+		ResponseFormat:   responseFormat,
+		TopK:             modelConfig.TopK,
+		PresencePenalty:  modelConfig.PresencePenalty,
+		FrequencyPenalty: modelConfig.FrequencyPenalty,
 	}
 }
 

@@ -12,9 +12,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
@@ -27,22 +29,29 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/receiver/rmqreceiver"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/config"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/file"
 	metrics2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/metrics"
-	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq/producer"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ck2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluator"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
 
-func InitTraceApplication(db2 db.Provider, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, authClient authservice.Client, meter metrics.Meter) (trace.TraceService, error) {
+func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, userClient userservice.Client, evalService evaluatorservice.Client, tagService tagservice.Client) (ITraceApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
 	}
@@ -51,29 +60,77 @@ func InitTraceApplication(db2 db.Provider, mqFactory mq.IFactory, configFactory 
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iTraceConfig)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
 	if err != nil {
 		return nil, err
 	}
-	iTraceProducer, err := mq2.NewTraceProducerImpl(iTraceConfig, mqFactory)
+	iTraceProducer, err := producer.NewTraceProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationProducer, err := producer.NewAnnotationProducerImpl(iTraceConfig, mqFactory)
 	if err != nil {
 		return nil, err
 	}
 	iTraceMetrics := metrics2.NewTraceMetricsImpl(meter)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceQueryProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iTraceMetrics, traceFilterProcessorBuilder)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
 	iViewDao := mysql.NewViewDaoImpl(db2)
 	iViewRepo := repo.NewViewRepoImpl(iViewDao)
 	iAuthProvider := auth.NewAuthProvider(authClient)
-	traceService, err := NewTraceApplication(iTraceService, iViewRepo, iAuthProvider, benefit2, iTraceMetrics, iTraceConfig)
+	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
+	iUserProvider := user.NewUserRPCProvider(userClient)
+	iTagRPCAdapter := tag.NewTagRPCProvider(tagService)
+	iTraceApplication, err := NewTraceApplication(iTraceService, iViewRepo, benefit2, iTraceMetrics, iTraceConfig, iAuthProvider, iEvaluatorRPCAdapter, iUserProvider, iTagRPCAdapter)
 	if err != nil {
 		return nil, err
 	}
-	return traceService, nil
+	return iTraceApplication, nil
+}
+
+func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, authClient authservice.Client, meter metrics.Meter) (IObservabilityOpenAPIApplication, error) {
+	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iConfigLoader, err := NewTraceConfigLoader(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	if err != nil {
+		return nil, err
+	}
+	iTraceProducer, err := producer.NewTraceProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationProducer, err := producer.NewAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceMetrics := metrics2.NewTraceMetricsImpl(meter)
+	iFileProvider := file.NewFileRPCProvider(fileClient)
+	traceFilterProcessorBuilder := NewTraceQueryProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder)
+	if err != nil {
+		return nil, err
+	}
+	iAuthProvider := auth.NewAuthProvider(authClient)
+	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2)
+	if err != nil {
+		return nil, err
+	}
+	return iObservabilityOpenAPIApplication, nil
 }
 
 func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
@@ -85,8 +142,12 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	if err != nil {
 		return nil, err
 	}
+	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iTraceConfig)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +162,20 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 
 // wire.go:
 
-var traceSet = wire.NewSet(
-	NewTraceApplication, service.NewTraceServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, metrics2.NewTraceMetricsImpl, mq2.NewTraceProducerImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,
-	NewTraceQueryProcessorBuilder, file.NewFileRPCProvider,
-)
-
-var traceIngestionSet = wire.NewSet(
-	NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,
-	NewIngestionCollectorFactory,
+var (
+	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
+		NewTraceQueryProcessorBuilder, config.NewTraceConfigCenter,
+	)
+	traceSet = wire.NewSet(
+		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, evaluator.NewEvaluatorRPCProvider, traceDomainSet,
+	)
+	traceIngestionSet = wire.NewSet(
+		NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,
+		NewIngestionCollectorFactory,
+	)
+	openApiSet = wire.NewSet(
+		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
+	)
 )
 
 func NewTraceQueryProcessorBuilder(
@@ -119,7 +186,7 @@ func NewTraceQueryProcessorBuilder(
 	return service.NewTraceFilterProcessorBuilder(span_filter.NewPlatformFilterFactory(
 		[]span_filter.Factory{span_filter.NewCozeLoopFilterFactory(), span_filter.NewPromptFilterFactory(traceConfig), span_filter.NewEvaluatorFilterFactory(), span_filter.NewEvalTargetFilterFactory()}), []span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewCheckProcessorFactory(), span_processor.NewAttrTosProcessorFactory(fileProvider), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
 
-		[]span_processor.Factory{span_processor.NewAttrTosProcessorFactory(fileProvider), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
+		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
 
 		[]span_processor.Factory{span_processor.NewCheckProcessorFactory()})
 }

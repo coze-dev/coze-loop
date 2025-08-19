@@ -151,6 +151,10 @@ func (do *BaseInfo) SetUpdatedBy(updatedBy *UserInfo) {
 	do.UpdatedBy = updatedBy
 }
 
+func (do *BaseInfo) SetUpdatedAt(updatedAt *int64) {
+	do.UpdatedAt = updatedAt
+}
+
 // Provider 模型提供方枚举
 type Provider int64
 

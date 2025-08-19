@@ -2028,6 +2028,20 @@ func (p *FieldSchema) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField20(buf[offset:])
@@ -2059,6 +2073,20 @@ func (p *FieldSchema) FastRead(buf []byte) (int, error) {
 		case 50:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField50(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 55:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField55(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2176,6 +2204,20 @@ func (p *FieldSchema) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FieldSchema) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsRequired = _field
+	return offset, nil
+}
+
 func (p *FieldSchema) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
@@ -2216,6 +2258,31 @@ func (p *FieldSchema) FastReadField50(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FieldSchema) FastReadField55(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*dataset.FieldTransformationConfig, 0, size)
+	values := make([]dataset.FieldTransformationConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.DefaultTransformations = _field
+	return offset, nil
+}
+
 func (p *FieldSchema) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2223,6 +2290,7 @@ func (p *FieldSchema) FastWrite(buf []byte) int {
 func (p *FieldSchema) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
@@ -2232,6 +2300,7 @@ func (p *FieldSchema) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField55(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2246,9 +2315,11 @@ func (p *FieldSchema) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field50Length()
+		l += p.field55Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2308,6 +2379,15 @@ func (p *FieldSchema) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *FieldSchema) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsRequired() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsRequired)
+	}
+	return offset
+}
+
 func (p *FieldSchema) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTextSchema() {
@@ -2331,6 +2411,22 @@ func (p *FieldSchema) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetHidden() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 50)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.Hidden)
+	}
+	return offset
+}
+
+func (p *FieldSchema) fastWriteField55(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDefaultTransformations() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 55)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.DefaultTransformations {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -2389,6 +2485,15 @@ func (p *FieldSchema) field6Length() int {
 	return l
 }
 
+func (p *FieldSchema) field7Length() int {
+	l := 0
+	if p.IsSetIsRequired() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *FieldSchema) field20Length() int {
 	l := 0
 	if p.IsSetTextSchema() {
@@ -2412,6 +2517,19 @@ func (p *FieldSchema) field50Length() int {
 	if p.IsSetHidden() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *FieldSchema) field55Length() int {
+	l := 0
+	if p.IsSetDefaultTransformations() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.DefaultTransformations {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -2461,6 +2579,11 @@ func (p *FieldSchema) DeepCopy(s interface{}) error {
 		p.Status = &tmp
 	}
 
+	if src.IsRequired != nil {
+		tmp := *src.IsRequired
+		p.IsRequired = &tmp
+	}
+
 	if src.TextSchema != nil {
 		var tmp string
 		if *src.TextSchema != "" {
@@ -2481,6 +2604,21 @@ func (p *FieldSchema) DeepCopy(s interface{}) error {
 	if src.Hidden != nil {
 		tmp := *src.Hidden
 		p.Hidden = &tmp
+	}
+
+	if src.DefaultTransformations != nil {
+		p.DefaultTransformations = make([]*dataset.FieldTransformationConfig, 0, len(src.DefaultTransformations))
+		for _, elem := range src.DefaultTransformations {
+			var _elem *dataset.FieldTransformationConfig
+			if elem != nil {
+				_elem = &dataset.FieldTransformationConfig{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.DefaultTransformations = append(p.DefaultTransformations, _elem)
+		}
 	}
 
 	return nil

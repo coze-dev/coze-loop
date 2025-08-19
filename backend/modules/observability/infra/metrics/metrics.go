@@ -5,10 +5,12 @@ package metrics
 
 import (
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	metrics2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const (
@@ -35,17 +37,29 @@ func traceQueryTagNames() []string {
 	}
 }
 
+var (
+	traceMetricsOnce      sync.Once
+	singletonTraceMetrics metrics2.ITraceMetrics
+)
+
 func NewTraceMetricsImpl(meter metrics.Meter) metrics2.ITraceMetrics {
-	ret := &TraceMetricsImpl{}
-	if meter == nil {
-		return ret
-	}
-	spansMetrics, err := meter.NewMetric(traceSpansMetricsName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, traceQueryTagNames())
-	if err != nil {
-		return ret
-	}
-	return &TraceMetricsImpl{
-		spansMetrics: spansMetrics,
+	traceMetricsOnce.Do(func() {
+		if meter == nil {
+			return
+		}
+		spansMetrics, err := meter.NewMetric(traceSpansMetricsName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, traceQueryTagNames())
+		if err != nil {
+			logs.Error("Failed to create trace metrics: %v", err)
+			return
+		}
+		singletonTraceMetrics = &TraceMetricsImpl{
+			spansMetrics: spansMetrics,
+		}
+	})
+	if singletonTraceMetrics != nil {
+		return singletonTraceMetrics
+	} else {
+		return &TraceMetricsImpl{} // not expected to be here
 	}
 }
 

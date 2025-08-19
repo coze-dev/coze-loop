@@ -100,3 +100,9 @@ func BatchGetEvalTargetRecords(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// BatchGetSourceEvalTargets .
+// @router /api/evaluation/v1/eval_targets/batch_get_source [POST]
+func BatchGetSourceEvalTargets(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalTargetSvc.BatchGetSourceEvalTargets)
+}

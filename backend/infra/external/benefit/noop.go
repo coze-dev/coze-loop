@@ -18,7 +18,7 @@ func (n NoopBenefitServiceImpl) CheckTraceBenefit(ctx context.Context, param *Ch
 	return &CheckTraceBenefitResult{
 		AccountAvailable: true,
 		IsEnough:         true,
-		StorageDuration:  3,
+		StorageDuration:  365,
 		WhichIsEnough:    -1,
 	}, nil
 }

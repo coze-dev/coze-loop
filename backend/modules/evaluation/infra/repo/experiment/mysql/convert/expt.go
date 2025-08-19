@@ -41,7 +41,10 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		SourceType:       int32(experiment.SourceType),
 		SourceID:         experiment.SourceID,
 		ExptType:         int32(experiment.ExptType),
-		MaxAliveTime:     gptr.Of(experiment.MaxAliveTime),
+	}
+
+	if experiment.MaxAliveTime != 0 {
+		expt.MaxAliveTime = gptr.Of(experiment.MaxAliveTime)
 	}
 
 	if experiment.EvalConf != nil {
