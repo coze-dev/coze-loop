@@ -476,3 +476,34 @@ func (p *GetDefaultPromptEvaluatorToolsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ValidateEvaluatorRequest) IsValid() error {
+	if p.EvaluatorContent != nil {
+		if err := p.EvaluatorContent.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ValidateEvaluatorResponse) IsValid() error {
+	if p.EvaluatorOutputData != nil {
+		if err := p.EvaluatorOutputData.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorOutputData not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

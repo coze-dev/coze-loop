@@ -320,6 +320,23 @@ struct GetDefaultPromptEvaluatorToolsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct ValidateEvaluatorRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')
+    3: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
+    4: optional evaluator.EvaluatorInputData input_data (api.body='input_data')
+
+    255: optional base.Base Base
+}
+
+struct ValidateEvaluatorResponse {
+    1: optional bool valid (api.body='valid')
+    2: optional string error_message (api.body='error_message')
+    3: optional evaluator.EvaluatorOutputData evaluator_output_data (api.body='evaluator_output_data')
+
+    255: base.BaseResp BaseResp
+}
+
 service EvaluatorService {
     // 评估器
     ListEvaluatorsResponse ListEvaluators(1: ListEvaluatorsRequest request)           (api.post=  "/api/evaluation/v1/evaluators/list")      // 按查询条件查询evaluator
@@ -350,5 +367,8 @@ service EvaluatorService {
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 修正evaluator运行分数
     GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
     BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
+    
+    // 评估器验证
+    ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (api.post="/api/evaluation/v1/evaluators/validate")
 
 } (api.js_conv="true" )

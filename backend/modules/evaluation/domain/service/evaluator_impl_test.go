@@ -19,7 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	entitymocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity/mocks"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -41,7 +41,7 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 	mockIdem := idemmocks.NewMockIdempotentService(ctrl)
 	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 	mockSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
-	mockSourceService.EXPECT().EvaluatorType().Return(entity.EvaluatorTypePrompt)
+
 
 	// 这里需要传递一个 EvaluatorSourceService 的 slice
 	service := NewEvaluatorServiceImpl(
@@ -52,7 +52,9 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 		mockEvaluatorRecordRepo,
 		mockIdem,
 		mockConfiger,
-		[]EvaluatorSourceService{mockSourceService},
+		map[entity.EvaluatorType]EvaluatorSourceService{
+			entity.EvaluatorTypePrompt: mockSourceService,
+		},
 	)
 
 	assert.IsType(t, &EvaluatorServiceImpl{}, service)
@@ -1263,7 +1265,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 		SpaceID:       1,
 		Name:          "Test Evaluator",
 		EvaluatorType: entity.EvaluatorTypePrompt, // 确保 GetEvaluatorVersion 能工作
-		// PromptEvaluatorVersion 将在 setupMocks 中被 mock 的 IEvaluatorVersion "替换"其行为
+		// PromptEvaluatorVersion 直接使用具体实现
 		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 			ID:                100,
 			EvaluatorID:       100,
@@ -1302,7 +1304,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 		version         string
 		description     string
 		cid             string
-		setupMocks      func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, mockEvalVersion *entitymocks.MockIEvaluatorVersion, inputEvaluatorDO *entity.Evaluator)
+		setupMocks      func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, inputEvaluatorDO *entity.Evaluator)
 		expectedEvalDO  *entity.Evaluator // 期望返回的 Evaluator 实体
 		expectedErrCode int32             // 期望的错误码，0表示无错误
 		expectedErrMsg  string            // 期望的错误信息中的特定子串
@@ -1314,7 +1316,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			version:     "v1.0.0",
 			description: "Initial version",
 			cid:         "client-id-1",
-			setupMocks: func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, mockEvalVersion *entitymocks.MockIEvaluatorVersion, inputEvaluatorDO *entity.Evaluator) {
+			setupMocks: func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, inputEvaluatorDO *entity.Evaluator) {
 				// 1. Mock idem.Set
 				mockIdem.EXPECT().Set(gomock.Any(), consts.IdemKeySubmitEvaluator+"client-id-1", time.Second*10).Return(nil)
 				// 2. Mock idgen.GenID
@@ -1341,7 +1343,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			version:     "v1.0.0",
 			description: "Desc",
 			cid:         "client-id-2",
-			setupMocks: func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, mockEvalVersion *entitymocks.MockIEvaluatorVersion, inputEvaluatorDO *entity.Evaluator) {
+			setupMocks: func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, inputEvaluatorDO *entity.Evaluator) {
 				mockIdem.EXPECT().Set(gomock.Any(), consts.IdemKeySubmitEvaluator+"client-id-2", time.Second*10).Return(errors.New("idem set error"))
 			},
 			expectedErrCode: errno.ActionRepeatedCode,
@@ -1353,7 +1355,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			version:     "v1.0.0",
 			description: "Desc",
 			cid:         "client-id-3",
-			setupMocks: func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, mockEvalVersion *entitymocks.MockIEvaluatorVersion, inputEvaluatorDO *entity.Evaluator) {
+			setupMocks: func(ctrl *gomock.Controller, mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, inputEvaluatorDO *entity.Evaluator) {
 				mockIdem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockIdgen.EXPECT().GenID(gomock.Any()).Return(int64(1), errors.New("gen id error"))
 			},
@@ -1370,7 +1372,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			mockIdemService := idemmocks.NewMockIdempotentService(ctrl)
 			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 			mockEvalRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
-			mockEvalVersion := entitymocks.NewMockIEvaluatorVersion(ctrl)
+
 
 			s := &EvaluatorServiceImpl{
 				evaluatorRepo: mockEvalRepo,
@@ -1379,7 +1381,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			}
 
 			if tc.setupMocks != nil {
-				tc.setupMocks(ctrl, mockIdemService, mockIDGen, mockEvalRepo, mockEvalVersion, tc.evaluatorDO)
+				tc.setupMocks(ctrl, mockIdemService, mockIDGen, mockEvalRepo, tc.evaluatorDO)
 			}
 
 			returnedEvalDO, err := s.SubmitEvaluatorVersion(context.Background(), tc.evaluatorDO, tc.version, tc.description, tc.cid)
@@ -1441,7 +1443,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 		SpaceID:       1,
 		Name:          "Test Evaluator",
 		EvaluatorType: entity.EvaluatorTypePrompt, // 确保 GetEvaluatorVersion 能工作
-		// PromptEvaluatorVersion 将在 setupMocks 中被 mock 的 IEvaluatorVersion "替换"其行为
+		// PromptEvaluatorVersion 直接使用具体实现
 		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 			ID:                100,
 			EvaluatorID:       100,
@@ -1579,7 +1581,7 @@ func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 		SpaceID:       1,
 		Name:          "Test Evaluator",
 		EvaluatorType: entity.EvaluatorTypePrompt, // 确保 GetEvaluatorVersion 能工作
-		// PromptEvaluatorVersion 将在 setupMocks 中被 mock 的 IEvaluatorVersion "替换"其行为
+		// PromptEvaluatorVersion 直接使用具体实现
 		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 			ID:                100,
 			EvaluatorID:       100,

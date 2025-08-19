@@ -179,6 +179,21 @@ struct ListSourceEvalTargetVersionsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct MockEvalTargetOutputRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: required i64 eval_target_id (api.js_conv="true", go.tag = 'json:"eval_target_id"')
+    3: required i64 eval_target_version_id (api.js_conv="true", go.tag = 'json:"eval_target_version_id"')
+
+    255: optional base.Base Base
+}
+
+struct MockEvalTargetOutputResponse {
+    1: optional eval_target.EvalTarget eval_target
+    2: optional map<string,string> mock_output
+
+    255: base.BaseResp BaseResp
+}
+
 service EvalTargetService {
     // 创建评测对象
     CreateEvalTargetResponse CreateEvalTarget(1: CreateEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets")
@@ -197,5 +212,8 @@ service EvalTargetService {
     ExecuteEvalTargetResponse ExecuteEvalTarget(1: ExecuteEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/:eval_target_id/versions/:eval_target_version_id/execute")
     GetEvalTargetRecordResponse GetEvalTargetRecord(1: GetEvalTargetRecordRequest request) (api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_records/:eval_target_record_id")
     BatchGetEvalTargetRecordsResponse BatchGetEvalTargetRecords(1: BatchGetEvalTargetRecordsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_records/batch_get")
+
+    // mock输出数据
+    MockEvalTargetOutputResponse MockEvalTargetOutput(1: MockEvalTargetOutputRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/mock_output")
 
 } (api.js_conv="true" )

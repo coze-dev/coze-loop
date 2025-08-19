@@ -296,12 +296,11 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 
 	versionID2Evaluator := make(map[int64]*entity.Evaluator)
 	for _, evaluator := range evaluatorVersionList {
-		evaluatorVersion := evaluator.GetEvaluatorVersion()
-		if evaluatorVersion == nil || !gslice.Contains(evaluatorVersionIDs, evaluatorVersion.GetID()) {
+		if (evaluator.EvaluatorType == entity.EvaluatorTypePrompt && evaluator.PromptEvaluatorVersion == nil) || !gslice.Contains(evaluatorVersionIDs, evaluator.GetEvaluatorVersionID()) {
 			continue
 		}
 
-		versionID2Evaluator[evaluatorVersion.GetID()] = evaluator
+		versionID2Evaluator[evaluator.GetEvaluatorVersionID()] = evaluator
 	}
 
 	results := make([]*entity.ExptAggregateResult, 0, len(expt2AggrResults))

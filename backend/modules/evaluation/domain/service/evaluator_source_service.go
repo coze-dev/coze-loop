@@ -17,4 +17,6 @@ type EvaluatorSourceService interface {
 	Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string)
 	Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, err error)
 	PreHandle(ctx context.Context, evaluator *entity.Evaluator) error
+	// Validate 验证评估器
+	Validate(ctx context.Context, evaluator *entity.Evaluator) error
 }

@@ -8,10 +8,9 @@ enum EvaluatorType {
     Code = 2
 }
 
-enum LanguageType {
-    Python = 1
-    JS = 2
-}
+typedef string LanguageType(ts.enum="true")
+const LanguageType LanguageType_Python = "Python" // 空间
+const LanguageType LanguageType_JS = "JS"
 
 enum PromptSourceType {
     BuiltinTemplate = 1
@@ -57,7 +56,9 @@ struct PromptEvaluator {
 
 struct CodeEvaluator {
     1: optional LanguageType language_type
-    2: optional string code
+    2: optional string code_content
+    3: optional string code_template_key
+    4: optional string code_template_name
 }
 
 struct EvaluatorVersion {
@@ -117,6 +118,7 @@ struct EvaluatorOutputData {
     2: optional EvaluatorUsage evaluator_usage
     3: optional EvaluatorRunError evaluator_run_error
     4: optional i64 time_consuming_ms (api.js_conv = 'true', go.tag = 'json:"time_consuming_ms"')
+    11: optional string stdout
 }
 
 struct EvaluatorResult {
@@ -138,4 +140,8 @@ struct EvaluatorRunError {
 struct EvaluatorInputData {
     1: optional list<common.Message> history_messages
     2: optional map<string, common.Content> input_fields
+    3: optional map<string, common.Content> from_eval_set_fields
+    4: optional map<string, common.Content> from_eval_target_fields
+
+    100: optional map<string, string> ext
 }
