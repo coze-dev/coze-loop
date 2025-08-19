@@ -156,7 +156,7 @@ struct BatchGetEvaluatorVersionsResponse {
 struct SubmitEvaluatorVersionRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"',vt.not_in="0")
     2: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"',vt.not_in="0")
-    3: required string version (api.body='version',vt.not_nil="true")
+    3: required string version (api.body='version',vt.min_size="1")
     4: optional string description (api.body='description',vt.not_nil="true")
     100: optional string cid (api.body='cid')
 

@@ -258,8 +258,8 @@ func (p *SubmitEvaluatorVersionRequest) IsValid() error {
 			return fmt.Errorf("field EvaluatorID not_in rule failed, current value: %v", p.EvaluatorID)
 		}
 	}
-	if p.Version == nil {
-		return fmt.Errorf("field Version not_nil rule failed")
+	if len(p.Version) < int(1) {
+		return fmt.Errorf("field Version min_len rule failed, current value: %d", len(p.Version))
 	}
 	if p.Description == nil {
 		return fmt.Errorf("field Description not_nil rule failed")
