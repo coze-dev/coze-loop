@@ -197,6 +197,8 @@ github.com/cloudwego/dynamicgo v0.6.2 h1:jpb0R27Kh1cNUFsQsOCTchyt9oNG0UvwDvTecEn
 github.com/cloudwego/dynamicgo v0.6.2/go.mod h1:ZfuIc4tsk8gdsmsoL+3M/q3916xTj+KAVJaXQHSaWiE=
 github.com/cloudwego/eino v0.3.27 h1:Oz4HcuivJyb+zT0W43Gmtb6wqmXZaYel0CS4iF6XsoI=
 github.com/cloudwego/eino v0.3.27/go.mod h1:wUjz990apdsaOraOXdh6CdhVXq8DJsOvLsVlxNTcNfY=
+github.com/cloudwego/eino v0.3.55 h1:lMZrGtEh0k3qykQTLNXSXuAa98OtF2tS43GMHyvN7nA=
+github.com/cloudwego/eino v0.3.55/go.mod h1:wUjz990apdsaOraOXdh6CdhVXq8DJsOvLsVlxNTcNfY=
 github.com/cloudwego/eino-ext/components/model/ark v0.1.8 h1:QU0M01WNTVf/63cUjD6S/D1lB+ggvcVH4ntZ+XKg5Lo=
 github.com/cloudwego/eino-ext/components/model/ark v0.1.8/go.mod h1:V3ZJbGMGXVYc1xgkBb3aEIGaS8BvPuVi2lub34vBO7k=
 github.com/cloudwego/eino-ext/components/model/arkbot v0.0.0-20250520101807-b2008771903a h1:axpTaAMf961yZxcPubr8KtXhquPGpiscVUY+UIfEzhY=
@@ -209,6 +211,8 @@ github.com/cloudwego/eino-ext/components/model/gemini v0.0.0-20250520101807-b200
 github.com/cloudwego/eino-ext/components/model/gemini v0.0.0-20250520101807-b2008771903a/go.mod h1:NTYXf6aAoO2zBES9S1lzkBvQoyD6UcUGvLmUAS5TMRU=
 github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250520101807-b2008771903a h1:+/VYbeXv7bCdm0Wk183zIj9MjtF8yVaO1aDQyjfhf6c=
 github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250520101807-b2008771903a/go.mod h1:giNUFqA+V7xrm/EDvH7JFnDqoWI+e2m1SVAnReU+Fd8=
+github.com/cloudwego/eino-ext/components/model/ollama v0.1.0 h1:FW067iMfg3EZbUaZIo8v3i2ILBAZDzY23/9pbprvE0M=
+github.com/cloudwego/eino-ext/components/model/ollama v0.1.0/go.mod h1:+qA5kkUCM0mIrXGSNzxLcjxh6K1AghPNigtEyyMdkOc=
 github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250513023651-7b19c6ffbf4a h1:WBjqihjYla2jh+ZMtlzFDLBnd3qWBwJS7rHH7rOs1Rc=
 github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250513023651-7b19c6ffbf4a/go.mod h1:uXIWTFbaAbZ1128EIXjFc4S+tDqmz1idMZd5qt5kkwU=
 github.com/cloudwego/eino-ext/components/model/qianfan v0.0.0-20250520101807-b2008771903a h1:nl5c/ze/DjOw3iza+IPWe05201eJcMYr6vLeB2EyIAk=

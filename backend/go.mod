@@ -20,13 +20,13 @@ require (
 	github.com/bytedance/gopkg v0.1.2
 	github.com/bytedance/sonic v1.13.2
 	github.com/cenk/backoff v2.2.1+incompatible
-	github.com/cloudwego/eino v0.3.27
+	github.com/cloudwego/eino v0.3.55
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.8
 	github.com/cloudwego/eino-ext/components/model/arkbot v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/components/model/claude v0.0.0-20250513023651-7b19c6ffbf4a
 	github.com/cloudwego/eino-ext/components/model/deepseek v0.0.0-20250514085234-473e80da5261
 	github.com/cloudwego/eino-ext/components/model/gemini v0.0.0-20250520101807-b2008771903a
-	github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250520101807-b2008771903a
+	github.com/cloudwego/eino-ext/components/model/ollama v0.1.0
 	github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250513023651-7b19c6ffbf4a
 	github.com/cloudwego/eino-ext/components/model/qianfan v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/components/model/qwen v0.0.0-20250520101807-b2008771903a
