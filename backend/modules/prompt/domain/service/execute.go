@@ -10,6 +10,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/cozeloop-go"
+	loopentity "github.com/coze-dev/cozeloop-go/entity"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+	"github.com/deatil/go-encoding/encoding"
+	"github.com/google/uuid"
+
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
@@ -22,11 +28,6 @@ import (
 	loopslices "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
-	"github.com/coze-dev/cozeloop-go"
-	loopentity "github.com/coze-dev/cozeloop-go/entity"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
-	"github.com/deatil/go-encoding/encoding"
-	"github.com/google/uuid"
 )
 
 const (
