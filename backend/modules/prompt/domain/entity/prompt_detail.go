@@ -10,13 +10,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/valyala/fasttemplate"
+
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/template"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"github.com/google/go-cmp/cmp"
-	"github.com/valyala/fasttemplate"
 )
 
 const (
