@@ -64,13 +64,24 @@ func (p *PromptServiceImpl) MParseCommitVersionByPromptKey(ctx context.Context, 
 	return promptKeyCommitVersionMap, nil
 }
 
-func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message) error {
+func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error {
 	var fileKeys []string
 	for _, message := range messages {
 		if message == nil || len(message.Parts) == 0 {
 			continue
 		}
 		for _, part := range message.Parts {
+			if part == nil || part.ImageURL == nil {
+				continue
+			}
+			fileKeys = append(fileKeys, part.ImageURL.URI)
+		}
+	}
+	for _, val := range variableVals {
+		if val == nil || len(val.MultiPartValues) == 0 {
+			continue
+		}
+		for _, part := range val.MultiPartValues {
 			if part == nil || part.ImageURL == nil {
 				continue
 			}
@@ -90,6 +101,17 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range message.Parts {
+			if part == nil || part.ImageURL == nil {
+				continue
+			}
+			part.ImageURL.URL = urlMap[part.ImageURL.URI]
+		}
+	}
+	for _, val := range variableVals {
+		if val == nil || len(val.MultiPartValues) == 0 {
+			continue
+		}
+		for _, part := range val.MultiPartValues {
 			if part == nil || part.ImageURL == nil {
 				continue
 			}

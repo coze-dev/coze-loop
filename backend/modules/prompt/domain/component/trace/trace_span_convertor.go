@@ -29,14 +29,21 @@ func VariableValToSpanPromptVariable(variable *entity.VariableVal) *tracespec.Pr
 		return nil
 	}
 	var val any
+	var valueType = tracespec.PromptArgumentValueTypeText
 	val = ptr.From(variable.Value)
 	if val == "" && len(variable.PlaceholderMessages) > 0 {
 		val = MessagesToSpanMessages(variable.PlaceholderMessages)
+		valueType = tracespec.PromptArgumentValueTypeModelMessage
+	}
+	if val == "" && len(variable.MultiPartValues) > 0 {
+		val = ContentPartsToSpanParts(variable.MultiPartValues)
+		valueType = tracespec.PromptArgumentValueTypeMessagePart
 	}
 	return &tracespec.PromptArgument{
-		Key:    variable.Key,
-		Value:  val,
-		Source: "input",
+		Key:       variable.Key,
+		Value:     val,
+		Source:    "input",
+		ValueType: valueType,
 	}
 }
 
