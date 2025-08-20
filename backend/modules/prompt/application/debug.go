@@ -12,10 +12,6 @@ import (
 
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
-	"github.com/coze-dev/cozeloop-go"
-	loopentity "github.com/coze-dev/cozeloop-go/entity"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -34,6 +30,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
+	"github.com/coze-dev/cozeloop-go"
+	loopentity "github.com/coze-dev/cozeloop-go/entity"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func NewPromptDebugApplication(
@@ -259,6 +258,11 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		messages := convertor.BatchMessageDTO2DO(req.Messages)
 		mockVariables := convertor.BatchVariableValDTO2DO(req.VariableVals)
 		mockTools := convertor.MockToolsDTO2DO(req.MockTools)
+		// complete multi modal file uri to url
+		executeErr = p.promptService.MCompleteMultiModalFileURL(ctx, messages, mockVariables)
+		if executeErr != nil {
+			return
+		}
 		aggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
 				Prompt:        prompt,
