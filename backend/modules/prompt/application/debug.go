@@ -12,6 +12,10 @@ import (
 
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
+	"github.com/coze-dev/cozeloop-go"
+	loopentity "github.com/coze-dev/cozeloop-go/entity"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -30,9 +34,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
-	"github.com/coze-dev/cozeloop-go"
-	loopentity "github.com/coze-dev/cozeloop-go/entity"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func NewPromptDebugApplication(
