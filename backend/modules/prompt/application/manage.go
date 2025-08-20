@@ -9,6 +9,9 @@ import (
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/samber/lo"
+	"golang.org/x/exp/maps"
+
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
@@ -23,8 +26,6 @@ import (
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"github.com/samber/lo"
-	"golang.org/x/exp/maps"
 )
 
 func NewPromptManageApplication(
