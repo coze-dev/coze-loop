@@ -240,12 +240,6 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
 	}
 
-	// uri->url
-	err = app.promptService.MCompleteMultiModalFileURL(ctx, promptDO.GetTemplateMessages([]*entity.Message{}))
-	if err != nil {
-		return nil, err
-	}
-
 	// 返回
 	r.Prompt = convertor.PromptDO2DTO(promptDO)
 
