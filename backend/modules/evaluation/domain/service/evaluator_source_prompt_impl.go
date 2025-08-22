@@ -358,7 +358,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 			score, err := outputMsg.Score.Float64()
 			if err != nil {
 				err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-				return errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+				return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 			}
 			output.EvaluatorResult.Score = &score
 			output.EvaluatorResult.Reasoning = outputMsg.Reason
@@ -374,7 +374,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 				score, err := outputMsg.Score.Float64()
 				if err != nil {
 					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-					return errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 				}
 				output.EvaluatorResult.Score = &score
 				output.EvaluatorResult.Reasoning = outputMsg.Reason
@@ -392,7 +392,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 				score, err := outputMsg.Score.Float64()
 				if err != nil {
 					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-					return errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 				}
 				output.EvaluatorResult.Score = &score
 				output.EvaluatorResult.Reasoning = outputMsg.Reason
@@ -408,7 +408,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 					score, err := outputMsg.Score.Float64()
 					if err != nil {
 						err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-						return errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+						return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 					}
 					output.EvaluatorResult.Score = &score
 					output.EvaluatorResult.Reasoning = outputMsg.Reason
@@ -420,7 +420,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 
 	// 若都没有找到合法的解析结果，返回错误
 	err := fmt.Errorf("[parseContentOutput] parse failed, content does not contain both score and reason: %s", content)
-	return errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+	return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 }
 
 func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
