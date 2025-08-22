@@ -29,6 +29,10 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ExptTurnResult:                 newExptTurnResult(db, opts...),
 		ExptTurnResultFilterKeyMapping: newExptTurnResultFilterKeyMapping(db, opts...),
 		ExptTurnResultRunLog:           newExptTurnResultRunLog(db, opts...),
+		ExptTurnResultTagRef:       newExptTurnResultTagRef(db, opts...),
+		ExptTurnAnnotateRecordRef:  newExptTurnAnnotateRecordRef(db, opts...),
+		AnnotateRecord:             newAnnotateRecord(db, opts...),
+		ExptResultExportRecord:     newExptResultExportRecord(db, opts...),
 	}
 }
 
@@ -46,6 +50,10 @@ type Query struct {
 	ExptTurnResult                 exptTurnResult
 	ExptTurnResultFilterKeyMapping exptTurnResultFilterKeyMapping
 	ExptTurnResultRunLog           exptTurnResultRunLog
+	ExptTurnResultTagRef       exptTurnResultTagRef
+	ExptTurnAnnotateRecordRef  exptTurnAnnotateRecordRef
+	AnnotateRecord             annotateRecord
+	ExptResultExportRecord     exptResultExportRecord
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -64,6 +72,10 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ExptTurnResult:                 q.ExptTurnResult.clone(db),
 		ExptTurnResultFilterKeyMapping: q.ExptTurnResultFilterKeyMapping.clone(db),
 		ExptTurnResultRunLog:           q.ExptTurnResultRunLog.clone(db),
+		ExptTurnResultTagRef:       q.ExptTurnResultTagRef.clone(db),
+		ExptTurnAnnotateRecordRef:  q.ExptTurnAnnotateRecordRef.clone(db),
+		AnnotateRecord:             q.AnnotateRecord.clone(db),
+		ExptResultExportRecord:     q.ExptResultExportRecord.clone(db),
 	}
 }
 
@@ -89,6 +101,10 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ExptTurnResult:                 q.ExptTurnResult.replaceDB(db),
 		ExptTurnResultFilterKeyMapping: q.ExptTurnResultFilterKeyMapping.replaceDB(db),
 		ExptTurnResultRunLog:           q.ExptTurnResultRunLog.replaceDB(db),
+		ExptTurnResultTagRef:       q.ExptTurnResultTagRef.replaceDB(db),
+		ExptTurnAnnotateRecordRef:  q.ExptTurnAnnotateRecordRef.replaceDB(db),
+		AnnotateRecord:             q.AnnotateRecord.replaceDB(db),
+		ExptResultExportRecord:     q.ExptResultExportRecord.replaceDB(db),
 	}
 }
 
@@ -104,6 +120,10 @@ type queryCtx struct {
 	ExptTurnResult                 *exptTurnResultDo
 	ExptTurnResultFilterKeyMapping *exptTurnResultFilterKeyMappingDo
 	ExptTurnResultRunLog           *exptTurnResultRunLogDo
+	ExptTurnResultTagRef       *exptTurnResultTagRefDo
+	ExptTurnAnnotateRecordRef  *exptTurnAnnotateRecordRefDo
+	AnnotateRecord             *annotateRecordDo
+	ExptResultExportRecord     *exptResultExportRecordDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -119,6 +139,10 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ExptTurnResult:                 q.ExptTurnResult.WithContext(ctx),
 		ExptTurnResultFilterKeyMapping: q.ExptTurnResultFilterKeyMapping.WithContext(ctx),
 		ExptTurnResultRunLog:           q.ExptTurnResultRunLog.WithContext(ctx),
+		ExptTurnResultTagRef:       q.ExptTurnResultTagRef.WithContext(ctx),
+		ExptTurnAnnotateRecordRef:  q.ExptTurnAnnotateRecordRef.WithContext(ctx),
+		AnnotateRecord:             q.AnnotateRecord.WithContext(ctx),
+		ExptResultExportRecord:     q.ExptResultExportRecord.WithContext(ctx),
 	}
 }
 

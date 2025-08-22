@@ -160,6 +160,9 @@ func InitEvaluationHandler(
 	userClient userservice.Client,
 	benefitSvc benefit.IBenefitService,
 	limiterFactory limiter.IRateLimiterFactory,
+	fileClient fileservice.Client,
+	tagClient tagservice.Client,
+	objectStorage fileserver.ObjectStorage,
 ) (*EvaluationHandler, error) {
 	wire.Build(
 		evaluationSet,

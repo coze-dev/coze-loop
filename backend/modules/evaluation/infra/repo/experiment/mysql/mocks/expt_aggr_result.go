@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	"go.uber.org/mock/gomock"
+
 	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockExptAggrResultDAO is a mock of ExptAggrResultDAO interface.
@@ -92,6 +93,25 @@ func (mr *MockExptAggrResultDAOMockRecorder) CreateExptAggrResult(arg0, arg1 int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptAggrResult", reflect.TypeOf((*MockExptAggrResultDAO)(nil).CreateExptAggrResult), varargs...)
+}
+
+// DeleteExptAggrResult mocks base method.
+func (m *MockExptAggrResultDAO) DeleteExptAggrResult(arg0 context.Context, arg1 *model.ExptAggrResult, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteExptAggrResult", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteExptAggrResult indicates an expected call of DeleteExptAggrResult.
+func (mr *MockExptAggrResultDAOMockRecorder) DeleteExptAggrResult(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExptAggrResult", reflect.TypeOf((*MockExptAggrResultDAO)(nil).DeleteExptAggrResult), varargs...)
 }
 
 // GetExptAggrResult mocks base method.

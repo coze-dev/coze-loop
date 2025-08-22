@@ -56,3 +56,8 @@ func (c *configer) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *e
 func (c *configer) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
 	return nil
 }
+
+func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.ExptExportWhiteList) {
+	const key = "expt_export_white_list"
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &eec) == nil, eec, entity.DefaultExptExportWhiteList())
+}

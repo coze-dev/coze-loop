@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/cozeloop-go"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/pkg/errors"
 
@@ -82,7 +81,7 @@ func (r *runtimeApp) Chat(ctx context.Context, req *runtime.ChatRequest) (resp *
 	var respMsg *entity.Message
 	// 5. start span
 	var span looptracer.Span
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, model.Name, tracespec.VModelSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(req.GetBizParam().GetWorkspaceID(), 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, model.Name, tracespec.VModelSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(req.GetBizParam().GetWorkspaceID(), 10)))
 	// 6. 调用llm.generate or llm.stream方法, 并解析流式返回
 	defer func() {
 		// 上报span
@@ -141,7 +140,7 @@ func (r *runtimeApp) ChatStream(ctx context.Context, req *runtime.ChatRequest, s
 	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools())
 	// 4. start trace
 	var span looptracer.Span
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, model.Name, tracespec.VModelSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(req.GetBizParam().GetWorkspaceID(), 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, model.Name, tracespec.VModelSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(req.GetBizParam().GetWorkspaceID(), 10)))
 	// 5. 调用llm.generate or llm.stream方法, 并解析流式返回
 	var parseResult entity.StreamRespParseResult
 	beginTime := time.Now()

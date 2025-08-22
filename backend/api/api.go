@@ -96,6 +96,9 @@ func Init(
 		louser.NewLocalUserService(foundationHandler.UserService),
 		benefitSvc,
 		limiterFactory,
+		lofile.NewLocalFileService(foundationHandler.FileService),
+		lotag.NewLocalTagService(dataHandler.TagService),
+		objectStorage,
 	)
 	if err != nil {
 		return nil, err

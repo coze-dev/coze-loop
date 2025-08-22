@@ -263,7 +263,7 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	}
 
 	logs.CtxInfo(ctx, "[ExptRecordEval] expt item eval finished, expt_id: %v, expt_run_id: %v, success: %v, update_fields: %v", event.ExptID, event.ExptRunID, evalErr == nil, ufields)
-	time.Sleep(time.Second * 1) // 确保日志落库
+	time.Sleep(time.Second * 2) // 确保日志落库
 	return nil
 }
 

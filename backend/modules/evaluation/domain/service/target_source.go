@@ -28,6 +28,7 @@ type ISourceEvalTargetOperateService interface {
 	ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error
 	// Execute
 	Execute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (outputData *entity.EvalTargetOutputData, status entity.EvalTargetRunStatus, err error)
+	RuntimeParam() entity.IRuntimeParam
 }
 
 //type Option func(option *Opt)

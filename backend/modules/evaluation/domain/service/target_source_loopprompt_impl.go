@@ -33,6 +33,10 @@ type PromptSourceEvalTargetServiceImpl struct {
 	promptRPCAdapter rpc.IPromptRPCAdapter
 }
 
+func (t *PromptSourceEvalTargetServiceImpl) RuntimeParam() entity.IRuntimeParam {
+	return entity.NewPromptRuntimeParam(nil)
+}
+
 func (t *PromptSourceEvalTargetServiceImpl) EvalType() entity.EvalTargetType {
 	return entity.EvalTargetTypeLoopPrompt
 }
@@ -98,6 +102,10 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 		}
 	}
 	exePromptParam.Variables = vals
+
+	if rtp := param.Input.Ext[consts.TargetExecuteExtRuntimeParamKey]; len(rtp) > 0 {
+		exePromptParam.RuntimeParam = gptr.Of(rtp)
+	}
 
 	// ExecutePrompt
 	executePromptResult, err := t.promptRPCAdapter.ExecutePrompt(ctx, spaceID, exePromptParam)
@@ -207,6 +215,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 					JsonSchema:          gptr.Of(consts.StringJsonSchema),
 				},
 			},
+			RuntimeParamDemo: gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo()),
 			BaseInfo: &entity.BaseInfo{
 				CreatedBy: &entity.UserInfo{
 					UserID: gptr.Of(userIDInContext),
@@ -267,6 +276,7 @@ func (t *PromptSourceEvalTargetServiceImpl) ListSource(ctx context.Context, para
 					Description:  desc,
 					SubmitStatus: status,
 				},
+				RuntimeParamDemo: gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo()),
 			},
 		})
 	}
@@ -315,6 +325,7 @@ func (t *PromptSourceEvalTargetServiceImpl) ListSourceVersion(ctx context.Contex
 				SubmitStatus: status,
 				Description:  gptr.Indirect(desc),
 			},
+			RuntimeParamDemo: gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo()),
 		})
 	}
 	return versions, nextCursor, len(info) == int(gptr.Indirect(param.PageSize)), nil

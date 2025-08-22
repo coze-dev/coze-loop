@@ -1633,6 +1633,20 @@ func (p *DatasetSpec) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1707,6 +1721,18 @@ func (p *DatasetSpec) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *DatasetSpec) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := NewMultiModalSpec()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.MultiModalSpec = _field
+	return offset, nil
+}
+
 func (p *DatasetSpec) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1718,6 +1744,7 @@ func (p *DatasetSpec) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1730,6 +1757,7 @@ func (p *DatasetSpec) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1771,6 +1799,15 @@ func (p *DatasetSpec) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *DatasetSpec) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMultiModalSpec() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.MultiModalSpec.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *DatasetSpec) field1Length() int {
 	l := 0
 	if p.IsSetMaxItemCount() {
@@ -1807,6 +1844,15 @@ func (p *DatasetSpec) field4Length() int {
 	return l
 }
 
+func (p *DatasetSpec) field5Length() int {
+	l := 0
+	if p.IsSetMultiModalSpec() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.MultiModalSpec.BLength()
+	}
+	return l
+}
+
 func (p *DatasetSpec) DeepCopy(s interface{}) error {
 	src, ok := s.(*DatasetSpec)
 	if !ok {
@@ -1832,6 +1878,15 @@ func (p *DatasetSpec) DeepCopy(s interface{}) error {
 		tmp := *src.MaxItemDataNestedDepth
 		p.MaxItemDataNestedDepth = &tmp
 	}
+
+	var _multiModalSpec *MultiModalSpec
+	if src.MultiModalSpec != nil {
+		_multiModalSpec = &MultiModalSpec{}
+		if err := _multiModalSpec.DeepCopy(src.MultiModalSpec); err != nil {
+			return err
+		}
+	}
+	p.MultiModalSpec = _multiModalSpec
 
 	return nil
 }
@@ -4274,6 +4329,20 @@ func (p *MultiModalSpec) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4344,6 +4413,20 @@ func (p *MultiModalSpec) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *MultiModalSpec) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxPartCount = _field
+	return offset, nil
+}
+
 func (p *MultiModalSpec) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4353,6 +4436,7 @@ func (p *MultiModalSpec) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -4365,6 +4449,7 @@ func (p *MultiModalSpec) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4404,6 +4489,15 @@ func (p *MultiModalSpec) fastWriteField3(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *MultiModalSpec) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxPartCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxPartCount)
+	}
+	return offset
+}
+
 func (p *MultiModalSpec) field1Length() int {
 	l := 0
 	if p.IsSetMaxFileCount() {
@@ -4435,6 +4529,15 @@ func (p *MultiModalSpec) field3Length() int {
 	return l
 }
 
+func (p *MultiModalSpec) field4Length() int {
+	l := 0
+	if p.IsSetMaxPartCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *MultiModalSpec) DeepCopy(s interface{}) error {
 	src, ok := s.(*MultiModalSpec)
 	if !ok {
@@ -4460,6 +4563,11 @@ func (p *MultiModalSpec) DeepCopy(s interface{}) error {
 			}
 			p.SupportedFormats = append(p.SupportedFormats, _elem)
 		}
+	}
+
+	if src.MaxPartCount != nil {
+		tmp := *src.MaxPartCount
+		p.MaxPartCount = &tmp
 	}
 
 	return nil

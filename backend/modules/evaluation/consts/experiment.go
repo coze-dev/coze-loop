@@ -19,4 +19,11 @@ const (
 
 const (
 	MaxEvalSetItemLimit = 5000
+
+	MaxItemConcurrentNum = 50 // TODO(@liushengyang): value
+)
+
+const (
+	FieldAdapterBuiltinFieldNameRuntimeParam = "builtin_runtime_param"
+	TargetExecuteExtRuntimeParamKey          = "builtin_runtime_param"
 )

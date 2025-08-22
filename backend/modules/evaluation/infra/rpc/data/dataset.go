@@ -47,12 +47,6 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 		BizCategory: param.BizCategory,
 		Visibility:  domain_dataset.DatasetVisibilityPtr(domain_dataset.DatasetVisibility_Space),
 		Fields:      fields,
-		// 评测集大小固定限制
-		Spec: &domain_dataset.DatasetSpec{
-			MaxFieldCount: gptr.Of(int32(50)),
-			MaxItemSize:   gptr.Of(int64(204800)),
-			MaxItemCount:  gptr.Of(int64(5000)),
-		},
 		Features: &domain_dataset.DatasetFeatures{
 			EditSchema: gptr.Of(true),
 		},

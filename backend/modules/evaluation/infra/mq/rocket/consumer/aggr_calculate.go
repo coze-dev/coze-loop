@@ -57,6 +57,24 @@ func (a *AggrCalculateConsumer) handleEvent(ctx context.Context, event *entity.A
 		}
 		err = a.exptAggrResultService.UpdateExptAggrResult(ctx, param)
 		return err
+	case entity.CreateAnnotationFields:
+		param := &entity.CreateSpecificFieldAggrResultParam{
+			SpaceID:      event.SpaceID,
+			ExperimentID: event.ExperimentID,
+			FieldType:    event.GetFieldType(),
+			FieldKey:     event.GetFieldKey(),
+		}
+		err = a.exptAggrResultService.CreateAnnotationAggrResult(ctx, param)
+		return err
+	case entity.UpdateAnnotationFields:
+		param := &entity.UpdateExptAggrResultParam{
+			SpaceID:      event.SpaceID,
+			ExperimentID: event.ExperimentID,
+			FieldType:    event.GetFieldType(),
+			FieldKey:     event.GetFieldKey(),
+		}
+		err = a.exptAggrResultService.UpdateAnnotationAggrResult(ctx, param)
+		return err
 	}
 
 	return nil

@@ -41,6 +41,11 @@ func (p *Audio) IsValid() error {
 	return nil
 }
 func (p *Image) IsValid() error {
+	if p.StorageProvider != nil {
+		if p.StorageProvider.String() == "<UNSET>" {
+			return fmt.Errorf("field StorageProvider defined_only rule failed")
+		}
+	}
 	return nil
 }
 func (p *OrderBy) IsValid() error {
@@ -77,5 +82,8 @@ func (p *ModelConfig) IsValid() error {
 	return nil
 }
 func (p *Session) IsValid() error {
+	return nil
+}
+func (p *RuntimeParam) IsValid() error {
 	return nil
 }

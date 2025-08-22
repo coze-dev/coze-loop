@@ -65,6 +65,14 @@ func TestExptTurnResultFilterDAOImpl_buildQueryConditions(t *testing.T) {
 						{Key: "2", Op: "!=", Values: []any{"2"}},
 						{Key: "3", Op: "BETWEEN", Values: []any{"3", "4"}},
 					},
+					AnnotationStringFilters: []*FieldFilter{
+						{Key: "1", Op: "=", Values: []any{"1"}},
+						{Key: "2", Op: "!=", Values: []any{"2"}},
+						{Key: "3", Op: "in", Values: []any{"3"}},
+						{Key: "4", Op: "LIKE", Values: []any{"4", "5"}},
+						{Key: "5", Op: "NOT LIKE", Values: []any{"5"}},
+						{Key: "6", Op: "NOT IN", Values: []any{"3"}},
+					},
 				},
 				ItemSnapshotCond: &ItemSnapshotFilter{
 					BoolMapFilters: []*FieldFilter{

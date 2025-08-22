@@ -41,6 +41,21 @@ func (m *MockIBenefitService) EXPECT() *MockIBenefitServiceMockRecorder {
 	return m.recorder
 }
 
+// BatchCheckEnableTypeBenefit mocks base method.
+func (m *MockIBenefitService) BatchCheckEnableTypeBenefit(ctx context.Context, param *benefit.BatchCheckEnableTypeBenefitParams) (*benefit.BatchCheckEnableTypeBenefitResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchCheckEnableTypeBenefit", ctx, param)
+	ret0, _ := ret[0].(*benefit.BatchCheckEnableTypeBenefitResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchCheckEnableTypeBenefit indicates an expected call of BatchCheckEnableTypeBenefit.
+func (mr *MockIBenefitServiceMockRecorder) BatchCheckEnableTypeBenefit(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCheckEnableTypeBenefit", reflect.TypeOf((*MockIBenefitService)(nil).BatchCheckEnableTypeBenefit), ctx, param)
+}
+
 // CheckAndDeductEvalBenefit mocks base method.
 func (m *MockIBenefitService) CheckAndDeductEvalBenefit(ctx context.Context, param *benefit.CheckAndDeductEvalBenefitParams) (*benefit.CheckAndDeductEvalBenefitResult, error) {
 	m.ctrl.T.Helper()

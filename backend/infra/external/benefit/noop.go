@@ -42,3 +42,14 @@ func (n NoopBenefitServiceImpl) CheckEvaluatorBenefit(ctx context.Context, param
 func (n NoopBenefitServiceImpl) CheckAndDeductEvalBenefit(ctx context.Context, param *CheckAndDeductEvalBenefitParams) (result *CheckAndDeductEvalBenefitResult, err error) {
 	return &CheckAndDeductEvalBenefitResult{}, nil
 }
+
+func (n NoopBenefitServiceImpl) BatchCheckEnableTypeBenefit(ctx context.Context, param *BatchCheckEnableTypeBenefitParams) (result *BatchCheckEnableTypeBenefitResult, err error) {
+	// 为所有请求的权益类型返回 true，表示在开源版本中所有权益都可用
+	results := make(map[string]bool)
+	for _, benefitType := range param.EnableTypeBenefits {
+		results[benefitType] = true
+	}
+	return &BatchCheckEnableTypeBenefitResult{
+		Results: results,
+	}, nil
+}

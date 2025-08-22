@@ -7,6 +7,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
@@ -161,6 +162,12 @@ func (e *ExptTurnResultFilterRepoImpl) InsertExptTurnResultFilterKeyMappings(ctx
 		pos = append(pos, convert.ExptTurnResultFilterKeyMappingDO2PO(mapping))
 	}
 	return e.exptTurnResultFilterKeyMappingDAO.Insert(ctx, pos)
+}
+
+func (e *ExptTurnResultFilterRepoImpl) DeleteExptTurnResultFilterKeyMapping(ctx context.Context, mapping *entity.ExptTurnResultFilterKeyMapping, opts ...db.Option) error {
+	po := convert.ExptTurnResultFilterKeyMappingDO2PO(mapping)
+
+	return e.exptTurnResultFilterKeyMappingDAO.Delete(ctx, po, opts...)
 }
 
 func (e *ExptTurnResultFilterRepoImpl) GetByExptIDItemIDs(ctx context.Context, spaceID, exptID, createdDate string, itemIDs []string) ([]*entity.ExptTurnResultFilterEntity, error) {

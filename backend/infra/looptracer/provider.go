@@ -16,7 +16,7 @@ type Tracer interface {
 	// The start time of the span starts counting from the call of StartSpan.
 	// The generated span will be automatically written into the context.
 	// Subsequent spans that need to be chained should call StartSpan based on the new context.
-	StartSpan(ctx context.Context, name, spanType string, opts ...cozeloop.StartSpanOption) (context.Context, Span)
+	StartSpan(ctx context.Context, name, spanType string, opts ...StartSpanOption) (context.Context, Span)
 	// GetSpanFromContext Get the span from the context.
 	GetSpanFromContext(ctx context.Context) Span
 	// Flush Force the reporting of spans in the queue.

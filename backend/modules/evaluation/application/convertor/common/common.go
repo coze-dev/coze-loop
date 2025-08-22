@@ -33,10 +33,11 @@ func ConvertImageDTO2DO(img *commondto.Image) *commonentity.Image {
 		return nil
 	}
 	return &commonentity.Image{
-		Name:     img.Name,
-		URL:      img.URL,
-		URI:      img.URI,
-		ThumbURL: img.ThumbURL,
+		Name:            img.Name,
+		URL:             img.URL,
+		URI:             img.URI,
+		ThumbURL:        img.ThumbURL,
+		StorageProvider: gptr.Of(commonentity.StorageProvider(gptr.Indirect(img.StorageProvider))),
 	}
 }
 
@@ -46,10 +47,11 @@ func ConvertImageDO2DTO(img *commonentity.Image) *commondto.Image {
 		return nil
 	}
 	return &commondto.Image{
-		Name:     img.Name,
-		URL:      img.URL,
-		URI:      img.URI,
-		ThumbURL: img.ThumbURL,
+		Name:            img.Name,
+		URL:             img.URL,
+		URI:             img.URI,
+		ThumbURL:        img.ThumbURL,
+		StorageProvider: gptr.Of(dataset.StorageProvider(gptr.Indirect(img.StorageProvider))),
 	}
 }
 

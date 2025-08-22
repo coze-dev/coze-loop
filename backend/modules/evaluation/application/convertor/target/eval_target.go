@@ -70,6 +70,7 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 				Description:  targetVersionDTO.GetEvalTargetContent().GetPrompt().GetDescription(),
 			}
 		}
+		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
 
 	return targetVersionDO

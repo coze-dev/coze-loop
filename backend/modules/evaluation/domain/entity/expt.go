@@ -150,10 +150,14 @@ type TargetConf struct {
 }
 
 func (t *TargetConf) Valid(ctx context.Context, targetType EvalTargetType) error {
-	if t != nil && t.TargetVersionID != 0 && t.IngressConf != nil && t.IngressConf.EvalSetAdapter != nil {
-		if targetType == EvalTargetTypeLoopPrompt || len(t.IngressConf.EvalSetAdapter.FieldConfs) > 0 {
-			return nil
-		}
+	if t == nil || t.TargetVersionID == 0 {
+		return fmt.Errorf("invalid TargetConf: %v", json.Jsonify(t))
+	}
+	if targetType == EvalTargetTypeLoopPrompt { // prompt target might receive no input
+		return nil
+	}
+	if t.IngressConf != nil && t.IngressConf.EvalSetAdapter != nil && len(t.IngressConf.EvalSetAdapter.FieldConfs) > 0 {
+		return nil
 	}
 	return fmt.Errorf("invalid TargetConf: %v", json.Jsonify(t))
 }
@@ -169,9 +173,9 @@ type EvaluatorsConf struct {
 }
 
 func (e *EvaluatorsConf) Valid(ctx context.Context) error {
-	if e == nil || len(e.EvaluatorConf) == 0 {
-		return fmt.Errorf("invalid EvaluatorConf: %v", json.Jsonify(e))
-	}
+	//if e == nil || len(e.EvaluatorConf) == 0 {
+	//	return fmt.Errorf("invalid EvaluatorConf: %v", json.Jsonify(e))
+	//}
 	for _, conf := range e.EvaluatorConf {
 		if err := conf.Valid(ctx); err != nil {
 			return err
@@ -204,7 +208,7 @@ type EvaluatorConf struct {
 
 func (e *EvaluatorConf) Valid(ctx context.Context) error {
 	if e == nil || e.EvaluatorVersionID == 0 || e.IngressConf == nil ||
-		e.IngressConf.TargetAdapter == nil || e.IngressConf.EvalSetAdapter == nil {
+		(e.IngressConf.TargetAdapter == nil && e.IngressConf.EvalSetAdapter == nil) {
 		return fmt.Errorf("invalid EvaluatorConf: %v", json.Jsonify(e))
 	}
 	return nil
@@ -291,6 +295,10 @@ type CreateEvalTargetParam struct {
 	EvalTargetType      *EvalTargetType
 	BotInfoType         *CozeBotInfoType
 	BotPublishVersion   *string
+}
+
+func (c *CreateEvalTargetParam) IsNull() bool {
+	return c == nil || (c.SourceTargetID == nil && c.SourceTargetVersion == nil)
 }
 
 type InvokeExptReq struct {

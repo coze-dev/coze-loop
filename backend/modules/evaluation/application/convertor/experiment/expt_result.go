@@ -4,6 +4,12 @@
 package experiment
 
 import (
+	"strconv"
+
+	"github.com/bytedance/gg/gptr"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
+	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -11,6 +17,8 @@ import (
 	evaluatorconv "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	targetconv "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 func ColumnEvalSetFieldsDO2DTOs(from []*entity.ColumnEvalSetField) []*domain_expt.ColumnEvalSetField {
@@ -32,6 +40,18 @@ func ColumnEvalSetFieldsDO2DTO(from *entity.ColumnEvalSetField) *domain_expt.Col
 	}
 }
 
+func ExptColumnEvaluatorsDO2DTOs(from []*entity.ExptColumnEvaluator) []*domain_expt.ExptColumnEvaluator {
+	dtos := make([]*domain_expt.ExptColumnEvaluator, 0, len(from))
+	for _, f := range from {
+		dto := &domain_expt.ExptColumnEvaluator{
+			ExperimentID:     f.ExptID,
+			ColumnEvaluators: ColumnEvaluatorsDO2DTOs(f.ColumnEvaluators),
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos
+}
+
 func ColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*domain_expt.ColumnEvaluator {
 	evaluators := make([]*domain_expt.ColumnEvaluator, 0, len(from))
 	for _, f := range from {
@@ -49,6 +69,65 @@ func ColumnEvaluatorsDO2DTO(from *entity.ColumnEvaluator) *domain_expt.ColumnEva
 		Version:            from.Version,
 		Description:        from.Description,
 	}
+}
+
+func TagValueDO2DtO(tagValue *entity.TagValue) *tag.TagValue {
+	return &tag.TagValue{
+		TagValueID:   ptr.Of(tagValue.TagValueId),
+		TagValueName: ptr.Of(tagValue.TagValueName),
+		Status:       ptr.Of(tagValue.Status),
+	}
+}
+
+func TagValueListDO2DTO(tagValues []*entity.TagValue) []*tag.TagValue {
+	ret := make([]*tag.TagValue, 0, len(tagValues))
+	for _, tagValue := range tagValues {
+		ret = append(ret, TagValueDO2DtO(tagValue))
+	}
+	return ret
+}
+
+func ExptColumnAnnotationDO2DTOs(from []*entity.ExptColumnAnnotation) []*domain_expt.ExptColumnAnnotation {
+	annotations := make([]*domain_expt.ExptColumnAnnotation, 0, len(from))
+	for _, f := range from {
+		dto := &domain_expt.ExptColumnAnnotation{
+			ExperimentID:      f.ExptID,
+			ColumnAnnotations: ColumnAnnotationDO2DTOs(f.ColumnAnnotations),
+		}
+		annotations = append(annotations, dto)
+	}
+	return annotations
+}
+
+func ColumnAnnotationDO2DTOs(from []*entity.ColumnAnnotation) []*domain_expt.ColumnAnnotation {
+	annotations := make([]*domain_expt.ColumnAnnotation, 0, len(from))
+	for _, f := range from {
+		annotations = append(annotations, ColumnAnnotationDO2DTO(f))
+	}
+	return annotations
+}
+
+func ColumnAnnotationDO2DTO(from *entity.ColumnAnnotation) *domain_expt.ColumnAnnotation {
+	columnAnnotation := &domain_expt.ColumnAnnotation{
+		TagKeyID:    ptr.Of(from.TagKeyID),
+		TagKeyName:  ptr.Of(from.TagName),
+		Description: ptr.Of(from.Description),
+		TagValues:   TagValueListDO2DTO(from.TagValues),
+		ContentType: ptr.Of(tag.TagContentType(from.TagContentType)),
+		Status:      ptr.Of(from.TagStatus),
+	}
+
+	if from.TagContentSpec != nil && from.TagContentSpec.ContinuousNumberSpec != nil {
+		columnAnnotation.ContentSpec = &tag.TagContentSpec{
+			ContinuousNumberSpec: &tag.ContinuousNumberSpec{
+				MinValue:            from.TagContentSpec.ContinuousNumberSpec.MinValue,
+				MinValueDescription: from.TagContentSpec.ContinuousNumberSpec.MinValueDescription,
+				MaxValue:            from.TagContentSpec.ContinuousNumberSpec.MaxValue,
+				MaxValueDescription: from.TagContentSpec.ContinuousNumberSpec.MaxValueDescription,
+			},
+		}
+	}
+	return columnAnnotation
 }
 
 func ItemResultsDO2DTOs(from []*entity.ItemResult) []*domain_expt.ItemResult_ {
@@ -106,6 +185,39 @@ func ExperimentTurnPayloadDO2DTO(from *entity.ExperimentTurnPayload) *domain_exp
 		TargetOutput:    TurnTargetOutputDO2DTO(from.TargetOutput),
 		EvaluatorOutput: TurnEvaluatorOutputDO2DTO(from.EvaluatorOutput),
 		SystemInfo:      TurnSystemInfoDO2DTO(from.SystemInfo),
+		AnnotateResult_: TurnAnnotationDO2DTO(from.AnnotateResult),
+	}
+}
+
+func TurnAnnotationDO2DTO(from *entity.TurnAnnotateResult) *domain_expt.TurnAnnotateResult_ {
+	if from == nil {
+		return &domain_expt.TurnAnnotateResult_{}
+	}
+
+	annotateRecords := make(map[int64]*domain_expt.AnnotateRecord)
+	for k, v := range from.AnnotateRecords {
+		annotateRecords[k] = AnnotateRecordsDO2DTO(v)
+	}
+
+	return &domain_expt.TurnAnnotateResult_{
+		AnnotateRecords: annotateRecords,
+	}
+}
+
+func AnnotateRecordsDO2DTO(from *entity.AnnotateRecord) *domain_expt.AnnotateRecord {
+	if from == nil || from.AnnotateData == nil {
+		return &domain_expt.AnnotateRecord{}
+	}
+
+	return &domain_expt.AnnotateRecord{
+		AnnotateRecordID:  ptr.Of(from.ID),
+		TagKeyID:          ptr.Of(from.TagKeyID),
+		Score:             ptr.Of(strconv.FormatFloat(ptr.From(from.AnnotateData.Score), 'f', -1, 64)),
+		BooleanOption:     from.AnnotateData.BoolValue,
+		PlainText:         from.AnnotateData.TextValue,
+		CategoricalOption: from.AnnotateData.Option,
+		TagContentType:    ptr.Of(tag.TagContentType(from.AnnotateData.TagContentType)),
+		TagValueID:        ptr.Of(from.TagValueID),
 	}
 }
 
@@ -171,4 +283,56 @@ func ItemSystemInfoDO2DTO(from *entity.ItemSystemInfo) *domain_expt.ItemSystemIn
 		LogID:    from.LogID,
 		Error:    RunErrorDO2DTO(from.Error),
 	}
+}
+
+func CSVExportStatusDO2DTO(from entity.CSVExportStatus) domain_expt.CSVExportStatus {
+	switch from {
+	case entity.CSVExportStatus_Unknown:
+		return domain_expt.CSVExportStatusUnknown
+	case entity.CSVExportStatus_Running:
+		return domain_expt.CSVExportStatusRunning
+	case entity.CSVExportStatus_Success:
+		return domain_expt.CSVExportStatusSuccess
+	case entity.CSVExportStatus_Failed:
+		return domain_expt.CSVExportStatusFailed
+	default:
+		return domain_expt.CSVExportStatusUnknown
+	}
+}
+
+func ExportRecordDO2DTO(from *entity.ExptResultExportRecord) *domain_expt.ExptResultExportRecord {
+	if from == nil {
+		return nil
+	}
+	res := &domain_expt.ExptResultExportRecord{
+		ExportID:        from.ID,
+		WorkspaceID:     from.SpaceID,
+		ExptID:          from.ExptID,
+		CsvExportStatus: CSVExportStatusDO2DTO(from.CsvExportStatus),
+		BaseInfo: &domain_common.BaseInfo{
+			CreatedBy: &domain_common.UserInfo{
+				UserID: ptr.Of(from.CreatedBy),
+			},
+		},
+		URL:     from.URL,
+		Expired: ptr.Of(from.Expired),
+	}
+
+	if from.StartAt != nil {
+		res.StartTime = gptr.Of(from.StartAt.Unix())
+	}
+	if from.EndAt != nil {
+		res.EndTime = gptr.Of(from.EndAt.Unix())
+	}
+
+	if len(from.ErrMsg) > 0 {
+		errImpl, ok := errno.ParseErrImpl(errno.DeserializeErr([]byte(from.ErrMsg)))
+		if ok {
+			res.Error = &domain_expt.RunError{
+				Detail: gptr.Of(errImpl.ErrMsg()),
+			}
+		}
+	}
+
+	return res
 }

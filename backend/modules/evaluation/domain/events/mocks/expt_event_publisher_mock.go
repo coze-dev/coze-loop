@@ -5,13 +5,13 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
-	"time"
+	context "context"
+	reflect "reflect"
+	time "time"
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
 // MockExptEventPublisher is a mock of ExptEventPublisher interface.
@@ -63,6 +63,20 @@ func (m *MockExptEventPublisher) PublishExptAggrCalculateEvent(arg0 context.Cont
 func (mr *MockExptEventPublisherMockRecorder) PublishExptAggrCalculateEvent(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptAggrCalculateEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptAggrCalculateEvent), arg0, arg1, arg2)
+}
+
+// PublishExptExportCSVEvent mocks base method.
+func (m *MockExptEventPublisher) PublishExptExportCSVEvent(arg0 context.Context, arg1 *entity.ExportCSVEvent, arg2 *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptExportCSVEvent", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptExportCSVEvent indicates an expected call of PublishExptExportCSVEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishExptExportCSVEvent(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptExportCSVEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptExportCSVEvent), arg0, arg1, arg2)
 }
 
 // PublishExptOnlineEvalResult mocks base method.

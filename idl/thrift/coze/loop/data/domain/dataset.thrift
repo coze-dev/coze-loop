@@ -117,6 +117,7 @@ struct DatasetSpec {
     2: optional i32 max_field_count // 字段数量上限
     3: optional i64 max_item_size (api.js_conv="true", go.tag='json:"max_item_size"')   // 单条数据字数上限
     4: optional i32 max_item_data_nested_depth
+    5: optional MultiModalSpec multi_modal_spec
 }
 
 // DatasetVersion 数据集版本元信息，不包含数据本身
@@ -190,6 +191,7 @@ struct MultiModalSpec {
     1: optional i64 max_file_count (api.js_conv="true", go.tag='json:"max_file_count"')               // 文件数量上限
     2: optional i64 max_file_size (api.js_conv="true", go.tag='json:"max_file_size"')                // 文件大小上限
     3: optional list<string> supported_formats // 文件格式
+    4: optional i32 max_part_count // 多模态节点总数上限
 }
 
 // DatasetItem 数据内容
@@ -260,9 +262,15 @@ enum ItemErrorType {
     MissingRequiredField = 7  // 缺少必填字段
     ExceedMaxNestedDepth = 8  // 数据嵌套层数超限
     TransformItemFailed = 9   // 数据转换失败
+    ExceedMaxImageCount = 10  // 图片数量超限
+    ExceedMaxImageSize = 11   // 图片大小超限
+    GetImageFailed = 12       // 图片获取失败（例如图片不存在/访问不在白名单内的内网链接）
+    IllegalExtension = 13     // 文件扩展名不合法
 
     /* system error*/
     InternalError = 100
+
+    UploadImageFailed = 103   // 上传图片失败
 }
 
 struct ItemErrorDetail {

@@ -22,6 +22,7 @@ struct CreateExperimentRequest {
     22: optional i32 item_concur_num (api.body = 'item_concur_num')
     23: optional i32 evaluators_concur_num (api.body = 'evaluators_concur_num')
     24: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
     30: optional expt.ExptType expt_type (api.body = 'expt_type')
     31: optional i64 max_alive_time (api.body = 'max_alive_time')
@@ -54,6 +55,7 @@ struct SubmitExperimentRequest {
     22: optional i32 item_concur_num (api.body = 'item_concur_num')
     23: optional i32 evaluators_concur_num (api.body = 'evaluators_concur_num')
     24: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
     30: optional expt.ExptType expt_type (api.body = 'expt_type')
     31: optional i64 max_alive_time (api.body = 'max_alive_time')
@@ -222,6 +224,10 @@ struct BatchGetExperimentResultResponse {
     1: required list<expt.ColumnEvalSetField> column_eval_set_fields (api.body = "column_eval_set_fields")
     // 评估器表头信息
     2: optional list<expt.ColumnEvaluator> column_evaluators (api.body = "column_evaluators")
+    3: optional list<expt.ExptColumnEvaluator> expt_column_evaluators (api.body = "expt_column_evaluators")
+    // 人工标注标签表头信息
+    4: optional list<expt.ExptColumnAnnotation> expt_column_annotations (api.body = "expt_column_annotations")
+
     // item粒度实验结果详情
     10: optional list<expt.ItemResult> item_results (api.body = "item_results")
 
@@ -329,14 +335,122 @@ struct UpsertExptTurnResultFilterRequest {
     3: optional list<i64> item_ids
     4: optional UpsertExptTurnResultFilterType filter_type
     5: optional i32 retry_times
-
-    200: optional common.Session session
-    255: optional base.Base Base
 }
 
 struct UpsertExptTurnResultFilterResponse {
     255: base.BaseResp BaseResp
 }
+
+struct AssociateAnnotationTagReq {
+     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+     3: optional i64 tag_key_id (api.body = 'tag_key_id', api.js_conv = 'true', go.tag = 'json:"tag_key_id"')
+
+     200: optional common.Session session
+     255: optional base.Base Base
+}
+
+struct AssociateAnnotationTagResp {
+
+    255: base.BaseResp BaseResp
+}
+
+struct DeleteAnnotationTagReq {
+     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+     3: optional i64 tag_key_id (api.body = 'tag_key_id', api.js_conv = 'true', go.tag = 'json:"tag_key_id"')
+
+     200: optional common.Session session
+     255: optional base.Base Base
+}
+
+struct DeleteAnnotationTagResp {
+
+    255: base.BaseResp BaseResp
+}
+
+struct CreateAnnotateRecordReq {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required expt.AnnotateRecord annotate_record (api.body = 'annotate_record')
+    4: required i64 item_id (api.body = 'item_id', api.js_conv='true', go.tag='json:"item_id"')
+    5: required i64 turn_id (api.body = 'turn_id', api.js_conv='true', go.tag='json:"turn_id"')
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct CreateAnnotateRecordResp {
+    1: required i64 annotate_record_id (api.body = "annotate_record_id", api.js_conv = 'true', go.tag = 'json:"annotate_record_id"')
+
+    255: base.BaseResp BaseResp
+}
+
+struct UpdateAnnotateRecordReq {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required expt.AnnotateRecord annotate_records (api.body = 'annotate_records')
+    4: required i64 annotate_record_id (api.body = 'annotate_record_id', api.js_conv='true', go.tag='json:"annotate_record_id"')
+    5: required i64 item_id (api.body = 'item_id', api.js_conv='true', go.tag='json:"item_id"')
+    6: required i64 turn_id (api.body = 'turn_id', api.js_conv='true', go.tag='json:"turn_id"')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct UpdateAnnotateRecordResp {
+
+    255: base.BaseResp BaseResp
+}
+
+
+struct ExportExptResultRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    4: optional expt.ExptResultExportType export_type (api.body = "export_type")
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct ExportExptResultResponse {
+    1: required i64 export_id (api.body = "export_id", api.js_conv = 'true', go.tag = 'json:"export_id"')
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListExptResultExportRecordRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: optional i32 page_number (api.body='page_number')
+    4: optional i32 page_size (api.body='page_size')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct ListExptResultExportRecordResponse {
+    1: required list<expt.ExptResultExportRecord> expt_result_export_records (agw.key = "expt_result_export_records")
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
+    255: base.BaseResp BaseResp
+}
+
+struct GetExptResultExportRecordRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    4: required i64 export_id (api.path = 'export_id', api.js_conv = 'true', go.tag = 'json:"export_id"')
+
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct GetExptResultExportRecordResponse {
+    1: optional expt.ExptResultExportRecord expt_result_export_record (agw.key = "expt_result_export_records")
+
+    255: base.BaseResp BaseResp
+}
+
+
 
 service ExperimentService {
 
@@ -382,5 +496,15 @@ service ExperimentService {
     // 更新报告ck
     UpsertExptTurnResultFilterResponse UpsertExptTurnResultFilter(1: UpsertExptTurnResultFilterRequest req)
 
+    // 人工标注
+    AssociateAnnotationTagResp AssociateAnnotationTag(1: AssociateAnnotationTagReq req) (api.post = "/api/evaluation/v1/experiments/:expt_id/associate_tag")
+    DeleteAnnotationTagResp DeleteAnnotationTag(1: DeleteAnnotationTagReq req) (api.delete = "/api/evaluation/v1/experiments/:expt_id/delete_tag")
+    CreateAnnotateRecordResp CreateAnnotateRecord(1: CreateAnnotateRecordReq req) (api.post = "/api/evaluation/v1/experiments/:expt_id/annotate_record/create")
+    UpdateAnnotateRecordResp UpdateAnnotateRecord(1: UpdateAnnotateRecordReq req) (api.post = "/api/evaluation/v1/experiments/:expt_id/annotate_record/update")
+
+    // 报告下载
+    ExportExptResultResponse ExportExptResult(1: ExportExptResultRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/results/export")
+    ListExptResultExportRecordResponse ListExptResultExportRecord(1: ListExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/list")
+    GetExptResultExportRecordResponse GetExptResultExportRecord(1: GetExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/:export_id")
 }
 

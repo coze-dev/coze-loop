@@ -34,6 +34,7 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 			MaxFieldCount:          gptr.Of(do.Spec.MaxFieldCount),
 			MaxItemSize:            gptr.Of(do.Spec.MaxItemSize),
 			MaxItemDataNestedDepth: gptr.Of(do.Spec.MaxItemDataNestedDepth),
+			MultiModalSpec:         MultiModalSpecDO2DTO(do.Spec.MultiModalSpec),
 		}
 	}
 	var features *dataset.DatasetFeatures
