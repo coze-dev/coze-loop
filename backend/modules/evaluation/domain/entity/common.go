@@ -241,7 +241,7 @@ type FunctionCall struct {
 }
 
 type ModelConfig struct {
-	ModelID     int64          `json:"model_id,string"`
+	ModelID     int64          `json:"model_id"`
 	ModelName   string         `json:"model_name"`
 	MaxTokens   *int32         `json:"max_tokens,omitempty"`
 	Temperature *float64       `json:"temperature,omitempty"`

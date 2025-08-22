@@ -17,7 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -92,7 +92,7 @@ func (p PromptRPCAdapter) parseRuntimeParam(ctx context.Context, rtp string) (*e
 		return &entity.PromptRuntimeParam{}, nil
 	}
 	runtimeParam := new(entity.PromptRuntimeParam)
-	if err := json.Unmarshal([]byte(rtp), runtimeParam); err != nil {
+	if err := js_conv.GetUnmarshaler()([]byte(rtp), runtimeParam); err != nil {
 		return runtimeParam, errorx.Wrapf(err, "PromptRuntimeParam json unmarshal fail, raw: %s", rtp)
 	}
 	return runtimeParam, nil

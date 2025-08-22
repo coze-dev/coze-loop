@@ -9,7 +9,8 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
 )
 
 type IRuntimeParam interface {
@@ -33,7 +34,7 @@ type PromptRuntimeParam struct {
 
 func (p *PromptRuntimeParam) ParseFromJSON(val string) (IRuntimeParam, error) {
 	ppp := &PromptRuntimeParam{}
-	if err := json.Unmarshal([]byte(val), p); err != nil {
+	if err := js_conv.GetUnmarshaler()([]byte(val), ppp); err != nil {
 		return nil, errorx.Wrapf(err, "PromptRuntimeParam json unmarshal fail")
 	}
 	return ppp, nil
@@ -41,7 +42,7 @@ func (p *PromptRuntimeParam) ParseFromJSON(val string) (IRuntimeParam, error) {
 
 func (p *PromptRuntimeParam) GetJSONDemo() string {
 	promptRuntimeParamDemoOnce.Do(func() {
-		promptRuntimeParamDemo = json.Jsonify(&PromptRuntimeParam{
+		bytes, _ := js_conv.GetMarshaler()(&PromptRuntimeParam{
 			ModelConfig: &ModelConfig{
 				MaxTokens:   gptr.Of(int32(0)),
 				Temperature: gptr.Of(float64(0)),
@@ -49,12 +50,14 @@ func (p *PromptRuntimeParam) GetJSONDemo() string {
 				JSONExt:     gptr.Of("{}"),
 			},
 		})
+		promptRuntimeParamDemo = string(bytes)
 	})
 	return promptRuntimeParamDemo
 }
 
 func (p *PromptRuntimeParam) GetJSONValue() string {
-	return json.Jsonify(p)
+	bytes, _ := js_conv.GetMarshaler()(p)
+	return conv.UnsafeBytesToString(bytes)
 }
 
 func NewDummyRuntimeParam() *DummyRuntimeParam {
