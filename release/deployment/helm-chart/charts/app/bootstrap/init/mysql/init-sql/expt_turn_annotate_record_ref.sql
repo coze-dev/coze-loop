@@ -1,4 +1,4 @@
-CREATE TABLE `expt_turn_annotate_record_ref` (
+CREATE TABLE IF NOT EXISTS `expt_turn_annotate_record_ref` (
                                                  `id` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'id',
                                                  `space_id` bigint unsigned NOT NULL COMMENT '空间 id',
                                                  `expt_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '实验 id',

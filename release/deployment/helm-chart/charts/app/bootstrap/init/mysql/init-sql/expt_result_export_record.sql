@@ -1,4 +1,4 @@
-CREATE TABLE `expt_result_export_record` (
+CREATE TABLE IF NOT EXISTS `expt_result_export_record` (
                                              `id` bigint unsigned NOT NULL COMMENT 'export_id 导出的唯一标识 idgen生成',
                                              `space_id` bigint unsigned NOT NULL COMMENT 'SpaceID',
                                              `expt_id` bigint unsigned NOT NULL COMMENT 'exptID',

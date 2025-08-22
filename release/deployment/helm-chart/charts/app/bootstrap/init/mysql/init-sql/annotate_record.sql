@@ -1,4 +1,4 @@
-CREATE TABLE `annotate_record` (
+CREATE TABLE IF NOT EXISTS `annotate_record` (
                                    `id` bigint unsigned NOT NULL COMMENT 'idgen record id',
                                    `space_id` bigint unsigned NOT NULL COMMENT '空间id，分片键',
                                    `tag_key_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '标签 id',
