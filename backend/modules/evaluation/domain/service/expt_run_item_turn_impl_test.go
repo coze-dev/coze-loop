@@ -13,12 +13,13 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
-// mock DenyReason 实现
+// mock DenyReason implementation
 
 func TestNewExptTurnEvaluation(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -56,7 +57,7 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常流程",
+			name: "normal flow",
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecEval(gomock.Any(), gomock.Any())
 				mockMetric.EXPECT().EmitTurnExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
@@ -66,6 +67,13 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 					Event: &entity.ExptItemEvalEvent{SpaceID: 1},
 					Expt: &entity.Experiment{
 						ExptType: entity.ExptType_Online,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+								},
+							},
+						},
 					},
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{},
@@ -73,15 +81,45 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "调用目标失败",
+			name: "no target config - skip call",
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecEval(gomock.Any(), gomock.Any())
 				mockMetric.EXPECT().EmitTurnExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-					Event: &entity.ExptItemEvalEvent{},
-					Expt:  &entity.Experiment{},
+					Event: &entity.ExptItemEvalEvent{SpaceID: 1},
+					Expt: &entity.Experiment{
+						ExptType: entity.ExptType_Offline,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: nil, // no target config
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "call target failed",
+			prepare: func() {
+				mockMetric.EXPECT().EmitTurnExecEval(gomock.Any(), gomock.Any())
+				mockMetric.EXPECT().EmitTurnExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+			},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{SpaceID: 1},
+					Expt: &entity.Experiment{
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+								},
+							},
+						},
+					},
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{},
 			},
@@ -134,12 +172,19 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "在线实验-跳过调用",
+			name:    "online experiment - skip call",
 			prepare: func() {},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					Expt: &entity.Experiment{
 						ExptType: entity.ExptType_Online,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+								},
+							},
+						},
 					},
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{},
@@ -152,7 +197,30 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "已有成功结果",
+			name:    "no target config - skip call",
+			prepare: func() {},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt: &entity.Experiment{
+						ExptType: entity.ExptType_Offline,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: nil, // no target config
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+			want: &entity.EvalTargetRecord{
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					OutputFields: make(map[string]*entity.Content),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "already has successful result",
 			prepare: func() {},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
@@ -163,7 +231,15 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 							UserID: "test_user",
 						},
 					},
-					Expt: &entity.Experiment{},
+					Expt: &entity.Experiment{
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+								},
+							},
+						},
+					},
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{
 					TargetResult: &entity.EvalTargetRecord{
@@ -181,13 +257,44 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "权益检查失败",
+			name:    "no target config - skip call",
+			prepare: func() {},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt: &entity.Experiment{
+						ExptType: entity.ExptType_Offline,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: nil, // no target config
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+			want: &entity.EvalTargetRecord{
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					OutputFields: make(map[string]*entity.Content),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "privilege check failed",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-					Expt: &entity.Experiment{},
+					Expt: &entity.Experiment{
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+								},
+							},
+						},
+					},
 					Event: &entity.ExptItemEvalEvent{
 						Session: &entity.Session{
 							UserID: "test_user",
@@ -199,7 +306,7 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "正常流程-真正调用callTarget",
+			name: "normal flow - actually call callTarget",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTargetResult, nil)
@@ -244,6 +351,29 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			want:    mockTargetResult,
 			wantErr: false,
 		},
+		{
+			name:    "no target config - skip call",
+			prepare: func() {},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt: &entity.Experiment{
+						ExptType: entity.ExptType_Offline,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: nil, // no target config
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+			want: &entity.EvalTargetRecord{
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					OutputFields: make(map[string]*entity.Content),
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -279,7 +409,7 @@ func TestDefaultExptTurnEvaluationImpl_CheckBenefit(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "正常流程",
+			name: "normal flow",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 			},
@@ -290,7 +420,7 @@ func TestDefaultExptTurnEvaluationImpl_CheckBenefit(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "检查失败",
+			name: "check failed",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
@@ -301,7 +431,7 @@ func TestDefaultExptTurnEvaluationImpl_CheckBenefit(t *testing.T) {
 			wantErr:  true,
 		},
 		{
-			name: "拒绝原因存在",
+			name: "deny reason exists",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{
 					DenyReason: gptr.Of(benefit.DenyReason(1)),
@@ -362,7 +492,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常流程",
+			name: "normal flow",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(mockEvaluatorResults[1], nil)
@@ -435,7 +565,25 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "权益检查失败",
+			name:    "no target config - skip call",
+			prepare: func() {},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt: &entity.Experiment{
+						ExptType: entity.ExptType_Offline,
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: nil, // no target config
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "privilege check failed",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
@@ -449,6 +597,11 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 								PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 									ID: 1,
 								},
+							},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								EvaluatorsConf: &entity.EvaluatorsConf{},
 							},
 						},
 					},
@@ -490,7 +643,7 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常-json",
+			name: "normal - json",
 			args: args{
 				content: &entity.Content{
 					ContentType: gptr.Of(entity.ContentTypeText),
@@ -504,8 +657,9 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 			},
 			wantErr: false,
 		},
+
 		{
-			name: "正常-嵌套json",
+			name: "normal - nested json",
 			args: args{
 				content: &entity.Content{
 					ContentType: gptr.Of(entity.ContentTypeText),
@@ -519,8 +673,9 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 			},
 			wantErr: false,
 		},
+
 		{
-			name: "正常-返回整个json",
+			name: "normal - return entire json",
 			args: args{
 				content: &entity.Content{
 					ContentType: gptr.Of(entity.ContentTypeText),
@@ -534,14 +689,16 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 			},
 			wantErr: false,
 		},
+
 		{
-			name:    "异常-content为nil",
+			name:    "abnormal - content is nil",
 			args:    args{content: nil, jsonPath: "$.key"},
 			want:    nil,
 			wantErr: false,
 		},
+
 		{
-			name: "异常-contentType为nil",
+			name: "abnormal - contentType is nil",
 			args: args{
 				content:  &entity.Content{ContentType: nil, Text: gptr.Of(`{"key": "value"}`)},
 				jsonPath: "$.key",
@@ -549,8 +706,9 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 			want:    nil,
 			wantErr: false,
 		},
+
 		{
-			name: "异常-contentType非text",
+			name: "abnormal - contentType is not text",
 			args: args{
 				content: &entity.Content{
 					ContentType: gptr.Of(entity.ContentTypeImage),
@@ -561,8 +719,9 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 			want:    nil,
 			wantErr: false,
 		},
+
 		{
-			name: "正常-json字符串",
+			name: "normal - json string",
 			args: args{
 				content: &entity.Content{
 					ContentType: gptr.Of(entity.ContentTypeText),
@@ -586,7 +745,7 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 			}
 			if tt.want == nil {
 				assert.Nil(t, got)
-			} else if tt.name == "正常-返回整个json" && tt.want.Text != nil && got != nil && got.Text != nil {
+			} else if tt.name == "normal - return entire json" && tt.want.Text != nil && got != nil && got.Text != nil {
 				assert.JSONEq(t, *tt.want.Text, *got.Text)
 				tmpWant := *tt.want
 				tmpGot := *got
@@ -595,6 +754,353 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath(t *testing.T) {
 				assert.Equal(t, tmpWant, tmpGot)
 			} else {
 				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestDefaultExptTurnEvaluationImpl_callTarget_RuntimeParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(123)
+	mockContent := &entity.Content{Text: gptr.Of("test_value")}
+	mockTargetResult := &entity.EvalTargetRecord{
+		ID: 1,
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"output": mockContent,
+			},
+		},
+	}
+
+	tests := []struct {
+		name                  string
+		etec                  *entity.ExptTurnEvalCtx
+		history               []*entity.Message
+		mockSetup             func()
+		wantRuntimeParamInExt string
+		wantErr               bool
+	}{
+		{
+			name: "runtime param in custom config",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{
+						ExptRunID: 1,
+					},
+					EvalSetItem: &entity.EvaluationSetItem{
+						ItemID: 1,
+					},
+					Expt: &entity.Experiment{
+						Target: &entity.EvalTarget{
+							ID:                1,
+							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+									IngressConf: &entity.TargetIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: "field1",
+													FromField: "field1",
+												},
+											},
+										},
+										CustomConf: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+													Value:     `{"model_config":{"model_id":"custom_model","temperature":0.8}}`,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Turn: &entity.Turn{
+					ID: 1,
+					FieldDataList: []*entity.FieldData{
+						{
+							Name:    "field1",
+							Content: mockContent,
+						},
+					},
+				},
+				Ext: map[string]string{},
+			},
+			history: []*entity.Message{},
+			mockSetup: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockEvalTargetService.EXPECT().ExecuteTarget(
+					gomock.Any(),
+					spaceID,
+					int64(1),
+					int64(1),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+					// Verify runtime param is injected into Ext
+					assert.Contains(t, inputData.Ext, consts.TargetExecuteExtRuntimeParamKey)
+					assert.Equal(t, `{"model_config":{"model_id":"custom_model","temperature":0.8}}`, inputData.Ext[consts.TargetExecuteExtRuntimeParamKey])
+					return mockTargetResult, nil
+				})
+			},
+			wantRuntimeParamInExt: `{"model_config":{"model_id":"custom_model","temperature":0.8}}`,
+			wantErr:               false,
+		},
+		{
+			name: "multiple field configs with runtime param",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{
+						ExptRunID: 1,
+					},
+					EvalSetItem: &entity.EvaluationSetItem{
+						ItemID: 1,
+					},
+					Expt: &entity.Experiment{
+						Target: &entity.EvalTarget{
+							ID:                1,
+							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+									IngressConf: &entity.TargetIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: "field1",
+													FromField: "field1",
+												},
+											},
+										},
+										CustomConf: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: "other_field",
+													Value:     "other_value",
+												},
+												{
+													FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+													Value:     `{"model_config":{"model_id":"multi_config_model"}}`,
+												},
+												{
+													FieldName: "another_field",
+													Value:     "another_value",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Turn: &entity.Turn{
+					ID: 1,
+					FieldDataList: []*entity.FieldData{
+						{
+							Name:    "field1",
+							Content: mockContent,
+						},
+					},
+				},
+				Ext: map[string]string{
+					"existing_key": "existing_value",
+				},
+			},
+			history: []*entity.Message{},
+			mockSetup: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockEvalTargetService.EXPECT().ExecuteTarget(
+					gomock.Any(),
+					spaceID,
+					int64(1),
+					int64(1),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+					// Verify runtime param is injected into Ext
+					assert.Contains(t, inputData.Ext, consts.TargetExecuteExtRuntimeParamKey)
+					assert.Equal(t, `{"model_config":{"model_id":"multi_config_model"}}`, inputData.Ext[consts.TargetExecuteExtRuntimeParamKey])
+					// Verify existing ext values are preserved
+					assert.Contains(t, inputData.Ext, "existing_key")
+					assert.Equal(t, "existing_value", inputData.Ext["existing_key"])
+					return mockTargetResult, nil
+				})
+			},
+			wantRuntimeParamInExt: `{"model_config":{"model_id":"multi_config_model"}}`,
+			wantErr:               false,
+		},
+		{
+			name: "no runtime param configured",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{
+						ExptRunID: 1,
+					},
+					EvalSetItem: &entity.EvaluationSetItem{
+						ItemID: 1,
+					},
+					Expt: &entity.Experiment{
+						Target: &entity.EvalTarget{
+							ID:                1,
+							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+									IngressConf: &entity.TargetIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: "field1",
+													FromField: "field1",
+												},
+											},
+										},
+										CustomConf: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: "other_field",
+													Value:     "other_value",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Turn: &entity.Turn{
+					ID: 1,
+					FieldDataList: []*entity.FieldData{
+						{
+							Name:    "field1",
+							Content: mockContent,
+						},
+					},
+				},
+				Ext: map[string]string{},
+			},
+			history: []*entity.Message{},
+			mockSetup: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockEvalTargetService.EXPECT().ExecuteTarget(
+					gomock.Any(),
+					spaceID,
+					int64(1),
+					int64(1),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+					// Verify runtime param is NOT in Ext
+					assert.NotContains(t, inputData.Ext, consts.TargetExecuteExtRuntimeParamKey)
+					return mockTargetResult, nil
+				})
+			},
+			wantErr: false,
+		},
+		{
+			name: "no custom config - no runtime param",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{
+						ExptRunID: 1,
+					},
+					EvalSetItem: &entity.EvaluationSetItem{
+						ItemID: 1,
+					},
+					Expt: &entity.Experiment{
+						Target: &entity.EvalTarget{
+							ID:                1,
+							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 1,
+									IngressConf: &entity.TargetIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{
+													FieldName: "field1",
+													FromField: "field1",
+												},
+											},
+										},
+										CustomConf: nil, // No custom config
+									},
+								},
+							},
+						},
+					},
+				},
+				Turn: &entity.Turn{
+					ID: 1,
+					FieldDataList: []*entity.FieldData{
+						{
+							Name:    "field1",
+							Content: mockContent,
+						},
+					},
+				},
+				Ext: map[string]string{},
+			},
+			history: []*entity.Message{},
+			mockSetup: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockEvalTargetService.EXPECT().ExecuteTarget(
+					gomock.Any(),
+					spaceID,
+					int64(1),
+					int64(1),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+					// Verify runtime param is NOT in Ext
+					assert.NotContains(t, inputData.Ext, consts.TargetExecuteExtRuntimeParamKey)
+					return mockTargetResult, nil
+				})
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockSetup != nil {
+				tt.mockSetup()
+			}
+
+			record, err := service.callTarget(ctx, tt.etec, tt.history, spaceID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, record)
+				assert.Equal(t, mockTargetResult.ID, record.ID)
 			}
 		})
 	}

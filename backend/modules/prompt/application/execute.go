@@ -124,7 +124,7 @@ func (p *PromptExecuteApplicationImpl) startPromptExecutorSpan(ctx context.Conte
 	}
 	var span looptracer.Span
 	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptExecutor, consts.SpanTypePromptExecutor,
-		cozeloop.WithSpanWorkspaceID(strconv.FormatInt(param.workspaceID, 10)))
+		looptracer.WithSpanWorkspaceID(strconv.FormatInt(param.workspaceID, 10)))
 	if span != nil {
 		if !hasSetCallType {
 			// todo: 目前只有评测，默认为评测
@@ -180,7 +180,7 @@ func (p *PromptExecuteApplicationImpl) finishPromptExecutorSpan(ctx context.Cont
 
 func (p *PromptExecuteApplicationImpl) getPromptByID(ctx context.Context, spaceID int64, promptID int64, version string) (prompt *entity.Prompt, err error) {
 	var span looptracer.Span
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptHub, tracespec.VPromptHubSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptHub, tracespec.VPromptHubSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
 	if span != nil {
 		span.SetInput(ctx, json.Jsonify(map[string]any{
 			consts.SpanTagPromptID:  strconv.FormatInt(promptID, 10),

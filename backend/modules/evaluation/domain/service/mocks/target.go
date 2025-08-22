@@ -166,3 +166,17 @@ func (mr *MockIEvalTargetServiceMockRecorder) GetRecordByID(ctx, spaceID, record
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecordByID", reflect.TypeOf((*MockIEvalTargetService)(nil).GetRecordByID), ctx, spaceID, recordID)
 }
+
+// ValidateRuntimeParam mocks base method.
+func (m *MockIEvalTargetService) ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateRuntimeParam", ctx, targetType, runtimeParam)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateRuntimeParam indicates an expected call of ValidateRuntimeParam.
+func (mr *MockIEvalTargetServiceMockRecorder) ValidateRuntimeParam(ctx, targetType, runtimeParam any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRuntimeParam", reflect.TypeOf((*MockIEvalTargetService)(nil).ValidateRuntimeParam), ctx, targetType, runtimeParam)
+}

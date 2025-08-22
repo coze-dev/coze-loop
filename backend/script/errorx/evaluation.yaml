@@ -65,6 +65,23 @@ error_code:
     description: number of experiments in running has reached the maximum limit
     no_affect_stability: true
 
+  - name: ExperimentExportValidateFail
+    code: 4007
+    message: experiment export validation failed
+    description: experiment export validation failed
+    no_affect_stability: true
+
+  - name: ExperimentUncomplete
+    code: 4008
+    message: experiment is not complete
+    description: experiment is not complete
+    no_affect_stability: true
+  - name: ExportRunningCountLimit
+    code: 4009
+    message: number of export in running has reached the maximum limit
+    description: number of export in running has reached the maximum limit
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported

@@ -17,6 +17,7 @@ import (
 type IExptTurnResultFilterKeyMappingDAO interface {
 	GetByExptID(ctx context.Context, spaceID, exptID int64, opts ...db.Option) ([]*model.ExptTurnResultFilterKeyMapping, error)
 	Insert(ctx context.Context, exptTurnResultFilterKeyMappings []*model.ExptTurnResultFilterKeyMapping) error
+	Delete(ctx context.Context, mapping *model.ExptTurnResultFilterKeyMapping, opts ...db.Option) error
 }
 
 type ExptTurnResultFilterKeyMappingDAOImpl struct {
@@ -27,6 +28,19 @@ func NewExptTurnResultFilterKeyMappingDAO(db db.Provider) IExptTurnResultFilterK
 	return &ExptTurnResultFilterKeyMappingDAOImpl{
 		provider: db,
 	}
+}
+
+func (dao *ExptTurnResultFilterKeyMappingDAOImpl) Delete(ctx context.Context, mapping *model.ExptTurnResultFilterKeyMapping, opts ...db.Option) error {
+	// 硬删除 可能删除后再关联
+	po := &model.ExptTurnResultFilterKeyMapping{}
+	db := dao.provider.NewSession(ctx, opts...)
+	err := db.Unscoped().Where("space_id = ? AND expt_id = ?  AND field_type = ? AND from_field = ?", mapping.SpaceID, mapping.ExptID, mapping.FieldType, mapping.FromField).
+		Delete(po).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (dao *ExptTurnResultFilterKeyMappingDAOImpl) GetByExptID(ctx context.Context, spaceID, exptID int64, opts ...db.Option) ([]*model.ExptTurnResultFilterKeyMapping, error) {

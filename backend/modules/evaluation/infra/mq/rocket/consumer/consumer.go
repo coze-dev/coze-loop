@@ -29,6 +29,7 @@ func NewConsumerWorkers(
 		newExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
 		newExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
 		newExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
+		newExptExportEventConsumer(NewExptExportConsumer(exptApp), loader),
 	}, nil
 }
 
@@ -115,6 +116,26 @@ type ExptAggrCalculateEventConsumer struct {
 func (e *ExptAggrCalculateEventConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
 	rmqCfg := &rocket.RMQConf{}
 	if err := e.UnmarshalKey(ctx, rocket.ExptAggrCalculateEventRMQKey, rmqCfg); err != nil {
+		return nil, err
+	}
+	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
+}
+
+func newExptExportEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+	return &ExptExportEventConsumer{
+		IConsumerHandler: handler,
+		IConfigLoader:    loader,
+	}
+}
+
+type ExptExportEventConsumer struct {
+	mq.IConsumerHandler
+	conf.IConfigLoader
+}
+
+func (e *ExptExportEventConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
+	rmqCfg := &rocket.RMQConf{}
+	if err := e.UnmarshalKey(ctx, rocket.ExptExportCSVEventRMQKey, rmqCfg); err != nil {
 		return nil, err
 	}
 	return gptr.Of(rmqCfg.ToConsumerCfg()), nil

@@ -51,6 +51,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptAggrCalculateEventRMQKey,
 		rocket.ExptOnlineEvalResultRMQKey,
 		rocket.ExptTurnResultFilterRMQKey,
+		rocket.ExptExportCSVEventRMQKey,
 	} {
 		p := &producer{}
 
@@ -116,6 +117,10 @@ func (e *exptEventPublisher) BatchPublishExptRecordEvalEvent(ctx context.Context
 
 func (e *exptEventPublisher) PublishExptAggrCalculateEvent(ctx context.Context, events []*entity.AggrCalculateEvent, duration *time.Duration) error {
 	return e.batchSend(ctx, rocket.ExptAggrCalculateEventRMQKey, lo.ToAnySlice(events), duration)
+}
+
+func (e *exptEventPublisher) PublishExptExportCSVEvent(ctx context.Context, event *entity.ExportCSVEvent, duration *time.Duration) error {
+	return e.batchSend(ctx, rocket.ExptExportCSVEventRMQKey, []any{event}, duration)
 }
 
 func (e *exptEventPublisher) PublishExptOnlineEvalResult(ctx context.Context, event *entity.OnlineExptEvalResultEvent, duration *time.Duration) error {

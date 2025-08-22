@@ -41,6 +41,11 @@ expt_turn_result_filter_rmq:
   consumer_group: 'cozeloop_evaluation_expt_turn_result_filter_cg'
   producer_group: 'cozeloop_evaluation_expt_turn_result_filter_pg'
   consume_timeout: 10m
+expt_export_csv_event_rmq:
+  addr: 'cozeloop-namesrv:9876'
+  topic: 'expt_export_csv_event'
+  consumer_group: 'expt_export_csv_event_cg'
+  producer_group: 'expt_export_csv_event_pg'
 
 rate_limiter_conf:
   - key_expr: biz_key + string(space_id)

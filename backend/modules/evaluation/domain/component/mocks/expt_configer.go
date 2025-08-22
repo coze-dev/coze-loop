@@ -5,12 +5,11 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
-	"go.uber.org/mock/gomock"
-
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockIConfiger is a mock of IConfiger interface.
@@ -104,6 +103,20 @@ func (m *MockIConfiger) GetExptExecConf(arg0 context.Context, arg1 int64) *entit
 func (mr *MockIConfigerMockRecorder) GetExptExecConf(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExecConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptExecConf), arg0, arg1)
+}
+
+// GetExptExportWhiteList mocks base method.
+func (m *MockIConfiger) GetExptExportWhiteList(arg0 context.Context) *entity.ExptExportWhiteList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExptExportWhiteList", arg0)
+	ret0, _ := ret[0].(*entity.ExptExportWhiteList)
+	return ret0
+}
+
+// GetExptExportWhiteList indicates an expected call of GetExptExportWhiteList.
+func (mr *MockIConfigerMockRecorder) GetExptExportWhiteList(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptExportWhiteList), arg0)
 }
 
 // GetExptTurnResultFilterBmqProducerCfg mocks base method.

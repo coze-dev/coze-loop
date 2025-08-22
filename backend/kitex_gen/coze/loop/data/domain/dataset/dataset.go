@@ -625,8 +625,18 @@ const (
 	ItemErrorType_ExceedMaxNestedDepth ItemErrorType = 8
 	// 数据转换失败
 	ItemErrorType_TransformItemFailed ItemErrorType = 9
+	// 图片数量超限
+	ItemErrorType_ExceedMaxImageCount ItemErrorType = 10
+	// 图片大小超限
+	ItemErrorType_ExceedMaxImageSize ItemErrorType = 11
+	// 图片获取失败（例如图片不存在/访问不在白名单内的内网链接）
+	ItemErrorType_GetImageFailed ItemErrorType = 12
+	// 文件扩展名不合法
+	ItemErrorType_IllegalExtension ItemErrorType = 13
 	/* system error*/
 	ItemErrorType_InternalError ItemErrorType = 100
+	// 上传图片失败
+	ItemErrorType_UploadImageFailed ItemErrorType = 103
 )
 
 func (p ItemErrorType) String() string {
@@ -649,8 +659,18 @@ func (p ItemErrorType) String() string {
 		return "ExceedMaxNestedDepth"
 	case ItemErrorType_TransformItemFailed:
 		return "TransformItemFailed"
+	case ItemErrorType_ExceedMaxImageCount:
+		return "ExceedMaxImageCount"
+	case ItemErrorType_ExceedMaxImageSize:
+		return "ExceedMaxImageSize"
+	case ItemErrorType_GetImageFailed:
+		return "GetImageFailed"
+	case ItemErrorType_IllegalExtension:
+		return "IllegalExtension"
 	case ItemErrorType_InternalError:
 		return "InternalError"
+	case ItemErrorType_UploadImageFailed:
+		return "UploadImageFailed"
 	}
 	return "<UNSET>"
 }
@@ -675,8 +695,18 @@ func ItemErrorTypeFromString(s string) (ItemErrorType, error) {
 		return ItemErrorType_ExceedMaxNestedDepth, nil
 	case "TransformItemFailed":
 		return ItemErrorType_TransformItemFailed, nil
+	case "ExceedMaxImageCount":
+		return ItemErrorType_ExceedMaxImageCount, nil
+	case "ExceedMaxImageSize":
+		return ItemErrorType_ExceedMaxImageSize, nil
+	case "GetImageFailed":
+		return ItemErrorType_GetImageFailed, nil
+	case "IllegalExtension":
+		return ItemErrorType_IllegalExtension, nil
 	case "InternalError":
 		return ItemErrorType_InternalError, nil
+	case "UploadImageFailed":
+		return ItemErrorType_UploadImageFailed, nil
 	}
 	return ItemErrorType(0), fmt.Errorf("not a valid ItemErrorType string")
 }
@@ -2882,8 +2912,9 @@ type DatasetSpec struct {
 	// 字段数量上限
 	MaxFieldCount *int32 `thrift:"max_field_count,2,optional" frugal:"2,optional,i32" form:"max_field_count" json:"max_field_count,omitempty" query:"max_field_count"`
 	// 单条数据字数上限
-	MaxItemSize            *int64 `thrift:"max_item_size,3,optional" frugal:"3,optional,i64" json:"max_item_size" form:"max_item_size" query:"max_item_size"`
-	MaxItemDataNestedDepth *int32 `thrift:"max_item_data_nested_depth,4,optional" frugal:"4,optional,i32" form:"max_item_data_nested_depth" json:"max_item_data_nested_depth,omitempty" query:"max_item_data_nested_depth"`
+	MaxItemSize            *int64          `thrift:"max_item_size,3,optional" frugal:"3,optional,i64" json:"max_item_size" form:"max_item_size" query:"max_item_size"`
+	MaxItemDataNestedDepth *int32          `thrift:"max_item_data_nested_depth,4,optional" frugal:"4,optional,i32" form:"max_item_data_nested_depth" json:"max_item_data_nested_depth,omitempty" query:"max_item_data_nested_depth"`
+	MultiModalSpec         *MultiModalSpec `thrift:"multi_modal_spec,5,optional" frugal:"5,optional,MultiModalSpec" form:"multi_modal_spec" json:"multi_modal_spec,omitempty" query:"multi_modal_spec"`
 }
 
 func NewDatasetSpec() *DatasetSpec {
@@ -2940,6 +2971,18 @@ func (p *DatasetSpec) GetMaxItemDataNestedDepth() (v int32) {
 	}
 	return *p.MaxItemDataNestedDepth
 }
+
+var DatasetSpec_MultiModalSpec_DEFAULT *MultiModalSpec
+
+func (p *DatasetSpec) GetMultiModalSpec() (v *MultiModalSpec) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMultiModalSpec() {
+		return DatasetSpec_MultiModalSpec_DEFAULT
+	}
+	return p.MultiModalSpec
+}
 func (p *DatasetSpec) SetMaxItemCount(val *int64) {
 	p.MaxItemCount = val
 }
@@ -2952,12 +2995,16 @@ func (p *DatasetSpec) SetMaxItemSize(val *int64) {
 func (p *DatasetSpec) SetMaxItemDataNestedDepth(val *int32) {
 	p.MaxItemDataNestedDepth = val
 }
+func (p *DatasetSpec) SetMultiModalSpec(val *MultiModalSpec) {
+	p.MultiModalSpec = val
+}
 
 var fieldIDToName_DatasetSpec = map[int16]string{
 	1: "max_item_count",
 	2: "max_field_count",
 	3: "max_item_size",
 	4: "max_item_data_nested_depth",
+	5: "multi_modal_spec",
 }
 
 func (p *DatasetSpec) IsSetMaxItemCount() bool {
@@ -2974,6 +3021,10 @@ func (p *DatasetSpec) IsSetMaxItemSize() bool {
 
 func (p *DatasetSpec) IsSetMaxItemDataNestedDepth() bool {
 	return p.MaxItemDataNestedDepth != nil
+}
+
+func (p *DatasetSpec) IsSetMultiModalSpec() bool {
+	return p.MultiModalSpec != nil
 }
 
 func (p *DatasetSpec) Read(iprot thrift.TProtocol) (err error) {
@@ -3021,6 +3072,14 @@ func (p *DatasetSpec) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3099,6 +3158,14 @@ func (p *DatasetSpec) ReadField4(iprot thrift.TProtocol) error {
 	p.MaxItemDataNestedDepth = _field
 	return nil
 }
+func (p *DatasetSpec) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewMultiModalSpec()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.MultiModalSpec = _field
+	return nil
+}
 
 func (p *DatasetSpec) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3120,6 +3187,10 @@ func (p *DatasetSpec) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -3212,6 +3283,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *DatasetSpec) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMultiModalSpec() {
+		if err = oprot.WriteFieldBegin("multi_modal_spec", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MultiModalSpec.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *DatasetSpec) String() string {
 	if p == nil {
@@ -3237,6 +3326,9 @@ func (p *DatasetSpec) DeepEqual(ano *DatasetSpec) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.MaxItemDataNestedDepth) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.MultiModalSpec) {
 		return false
 	}
 	return true
@@ -3286,6 +3378,13 @@ func (p *DatasetSpec) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.MaxItemDataNestedDepth != *src {
+		return false
+	}
+	return true
+}
+func (p *DatasetSpec) Field5DeepEqual(src *MultiModalSpec) bool {
+
+	if !p.MultiModalSpec.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -6675,6 +6774,8 @@ type MultiModalSpec struct {
 	MaxFileSize *int64 `thrift:"max_file_size,2,optional" frugal:"2,optional,i64" json:"max_file_size" form:"max_file_size" query:"max_file_size"`
 	// 文件格式
 	SupportedFormats []string `thrift:"supported_formats,3,optional" frugal:"3,optional,list<string>" form:"supported_formats" json:"supported_formats,omitempty" query:"supported_formats"`
+	// 多模态节点总数上限
+	MaxPartCount *int32 `thrift:"max_part_count,4,optional" frugal:"4,optional,i32" form:"max_part_count" json:"max_part_count,omitempty" query:"max_part_count"`
 }
 
 func NewMultiModalSpec() *MultiModalSpec {
@@ -6719,6 +6820,18 @@ func (p *MultiModalSpec) GetSupportedFormats() (v []string) {
 	}
 	return p.SupportedFormats
 }
+
+var MultiModalSpec_MaxPartCount_DEFAULT int32
+
+func (p *MultiModalSpec) GetMaxPartCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxPartCount() {
+		return MultiModalSpec_MaxPartCount_DEFAULT
+	}
+	return *p.MaxPartCount
+}
 func (p *MultiModalSpec) SetMaxFileCount(val *int64) {
 	p.MaxFileCount = val
 }
@@ -6728,11 +6841,15 @@ func (p *MultiModalSpec) SetMaxFileSize(val *int64) {
 func (p *MultiModalSpec) SetSupportedFormats(val []string) {
 	p.SupportedFormats = val
 }
+func (p *MultiModalSpec) SetMaxPartCount(val *int32) {
+	p.MaxPartCount = val
+}
 
 var fieldIDToName_MultiModalSpec = map[int16]string{
 	1: "max_file_count",
 	2: "max_file_size",
 	3: "supported_formats",
+	4: "max_part_count",
 }
 
 func (p *MultiModalSpec) IsSetMaxFileCount() bool {
@@ -6745,6 +6862,10 @@ func (p *MultiModalSpec) IsSetMaxFileSize() bool {
 
 func (p *MultiModalSpec) IsSetSupportedFormats() bool {
 	return p.SupportedFormats != nil
+}
+
+func (p *MultiModalSpec) IsSetMaxPartCount() bool {
+	return p.MaxPartCount != nil
 }
 
 func (p *MultiModalSpec) Read(iprot thrift.TProtocol) (err error) {
@@ -6784,6 +6905,14 @@ func (p *MultiModalSpec) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6863,6 +6992,17 @@ func (p *MultiModalSpec) ReadField3(iprot thrift.TProtocol) error {
 	p.SupportedFormats = _field
 	return nil
 }
+func (p *MultiModalSpec) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxPartCount = _field
+	return nil
+}
 
 func (p *MultiModalSpec) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6880,6 +7020,10 @@ func (p *MultiModalSpec) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -6962,6 +7106,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *MultiModalSpec) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxPartCount() {
+		if err = oprot.WriteFieldBegin("max_part_count", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxPartCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *MultiModalSpec) String() string {
 	if p == nil {
@@ -6984,6 +7146,9 @@ func (p *MultiModalSpec) DeepEqual(ano *MultiModalSpec) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.SupportedFormats) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MaxPartCount) {
 		return false
 	}
 	return true
@@ -7023,6 +7188,18 @@ func (p *MultiModalSpec) Field3DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *MultiModalSpec) Field4DeepEqual(src *int32) bool {
+
+	if p.MaxPartCount == src {
+		return true
+	} else if p.MaxPartCount == nil || src == nil {
+		return false
+	}
+	if *p.MaxPartCount != *src {
+		return false
 	}
 	return true
 }

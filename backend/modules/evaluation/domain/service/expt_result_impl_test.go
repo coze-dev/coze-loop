@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -630,6 +632,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 				mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{EvalSetVersionID: 1}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{{ID: 1, ItemID: 1}}, int64(1), nil)
@@ -690,6 +694,28 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 				mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:       1,
+						SpaceID:  1,
+						ExptID:   1,
+						TagKeyID: 1,
+					},
+				}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{
+					1: {
+						TagKeyId:       1,
+						TagKeyName:     "123",
+						Description:    "123",
+						InActive:       false,
+						TagContentType: "",
+						TagValues:      nil,
+						TagContentSpec: nil,
+						TagStatus:      "",
+					},
+				}, nil).AnyTimes()
 
 				return ExptResultServiceImpl{
 					ExptTurnResultRepo:          mockExptTurnResultRepo,
@@ -704,6 +730,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					evalTargetService:           mockEvalTargetService,
 					evaluationSetService:        mockEvaluationSetService,
 					evaluationSetVersionService: mockEvaluationSetVersionService,
+					ExptAnnotateRepo:            mockExptAnnotateRepo,
+					tagRPCAdapter:               mockTagRPCAdapter,
 				}
 			},
 			want:    []*entity.ColumnEvaluator{},
@@ -728,6 +756,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 				mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
 				mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
@@ -779,6 +809,17 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnEvaluatorResultRef{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().GetItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:       1,
+						SpaceID:  1,
+						ExptID:   1,
+						TagKeyID: 1,
+					},
+				}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{}, nil).AnyTimes()
 
 				return ExptResultServiceImpl{
 					ExptTurnResultRepo:          mockExptTurnResultRepo,
@@ -793,6 +834,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					evalTargetService:           mockEvalTargetService,
 					evaluationSetService:        mockEvaluationSetService,
 					evaluationSetVersionService: mockEvaluationSetVersionService,
+					ExptAnnotateRepo:            mockExptAnnotateRepo,
+					tagRPCAdapter:               mockTagRPCAdapter,
 				}
 			},
 			want: []*entity.ColumnEvaluator{
@@ -847,6 +890,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorService := svcMocks.NewMockEvaluatorService(ctrl)
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 				mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
@@ -856,7 +901,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 				mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvaluatorRef{}, nil)
-				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil)
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
@@ -869,6 +914,17 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 						FieldSchemas: []*entity.FieldSchema{},
 					},
 				}, nil, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:       1,
+						SpaceID:  1,
+						ExptID:   1,
+						TagKeyID: 1,
+					},
+				}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{}, nil).AnyTimes()
 
 				return ExptResultServiceImpl{
 					ExptTurnResultRepo:          mockExptTurnResultRepo,
@@ -878,6 +934,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					evaluatorService:            mockEvaluatorService,
 					evaluationSetService:        mockEvaluationSetService,
 					evaluationSetVersionService: mockEvaluationSetVersionService,
+					ExptAnnotateRepo:            mockExptAnnotateRepo,
+					tagRPCAdapter:               mockTagRPCAdapter,
 				}
 			},
 			want:    nil,
@@ -896,6 +954,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorService := svcMocks.NewMockEvaluatorService(ctrl)
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 				mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					ExptType:         entity.ExptType_Online,
@@ -905,7 +965,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 				mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvaluatorRef{}, nil)
-				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil)
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
@@ -918,6 +978,17 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 						FieldSchemas: []*entity.FieldSchema{},
 					},
 				}, nil, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:       1,
+						SpaceID:  1,
+						ExptID:   1,
+						TagKeyID: 1,
+					},
+				}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{}, nil).AnyTimes()
 
 				return ExptResultServiceImpl{
 					ExperimentRepo:              mockExperimentRepo,
@@ -926,6 +997,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					evaluatorService:            mockEvaluatorService,
 					evaluationSetService:        mockEvaluationSetService,
 					evaluationSetVersionService: mockEvaluationSetVersionService,
+					ExptAnnotateRepo:            mockExptAnnotateRepo,
+					tagRPCAdapter:               mockTagRPCAdapter,
 				}
 			},
 			want:    []*entity.ColumnEvaluator{},
@@ -1026,6 +1099,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 				mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
 				mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
@@ -1102,6 +1177,18 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 				mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:       1,
+						SpaceID:  1,
+						ExptID:   1,
+						TagKeyID: 1,
+					},
+				}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{}, nil).AnyTimes()
+
 				return ExptResultServiceImpl{
 					ExptTurnResultRepo:          mockExptTurnResultRepo,
 					ExperimentRepo:              mockExperimentRepo,
@@ -1116,6 +1203,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					evaluationSetService:        mockEvaluationSetService,
 					evaluationSetVersionService: mockEvaluationSetVersionService,
 					exptTurnResultFilterRepo:    mockExptTurnResultFilterRepo,
+					ExptAnnotateRepo:            mockExptAnnotateRepo,
+					tagRPCAdapter:               mockTagRPCAdapter,
 				}
 			},
 			want: []*entity.ColumnEvaluator{
@@ -1138,7 +1227,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			svc := tt.setup(ctrl)
-			got, _, _, _, err := svc.MGetExperimentResult(context.Background(), tt.param)
+			got, _, _, _, _, _, err := svc.MGetExperimentResult(context.Background(), tt.param)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MGetExperimentResult() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1176,11 +1265,12 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
 				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 				mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+				mockIdgen := idgenMocks.NewMockIIDGenerator(ctrl)
 
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
 						ID:     1,
@@ -1192,7 +1282,11 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemTurnRunLogs mock
 				mockExptTurnResultRepo.EXPECT().
 					GetItemTurnRunLogs(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success}}, nil)
+					Return([]*entity.ExptTurnResultRunLog{{
+						TurnID:             1,
+						Status:             entity.TurnRunState_Success,
+						EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 1}},
+					}}, nil)
 
 				// GetItemTurnResults mock
 				mockExptItemResultRepo.EXPECT().
@@ -1202,6 +1296,16 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 						TurnID: 1,
 						Status: int32(entity.TurnRunState_Success),
 					}}, nil)
+
+				// idgen mock
+				mockIdgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1}, nil)
+
+				// CreateTurnEvaluatorRefs mock
+				mockExptTurnResultRepo.EXPECT().
+					CreateTurnEvaluatorRefs(gomock.Any(), gomock.Any()).
+					Return(nil)
 
 				// SaveTurnResults mock
 				mockExptTurnResultRepo.EXPECT().
@@ -1229,6 +1333,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 					ExptStatsRepo:          mockExptStatsRepo,
 					evaluatorRecordService: mockEvaluatorRecordService,
 					publisher:              mockPublisher,
+					idgen:                  mockIdgen,
 				}
 			},
 			wantErr: false,
@@ -1272,7 +1377,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 
 				// GetItemTurnRunLogs mock 返回错误
 				mockExptTurnResultRepo.EXPECT().
@@ -1302,12 +1407,12 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 
 				// GetItemTurnRunLogs mock
 				mockExptTurnResultRepo.EXPECT().
 					GetItemTurnRunLogs(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success}}, nil)
+					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success, EvaluatorResultIds: nil}}, nil)
 
 				// GetItemTurnResults mock 返回错误
 				mockExptItemResultRepo.EXPECT().
@@ -1337,7 +1442,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 
 				// BatchGet mock
 				mockExptItemResultRepo.EXPECT().
@@ -1353,7 +1458,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemTurnRunLogs mock
 				mockExptTurnResultRepo.EXPECT().
 					GetItemTurnRunLogs(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success}}, nil)
+					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success, EvaluatorResultIds: nil}}, nil)
 
 				// GetItemTurnResults mock
 				mockExptItemResultRepo.EXPECT().
@@ -1392,7 +1497,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 
 				// BatchGet mock
 				mockExptItemResultRepo.EXPECT().
@@ -1408,7 +1513,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemTurnRunLogs mock
 				mockExptTurnResultRepo.EXPECT().
 					GetItemTurnRunLogs(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success}}, nil)
+					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success, EvaluatorResultIds: nil}}, nil)
 
 				// GetItemTurnResults mock
 				mockExptItemResultRepo.EXPECT().
@@ -1452,7 +1557,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 
 				// BatchGet mock
 				mockExptItemResultRepo.EXPECT().
@@ -1468,7 +1573,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemTurnRunLogs mock
 				mockExptTurnResultRepo.EXPECT().
 					GetItemTurnRunLogs(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success}}, nil)
+					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success, EvaluatorResultIds: nil}}, nil)
 
 				// GetItemTurnResults mock
 				mockExptItemResultRepo.EXPECT().
@@ -1518,7 +1623,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemRunLog mock
 				mockExptItemResultRepo.EXPECT().
 					GetItemRunLog(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return(&entity.ExptItemResultRunLog{Status: 1}, nil)
+					Return(&entity.ExptItemResultRunLog{Status: 1, ResultState: int32(entity.ExptItemResultStateLogged)}, nil)
 
 				// BatchGet mock
 				mockExptItemResultRepo.EXPECT().
@@ -1534,7 +1639,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 				// GetItemTurnRunLogs mock
 				mockExptTurnResultRepo.EXPECT().
 					GetItemTurnRunLogs(gomock.Any(), int64(1), int64(1), int64(1), int64(100)).
-					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success}}, nil)
+					Return([]*entity.ExptTurnResultRunLog{{TurnID: 1, Status: entity.TurnRunState_Success, EvaluatorResultIds: nil}}, nil)
 
 				// GetItemTurnResults mock
 				mockExptItemResultRepo.EXPECT().
@@ -1609,10 +1714,12 @@ func TestNewExptResultService(t *testing.T) {
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
 	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
-
+	mockTagAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
+	mockAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 	svc := NewExptResultService(
 		mockExptItemResultRepo,
 		mockExptTurnResultRepo,
+		mockAnnotateRepo,
 		mockExptStatsRepo,
 		mockExperimentRepo,
 		mockMetric,
@@ -1626,6 +1733,7 @@ func TestNewExptResultService(t *testing.T) {
 		mockEvaluatorRecordService,
 		mockEvaluationSetItemService,
 		mockPublisher,
+		mockTagAdapter,
 	)
 
 	impl, ok := svc.(ExptResultServiceImpl)
@@ -1690,6 +1798,7 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 			mockExperimentRepo *repoMocks.MockIExperimentRepo,
 			mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo,
 			mockPublisher *eventsMocks.MockExptEventPublisher,
+			mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
 		)
 		wantErr bool
 	}{
@@ -1698,7 +1807,7 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 			spaceID: 100,
 			exptID:  1,
 			itemIDs: []int64{10, 11},
-			setup: func(mockLWT *lwtMocks.MockILatestWriteTracker, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo, mockPublisher *eventsMocks.MockExptEventPublisher) {
+			setup: func(mockLWT *lwtMocks.MockILatestWriteTracker, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo, mockPublisher *eventsMocks.MockExptEventPublisher, mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo) {
 				// 模拟写标志检查
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeExperiment, int64(1)).Return(false)
 				// 模拟获取实验信息
@@ -1716,6 +1825,16 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 				mockFilterRepo.EXPECT().InsertExptTurnResultFilterKeyMappings(gomock.Any(), gomock.Any()).Return(nil)
 				// 模拟发布事件
 				mockPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gptr.Of(time.Second*3)).Return(nil)
+				mockExptAnnotateRepo.EXPECT().GetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:          1,
+						SpaceID:     100,
+						ExptID:      1,
+						TagKeyID:    10,
+						TotalCnt:    10,
+						CompleteCnt: 10,
+					},
+				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1724,7 +1843,7 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 			spaceID: 100,
 			exptID:  2,
 			itemIDs: []int64{10},
-			setup: func(mockLWT *lwtMocks.MockILatestWriteTracker, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo, mockPublisher *eventsMocks.MockExptEventPublisher) {
+			setup: func(mockLWT *lwtMocks.MockILatestWriteTracker, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo, mockPublisher *eventsMocks.MockExptEventPublisher, mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo) {
 				// 模拟写标志检查
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeExperiment, int64(2)).Return(false)
 				// 模拟返回空实验列表
@@ -1737,7 +1856,7 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 			spaceID: 100,
 			exptID:  3,
 			itemIDs: []int64{10},
-			setup: func(mockLWT *lwtMocks.MockILatestWriteTracker, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo, mockPublisher *eventsMocks.MockExptEventPublisher) {
+			setup: func(mockLWT *lwtMocks.MockILatestWriteTracker, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockFilterRepo *repoMocks.MockIExptTurnResultFilterRepo, mockPublisher *eventsMocks.MockExptEventPublisher, mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo) {
 				// 模拟写标志检查
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeExperiment, int64(3)).Return(false)
 				// 模拟获取实验信息
@@ -1748,6 +1867,16 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 						EvaluatorVersionRef: []*entity.ExptEvaluatorVersionRef{
 							{EvaluatorVersionID: 101},
 						},
+					},
+				}, nil)
+				mockExptAnnotateRepo.EXPECT().GetExptTurnResultTagRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultTagRef{
+					{
+						ID:          1,
+						SpaceID:     100,
+						ExptID:      1,
+						TagKeyID:    10,
+						TotalCnt:    10,
+						CompleteCnt: 10,
 					},
 				}, nil)
 				// 模拟插入失败
@@ -1768,6 +1897,7 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 			mockFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
 			mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 
 			// 实例化被测服务
 			svc := ExptResultServiceImpl{
@@ -1775,10 +1905,11 @@ func TestExptResultServiceImpl_ManualUpsertExptTurnResultFilter(t *testing.T) {
 				ExperimentRepo:           mockExperimentRepo,
 				exptTurnResultFilterRepo: mockFilterRepo,
 				publisher:                mockPublisher,
+				ExptAnnotateRepo:         mockExptAnnotateRepo,
 			}
 
 			// 设置Mock期望
-			tt.setup(mockLWT, mockExperimentRepo, mockFilterRepo, mockPublisher)
+			tt.setup(mockLWT, mockExperimentRepo, mockFilterRepo, mockPublisher, mockExptAnnotateRepo)
 
 			// 调用被测方法
 			err := svc.ManualUpsertExptTurnResultFilter(context.Background(), tt.spaceID, tt.exptID, tt.itemIDs)
@@ -1808,6 +1939,7 @@ func TestPayloadBuilder_BuildTurnResultFilter(t *testing.T) {
 				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
 				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 
 				// 定义模拟数据
 				spaceID := int64(100)
@@ -1849,6 +1981,84 @@ func TestPayloadBuilder_BuildTurnResultFilter(t *testing.T) {
 						},
 					},
 				}, nil)
+				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{
+					{
+						ID:               1,
+						ExptTurnResultID: 10,
+						SpaceID:          100,
+						ExptID:           1,
+						TagKeyID:         10,
+						AnnotateRecordID: 10,
+					},
+					{
+						ID:               1,
+						ExptTurnResultID: 10,
+						SpaceID:          100,
+						ExptID:           1,
+						TagKeyID:         11,
+						AnnotateRecordID: 11,
+					},
+					{
+						ID:               1,
+						ExptTurnResultID: 10,
+						SpaceID:          100,
+						ExptID:           1,
+						TagKeyID:         12,
+						AnnotateRecordID: 12,
+					},
+					{
+						ID:               1,
+						ExptTurnResultID: 10,
+						SpaceID:          100,
+						ExptID:           1,
+						TagKeyID:         13,
+						AnnotateRecordID: 13,
+					},
+				}, nil).AnyTimes()
+				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{
+					{
+						ID:           10,
+						ExperimentID: 1,
+						SpaceID:      100,
+						TagKeyID:     10,
+						TagValueID:   0,
+						AnnotateData: &entity.AnnotateData{
+							Score:          ptr.Of(float64(1)),
+							TagContentType: entity.TagContentTypeContinuousNumber,
+						},
+					},
+					{
+						ID:           13,
+						ExperimentID: 1,
+						SpaceID:      100,
+						TagKeyID:     13,
+						TagValueID:   456,
+						AnnotateData: &entity.AnnotateData{
+							TagContentType: entity.TagContentTypeCategorical,
+						},
+					},
+					{
+						ID:           11,
+						ExperimentID: 1,
+						SpaceID:      100,
+						TagKeyID:     11,
+						TagValueID:   123,
+						AnnotateData: &entity.AnnotateData{
+							TagContentType: entity.TagContentTypeBoolean,
+						},
+					},
+					{
+						ID:           12,
+						ExperimentID: 1,
+						SpaceID:      100,
+						TagKeyID:     12,
+						TagValueID:   0,
+						AnnotateData: &entity.AnnotateData{
+							TextValue:      ptr.Of("text"),
+							TagContentType: entity.TagContentTypeFreeText,
+						},
+					},
+				}, nil).AnyTimes()
 
 				// 创建 PayloadBuilder 实例
 				return &PayloadBuilder{
@@ -1858,11 +2068,16 @@ func TestPayloadBuilder_BuildTurnResultFilter(t *testing.T) {
 					BaseExptItemResultDO: []*entity.ExptItemResult{{ItemID: 20, ItemIdx: 1, Status: entity.ItemRunState_Success}},
 					ExptTurnResultFilterKeyMappingEvaluatorMap: map[string]*entity.ExptTurnResultFilterKeyMapping{
 						"201": {ToKey: "eval_score_key"},
+						"10":  {ToKey: "eval_score_key"},
+						"11":  {ToKey: "eval_score_key"},
+						"12":  {ToKey: "eval_score_key"},
+						"13":  {ToKey: "eval_score_key"},
 					},
 					ExperimentRepo:         mockExperimentRepo,
 					ExptTurnResultRepo:     mockExptTurnResultRepo,
 					EvalTargetService:      mockEvalTargetService,
 					EvaluatorRecordService: mockEvaluatorRecordService,
+					ExptAnnotateRepo:       mockExptAnnotateRepo,
 				}
 			},
 			want: []*entity.ExptTurnResultFilterEntity{
@@ -1956,6 +2171,7 @@ func TestExptResultServiceImpl_UpsertExptTurnResultFilter(t *testing.T) {
 	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+	mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 	tests := []struct {
 		name    string
 		args    args
@@ -2033,6 +2249,21 @@ func TestExptResultServiceImpl_UpsertExptTurnResultFilter(t *testing.T) {
 					},
 				},
 			}, nil)
+			mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{
+				{
+					ID:       1,
+					SpaceID:  100,
+					ExptID:   1,
+					TagKeyID: 10,
+				},
+			}, nil).AnyTimes()
+			mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{
+				{
+					ID:       1,
+					SpaceID:  100,
+					TagKeyID: 10,
+				},
+			}, nil).AnyTimes()
 		},
 		wantErr: false,
 	}}
@@ -2051,6 +2282,7 @@ func TestExptResultServiceImpl_UpsertExptTurnResultFilter(t *testing.T) {
 				ExperimentRepo:           mockExperimentRepo,
 				evalTargetService:        mockEvalTargetService,
 				evaluatorRecordService:   mockEvaluatorRecordService,
+				ExptAnnotateRepo:         mockExptAnnotateRepo,
 			}
 			if err := svc.UpsertExptTurnResultFilter(context.Background(), tt.args.spaceID, tt.args.exptID, tt.args.itemIDs); (err != nil) != tt.wantErr {
 				t.Errorf("UpsertExptTurnResultFilter() error = %v, wantErr %v", err, tt.wantErr)
@@ -2084,6 +2316,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 	mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
 	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+	mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 
 	svc := &ExptResultServiceImpl{
 		ExptTurnResultRepo:          mockExptTurnResultRepo,
@@ -2100,11 +2333,16 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		evaluationSetService:        mockEvaluationSetService,
 		Metric:                      mockMetric,
 		idgen:                       mockIDGen,
+		ExptAnnotateRepo:            mockExptAnnotateRepo,
 	}
 
 	now := time.Now()
 
 	defaultSetup := func() {
+		// 设置 ExptAnnotateRepo Mock 避免 PayloadBuilder 构建时的 panic
+		mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
+		mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+		
 		// 设置实验信息Mock
 		mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Experiment{{
 			ID:               1,
@@ -2295,7 +2533,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				FieldType: entity.FieldTypeEvaluator,
 			},
 		}, nil).AnyTimes()
-		mockMetric.EXPECT().EmitExptTurnResultFilterCheck(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+		mockMetric.EXPECT().EmitExptTurnResultFilterCheck(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 		mockPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
 
@@ -2327,6 +2565,47 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			setup:   defaultSetup,
 			wantErr: false,
 		},
+		// 新增测试用例：基于现有架构稍微增加覆盖率
+		{
+			name: "过滤器不存在场景测试",
+			args: args{
+				spaceID:    100,
+				exptID:     2, // 使用不同的 exptID
+				itemIDs:    []int64{2},
+				retryTimes: 3,
+			},
+			setup: func() {
+				// 基于 defaultSetup，但针对不同的 exptID 设置空过滤器
+				defaultSetup()
+				
+				// 覆盖过滤器设置，使其为空（模拟过滤器不存在的情况）
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "2", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
+				
+				// 设置 TurnResult 存在，确保会进入 for 循环
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(2), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+					{
+						ID:     2,
+						ExptID: 2,
+						ItemID: 2,
+						TurnID: 1,
+						Status: 1,
+					},
+				}, int64(1), nil).AnyTimes()
+				
+				// 设置实验信息
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{2}, int64(100)).Return([]*entity.Experiment{{
+					ID:               2,
+					SpaceID:          100,
+					ExptType:         entity.ExptType_Offline,
+					StartAt:          &now,
+					EvalSetVersionID: 101,
+				}}, nil).AnyTimes()
+				
+				// 验证指标上报 - 过滤器不存在且重试次数超过最大值
+				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), false, false, true, true).Return().AnyTimes()
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2339,4 +2618,426 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			}
 		})
 	}
+}
+func TestExptResultServiceImpl_ListTurnResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Mock dependencies
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+	mockLwt := lwtMocks.NewMockILatestWriteTracker(ctrl)
+	mockIdgen := idgenMocks.NewMockIIDGenerator(ctrl)
+	mockExptTurnResultFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
+	mockEvaluatorService := svcMocks.NewMockEvaluatorService(ctrl)
+	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+	mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+	mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
+	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
+	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+
+	service := ExptResultServiceImpl{
+		ExptItemResultRepo:          mockExptItemResultRepo,
+		ExptTurnResultRepo:          mockExptTurnResultRepo,
+		ExptStatsRepo:               mockExptStatsRepo,
+		ExperimentRepo:              mockExperimentRepo,
+		Metric:                      mockMetric,
+		lwt:                         mockLwt,
+		idgen:                       mockIdgen,
+		exptTurnResultFilterRepo:    mockExptTurnResultFilterRepo,
+		evalTargetService:           mockEvalTargetService,
+		evaluationSetVersionService: mockEvaluationSetVersionService,
+		evaluationSetService:        mockEvaluationSetService,
+		evaluatorService:            mockEvaluatorService,
+		evaluatorRecordService:      mockEvaluatorRecordService,
+		evaluationSetItemService:    mockEvaluationSetItemService,
+		publisher:                   mockPublisher,
+	}
+
+	now := time.Now()
+
+	tests := []struct {
+		name                        string
+		param                       *entity.MGetExperimentResultParam
+		expt                        *entity.Experiment
+		setup                       func()
+		expectedTurnResults         []*entity.ExptTurnResult
+		expectedItemID2ItemRunState map[int64]entity.ItemRunState
+		expectedTotal               int64
+		expectedError               error
+	}{
+		{
+			name: "UseAccelerator=false, 正常流程",
+			param: &entity.MGetExperimentResultParam{
+				SpaceID:        100,
+				ExptIDs:        []int64{1},
+				BaseExptID:     gptr.Of(int64(1)),
+				UseAccelerator: false,
+				Page:           entity.NewPage(1, 20),
+			},
+			expt: &entity.Experiment{
+				ID:       1,
+				SpaceID:  100,
+				ExptType: entity.ExptType_Offline,
+				StartAt:  &now,
+			},
+			setup: func() {
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{
+						{
+							ID:      1,
+							SpaceID: 100,
+							ExptID:  1,
+							ItemID:  10,
+							TurnID:  20,
+							Status:  int32(entity.TurnRunState_Success),
+						},
+					}, int64(1), nil).
+					Times(1)
+
+				// 添加 BatchGet mock 期望
+				mockExptItemResultRepo.EXPECT().
+					BatchGet(gomock.Any(), int64(100), int64(1), []int64{10}).
+					Return([]*entity.ExptItemResult{
+						{
+							ID:      1,
+							ItemID:  10,
+							SpaceID: 100,
+							ExptID:  1,
+							ItemIdx: 1,
+						},
+					}, nil).
+					Times(1)
+			},
+			expectedTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					SpaceID: 100,
+					ExptID:  1,
+					ItemID:  10,
+					TurnID:  20,
+					Status:  int32(entity.TurnRunState_Success),
+				},
+			},
+			expectedItemID2ItemRunState: nil,
+			expectedTotal:               1,
+			expectedError:               nil,
+		},
+		{
+			name: "UseAccelerator=false, 数据库错误",
+			param: &entity.MGetExperimentResultParam{
+				SpaceID:        100,
+				ExptIDs:        []int64{1},
+				BaseExptID:     gptr.Of(int64(1)),
+				UseAccelerator: false,
+				Page:           entity.NewPage(1, 20),
+			},
+			expt: &entity.Experiment{
+				ID:       1,
+				SpaceID:  100,
+				ExptType: entity.ExptType_Offline,
+				StartAt:  &now,
+			},
+			setup: func() {
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return(nil, int64(0), errors.New("database error")).
+					Times(1)
+			},
+			expectedTurnResults:         nil,
+			expectedItemID2ItemRunState: nil,
+			expectedTotal:               0,
+			expectedError:               errors.New("database error"),
+		},
+		{
+			name: "UseAccelerator=true, 无过滤器",
+			param: &entity.MGetExperimentResultParam{
+				SpaceID:            100,
+				ExptIDs:            []int64{1},
+				BaseExptID:         gptr.Of(int64(1)),
+				UseAccelerator:     true,
+				FilterAccelerators: map[int64]*entity.ExptTurnResultFilterAccelerator{},
+				Page:               entity.NewPage(1, 20),
+			},
+			expt: &entity.Experiment{
+				ID:       1,
+				SpaceID:  100,
+				ExptType: entity.ExptType_Offline,
+				StartAt:  &now,
+			},
+			setup: func() {
+				mockExptItemResultRepo.EXPECT().
+					ListItemResultsByExptID(gomock.Any(), int64(1), int64(100), gomock.Any(), false).
+					Return([]*entity.ExptItemResult{
+						{
+							ID:      1,
+							ItemID:  10,
+							SpaceID: 100,
+							ExptID:  1,
+						},
+					}, int64(1), nil).
+					Times(1)
+
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(1), []int64{10}, entity.Page{}, false).
+					Return([]*entity.ExptTurnResult{
+						{
+							ID:      1,
+							SpaceID: 100,
+							ExptID:  1,
+							ItemID:  10,
+							TurnID:  20,
+							Status:  int32(entity.TurnRunState_Success),
+						},
+					}, int64(1), nil).
+					Times(1)
+
+				// 添加 BatchGet mock 期望
+				mockExptItemResultRepo.EXPECT().
+					BatchGet(gomock.Any(), int64(100), int64(1), []int64{10}).
+					Return([]*entity.ExptItemResult{
+						{
+							ID:      1,
+							ItemID:  10,
+							SpaceID: 100,
+							ExptID:  1,
+							ItemIdx: 1,
+						},
+					}, nil).
+					Times(1)
+			},
+			expectedTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					SpaceID: 100,
+					ExptID:  1,
+					ItemID:  10,
+					TurnID:  20,
+					Status:  int32(entity.TurnRunState_Success),
+				},
+			},
+			expectedItemID2ItemRunState: nil,
+			expectedTotal:               1,
+			expectedError:               nil,
+		},
+		{
+			name: "UseAccelerator=true, 有过滤器",
+			param: &entity.MGetExperimentResultParam{
+				SpaceID:        100,
+				ExptIDs:        []int64{1},
+				BaseExptID:     gptr.Of(int64(1)),
+				UseAccelerator: true,
+				FilterAccelerators: map[int64]*entity.ExptTurnResultFilterAccelerator{
+					1: {
+						SpaceID: 100,
+						ExptID:  1,
+						ItemIDs: []*entity.FieldFilter{
+							{Key: "test"},
+						},
+					},
+				},
+				Page: entity.NewPage(1, 20),
+			},
+			expt: &entity.Experiment{
+				ID:               1,
+				SpaceID:          100,
+				ExptType:         entity.ExptType_Offline,
+				StartAt:          &now,
+				EvalSetVersionID: 5,
+			},
+			setup: func() {
+				mockExptTurnResultFilterRepo.EXPECT().
+					QueryItemIDStates(gomock.Any(), gomock.Any()).
+					Return(map[int64]entity.ItemRunState{
+						10: entity.ItemRunState_Success,
+					}, int64(1), nil).
+					Times(1)
+
+				mockMetric.EXPECT().
+					EmitExptTurnResultFilterQueryLatency(int64(100), gomock.Any(), false).
+					Times(1)
+
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(1), []int64{10}, entity.Page{}, false).
+					Return([]*entity.ExptTurnResult{
+						{
+							ID:      1,
+							SpaceID: 100,
+							ExptID:  1,
+							ItemID:  10,
+							TurnID:  20,
+							Status:  int32(entity.TurnRunState_Success),
+						},
+					}, int64(1), nil).
+					Times(1)
+
+				// 添加 BatchGet mock 期望
+				mockExptItemResultRepo.EXPECT().
+					BatchGet(gomock.Any(), int64(100), int64(1), []int64{10}).
+					Return([]*entity.ExptItemResult{
+						{
+							ID:      1,
+							ItemID:  10,
+							SpaceID: 100,
+							ExptID:  1,
+							ItemIdx: 1,
+						},
+					}, nil).
+					Times(1)
+			},
+			expectedTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					SpaceID: 100,
+					ExptID:  1,
+					ItemID:  10,
+					TurnID:  20,
+					Status:  int32(entity.TurnRunState_Success),
+				},
+			},
+			expectedItemID2ItemRunState: map[int64]entity.ItemRunState{
+				10: entity.ItemRunState_Success,
+			},
+			expectedTotal: 1,
+			expectedError: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+
+			turnResults, itemID2ItemRunState, total, err := service.ListTurnResult(context.Background(), tt.param, tt.expt)
+
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedTurnResults, turnResults)
+			assert.Equal(t, tt.expectedItemID2ItemRunState, itemID2ItemRunState)
+			assert.Equal(t, tt.expectedTotal, total)
+		})
+	}
+}
+
+func TestExptResultServiceImpl_ListTurnResult_EdgeCases(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Mock dependencies
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+	mockLwt := lwtMocks.NewMockILatestWriteTracker(ctrl)
+	mockIdgen := idgenMocks.NewMockIIDGenerator(ctrl)
+	mockExptTurnResultFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
+	mockEvaluatorService := svcMocks.NewMockEvaluatorService(ctrl)
+	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+	mockEvaluationSetVersionService := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+	mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
+	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
+	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+
+	service := ExptResultServiceImpl{
+		ExptItemResultRepo:          mockExptItemResultRepo,
+		ExptTurnResultRepo:          mockExptTurnResultRepo,
+		ExptStatsRepo:               mockExptStatsRepo,
+		ExperimentRepo:              mockExperimentRepo,
+		Metric:                      mockMetric,
+		lwt:                         mockLwt,
+		idgen:                       mockIdgen,
+		exptTurnResultFilterRepo:    mockExptTurnResultFilterRepo,
+		evalTargetService:           mockEvalTargetService,
+		evaluationSetVersionService: mockEvaluationSetVersionService,
+		evaluationSetService:        mockEvaluationSetService,
+		evaluatorService:            mockEvaluatorService,
+		evaluatorRecordService:      mockEvaluatorRecordService,
+		evaluationSetItemService:    mockEvaluationSetItemService,
+		publisher:                   mockPublisher,
+	}
+
+	now := time.Now()
+
+	t.Run("UseAccelerator=false, 有过滤器", func(t *testing.T) {
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:        100,
+			ExptIDs:        []int64{1},
+			BaseExptID:     gptr.Of(int64(1)),
+			UseAccelerator: false,
+			Filters: map[int64]*entity.ExptTurnResultFilter{
+				1: {
+					TrunRunStateFilters: []*entity.TurnRunStateFilter{
+						{
+							Status:   []entity.TurnRunState{entity.TurnRunState_Success},
+							Operator: "=",
+						},
+					},
+				},
+			},
+			Page: entity.NewPage(1, 20),
+		}
+
+		expt := &entity.Experiment{
+			ID:       1,
+			SpaceID:  100,
+			ExptType: entity.ExptType_Offline,
+			StartAt:  &now,
+		}
+
+		expectedFilter := &entity.ExptTurnResultFilter{
+			TrunRunStateFilters: []*entity.TurnRunStateFilter{
+				{
+					Status:   []entity.TurnRunState{entity.TurnRunState_Success},
+					Operator: "=",
+				},
+			},
+		}
+
+		mockExptTurnResultRepo.EXPECT().
+			ListTurnResult(gomock.Any(), int64(100), int64(1), expectedFilter, gomock.Any(), false).
+			Return([]*entity.ExptTurnResult{
+				{
+					ID:      1,
+					SpaceID: 100,
+					ExptID:  1,
+					ItemID:  10,
+					TurnID:  20,
+					Status:  int32(entity.TurnRunState_Success),
+				},
+			}, int64(1), nil).
+			Times(1)
+
+		// 添加 BatchGet mock 期望
+		mockExptItemResultRepo.EXPECT().
+			BatchGet(gomock.Any(), int64(100), int64(1), []int64{10}).
+			Return([]*entity.ExptItemResult{
+				{
+					ID:      1,
+					ItemID:  10,
+					SpaceID: 100,
+					ExptID:  1,
+					ItemIdx: 1,
+				},
+			}, nil).
+			Times(1)
+
+		turnResults, itemID2ItemRunState, total, err := service.ListTurnResult(context.Background(), param, expt)
+
+		assert.NoError(t, err)
+		assert.Len(t, turnResults, 1)
+		assert.Equal(t, int64(1), turnResults[0].ID)
+		assert.Nil(t, itemID2ItemRunState)
+		assert.Equal(t, int64(1), total)
+	})
 }

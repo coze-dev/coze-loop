@@ -114,7 +114,7 @@ func (e *exptRepoImpl) GetByID(ctx context.Context, id, spaceID int64) (*entity.
 		return nil, err
 	}
 	if len(got) == 0 {
-		return nil, errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("experiment not found"))
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment not found"))
 	}
 	return got[0], nil
 }

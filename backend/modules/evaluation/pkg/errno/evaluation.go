@@ -92,6 +92,18 @@ const (
 	experimentRunningCountLimitMessage           = "number of experiments in running has reached the maximum limit"
 	experimentRunningCountLimitNoAffectStability = true
 
+	ExperimentExportValidateFailCode              = 601204007 // experiment export validation failed
+	experimentExportValidateFailMessage           = "experiment export validation failed"
+	experimentExportValidateFailNoAffectStability = true
+
+	ExperimentUncompleteCode              = 601204008 // experiment is not complete
+	experimentUncompleteMessage           = "experiment is not complete"
+	experimentUncompleteNoAffectStability = true
+
+	ExportRunningCountLimitCode              = 601204009 // number of export in running has reached the maximum limit
+	exportRunningCountLimitMessage           = "number of export in running has reached the maximum limit"
+	exportRunningCountLimitNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -323,6 +335,24 @@ func init() {
 		ExperimentRunningCountLimitCode,
 		experimentRunningCountLimitMessage,
 		code.WithAffectStability(!experimentRunningCountLimitNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentExportValidateFailCode,
+		experimentExportValidateFailMessage,
+		code.WithAffectStability(!experimentExportValidateFailNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentUncompleteCode,
+		experimentUncompleteMessage,
+		code.WithAffectStability(!experimentUncompleteNoAffectStability),
+	)
+
+	code.Register(
+		ExportRunningCountLimitCode,
+		exportRunningCountLimitMessage,
+		code.WithAffectStability(!exportRunningCountLimitNoAffectStability),
 	)
 
 	code.Register(

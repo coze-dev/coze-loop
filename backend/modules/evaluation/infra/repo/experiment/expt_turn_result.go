@@ -110,6 +110,16 @@ func (r *ExptTurnResultRepoImpl) BatchGet(ctx context.Context, spaceID int64, ex
 	return exptTurnResults, nil
 }
 
+func (r *ExptTurnResultRepoImpl) Get(ctx context.Context, spaceID, exptID int64, itemID, turnID int64) (*entity.ExptTurnResult, error) {
+	exptTurnResultPO, err := r.exptTurnResultDAO.Get(ctx, spaceID, exptID, itemID, turnID)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "BatchGet fail, spaceID: %v, exptID: %v, itemID: %v, turnID: %v", spaceID, exptID, itemID, turnID)
+	}
+
+	exptTurnResult := convert.NewExptTurnResultConvertor().PO2DO(exptTurnResultPO, nil)
+	return exptTurnResult, nil
+}
+
 func (r *ExptTurnResultRepoImpl) SaveTurnResults(ctx context.Context, turnResults []*entity.ExptTurnResult) error {
 	logs.CtxInfo(ctx, "SaveTurnResults: %v", json.Jsonify(turnResults))
 

@@ -29,8 +29,9 @@ type EvalTargetVersion struct {
 	Prompt       *LoopPrompt
 	CozeWorkflow *CozeWorkflow
 
-	InputSchema  []*ArgsSchema
-	OutputSchema []*ArgsSchema
+	InputSchema      []*ArgsSchema
+	OutputSchema     []*ArgsSchema
+	RuntimeParamDemo *string
 
 	BaseInfo *BaseInfo
 }

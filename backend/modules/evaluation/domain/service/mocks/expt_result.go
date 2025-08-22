@@ -5,12 +5,12 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
 // MockExptResultService is a mock of ExptResultService interface.
@@ -124,15 +124,17 @@ func (mr *MockExptResultServiceMockRecorder) InsertExptTurnResultFilterKeyMappin
 }
 
 // MGetExperimentResult mocks base method.
-func (m *MockExptResultService) MGetExperimentResult(arg0 context.Context, arg1 *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ItemResult, int64, error) {
+func (m *MockExptResultService) MGetExperimentResult(arg0 context.Context, arg1 *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ExptColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ExptColumnAnnotation, []*entity.ItemResult, int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MGetExperimentResult", arg0, arg1)
 	ret0, _ := ret[0].([]*entity.ColumnEvaluator)
-	ret1, _ := ret[1].([]*entity.ColumnEvalSetField)
-	ret2, _ := ret[2].([]*entity.ItemResult)
-	ret3, _ := ret[3].(int64)
-	ret4, _ := ret[4].(error)
-	return ret0, ret1, ret2, ret3, ret4
+	ret1, _ := ret[1].([]*entity.ExptColumnEvaluator)
+	ret2, _ := ret[2].([]*entity.ColumnEvalSetField)
+	ret3, _ := ret[3].([]*entity.ExptColumnAnnotation)
+	ret4, _ := ret[4].([]*entity.ItemResult)
+	ret5, _ := ret[5].(int64)
+	ret6, _ := ret[6].(error)
+	return ret0, ret1, ret2, ret3, ret4, ret5, ret6
 }
 
 // MGetExperimentResult indicates an expected call of MGetExperimentResult.
@@ -237,6 +239,20 @@ func (mr *MockExptAggrResultServiceMockRecorder) BatchGetExptAggrResultByExperim
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExptAggrResultByExperimentIDs", reflect.TypeOf((*MockExptAggrResultService)(nil).BatchGetExptAggrResultByExperimentIDs), arg0, arg1, arg2)
 }
 
+// CreateAnnotationAggrResult mocks base method.
+func (m *MockExptAggrResultService) CreateAnnotationAggrResult(arg0 context.Context, arg1 *entity.CreateSpecificFieldAggrResultParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAnnotationAggrResult", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateAnnotationAggrResult indicates an expected call of CreateAnnotationAggrResult.
+func (mr *MockExptAggrResultServiceMockRecorder) CreateAnnotationAggrResult(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnnotationAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateAnnotationAggrResult), arg0, arg1)
+}
+
 // CreateExptAggrResult mocks base method.
 func (m *MockExptAggrResultService) CreateExptAggrResult(arg0 context.Context, arg1, arg2 int64) error {
 	m.ctrl.T.Helper()
@@ -249,6 +265,20 @@ func (m *MockExptAggrResultService) CreateExptAggrResult(arg0 context.Context, a
 func (mr *MockExptAggrResultServiceMockRecorder) CreateExptAggrResult(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateExptAggrResult), arg0, arg1, arg2)
+}
+
+// UpdateAnnotationAggrResult mocks base method.
+func (m *MockExptAggrResultService) UpdateAnnotationAggrResult(arg0 context.Context, arg1 *entity.UpdateExptAggrResultParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAnnotationAggrResult", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAnnotationAggrResult indicates an expected call of UpdateAnnotationAggrResult.
+func (mr *MockExptAggrResultServiceMockRecorder) UpdateAnnotationAggrResult(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotationAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).UpdateAnnotationAggrResult), arg0, arg1)
 }
 
 // UpdateExptAggrResult mocks base method.

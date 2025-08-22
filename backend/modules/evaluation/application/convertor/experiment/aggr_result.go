@@ -21,11 +21,16 @@ func ExptAggregateResultDOToDTO(data *entity.ExptAggregateResult) *domain_expt.E
 	for evaluatorVersionID, evaluatorResult := range data.EvaluatorResults {
 		evaluatorResults[evaluatorVersionID] = EvaluatorResultsDOToDTO(evaluatorResult)
 	}
+	annotationResults := make(map[int64]*domain_expt.AnnotationAggregateResult_, len(data.AnnotationResults))
+	for tagKeyID, annotationResult := range data.AnnotationResults {
+		annotationResults[tagKeyID] = AnnotationResultDOToDTO(annotationResult)
+	}
 
 	return &domain_expt.ExptAggregateResult_{
-		ExperimentID:     data.ExperimentID,
-		EvaluatorResults: evaluatorResults,
-		Status:           domain_expt.ExptAggregateCalculateStatusPtr(domain_expt.ExptAggregateCalculateStatus(data.Status)),
+		ExperimentID:      data.ExperimentID,
+		EvaluatorResults:  evaluatorResults,
+		Status:            domain_expt.ExptAggregateCalculateStatusPtr(domain_expt.ExptAggregateCalculateStatus(data.Status)),
+		AnnotationResults: annotationResults,
 	}
 }
 
@@ -39,6 +44,18 @@ func EvaluatorResultsDOToDTO(result *entity.EvaluatorAggregateResult) *domain_ex
 		AggregatorResults:  AggregatorResultDOsToDTOs(result.AggregatorResults),
 		Name:               result.Name,
 		Version:            result.Version,
+	}
+}
+
+func AnnotationResultDOToDTO(result *entity.AnnotationAggregateResult) *domain_expt.AnnotationAggregateResult_ {
+	if result == nil {
+		return nil
+	}
+
+	return &domain_expt.AnnotationAggregateResult_{
+		TagKeyID:          result.TagKeyID,
+		AggregatorResults: AggregatorResultDOsToDTOs(result.AggregatorResults),
+		Name:              result.Name,
 	}
 }
 
@@ -83,6 +100,12 @@ func AggregateDataDOToDTO(data *entity.AggregateData) *domain_expt.AggregateData
 		}
 	}
 
+	if data.OptionDistribution != nil {
+		aggregateData.OptionDistribution = &domain_expt.OptionDistribution{
+			OptionDistributionItems: OptionDistributionItemsDOToDTO(data.OptionDistribution.OptionDistributionItems),
+		}
+	}
+
 	return aggregateData
 }
 
@@ -98,6 +121,26 @@ func ScoreDistributionItemsDOToDTO(data []*entity.ScoreDistributionItem) []*doma
 		}
 		items = append(items, &domain_expt.ScoreDistributionItem{
 			Score:      item.Score,
+			Count:      item.Count,
+			Percentage: item.Percentage,
+		})
+	}
+
+	return items
+}
+
+func OptionDistributionItemsDOToDTO(data []*entity.OptionDistributionItem) []*domain_expt.OptionDistributionItem {
+	if len(data) == 0 {
+		return nil
+	}
+
+	items := make([]*domain_expt.OptionDistributionItem, 0, len(data))
+	for _, item := range data {
+		if item == nil {
+			continue
+		}
+		items = append(items, &domain_expt.OptionDistributionItem{
+			Option:     item.Option,
 			Count:      item.Count,
 			Percentage: item.Percentage,
 		})

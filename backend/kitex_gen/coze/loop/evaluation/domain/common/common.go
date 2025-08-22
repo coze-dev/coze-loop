@@ -19,6 +19,8 @@ const (
 	ContentTypeAudio = "Audio"
 
 	ContentTypeMultiPart = "MultiPart"
+
+	ContentTypeMultiPartVariable = "multi_part_variable"
 )
 
 type Role int64
@@ -1112,6 +1114,8 @@ type Image struct {
 	URL      *string `thrift:"url,2,optional" frugal:"2,optional,string" form:"url" json:"url,omitempty" query:"url"`
 	URI      *string `thrift:"uri,3,optional" frugal:"3,optional,string" form:"uri" json:"uri,omitempty" query:"uri"`
 	ThumbURL *string `thrift:"thumb_url,4,optional" frugal:"4,optional,string" form:"thumb_url" json:"thumb_url,omitempty" query:"thumb_url"`
+	// 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
+	StorageProvider *dataset.StorageProvider `thrift:"storage_provider,10,optional" frugal:"10,optional,StorageProvider" form:"storage_provider" json:"storage_provider,omitempty" query:"storage_provider"`
 }
 
 func NewImage() *Image {
@@ -1168,6 +1172,18 @@ func (p *Image) GetThumbURL() (v string) {
 	}
 	return *p.ThumbURL
 }
+
+var Image_StorageProvider_DEFAULT dataset.StorageProvider
+
+func (p *Image) GetStorageProvider() (v dataset.StorageProvider) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStorageProvider() {
+		return Image_StorageProvider_DEFAULT
+	}
+	return *p.StorageProvider
+}
 func (p *Image) SetName(val *string) {
 	p.Name = val
 }
@@ -1180,12 +1196,16 @@ func (p *Image) SetURI(val *string) {
 func (p *Image) SetThumbURL(val *string) {
 	p.ThumbURL = val
 }
+func (p *Image) SetStorageProvider(val *dataset.StorageProvider) {
+	p.StorageProvider = val
+}
 
 var fieldIDToName_Image = map[int16]string{
-	1: "name",
-	2: "url",
-	3: "uri",
-	4: "thumb_url",
+	1:  "name",
+	2:  "url",
+	3:  "uri",
+	4:  "thumb_url",
+	10: "storage_provider",
 }
 
 func (p *Image) IsSetName() bool {
@@ -1202,6 +1222,10 @@ func (p *Image) IsSetURI() bool {
 
 func (p *Image) IsSetThumbURL() bool {
 	return p.ThumbURL != nil
+}
+
+func (p *Image) IsSetStorageProvider() bool {
+	return p.StorageProvider != nil
 }
 
 func (p *Image) Read(iprot thrift.TProtocol) (err error) {
@@ -1249,6 +1273,14 @@ func (p *Image) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1327,6 +1359,18 @@ func (p *Image) ReadField4(iprot thrift.TProtocol) error {
 	p.ThumbURL = _field
 	return nil
 }
+func (p *Image) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *dataset.StorageProvider
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.StorageProvider(v)
+		_field = &tmp
+	}
+	p.StorageProvider = _field
+	return nil
+}
 
 func (p *Image) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1348,6 +1392,10 @@ func (p *Image) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -1440,6 +1488,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *Image) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStorageProvider() {
+		if err = oprot.WriteFieldBegin("storage_provider", thrift.I32, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.StorageProvider)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 
 func (p *Image) String() string {
 	if p == nil {
@@ -1465,6 +1531,9 @@ func (p *Image) DeepEqual(ano *Image) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ThumbURL) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.StorageProvider) {
 		return false
 	}
 	return true
@@ -1514,6 +1583,18 @@ func (p *Image) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ThumbURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Image) Field10DeepEqual(src *dataset.StorageProvider) bool {
+
+	if p.StorageProvider == src {
+		return true
+	} else if p.StorageProvider == nil || src == nil {
+		return false
+	}
+	if *p.StorageProvider != *src {
 		return false
 	}
 	return true
@@ -3702,6 +3783,7 @@ type ModelConfig struct {
 	Temperature *float64 `thrift:"temperature,3,optional" frugal:"3,optional,double" form:"temperature" json:"temperature,omitempty" query:"temperature"`
 	MaxTokens   *int32   `thrift:"max_tokens,4,optional" frugal:"4,optional,i32" form:"max_tokens" json:"max_tokens,omitempty" query:"max_tokens"`
 	TopP        *float64 `thrift:"top_p,5,optional" frugal:"5,optional,double" form:"top_p" json:"top_p,omitempty" query:"top_p"`
+	JSONExt     *string  `thrift:"json_ext,50,optional" frugal:"50,optional,string" form:"json_ext" json:"json_ext,omitempty" query:"json_ext"`
 }
 
 func NewModelConfig() *ModelConfig {
@@ -3770,6 +3852,18 @@ func (p *ModelConfig) GetTopP() (v float64) {
 	}
 	return *p.TopP
 }
+
+var ModelConfig_JSONExt_DEFAULT string
+
+func (p *ModelConfig) GetJSONExt() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetJSONExt() {
+		return ModelConfig_JSONExt_DEFAULT
+	}
+	return *p.JSONExt
+}
 func (p *ModelConfig) SetModelID(val *int64) {
 	p.ModelID = val
 }
@@ -3785,13 +3879,17 @@ func (p *ModelConfig) SetMaxTokens(val *int32) {
 func (p *ModelConfig) SetTopP(val *float64) {
 	p.TopP = val
 }
+func (p *ModelConfig) SetJSONExt(val *string) {
+	p.JSONExt = val
+}
 
 var fieldIDToName_ModelConfig = map[int16]string{
-	1: "model_id",
-	2: "model_name",
-	3: "temperature",
-	4: "max_tokens",
-	5: "top_p",
+	1:  "model_id",
+	2:  "model_name",
+	3:  "temperature",
+	4:  "max_tokens",
+	5:  "top_p",
+	50: "json_ext",
 }
 
 func (p *ModelConfig) IsSetModelID() bool {
@@ -3812,6 +3910,10 @@ func (p *ModelConfig) IsSetMaxTokens() bool {
 
 func (p *ModelConfig) IsSetTopP() bool {
 	return p.TopP != nil
+}
+
+func (p *ModelConfig) IsSetJSONExt() bool {
+	return p.JSONExt != nil
 }
 
 func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -3867,6 +3969,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.DOUBLE {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 50:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField50(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3956,6 +4066,17 @@ func (p *ModelConfig) ReadField5(iprot thrift.TProtocol) error {
 	p.TopP = _field
 	return nil
 }
+func (p *ModelConfig) ReadField50(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.JSONExt = _field
+	return nil
+}
 
 func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3981,6 +4102,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
 			goto WriteFieldError
 		}
 	}
@@ -4091,6 +4216,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ModelConfig) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJSONExt() {
+		if err = oprot.WriteFieldBegin("json_ext", thrift.STRING, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.JSONExt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
+}
 
 func (p *ModelConfig) String() string {
 	if p == nil {
@@ -4119,6 +4262,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.TopP) {
+		return false
+	}
+	if !p.Field50DeepEqual(ano.JSONExt) {
 		return false
 	}
 	return true
@@ -4180,6 +4326,18 @@ func (p *ModelConfig) Field5DeepEqual(src *float64) bool {
 		return false
 	}
 	if *p.TopP != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field50DeepEqual(src *string) bool {
+
+	if p.JSONExt == src {
+		return true
+	} else if p.JSONExt == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.JSONExt, *src) != 0 {
 		return false
 	}
 	return true
@@ -4438,6 +4596,264 @@ func (p *Session) Field2DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.AppID != *src {
+		return false
+	}
+	return true
+}
+
+type RuntimeParam struct {
+	JSONValue *string `thrift:"json_value,1,optional" frugal:"1,optional,string" form:"json_value" json:"json_value,omitempty" query:"json_value"`
+	JSONDemo  *string `thrift:"json_demo,2,optional" frugal:"2,optional,string" form:"json_demo" json:"json_demo,omitempty" query:"json_demo"`
+}
+
+func NewRuntimeParam() *RuntimeParam {
+	return &RuntimeParam{}
+}
+
+func (p *RuntimeParam) InitDefault() {
+}
+
+var RuntimeParam_JSONValue_DEFAULT string
+
+func (p *RuntimeParam) GetJSONValue() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetJSONValue() {
+		return RuntimeParam_JSONValue_DEFAULT
+	}
+	return *p.JSONValue
+}
+
+var RuntimeParam_JSONDemo_DEFAULT string
+
+func (p *RuntimeParam) GetJSONDemo() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetJSONDemo() {
+		return RuntimeParam_JSONDemo_DEFAULT
+	}
+	return *p.JSONDemo
+}
+func (p *RuntimeParam) SetJSONValue(val *string) {
+	p.JSONValue = val
+}
+func (p *RuntimeParam) SetJSONDemo(val *string) {
+	p.JSONDemo = val
+}
+
+var fieldIDToName_RuntimeParam = map[int16]string{
+	1: "json_value",
+	2: "json_demo",
+}
+
+func (p *RuntimeParam) IsSetJSONValue() bool {
+	return p.JSONValue != nil
+}
+
+func (p *RuntimeParam) IsSetJSONDemo() bool {
+	return p.JSONDemo != nil
+}
+
+func (p *RuntimeParam) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RuntimeParam[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RuntimeParam) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.JSONValue = _field
+	return nil
+}
+func (p *RuntimeParam) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.JSONDemo = _field
+	return nil
+}
+
+func (p *RuntimeParam) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RuntimeParam"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RuntimeParam) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJSONValue() {
+		if err = oprot.WriteFieldBegin("json_value", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.JSONValue); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *RuntimeParam) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJSONDemo() {
+		if err = oprot.WriteFieldBegin("json_demo", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.JSONDemo); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *RuntimeParam) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RuntimeParam(%+v)", *p)
+
+}
+
+func (p *RuntimeParam) DeepEqual(ano *RuntimeParam) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.JSONValue) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.JSONDemo) {
+		return false
+	}
+	return true
+}
+
+func (p *RuntimeParam) Field1DeepEqual(src *string) bool {
+
+	if p.JSONValue == src {
+		return true
+	} else if p.JSONValue == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.JSONValue, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RuntimeParam) Field2DeepEqual(src *string) bool {
+
+	if p.JSONDemo == src {
+		return true
+	} else if p.JSONDemo == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.JSONDemo, *src) != 0 {
 		return false
 	}
 	return true

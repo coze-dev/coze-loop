@@ -21,15 +21,16 @@ func (c *ExptItemResultRunLogConverter) PO2DO(rl *model.ExptItemResultRunLog) *e
 		return nil
 	}
 	do := &entity.ExptItemResultRunLog{
-		ID:        rl.ID,
-		SpaceID:   rl.SpaceID,
-		ExptID:    rl.ExptID,
-		ExptRunID: rl.ExptRunID,
-		ItemID:    rl.ItemID,
-		Status:    rl.Status,
-		ErrMsg:    gptr.Indirect(rl.ErrMsg),
-		LogID:     rl.LogID,
-		UpdatedAt: gptr.Of(rl.UpdatedAt),
+		ID:          rl.ID,
+		SpaceID:     rl.SpaceID,
+		ExptID:      rl.ExptID,
+		ExptRunID:   rl.ExptRunID,
+		ItemID:      rl.ItemID,
+		Status:      rl.Status,
+		ErrMsg:      gptr.Indirect(rl.ErrMsg),
+		LogID:       rl.LogID,
+		ResultState: gptr.Indirect(rl.ResultState),
+		UpdatedAt:   gptr.Of(rl.UpdatedAt),
 	}
 
 	return do
@@ -40,14 +41,15 @@ func (c *ExptItemResultRunLogConverter) DO2PO(do *entity.ExptItemResultRunLog) *
 		return nil
 	}
 	po := &model.ExptItemResultRunLog{
-		ID:        do.ID,
-		SpaceID:   do.SpaceID,
-		ExptID:    do.ExptID,
-		ExptRunID: do.ExptRunID,
-		ItemID:    do.ItemID,
-		Status:    do.Status,
-		ErrMsg:    gptr.Of(do.ErrMsg),
-		LogID:     do.LogID,
+		ID:          do.ID,
+		SpaceID:     do.SpaceID,
+		ExptID:      do.ExptID,
+		ExptRunID:   do.ExptRunID,
+		ItemID:      do.ItemID,
+		Status:      do.Status,
+		ErrMsg:      gptr.Of(do.ErrMsg),
+		LogID:       do.LogID,
+		ResultState: gptr.Of(do.ResultState),
 	}
 
 	if do.UpdatedAt != nil {

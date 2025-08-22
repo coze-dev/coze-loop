@@ -23,6 +23,7 @@ type ExecutePromptParam struct {
 	PromptVersion string
 	Variables     []*entity.VariableVal
 	History       []*entity.Message
+	RuntimeParam  *string
 }
 
 type ExecutePromptResult struct {

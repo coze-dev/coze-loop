@@ -24,6 +24,8 @@ type IBenefitService interface {
 	CheckEvaluatorBenefit(ctx context.Context, param *CheckEvaluatorBenefitParams) (result *CheckEvaluatorBenefitResult, err error)
 	// CheckAndDeductEvalBenefit 校验扣减评测权益
 	CheckAndDeductEvalBenefit(ctx context.Context, param *CheckAndDeductEvalBenefitParams) (result *CheckAndDeductEvalBenefitResult, err error)
+	// BatchCheckEnableTypeBenefit 批量校验Enable类型权益
+	BatchCheckEnableTypeBenefit(ctx context.Context, param *BatchCheckEnableTypeBenefitParams) (result *BatchCheckEnableTypeBenefitResult, err error)
 }
 
 type CheckTraceBenefitParams struct {
@@ -127,4 +129,14 @@ type CheckAndDeductEvalBenefitResult struct {
 	// 用法：创建实验时的校验不传，IsFreeEvaluate，如果为true，后续的校验要传
 	// 需要改成通过ctx传，Coze还未给出，实验过程中的校验，以及调用prompt/评估器模型等都需要ctx透传给llm gateway
 	IsFreeEvaluate *bool `json:"is_free_evaluate"` // 是否特殊检查，免扣权益
+}
+
+type BatchCheckEnableTypeBenefitParams struct {
+	ConnectorUID       string   `json:"connector_uid"`        // Coze登录ID
+	SpaceID            int64    `json:"space_id"`             // 空间ID
+	EnableTypeBenefits []string `json:"enable_type_benefits"` // 权益类型列表
+}
+
+type BatchCheckEnableTypeBenefitResult struct {
+	Results map[string]bool `json:"results"` // 权益类型 -> 是否启用的映射
 }

@@ -4,11 +4,10 @@
 package experiment
 
 import (
-	"fmt"
-
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
@@ -16,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -28,25 +28,29 @@ func NewEvalConfConvert() *EvalConfConvert {
 type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*entity.EvaluationConfiguration, error) {
-	if cer == nil || cer.TargetFieldMapping == nil || cer.EvaluatorFieldMapping == nil {
-		return nil, fmt.Errorf("invalid EvaluationConfiguration")
-	}
-	return &entity.EvaluationConfiguration{
-		ConnectorConf: entity.Connector{
-			TargetConf: &entity.TargetConf{
-				TargetVersionID: cer.GetTargetVersionID(),
-				IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping()),
-			},
-			EvaluatorsConf: &entity.EvaluatorsConf{
-				EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
-				EvaluatorConf:      toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
-			},
-		},
+	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
-	}, nil
+	}
+	if cer.GetTargetFieldMapping() != nil && cer.GetTargetFieldMapping().GetFromEvalSet() != nil {
+		ec.ConnectorConf.TargetConf = &entity.TargetConf{
+			TargetVersionID: cer.GetTargetVersionID(),
+			IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping(), cer.GetTargetRuntimeParam()),
+		}
+	}
+	if cer.GetEvaluatorFieldMapping() != nil {
+		ec.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
+			EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
+			EvaluatorConf:      toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
+		}
+	}
+	return ec, nil
 }
 
-func toTargetFieldMappingDO(mapping *domain_expt.TargetFieldMapping) *entity.TargetIngressConf {
+func toTargetFieldMappingDO(mapping *domain_expt.TargetFieldMapping, rtp *common.RuntimeParam) *entity.TargetIngressConf {
+	if mapping == nil {
+		return nil
+	}
+
 	fc := make([]*entity.FieldConf, 0, len(mapping.GetFromEvalSet()))
 	for _, fm := range mapping.GetFromEvalSet() {
 		fc = append(fc, &entity.FieldConf{
@@ -55,14 +59,27 @@ func toTargetFieldMappingDO(mapping *domain_expt.TargetFieldMapping) *entity.Tar
 			Value:     fm.GetConstValue(),
 		})
 	}
-	return &entity.TargetIngressConf{
+	tic := &entity.TargetIngressConf{
 		EvalSetAdapter: &entity.FieldAdapter{
 			FieldConfs: fc,
 		},
 	}
+
+	if rtp != nil && len(rtp.GetJSONValue()) > 0 {
+		tic.CustomConf = &entity.FieldAdapter{
+			FieldConfs: []*entity.FieldConf{{
+				FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+				Value:     rtp.GetJSONValue(),
+			}},
+		}
+	}
+	return tic
 }
 
 func toEvaluatorFieldMappingDo(mapping []*domain_expt.EvaluatorFieldMapping) []*entity.EvaluatorConf {
+	if mapping == nil {
+		return nil
+	}
 	ec := make([]*entity.EvaluatorConf, 0, len(mapping))
 	for _, fm := range mapping {
 		esf := make([]*entity.FieldConf, 0, len(fm.GetFromEvalSet()))
@@ -92,9 +109,9 @@ func toEvaluatorFieldMappingDo(mapping []*domain_expt.EvaluatorFieldMapping) []*
 	return ec
 }
 
-func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping) {
+func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common.RuntimeParam) {
 	if ec == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	var evaluatorMappings []*domain_expt.EvaluatorFieldMapping
@@ -129,16 +146,27 @@ func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration)
 	}
 
 	targetMapping := &domain_expt.TargetFieldMapping{}
-	if targetConf := ec.ConnectorConf.TargetConf; targetConf != nil && targetConf.IngressConf != nil && targetConf.IngressConf.EvalSetAdapter != nil {
-		for _, fc := range targetConf.IngressConf.EvalSetAdapter.FieldConfs {
-			targetMapping.FromEvalSet = append(targetMapping.FromEvalSet, &domain_expt.FieldMapping{
-				FieldName:     gptr.Of(fc.FieldName),
-				FromFieldName: gptr.Of(fc.FromField),
-				ConstValue:    gptr.Of(fc.Value),
-			})
+	trtp := &common.RuntimeParam{}
+	if targetConf := ec.ConnectorConf.TargetConf; targetConf != nil && targetConf.IngressConf != nil {
+		if targetConf.IngressConf.EvalSetAdapter != nil {
+			for _, fc := range targetConf.IngressConf.EvalSetAdapter.FieldConfs {
+				targetMapping.FromEvalSet = append(targetMapping.FromEvalSet, &domain_expt.FieldMapping{
+					FieldName:     gptr.Of(fc.FieldName),
+					FromFieldName: gptr.Of(fc.FromField),
+					ConstValue:    gptr.Of(fc.Value),
+				})
+			}
+		}
+		if targetConf.IngressConf.CustomConf != nil {
+			for _, fc := range targetConf.IngressConf.CustomConf.FieldConfs {
+				if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+					trtp.JSONValue = gptr.Of(fc.Value)
+				}
+			}
 		}
 	}
-	return targetMapping, evaluatorMappings
+
+	return targetMapping, evaluatorMappings, trtp
 }
 
 func ToExptStatsInfoDTO(experiment *entity.Experiment, stats *entity.ExptStats) *domain_expt.ExptStatsInfo {
@@ -167,7 +195,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
 	}
 
-	tm, ems := NewEvalConfConvert().ConvertEntityToDTO(experiment.EvalConf)
+	tm, ems, trtp := NewEvalConfConvert().ConvertEntityToDTO(experiment.EvalConf)
 
 	res := &domain_expt.Experiment{
 		ID:                    gptr.Of(experiment.ID),
@@ -188,6 +216,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		SourceID:              gptr.Of(experiment.SourceID),
 		ExptType:              gptr.Of(domain_expt.ExptType(experiment.ExptType)),
 		MaxAliveTime:          gptr.Of(experiment.MaxAliveTime),
+		TargetRuntimeParam:    trtp,
 	}
 
 	if experiment.StartAt != nil {
@@ -195,6 +224,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 	if experiment.EndAt != nil {
 		res.EndTime = gptr.Of(experiment.EndAt.Unix())
+	}
+	if experiment.EvalConf != nil && experiment.EvalConf.ItemConcurNum != nil {
+		res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
 	}
 
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
@@ -235,7 +267,11 @@ func ToExptStatsDTO(stats *entity.ExptStats, aggrResult *entity.ExptAggregateRes
 	return exptStatistics
 }
 
-func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam, exptType domain_expt.ExptType) *entity.CreateEvalTargetParam {
+func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *entity.CreateEvalTargetParam {
+	if param == nil {
+		return nil
+	}
+
 	res := &entity.CreateEvalTargetParam{
 		SourceTargetID:      param.SourceTargetID,
 		SourceTargetVersion: param.SourceTargetVersion,
@@ -269,7 +305,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest) (param *entity.CreateEx
 		Desc:                  cer.GetDesc(),
 		EvalSetID:             cer.GetEvalSetID(),
 		TargetID:              cer.TargetID,
-		CreateEvalTargetParam: CreateEvalTargetParamDTO2DO(cer.GetCreateEvalTargetParam(), cer.GetExptType()),
+		CreateEvalTargetParam: CreateEvalTargetParamDTO2DO(cer.GetCreateEvalTargetParam()),
 		ExptType:              entity.ExptType(cer.GetExptType()),
 		MaxAliveTime:          cer.GetMaxAliveTime(),
 		SourceType:            entity.SourceType(cer.GetSourceType()),

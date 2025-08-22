@@ -47,6 +47,7 @@ func FieldSchemaDTO2DO(dto *eval_set.FieldSchema) *entity.FieldSchema {
 			MaxFileCount:     gptr.Indirect(dto.MultiModelSpec.MaxFileCount),
 			MaxFileSize:      gptr.Indirect(dto.MultiModelSpec.MaxFileSize),
 			SupportedFormats: dto.MultiModelSpec.SupportedFormats,
+			MaxPartCount:     gptr.Indirect(dto.MultiModelSpec.MaxPartCount),
 		}
 	}
 	return &entity.FieldSchema{
@@ -89,17 +90,21 @@ func FieldSchemaDO2DTOs(dos []*entity.FieldSchema) []*eval_set.FieldSchema {
 	return result
 }
 
-func FieldSchemaDO2DTO(do *entity.FieldSchema) *eval_set.FieldSchema {
+func MultiModalSpecDO2DTO(do *entity.MultiModalSpec) *dataset.MultiModalSpec {
 	if do == nil {
 		return nil
 	}
-	var multiModelSpec *dataset.MultiModalSpec
-	if do.MultiModelSpec != nil {
-		multiModelSpec = &dataset.MultiModalSpec{
-			MaxFileCount:     gptr.Of(do.MultiModelSpec.MaxFileCount),
-			MaxFileSize:      gptr.Of(do.MultiModelSpec.MaxFileSize),
-			SupportedFormats: do.MultiModelSpec.SupportedFormats,
-		}
+	return &dataset.MultiModalSpec{
+		MaxFileCount:     gptr.Of(do.MaxFileCount),
+		MaxFileSize:      gptr.Of(do.MaxFileSize),
+		SupportedFormats: do.SupportedFormats,
+		MaxPartCount:     gptr.Of(do.MaxPartCount),
+	}
+}
+
+func FieldSchemaDO2DTO(do *entity.FieldSchema) *eval_set.FieldSchema {
+	if do == nil {
+		return nil
 	}
 	return &eval_set.FieldSchema{
 		Key:                    gptr.Of(do.Key),
@@ -109,7 +114,7 @@ func FieldSchemaDO2DTO(do *entity.FieldSchema) *eval_set.FieldSchema {
 		DefaultDisplayFormat:   gptr.Of(dataset.FieldDisplayFormat(do.DefaultDisplayFormat)),
 		Status:                 gptr.Of(dataset.FieldStatus(do.Status)),
 		TextSchema:             gptr.Of(do.TextSchema),
-		MultiModelSpec:         multiModelSpec,
+		MultiModelSpec:         MultiModalSpecDO2DTO(do.MultiModelSpec),
 		Hidden:                 gptr.Of(do.Hidden),
 		IsRequired:             gptr.Of(do.IsRequired),
 		DefaultTransformations: do.DefaultTransformations,

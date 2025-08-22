@@ -92,6 +92,7 @@ const (
 	tagDiff               = "diff_exist"
 	tagActualOutputDiff   = "actual_output_diff"
 	tagEvaluatorScoreDiff = "evaluator_score_diff"
+	tagResultMissing      = "result_missing"
 )
 
 func exptEvalMtrTags() []string {

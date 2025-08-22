@@ -140,6 +140,55 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"AssociateAnnotationTag": kitex.NewMethodInfo(
+		associateAnnotationTagHandler,
+		newExperimentServiceAssociateAnnotationTagArgs,
+		newExperimentServiceAssociateAnnotationTagResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteAnnotationTag": kitex.NewMethodInfo(
+		deleteAnnotationTagHandler,
+		newExperimentServiceDeleteAnnotationTagArgs,
+		newExperimentServiceDeleteAnnotationTagResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateAnnotateRecord": kitex.NewMethodInfo(
+		createAnnotateRecordHandler,
+		newExperimentServiceCreateAnnotateRecordArgs,
+		newExperimentServiceCreateAnnotateRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateAnnotateRecord": kitex.NewMethodInfo(
+		updateAnnotateRecordHandler,
+		newExperimentServiceUpdateAnnotateRecordArgs,
+		newExperimentServiceUpdateAnnotateRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ExportExptResult": kitex.NewMethodInfo(
+		exportExptResult_Handler,
+		newExperimentServiceExportExptResultArgs,
+		newExperimentServiceExportExptResultResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExptResultExportRecord": kitex.NewMethodInfo(
+		listExptResultExportRecordHandler,
+		newExperimentServiceListExptResultExportRecordArgs,
+		newExperimentServiceListExptResultExportRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetExptResultExportRecord": kitex.NewMethodInfo(
+		getExptResultExportRecordHandler,
+		newExperimentServiceGetExptResultExportRecordArgs,
+		newExperimentServiceGetExptResultExportRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -515,6 +564,139 @@ func newExperimentServiceUpsertExptTurnResultFilterResult() interface{} {
 	return expt.NewExperimentServiceUpsertExptTurnResultFilterResult()
 }
 
+func associateAnnotationTagHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceAssociateAnnotationTagArgs)
+	realResult := result.(*expt.ExperimentServiceAssociateAnnotationTagResult)
+	success, err := handler.(expt.ExperimentService).AssociateAnnotationTag(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceAssociateAnnotationTagArgs() interface{} {
+	return expt.NewExperimentServiceAssociateAnnotationTagArgs()
+}
+
+func newExperimentServiceAssociateAnnotationTagResult() interface{} {
+	return expt.NewExperimentServiceAssociateAnnotationTagResult()
+}
+
+func deleteAnnotationTagHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceDeleteAnnotationTagArgs)
+	realResult := result.(*expt.ExperimentServiceDeleteAnnotationTagResult)
+	success, err := handler.(expt.ExperimentService).DeleteAnnotationTag(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceDeleteAnnotationTagArgs() interface{} {
+	return expt.NewExperimentServiceDeleteAnnotationTagArgs()
+}
+
+func newExperimentServiceDeleteAnnotationTagResult() interface{} {
+	return expt.NewExperimentServiceDeleteAnnotationTagResult()
+}
+
+func createAnnotateRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceCreateAnnotateRecordArgs)
+	realResult := result.(*expt.ExperimentServiceCreateAnnotateRecordResult)
+	success, err := handler.(expt.ExperimentService).CreateAnnotateRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceCreateAnnotateRecordArgs() interface{} {
+	return expt.NewExperimentServiceCreateAnnotateRecordArgs()
+}
+
+func newExperimentServiceCreateAnnotateRecordResult() interface{} {
+	return expt.NewExperimentServiceCreateAnnotateRecordResult()
+}
+
+func updateAnnotateRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpdateAnnotateRecordArgs)
+	realResult := result.(*expt.ExperimentServiceUpdateAnnotateRecordResult)
+	success, err := handler.(expt.ExperimentService).UpdateAnnotateRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpdateAnnotateRecordArgs() interface{} {
+	return expt.NewExperimentServiceUpdateAnnotateRecordArgs()
+}
+
+func newExperimentServiceUpdateAnnotateRecordResult() interface{} {
+	return expt.NewExperimentServiceUpdateAnnotateRecordResult()
+}
+
+func exportExptResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceExportExptResultArgs)
+	realResult := result.(*expt.ExperimentServiceExportExptResultResult)
+	success, err := handler.(expt.ExperimentService).ExportExptResult_(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceExportExptResultArgs() interface{} {
+	return expt.NewExperimentServiceExportExptResultArgs()
+}
+
+func newExperimentServiceExportExptResultResult() interface{} {
+	return expt.NewExperimentServiceExportExptResultResult()
+}
+
+func listExptResultExportRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListExptResultExportRecordArgs)
+	realResult := result.(*expt.ExperimentServiceListExptResultExportRecordResult)
+	success, err := handler.(expt.ExperimentService).ListExptResultExportRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListExptResultExportRecordArgs() interface{} {
+	return expt.NewExperimentServiceListExptResultExportRecordArgs()
+}
+
+func newExperimentServiceListExptResultExportRecordResult() interface{} {
+	return expt.NewExperimentServiceListExptResultExportRecordResult()
+}
+
+func getExptResultExportRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceGetExptResultExportRecordArgs)
+	realResult := result.(*expt.ExperimentServiceGetExptResultExportRecordResult)
+	success, err := handler.(expt.ExperimentService).GetExptResultExportRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceGetExptResultExportRecordArgs() interface{} {
+	return expt.NewExperimentServiceGetExptResultExportRecordArgs()
+}
+
+func newExperimentServiceGetExptResultExportRecordResult() interface{} {
+	return expt.NewExperimentServiceGetExptResultExportRecordResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -702,6 +884,76 @@ func (p *kClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.Upse
 	_args.Req = req
 	var _result expt.ExperimentServiceUpsertExptTurnResultFilterResult
 	if err = p.c.Call(ctx, "UpsertExptTurnResultFilter", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq) (r *expt.AssociateAnnotationTagResp, err error) {
+	var _args expt.ExperimentServiceAssociateAnnotationTagArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceAssociateAnnotationTagResult
+	if err = p.c.Call(ctx, "AssociateAnnotationTag", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq) (r *expt.DeleteAnnotationTagResp, err error) {
+	var _args expt.ExperimentServiceDeleteAnnotationTagArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceDeleteAnnotationTagResult
+	if err = p.c.Call(ctx, "DeleteAnnotationTag", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq) (r *expt.CreateAnnotateRecordResp, err error) {
+	var _args expt.ExperimentServiceCreateAnnotateRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceCreateAnnotateRecordResult
+	if err = p.c.Call(ctx, "CreateAnnotateRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq) (r *expt.UpdateAnnotateRecordResp, err error) {
+	var _args expt.ExperimentServiceUpdateAnnotateRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpdateAnnotateRecordResult
+	if err = p.c.Call(ctx, "UpdateAnnotateRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest) (r *expt.ExportExptResultResponse, err error) {
+	var _args expt.ExperimentServiceExportExptResultArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceExportExptResultResult
+	if err = p.c.Call(ctx, "ExportExptResult", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest) (r *expt.ListExptResultExportRecordResponse, err error) {
+	var _args expt.ExperimentServiceListExptResultExportRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListExptResultExportRecordResult
+	if err = p.c.Call(ctx, "ListExptResultExportRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest) (r *expt.GetExptResultExportRecordResponse, err error) {
+	var _args expt.ExperimentServiceGetExptResultExportRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceGetExptResultExportRecordResult
+	if err = p.c.Call(ctx, "GetExptResultExportRecord", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -31,6 +31,7 @@ struct EvalTargetVersion {
 struct EvalTargetContent {
     1: optional list<common.ArgsSchema> input_schemas (go.tag='json:\"input_schemas\"') // 输入schema
     2: optional list<common.ArgsSchema> output_schemas (go.tag='json:\"output_schemas\"') // 输出schema
+    3: optional string runtime_param_json_demo
 
     // 101-200 EvalTarget类型
     // EvalTargetType=0 时，传参此字段。 评测对象为 CozeBot 时, 需要设置 CozeBot 信息
@@ -153,4 +154,8 @@ struct EvalTargetUsage {
 struct EvalTargetRunError {
     1: optional i32 code (go.tag='json:\"code\"')
     2: optional string message (go.tag='json:\"message\"')
+}
+
+struct PromptRuntimeParam {
+    1: optional common.ModelConfig model_config
 }

@@ -6,10 +6,11 @@ package repo
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
@@ -54,6 +55,7 @@ type IExptTurnResultRepo interface {
 	ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
 	ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error)
+	Get(ctx context.Context, spaceID, exptID int64, itemID, turnID int64) (*entity.ExptTurnResult, error)
 	CreateTurnEvaluatorRefs(ctx context.Context, turnResults []*entity.ExptTurnEvaluatorResultRef) error
 	BatchCreateNX(ctx context.Context, turnResults []*entity.ExptTurnResult) error
 	GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64) ([]*entity.ExptTurnResult, error)
@@ -89,6 +91,7 @@ type IExptAggrResultRepo interface {
 	BatchCreateExptAggrResult(ctx context.Context, exptAggrResults []*entity.ExptAggrResult) error
 	UpdateExptAggrResultByVersion(ctx context.Context, exptAggrResult *entity.ExptAggrResult, taskVersion int64) error
 	UpdateAndGetLatestVersion(ctx context.Context, experimentID int64, fieldType int32, fieldKey string) (int64, error)
+	DeleteExptAggrResult(ctx context.Context, exptAggrResult *entity.ExptAggrResult, opts ...db.Option) error
 }
 
 type QuotaRepo interface {
@@ -101,4 +104,33 @@ type IExptTurnResultFilterRepo interface {
 	GetExptTurnResultFilterKeyMappings(ctx context.Context, spaceID, exptID int64) ([]*entity.ExptTurnResultFilterKeyMapping, error)
 	InsertExptTurnResultFilterKeyMappings(ctx context.Context, mappings []*entity.ExptTurnResultFilterKeyMapping) error
 	GetByExptIDItemIDs(ctx context.Context, spaceID, exptID, createdDate string, itemIDs []string) ([]*entity.ExptTurnResultFilterEntity, error)
+	DeleteExptTurnResultFilterKeyMapping(ctx context.Context, mapping *entity.ExptTurnResultFilterKeyMapping, opts ...db.Option) error
+}
+
+type IExptAnnotateRepo interface {
+	CreateExptTurnAnnotateRecordRefs(ctx context.Context, refs *entity.ExptTurnAnnotateRecordRef) error
+	GetExptTurnAnnotateRecordRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnAnnotateRecordRef, error)
+	BatchGetExptTurnAnnotateRecordRefs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*entity.ExptTurnAnnotateRecordRef, error)
+	GetExptTurnAnnotateRecordRefsByTagKeyID(ctx context.Context, exptID, spaceID, tagKeyID int64) ([]*entity.ExptTurnAnnotateRecordRef, error)
+	GetExptTurnAnnotateRecordRefsByTurnResultIDs(ctx context.Context, exptID int64, turnResultIDs []int64) ([]*entity.ExptTurnAnnotateRecordRef, error)
+	DeleteTurnAnnotateRecordRef(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
+
+	CreateExptTurnResultTagRefs(ctx context.Context, refs []*entity.ExptTurnResultTagRef) error
+	GetExptTurnResultTagRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
+	BatchGetExptTurnResultTagRefs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
+	GetTagRefByTagKeyID(ctx context.Context, exptID, spaceID, tagKeyID int64) (*entity.ExptTurnResultTagRef, error)
+	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) (int32, int32, error)
+	DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
+
+	SaveAnnotateRecord(ctx context.Context, exptTurnResultID int64, record *entity.AnnotateRecord, opts ...db.Option) error
+	UpdateAnnotateRecord(ctx context.Context, record *entity.AnnotateRecord) error
+	GetAnnotateRecordsByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.AnnotateRecord, error)
+	GetAnnotateRecordByID(ctx context.Context, spaceID, recordID int64) (*entity.AnnotateRecord, error)
+}
+
+type IExptResultExportRecordRepo interface {
+	Create(ctx context.Context, exportRecord *entity.ExptResultExportRecord, opts ...db.Option) (int64, error)
+	Update(ctx context.Context, exportRecord *entity.ExptResultExportRecord, opts ...db.Option) error
+	List(ctx context.Context, spaceID, exptID int64, page entity.Page, csvExportStatus *int32) ([]*entity.ExptResultExportRecord, int64, error)
+	Get(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)
 }

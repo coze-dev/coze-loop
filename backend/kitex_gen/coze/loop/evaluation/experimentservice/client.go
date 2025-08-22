@@ -29,6 +29,13 @@ type Client interface {
 	FinishExperiment(ctx context.Context, req *expt.FinishExperimentRequest, callOptions ...callopt.Option) (r *expt.FinishExperimentResponse, err error)
 	ListExperimentStats(ctx context.Context, req *expt.ListExperimentStatsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentStatsResponse, err error)
 	UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (r *expt.UpsertExptTurnResultFilterResponse, err error)
+	AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq, callOptions ...callopt.Option) (r *expt.AssociateAnnotationTagResp, err error)
+	DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq, callOptions ...callopt.Option) (r *expt.DeleteAnnotationTagResp, err error)
+	CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq, callOptions ...callopt.Option) (r *expt.CreateAnnotateRecordResp, err error)
+	UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq, callOptions ...callopt.Option) (r *expt.UpdateAnnotateRecordResp, err error)
+	ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest, callOptions ...callopt.Option) (r *expt.ExportExptResultResponse, err error)
+	ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.ListExptResultExportRecordResponse, err error)
+	GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptResultExportRecordResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -148,4 +155,39 @@ func (p *kExperimentServiceClient) ListExperimentStats(ctx context.Context, req 
 func (p *kExperimentServiceClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (r *expt.UpsertExptTurnResultFilterResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpsertExptTurnResultFilter(ctx, req)
+}
+
+func (p *kExperimentServiceClient) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq, callOptions ...callopt.Option) (r *expt.AssociateAnnotationTagResp, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AssociateAnnotationTag(ctx, req)
+}
+
+func (p *kExperimentServiceClient) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq, callOptions ...callopt.Option) (r *expt.DeleteAnnotationTagResp, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteAnnotationTag(ctx, req)
+}
+
+func (p *kExperimentServiceClient) CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq, callOptions ...callopt.Option) (r *expt.CreateAnnotateRecordResp, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateAnnotateRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq, callOptions ...callopt.Option) (r *expt.UpdateAnnotateRecordResp, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateAnnotateRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest, callOptions ...callopt.Option) (r *expt.ExportExptResultResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ExportExptResult_(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.ListExptResultExportRecordResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExptResultExportRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptResultExportRecordResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExptResultExportRecord(ctx, req)
 }

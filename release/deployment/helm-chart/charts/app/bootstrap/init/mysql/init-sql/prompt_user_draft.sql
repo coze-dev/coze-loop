@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `prompt_user_draft`
     `tool_call_config` text COLLATE utf8mb4_general_ci COMMENT 'tool调用配置',
     `base_version`     varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '草稿关联版本',
     `is_draft_edited`  tinyint                                 NOT NULL DEFAULT '0' COMMENT '草稿内容是否基于BaseVersion有变更',
+    `ext_info`         text COLLATE utf8mb4_general_ci COMMENT '扩展字段',
     `created_at`       datetime                                NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`       datetime                                NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`       bigint                                  NOT NULL DEFAULT '0' COMMENT '删除时间',
@@ -19,5 +20,5 @@ CREATE TABLE IF NOT EXISTS `prompt_user_draft`
     UNIQUE KEY `uniq_prompt_id_user_id_deleted_at` (`prompt_id`, `user_id`, `deleted_at`),
     KEY `idx_prompt_id_user_id` (`prompt_id`, `user_id`)
 ) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_general_ci COMMENT ='Draft表';
+    DEFAULT CHARSET = utf8mb4
+    COLLATE = utf8mb4_general_ci COMMENT ='Draft表';

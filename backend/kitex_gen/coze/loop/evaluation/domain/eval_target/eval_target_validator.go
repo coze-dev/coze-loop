@@ -132,3 +132,11 @@ func (p *EvalTargetUsage) IsValid() error {
 func (p *EvalTargetRunError) IsValid() error {
 	return nil
 }
+func (p *PromptRuntimeParam) IsValid() error {
+	if p.ModelConfig != nil {
+		if err := p.ModelConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ModelConfig not valid, %w", err)
+		}
+	}
+	return nil
+}

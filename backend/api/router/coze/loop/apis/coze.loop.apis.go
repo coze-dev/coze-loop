@@ -187,9 +187,25 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_experiments.POST("/check_name", append(_checkexperimentnameMw(handler), apis.CheckExperimentName)...)
 					_experiments.DELETE("/:expt_id", append(_expt_idMw(handler), apis.DeleteExperiment)...)
 					_expt_id := _experiments.Group("/:expt_id", _expt_idMw(handler)...)
+					_expt_id.POST("/associate_tag", append(_associateannotationtagMw(handler), apis.AssociateAnnotationTag)...)
 					_expt_id.POST("/clone", append(_cloneexperimentMw(handler), apis.CloneExperiment)...)
+					_expt_id.DELETE("/delete_tag", append(_deleteannotationtagMw(handler), apis.DeleteAnnotationTag)...)
 					_expt_id.POST("/kill", append(_killexperimentMw(handler), apis.KillExperiment)...)
 					_expt_id.POST("/retry", append(_retryexperimentMw(handler), apis.RetryExperiment)...)
+					{
+						_annotate_record := _expt_id.Group("/annotate_record", _annotate_recordMw(handler)...)
+						_annotate_record.POST("/create", append(_createannotaterecordMw(handler), apis.CreateAnnotateRecord)...)
+						_annotate_record.POST("/update", append(_updateannotaterecordMw(handler), apis.UpdateAnnotateRecord)...)
+					}
+					{
+						_export_records := _expt_id.Group("/export_records", _export_recordsMw(handler)...)
+						_export_records.POST("/:export_id", append(_getexptresultexportrecordMw(handler), apis.GetExptResultExportRecord)...)
+						_export_records.POST("/list", append(_listexptresultexportrecordMw(handler), apis.ListExptResultExportRecord)...)
+					}
+					{
+						_results := _expt_id.Group("/results", _resultsMw(handler)...)
+						_results.POST("/export", append(_exportexptresultMw(handler), apis.ExportExptResult)...)
+					}
 					_experiments.PATCH("/:expt_id", append(_updateexperimentMw(handler), apis.UpdateExperiment)...)
 					_experiments.POST("/list", append(_listexperimentsMw(handler), apis.ListExperiments)...)
 					_experiments.POST("/submit", append(_submitexperimentMw(handler), apis.SubmitExperiment)...)
@@ -198,8 +214,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_aggr_results.POST("/batch_get", append(_batchgetexperimentaggrresultMw(handler), apis.BatchGetExperimentAggrResult)...)
 					}
 					{
-						_results := _experiments.Group("/results", _resultsMw(handler)...)
-						_results.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
+						_results0 := _experiments.Group("/results", _results0Mw(handler)...)
+						_results0.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
 					}
 				}
 			}

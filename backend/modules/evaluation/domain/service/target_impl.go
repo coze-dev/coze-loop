@@ -11,7 +11,6 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
-	"github.com/coze-dev/cozeloop-go"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -237,7 +236,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[ExecuteTarget]evalTargetDO is nil"))
 	}
 
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", cozeloop.WithStartNewTrace(), cozeloop.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
 	if err != nil {
 		logs.CtxWarn(ctx, "start span failed, err=%v", err)
 	}
@@ -285,6 +284,28 @@ func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID
 	}
 
 	return e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
+}
+
+func (e *EvalTargetServiceImpl) ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error {
+	if len(runtimeParam) == 0 {
+		return nil
+	}
+
+	so, err := e.sourceTargetOperator(targetType)
+	if err != nil {
+		return err
+	}
+
+	_, err = so.RuntimeParam().ParseFromJSON(runtimeParam)
+	return err
+}
+
+func (e *EvalTargetServiceImpl) sourceTargetOperator(targetType entity.EvalTargetType) (ISourceEvalTargetOperateService, error) {
+	o, ok := e.typedOperators[targetType]
+	if !ok || o == nil {
+		return nil, errorx.New("target %v operator not found", targetType)
+	}
+	return o, nil
 }
 
 func setSpanInputOutput(spanParam *targetSpanTagsParams, do *entity.EvalTarget, inputData *entity.EvalTargetInputData, outputData *entity.EvalTargetOutputData) {
