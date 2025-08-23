@@ -72,6 +72,7 @@ type CommitDraftParam struct {
 
 	CommitVersion     string
 	CommitDescription string
+	LabelKeys []string
 }
 
 type ListCommitInfoParam struct {

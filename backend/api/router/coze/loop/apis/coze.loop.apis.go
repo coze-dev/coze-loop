@@ -291,6 +291,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			_prompt := _api.Group("/prompt", _promptMw(handler)...)
 			{
 				_v15 := _prompt.Group("/v1", _v15Mw(handler)...)
+				_v15.POST("/labels", append(_labelsMw(handler), apis.CreateLabel)...)
+				_labels := _v15.Group("/labels", _labelsMw(handler)...)
+				_labels.POST("/batch_get", append(_batchgetlabelMw(handler), apis.BatchGetLabel)...)
+				_labels.POST("/list", append(_listlabelMw(handler), apis.ListLabel)...)
 				_v15.POST("/prompts", append(_promptsMw(handler), apis.CreatePrompt)...)
 				_prompts := _v15.Group("/prompts", _promptsMw(handler)...)
 				_prompts.POST("/list", append(_listpromptMw(handler), apis.ListPrompt)...)
@@ -300,6 +304,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_commits := _prompt_id.Group("/commits", _commitsMw(handler)...)
 					_commits.POST("/list", append(_listcommitMw(handler), apis.ListCommit)...)
+					{
+						_commit_version := _commits.Group("/:commit_version", _commit_versionMw(handler)...)
+						_commit_version.POST("/labels_update", append(_updatecommitlabelsMw(handler), apis.UpdateCommitLabels)...)
+					}
 				}
 				{
 					_debug_context := _prompt_id.Group("/debug_context", _debug_contextMw(handler)...)

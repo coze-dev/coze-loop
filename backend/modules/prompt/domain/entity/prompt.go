@@ -24,8 +24,9 @@ type PromptDraft struct {
 }
 
 type PromptCommit struct {
-	PromptDetail *PromptDetail `json:"prompt_detail,omitempty"`
-	CommitInfo   *CommitInfo   `json:"commit_info,omitempty"`
+	PromptDetail *PromptDetail  `json:"prompt_detail,omitempty"`
+	CommitInfo   *CommitInfo    `json:"commit_info,omitempty"`
+	Labels       []*PromptLabel `json:"labels,omitempty"`
 }
 
 type DraftInfo struct {

@@ -1013,6 +1013,7 @@ func (p *PromptResultData) Field1DeepEqual(src []*PromptResult_) bool {
 type PromptQuery struct {
 	PromptKey *string `thrift:"prompt_key,1,optional" frugal:"1,optional,string" form:"prompt_key" json:"prompt_key,omitempty" query:"prompt_key"`
 	Version   *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	Label     *string `thrift:"label,3,optional" frugal:"3,optional,string" form:"label" json:"label,omitempty" query:"label"`
 }
 
 func NewPromptQuery() *PromptQuery {
@@ -1045,16 +1046,32 @@ func (p *PromptQuery) GetVersion() (v string) {
 	}
 	return *p.Version
 }
+
+var PromptQuery_Label_DEFAULT string
+
+func (p *PromptQuery) GetLabel() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabel() {
+		return PromptQuery_Label_DEFAULT
+	}
+	return *p.Label
+}
 func (p *PromptQuery) SetPromptKey(val *string) {
 	p.PromptKey = val
 }
 func (p *PromptQuery) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *PromptQuery) SetLabel(val *string) {
+	p.Label = val
+}
 
 var fieldIDToName_PromptQuery = map[int16]string{
 	1: "prompt_key",
 	2: "version",
+	3: "label",
 }
 
 func (p *PromptQuery) IsSetPromptKey() bool {
@@ -1063,6 +1080,10 @@ func (p *PromptQuery) IsSetPromptKey() bool {
 
 func (p *PromptQuery) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *PromptQuery) IsSetLabel() bool {
+	return p.Label != nil
 }
 
 func (p *PromptQuery) Read(iprot thrift.TProtocol) (err error) {
@@ -1094,6 +1115,14 @@ func (p *PromptQuery) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1150,6 +1179,17 @@ func (p *PromptQuery) ReadField2(iprot thrift.TProtocol) error {
 	p.Version = _field
 	return nil
 }
+func (p *PromptQuery) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Label = _field
+	return nil
+}
 
 func (p *PromptQuery) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1163,6 +1203,10 @@ func (p *PromptQuery) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -1219,6 +1263,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *PromptQuery) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabel() {
+		if err = oprot.WriteFieldBegin("label", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Label); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *PromptQuery) String() string {
 	if p == nil {
@@ -1238,6 +1300,9 @@ func (p *PromptQuery) DeepEqual(ano *PromptQuery) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Label) {
 		return false
 	}
 	return true
@@ -1263,6 +1328,18 @@ func (p *PromptQuery) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *PromptQuery) Field3DeepEqual(src *string) bool {
+
+	if p.Label == src {
+		return true
+	} else if p.Label == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Label, *src) != 0 {
 		return false
 	}
 	return true

@@ -42,6 +42,50 @@ func (m *MockIPromptService) EXPECT() *MockIPromptServiceMockRecorder {
 	return m.recorder
 }
 
+// BatchGetCommitLabels mocks base method.
+func (m *MockIPromptService) BatchGetCommitLabels(ctx context.Context, promptID int64, commitVersions []string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetCommitLabels", ctx, promptID, commitVersions)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetCommitLabels indicates an expected call of BatchGetCommitLabels.
+func (mr *MockIPromptServiceMockRecorder) BatchGetCommitLabels(ctx, promptID, commitVersions any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetCommitLabels", reflect.TypeOf((*MockIPromptService)(nil).BatchGetCommitLabels), ctx, promptID, commitVersions)
+}
+
+// BatchGetLabelMappingPromptVersion mocks base method.
+func (m *MockIPromptService) BatchGetLabelMappingPromptVersion(ctx context.Context, queries []service.PromptLabelQuery) (map[service.PromptLabelQuery]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetLabelMappingPromptVersion", ctx, queries)
+	ret0, _ := ret[0].(map[service.PromptLabelQuery]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetLabelMappingPromptVersion indicates an expected call of BatchGetLabelMappingPromptVersion.
+func (mr *MockIPromptServiceMockRecorder) BatchGetLabelMappingPromptVersion(ctx, queries any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetLabelMappingPromptVersion", reflect.TypeOf((*MockIPromptService)(nil).BatchGetLabelMappingPromptVersion), ctx, queries)
+}
+
+// CreateLabel mocks base method.
+func (m *MockIPromptService) CreateLabel(ctx context.Context, labelDO *entity.PromptLabel) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateLabel", ctx, labelDO)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateLabel indicates an expected call of CreateLabel.
+func (mr *MockIPromptServiceMockRecorder) CreateLabel(ctx, labelDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLabel", reflect.TypeOf((*MockIPromptService)(nil).CreateLabel), ctx, labelDO)
+}
+
 // Execute mocks base method.
 func (m *MockIPromptService) Execute(ctx context.Context, param service.ExecuteParam) (*entity.Reply, error) {
 	m.ctrl.T.Helper()
@@ -87,6 +131,22 @@ func (mr *MockIPromptServiceMockRecorder) FormatPrompt(ctx, prompt, messages, va
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatPrompt", reflect.TypeOf((*MockIPromptService)(nil).FormatPrompt), ctx, prompt, messages, variableVals)
 }
 
+// ListLabel mocks base method.
+func (m *MockIPromptService) ListLabel(ctx context.Context, param service.ListLabelParam) ([]*entity.PromptLabel, *int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListLabel", ctx, param)
+	ret0, _ := ret[0].([]*entity.PromptLabel)
+	ret1, _ := ret[1].(*int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListLabel indicates an expected call of ListLabel.
+func (mr *MockIPromptServiceMockRecorder) ListLabel(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLabel", reflect.TypeOf((*MockIPromptService)(nil).ListLabel), ctx, param)
+}
+
 // MCompleteMultiModalFileURL mocks base method.
 func (m *MockIPromptService) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message) error {
 	m.ctrl.T.Helper()
@@ -117,16 +177,44 @@ func (mr *MockIPromptServiceMockRecorder) MGetPromptIDs(ctx, spaceID, promptKeys
 }
 
 // MParseCommitVersion mocks base method.
-func (m *MockIPromptService) MParseCommitVersionByPromptKey(ctx context.Context, spaceID int64, pairs []service.PromptKeyVersionPair) (map[service.PromptKeyVersionPair]string, error) {
+func (m *MockIPromptService) MParseCommitVersion(ctx context.Context, spaceID int64, params []service.PromptQueryParam) (map[service.PromptQueryParam]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MParseCommitVersionByPromptKey", ctx, spaceID, pairs)
-	ret0, _ := ret[0].(map[service.PromptKeyVersionPair]string)
+	ret := m.ctrl.Call(m, "MParseCommitVersion", ctx, spaceID, params)
+	ret0, _ := ret[0].(map[service.PromptQueryParam]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MParseCommitVersion indicates an expected call of MParseCommitVersion.
-func (mr *MockIPromptServiceMockRecorder) MParseCommitVersion(ctx, spaceID, pairs any) *gomock.Call {
+func (mr *MockIPromptServiceMockRecorder) MParseCommitVersion(ctx, spaceID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MParseCommitVersionByPromptKey", reflect.TypeOf((*MockIPromptService)(nil).MParseCommitVersionByPromptKey), ctx, spaceID, pairs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MParseCommitVersion", reflect.TypeOf((*MockIPromptService)(nil).MParseCommitVersion), ctx, spaceID, params)
+}
+
+// UpdateCommitLabels mocks base method.
+func (m *MockIPromptService) UpdateCommitLabels(ctx context.Context, param service.UpdateCommitLabelsParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCommitLabels", ctx, param)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateCommitLabels indicates an expected call of UpdateCommitLabels.
+func (mr *MockIPromptServiceMockRecorder) UpdateCommitLabels(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCommitLabels", reflect.TypeOf((*MockIPromptService)(nil).UpdateCommitLabels), ctx, param)
+}
+
+// ValidateLabelsExist mocks base method.
+func (m *MockIPromptService) ValidateLabelsExist(ctx context.Context, spaceID int64, labelKeys []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateLabelsExist", ctx, spaceID, labelKeys)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateLabelsExist indicates an expected call of ValidateLabelsExist.
+func (mr *MockIPromptServiceMockRecorder) ValidateLabelsExist(ctx, spaceID, labelKeys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateLabelsExist", reflect.TypeOf((*MockIPromptService)(nil).ValidateLabelsExist), ctx, spaceID, labelKeys)
 }
