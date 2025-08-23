@@ -25,7 +25,7 @@ func main() {
 
 func initDB() *gorm.DB {
 	cli, err := gorm.Open(rawsql.New(rawsql.Config{
-		FilePath: []string{"../conf/default/mysql/init-sql"},
+		FilePath: []string{"../release/deployment/docker-compose/bootstrap/mysql-init/init-sql"},
 	}))
 	if err != nil {
 		panic(err)
@@ -190,6 +190,11 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_turn_result_run_log",
 		"expt_run_log",
 		"expt_aggr_result",
+		"expt_turn_result_filter_key_mapping",
+		"expt_turn_result_tag_ref",
+		"expt_turn_annotate_record_ref",
+		"annotate_record",
+		"expt_result_export_record",
 	}
 
 	var models []any
