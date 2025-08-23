@@ -1,0 +1,37 @@
+# Pre-commit configuration file
+# This file configures pre-commit hooks that run before each commit
+
+repos:
+  # Gitleaks hook for detecting secrets and sensitive information
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0  # Use the latest stable version
+    hooks:
+      - id: gitleaks
+        name: Gitleaks
+        description: Detect secrets and sensitive information in code
+        entry: gitleaks detect --source . --config .gitleaks.toml --verbose --no-git
+        language: system
+        types: [text]
+        stages: [pre-commit]
+        additional_dependencies: []
+        args: []
+        pass_filenames: false
+
+
+# Global configuration
+default_language_version:
+  python: python3
+
+# Skip hooks for specific file types
+exclude: |
+  (?x)^(
+      \.git/|
+      \.venv/|
+      node_modules/|
+      vendor/|
+      dist/|
+      build/|
+      \.idea/|
+      \.vscode/|
+      release/
+  )$

@@ -1,0 +1,25 @@
+# Gitleaks configuration file for sensitive information detection
+# This file configures patterns to detect secrets, API keys, passwords, and other sensitive data
+
+[extend]
+# useDefault will extend the default gitleaks config built in to the binary
+# the latest version is located at:
+# https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+useDefault = true
+#disabledRules = [ "generic-api-key"]
+
+[allowlist]
+# Allowlist patterns - these will be ignored even if they match detection rules
+description = "Allowlist for false positives"
+paths = [
+    ".idea/.*",
+    ".gitleaks.toml",
+    ".*/vendor/.*",
+    # frontend
+    ".*/__tests__/.*",
+    "frontend/apps/cozeloop/src/components/navbar/menu-config.tsx",
+    # backend
+    ".*/*_test.go",
+    ".*/*.gen.go",
+    "backend/modules/foundation/domain/file/service/consts.go",
+]

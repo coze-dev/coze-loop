@@ -1,0 +1,79 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ "main", "release/**" ]
+  pull_request:
+    branches: [ "main", "release/**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gitleaks:
+    name: Gitleaks Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+          fail-on-error: true
+          verbose: true
+          report-format: json
+          report-path: gitleaks-report.json
+
+      - name: Upload Gitleaks report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          retention-days: 30
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            try {
+              const reportPath = path.join(process.env.GITHUB_WORKSPACE, 'gitleaks-report.json');
+              if (fs.existsSync(reportPath)) {
+                const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+
+                if (report.length === 0) {
+                  github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: '✅ **Security Scan Passed**\n\nNo secrets or sensitive information detected in this PR.'
+                  });
+                } else {
+                  const leaks = report.map(leak =>
+                    `- **${leak.rule}**: ${leak.file}:${leak.startLine} (${leak.description})`
+                  ).join('\n');
+
+                  github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `🚨 **Security Scan Failed**\n\n**${report.length} potential secrets detected:**\n\n${leaks}\n\nPlease review and remove any sensitive information before merging.`
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Error processing gitleaks report:', error);
+            }
