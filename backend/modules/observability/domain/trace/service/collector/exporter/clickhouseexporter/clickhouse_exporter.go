@@ -43,6 +43,7 @@ func (c *ckExporter) ConsumeTraces(ctx context.Context, td consumer.Traces) erro
 			TTL:    ttl,
 		}); err != nil {
 			logs.CtxError(ctx, "inert %d spans failed, %v", len(spans), err)
+			return err
 		}
 		logs.CtxInfo(ctx, "inert %d spans successfully", len(spans))
 	}
