@@ -69,6 +69,7 @@ func ConvertVariables2Prompt(fromVals []*entity.VariableVal) (toVals []*prompt.V
 			Key:                 v.Key,
 			Value:               v.Value,
 			PlaceholderMessages: ConvertMessages2Prompt(v.PlaceholderMessages),
+			MultiPartValues:     ConvertContent(v.Content),
 		})
 	}
 	return

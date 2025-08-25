@@ -81,6 +81,7 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 			variable := &entity.VariableVal{
 				Key:                 gptr.Of(key),
 				Value:               content.Text,
+				Content:             content,
 				PlaceholderMessages: nil,
 			}
 			// placeholder
