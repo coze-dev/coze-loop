@@ -21,6 +21,8 @@ const (
 	// Trace
 	EvalTargetType_Trace        EvalTargetType = 3
 	EvalTargetType_CozeWorkflow EvalTargetType = 4
+	// 火山智能体
+	EvalTargetType_VolcengineAgent EvalTargetType = 5
 )
 
 func (p EvalTargetType) String() string {
@@ -33,6 +35,8 @@ func (p EvalTargetType) String() string {
 		return "Trace"
 	case EvalTargetType_CozeWorkflow:
 		return "CozeWorkflow"
+	case EvalTargetType_VolcengineAgent:
+		return "VolcengineAgent"
 	}
 	return "<UNSET>"
 }
@@ -47,6 +51,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_Trace, nil
 	case "CozeWorkflow":
 		return EvalTargetType_CozeWorkflow, nil
+	case "VolcengineAgent":
+		return EvalTargetType_VolcengineAgent, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }
@@ -1379,6 +1385,8 @@ type EvalTargetContent struct {
 	Prompt *EvalPrompt `thrift:"prompt,102,optional" frugal:"102,optional,EvalPrompt" form:"prompt" json:"prompt,omitempty" query:"prompt"`
 	// EvalTargetType=4 时，传参此字段。 评测对象为 CozeWorkflow 时, 需要设置 CozeWorkflow 信息
 	CozeWorkflow *CozeWorkflow `thrift:"coze_workflow,103,optional" frugal:"103,optional,CozeWorkflow" form:"coze_workflow" json:"coze_workflow,omitempty" query:"coze_workflow"`
+	// EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息
+	VolcengineAgent *VolcengineAgent `thrift:"volcengine_agent,104,optional" frugal:"104,optional,VolcengineAgent" form:"volcengine_agent" json:"volcengine_agent,omitempty" query:"volcengine_agent"`
 }
 
 func NewEvalTargetContent() *EvalTargetContent {
@@ -1459,6 +1467,18 @@ func (p *EvalTargetContent) GetCozeWorkflow() (v *CozeWorkflow) {
 	}
 	return p.CozeWorkflow
 }
+
+var EvalTargetContent_VolcengineAgent_DEFAULT *VolcengineAgent
+
+func (p *EvalTargetContent) GetVolcengineAgent() (v *VolcengineAgent) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVolcengineAgent() {
+		return EvalTargetContent_VolcengineAgent_DEFAULT
+	}
+	return p.VolcengineAgent
+}
 func (p *EvalTargetContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
 }
@@ -1477,6 +1497,9 @@ func (p *EvalTargetContent) SetPrompt(val *EvalPrompt) {
 func (p *EvalTargetContent) SetCozeWorkflow(val *CozeWorkflow) {
 	p.CozeWorkflow = val
 }
+func (p *EvalTargetContent) SetVolcengineAgent(val *VolcengineAgent) {
+	p.VolcengineAgent = val
+}
 
 var fieldIDToName_EvalTargetContent = map[int16]string{
 	1:   "input_schemas",
@@ -1485,6 +1508,7 @@ var fieldIDToName_EvalTargetContent = map[int16]string{
 	101: "coze_bot",
 	102: "prompt",
 	103: "coze_workflow",
+	104: "volcengine_agent",
 }
 
 func (p *EvalTargetContent) IsSetInputSchemas() bool {
@@ -1509,6 +1533,10 @@ func (p *EvalTargetContent) IsSetPrompt() bool {
 
 func (p *EvalTargetContent) IsSetCozeWorkflow() bool {
 	return p.CozeWorkflow != nil
+}
+
+func (p *EvalTargetContent) IsSetVolcengineAgent() bool {
+	return p.VolcengineAgent != nil
 }
 
 func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
@@ -1572,6 +1600,14 @@ func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
 		case 103:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 104:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField104(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1687,6 +1723,14 @@ func (p *EvalTargetContent) ReadField103(iprot thrift.TProtocol) error {
 	p.CozeWorkflow = _field
 	return nil
 }
+func (p *EvalTargetContent) ReadField104(iprot thrift.TProtocol) error {
+	_field := NewVolcengineAgent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VolcengineAgent = _field
+	return nil
+}
 
 func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1716,6 +1760,10 @@ func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField103(oprot); err != nil {
 			fieldId = 103
+			goto WriteFieldError
+		}
+		if err = p.writeField104(oprot); err != nil {
+			fieldId = 104
 			goto WriteFieldError
 		}
 	}
@@ -1860,6 +1908,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
 }
+func (p *EvalTargetContent) writeField104(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVolcengineAgent() {
+		if err = oprot.WriteFieldBegin("volcengine_agent", thrift.STRUCT, 104); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VolcengineAgent.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 104 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
+}
 
 func (p *EvalTargetContent) String() string {
 	if p == nil {
@@ -1891,6 +1957,9 @@ func (p *EvalTargetContent) DeepEqual(ano *EvalTargetContent) bool {
 		return false
 	}
 	if !p.Field103DeepEqual(ano.CozeWorkflow) {
+		return false
+	}
+	if !p.Field104DeepEqual(ano.VolcengineAgent) {
 		return false
 	}
 	return true
@@ -1951,6 +2020,777 @@ func (p *EvalTargetContent) Field102DeepEqual(src *EvalPrompt) bool {
 func (p *EvalTargetContent) Field103DeepEqual(src *CozeWorkflow) bool {
 
 	if !p.CozeWorkflow.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetContent) Field104DeepEqual(src *VolcengineAgent) bool {
+
+	if !p.VolcengineAgent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type VolcengineAgent struct {
+	// 罗盘应用ID
+	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	// DTO使用，不存数据库
+	Name *string `thrift:"name,10,optional" frugal:"10,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// DTO使用，不存数据库
+	Description *string `thrift:"description,11,optional" frugal:"11,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	// DTO使用，不存数据库
+	VolcengineAgentEndpoints []*VolcengineAgentEndpoint `thrift:"volcengine_agent_endpoints,12,optional" frugal:"12,optional,list<VolcengineAgentEndpoint>" form:"volcengine_agent_endpoints" json:"volcengine_agent_endpoints,omitempty" query:"volcengine_agent_endpoints"`
+	BaseInfo                 *common.BaseInfo           `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+}
+
+func NewVolcengineAgent() *VolcengineAgent {
+	return &VolcengineAgent{}
+}
+
+func (p *VolcengineAgent) InitDefault() {
+}
+
+var VolcengineAgent_ID_DEFAULT int64
+
+func (p *VolcengineAgent) GetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return VolcengineAgent_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var VolcengineAgent_Name_DEFAULT string
+
+func (p *VolcengineAgent) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return VolcengineAgent_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var VolcengineAgent_Description_DEFAULT string
+
+func (p *VolcengineAgent) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return VolcengineAgent_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var VolcengineAgent_VolcengineAgentEndpoints_DEFAULT []*VolcengineAgentEndpoint
+
+func (p *VolcengineAgent) GetVolcengineAgentEndpoints() (v []*VolcengineAgentEndpoint) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVolcengineAgentEndpoints() {
+		return VolcengineAgent_VolcengineAgentEndpoints_DEFAULT
+	}
+	return p.VolcengineAgentEndpoints
+}
+
+var VolcengineAgent_BaseInfo_DEFAULT *common.BaseInfo
+
+func (p *VolcengineAgent) GetBaseInfo() (v *common.BaseInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseInfo() {
+		return VolcengineAgent_BaseInfo_DEFAULT
+	}
+	return p.BaseInfo
+}
+func (p *VolcengineAgent) SetID(val *int64) {
+	p.ID = val
+}
+func (p *VolcengineAgent) SetName(val *string) {
+	p.Name = val
+}
+func (p *VolcengineAgent) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *VolcengineAgent) SetVolcengineAgentEndpoints(val []*VolcengineAgentEndpoint) {
+	p.VolcengineAgentEndpoints = val
+}
+func (p *VolcengineAgent) SetBaseInfo(val *common.BaseInfo) {
+	p.BaseInfo = val
+}
+
+var fieldIDToName_VolcengineAgent = map[int16]string{
+	1:   "id",
+	10:  "name",
+	11:  "description",
+	12:  "volcengine_agent_endpoints",
+	100: "base_info",
+}
+
+func (p *VolcengineAgent) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *VolcengineAgent) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *VolcengineAgent) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *VolcengineAgent) IsSetVolcengineAgentEndpoints() bool {
+	return p.VolcengineAgentEndpoints != nil
+}
+
+func (p *VolcengineAgent) IsSetBaseInfo() bool {
+	return p.BaseInfo != nil
+}
+
+func (p *VolcengineAgent) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_VolcengineAgent[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *VolcengineAgent) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *VolcengineAgent) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *VolcengineAgent) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *VolcengineAgent) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*VolcengineAgentEndpoint, 0, size)
+	values := make([]VolcengineAgentEndpoint, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.VolcengineAgentEndpoints = _field
+	return nil
+}
+func (p *VolcengineAgent) ReadField100(iprot thrift.TProtocol) error {
+	_field := common.NewBaseInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseInfo = _field
+	return nil
+}
+
+func (p *VolcengineAgent) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("VolcengineAgent"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *VolcengineAgent) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *VolcengineAgent) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *VolcengineAgent) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *VolcengineAgent) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVolcengineAgentEndpoints() {
+		if err = oprot.WriteFieldBegin("volcengine_agent_endpoints", thrift.LIST, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.VolcengineAgentEndpoints)); err != nil {
+			return err
+		}
+		for _, v := range p.VolcengineAgentEndpoints {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+func (p *VolcengineAgent) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseInfo() {
+		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+
+func (p *VolcengineAgent) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("VolcengineAgent(%+v)", *p)
+
+}
+
+func (p *VolcengineAgent) DeepEqual(ano *VolcengineAgent) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.VolcengineAgentEndpoints) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.BaseInfo) {
+		return false
+	}
+	return true
+}
+
+func (p *VolcengineAgent) Field1DeepEqual(src *int64) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *VolcengineAgent) Field10DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *VolcengineAgent) Field11DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *VolcengineAgent) Field12DeepEqual(src []*VolcengineAgentEndpoint) bool {
+
+	if len(p.VolcengineAgentEndpoints) != len(src) {
+		return false
+	}
+	for i, v := range p.VolcengineAgentEndpoints {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *VolcengineAgent) Field100DeepEqual(src *common.BaseInfo) bool {
+
+	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type VolcengineAgentEndpoint struct {
+	EndpointID *string `thrift:"endpoint_id,1,optional" frugal:"1,optional,string" form:"endpoint_id" json:"endpoint_id,omitempty" query:"endpoint_id"`
+	APIKey     *string `thrift:"api_key,2,optional" frugal:"2,optional,string" form:"api_key" json:"api_key,omitempty" query:"api_key"`
+}
+
+func NewVolcengineAgentEndpoint() *VolcengineAgentEndpoint {
+	return &VolcengineAgentEndpoint{}
+}
+
+func (p *VolcengineAgentEndpoint) InitDefault() {
+}
+
+var VolcengineAgentEndpoint_EndpointID_DEFAULT string
+
+func (p *VolcengineAgentEndpoint) GetEndpointID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndpointID() {
+		return VolcengineAgentEndpoint_EndpointID_DEFAULT
+	}
+	return *p.EndpointID
+}
+
+var VolcengineAgentEndpoint_APIKey_DEFAULT string
+
+func (p *VolcengineAgentEndpoint) GetAPIKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAPIKey() {
+		return VolcengineAgentEndpoint_APIKey_DEFAULT
+	}
+	return *p.APIKey
+}
+func (p *VolcengineAgentEndpoint) SetEndpointID(val *string) {
+	p.EndpointID = val
+}
+func (p *VolcengineAgentEndpoint) SetAPIKey(val *string) {
+	p.APIKey = val
+}
+
+var fieldIDToName_VolcengineAgentEndpoint = map[int16]string{
+	1: "endpoint_id",
+	2: "api_key",
+}
+
+func (p *VolcengineAgentEndpoint) IsSetEndpointID() bool {
+	return p.EndpointID != nil
+}
+
+func (p *VolcengineAgentEndpoint) IsSetAPIKey() bool {
+	return p.APIKey != nil
+}
+
+func (p *VolcengineAgentEndpoint) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_VolcengineAgentEndpoint[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *VolcengineAgentEndpoint) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndpointID = _field
+	return nil
+}
+func (p *VolcengineAgentEndpoint) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.APIKey = _field
+	return nil
+}
+
+func (p *VolcengineAgentEndpoint) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("VolcengineAgentEndpoint"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *VolcengineAgentEndpoint) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndpointID() {
+		if err = oprot.WriteFieldBegin("endpoint_id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.EndpointID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *VolcengineAgentEndpoint) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAPIKey() {
+		if err = oprot.WriteFieldBegin("api_key", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.APIKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *VolcengineAgentEndpoint) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("VolcengineAgentEndpoint(%+v)", *p)
+
+}
+
+func (p *VolcengineAgentEndpoint) DeepEqual(ano *VolcengineAgentEndpoint) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EndpointID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.APIKey) {
+		return false
+	}
+	return true
+}
+
+func (p *VolcengineAgentEndpoint) Field1DeepEqual(src *string) bool {
+
+	if p.EndpointID == src {
+		return true
+	} else if p.EndpointID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.EndpointID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *VolcengineAgentEndpoint) Field2DeepEqual(src *string) bool {
+
+	if p.APIKey == src {
+		return true
+	} else if p.APIKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.APIKey, *src) != 0 {
 		return false
 	}
 	return true
