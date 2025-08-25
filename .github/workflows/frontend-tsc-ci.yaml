@@ -2,12 +2,12 @@ name: CI@frontend - TS Check
 
 on:
   push:
-    branches: ["main", "release/**"]
+    branches: [ "main", "release/**", "integration**" ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-tsc-ci.yaml'
   pull_request:
-    branches: ["main", "release/**"]
+    branches: [ "main", "release/**", "integration**" ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-tsc-ci.yaml'
