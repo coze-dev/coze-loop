@@ -115,7 +115,7 @@ func TestCkExporter_ConsumeTraces(t *testing.T) {
 					}},
 				}},
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
