@@ -42,7 +42,7 @@ func (t *PromptSourceEvalTargetServiceImpl) EvalType() entity.EvalTargetType {
 }
 
 func (t *PromptSourceEvalTargetServiceImpl) ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error {
-	return input.ValidateInputSchema(inputSchema)
+	return input.ValidateInputSchema(ctx, inputSchema)
 }
 
 func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (evaluatorOutputData *entity.EvalTargetOutputData, status entity.EvalTargetRunStatus, err error) {
