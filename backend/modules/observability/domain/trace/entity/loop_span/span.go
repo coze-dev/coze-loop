@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 )
 
@@ -49,8 +49,21 @@ const (
 	SpanFieldPromptKey               = "prompt_key"
 	SpanFieldTenant                  = "tenant"
 
-	SpanTypePrompt = "prompt"
-	SpanTypeModel  = "model"
+	SpanTypePrompt          = "prompt"
+	SpanTypeModel           = "model"
+	SpanTypeParser          = "parser"
+	SpanTypeEmbedding       = "embedding"
+	SpanTypeMemory          = "memory"
+	SpanTypePlugin          = "plugin"
+	SpanTypeFunction        = "function"
+	SpanTypeGraph           = "graph"
+	SpanTypeRemote          = "remote"
+	SpanTypeLoader          = "loader"
+	SpanTypeTransformer     = "transformer"
+	SpanTypeVectorStore     = "vector_store"
+	SpanTypeVectorRetriever = "vector_retriever"
+	SpanTypeAgent           = "agent"
+	SpanTypeLLMCall         = "LLMCall"
 
 	SpanStatusSuccess = "success"
 	SpanStatusError   = "error"

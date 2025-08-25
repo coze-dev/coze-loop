@@ -30,12 +30,20 @@ var (
 	singletonTraceProducer mq2.ITraceProducer
 )
 
-type TraceProducerImpl struct {
+type producerProxy struct {
 	traceTopic string
 	mqProducer mq.IProducer
 }
 
+type TraceProducerImpl struct {
+	producerProxy map[string]*producerProxy
+}
+
 func (t *TraceProducerImpl) IngestSpans(ctx context.Context, td *entity.TraceData) error {
+	if t.producerProxy == nil || t.producerProxy[td.Tenant] == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("tenant producer not exist"))
+	}
+	producer := t.producerProxy[td.Tenant]
 	payload, err := json.Marshal(td)
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("trace data marshal failed"))
@@ -54,8 +62,8 @@ func (t *TraceProducerImpl) IngestSpans(ctx context.Context, td *entity.TraceDat
 			}
 		}
 	} else {
-		msg := mq.NewMessage(t.traceTopic, payload)
-		if err := t.mqProducer.SendAsync(ctx, func(ctx context.Context, sendResponse mq.SendResponse, err error) {
+		msg := mq.NewMessage(producer.traceTopic, payload)
+		if err := producer.mqProducer.SendAsync(ctx, func(ctx context.Context, sendResponse mq.SendResponse, err error) {
 			if err != nil {
 				logs.CtxWarn(ctx, "mq send error: %v", err)
 			}
@@ -79,27 +87,37 @@ func NewTraceProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory
 }
 
 func newTraceProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory) (mq2.ITraceProducer, error) {
-	mqCfg, err := traceConfig.GetTraceMqProducerCfg(context.Background())
+	ingestTenantCfg, err := traceConfig.GetTraceIngestTenantProducerCfg(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	if mqCfg.Topic == "" {
-		return nil, fmt.Errorf("trace topic required")
+	impl := &TraceProducerImpl{
+		producerProxy: make(map[string]*producerProxy),
 	}
-	mqProducer, err := mqFactory.NewProducer(mq.ProducerConfig{
-		Addr:           mqCfg.Addr,
-		ProduceTimeout: time.Duration(mqCfg.Timeout) * time.Millisecond,
-		RetryTimes:     mqCfg.RetryTimes,
-		ProducerGroup:  ptr.Of(mqCfg.ProducerGroup),
-	})
-	if err != nil {
-		return nil, err
+	for tenant, ingestCfg := range ingestTenantCfg {
+		if ingestCfg == nil {
+			continue
+		}
+		mqCfg := ingestCfg.MqProducer
+		if mqCfg.Topic == "" {
+			return nil, fmt.Errorf("trace topic required")
+		}
+		mqProducer, e := mqFactory.NewProducer(mq.ProducerConfig{
+			Addr:           mqCfg.Addr,
+			ProduceTimeout: time.Duration(mqCfg.Timeout) * time.Millisecond,
+			RetryTimes:     mqCfg.RetryTimes,
+			ProducerGroup:  ptr.Of(mqCfg.ProducerGroup),
+		})
+		if e != nil {
+			return nil, e
+		}
+		if e = mqProducer.Start(); e != nil {
+			return nil, fmt.Errorf("fail to start producer, %v", e)
+		}
+		impl.producerProxy[tenant] = &producerProxy{
+			traceTopic: mqCfg.Topic,
+			mqProducer: mqProducer,
+		}
 	}
-	if err := mqProducer.Start(); err != nil {
-		return nil, fmt.Errorf("fail to start producer, %v", err)
-	}
-	return &TraceProducerImpl{
-		traceTopic: mqCfg.Topic,
-		mqProducer: mqProducer,
-	}, nil
+	return impl, nil
 }

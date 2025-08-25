@@ -462,7 +462,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 						// 验证输入数据已被正确处理
 						assert.Equal(t, int64(123), evaluator.SpaceID)
 						assert.Equal(t, entity.EvaluatorTypePrompt, evaluator.EvaluatorType)
-						
+
 						// 验证 URI 已转换为 URL
 						imageContent := input.InputFields["image"]
 						assert.NotNil(t, imageContent)
@@ -531,7 +531,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 						// 验证审核参数
 						assert.Equal(t, audit.AuditType_CozeLoopEvaluatorModify, param.AuditType)
 						assert.Contains(t, param.AuditData["texts"], "敏感内容评估器")
-						
+
 						return audit.AuditRecord{
 							AuditStatus:  audit.AuditStatus_Rejected,
 							FailedReason: gptr.Of("内容包含敏感词汇"),
@@ -544,7 +544,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 
 				assert.Error(t, err)
 				assert.Nil(t, resp)
-				
+
 				// 验证错误类型
 				statusErr, ok := errorx.FromStatusError(err)
 				assert.True(t, ok)
@@ -614,7 +614,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 
 						// 验证响应数据一致性
 						if resp.Evaluator.GetEvaluatorID() != evaluatorID {
-							results <- fmt.Errorf("inconsistent evaluator ID: expected %d, got %d", 
+							results <- fmt.Errorf("inconsistent evaluator ID: expected %d, got %d",
 								evaluatorID, resp.Evaluator.GetEvaluatorID())
 							return
 						}
@@ -693,7 +693,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					Times(1)
 
 				ctx := context.Background()
-				
+
 				// 第一次调用应该失败
 				resp1, err1 := handler.RunEvaluator(ctx, request)
 				assert.Error(t, err1)

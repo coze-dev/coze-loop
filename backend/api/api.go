@@ -104,12 +104,14 @@ func Init(
 		return nil, err
 	}
 
-	observabilityHandler, err := apis.InitObservabilityHandler(ctx, db, ckDB, meter, mqFactory, configFactory, benefitSvc,
+	observabilityHandler, err := apis.InitObservabilityHandler(ctx, db, ckDB, meter, mqFactory, configFactory, idgen,
+		benefitSvc,
 		lofile.NewLocalFileService(foundationHandler.FileService),
 		loauth.NewLocalAuthService(foundationHandler.AuthService),
 		louser.NewLocalUserService(foundationHandler.UserService),
 		loevaluator.NewLocalEvaluatorService(evaluationHandler.EvaluatorService),
 		lotag.NewLocalTagService(dataHandler.TagService),
+		limiterFactory,
 	)
 	if err != nil {
 		return nil, err

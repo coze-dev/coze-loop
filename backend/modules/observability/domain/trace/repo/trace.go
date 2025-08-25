@@ -12,11 +12,13 @@ import (
 type GetTraceParam struct {
 	Tenants            []string
 	TraceID            string
+	LogID              string
 	StartAt            int64 // ms
 	EndAt              int64 // ms
 	Limit              int32
 	NotQueryAnnotation bool
 	SpanIDs            []string
+	OmitColumns        []string // omit specific columns
 }
 
 type ListSpansParam struct {
@@ -28,6 +30,7 @@ type ListSpansParam struct {
 	DescByStartTime    bool
 	PageToken          string
 	NotQueryAnnotation bool
+	OmitColumns        []string // omit specific columns
 }
 
 type ListSpansResult struct {

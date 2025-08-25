@@ -6,7 +6,6 @@ package logs
 import (
 	"context"
 	"errors"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"

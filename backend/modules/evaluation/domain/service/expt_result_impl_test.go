@@ -2342,7 +2342,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		// 设置 ExptAnnotateRepo Mock 避免 PayloadBuilder 构建时的 panic
 		mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
 		mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
-		
+
 		// 设置实验信息Mock
 		mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Experiment{{
 			ID:               1,
@@ -2577,10 +2577,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			setup: func() {
 				// 基于 defaultSetup，但针对不同的 exptID 设置空过滤器
 				defaultSetup()
-				
+
 				// 覆盖过滤器设置，使其为空（模拟过滤器不存在的情况）
 				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "2", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
-				
+
 				// 设置 TurnResult 存在，确保会进入 for 循环
 				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(2), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
 					{
@@ -2591,7 +2591,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 						Status: 1,
 					},
 				}, int64(1), nil).AnyTimes()
-				
+
 				// 设置实验信息
 				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{2}, int64(100)).Return([]*entity.Experiment{{
 					ID:               2,
@@ -2600,7 +2600,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
-				
+
 				// 验证指标上报 - 过滤器不存在且重试次数超过最大值
 				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), false, false, true, true).Return().AnyTimes()
 			},

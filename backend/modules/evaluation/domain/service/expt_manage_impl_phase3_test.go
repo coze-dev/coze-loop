@@ -75,17 +75,17 @@ func TestExptMangerImpl_packTupleID_WithoutTarget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := mgr.packTupleID(ctx, tt.expt)
-			
+
 			// Check VersionedEvalSetID
 			if got.VersionedEvalSetID.EvalSetID != tt.want.VersionedEvalSetID.EvalSetID {
-				t.Errorf("packTupleID() VersionedEvalSetID.EvalSetID = %v, want %v", 
+				t.Errorf("packTupleID() VersionedEvalSetID.EvalSetID = %v, want %v",
 					got.VersionedEvalSetID.EvalSetID, tt.want.VersionedEvalSetID.EvalSetID)
 			}
 			if got.VersionedEvalSetID.VersionID != tt.want.VersionedEvalSetID.VersionID {
-				t.Errorf("packTupleID() VersionedEvalSetID.VersionID = %v, want %v", 
+				t.Errorf("packTupleID() VersionedEvalSetID.VersionID = %v, want %v",
 					got.VersionedEvalSetID.VersionID, tt.want.VersionedEvalSetID.VersionID)
 			}
-			
+
 			// Check VersionedTargetID
 			if tt.want.VersionedTargetID == nil {
 				if got.VersionedTargetID != nil {
@@ -96,24 +96,24 @@ func TestExptMangerImpl_packTupleID_WithoutTarget(t *testing.T) {
 					t.Errorf("packTupleID() VersionedTargetID = nil, want %v", tt.want.VersionedTargetID)
 				} else {
 					if got.VersionedTargetID.TargetID != tt.want.VersionedTargetID.TargetID {
-						t.Errorf("packTupleID() VersionedTargetID.TargetID = %v, want %v", 
+						t.Errorf("packTupleID() VersionedTargetID.TargetID = %v, want %v",
 							got.VersionedTargetID.TargetID, tt.want.VersionedTargetID.TargetID)
 					}
 					if got.VersionedTargetID.VersionID != tt.want.VersionedTargetID.VersionID {
-						t.Errorf("packTupleID() VersionedTargetID.VersionID = %v, want %v", 
+						t.Errorf("packTupleID() VersionedTargetID.VersionID = %v, want %v",
 							got.VersionedTargetID.VersionID, tt.want.VersionedTargetID.VersionID)
 					}
 				}
 			}
-			
+
 			// Check EvaluatorVersionIDs
 			if len(got.EvaluatorVersionIDs) != len(tt.want.EvaluatorVersionIDs) {
-				t.Errorf("packTupleID() EvaluatorVersionIDs length = %v, want %v", 
+				t.Errorf("packTupleID() EvaluatorVersionIDs length = %v, want %v",
 					len(got.EvaluatorVersionIDs), len(tt.want.EvaluatorVersionIDs))
 			} else {
 				for i, id := range got.EvaluatorVersionIDs {
 					if id != tt.want.EvaluatorVersionIDs[i] {
-						t.Errorf("packTupleID() EvaluatorVersionIDs[%d] = %v, want %v", 
+						t.Errorf("packTupleID() EvaluatorVersionIDs[%d] = %v, want %v",
 							i, id, tt.want.EvaluatorVersionIDs[i])
 					}
 				}
@@ -130,11 +130,11 @@ func TestExptMangerImpl_getExptTupleByID_WithoutTarget(t *testing.T) {
 	session := &entity.Session{UserID: "1"}
 
 	tests := []struct {
-		name        string
-		tupleID     *entity.ExptTupleID
-		setup       func()
-		wantTarget  bool
-		wantErr     bool
+		name       string
+		tupleID    *entity.ExptTupleID
+		setup      func()
+		wantTarget bool
+		wantErr    bool
 	}{
 		{
 			name: "tuple_without_target",
@@ -148,12 +148,12 @@ func TestExptMangerImpl_getExptTupleByID_WithoutTarget(t *testing.T) {
 			},
 			setup: func() {
 				// No target service call expected
-				
+
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
 					GetEvaluationSetVersion(ctx, int64(1), int64(2), gptr.Of(true)).
 					Return(&entity.EvaluationSetVersion{ID: 2}, &entity.EvaluationSet{ID: 1}, nil)
-				
+
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
 					BatchGetEvaluatorVersion(ctx, nil, []int64{10}, false).
@@ -167,14 +167,14 @@ func TestExptMangerImpl_getExptTupleByID_WithoutTarget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			
+
 			got, err := mgr.getExptTupleByID(ctx, tt.tupleID, 1, session)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getExptTupleByID() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if !tt.wantErr {
 				if tt.wantTarget && got.Target == nil {
 					t.Errorf("getExptTupleByID() target = nil, want target")

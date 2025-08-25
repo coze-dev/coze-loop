@@ -10,6 +10,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
@@ -40,13 +42,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
 
-func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, userClient userservice.Client, evalService evaluatorservice.Client, tagService tagservice.Client) (ITraceApplication, error) {
+func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, userClient userservice.Client, evalService evaluatorservice.Client, tagService tagservice.Client) (ITraceApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -74,25 +78,26 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	}
 	iTraceMetrics := metrics2.NewTraceMetricsImpl(meter)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
-	traceFilterProcessorBuilder := NewTraceQueryProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider)
 	if err != nil {
 		return nil, err
 	}
 	iViewDao := mysql.NewViewDaoImpl(db2)
-	iViewRepo := repo.NewViewRepoImpl(iViewDao)
+	iViewRepo := repo.NewViewRepoImpl(iViewDao, idgen2)
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iUserProvider := user.NewUserRPCProvider(userClient)
 	iTagRPCAdapter := tag.NewTagRPCProvider(tagService)
-	iTraceApplication, err := NewTraceApplication(iTraceService, iViewRepo, benefit2, iTraceMetrics, iTraceConfig, iAuthProvider, iEvaluatorRPCAdapter, iUserProvider, iTagRPCAdapter)
+	iTraceApplication, err := NewTraceApplication(iTraceService, iViewRepo, benefit2, iTenantProvider, iTraceMetrics, iTraceConfig, iAuthProvider, iEvaluatorRPCAdapter, iUserProvider, iTagRPCAdapter)
 	if err != nil {
 		return nil, err
 	}
 	return iTraceApplication, nil
 }
 
-func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, authClient authservice.Client, meter metrics.Meter) (IObservabilityOpenAPIApplication, error) {
+func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter) (IObservabilityOpenAPIApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -120,13 +125,15 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	}
 	iTraceMetrics := metrics2.NewTraceMetricsImpl(meter)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
-	traceFilterProcessorBuilder := NewTraceQueryProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider)
 	if err != nil {
 		return nil, err
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
-	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2)
+	iWorkSpaceProvider := workspace.NewWorkspaceProvider()
+	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2, iTenantProvider, iWorkSpaceProvider, limiterFactory, iTraceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +171,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 
 var (
 	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
-		NewTraceQueryProcessorBuilder, config.NewTraceConfigCenter,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, evaluator.NewEvaluatorRPCProvider, traceDomainSet,
@@ -178,7 +185,7 @@ var (
 	)
 )
 
-func NewTraceQueryProcessorBuilder(
+func NewTraceProcessorBuilder(
 	traceConfig config2.ITraceConfig,
 	fileProvider rpc.IFileProvider,
 	benefitSvc benefit.IBenefitService,
@@ -188,7 +195,13 @@ func NewTraceQueryProcessorBuilder(
 
 		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
 
-		[]span_processor.Factory{span_processor.NewCheckProcessorFactory()})
+		[]span_processor.Factory{span_processor.NewCheckProcessorFactory()},
+
+		[]span_processor.Factory{},
+
+		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewCheckProcessorFactory(), span_processor.NewAttrTosProcessorFactory(fileProvider), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
+
+		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)})
 }
 
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo2.ITraceRepo) service.IngestionCollectorFactory {

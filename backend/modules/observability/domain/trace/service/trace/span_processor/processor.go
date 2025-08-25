@@ -15,6 +15,7 @@ type Settings struct {
 	PlatformType   loop_span.PlatformType
 	QueryStartTime int64 // ms
 	QueryEndTime   int64 // ms
+	Tenant         string
 }
 
 type Factory interface {

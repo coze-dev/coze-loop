@@ -280,3 +280,8 @@ trace_collector_cfg:
       receivers: [ rmq/default ]
       processors: [ queue/default ]
       exporters: [ clickhouse/default ]
+
+query_trace_rate_limit_config:
+  default_max_qps: 10
+  space_max_qps:
+    123456: 100

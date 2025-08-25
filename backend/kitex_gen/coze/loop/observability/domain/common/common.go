@@ -25,6 +25,14 @@ const (
 
 	PlatformTypeLoopAll = "loop_all"
 
+	PlatformTypeInnerCozeloop = "inner_cozeloop"
+
+	PlatformTypeInnerDoubao = "inner_doubao"
+
+	PlatformTypeInnerPrompt = "inner_prompt"
+
+	PlatformTypeInnerCozeBot = "inner_coze_bot"
+
 	SpanListTypeRootSpan = "root_span"
 
 	SpanListTypeAllSpan = "all_span"

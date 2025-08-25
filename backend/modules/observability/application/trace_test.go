@@ -4,6 +4,7 @@
 package application
 
 import (
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"context"
 	"fmt"
 	"testing"
@@ -21,6 +22,7 @@ import (
 	confmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
+	tenantmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -932,6 +934,7 @@ func TestTraceApplication_IngestTracesInner(t *testing.T) {
 	type fields struct {
 		traceSvc service.ITraceService
 		benefit  benefit.IBenefitService
+		tenant   tenant.ITenantProvider
 	}
 	type args struct {
 		ctx context.Context
@@ -950,10 +953,13 @@ func TestTraceApplication_IngestTracesInner(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockBenefit := benefitmock.NewMockIBenefitService(ctrl)
 				mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{IsEnough: true, AccountAvailable: true, StorageDuration: 7}, nil)
+				mockTenant := tenantmock.NewMockITenantProvider(ctrl)
+				mockTenant.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("")
 				mockSvc.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil)
 				return fields{
 					traceSvc: mockSvc,
 					benefit:  mockBenefit,
+					tenant:   mockTenant,
 				}
 			},
 			args: args{
@@ -979,6 +985,7 @@ func TestTraceApplication_IngestTracesInner(t *testing.T) {
 			app := &TraceApplication{
 				traceService: fields.traceSvc,
 				benefit:      fields.benefit,
+				tenant:       fields.tenant,
 			}
 			got, err := app.IngestTracesInner(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)

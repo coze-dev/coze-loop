@@ -196,12 +196,14 @@ func InitObservabilityHandler(
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
+	idgen idgen.IIDGenerator,
 	benefit benefit.IBenefitService,
 	fileClient fileservice.Client,
 	authCli authservice.Client,
 	userClient userservice.Client,
 	evalClient evaluatorservice.Client,
 	tagClient tagservice.Client,
+	limiterFactory limiter.IRateLimiterFactory,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,

@@ -148,8 +148,8 @@ func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Prov
 	return dataHandler, nil
 }
 
-func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, tagClient tagservice.Client) (*ObservabilityHandler, error) {
-	iTraceApplication, err := application6.InitTraceApplication(db2, ckDb, meter, mqFactory, configFactory, fileClient, benefit2, authCli, userClient, evalClient, tagClient)
+func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory) (*ObservabilityHandler, error) {
+	iTraceApplication, err := application6.InitTraceApplication(db2, ckDb, meter, mqFactory, configFactory, idgen2, fileClient, benefit2, authCli, userClient, evalClient, tagClient)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, authCli, meter)
+	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, limiterFactory, authCli, meter)
 	if err != nil {
 		return nil, err
 	}

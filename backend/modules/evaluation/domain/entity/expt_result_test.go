@@ -496,7 +496,7 @@ func TestExptTurnResultFilterAccelerator_HasFilters(t *testing.T) {
 
 func TestExptTurnResultFilterAccelerator_HasFilters_NilPointer(t *testing.T) {
 	var filter *ExptTurnResultFilterAccelerator
-	
+
 	assert.Panics(t, func() {
 		filter.HasFilters()
 	}, "Calling HasFilters on nil pointer should panic")

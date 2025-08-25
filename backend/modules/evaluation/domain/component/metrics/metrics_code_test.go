@@ -85,5 +85,3 @@ func TestGetCode_ErrorxNewByCode_AffectStabilityTrue(t *testing.T) {
 	assert.Equal(t, int64(c), codeVal)
 	assert.Equal(t, int64(1), isErr)
 }
-
-

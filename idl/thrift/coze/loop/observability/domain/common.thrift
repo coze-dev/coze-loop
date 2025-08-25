@@ -9,6 +9,10 @@ const PlatformType PlatformType_CozeBot = "coze_bot"
 const PlatformType PlatformType_Project = "coze_project"
 const PlatformType PlatformType_Workflow = "coze_workflow"
 const PlatformType PlatformType_LoopAll = "loop_all"
+const PlatformType PlatformType_InnerCozeloop = "inner_cozeloop"
+const PlatformType PlatformType_InnerDoubao = "inner_doubao"
+const PlatformType PlatformType_InnerPrompt = "inner_prompt"
+const PlatformType PlatformType_InnerCozeBot = "inner_coze_bot"
 
 typedef string SpanListType (ts.enum="true")
 const SpanListType SpanListType_RootSpan = "root_span"

@@ -66,9 +66,9 @@ func TestExecutePromptParam_Structure_Integrity(t *testing.T) {
 		runtimeParam *string
 	}{
 		{
-			name:      "complete_param_with_runtime_param",
-			promptID:  67890,
-			version:   "v2.1",
+			name:     "complete_param_with_runtime_param",
+			promptID: 67890,
+			version:  "v2.1",
 			variables: []*entity.VariableVal{
 				{Key: stringPtr("var1"), Value: stringPtr("value1")},
 			},
@@ -157,7 +157,7 @@ func TestExecutePromptParam_RuntimeParam_JSON_Scenarios(t *testing.T) {
 
 			// Test that RuntimeParam preserves the exact string value
 			assert.Equal(t, tt.runtimeParam, param.RuntimeParam)
-			
+
 			// Test that the field can be accessed and is not modified
 			if tt.runtimeParam != nil {
 				assert.Equal(t, *tt.runtimeParam, *param.RuntimeParam)

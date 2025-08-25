@@ -86,6 +86,7 @@ func (t *TraceCkRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansPara
 		Filters:          req.Filters,
 		Limit:            req.Limit + 1,
 		OrderByStartTime: req.DescByStartTime,
+		OmitColumns:      req.OmitColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -152,8 +153,22 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 		})
 	}
 	filter := &loop_span.FilterFields{
-		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-		FilterFields: filterFields,
+		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+	}
+	if req.TraceID != "" {
+		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldTraceId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.TraceID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
+	} else {
+		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldLogID,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.LogID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
 	}
 	st := time.Now()
 	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
@@ -164,6 +179,7 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 		EndTime:      time_util.MillSec2MicroSec(req.EndAt),
 		Filters:      filter,
 		Limit:        req.Limit,
+		OmitColumns:  req.OmitColumns,
 	})
 	if err != nil {
 		return nil, err

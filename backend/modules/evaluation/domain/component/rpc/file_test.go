@@ -128,7 +128,7 @@ func TestIFileProvider_Interface(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockProvider := mocks.NewMockIFileProvider(ctrl)
-	
+
 	// 验证方法签名正确
 	mockProvider.EXPECT().
 		MGetFileURL(gomock.Any(), gomock.Any()).

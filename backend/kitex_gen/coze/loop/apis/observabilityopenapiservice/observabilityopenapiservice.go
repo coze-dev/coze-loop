@@ -21,6 +21,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"OtelIngestTraces": kitex.NewMethodInfo(
+		otelIngestTracesHandler,
+		newOpenAPIServiceOtelIngestTracesArgs,
+		newOpenAPIServiceOtelIngestTracesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SearchTraceOApi": kitex.NewMethodInfo(
+		searchTraceOApiHandler,
+		newOpenAPIServiceSearchTraceOApiArgs,
+		newOpenAPIServiceSearchTraceOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListSpansOApi": kitex.NewMethodInfo(
+		listSpansOApiHandler,
+		newOpenAPIServiceListSpansOApiArgs,
+		newOpenAPIServiceListSpansOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateAnnotation": kitex.NewMethodInfo(
 		createAnnotationHandler,
 		newOpenAPIServiceCreateAnnotationArgs,
@@ -87,6 +108,63 @@ func newOpenAPIServiceIngestTracesResult() interface{} {
 	return openapi.NewOpenAPIServiceIngestTracesResult()
 }
 
+func otelIngestTracesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceOtelIngestTracesArgs)
+	realResult := result.(*openapi.OpenAPIServiceOtelIngestTracesResult)
+	success, err := handler.(openapi.OpenAPIService).OtelIngestTraces(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceOtelIngestTracesArgs() interface{} {
+	return openapi.NewOpenAPIServiceOtelIngestTracesArgs()
+}
+
+func newOpenAPIServiceOtelIngestTracesResult() interface{} {
+	return openapi.NewOpenAPIServiceOtelIngestTracesResult()
+}
+
+func searchTraceOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceSearchTraceOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceSearchTraceOApiResult)
+	success, err := handler.(openapi.OpenAPIService).SearchTraceOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceSearchTraceOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceSearchTraceOApiArgs()
+}
+
+func newOpenAPIServiceSearchTraceOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceSearchTraceOApiResult()
+}
+
+func listSpansOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceListSpansOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceListSpansOApiResult)
+	success, err := handler.(openapi.OpenAPIService).ListSpansOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceListSpansOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceListSpansOApiArgs()
+}
+
+func newOpenAPIServiceListSpansOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceListSpansOApiResult()
+}
+
 func createAnnotationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.OpenAPIServiceCreateAnnotationArgs)
 	realResult := result.(*openapi.OpenAPIServiceCreateAnnotationResult)
@@ -142,6 +220,36 @@ func (p *kClient) IngestTraces(ctx context.Context, req *openapi.IngestTracesReq
 	_args.Req = req
 	var _result openapi.OpenAPIServiceIngestTracesResult
 	if err = p.c.Call(ctx, "IngestTraces", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) OtelIngestTraces(ctx context.Context, req *openapi.OtelIngestTracesRequest) (r *openapi.OtelIngestTracesResponse, err error) {
+	var _args openapi.OpenAPIServiceOtelIngestTracesArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceOtelIngestTracesResult
+	if err = p.c.Call(ctx, "OtelIngestTraces", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest) (r *openapi.SearchTraceOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceSearchTraceOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceSearchTraceOApiResult
+	if err = p.c.Call(ctx, "SearchTraceOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest) (r *openapi.ListSpansOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceListSpansOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceListSpansOApiResult
+	if err = p.c.Call(ctx, "ListSpansOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

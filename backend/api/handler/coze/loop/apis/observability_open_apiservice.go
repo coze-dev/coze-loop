@@ -9,8 +9,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilityopenapiservice"
+	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 )
 
 var observabilityOpenAPIClient observabilityopenapiservice.Client
@@ -19,4 +20,52 @@ var observabilityOpenAPIClient observabilityopenapiservice.Client
 // @router /v1/loop/traces/ingest [POST]
 func IngestTraces(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.IngestTraces)
+}
+
+// SearchTraceOApi .
+// @router /v1/loop/traces/search [POST]
+func SearchTraceOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi1.SearchTraceOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi1.SearchTraceOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListSpansOApi .
+// @router /v1/loop/spans/search [POST]
+func ListSpansOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi1.ListSpansOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi1.ListSpansOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// OtelIngestTraces .
+// @router /v1/loop/opentelemetry/v1/traces [POST]
+func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi1.OtelIngestTracesRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi1.OtelIngestTracesResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

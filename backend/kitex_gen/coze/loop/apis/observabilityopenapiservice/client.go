@@ -12,6 +12,9 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest, callOptions ...callopt.Option) (r *openapi.IngestTracesResponse, err error)
+	OtelIngestTraces(ctx context.Context, req *openapi.OtelIngestTracesRequest, callOptions ...callopt.Option) (r *openapi.OtelIngestTracesResponse, err error)
+	SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceOApiResponse, err error)
+	ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error)
 	CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error)
 	DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest, callOptions ...callopt.Option) (r *openapi.DeleteAnnotationResponse, err error)
 }
@@ -48,6 +51,21 @@ type kObservabilityOpenAPIServiceClient struct {
 func (p *kObservabilityOpenAPIServiceClient) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest, callOptions ...callopt.Option) (r *openapi.IngestTracesResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.IngestTraces(ctx, req)
+}
+
+func (p *kObservabilityOpenAPIServiceClient) OtelIngestTraces(ctx context.Context, req *openapi.OtelIngestTracesRequest, callOptions ...callopt.Option) (r *openapi.OtelIngestTracesResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.OtelIngestTraces(ctx, req)
+}
+
+func (p *kObservabilityOpenAPIServiceClient) SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchTraceOApi(ctx, req)
+}
+
+func (p *kObservabilityOpenAPIServiceClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListSpansOApi(ctx, req)
 }
 
 func (p *kObservabilityOpenAPIServiceClient) CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error) {

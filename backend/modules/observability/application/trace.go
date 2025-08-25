@@ -4,9 +4,11 @@
 package application
 
 import (
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"context"
 	"strconv"
 
+	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -33,9 +35,10 @@ import (
 )
 
 const (
-	MaxSpanLength     = 100
-	MaxListSpansLimit = 1000
-	QueryLimitDefault = 100
+	MaxSpanLength         = 500
+	MaxListSpansLimit     = 1000
+	MaxOApiListSpansLimit = 200
+	QueryLimitDefault     = 100
 )
 
 type ITraceApplication interface {
@@ -46,6 +49,7 @@ func NewTraceApplication(
 	traceService service.ITraceService,
 	viewRepo repo.IViewRepo,
 	benefitService benefit.IBenefitService,
+	tenant tenant.ITenantProvider,
 	traceMetrics metrics.ITraceMetrics,
 	traceConfig config.ITraceConfig,
 	authService rpc.IAuthProvider,
@@ -59,6 +63,7 @@ func NewTraceApplication(
 		traceConfig:  traceConfig,
 		metrics:      traceMetrics,
 		benefit:      benefitService,
+		tenant:       tenant,
 		authSvc:      authService,
 		evalSvc:      evalService,
 		userSvc:      userService,
@@ -72,6 +77,7 @@ type TraceApplication struct {
 	traceConfig  config.ITraceConfig
 	metrics      metrics.ITraceMetrics
 	benefit      benefit.IBenefitService
+	tenant       tenant.ITenantProvider
 	authSvc      rpc.IAuthProvider
 	evalSvc      rpc.IEvaluatorRPCAdapter
 	userSvc      rpc.IUserProvider
@@ -364,6 +370,7 @@ func (t *TraceApplication) IngestTracesInner(ctx context.Context, req *trace.Ing
 				}
 			}
 			if err := t.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+				Tenant:           t.tenant.GetIngestTenant(ctx, spans),
 				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
 				WhichIsEnough:    benefitRes.WhichIsEnough,
 				CozeAccountId:    userId,
@@ -577,8 +584,8 @@ func (t *TraceApplication) getSystemViews(ctx context.Context) ([]*view.View, er
 			ID:           v.ID,
 			ViewName:     v.ViewName,
 			Filters:      v.Filters,
-			PlatformType: ptr.Of(common.PlatformTypeCozeloop),
-			SpanListType: ptr.Of(common.SpanListTypeRootSpan),
+			PlatformType: ptr.Of(lo.Ternary(v.PlatformType != "", v.PlatformType, common.PlatformTypeCozeloop)),
+			SpanListType: ptr.Of(lo.Ternary(v.SpanListType != "", v.SpanListType, common.SpanListTypeRootSpan)),
 			IsSystem:     true,
 		})
 	}

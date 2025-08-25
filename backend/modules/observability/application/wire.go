@@ -10,6 +10,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
@@ -40,6 +42,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
 )
@@ -55,8 +59,10 @@ var (
 		mq2.NewAnnotationProducerImpl,
 		file.NewFileRPCProvider,
 		NewTraceConfigLoader,
-		NewTraceQueryProcessorBuilder,
+		NewTraceProcessorBuilder,
 		obconfig.NewTraceConfigCenter,
+		tenant.NewTenantProvider,
+		workspace.NewWorkspaceProvider,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
@@ -85,7 +91,7 @@ var (
 	)
 )
 
-func NewTraceQueryProcessorBuilder(
+func NewTraceProcessorBuilder(
 	traceConfig config.ITraceConfig,
 	fileProvider rpc.IFileProvider,
 	benefitSvc benefit.IBenefitService,
@@ -113,6 +119,20 @@ func NewTraceQueryProcessorBuilder(
 		// batch get advance info processors
 		[]span_processor.Factory{
 			span_processor.NewCheckProcessorFactory(),
+		},
+		// ingest trace processors
+		[]span_processor.Factory{},
+		// search trace open api processors
+		[]span_processor.Factory{
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		// list trace open api processors
+		[]span_processor.Factory{
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		})
 }
 
@@ -140,6 +160,7 @@ func InitTraceApplication(
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
+	idgen idgen.IIDGenerator,
 	fileClient fileservice.Client,
 	benefit benefit.IBenefitService,
 	authClient authservice.Client,
@@ -157,6 +178,7 @@ func InitOpenAPIApplication(
 	fileClient fileservice.Client,
 	ckDb ck.Provider,
 	benefit benefit.IBenefitService,
+	limiterFactory limiter.IRateLimiterFactory,
 	authClient authservice.Client,
 	meter metrics.Meter,
 ) (IObservabilityOpenAPIApplication, error) {

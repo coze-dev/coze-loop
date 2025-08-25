@@ -749,13 +749,13 @@ func TestExperimentApplication_ListExperiments(t *testing.T) {
 				userInfoService:   mockUserInfoService,
 				evalTargetService: mockEvalTargetService,
 			}
-			
+
 			// Setup mock behavior
 			tt.mockSetup()
-			
+
 			// Execute test
 			gotResp, err := app.ListExperiments(context.Background(), tt.req)
-			
+
 			// 验证结果
 			if tt.wantErr {
 				assert.Error(t, err)

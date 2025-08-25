@@ -988,7 +988,7 @@ func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
 
 	mockOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 	mockRuntimeParam := entity.NewPromptRuntimeParam(nil)
-	
+
 	service := &EvalTargetServiceImpl{
 		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
 			entity.EvalTargetTypeLoopPrompt: mockOperator,
@@ -1025,18 +1025,18 @@ func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
 			wantErrContain: "PromptRuntimeParam json unmarshal fail",
 		},
 		{
-			name:         "unsupported_target_type",
-			targetType:   entity.EvalTargetType(999),
-			runtimeParam: `{"model_config":{"model_id":"123"}}`,
-			mockSetup:    func() {},
-			wantErr:      true,
+			name:           "unsupported_target_type",
+			targetType:     entity.EvalTargetType(999),
+			runtimeParam:   `{"model_config":{"model_id":"123"}}`,
+			mockSetup:      func() {},
+			wantErr:        true,
 			wantErrContain: "operator not found",
 		},
 		{
 			name:         "empty_runtime_param",
 			targetType:   entity.EvalTargetTypeLoopPrompt,
 			runtimeParam: "",
-			mockSetup:    func() {
+			mockSetup: func() {
 				// 空字符串直接返回 nil，不会调用 RuntimeParam()
 			},
 			wantErr: false, // 空字符串应该返回 nil，不是错误
@@ -1077,7 +1077,7 @@ func TestEvalTargetServiceImpl_sourceTargetOperator(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
-	
+
 	service := &EvalTargetServiceImpl{
 		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
 			entity.EvalTargetTypeLoopPrompt: mockOperator,
