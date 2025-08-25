@@ -143,6 +143,7 @@ func generateForTag(db *gorm.DB) {
 		gen.FieldType("change_log", "datatypes.JSON"),
 		gen.FieldType("version_num", "*int32"),
 		gen.FieldType("spec", "datatypes.JSON"),
+		gen.FieldType("content_type", "*string"),
 	)
 
 	tagValue := g.GenerateModelAs("tag_value", "TagValue",
@@ -193,7 +194,6 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_turn_result_filter_key_mapping",
 		"expt_turn_result_tag_ref",
 		"expt_turn_annotate_record_ref",
-		"annotate_record",
 		"expt_result_export_record",
 	}
 
@@ -209,6 +209,16 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		name := strings.Join(parts, "")
 		models = append(models, g.GenerateModelAs(tn, name))
 	}
+
+	models = append(models, g.GenerateModelAs("annotate_record", "AnnotateRecord",
+		gen.FieldType("score", "float64"),
+		gen.FieldType("annotate_data", "[]byte"),
+	))
+	models = append(models, g.GenerateModelAs("expt_turn_result_filter_key_mapping", "ExptTurnResultFilterKeyMapping",
+		gen.FieldType("created_at", "time.Time"),
+		gen.FieldType("created_by", "string"),
+	))
+
 	g.ApplyBasic(models...)
 	g.Execute()
 }

@@ -20,9 +20,9 @@ type ExptTurnResultFilterKeyMapping struct {
 	FromField string         `gorm:"column:from_field;type:varchar(255);not null;uniqueIndex:uniq_idx_space_expt_from_type,priority:4;comment:筛选项唯一键，评估器: evaluator_version_id，人工标准：tag_key_id" json:"from_field"` // 筛选项唯一键，评估器: evaluator_version_id，人工标准：tag_key_id
 	ToKey     string         `gorm:"column:to_key;type:varchar(255);not null;comment:ck侧的map key，评估器：key1 ~ key10，人工标准：key1 ~ key100" json:"to_key"`                                                               // ck侧的map key，评估器：key1 ~ key10，人工标准：key1 ~ key100
 	FieldType int32          `gorm:"column:field_type;type:int(11);not null;uniqueIndex:uniq_idx_space_expt_from_type,priority:3;comment:映射类型，Evaluator —— 1，人工标注—— 2" json:"field_type"`                          // 映射类型，Evaluator —— 1，人工标注—— 2
-	CreatedAt *time.Time     `gorm:"column:created_at;type:timestamp;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                                                    // 创建时间
+	CreatedAt time.Time      `gorm:"column:created_at;type:timestamp;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                                                    // 创建时间
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                                              // 删除时间
-	CreatedBy *string        `gorm:"column:created_by;type:varchar(255);comment:创建人" json:"created_by"`                                                                                                            // 创建人
+	CreatedBy string         `gorm:"column:created_by;type:varchar(255);comment:创建人" json:"created_by"`                                                                                                            // 创建人
 }
 
 // TableName ExptTurnResultFilterKeyMapping's table name
