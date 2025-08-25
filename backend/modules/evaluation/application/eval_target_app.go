@@ -59,9 +59,6 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 	if request.Param.SourceTargetID == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target id is nil"))
 	}
-	if request.Param.SourceTargetVersion == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target version is nil"))
-	}
 	if request.Param.EvalTargetType == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target type is nil"))
 	}

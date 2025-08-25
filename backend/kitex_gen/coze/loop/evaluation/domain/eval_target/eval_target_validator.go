@@ -63,6 +63,22 @@ func (p *EvalTargetContent) IsValid() error {
 			return fmt.Errorf("field CozeWorkflow not valid, %w", err)
 		}
 	}
+	if p.VolcengineAgent != nil {
+		if err := p.VolcengineAgent.IsValid(); err != nil {
+			return fmt.Errorf("field VolcengineAgent not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *VolcengineAgent) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *VolcengineAgentEndpoint) IsValid() error {
 	return nil
 }
 func (p *CozeWorkflow) IsValid() error {
