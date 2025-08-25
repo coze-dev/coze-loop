@@ -4,15 +4,12 @@
 package entity
 
 import (
-	"context"
 	"errors"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/json"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
@@ -51,7 +48,7 @@ type EvalTargetInputData struct {
 }
 
 // ValidateInputSchema  common valiate input schema
-func (e *EvalTargetInputData) ValidateInputSchema(ctx context.Context, inputSchema []*ArgsSchema) error {
+func (e *EvalTargetInputData) ValidateInputSchema(inputSchema []*ArgsSchema) error {
 	for fieldKey, content := range e.InputFields {
 		if content == nil {
 			continue
@@ -67,7 +64,7 @@ func (e *EvalTargetInputData) ValidateInputSchema(ctx context.Context, inputSche
 				return errorx.Wrapf(errors.New(""), "field %s content type is nil", fieldKey)
 			}
 			if !gslice.Contains(argsSchema.SupportContentTypes, gptr.Indirect(contentType)) {
-				logs.CtxInfo(ctx, "field %s content type %v not support", fieldKey, content.ContentType)
+				return errorx.New("field %s content type %v not support", fieldKey, content.ContentType)
 			}
 			if *contentType == ContentTypeText {
 				valid, err := json.ValidateJSONSchema(*argsSchema.JsonSchema, content.GetText())

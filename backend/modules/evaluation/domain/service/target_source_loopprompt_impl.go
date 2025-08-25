@@ -42,7 +42,7 @@ func (t *PromptSourceEvalTargetServiceImpl) EvalType() entity.EvalTargetType {
 }
 
 func (t *PromptSourceEvalTargetServiceImpl) ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error {
-	return input.ValidateInputSchema(ctx, inputSchema)
+	return input.ValidateInputSchema(inputSchema)
 }
 
 func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (evaluatorOutputData *entity.EvalTargetOutputData, status entity.EvalTargetRunStatus, err error) {
@@ -163,6 +163,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 		inputSchema = make([]*entity.ArgsSchema, 0)
 		for _, p := range prompt.PromptCommit.Detail.PromptTemplate.VariableDefs {
 			var jsonschema string
+			supportTypes := []entity.ContentType{entity.ContentTypeText}
 			switch gptr.Indirect(p.Type) {
 			case rpc.VariableTypeString:
 				jsonschema = consts.StringJsonSchema
@@ -184,12 +185,14 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 				jsonschema = consts.ArrayBooleanJsonSchema
 			case rpc.VariableTypeArrayObject:
 				jsonschema = consts.ArrayObjectJsonSchema
+			case rpc.VariableTypeMultiPart:
+				supportTypes = []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}
 			default:
 				jsonschema = consts.StringJsonSchema // 默认是string，例如placeholder，评测不严格规定placeholder的类型
 			}
 			inputSchema = append(inputSchema, &entity.ArgsSchema{
 				Key:                 p.Key,
-				SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
+				SupportContentTypes: supportTypes,
 				JsonSchema:          gptr.Of(jsonschema),
 			})
 		}

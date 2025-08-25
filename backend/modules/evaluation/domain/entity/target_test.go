@@ -3,7 +3,6 @@
 package entity
 
 import (
-	"context"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
@@ -48,7 +47,7 @@ func TestEvalTargetInputData_ValidateInputSchema(t *testing.T) {
 			Text:        gptr.Of("hi"),
 		},
 	}}
-	assert.NoError(t, input.ValidateInputSchema(context.Background(), []*ArgsSchema{
+	assert.NoError(t, input.ValidateInputSchema([]*ArgsSchema{
 		{
 			Key:                 gptr.Of("input"),
 			SupportContentTypes: []ContentType{ContentTypeText},
