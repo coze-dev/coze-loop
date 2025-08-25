@@ -55,7 +55,7 @@ trace_platform_span_handler_config:
 trace_tenant_cfg:
   tenant_table:
     cozeloop:
-      3d:
+      365d:
         span_table: "observability_spans"
   default_ingest_tenant: "cozeloop"
   tenants_support_annotation:
