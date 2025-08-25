@@ -188,7 +188,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 			}
 			inputSchema = append(inputSchema, &entity.ArgsSchema{
 				Key:                 p.Key,
-				SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
+				SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
 				JsonSchema:          gptr.Of(jsonschema),
 			})
 		}
