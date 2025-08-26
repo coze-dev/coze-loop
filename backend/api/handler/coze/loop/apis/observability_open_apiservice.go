@@ -10,8 +10,9 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilityopenapiservice"
-	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 )
 
 var observabilityOpenAPIClient observabilityopenapiservice.Client
@@ -25,47 +26,31 @@ func IngestTraces(ctx context.Context, c *app.RequestContext) {
 // SearchTraceOApi .
 // @router /v1/loop/traces/search [POST]
 func SearchTraceOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi1.SearchTraceOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi1.SearchTraceOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.SearchTraceOApi)
 }
 
 // ListSpansOApi .
 // @router /v1/loop/spans/search [POST]
 func ListSpansOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi1.ListSpansOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi1.ListSpansOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListSpansOApi)
 }
 
 // OtelIngestTraces .
 // @router /v1/loop/opentelemetry/v1/traces [POST]
 func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
 	var err error
-	var req openapi1.OtelIngestTracesRequest
-	err = c.BindAndValidate(&req)
+
+	c.Request.Body()
+	resp, err := observabilityOpenAPIClient.OtelIngestTraces(ctx, &openapi.OtelIngestTracesRequest{
+		Body:            c.Request.Body(),
+		ContentType:     c.Request.Header.Get("Content-Type"),
+		ContentEncoding: c.Request.Header.Get("Content-Encoding"),
+		WorkspaceID:     c.Request.Header.Get("cozeloop-workspace-id"),
+	})
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		_ = c.Error(err)
 		return
 	}
-
-	resp := new(openapi1.OtelIngestTracesResponse)
 
 	c.JSON(consts.StatusOK, resp)
 }
