@@ -488,3 +488,226 @@ func TestOpenAPIToolCallConfigDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenAPIContentTypeDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   entity.ContentType
+		want openapi.ContentType
+	}{
+		{
+			name: "text content type",
+			do:   entity.ContentTypeText,
+			want: openapi.ContentTypeText,
+		},
+		{
+			name: "multi part variable content type",
+			do:   entity.ContentTypeMultiPartVariable,
+			want: openapi.ContentTypeMultiPartVariable,
+		},
+		{
+			name: "image url content type - should default to text",
+			do:   entity.ContentTypeImageURL,
+			want: openapi.ContentTypeText,
+		},
+		{
+			name: "unknown content type - should default to text",
+			do:   entity.ContentType("unknown"),
+			want: openapi.ContentTypeText,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIContentTypeDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIContentPartDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ContentPart
+		want *openapi.ContentPart
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "text content part with text",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeText,
+				Text: ptr.Of("Hello world"),
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeText),
+				Text: ptr.Of("Hello world"),
+			},
+		},
+		{
+			name: "multi part variable content part",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeMultiPartVariable,
+				Text: ptr.Of("{{variable}}"),
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+				Text: ptr.Of("{{variable}}"),
+			},
+		},
+		{
+			name: "content part with nil text",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeText,
+				Text: nil,
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeText),
+				Text: nil,
+			},
+		},
+		{
+			name: "image url content part - type converts to text",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeImageURL,
+				Text: ptr.Of("image description"),
+				ImageURL: &entity.ImageURL{
+					URI: "https://example.com/image.jpg",
+					URL: "https://example.com/image.jpg",
+				},
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeText),
+				Text: ptr.Of("image description"),
+			},
+		},
+		{
+			name: "empty text content part",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeText,
+				Text: ptr.Of(""),
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeText),
+				Text: ptr.Of(""),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIContentPartDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   []*entity.ContentPart
+		want []*openapi.ContentPart
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "empty array",
+			do:   []*entity.ContentPart{},
+			want: []*openapi.ContentPart{},
+		},
+		{
+			name: "array with nil elements",
+			do: []*entity.ContentPart{
+				nil,
+				{
+					Type: entity.ContentTypeText,
+					Text: ptr.Of("Hello"),
+				},
+				nil,
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type: ptr.Of(openapi.ContentTypeText),
+					Text: ptr.Of("Hello"),
+				},
+			},
+		},
+		{
+			name: "normal array conversion",
+			do: []*entity.ContentPart{
+				{
+					Type: entity.ContentTypeText,
+					Text: ptr.Of("Hello"),
+				},
+				{
+					Type: entity.ContentTypeMultiPartVariable,
+					Text: ptr.Of("{{variable}}"),
+				},
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type: ptr.Of(openapi.ContentTypeText),
+					Text: ptr.Of("Hello"),
+				},
+				{
+					Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+					Text: ptr.Of("{{variable}}"),
+				},
+			},
+		},
+		{
+			name: "mixed types array",
+			do: []*entity.ContentPart{
+				{
+					Type: entity.ContentTypeText,
+					Text: ptr.Of("Text content"),
+				},
+				{
+					Type: entity.ContentTypeImageURL,
+					Text: ptr.Of("Image description"),
+					ImageURL: &entity.ImageURL{
+						URI: "https://example.com/image.jpg",
+						URL: "https://example.com/image.jpg",
+					},
+				},
+				{
+					Type: entity.ContentTypeMultiPartVariable,
+					Text: ptr.Of("{{user_input}}"),
+				},
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type: ptr.Of(openapi.ContentTypeText),
+					Text: ptr.Of("Text content"),
+				},
+				{
+					Type: ptr.Of(openapi.ContentTypeText),
+					Text: ptr.Of("Image description"),
+				},
+				{
+					Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+					Text: ptr.Of("{{user_input}}"),
+				},
+			},
+		},
+		{
+			name: "array with all nil elements",
+			do: []*entity.ContentPart{
+				nil,
+				nil,
+				nil,
+			},
+			want: []*openapi.ContentPart{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIBatchContentPartDO2DTO(tt.do))
+		})
+	}
+}
