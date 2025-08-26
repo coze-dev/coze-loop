@@ -247,7 +247,10 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 					if vardef != nil && value != nil && vardef.Type == VariableTypeMultiPart {
 						var filtered []*ContentPart
 						for _, pt := range value.MultiPartValues {
-							if pt != nil && ptr.From(pt.Text) != "" {
+							if pt == nil {
+								continue
+							}
+							if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
 								filtered = append(filtered, pt)
 							}
 						}
