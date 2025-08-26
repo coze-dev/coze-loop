@@ -1,10 +1,13 @@
-trace_mq_producer_config:
-  addr:
-    - "cozeloop-namesrv:9876"
-  timeout: 200
-  retry_times: 3
-  topic: "trace_ingestion_event"
-  producer_group: "trace_ingestion_event_pg"
+trace_ingest_tenant_config:
+  cozeloop:
+    max_span_length: 100
+    mq_producer:
+      addr:
+        - "cozeloop-namesrv:9876"
+      timeout: 200
+      retry_times: 3
+      topic: "trace_ingestion_event"
+      producer_group: "trace_ingestion_event_pg"
 
 annotation_mq_producer_config:
   addr:
