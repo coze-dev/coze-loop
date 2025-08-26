@@ -43,6 +43,50 @@ func (l *LocalPromptOpenAPIService) BatchGetPromptByPromptKey(ctx context.Contex
 	return result.GetSuccess(), nil
 }
 
+// ValidateTemplate 验证Jinja2模板语法
+func (l *LocalPromptOpenAPIService) ValidateTemplate(ctx context.Context, req *openapi.ValidateTemplateRequest, callOptions ...callopt.Option) (*openapi.ValidateTemplateResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceValidateTemplateArgs)
+		result := out.(*openapi.PromptOpenAPIServiceValidateTemplateResult)
+		resp, err := l.impl.ValidateTemplate(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceValidateTemplateArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceValidateTemplateResult{}
+	ctx = l.injectRPCInfo(ctx, "ValidateTemplate")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// PreviewTemplate 预览Jinja2模板渲染结果
+func (l *LocalPromptOpenAPIService) PreviewTemplate(ctx context.Context, req *openapi.PreviewTemplateRequest, callOptions ...callopt.Option) (*openapi.PreviewTemplateResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServicePreviewTemplateArgs)
+		result := out.(*openapi.PromptOpenAPIServicePreviewTemplateResult)
+		resp, err := l.impl.PreviewTemplate(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServicePreviewTemplateArgs{Req: req}
+	result := &openapi.PromptOpenAPIServicePreviewTemplateResult{}
+	ctx = l.injectRPCInfo(ctx, "PreviewTemplate")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalPromptOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

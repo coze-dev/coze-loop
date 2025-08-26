@@ -196,3 +196,104 @@ func (p *PromptOpenAPIApplicationImpl) AllowBySpace(ctx context.Context, workspa
 	}
 	return false
 }
+
+// ValidateTemplate 验证Jinja2模板语法
+func (p *PromptOpenAPIApplicationImpl) ValidateTemplate(ctx context.Context, req *openapi.ValidateTemplateRequest) (*openapi.ValidateTemplateResponse, error) {
+	r := openapi.NewValidateTemplateResponse()
+
+	// 参数验证
+	if req.GetTemplate() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("template参数不能为空"))
+	}
+
+	if req.GetTemplateType() != "jinja2" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("目前只支持jinja2模板类型"))
+	}
+
+	defer func() {
+		if err := recover(); err != nil {
+			logs.CtxError(ctx, "template validation panic, err=%v", err)
+			r.Code = 500
+			r.Msg = "Internal server error"
+			r.Data = &openapi.ValidateTemplateData{
+				IsValid:     false,
+				ErrorMessage: "Template validation failed due to internal error",
+			}
+		}
+	}()
+
+	// 创建Jinja2引擎进行语法验证
+	engine := entity.NewJinja2Engine()
+
+	// 使用空变量进行语法验证
+	_, err := engine.Execute(req.GetTemplate(), map[string]interface{}{})
+
+	r.Code = 200
+	r.Msg = "Success"
+	r.Data = &openapi.ValidateTemplateData{
+		IsValid: err == nil,
+	}
+
+	if err != nil {
+		r.Data.ErrorMessage = err.Error()
+		logs.CtxInfo(ctx, "template validation failed, template=%s, error=%v", req.GetTemplate(), err)
+	}
+
+	return r, nil
+}
+
+// PreviewTemplate 预览Jinja2模板渲染结果
+func (p *PromptOpenAPIApplicationImpl) PreviewTemplate(ctx context.Context, req *openapi.PreviewTemplateRequest) (*openapi.PreviewTemplateResponse, error) {
+	r := openapi.NewPreviewTemplateResponse()
+
+	// 参数验证
+	if req.GetTemplate() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("template参数不能为空"))
+	}
+
+	if req.GetTemplateType() != "jinja2" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("目前只支持jinja2模板类型"))
+	}
+
+	defer func() {
+		if err := recover(); err != nil {
+			logs.CtxError(ctx, "template preview panic, err=%v", err)
+			r.Code = 500
+			r.Msg = "Internal server error"
+			r.Data = &openapi.PreviewTemplateData{
+				Result: "Template preview failed due to internal error",
+			}
+		}
+	}()
+
+	// 创建Jinja2引擎进行模板渲染
+	engine := entity.NewJinja2Engine()
+
+	// 转换变量类型
+	variables := make(map[string]interface{})
+	for key, value := range req.GetVariables() {
+		variables[key] = value
+	}
+
+	// 执行模板渲染
+	result, err := engine.Execute(req.GetTemplate(), variables)
+
+	r.Code = 200
+	r.Msg = "Success"
+
+	if err != nil {
+		r.Code = 400
+		r.Msg = "Template execution failed"
+		r.Data = &openapi.PreviewTemplateData{
+			Result: fmt.Sprintf("Error: %s", err.Error()),
+		}
+		logs.CtxError(ctx, "template preview failed, template=%s, variables=%v, error=%v", req.GetTemplate(), variables, err)
+	} else {
+		r.Data = &openapi.PreviewTemplateData{
+			Result: result,
+		}
+		logs.CtxInfo(ctx, "template preview success, template=%s, variables=%v, result_length=%d", req.GetTemplate(), variables, len(result))
+	}
+
+	return r, nil
+}

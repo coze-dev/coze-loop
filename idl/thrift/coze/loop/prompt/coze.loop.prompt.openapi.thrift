@@ -5,6 +5,10 @@ include "./domain/prompt.thrift"
 
 service PromptOpenAPIService {
     BatchGetPromptByPromptKeyResponse BatchGetPromptByPromptKey(1: BatchGetPromptByPromptKeyRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/mget')
+
+    // 新增Jinja2模板相关API
+    ValidateTemplateResponse ValidateTemplate(1: ValidateTemplateRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/validate-template')
+    PreviewTemplateResponse PreviewTemplate(1: PreviewTemplateRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/preview-template')
 }
 
 struct BatchGetPromptByPromptKeyRequest {
@@ -54,6 +58,7 @@ struct PromptTemplate {
 
 typedef string TemplateType
 const TemplateType TemplateType_Normal = "normal"
+const TemplateType TemplateType_Jinja2 = "jinja2"  // 新增Jinja2模板类型
 
 typedef string ToolChoiceType
 const ToolChoiceType ToolChoiceType_Auto = "auto"
@@ -97,6 +102,47 @@ struct Function {
     1: optional string name
     2: optional string description
     3: optional string parameters
+}
+
+// 新增Jinja2模板相关结构
+struct ValidateTemplateRequest {
+    1: required string template (api.body="template")
+    2: required string template_type (api.body="template_type")
+
+    255: optional base.Base Base
+}
+
+struct ValidateTemplateResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ValidateTemplateData data
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ValidateTemplateData {
+    1: optional bool is_valid
+    2: optional string error_message
+}
+
+struct PreviewTemplateRequest {
+    1: required string template (api.body="template")
+    2: required string template_type (api.body="template_type")
+    3: required map<string, string> variables (api.body="variables")
+
+    255: optional base.Base Base
+}
+
+struct PreviewTemplateResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional PreviewTemplateData data
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct PreviewTemplateData {
+    1: optional string result
 }
 
 struct LLMConfig {

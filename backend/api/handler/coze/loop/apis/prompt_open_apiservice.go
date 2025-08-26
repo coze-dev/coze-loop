@@ -20,3 +20,15 @@ var promptOpenAPISvc promptopenapiservice.Client
 func BatchGetPromptByPromptKey(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, promptOpenAPISvc.BatchGetPromptByPromptKey)
 }
+
+// ValidateTemplate 验证Jinja2模板语法
+// @router /v1/loop/prompts/validate-template [POST]
+func ValidateTemplate(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.ValidateTemplate)
+}
+
+// PreviewTemplate 预览Jinja2模板渲染结果
+// @router /v1/loop/prompts/preview-template [POST]
+func PreviewTemplate(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.PreviewTemplate)
+}

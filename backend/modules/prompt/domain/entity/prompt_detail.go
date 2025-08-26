@@ -37,6 +37,7 @@ type TemplateType string
 
 const (
 	TemplateTypeNormal TemplateType = "normal"
+	TemplateTypeJinja2 TemplateType = "jinja2"  // 新增Jinja2模板类型
 )
 
 type Message struct {
@@ -231,9 +232,26 @@ func formatText(templateType TemplateType, templateStr string, defMap map[string
 				}
 				return 0, nil
 			}), nil
+	case TemplateTypeJinja2:
+		return formatJinja2Text(templateStr, defMap, valMap)
 	default:
 		return "", errorx.New("unknown template type")
 	}
+}
+
+// formatJinja2Text 处理Jinja2模板格式化
+func formatJinja2Text(templateStr string, defMap map[string]*VariableDef, valMap map[string]*VariableVal) (string, error) {
+	engine := NewJinja2Engine()
+
+	// 构建变量映射
+	variables := make(map[string]interface{})
+	for key, val := range valMap {
+		if defMap[key] != nil && val != nil {
+			variables[key] = ptr.From(val.Value)
+		}
+	}
+
+	return engine.Execute(templateStr, variables)
 }
 
 func (pd *PromptDetail) DeepEqual(other *PromptDetail) bool {
