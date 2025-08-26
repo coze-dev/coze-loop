@@ -1402,12 +1402,7 @@ func Test_formatMultiPart(t *testing.T) {
 					},
 				},
 			},
-			expected: []*ContentPart{
-				{
-					Type: ContentTypeMultiPartVariable,
-					Text: ptr.Of(""),
-				},
-			},
+			expected: nil,
 		},
 		{
 			name: "multipart variable with nil text",
@@ -1434,12 +1429,7 @@ func Test_formatMultiPart(t *testing.T) {
 					},
 				},
 			},
-			expected: []*ContentPart{
-				{
-					Type: ContentTypeMultiPartVariable,
-					Text: nil,
-				},
-			},
+			expected: nil,
 		},
 		{
 			name: "multipart variable not in definition map",

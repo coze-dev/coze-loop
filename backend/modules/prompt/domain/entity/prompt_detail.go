@@ -245,18 +245,7 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 			if vardef, ok := defMap[multiPartVariableKey]; ok {
 				if value, ok := valMap[multiPartVariableKey]; ok {
 					if vardef != nil && value != nil && vardef.Type == VariableTypeMultiPart {
-						var filtered []*ContentPart
-						for _, pt := range value.MultiPartValues {
-							if pt == nil {
-								continue
-							}
-							if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
-								filtered = append(filtered, pt)
-							}
-						}
-						if len(filtered) > 0 {
-							formatedParts = append(formatedParts, filtered...)
-						}
+						formatedParts = append(formatedParts, value.MultiPartValues...)
 					}
 				}
 			}
@@ -264,7 +253,16 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 			formatedParts = append(formatedParts, part)
 		}
 	}
-	return formatedParts
+	var filtered []*ContentPart
+	for _, pt := range formatedParts {
+		if pt == nil {
+			continue
+		}
+		if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
+			filtered = append(filtered, pt)
+		}
+	}
+	return filtered
 }
 
 func formatText(templateType TemplateType, templateStr string, defMap map[string]*VariableDef, valMap map[string]*VariableVal) (string, error) {
