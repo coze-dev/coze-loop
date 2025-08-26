@@ -245,7 +245,15 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 			if vardef, ok := defMap[multiPartVariableKey]; ok {
 				if value, ok := valMap[multiPartVariableKey]; ok {
 					if vardef != nil && value != nil && vardef.Type == VariableTypeMultiPart {
-						formatedParts = append(formatedParts, value.MultiPartValues...)
+						var filtered []*ContentPart
+						for _, filterPart := range value.MultiPartValues {
+							if filterPart != nil && ptr.From(part.Text) != "" {
+								filtered = append(filtered, filterPart)
+							}
+						}
+						if len(filtered) > 0 {
+							formatedParts = append(formatedParts, filtered...)
+						}
 					}
 				}
 			}
