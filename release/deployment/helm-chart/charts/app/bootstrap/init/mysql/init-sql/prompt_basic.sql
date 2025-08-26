@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `prompt_basic`
     `description`        varchar(1024) COLLATE utf8mb4_bin NOT NULL DEFAULT '' COMMENT '描述',
     `created_by`         varchar(128) COLLATE utf8mb4_bin  NOT NULL DEFAULT '' COMMENT '创建人',
     `updated_by`         varchar(128) COLLATE utf8mb4_bin  NOT NULL DEFAULT '' COMMENT '更新人',
-    `commit_status`      tinyint                           NOT NULL DEFAULT '0' COMMENT '提交状态',
+--    `commit_status`      tinyint                           NOT NULL DEFAULT '0' COMMENT '提交状态',
     `latest_version`     varchar(128) COLLATE utf8mb4_bin  NOT NULL DEFAULT '' COMMENT '最新版本',
     `latest_commit_time` datetime                                   DEFAULT NULL COMMENT '最新提交时间',
     `created_at`         datetime                          NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
