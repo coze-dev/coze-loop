@@ -42,6 +42,16 @@ const (
 	FieldTypeDouble = "double"
 
 	FieldTypeBool = "bool"
+
+	TaskFieldNameTaskStatus = "task_status"
+
+	TaskFieldNameTaskName = "task_name"
+
+	TaskFieldNameTaskType = "task_type"
+
+	TaskFieldNameSampleRate = "sample_rate"
+
+	TaskFieldNameCreatedBy = "created_by"
 )
 
 type QueryType = string
@@ -49,6 +59,8 @@ type QueryType = string
 type QueryRelation = string
 
 type FieldType = string
+
+type TaskFieldName = string
 
 type FilterFields struct {
 	QueryAndOr   *QueryRelation `thrift:"query_and_or,1,optional" frugal:"1,optional,string" form:"query_and_or" json:"query_and_or,omitempty" query:"query_and_or"`
@@ -1299,6 +1311,861 @@ func (p *FieldOptions) Field4DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+
+type TaskFilterFields struct {
+	QueryAndOr   *QueryRelation     `thrift:"query_and_or,1,optional" frugal:"1,optional,string" form:"query_and_or" json:"query_and_or,omitempty" query:"query_and_or"`
+	FilterFields []*TaskFilterField `thrift:"filter_fields,2,required" frugal:"2,required,list<TaskFilterField>" form:"filter_fields,required" json:"filter_fields,required" query:"filter_fields,required"`
+}
+
+func NewTaskFilterFields() *TaskFilterFields {
+	return &TaskFilterFields{}
+}
+
+func (p *TaskFilterFields) InitDefault() {
+}
+
+var TaskFilterFields_QueryAndOr_DEFAULT QueryRelation
+
+func (p *TaskFilterFields) GetQueryAndOr() (v QueryRelation) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetQueryAndOr() {
+		return TaskFilterFields_QueryAndOr_DEFAULT
+	}
+	return *p.QueryAndOr
+}
+
+func (p *TaskFilterFields) GetFilterFields() (v []*TaskFilterField) {
+	if p != nil {
+		return p.FilterFields
+	}
+	return
+}
+func (p *TaskFilterFields) SetQueryAndOr(val *QueryRelation) {
+	p.QueryAndOr = val
+}
+func (p *TaskFilterFields) SetFilterFields(val []*TaskFilterField) {
+	p.FilterFields = val
+}
+
+var fieldIDToName_TaskFilterFields = map[int16]string{
+	1: "query_and_or",
+	2: "filter_fields",
+}
+
+func (p *TaskFilterFields) IsSetQueryAndOr() bool {
+	return p.QueryAndOr != nil
+}
+
+func (p *TaskFilterFields) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetFilterFields bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetFilterFields = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetFilterFields {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TaskFilterFields[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TaskFilterFields[fieldId]))
+}
+
+func (p *TaskFilterFields) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *QueryRelation
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.QueryAndOr = _field
+	return nil
+}
+func (p *TaskFilterFields) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*TaskFilterField, 0, size)
+	values := make([]TaskFilterField, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FilterFields = _field
+	return nil
+}
+
+func (p *TaskFilterFields) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TaskFilterFields"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TaskFilterFields) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryAndOr() {
+		if err = oprot.WriteFieldBegin("query_and_or", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.QueryAndOr); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TaskFilterFields) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("filter_fields", thrift.LIST, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FilterFields)); err != nil {
+		return err
+	}
+	for _, v := range p.FilterFields {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TaskFilterFields) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TaskFilterFields(%+v)", *p)
+
+}
+
+func (p *TaskFilterFields) DeepEqual(ano *TaskFilterFields) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.QueryAndOr) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FilterFields) {
+		return false
+	}
+	return true
+}
+
+func (p *TaskFilterFields) Field1DeepEqual(src *QueryRelation) bool {
+
+	if p.QueryAndOr == src {
+		return true
+	} else if p.QueryAndOr == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.QueryAndOr, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TaskFilterFields) Field2DeepEqual(src []*TaskFilterField) bool {
+
+	if len(p.FilterFields) != len(src) {
+		return false
+	}
+	for i, v := range p.FilterFields {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+type TaskFilterField struct {
+	FieldName  *TaskFieldName   `thrift:"field_name,1,optional" frugal:"1,optional,string" form:"field_name" json:"field_name,omitempty" query:"field_name"`
+	FieldType  *FieldType       `thrift:"field_type,2,optional" frugal:"2,optional,string" form:"field_type" json:"field_type,omitempty" query:"field_type"`
+	Values     []string         `thrift:"values,3,optional" frugal:"3,optional,list<string>" form:"values" json:"values,omitempty" query:"values"`
+	QueryType  *QueryType       `thrift:"query_type,4,optional" frugal:"4,optional,string" form:"query_type" json:"query_type,omitempty" query:"query_type"`
+	QueryAndOr *QueryRelation   `thrift:"query_and_or,5,optional" frugal:"5,optional,string" form:"query_and_or" json:"query_and_or,omitempty" query:"query_and_or"`
+	SubFilter  *TaskFilterField `thrift:"sub_filter,6,optional" frugal:"6,optional,TaskFilterField" form:"sub_filter" json:"sub_filter,omitempty" query:"sub_filter"`
+}
+
+func NewTaskFilterField() *TaskFilterField {
+	return &TaskFilterField{}
+}
+
+func (p *TaskFilterField) InitDefault() {
+}
+
+var TaskFilterField_FieldName_DEFAULT TaskFieldName
+
+func (p *TaskFilterField) GetFieldName() (v TaskFieldName) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldName() {
+		return TaskFilterField_FieldName_DEFAULT
+	}
+	return *p.FieldName
+}
+
+var TaskFilterField_FieldType_DEFAULT FieldType
+
+func (p *TaskFilterField) GetFieldType() (v FieldType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldType() {
+		return TaskFilterField_FieldType_DEFAULT
+	}
+	return *p.FieldType
+}
+
+var TaskFilterField_Values_DEFAULT []string
+
+func (p *TaskFilterField) GetValues() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetValues() {
+		return TaskFilterField_Values_DEFAULT
+	}
+	return p.Values
+}
+
+var TaskFilterField_QueryType_DEFAULT QueryType
+
+func (p *TaskFilterField) GetQueryType() (v QueryType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetQueryType() {
+		return TaskFilterField_QueryType_DEFAULT
+	}
+	return *p.QueryType
+}
+
+var TaskFilterField_QueryAndOr_DEFAULT QueryRelation
+
+func (p *TaskFilterField) GetQueryAndOr() (v QueryRelation) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetQueryAndOr() {
+		return TaskFilterField_QueryAndOr_DEFAULT
+	}
+	return *p.QueryAndOr
+}
+
+var TaskFilterField_SubFilter_DEFAULT *TaskFilterField
+
+func (p *TaskFilterField) GetSubFilter() (v *TaskFilterField) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSubFilter() {
+		return TaskFilterField_SubFilter_DEFAULT
+	}
+	return p.SubFilter
+}
+func (p *TaskFilterField) SetFieldName(val *TaskFieldName) {
+	p.FieldName = val
+}
+func (p *TaskFilterField) SetFieldType(val *FieldType) {
+	p.FieldType = val
+}
+func (p *TaskFilterField) SetValues(val []string) {
+	p.Values = val
+}
+func (p *TaskFilterField) SetQueryType(val *QueryType) {
+	p.QueryType = val
+}
+func (p *TaskFilterField) SetQueryAndOr(val *QueryRelation) {
+	p.QueryAndOr = val
+}
+func (p *TaskFilterField) SetSubFilter(val *TaskFilterField) {
+	p.SubFilter = val
+}
+
+var fieldIDToName_TaskFilterField = map[int16]string{
+	1: "field_name",
+	2: "field_type",
+	3: "values",
+	4: "query_type",
+	5: "query_and_or",
+	6: "sub_filter",
+}
+
+func (p *TaskFilterField) IsSetFieldName() bool {
+	return p.FieldName != nil
+}
+
+func (p *TaskFilterField) IsSetFieldType() bool {
+	return p.FieldType != nil
+}
+
+func (p *TaskFilterField) IsSetValues() bool {
+	return p.Values != nil
+}
+
+func (p *TaskFilterField) IsSetQueryType() bool {
+	return p.QueryType != nil
+}
+
+func (p *TaskFilterField) IsSetQueryAndOr() bool {
+	return p.QueryAndOr != nil
+}
+
+func (p *TaskFilterField) IsSetSubFilter() bool {
+	return p.SubFilter != nil
+}
+
+func (p *TaskFilterField) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TaskFilterField[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TaskFilterField) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *TaskFieldName
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FieldName = _field
+	return nil
+}
+func (p *TaskFilterField) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *FieldType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FieldType = _field
+	return nil
+}
+func (p *TaskFilterField) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Values = _field
+	return nil
+}
+func (p *TaskFilterField) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *QueryType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.QueryType = _field
+	return nil
+}
+func (p *TaskFilterField) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *QueryRelation
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.QueryAndOr = _field
+	return nil
+}
+func (p *TaskFilterField) ReadField6(iprot thrift.TProtocol) error {
+	_field := NewTaskFilterField()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SubFilter = _field
+	return nil
+}
+
+func (p *TaskFilterField) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TaskFilterField"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TaskFilterField) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldName() {
+		if err = oprot.WriteFieldBegin("field_name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FieldName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TaskFilterField) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldType() {
+		if err = oprot.WriteFieldBegin("field_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FieldType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *TaskFilterField) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValues() {
+		if err = oprot.WriteFieldBegin("values", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.Values)); err != nil {
+			return err
+		}
+		for _, v := range p.Values {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *TaskFilterField) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryType() {
+		if err = oprot.WriteFieldBegin("query_type", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.QueryType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *TaskFilterField) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryAndOr() {
+		if err = oprot.WriteFieldBegin("query_and_or", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.QueryAndOr); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *TaskFilterField) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSubFilter() {
+		if err = oprot.WriteFieldBegin("sub_filter", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SubFilter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TaskFilterField) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TaskFilterField(%+v)", *p)
+
+}
+
+func (p *TaskFilterField) DeepEqual(ano *TaskFilterField) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.FieldName) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FieldType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Values) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.QueryType) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.QueryAndOr) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.SubFilter) {
+		return false
+	}
+	return true
+}
+
+func (p *TaskFilterField) Field1DeepEqual(src *TaskFieldName) bool {
+
+	if p.FieldName == src {
+		return true
+	} else if p.FieldName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FieldName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TaskFilterField) Field2DeepEqual(src *FieldType) bool {
+
+	if p.FieldType == src {
+		return true
+	} else if p.FieldType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FieldType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TaskFilterField) Field3DeepEqual(src []string) bool {
+
+	if len(p.Values) != len(src) {
+		return false
+	}
+	for i, v := range p.Values {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *TaskFilterField) Field4DeepEqual(src *QueryType) bool {
+
+	if p.QueryType == src {
+		return true
+	} else if p.QueryType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.QueryType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TaskFilterField) Field5DeepEqual(src *QueryRelation) bool {
+
+	if p.QueryAndOr == src {
+		return true
+	} else if p.QueryAndOr == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.QueryAndOr, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TaskFilterField) Field6DeepEqual(src *TaskFilterField) bool {
+
+	if !p.SubFilter.DeepEqual(src) {
+		return false
 	}
 	return true
 }

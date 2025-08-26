@@ -24,6 +24,14 @@ type Client interface {
 	UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.UpdateManualAnnotationResponse, err error)
 	DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.DeleteManualAnnotationResponse, err error)
 	ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error)
+	ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error)
+	ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationEvaluatorsResponse, err error)
+	ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest, callOptions ...callopt.Option) (r *trace.ExtractSpanInfoResponse, err error)
+	CheckTaskName(ctx context.Context, req *trace.CheckTaskNameRequest, callOptions ...callopt.Option) (r *trace.CheckTaskNameResponse, err error)
+	CreateTask(ctx context.Context, req *trace.CreateTaskRequest, callOptions ...callopt.Option) (r *trace.CreateTaskResponse, err error)
+	UpdateTask(ctx context.Context, req *trace.UpdateTaskRequest, callOptions ...callopt.Option) (r *trace.UpdateTaskResponse, err error)
+	ListTasks(ctx context.Context, req *trace.ListTasksRequest, callOptions ...callopt.Option) (r *trace.ListTasksResponse, err error)
+	GetTask(ctx context.Context, req *trace.GetTaskRequest, callOptions ...callopt.Option) (r *trace.GetTaskResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -118,4 +126,44 @@ func (p *kTraceServiceClient) DeleteManualAnnotation(ctx context.Context, req *t
 func (p *kTraceServiceClient) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListAnnotations(ctx, req)
+}
+
+func (p *kTraceServiceClient) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ChangeEvaluatorScore(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationEvaluatorsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListAnnotationEvaluators(ctx, req)
+}
+
+func (p *kTraceServiceClient) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest, callOptions ...callopt.Option) (r *trace.ExtractSpanInfoResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ExtractSpanInfo(ctx, req)
+}
+
+func (p *kTraceServiceClient) CheckTaskName(ctx context.Context, req *trace.CheckTaskNameRequest, callOptions ...callopt.Option) (r *trace.CheckTaskNameResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CheckTaskName(ctx, req)
+}
+
+func (p *kTraceServiceClient) CreateTask(ctx context.Context, req *trace.CreateTaskRequest, callOptions ...callopt.Option) (r *trace.CreateTaskResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateTask(ctx, req)
+}
+
+func (p *kTraceServiceClient) UpdateTask(ctx context.Context, req *trace.UpdateTaskRequest, callOptions ...callopt.Option) (r *trace.UpdateTaskResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateTask(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListTasks(ctx context.Context, req *trace.ListTasksRequest, callOptions ...callopt.Option) (r *trace.ListTasksResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListTasks(ctx, req)
+}
+
+func (p *kTraceServiceClient) GetTask(ctx context.Context, req *trace.GetTaskRequest, callOptions ...callopt.Option) (r *trace.GetTaskResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetTask(ctx, req)
 }

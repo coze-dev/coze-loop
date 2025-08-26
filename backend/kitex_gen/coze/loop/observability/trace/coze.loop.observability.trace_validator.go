@@ -298,3 +298,241 @@ func (p *ListAnnotationsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ChangeEvaluatorScoreRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.EvaluatorRecordID <= int64(0) {
+		return fmt.Errorf("field EvaluatorRecordID gt rule failed, current value: %v", p.EvaluatorRecordID)
+	}
+	if len(p.SpanID) < int(1) {
+		return fmt.Errorf("field SpanID min_len rule failed, current value: %d", len(p.SpanID))
+	}
+	if p.StartTime <= int64(0) {
+		return fmt.Errorf("field StartTime gt rule failed, current value: %v", p.StartTime)
+	}
+	if p.Correction != nil {
+		if err := p.Correction.IsValid(); err != nil {
+			return fmt.Errorf("field Correction not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ChangeEvaluatorScoreResponse) IsValid() error {
+	if p.Annotation != nil {
+		if err := p.Annotation.IsValid(); err != nil {
+			return fmt.Errorf("field Annotation not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AnnotationEvaluator) IsValid() error {
+	return nil
+}
+func (p *ListAnnotationEvaluatorsRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListAnnotationEvaluatorsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExtractSpanInfoRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.TraceID) < int(1) {
+		return fmt.Errorf("field TraceID min_len rule failed, current value: %d", len(p.TraceID))
+	}
+	if len(p.SpanIds) < int(1) {
+		return fmt.Errorf("field SpanIds MinLen rule failed, current value: %v", p.SpanIds)
+	}
+	if len(p.SpanIds) > int(500) {
+		return fmt.Errorf("field SpanIds MaxLen rule failed, current value: %v", p.SpanIds)
+	}
+	if p.StartTime != nil {
+		if *p.StartTime <= int64(0) {
+			return fmt.Errorf("field StartTime gt rule failed, current value: %v", *p.StartTime)
+		}
+	}
+	if p.EndTime != nil {
+		if *p.EndTime <= int64(0) {
+			return fmt.Errorf("field EndTime gt rule failed, current value: %v", *p.EndTime)
+		}
+	}
+	if len(p.FieldMappings) < int(1) {
+		return fmt.Errorf("field FieldMappings MinLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if len(p.FieldMappings) > int(100) {
+		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *FieldData) IsValid() error {
+	if p.Content != nil {
+		if err := p.Content.IsValid(); err != nil {
+			return fmt.Errorf("field Content not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Content) IsValid() error {
+	if p.Image != nil {
+		if err := p.Image.IsValid(); err != nil {
+			return fmt.Errorf("field Image not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Image) IsValid() error {
+	return nil
+}
+func (p *SpanInfo) IsValid() error {
+	return nil
+}
+func (p *ExtractSpanInfoResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateTaskRequest) IsValid() error {
+	if p.Task != nil {
+		if err := p.Task.IsValid(); err != nil {
+			return fmt.Errorf("field Task not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateTaskResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateTaskRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.EffectiveTime != nil {
+		if err := p.EffectiveTime.IsValid(); err != nil {
+			return fmt.Errorf("field EffectiveTime not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateTaskResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListTasksRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.TaskFilters != nil {
+		if err := p.TaskFilters.IsValid(); err != nil {
+			return fmt.Errorf("field TaskFilters not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListTasksResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetTaskRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetTaskResponse) IsValid() error {
+	if p.Task != nil {
+		if err := p.Task.IsValid(); err != nil {
+			return fmt.Errorf("field Task not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CheckTaskNameRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CheckTaskNameResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

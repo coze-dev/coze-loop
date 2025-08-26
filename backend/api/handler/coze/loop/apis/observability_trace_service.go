@@ -9,7 +9,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilitytraceservice"
+	trace "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 )
 
 var observabilityClient observabilitytraceservice.Client
@@ -84,4 +86,132 @@ func DeleteManualAnnotation(ctx context.Context, c *app.RequestContext) {
 // @router /api/observability/v1/annotations/list [POST]
 func ListAnnotations(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListAnnotations)
+}
+
+// ChangeEvaluatorScore .
+// @router /api/observability/v1/annotations/change_eEvaluator_sScore [POST]
+func ChangeEvaluatorScore(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ChangeEvaluatorScoreRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ChangeEvaluatorScoreResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListAnnotationEvaluators .
+// @router /api/observability/v1/annotations/lis_annotation_evaluators [POST]
+func ListAnnotationEvaluators(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ListAnnotationEvaluatorsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ListAnnotationEvaluatorsResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ExtractSpanInfo .
+// @router /api/observability/v1/traces/extract_span_info [POST]
+func ExtractSpanInfo(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ExtractSpanInfoRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ExtractSpanInfoResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// CheckTaskName .
+// @router /api/observability/v1/tasks/check_name [GET]
+func CheckTaskName(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.CheckTaskNameRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.CheckTaskNameResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// CreateTask .
+// @router /api/observability/v1/tasks [POST]
+func CreateTask(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.CreateTaskRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.CreateTaskResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// UpdateTask .
+// @router /api/observability/v1/tasks/:task_id [PUT]
+func UpdateTask(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.UpdateTaskRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.UpdateTaskResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListTasks .
+// @router /api/observability/v1/tasks/list [POST]
+func ListTasks(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ListTasksRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ListTasksResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetTask .
+// @router /api/observability/v1/tasks/:task_id [GET]
+func GetTask(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.GetTaskRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.GetTaskResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

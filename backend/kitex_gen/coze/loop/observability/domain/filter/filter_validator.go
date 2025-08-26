@@ -35,3 +35,14 @@ func (p *FilterField) IsValid() error {
 func (p *FieldOptions) IsValid() error {
 	return nil
 }
+func (p *TaskFilterFields) IsValid() error {
+	return nil
+}
+func (p *TaskFilterField) IsValid() error {
+	if p.SubFilter != nil {
+		if err := p.SubFilter.IsValid(); err != nil {
+			return fmt.Errorf("field SubFilter not valid, %w", err)
+		}
+	}
+	return nil
+}
