@@ -14,6 +14,9 @@ export {
   PromptMessage,
 } from './prompt-editor';
 
+// 新增 Jinja2 相关导出
+export { TemplatePreview } from './template-preview';
+
 // 开源版模型选择器
 export { PopoverModelConfigEditor } from './model-config-editor-community/popover-model-config-editor';
 export { PopoverModelConfigEditorQuery } from './model-config-editor-community/popover-model-config-editor-query';

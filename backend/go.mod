@@ -44,6 +44,7 @@ require (
 	github.com/dolthub/vitess v0.0.0-20240228192915-d55088cef56a
 	github.com/expr-lang/expr v1.17.0
 	github.com/fatih/structs v1.1.0
+	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/getkin/kin-openapi v0.118.0
 	github.com/go-playground/validator/v10 v10.20.0
