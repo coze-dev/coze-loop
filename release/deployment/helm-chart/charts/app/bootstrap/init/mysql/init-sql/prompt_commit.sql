@@ -28,9 +28,9 @@ CREATE TABLE `prompt_commit`
     COLLATE = utf8mb4_general_ci COMMENT =''Commit表'';
 ';
 
-CALL UniversalTableManager(@table_name, @create_table_sql, 'ext_info');
+CALL CozeLoopTableManager(@table_name, @create_table_sql, 'ext_info');
 
 SELECT
     CONCAT('Table compatibility check completed for: ', @table_name) as status,
     @table_name as table_name,
-    'UniversalTableManager executed successfully' as result;
+    'CozeLoopTableManager executed successfully' as result;
