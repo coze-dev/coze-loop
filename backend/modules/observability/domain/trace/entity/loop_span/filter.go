@@ -182,6 +182,7 @@ type FilterField struct {
 	QueryType  *QueryTypeEnum  `mapstructure:"query_type" json:"query_type"`
 	QueryAndOr *QueryAndOrEnum `mapstructure:"query_and_or" json:"query_and_or"`
 	SubFilter  *FilterFields   `mapstructure:"sub_filter" json:"sub_filter"`
+	IsSystem   bool            `mapstructure:"is_system" json:"is_system"`
 }
 
 func (f *FilterField) Validate() error {

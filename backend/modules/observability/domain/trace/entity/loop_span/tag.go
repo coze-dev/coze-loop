@@ -4,13 +4,11 @@
 package loop_span
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const (
@@ -35,8 +33,6 @@ type TagValue struct {
 	VDouble *float64
 	VStr    *string
 }
-
-type TagSlice []*Tag
 
 func (p TagValueType) String() string {
 	switch p {
@@ -184,69 +180,6 @@ func (t Tag) GetStringValue() (string, error) {
 		tagStr = strconv.FormatFloat(tagF64, 'f', -1, 64)
 	}
 	return tagStr, nil
-}
-
-func (t Tag) getValue(f *Field) (any, error) {
-	var val any
-	var err error
-	valueType, err := f.ValueType()
-	if err != nil {
-		return nil, err
-	}
-	switch valueType {
-	case TagValueTypeBool:
-		val, err = t.getBool()
-	case TagValueTypeInt64:
-		val, err = t.getI64()
-	case TagValueTypeFloat64:
-		val, err = t.getF64()
-	case TagValueTypeString:
-		val, err = t.getString()
-	default:
-		return nil, fmt.Errorf("getValue,unexpected field type, kind=%v, name=%s", f.Kind(), f.Name())
-	}
-	return val, err
-}
-
-func (t Tag) saveToField(f *Field) error {
-	if f == nil {
-		return fmt.Errorf("f is a nil pointer")
-	}
-	val, err := t.getValue(f)
-	if err != nil {
-		return err
-	}
-	if err = f.Set(val); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (ts TagSlice) toAttr(ctx context.Context, attr any) error {
-	loopTagMap := make(map[string]Tag)
-	for _, tag := range ts {
-		if tag == nil {
-			continue
-		}
-		loopTagMap[tag.GetKey()] = *tag
-	}
-	s := NewStruct(attr)
-	fields := s.Fields()
-	for _, f := range fields {
-		jsonAlias, err := f.TagJson()
-		if err != nil {
-			return err
-		}
-		loopTag, ok := loopTagMap[jsonAlias]
-		if !ok {
-			continue
-		}
-		if err = loopTag.saveToField(f); err != nil {
-			logs.CtxWarn(ctx, "tag save to field err: %v", err)
-			return err
-		}
-	}
-	return nil
 }
 
 func NewStringTag(key, val string) *Tag {

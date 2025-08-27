@@ -211,16 +211,9 @@ func (s *Span) getTags() []*Tag {
 }
 
 func (s *Span) getTokens(ctx context.Context) (inputTokens, outputTokens int64, err error) {
-	type Tokens struct {
-		Input  int64 `json:"input_tokens"`
-		Output int64 `json:"output_tokens"`
-	}
-	tokens := new(Tokens)
-	tags := s.getTags()
-	if err := TagSlice(tags).toAttr(ctx, tokens); err != nil {
-		return -1, -1, err
-	}
-	return tokens.Input, tokens.Output, nil
+	inputToken := s.TagsLong[SpanFieldInputTokens]
+	outputToken := s.TagsLong[SpanFieldOutputTokens]
+	return inputToken, outputToken, nil
 }
 
 // filter使用, 当前只支持特定参数,后续有需要可拓展到其他参数
