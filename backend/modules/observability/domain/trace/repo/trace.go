@@ -62,9 +62,9 @@ type ListAnnotationsParam struct {
 }
 
 type InsertAnnotationParam struct {
-	Tenant     string
-	TTL        loop_span.TTL
-	Annotation *loop_span.Annotation
+	Tenant      string
+	TTL         loop_span.TTL
+	Annotations []*loop_span.Annotation
 }
 
 //go:generate mockgen -destination=mocks/trace.go -package=mocks . ITraceRepo
@@ -74,5 +74,5 @@ type ITraceRepo interface {
 	GetTrace(context.Context, *GetTraceParam) (loop_span.SpanList, error)
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)
 	GetAnnotation(context.Context, *GetAnnotationParam) (*loop_span.Annotation, error)
-	InsertAnnotation(context.Context, *InsertAnnotationParam) error
+	InsertAnnotations(context.Context, *InsertAnnotationParam) error
 }

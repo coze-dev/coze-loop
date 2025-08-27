@@ -118,6 +118,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ValidateDatasetItems": kitex.NewMethodInfo(
+		validateDatasetItemsHandler,
+		newDatasetServiceValidateDatasetItemsArgs,
+		newDatasetServiceValidateDatasetItemsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"BatchCreateDatasetItems": kitex.NewMethodInfo(
 		batchCreateDatasetItemsHandler,
 		newDatasetServiceBatchCreateDatasetItemsArgs,
@@ -506,6 +513,25 @@ func newDatasetServiceUpdateDatasetSchemaResult() interface{} {
 	return dataset.NewDatasetServiceUpdateDatasetSchemaResult()
 }
 
+func validateDatasetItemsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*dataset.DatasetServiceValidateDatasetItemsArgs)
+	realResult := result.(*dataset.DatasetServiceValidateDatasetItemsResult)
+	success, err := handler.(dataset.DatasetService).ValidateDatasetItems(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newDatasetServiceValidateDatasetItemsArgs() interface{} {
+	return dataset.NewDatasetServiceValidateDatasetItemsArgs()
+}
+
+func newDatasetServiceValidateDatasetItemsResult() interface{} {
+	return dataset.NewDatasetServiceValidateDatasetItemsResult()
+}
+
 func batchCreateDatasetItemsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*dataset.DatasetServiceBatchCreateDatasetItemsArgs)
 	realResult := result.(*dataset.DatasetServiceBatchCreateDatasetItemsResult)
@@ -853,6 +879,16 @@ func (p *kClient) UpdateDatasetSchema(ctx context.Context, req *dataset.UpdateDa
 	_args.Req = req
 	var _result dataset.DatasetServiceUpdateDatasetSchemaResult
 	if err = p.c.Call(ctx, "UpdateDatasetSchema", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ValidateDatasetItems(ctx context.Context, req *dataset.ValidateDatasetItemsReq) (r *dataset.ValidateDatasetItemsResp, err error) {
+	var _args dataset.DatasetServiceValidateDatasetItemsArgs
+	_args.Req = req
+	var _result dataset.DatasetServiceValidateDatasetItemsResult
+	if err = p.c.Call(ctx, "ValidateDatasetItems", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

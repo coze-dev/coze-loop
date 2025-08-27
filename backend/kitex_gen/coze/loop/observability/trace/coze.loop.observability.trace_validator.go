@@ -298,3 +298,87 @@ func (p *ListAnnotationsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ExportTracesToDatasetRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.SpanIds) < int(1) {
+		return fmt.Errorf("field SpanIds MinLen rule failed, current value: %v", p.SpanIds)
+	}
+	if len(p.SpanIds) > int(500) {
+		return fmt.Errorf("field SpanIds MaxLen rule failed, current value: %v", p.SpanIds)
+	}
+	if p.Config != nil {
+		if err := p.Config.IsValid(); err != nil {
+			return fmt.Errorf("field Config not valid, %w", err)
+		}
+	}
+	if len(p.FieldMappings) < int(1) {
+		return fmt.Errorf("field FieldMappings MinLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if len(p.FieldMappings) > int(100) {
+		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SpanID) IsValid() error {
+	return nil
+}
+func (p *DatasetConfig) IsValid() error {
+	if p.DatasetSchema == nil {
+		return fmt.Errorf("field DatasetSchema not_nil rule failed")
+	}
+	if err := p.DatasetSchema.IsValid(); err != nil {
+		return fmt.Errorf("field DatasetSchema not valid, %w", err)
+	}
+	return nil
+}
+func (p *ExportTracesToDatasetResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PreviewExportTracesToDatasetRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.SpanIds) < int(1) {
+		return fmt.Errorf("field SpanIds MinLen rule failed, current value: %v", p.SpanIds)
+	}
+	if len(p.SpanIds) > int(500) {
+		return fmt.Errorf("field SpanIds MaxLen rule failed, current value: %v", p.SpanIds)
+	}
+	if p.Config != nil {
+		if err := p.Config.IsValid(); err != nil {
+			return fmt.Errorf("field Config not valid, %w", err)
+		}
+	}
+	if len(p.FieldMappings) < int(1) {
+		return fmt.Errorf("field FieldMappings MinLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if len(p.FieldMappings) > int(100) {
+		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PreviewExportTracesToDatasetResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

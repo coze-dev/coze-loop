@@ -12883,6 +12883,1058 @@ func (p *GetDatasetSchemaResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+type ValidateDatasetItemsReq struct {
+	WorkspaceID *int64                 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	Items       []*dataset.DatasetItem `thrift:"items,2,optional" frugal:"2,optional,list<dataset.DatasetItem>" form:"items" json:"items,omitempty" query:"items"`
+	// 添加到已有数据集时提供
+	DatasetID *int64 `thrift:"dataset_id,3,optional" frugal:"3,optional,i64" json:"dataset_id" path:"dataset_id" `
+	// 新建数据集并添加数据时提供
+	DatasetCategory *dataset.DatasetCategory `thrift:"dataset_category,4,optional" frugal:"4,optional,DatasetCategory" form:"dataset_category" json:"dataset_category,omitempty" query:"dataset_category"`
+	// 新建数据集并添加数据时，必须提供；添加到已有数据集时，如非空，则覆盖已有 schema 用于校验
+	DatasetFields []*dataset.FieldSchema `thrift:"dataset_fields,5,optional" frugal:"5,optional,list<dataset.FieldSchema>" form:"dataset_fields" json:"dataset_fields,omitempty" query:"dataset_fields"`
+	// 添加到已有数据集时，现有数据条数，做容量校验时不做考虑，仅考虑提供 items 数量是否超限
+	IgnoreCurrentItemCount *bool      `thrift:"ignore_current_item_count,10,optional" frugal:"10,optional,bool" form:"ignore_current_item_count" json:"ignore_current_item_count,omitempty" query:"ignore_current_item_count"`
+	Base                   *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewValidateDatasetItemsReq() *ValidateDatasetItemsReq {
+	return &ValidateDatasetItemsReq{}
+}
+
+func (p *ValidateDatasetItemsReq) InitDefault() {
+}
+
+var ValidateDatasetItemsReq_WorkspaceID_DEFAULT int64
+
+func (p *ValidateDatasetItemsReq) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return ValidateDatasetItemsReq_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var ValidateDatasetItemsReq_Items_DEFAULT []*dataset.DatasetItem
+
+func (p *ValidateDatasetItemsReq) GetItems() (v []*dataset.DatasetItem) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItems() {
+		return ValidateDatasetItemsReq_Items_DEFAULT
+	}
+	return p.Items
+}
+
+var ValidateDatasetItemsReq_DatasetID_DEFAULT int64
+
+func (p *ValidateDatasetItemsReq) GetDatasetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetID() {
+		return ValidateDatasetItemsReq_DatasetID_DEFAULT
+	}
+	return *p.DatasetID
+}
+
+var ValidateDatasetItemsReq_DatasetCategory_DEFAULT dataset.DatasetCategory
+
+func (p *ValidateDatasetItemsReq) GetDatasetCategory() (v dataset.DatasetCategory) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetCategory() {
+		return ValidateDatasetItemsReq_DatasetCategory_DEFAULT
+	}
+	return *p.DatasetCategory
+}
+
+var ValidateDatasetItemsReq_DatasetFields_DEFAULT []*dataset.FieldSchema
+
+func (p *ValidateDatasetItemsReq) GetDatasetFields() (v []*dataset.FieldSchema) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetFields() {
+		return ValidateDatasetItemsReq_DatasetFields_DEFAULT
+	}
+	return p.DatasetFields
+}
+
+var ValidateDatasetItemsReq_IgnoreCurrentItemCount_DEFAULT bool
+
+func (p *ValidateDatasetItemsReq) GetIgnoreCurrentItemCount() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIgnoreCurrentItemCount() {
+		return ValidateDatasetItemsReq_IgnoreCurrentItemCount_DEFAULT
+	}
+	return *p.IgnoreCurrentItemCount
+}
+
+var ValidateDatasetItemsReq_Base_DEFAULT *base.Base
+
+func (p *ValidateDatasetItemsReq) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ValidateDatasetItemsReq_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ValidateDatasetItemsReq) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *ValidateDatasetItemsReq) SetItems(val []*dataset.DatasetItem) {
+	p.Items = val
+}
+func (p *ValidateDatasetItemsReq) SetDatasetID(val *int64) {
+	p.DatasetID = val
+}
+func (p *ValidateDatasetItemsReq) SetDatasetCategory(val *dataset.DatasetCategory) {
+	p.DatasetCategory = val
+}
+func (p *ValidateDatasetItemsReq) SetDatasetFields(val []*dataset.FieldSchema) {
+	p.DatasetFields = val
+}
+func (p *ValidateDatasetItemsReq) SetIgnoreCurrentItemCount(val *bool) {
+	p.IgnoreCurrentItemCount = val
+}
+func (p *ValidateDatasetItemsReq) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ValidateDatasetItemsReq = map[int16]string{
+	1:   "workspace_id",
+	2:   "items",
+	3:   "dataset_id",
+	4:   "dataset_category",
+	5:   "dataset_fields",
+	10:  "ignore_current_item_count",
+	255: "Base",
+}
+
+func (p *ValidateDatasetItemsReq) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *ValidateDatasetItemsReq) IsSetItems() bool {
+	return p.Items != nil
+}
+
+func (p *ValidateDatasetItemsReq) IsSetDatasetID() bool {
+	return p.DatasetID != nil
+}
+
+func (p *ValidateDatasetItemsReq) IsSetDatasetCategory() bool {
+	return p.DatasetCategory != nil
+}
+
+func (p *ValidateDatasetItemsReq) IsSetDatasetFields() bool {
+	return p.DatasetFields != nil
+}
+
+func (p *ValidateDatasetItemsReq) IsSetIgnoreCurrentItemCount() bool {
+	return p.IgnoreCurrentItemCount != nil
+}
+
+func (p *ValidateDatasetItemsReq) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ValidateDatasetItemsReq) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateDatasetItemsReq[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ValidateDatasetItemsReq) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ValidateDatasetItemsReq) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.DatasetItem, 0, size)
+	values := make([]dataset.DatasetItem, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Items = _field
+	return nil
+}
+func (p *ValidateDatasetItemsReq) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetID = _field
+	return nil
+}
+func (p *ValidateDatasetItemsReq) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *dataset.DatasetCategory
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.DatasetCategory(v)
+		_field = &tmp
+	}
+	p.DatasetCategory = _field
+	return nil
+}
+func (p *ValidateDatasetItemsReq) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.FieldSchema, 0, size)
+	values := make([]dataset.FieldSchema, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DatasetFields = _field
+	return nil
+}
+func (p *ValidateDatasetItemsReq) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IgnoreCurrentItemCount = _field
+	return nil
+}
+func (p *ValidateDatasetItemsReq) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ValidateDatasetItemsReq) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ValidateDatasetItemsReq"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ValidateDatasetItemsReq) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsReq) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItems() {
+		if err = oprot.WriteFieldBegin("items", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Items)); err != nil {
+			return err
+		}
+		for _, v := range p.Items {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsReq) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetID() {
+		if err = oprot.WriteFieldBegin("dataset_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DatasetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsReq) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetCategory() {
+		if err = oprot.WriteFieldBegin("dataset_category", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.DatasetCategory)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsReq) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetFields() {
+		if err = oprot.WriteFieldBegin("dataset_fields", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DatasetFields)); err != nil {
+			return err
+		}
+		for _, v := range p.DatasetFields {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsReq) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIgnoreCurrentItemCount() {
+		if err = oprot.WriteFieldBegin("ignore_current_item_count", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IgnoreCurrentItemCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsReq) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ValidateDatasetItemsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ValidateDatasetItemsReq(%+v)", *p)
+
+}
+
+func (p *ValidateDatasetItemsReq) DeepEqual(ano *ValidateDatasetItemsReq) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Items) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.DatasetID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.DatasetCategory) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.DatasetFields) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.IgnoreCurrentItemCount) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ValidateDatasetItemsReq) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *ValidateDatasetItemsReq) Field2DeepEqual(src []*dataset.DatasetItem) bool {
+
+	if len(p.Items) != len(src) {
+		return false
+	}
+	for i, v := range p.Items {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ValidateDatasetItemsReq) Field3DeepEqual(src *int64) bool {
+
+	if p.DatasetID == src {
+		return true
+	} else if p.DatasetID == nil || src == nil {
+		return false
+	}
+	if *p.DatasetID != *src {
+		return false
+	}
+	return true
+}
+func (p *ValidateDatasetItemsReq) Field4DeepEqual(src *dataset.DatasetCategory) bool {
+
+	if p.DatasetCategory == src {
+		return true
+	} else if p.DatasetCategory == nil || src == nil {
+		return false
+	}
+	if *p.DatasetCategory != *src {
+		return false
+	}
+	return true
+}
+func (p *ValidateDatasetItemsReq) Field5DeepEqual(src []*dataset.FieldSchema) bool {
+
+	if len(p.DatasetFields) != len(src) {
+		return false
+	}
+	for i, v := range p.DatasetFields {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ValidateDatasetItemsReq) Field10DeepEqual(src *bool) bool {
+
+	if p.IgnoreCurrentItemCount == src {
+		return true
+	} else if p.IgnoreCurrentItemCount == nil || src == nil {
+		return false
+	}
+	if *p.IgnoreCurrentItemCount != *src {
+		return false
+	}
+	return true
+}
+func (p *ValidateDatasetItemsReq) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ValidateDatasetItemsResp struct {
+	// 合法的 item 索引，与 ValidateCreateDatasetItemsReq.items 中的索引对应
+	ValidItemIndices []int32                   `thrift:"valid_item_indices,1,optional" frugal:"1,optional,list<i32>" form:"valid_item_indices" json:"valid_item_indices,omitempty" query:"valid_item_indices"`
+	Errors           []*dataset.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<dataset.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
+	BaseResp         *base.BaseResp            `thrift:"baseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"baseResp" json:"baseResp,omitempty" query:"baseResp"`
+}
+
+func NewValidateDatasetItemsResp() *ValidateDatasetItemsResp {
+	return &ValidateDatasetItemsResp{}
+}
+
+func (p *ValidateDatasetItemsResp) InitDefault() {
+}
+
+var ValidateDatasetItemsResp_ValidItemIndices_DEFAULT []int32
+
+func (p *ValidateDatasetItemsResp) GetValidItemIndices() (v []int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetValidItemIndices() {
+		return ValidateDatasetItemsResp_ValidItemIndices_DEFAULT
+	}
+	return p.ValidItemIndices
+}
+
+var ValidateDatasetItemsResp_Errors_DEFAULT []*dataset.ItemErrorGroup
+
+func (p *ValidateDatasetItemsResp) GetErrors() (v []*dataset.ItemErrorGroup) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrors() {
+		return ValidateDatasetItemsResp_Errors_DEFAULT
+	}
+	return p.Errors
+}
+
+var ValidateDatasetItemsResp_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ValidateDatasetItemsResp) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ValidateDatasetItemsResp_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ValidateDatasetItemsResp) SetValidItemIndices(val []int32) {
+	p.ValidItemIndices = val
+}
+func (p *ValidateDatasetItemsResp) SetErrors(val []*dataset.ItemErrorGroup) {
+	p.Errors = val
+}
+func (p *ValidateDatasetItemsResp) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ValidateDatasetItemsResp = map[int16]string{
+	1:   "valid_item_indices",
+	2:   "errors",
+	255: "baseResp",
+}
+
+func (p *ValidateDatasetItemsResp) IsSetValidItemIndices() bool {
+	return p.ValidItemIndices != nil
+}
+
+func (p *ValidateDatasetItemsResp) IsSetErrors() bool {
+	return p.Errors != nil
+}
+
+func (p *ValidateDatasetItemsResp) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ValidateDatasetItemsResp) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateDatasetItemsResp[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ValidateDatasetItemsResp) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ValidItemIndices = _field
+	return nil
+}
+func (p *ValidateDatasetItemsResp) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.ItemErrorGroup, 0, size)
+	values := make([]dataset.ItemErrorGroup, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Errors = _field
+	return nil
+}
+func (p *ValidateDatasetItemsResp) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ValidateDatasetItemsResp) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ValidateDatasetItemsResp"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ValidateDatasetItemsResp) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValidItemIndices() {
+		if err = oprot.WriteFieldBegin("valid_item_indices", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I32, len(p.ValidItemIndices)); err != nil {
+			return err
+		}
+		for _, v := range p.ValidItemIndices {
+			if err := oprot.WriteI32(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsResp) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrors() {
+		if err = oprot.WriteFieldBegin("errors", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Errors)); err != nil {
+			return err
+		}
+		for _, v := range p.Errors {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ValidateDatasetItemsResp) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("baseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ValidateDatasetItemsResp) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ValidateDatasetItemsResp(%+v)", *p)
+
+}
+
+func (p *ValidateDatasetItemsResp) DeepEqual(ano *ValidateDatasetItemsResp) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ValidItemIndices) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Errors) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ValidateDatasetItemsResp) Field1DeepEqual(src []int32) bool {
+
+	if len(p.ValidItemIndices) != len(src) {
+		return false
+	}
+	for i, v := range p.ValidItemIndices {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *ValidateDatasetItemsResp) Field2DeepEqual(src []*dataset.ItemErrorGroup) bool {
+
+	if len(p.Errors) != len(src) {
+		return false
+	}
+	for i, v := range p.Errors {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ValidateDatasetItemsResp) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type BatchCreateDatasetItemsRequest struct {
 	WorkspaceID *int64                 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	DatasetID   int64                  `thrift:"dataset_id,2,required" frugal:"2,required,i64" json:"dataset_id" path:"dataset_id,required" `
@@ -20538,6 +21590,8 @@ type DatasetService interface {
 	// 覆盖更新 schema
 	UpdateDatasetSchema(ctx context.Context, req *UpdateDatasetSchemaRequest) (r *UpdateDatasetSchemaResponse, err error)
 	/* Dataset Item */
+	// 校验数据
+	ValidateDatasetItems(ctx context.Context, req *ValidateDatasetItemsReq) (r *ValidateDatasetItemsResp, err error)
 	// 批量新增数据
 	BatchCreateDatasetItems(ctx context.Context, req *BatchCreateDatasetItemsRequest) (r *BatchCreateDatasetItemsResponse, err error)
 	// 更新数据
@@ -20721,6 +21775,15 @@ func (p *DatasetServiceClient) UpdateDatasetSchema(ctx context.Context, req *Upd
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *DatasetServiceClient) ValidateDatasetItems(ctx context.Context, req *ValidateDatasetItemsReq) (r *ValidateDatasetItemsResp, err error) {
+	var _args DatasetServiceValidateDatasetItemsArgs
+	_args.Req = req
+	var _result DatasetServiceValidateDatasetItemsResult
+	if err = p.Client_().Call(ctx, "ValidateDatasetItems", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *DatasetServiceClient) BatchCreateDatasetItems(ctx context.Context, req *BatchCreateDatasetItemsRequest) (r *BatchCreateDatasetItemsResponse, err error) {
 	var _args DatasetServiceBatchCreateDatasetItemsArgs
 	_args.Req = req
@@ -20847,6 +21910,7 @@ func NewDatasetServiceProcessor(handler DatasetService) *DatasetServiceProcessor
 	self.AddToProcessorMap("BatchGetDatasetVersions", &datasetServiceProcessorBatchGetDatasetVersions{handler: handler})
 	self.AddToProcessorMap("GetDatasetSchema", &datasetServiceProcessorGetDatasetSchema{handler: handler})
 	self.AddToProcessorMap("UpdateDatasetSchema", &datasetServiceProcessorUpdateDatasetSchema{handler: handler})
+	self.AddToProcessorMap("ValidateDatasetItems", &datasetServiceProcessorValidateDatasetItems{handler: handler})
 	self.AddToProcessorMap("BatchCreateDatasetItems", &datasetServiceProcessorBatchCreateDatasetItems{handler: handler})
 	self.AddToProcessorMap("UpdateDatasetItem", &datasetServiceProcessorUpdateDatasetItem{handler: handler})
 	self.AddToProcessorMap("DeleteDatasetItem", &datasetServiceProcessorDeleteDatasetItem{handler: handler})
@@ -21580,6 +22644,54 @@ func (p *datasetServiceProcessorUpdateDatasetSchema) Process(ctx context.Context
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("UpdateDatasetSchema", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type datasetServiceProcessorValidateDatasetItems struct {
+	handler DatasetService
+}
+
+func (p *datasetServiceProcessorValidateDatasetItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := DatasetServiceValidateDatasetItemsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ValidateDatasetItems", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := DatasetServiceValidateDatasetItemsResult{}
+	var retval *ValidateDatasetItemsResp
+	if retval, err2 = p.handler.ValidateDatasetItems(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ValidateDatasetItems: "+err2.Error())
+		oprot.WriteMessageBegin("ValidateDatasetItems", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ValidateDatasetItems", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -27230,6 +28342,350 @@ func (p *DatasetServiceUpdateDatasetSchemaResult) DeepEqual(ano *DatasetServiceU
 }
 
 func (p *DatasetServiceUpdateDatasetSchemaResult) Field0DeepEqual(src *UpdateDatasetSchemaResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type DatasetServiceValidateDatasetItemsArgs struct {
+	Req *ValidateDatasetItemsReq `thrift:"req,1" frugal:"1,default,ValidateDatasetItemsReq"`
+}
+
+func NewDatasetServiceValidateDatasetItemsArgs() *DatasetServiceValidateDatasetItemsArgs {
+	return &DatasetServiceValidateDatasetItemsArgs{}
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) InitDefault() {
+}
+
+var DatasetServiceValidateDatasetItemsArgs_Req_DEFAULT *ValidateDatasetItemsReq
+
+func (p *DatasetServiceValidateDatasetItemsArgs) GetReq() (v *ValidateDatasetItemsReq) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return DatasetServiceValidateDatasetItemsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *DatasetServiceValidateDatasetItemsArgs) SetReq(val *ValidateDatasetItemsReq) {
+	p.Req = val
+}
+
+var fieldIDToName_DatasetServiceValidateDatasetItemsArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DatasetServiceValidateDatasetItemsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewValidateDatasetItemsReq()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ValidateDatasetItems_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DatasetServiceValidateDatasetItemsArgs(%+v)", *p)
+
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) DeepEqual(ano *DatasetServiceValidateDatasetItemsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *DatasetServiceValidateDatasetItemsArgs) Field1DeepEqual(src *ValidateDatasetItemsReq) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type DatasetServiceValidateDatasetItemsResult struct {
+	Success *ValidateDatasetItemsResp `thrift:"success,0,optional" frugal:"0,optional,ValidateDatasetItemsResp"`
+}
+
+func NewDatasetServiceValidateDatasetItemsResult() *DatasetServiceValidateDatasetItemsResult {
+	return &DatasetServiceValidateDatasetItemsResult{}
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) InitDefault() {
+}
+
+var DatasetServiceValidateDatasetItemsResult_Success_DEFAULT *ValidateDatasetItemsResp
+
+func (p *DatasetServiceValidateDatasetItemsResult) GetSuccess() (v *ValidateDatasetItemsResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return DatasetServiceValidateDatasetItemsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *DatasetServiceValidateDatasetItemsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ValidateDatasetItemsResp)
+}
+
+var fieldIDToName_DatasetServiceValidateDatasetItemsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DatasetServiceValidateDatasetItemsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewValidateDatasetItemsResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ValidateDatasetItems_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DatasetServiceValidateDatasetItemsResult(%+v)", *p)
+
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) DeepEqual(ano *DatasetServiceValidateDatasetItemsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *DatasetServiceValidateDatasetItemsResult) Field0DeepEqual(src *ValidateDatasetItemsResp) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

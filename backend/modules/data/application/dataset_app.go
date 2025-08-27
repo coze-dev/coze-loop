@@ -55,12 +55,12 @@ type DatasetApplicationImpl struct {
 	auditClient audit.IAuditService
 }
 
-func (d *DatasetApplicationImpl) RunSnapshotItemJob(ctx context.Context, msg *entity.JobRunMessage) error {
-	return d.svc.RunSnapshotItemJob(ctx, msg)
+func (h *DatasetApplicationImpl) RunSnapshotItemJob(ctx context.Context, msg *entity.JobRunMessage) error {
+	return h.svc.RunSnapshotItemJob(ctx, msg)
 }
 
-func (d *DatasetApplicationImpl) RunIOJob(ctx context.Context, msg *entity.JobRunMessage) error {
-	return d.svc.RunIOJob(ctx, msg)
+func (h *DatasetApplicationImpl) RunIOJob(ctx context.Context, msg *entity.JobRunMessage) error {
+	return h.svc.RunIOJob(ctx, msg)
 }
 
 type batchCreateDatasetItemsReqContext struct {
@@ -70,11 +70,11 @@ type batchCreateDatasetItemsReqContext struct {
 	itemCount int64
 }
 
-func (d *DatasetApplicationImpl) CreateDataset(ctx context.Context, req *dataset.CreateDatasetRequest) (resp *dataset.CreateDatasetResponse, err error) {
+func (h *DatasetApplicationImpl) CreateDataset(ctx context.Context, req *dataset.CreateDatasetRequest) (resp *dataset.CreateDatasetResponse, err error) {
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	appID := session.AppIDInCtxOrEmpty(ctx)
 	// 鉴权
-	err = d.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionCreateLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
@@ -110,7 +110,7 @@ func (d *DatasetApplicationImpl) CreateDataset(ctx context.Context, req *dataset
 	data := map[string]string{
 		"texts": strings.Join(gslice.Union(fieldNames, fieldDescs, []string{set.Name, set.GetDescription()}), ","),
 	}
-	record, err := d.auditClient.Audit(ctx, audit.AuditParam{
+	record, err := h.auditClient.Audit(ctx, audit.AuditParam{
 		ObjectID:  0,
 		AuditType: audit.AuditType_CozeLoopDatasetModify,
 		AuditData: data,
@@ -122,7 +122,7 @@ func (d *DatasetApplicationImpl) CreateDataset(ctx context.Context, req *dataset
 	if record.AuditStatus != audit.AuditStatus_Approved {
 		return nil, errno.GetContentAuditFailedErrorf("reason=%s", gptr.Indirect(record.FailedReason))
 	}
-	if err := d.svc.CreateDataset(ctx, set, fields); err != nil {
+	if err := h.svc.CreateDataset(ctx, set, fields); err != nil {
 		return nil, err
 	}
 	return &dataset.CreateDatasetResponse{
@@ -130,16 +130,16 @@ func (d *DatasetApplicationImpl) CreateDataset(ctx context.Context, req *dataset
 	}, nil
 }
 
-func (d *DatasetApplicationImpl) UpdateDataset(ctx context.Context, req *dataset.UpdateDatasetRequest) (resp *dataset.UpdateDatasetResponse, err error) {
+func (h *DatasetApplicationImpl) UpdateDataset(ctx context.Context, req *dataset.UpdateDatasetRequest) (resp *dataset.UpdateDatasetResponse, err error) {
 	// 鉴权
-	err = d.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
+	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
 	if err != nil {
 		return nil, err
 	}
 	data := map[string]string{
 		"texts": strings.Join([]string{req.GetName(), req.GetDescription()}, ","),
 	}
-	record, err := d.auditClient.Audit(ctx, audit.AuditParam{
+	record, err := h.auditClient.Audit(ctx, audit.AuditParam{
 		ObjectID:  req.GetDatasetID(),
 		AuditType: audit.AuditType_CozeLoopDatasetModify,
 		AuditData: data,
@@ -151,7 +151,7 @@ func (d *DatasetApplicationImpl) UpdateDataset(ctx context.Context, req *dataset
 	if record.AuditStatus != audit.AuditStatus_Approved {
 		return nil, errno.GetContentAuditFailedErrorf("reason=%s", gptr.Indirect(record.FailedReason))
 	}
-	err = d.svc.UpdateDataset(ctx, &service.UpdateDatasetParam{
+	err = h.svc.UpdateDataset(ctx, &service.UpdateDatasetParam{
 		SpaceID:     req.GetWorkspaceID(),
 		DatasetID:   req.GetDatasetID(),
 		Name:        req.GetName(),
@@ -164,22 +164,22 @@ func (d *DatasetApplicationImpl) UpdateDataset(ctx context.Context, req *dataset
 	return &dataset.UpdateDatasetResponse{}, nil
 }
 
-func (d *DatasetApplicationImpl) DeleteDataset(ctx context.Context, req *dataset.DeleteDatasetRequest) (resp *dataset.DeleteDatasetResponse, err error) {
+func (h *DatasetApplicationImpl) DeleteDataset(ctx context.Context, req *dataset.DeleteDatasetRequest) (resp *dataset.DeleteDatasetResponse, err error) {
 	// 鉴权
-	err = d.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
+	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
 	if err != nil {
 		return nil, err
 	}
-	err = d.svc.DeleteDataset(ctx, req.GetWorkspaceID(), req.GetDatasetID())
+	err = h.svc.DeleteDataset(ctx, req.GetWorkspaceID(), req.GetDatasetID())
 	if err != nil {
 		return nil, err
 	}
 	return &dataset.DeleteDatasetResponse{}, nil
 }
 
-func (d *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.ListDatasetsRequest) (resp *dataset.ListDatasetsResponse, err error) {
+func (h *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.ListDatasetsRequest) (resp *dataset.ListDatasetsResponse, err error) {
 	// 鉴权
-	err = d.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionListLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
@@ -195,7 +195,7 @@ func (d *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 			IsAsc: gptr.Of(req.GetOrderBys()[0].GetIsAsc()),
 		}
 	}
-	res, err := d.svc.SearchDataset(ctx, &service.SearchDatasetsParam{
+	res, err := h.svc.SearchDataset(ctx, &service.SearchDatasetsParam{
 		SpaceID:      req.GetWorkspaceID(),
 		DatasetIDs:   req.DatasetIds,
 		Category:     convertor.ConvertCategoryDTO2DO(gptr.Indirect(req.Category)),
@@ -229,7 +229,7 @@ func (d *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 		return resp, nil
 	}
 	// 获取对应的 item_count
-	itemCountsM, err := d.repo.MGetItemCount(ctx, gslice.Map(res.DatasetWithSchemas, func(dataset *service.DatasetWithSchema) int64 { return dataset.ID })...)
+	itemCountsM, err := h.repo.MGetItemCount(ctx, gslice.Map(res.DatasetWithSchemas, func(dataset *service.DatasetWithSchema) int64 { return dataset.ID })...)
 	if err != nil {
 		return nil, err
 	}
@@ -239,13 +239,13 @@ func (d *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 	return resp, nil
 }
 
-func (d *DatasetApplicationImpl) GetDataset(ctx context.Context, req *dataset.GetDatasetRequest) (resp *dataset.GetDatasetResponse, err error) {
+func (h *DatasetApplicationImpl) GetDataset(ctx context.Context, req *dataset.GetDatasetRequest) (resp *dataset.GetDatasetResponse, err error) {
 	// 鉴权
-	err = d.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionRead)
+	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionRead)
 	if err != nil {
 		return nil, err
 	}
-	dsWithSchema, err := d.svc.GetDatasetWithOpt(ctx, req.GetWorkspaceID(), req.GetDatasetID(), service.WithDeleted(req.GetWithDeleted()))
+	dsWithSchema, err := h.svc.GetDatasetWithOpt(ctx, req.GetWorkspaceID(), req.GetDatasetID(), service.WithDeleted(req.GetWithDeleted()))
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (d *DatasetApplicationImpl) GetDataset(ctx context.Context, req *dataset.Ge
 		return nil, err
 	}
 	// 获取当前数据条数
-	itemCnt, err := d.repo.GetItemCount(ctx, req.GetDatasetID())
+	itemCnt, err := h.repo.GetItemCount(ctx, req.GetDatasetID())
 	if err != nil {
 		return nil, err
 	}
@@ -265,9 +265,9 @@ func (d *DatasetApplicationImpl) GetDataset(ctx context.Context, req *dataset.Ge
 	return &dataset.GetDatasetResponse{Dataset: dto}, nil
 }
 
-func (d *DatasetApplicationImpl) BatchGetDatasets(ctx context.Context, req *dataset.BatchGetDatasetsRequest) (r *dataset.BatchGetDatasetsResponse, err error) {
+func (h *DatasetApplicationImpl) BatchGetDatasets(ctx context.Context, req *dataset.BatchGetDatasetsRequest) (r *dataset.BatchGetDatasetsResponse, err error) {
 	// 鉴权
-	err = d.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionListLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
@@ -275,7 +275,7 @@ func (d *DatasetApplicationImpl) BatchGetDatasets(ctx context.Context, req *data
 	if err != nil {
 		return nil, err
 	}
-	ds, err := d.svc.BatchGetDatasetWithOpt(ctx, req.GetWorkspaceID(), req.GetDatasetIds(), &service.GetOpt{WithDeleted: req.GetWithDeleted()})
+	ds, err := h.svc.BatchGetDatasetWithOpt(ctx, req.GetWorkspaceID(), req.GetDatasetIds(), &service.GetOpt{WithDeleted: req.GetWithDeleted()})
 	if err != nil {
 		return nil, err
 	}
@@ -289,9 +289,9 @@ func (d *DatasetApplicationImpl) BatchGetDatasets(ctx context.Context, req *data
 	return &dataset.BatchGetDatasetsResponse{Datasets: dtos}, nil
 }
 
-func (d *DatasetApplicationImpl) authByDatasetID(ctx context.Context, spaceID, datasetID int64, action string) error {
+func (h *DatasetApplicationImpl) authByDatasetID(ctx context.Context, spaceID, datasetID int64, action string) error {
 	// 获取dataset owner信息
-	ds, err := d.repo.GetDataset(ctx, spaceID, datasetID, repo.WithDeleted())
+	ds, err := h.repo.GetDataset(ctx, spaceID, datasetID, repo.WithDeleted())
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func (d *DatasetApplicationImpl) authByDatasetID(ctx context.Context, spaceID, d
 		return errno.NotFoundErrorf("dataset %d not found, space_id=%d", datasetID, spaceID)
 	}
 	// 鉴权
-	err = d.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+	err = h.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(datasetID, 10),
 		SpaceID:         spaceID,
 		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(action), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
@@ -312,9 +312,9 @@ func (d *DatasetApplicationImpl) authByDatasetID(ctx context.Context, spaceID, d
 	return nil
 }
 
-func (d *DatasetApplicationImpl) authByVersionID(ctx context.Context, spaceID, versionID int64, action string) error {
+func (h *DatasetApplicationImpl) authByVersionID(ctx context.Context, spaceID, versionID int64, action string) error {
 	// 获取version信息
-	version, err := d.repo.GetVersion(ctx, spaceID, versionID)
+	version, err := h.repo.GetVersion(ctx, spaceID, versionID)
 	if err != nil {
 		return err
 	}
@@ -322,17 +322,17 @@ func (d *DatasetApplicationImpl) authByVersionID(ctx context.Context, spaceID, v
 		return errno.NotFoundErrorf("version %d not found", versionID)
 	}
 	// 获取dataset owner信息
-	return d.authByDatasetID(ctx, spaceID, version.DatasetID, action)
+	return h.authByDatasetID(ctx, spaceID, version.DatasetID, action)
 }
 
-func (d *DatasetApplicationImpl) authByJobID(ctx context.Context, spaceID, jobID int64, action string) error {
+func (h *DatasetApplicationImpl) authByJobID(ctx context.Context, spaceID, jobID int64, action string) error {
 	// 获取job信息
-	job, err := d.repo.GetIOJob(ctx, jobID)
+	job, err := h.repo.GetIOJob(ctx, jobID)
 	if err != nil {
 		return err
 	}
 	if job == nil {
 		return errno.NotFoundErrorf("job %d not found", jobID)
 	}
-	return d.authByDatasetID(ctx, spaceID, job.DatasetID, action)
+	return h.authByDatasetID(ctx, spaceID, job.DatasetID, action)
 }

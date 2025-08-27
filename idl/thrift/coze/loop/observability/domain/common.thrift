@@ -41,3 +41,10 @@ struct BaseInfo {
     3: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"')
     4: optional i64 updated_at (api.js_conv='true', go.tag='json:"updated_at"')
 }
+
+typedef string ContentType(ts.enum="true")
+
+const ContentType ContentType_Text = "Text" // 空间
+const ContentType ContentType_Image = "Image"
+const ContentType ContentType_Audio = "Audio"
+const ContentType ContentType_MultiPart = "MultiPart"

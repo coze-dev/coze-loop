@@ -1204,3 +1204,23 @@ func _results0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _exporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _previewexporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _dataset_itemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _validatedatasetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

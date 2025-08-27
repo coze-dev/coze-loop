@@ -49,6 +49,7 @@ const (
 	PlatformPrompt     PlatformType = "prompt"
 	PlatformEvaluator  PlatformType = "evaluator"
 	PlatformEvalTarget PlatformType = "evaluation_target"
+	PlatformOpenAPI    PlatformType = "open_api"
 
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"

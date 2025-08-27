@@ -5,12 +5,15 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"gorm.io/gorm"
+
+	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/entity"
@@ -409,4 +412,88 @@ func (s *DatasetServiceImpl) reloadConflictItems(ctx context.Context, ds *Datase
 		}
 	}
 	return nil
+}
+
+func (s *DatasetServiceImpl) ValidateDatasetItems(ctx context.Context, param *ValidateDatasetItemsParam) (*ValidateDatasetItemsResult, error) {
+	if len(param.Items) == 0 {
+		return &ValidateDatasetItemsResult{}, nil
+	}
+
+	ds, err := s.buildDatasetForValidate(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	// 格式校验
+	SanitizeInputItem(ds, param.Items...)
+	goodItems, badItems := ValidateItems(ds, param.Items)
+
+	// 容量校验
+	var used int64
+	if param.DatasetID > 0 && !param.IgnoreCurrentItemCount && len(goodItems) > 0 {
+		used, err = s.repo.GetItemCount(ctx, param.DatasetID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	remaining := ds.Spec.MaxItemCount - used
+	diff := remaining - int64(len(goodItems))
+	if diff < 0 {
+		eg := &entity.ItemErrorGroup{
+			Type:       gptr.Of(entity.ItemErrorType_ExceedDatasetCapacity),
+			Summary:    gptr.Of(fmt.Sprintf("capacity=%d, current=%d, to_add=%d", ds.Spec.MaxItemCount, used, len(goodItems))),
+			ErrorCount: gptr.Of(int32(-diff)),
+			Details: gslice.Map(goodItems[remaining:], func(i *IndexedItem) *entity.ItemErrorDetail {
+				return &entity.ItemErrorDetail{Index: gptr.Of(int32(i.Index))}
+			}),
+		}
+		badItems = append(badItems, eg)
+		goodItems = goodItems[:remaining]
+	}
+
+	return &ValidateDatasetItemsResult{
+		ValidItemIndices: gslice.Map(goodItems, func(i *IndexedItem) int32 { return int32(i.Index) }),
+		ErrorGroups:      badItems,
+	}, nil
+}
+
+func (s *DatasetServiceImpl) buildDatasetForValidate(ctx context.Context, param *ValidateDatasetItemsParam) (*DatasetWithSchema, error) {
+	if param.DatasetID == 0 {
+		if param.DatasetCategory == "" {
+			return nil, errno.BadReqErrorf("dataset_id is required")
+		}
+		if len(param.DatasetFields) == 0 {
+			return nil, errno.BadReqErrorf("dataset_fields is required")
+		}
+
+		ds := &DatasetWithSchema{
+			Dataset: &entity.Dataset{
+				SpaceID:  param.SpaceID,
+				Category: param.DatasetCategory,
+			},
+			Schema: &entity.DatasetSchema{
+				Fields: param.DatasetFields,
+			},
+		}
+		s.buildNewDataset(ds.Dataset)
+		return ds, nil
+	}
+
+	dataset, err := s.repo.GetDataset(ctx, param.SpaceID, param.DatasetID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "get dataset, space_id=%d, dataset_id=%d", param.SpaceID, param.DatasetID)
+	}
+
+	if len(param.DatasetFields) > 0 {
+		return &DatasetWithSchema{
+			Dataset: dataset,
+			Schema:  &entity.DatasetSchema{Fields: param.DatasetFields},
+		}, nil
+	}
+	schema, err := s.repo.GetSchema(ctx, param.SpaceID, dataset.SchemaID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "get schema, space_id=%d, dataset_id=%d, schema_id=%d", param.SpaceID, param.DatasetID, dataset.SchemaID)
+	}
+	return &DatasetWithSchema{Dataset: dataset, Schema: schema}, nil
 }

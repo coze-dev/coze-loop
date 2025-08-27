@@ -52,6 +52,8 @@ type IVersionService interface {
 }
 
 type IItemService interface {
+	// ValidateDatasetItems 校验 items 是否符合 dataset 的规格
+	ValidateDatasetItems(ctx context.Context, param *ValidateDatasetItemsParam) (*ValidateDatasetItemsResult, error)
 	// BatchCreateItems 创建新 items，支持 itemKey 幂等锁
 	BatchCreateItems(ctx context.Context, ds *DatasetWithSchema, items []*IndexedItem, opt *MAddItemOpt) (added []*IndexedItem, err error)
 	// BatchGetItems 获取 items

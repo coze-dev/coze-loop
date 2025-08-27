@@ -5,6 +5,11 @@ package application
 
 import (
 	"bytes"
+	"compress/gzip"
+	"context"
+	"testing"
+	"time"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
@@ -27,8 +32,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"compress/gzip"
-	"context"
 	"github.com/bytedance/sonic"
 	"github.com/stretchr/testify/assert"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -37,8 +40,6 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/proto"
-	"testing"
-	"time"
 )
 
 func TestOpenAPIApplication_IngestTraces(t *testing.T) {

@@ -295,6 +295,48 @@ func (l *LocalTraceService) ListAnnotations(ctx context.Context, req *trace.List
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) ExportTracesToDataset(ctx context.Context, Req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (*trace.ExportTracesToDatasetResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceExportTracesToDatasetArgs)
+		result := out.(*trace.TraceServiceExportTracesToDatasetResult)
+		resp, err := l.impl.ExportTracesToDataset(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceExportTracesToDatasetArgs{Req: Req}
+	result := &trace.TraceServiceExportTracesToDatasetResult{}
+	ctx = l.injectRPCInfo(ctx, "ExportTracesToDataset")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) PreviewExportTracesToDataset(ctx context.Context, Req *trace.PreviewExportTracesToDatasetRequest, callOptions ...callopt.Option) (*trace.PreviewExportTracesToDatasetResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServicePreviewExportTracesToDatasetArgs)
+		result := out.(*trace.TraceServicePreviewExportTracesToDatasetResult)
+		resp, err := l.impl.PreviewExportTracesToDataset(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServicePreviewExportTracesToDatasetArgs{Req: Req}
+	result := &trace.TraceServicePreviewExportTracesToDatasetResult{}
+	ctx = l.injectRPCInfo(ctx, "PreviewExportTracesToDataset")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

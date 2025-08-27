@@ -4,9 +4,11 @@
 package application
 
 import (
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"context"
 	"strconv"
+	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
@@ -47,6 +49,7 @@ type ITraceApplication interface {
 
 func NewTraceApplication(
 	traceService service.ITraceService,
+	traceExportService service.ITraceExportService,
 	viewRepo repo.IViewRepo,
 	benefitService benefit.IBenefitService,
 	tenant tenant.ITenantProvider,
@@ -58,30 +61,32 @@ func NewTraceApplication(
 	tagService rpc.ITagRPCAdapter,
 ) (ITraceApplication, error) {
 	return &TraceApplication{
-		traceService: traceService,
-		viewRepo:     viewRepo,
-		traceConfig:  traceConfig,
-		metrics:      traceMetrics,
-		benefit:      benefitService,
-		tenant:       tenant,
-		authSvc:      authService,
-		evalSvc:      evalService,
-		userSvc:      userService,
-		tagSvc:       tagService,
+		traceService:       traceService,
+		traceExportService: traceExportService,
+		viewRepo:           viewRepo,
+		traceConfig:        traceConfig,
+		metrics:            traceMetrics,
+		benefit:            benefitService,
+		tenant:             tenant,
+		authSvc:            authService,
+		evalSvc:            evalService,
+		userSvc:            userService,
+		tagSvc:             tagService,
 	}, nil
 }
 
 type TraceApplication struct {
-	traceService service.ITraceService
-	viewRepo     repo.IViewRepo
-	traceConfig  config.ITraceConfig
-	metrics      metrics.ITraceMetrics
-	benefit      benefit.IBenefitService
-	tenant       tenant.ITenantProvider
-	authSvc      rpc.IAuthProvider
-	evalSvc      rpc.IEvaluatorRPCAdapter
-	userSvc      rpc.IUserProvider
-	tagSvc       rpc.ITagRPCAdapter
+	traceService       service.ITraceService
+	traceExportService service.ITraceExportService
+	viewRepo           repo.IViewRepo
+	traceConfig        config.ITraceConfig
+	metrics            metrics.ITraceMetrics
+	benefit            benefit.IBenefitService
+	tenant             tenant.ITenantProvider
+	authSvc            rpc.IAuthProvider
+	evalSvc            rpc.IEvaluatorRPCAdapter
+	userSvc            rpc.IUserProvider
+	tagSvc             rpc.ITagRPCAdapter
 }
 
 func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRequest) (*trace.ListSpansResponse, error) {
@@ -748,4 +753,75 @@ func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId i
 	})
 	_ = g.Wait()
 	return
+}
+
+func (t *TraceApplication) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest) (
+	r *trace.ExportTracesToDatasetResponse, err error) {
+	if err := req.IsValid(); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	if newStartTime, newEndTime, err := v.CorrectDate(); err != nil {
+		return nil, err
+	} else {
+		req.SetStartTime(newStartTime - time.Minute.Milliseconds())
+		req.SetEndTime(newEndTime + time.Minute.Milliseconds())
+	}
+
+	spaceID := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if err := t.authSvc.CheckWorkspacePermission(ctx, rpc.AuthActionTraceExport, spaceID); err != nil {
+		return nil, err
+	}
+
+	// 转换请求
+	serviceReq := tconv.ExportRequestDTO2DO(req)
+
+	// 调用 service
+	serviceResp, err := t.traceExportService.ExportTracesToDataset(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换响应
+	return tconv.ExportResponseDO2DTO(serviceResp), nil
+}
+
+func (t *TraceApplication) PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest) (
+	r *trace.PreviewExportTracesToDatasetResponse, err error) {
+	if err := req.IsValid(); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+
+	if newStartTime, newEndTime, err := v.CorrectDate(); err != nil {
+		return nil, err
+	} else {
+		req.SetStartTime(newStartTime - time.Minute.Milliseconds())
+		req.SetEndTime(newEndTime + time.Minute.Milliseconds())
+	}
+
+	spaceID := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if err := t.authSvc.CheckWorkspacePermission(ctx, rpc.AuthActionTracePreviewExport, spaceID); err != nil {
+		return nil, err
+	}
+
+	// 转换请求
+	serviceReq := tconv.PreviewRequestDTO2DO(req)
+
+	// 调用 service
+	serviceResp, err := t.traceExportService.PreviewExportTracesToDataset(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换响应
+	return tconv.PreviewResponseDO2DTO(serviceResp), nil
 }

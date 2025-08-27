@@ -73,3 +73,17 @@ type UpdateDatasetParam struct {
 	Description *string
 	UpdatedBy   string
 }
+
+type ValidateDatasetItemsParam struct {
+	SpaceID                int64
+	DatasetID              int64
+	DatasetCategory        entity.DatasetCategory
+	DatasetFields          []*entity.FieldSchema
+	Items                  []*entity.Item
+	IgnoreCurrentItemCount bool
+}
+
+type ValidateDatasetItemsResult struct {
+	ValidItemIndices []int32
+	ErrorGroups      []*entity.ItemErrorGroup
+}

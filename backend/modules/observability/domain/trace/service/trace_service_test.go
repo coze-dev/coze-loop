@@ -584,7 +584,7 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -785,7 +785,7 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -932,7 +932,7 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(errorx.WrapByCode(fmt.Errorf("insert error"), obErrorx.CommercialCommonRPCErrorCodeCode))
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(errorx.WrapByCode(fmt.Errorf("insert error"), obErrorx.CommercialCommonRPCErrorCodeCode))
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -1463,7 +1463,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 					},
 				}, nil)
 				repoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -1615,7 +1615,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 					},
 				}, nil)
 				repoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -1708,7 +1708,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -1838,7 +1838,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
 				return fields{
 					traceRepo:   repoMock,
 					traceConfig: confMock,
@@ -1916,7 +1916,7 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -2033,7 +2033,7 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
 				return fields{
 					traceRepo:      repoMock,
 					traceConfig:    confMock,
@@ -2355,7 +2355,7 @@ func TestTraceServiceImpl_Send(t *testing.T) {
 						{},
 					},
 				}, nil)
-				repoMock.EXPECT().InsertAnnotation(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
 					SourceCfg: map[string]config.AnnotationConfig{

@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
@@ -202,8 +203,10 @@ func InitObservabilityHandler(
 	authCli authservice.Client,
 	userClient userservice.Client,
 	evalClient evaluatorservice.Client,
+	evalSetClient evaluationsetservice.Client,
 	tagClient tagservice.Client,
 	limiterFactory limiter.IRateLimiterFactory,
+	datasetClient datasetservice.Client,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,

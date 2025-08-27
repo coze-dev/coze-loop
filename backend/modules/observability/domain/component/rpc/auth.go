@@ -6,12 +6,14 @@ package rpc
 import "context"
 
 const (
-	AuthActionTraceRead        = "readLoopTrace"
-	AuthActionTraceIngest      = "ingestLoopTrace"
-	AuthActionTraceViewCreate  = "createLoopTraceView"
-	AuthActionTraceViewList    = "listLoopTraceView"
-	AuthActionTraceViewEdit    = "edit"
-	AuthActionAnnotationCreate = "createLoopTraceAnnotation"
+	AuthActionTraceRead          = "readLoopTrace"
+	AuthActionTraceIngest        = "ingestLoopTrace"
+	AuthActionTraceViewCreate    = "createLoopTraceView"
+	AuthActionTraceViewList      = "listLoopTraceView"
+	AuthActionTraceViewEdit      = "edit"
+	AuthActionAnnotationCreate   = "createLoopTraceAnnotation"
+	AuthActionTraceExport        = "exportLoopTrace"
+	AuthActionTracePreviewExport = "previewExportLoopTrace"
 )
 
 //go:generate mockgen -destination=mocks/auth_provider.go -package=mocks . IAuthProvider

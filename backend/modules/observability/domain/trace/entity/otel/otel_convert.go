@@ -4,14 +4,15 @@
 package otel
 
 import (
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"context"
 	"fmt"
-	"github.com/bytedance/gg/gptr"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/bytedance/gg/gptr"
 
 	semconv1_26_0 "go.opentelemetry.io/otel/semconv/v1.26.0"
 	semconv1_27_0 "go.opentelemetry.io/otel/semconv/v1.27.0"

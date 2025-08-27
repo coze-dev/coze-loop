@@ -8,11 +8,15 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/bytedance/sonic"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 )
 
@@ -360,6 +364,63 @@ func (s *Span) BuildFeedback(t AnnotationType, key string, value AnnotationValue
 		return nil, fmt.Errorf("fail to generate annotation id: %v", err)
 	}
 	return a, nil
+}
+
+func (s *Span) AddAnnotation(annotation *Annotation) {
+	if s.Annotations == nil {
+		s.Annotations = make([]*Annotation, 0)
+	}
+	s.Annotations = append(s.Annotations, annotation)
+}
+
+func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annotationType AnnotationType) (*Annotation, error) {
+	a := &Annotation{}
+	a.SpanID = s.SpanID
+	a.TraceID = s.TraceID
+	a.StartTime = time.UnixMicro(s.StartTime)
+	a.WorkspaceID = s.WorkspaceID
+	a.AnnotationType = annotationType
+	a.Key = strconv.FormatInt(datasetID, 10)
+	a.Value = NewBoolValue(true)
+	a.Metadata = &ManualDatasetMetadata{}
+	a.Status = AnnotationStatusNormal
+	a.CreatedAt = time.Now()
+	a.CreatedBy = userID
+	a.UpdatedAt = time.Now()
+	a.UpdatedBy = userID
+
+	if err := a.GenID(); err != nil {
+		return nil, err
+	}
+
+	s.AddAnnotation(a)
+	return a, nil
+}
+
+func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath string) (string, error) {
+	jsonpath = strings.TrimPrefix(jsonpath, key)
+	jsonpath = strings.TrimPrefix(jsonpath, ".")
+	data := ""
+	if key == "Input" {
+		data = s.Input
+	} else if key == "Output" {
+		data = s.Output
+	} else if strings.HasPrefix(key, "Tags.") {
+		key = strings.TrimPrefix(key, "Tags.")
+		tag := s.GetFieldValue(key)
+		data = conv.ToString(tag)
+	} else {
+		return "", errors.Errorf("unsupported mapping key: %s", key)
+	}
+
+	if data == "" {
+		return "", nil
+	}
+	if jsonpath == "" {
+		return data, nil
+	}
+
+	return json.GetStringByJSONPathRecursively(data, jsonpath)
 }
 
 func validField(clipFields *[]string, key, value string) string {

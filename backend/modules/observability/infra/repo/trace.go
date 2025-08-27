@@ -137,21 +137,6 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 	if err != nil {
 		return nil, err
 	}
-	var filterFields []*loop_span.FilterField
-	filterFields = append(filterFields, &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldTraceId,
-		FieldType: loop_span.FieldTypeString,
-		Values:    []string{req.TraceID},
-		QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-	})
-	if len(req.SpanIDs) > 0 {
-		filterFields = append(filterFields, &loop_span.FilterField{
-			FieldName: loop_span.SpanFieldSpanId,
-			FieldType: loop_span.FieldTypeString,
-			Values:    req.SpanIDs,
-			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-		})
-	}
 	filter := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 	}
@@ -168,6 +153,14 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 			FieldType: loop_span.FieldTypeString,
 			Values:    []string{req.LogID},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
+	}
+	if len(req.SpanIDs) > 0 {
+		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldSpanId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    req.SpanIDs,
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		})
 	}
 	st := time.Now()
@@ -257,18 +250,22 @@ func (t *TraceCkRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnno
 	return convertor.AnnotationPO2DO(annotation), nil
 }
 
-func (t *TraceCkRepoImpl) InsertAnnotation(ctx context.Context, param *repo.InsertAnnotationParam) error {
+func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.InsertAnnotationParam) error {
 	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL)
 	if err != nil {
 		return err
 	}
-	annotationPO, err := convertor.AnnotationDO2PO(param.Annotation)
-	if err != nil {
-		return err
+	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Annotations))
+	for _, annotation := range param.Annotations {
+		annotationPO, err := convertor.AnnotationDO2PO(annotation)
+		if err != nil {
+			return err
+		}
+		pos = append(pos, annotationPO)
 	}
 	return t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
-		Table:      table,
-		Annotation: annotationPO,
+		Table:       table,
+		Annotations: pos,
 	})
 }
 

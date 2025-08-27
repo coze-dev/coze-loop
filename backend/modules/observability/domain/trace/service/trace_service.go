@@ -602,10 +602,10 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
-	if err := r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	}); err != nil {
 		return nil, err
 	}
@@ -658,10 +658,10 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		annotation.CreatedBy = existedAnno.CreatedBy
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -695,10 +695,10 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 	if err != nil || annotation.ID != req.AnnotationID {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -758,10 +758,10 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		annotation.CreatedBy = existedAnno.CreatedBy
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -808,10 +808,10 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -848,10 +848,10 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 		return nil
 	}
 	// retry if failed
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: event.Annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{event.Annotation},
 	})
 }
 
