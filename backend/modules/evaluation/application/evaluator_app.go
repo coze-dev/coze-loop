@@ -648,14 +648,14 @@ func (e *EvaluatorHandlerImpl) RunEvaluator(ctx context.Context, request *evalua
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
 	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
-	}
+	//err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	//	ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+	//	SpaceID:       evaluatorDO.SpaceID,
+	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
 	recordDO, err := e.evaluatorService.RunEvaluator(ctx, buildRunEvaluatorRequest(evaluatorDO.Name, request))
 	if err != nil {
 		return nil, err
@@ -674,6 +674,7 @@ func buildRunEvaluatorRequest(evaluatorName string, request *evaluatorservice.Ru
 		ExperimentRunID:    request.GetExperimentRunID(),
 		ItemID:             request.GetItemID(),
 		TurnID:             request.GetTurnID(),
+		DisableTracing:     request.GetDisableTracing(),
 	}
 	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
 	srvReq.InputData = inputData
