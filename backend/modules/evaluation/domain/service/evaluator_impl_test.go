@@ -1496,7 +1496,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
 				session.WithCtxUser(ctx, &session.User{ID: defaultUserID})
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData, false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, record *entity.EvaluatorRecord) error {
