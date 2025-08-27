@@ -2606,6 +2606,101 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "itemIDs为空时获取所有item",
+			args: args{
+				spaceID:    100,
+				exptID:     3,
+				itemIDs:    []int64{}, // 空的itemIDs
+				retryTimes: 0,
+			},
+			setup: func() {
+				defaultSetup()
+				
+				// 设置实验信息
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{3}, int64(100)).Return([]*entity.Experiment{{
+					ID:               3,
+					SpaceID:          100,
+					ExptType:         entity.ExptType_Offline,
+					StartAt:          &now,
+					EvalSetVersionID: 101,
+				}}, nil).AnyTimes()
+				
+				// 模拟获取所有item的调用
+				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(3), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
+					{
+						ID:     1,
+						ExptID: 3,
+						ItemID: 10,
+						Status: 1,
+					},
+					{
+						ID:     2,
+						ExptID: 3,
+						ItemID: 20,
+						Status: 1,
+					},
+				}, int64(2), nil).Times(1)
+				
+				// 设置过滤器查询
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "3", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+					{
+						SpaceID: 100,
+						ExptID:  3,
+						ItemID:  10,
+						ItemIdx: 1,
+						TurnID:  1,
+						Status:  1,
+						EvalTargetData: map[string]string{
+							"actual_output": "some output",
+						},
+						EvaluatorScore: map[string]float64{
+							"key1": 0.9,
+						},
+						EvaluatorScoreCorrected: true,
+						EvalSetVersionID:        1,
+					},
+					{
+						SpaceID: 100,
+						ExptID:  3,
+						ItemID:  20,
+						ItemIdx: 2,
+						TurnID:  1,
+						Status:  1,
+						EvalTargetData: map[string]string{
+							"actual_output": "some output",
+						},
+						EvaluatorScore: map[string]float64{
+							"key1": 0.9,
+						},
+						EvaluatorScoreCorrected: true,
+						EvalSetVersionID:        1,
+					},
+				}, nil).AnyTimes()
+				
+				// 设置TurnResult查询
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(3), []int64{10, 20}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+					{
+						ID:     10,
+						ExptID: 3,
+						ItemID: 10,
+						TurnID: 1,
+						Status: 1,
+					},
+					{
+						ID:     20,
+						ExptID: 3,
+						ItemID: 20,
+						TurnID: 1,
+						Status: 1,
+					},
+				}, int64(2), nil).AnyTimes()
+				
+				// 验证指标上报
+				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

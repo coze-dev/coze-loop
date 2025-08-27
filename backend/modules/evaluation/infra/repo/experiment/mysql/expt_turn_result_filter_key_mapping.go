@@ -7,10 +7,12 @@ import (
 	"context"
 
 	"gorm.io/gorm/clause" // 导入 GORM 的 clause 包
+	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 )
 
 //go:generate  mockgen -destination=mocks/expt_turn_result_filter_key_mapping.go  -package mocks . IExptTurnResultFilterKeyMappingDAO
@@ -45,6 +47,9 @@ func (dao *ExptTurnResultFilterKeyMappingDAOImpl) Delete(ctx context.Context, ma
 
 func (dao *ExptTurnResultFilterKeyMappingDAOImpl) GetByExptID(ctx context.Context, spaceID, exptID int64, opts ...db.Option) ([]*model.ExptTurnResultFilterKeyMapping, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptTurnResultFilterKeyMapping
 	ret, err := q.WithContext(ctx).Where(
 		q.SpaceID.Eq(spaceID),
