@@ -20,6 +20,7 @@ const (
 	otelAttributeSpanType    = "cozeloop.span_type"
 	otelAttributeInput       = "cozeloop.input"
 	otelAttributeOutput      = "cozeloop.output"
+	otelAttributeLogID       = "cozeloop.logid"
 
 	// model
 	otelTraceLoopAttributeModelSpanType = "gen_ai.request.type" // traceloop span type
@@ -30,6 +31,26 @@ const (
 	otelAttributePromptKey      = "cozeloop.prompt_key"
 	otelAttributePromptVersion  = "cozeloop.prompt_version"
 	otelAttributePromptProvider = "cozeloop.prompt_provider"
+)
+
+// openinference attribute key
+const (
+	// common
+	openInferenceAttributeInput     = "input.value"
+	openInferenceAttributeOutput    = "output.value"
+	openInferenceAttributeSpanKind  = "openinference.span.kind"
+	openInferenceAttributeException = "exception"
+
+	// model
+	openInferenceAttributeModelInputMessages  = "llm.input_messages"
+	openInferenceAttributeModelInputTools     = "llm.tools"
+	openInferenceAttributeModelOutputMessages = "llm.output_messages"
+	openInferenceAttributeModelName           = "llm.model_name"
+	openInferenceAttributeModelInputTokens    = "llm.token_count.prompt"
+	openInferenceAttributeModelOutputTokens   = "llm.token_count.completion"
+
+	// tool
+	openInferenceAttributeToolInput = "tool"
 )
 
 // otel event name
@@ -45,6 +66,12 @@ const (
 	// output
 	otelEventModelChoice             = "gen_ai.choice"
 	otelSpringAIEventModelCompletion = "gen_ai.content.completion" // springAI completion event name
+)
+
+// otel attribute key prefix
+const (
+	otelAttributeErrorPrefix = "error"
+	otelAttributeToolsPrefix = "gen_ai.request.functions" // tools
 )
 
 var otelMessageEventNameMap = []string{
@@ -64,6 +91,7 @@ var otelMessageAttributeKeyMap = []string{
 const (
 	// common
 	tagKeyThreadID           = "thread_id"
+	tagKeyLogID              = "logid"
 	tagKeyUserID             = "user_id"
 	tagKeyMessageID          = "message_id"
 	tagKeyStartTimeFirstResp = "start_time_first_resp"
@@ -71,11 +99,16 @@ const (
 
 var (
 	otelModelSpanTypeMap = map[string]string{
+		"": "custom",
+		// 以下为otel的span type
 		"chat":             tracespec.VModelSpanType,
 		"execute_tool":     tracespec.VToolSpanType,
 		"generate_content": tracespec.VModelSpanType,
 		"text_completion":  tracespec.VModelSpanType,
-		"":                 "custom",
+		// 以下为openinference的span type
+		"TOOL":      tracespec.VToolSpanType,
+		"LLM":       tracespec.VModelSpanType,
+		"RETRIEVER": tracespec.VRetrieverSpanType,
 	}
 )
 

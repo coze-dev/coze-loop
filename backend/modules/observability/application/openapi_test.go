@@ -970,7 +970,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {

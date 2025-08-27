@@ -16,6 +16,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -82,55 +83,92 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 	if err := o.validateIngestTracesReq(ctx, req); err != nil {
 		return nil, err
 	}
-	workspaceId := o.workspace.GetIngestWorkSpaceID(ctx, req.Spans)
-	if err := o.auth.CheckIngestPermission(ctx,
-		workspaceId); err != nil {
-		return nil, err
-	}
-	workSpaceIdNum, err := strconv.ParseInt(workspaceId, 10, 64)
-	if err != nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	}
+	// unpack
+	spanMap := o.unpackSpace(ctx, req.Spans)
 	connectorUid := session.UserIDInCtxOrEmpty(ctx)
-	benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-		ConnectorUID: connectorUid,
-		SpaceID:      workSpaceIdNum,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "Fail to check benefit, %v", err)
-	}
-	if benefitRes == nil {
-		benefitRes = &benefit.CheckTraceBenefitResult{
-			AccountAvailable: true,
-			IsEnough:         true,
-			StorageDuration:  3,
-			WhichIsEnough:    -1,
+	for workspaceId := range spanMap {
+		// check permission
+		if err := o.auth.CheckIngestPermission(ctx, workspaceId); err != nil {
+			return nil, err
+		}
+		// check benefit
+		workSpaceIdNum, err := strconv.ParseInt(workspaceId, 10, 64)
+		if err != nil {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		}
+		benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: connectorUid,
+			SpaceID:      workSpaceIdNum,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Fail to check benefit, %v", err)
+		}
+		if benefitRes == nil {
+			benefitRes = &benefit.CheckTraceBenefitResult{
+				AccountAvailable: true,
+				IsEnough:         true,
+				StorageDuration:  3,
+				WhichIsEnough:    -1,
+			}
+		}
+		if !benefitRes.IsEnough {
+			return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
+		} else if !benefitRes.AccountAvailable {
+			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
+		}
+
+		spans := tconv.SpanListDTO2DO(spanMap[workspaceId])
+		for i := range spans {
+			spans[i].CallType = "Custom"
+		}
+		tenantSpanMap := o.unpackTenant(ctx, spans)
+		for ingestTenant := range tenantSpanMap {
+			if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
+				return nil, err
+			}
+			if err = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+				Tenant:           ingestTenant,
+				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
+				WhichIsEnough:    benefitRes.WhichIsEnough,
+				CozeAccountId:    connectorUid,
+				VolcanoAccountID: benefitRes.VolcanoAccountID,
+				Spans:            spans,
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
-	if !benefitRes.IsEnough {
-		return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
-	} else if !benefitRes.AccountAvailable {
-		return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
-	}
-	spans := tconv.SpanListDTO2DO(req.Spans)
-	for i := range spans {
-		spans[i].CallType = "Custom"
-	}
-	ingestTenant := o.tenant.GetIngestTenant(ctx, spans)
-	if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
-		return nil, err
-	}
-	if err = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-		Tenant:           ingestTenant,
-		TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
-		WhichIsEnough:    benefitRes.WhichIsEnough,
-		CozeAccountId:    connectorUid,
-		VolcanoAccountID: benefitRes.VolcanoAccountID,
-		Spans:            spans,
-	}); err != nil {
-		return nil, err
-	}
 	return openapi.NewIngestTracesResponse(), nil
+}
+
+func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.InputSpan) map[string][]*span.InputSpan {
+	if spans == nil {
+		return nil
+	}
+	spansMap := make(map[string][]*span.InputSpan)
+	for i := range spans {
+		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]})
+		if spansMap[workspaceID] == nil {
+			spansMap[workspaceID] = make([]*span.InputSpan, 0)
+		}
+		spansMap[workspaceID] = append(spansMap[workspaceID], spans[i])
+	}
+	return spansMap
+}
+
+func (o *OpenAPIApplication) unpackTenant(ctx context.Context, spans []*loop_span.Span) map[string][]*loop_span.Span {
+	if spans == nil {
+		return nil
+	}
+	spansMap := make(map[string][]*loop_span.Span)
+	for i := range spans {
+		ingestTenant := o.tenant.GetIngestTenant(ctx, []*loop_span.Span{spans[i]})
+		if spansMap[ingestTenant] == nil {
+			spansMap[ingestTenant] = make([]*loop_span.Span, 0)
+		}
+		spansMap[ingestTenant] = append(spansMap[ingestTenant], spans[i])
+	}
+	return spansMap
 }
 
 func (o *OpenAPIApplication) validateIngestTracesReq(ctx context.Context, req *openapi.IngestTracesRequest) error {
@@ -213,19 +251,23 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 		}
 
 		spans := otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
-		ingestTenant := o.tenant.GetIngestTenant(ctx, spans)
-		if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-			Tenant:           ingestTenant,
-			TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
-			WhichIsEnough:    benefitRes.WhichIsEnough,
-			CozeAccountId:    connectorUid,
-			VolcanoAccountID: benefitRes.VolcanoAccountID,
-			Spans:            spans,
-		}); e != nil {
-			logs.CtxError(ctx, "IngestTraces err: %v", e)
-			partialFailSpanNumber += len(spans)
-			partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
-			return nil, e
+
+		tenantSpanMap := o.unpackTenant(ctx, spans)
+		for ingestTenant := range tenantSpanMap {
+			if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+				Tenant:           ingestTenant,
+				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
+				WhichIsEnough:    benefitRes.WhichIsEnough,
+				CozeAccountId:    connectorUid,
+				VolcanoAccountID: benefitRes.VolcanoAccountID,
+				Spans:            tenantSpanMap[ingestTenant],
+			}); e != nil {
+				logs.CtxError(ctx, "IngestTraces err: %v", e)
+				partialFailSpanNumber += len(tenantSpanMap[ingestTenant])
+				partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
+				continue
+			}
+
 		}
 	}
 	respSpanProto := &coltracepb.ExportTraceServiceResponse{
@@ -466,8 +508,7 @@ func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *opena
 		Limit:        req.GetLimit(),
 		PlatformType: platformType,
 	}
-	tenants := o.tenant.GetOAPIQueryTenants(ctx, platformType)
-	if len(tenants) == 0 {
+	if len(ret.Tenants) == 0 {
 		logs.CtxError(ctx, "fail to get platform tenants")
 		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
