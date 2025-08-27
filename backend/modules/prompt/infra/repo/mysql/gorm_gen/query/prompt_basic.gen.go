@@ -34,7 +34,6 @@ func newPromptBasic(db *gorm.DB, opts ...gen.DOOption) promptBasic {
 	_promptBasic.Description = field.NewString(tableName, "description")
 	_promptBasic.CreatedBy = field.NewString(tableName, "created_by")
 	_promptBasic.UpdatedBy = field.NewString(tableName, "updated_by")
-	_promptBasic.CommitStatus = field.NewInt32(tableName, "commit_status")
 	_promptBasic.LatestVersion = field.NewString(tableName, "latest_version")
 	_promptBasic.LatestCommitTime = field.NewTime(tableName, "latest_commit_time")
 	_promptBasic.CreatedAt = field.NewTime(tableName, "created_at")
@@ -58,7 +57,6 @@ type promptBasic struct {
 	Description      field.String // 描述
 	CreatedBy        field.String // 创建人
 	UpdatedBy        field.String // 更新人
-	CommitStatus     field.Int32  // 提交状态
 	LatestVersion    field.String // 最新版本
 	LatestCommitTime field.Time   // 最新提交时间
 	CreatedAt        field.Time   // 创建时间
@@ -87,7 +85,6 @@ func (p *promptBasic) updateTableName(table string) *promptBasic {
 	p.Description = field.NewString(table, "description")
 	p.CreatedBy = field.NewString(table, "created_by")
 	p.UpdatedBy = field.NewString(table, "updated_by")
-	p.CommitStatus = field.NewInt32(table, "commit_status")
 	p.LatestVersion = field.NewString(table, "latest_version")
 	p.LatestCommitTime = field.NewTime(table, "latest_commit_time")
 	p.CreatedAt = field.NewTime(table, "created_at")
@@ -119,7 +116,7 @@ func (p *promptBasic) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (p *promptBasic) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 13)
+	p.fieldMap = make(map[string]field.Expr, 12)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_key"] = p.PromptKey
@@ -127,7 +124,6 @@ func (p *promptBasic) fillFieldMap() {
 	p.fieldMap["description"] = p.Description
 	p.fieldMap["created_by"] = p.CreatedBy
 	p.fieldMap["updated_by"] = p.UpdatedBy
-	p.fieldMap["commit_status"] = p.CommitStatus
 	p.fieldMap["latest_version"] = p.LatestVersion
 	p.fieldMap["latest_commit_time"] = p.LatestCommitTime
 	p.fieldMap["created_at"] = p.CreatedAt
