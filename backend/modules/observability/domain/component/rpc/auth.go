@@ -12,6 +12,9 @@ const (
 	AuthActionTraceViewList    = "listLoopTraceView"
 	AuthActionTraceViewEdit    = "edit"
 	AuthActionAnnotationCreate = "createLoopTraceAnnotation"
+	AuthActionTraceTaskCreate  = "createLoopTask"
+	AuthActionTraceTaskList    = "listLoopTask"
+	AuthActionTraceTaskEdit    = "edit"
 )
 
 //go:generate mockgen -destination=mocks/auth_provider.go -package=mocks . IAuthProvider

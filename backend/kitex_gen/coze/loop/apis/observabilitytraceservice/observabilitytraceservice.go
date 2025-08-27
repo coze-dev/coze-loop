@@ -126,41 +126,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"CheckTaskName": kitex.NewMethodInfo(
-		checkTaskNameHandler,
-		newTraceServiceCheckTaskNameArgs,
-		newTraceServiceCheckTaskNameResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"CreateTask": kitex.NewMethodInfo(
-		createTaskHandler,
-		newTraceServiceCreateTaskArgs,
-		newTraceServiceCreateTaskResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"UpdateTask": kitex.NewMethodInfo(
-		updateTaskHandler,
-		newTraceServiceUpdateTaskArgs,
-		newTraceServiceUpdateTaskResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"ListTasks": kitex.NewMethodInfo(
-		listTasksHandler,
-		newTraceServiceListTasksArgs,
-		newTraceServiceListTasksResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"GetTask": kitex.NewMethodInfo(
-		getTaskHandler,
-		newTraceServiceGetTaskArgs,
-		newTraceServiceGetTaskResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 }
 
 var (
@@ -498,101 +463,6 @@ func newTraceServiceExtractSpanInfoResult() interface{} {
 	return trace.NewTraceServiceExtractSpanInfoResult()
 }
 
-func checkTaskNameHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceCheckTaskNameArgs)
-	realResult := result.(*trace.TraceServiceCheckTaskNameResult)
-	success, err := handler.(trace.TraceService).CheckTaskName(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceCheckTaskNameArgs() interface{} {
-	return trace.NewTraceServiceCheckTaskNameArgs()
-}
-
-func newTraceServiceCheckTaskNameResult() interface{} {
-	return trace.NewTraceServiceCheckTaskNameResult()
-}
-
-func createTaskHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceCreateTaskArgs)
-	realResult := result.(*trace.TraceServiceCreateTaskResult)
-	success, err := handler.(trace.TraceService).CreateTask(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceCreateTaskArgs() interface{} {
-	return trace.NewTraceServiceCreateTaskArgs()
-}
-
-func newTraceServiceCreateTaskResult() interface{} {
-	return trace.NewTraceServiceCreateTaskResult()
-}
-
-func updateTaskHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceUpdateTaskArgs)
-	realResult := result.(*trace.TraceServiceUpdateTaskResult)
-	success, err := handler.(trace.TraceService).UpdateTask(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceUpdateTaskArgs() interface{} {
-	return trace.NewTraceServiceUpdateTaskArgs()
-}
-
-func newTraceServiceUpdateTaskResult() interface{} {
-	return trace.NewTraceServiceUpdateTaskResult()
-}
-
-func listTasksHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceListTasksArgs)
-	realResult := result.(*trace.TraceServiceListTasksResult)
-	success, err := handler.(trace.TraceService).ListTasks(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceListTasksArgs() interface{} {
-	return trace.NewTraceServiceListTasksArgs()
-}
-
-func newTraceServiceListTasksResult() interface{} {
-	return trace.NewTraceServiceListTasksResult()
-}
-
-func getTaskHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceGetTaskArgs)
-	realResult := result.(*trace.TraceServiceGetTaskResult)
-	success, err := handler.(trace.TraceService).GetTask(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceGetTaskArgs() interface{} {
-	return trace.NewTraceServiceGetTaskArgs()
-}
-
-func newTraceServiceGetTaskResult() interface{} {
-	return trace.NewTraceServiceGetTaskResult()
-}
-
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -760,56 +630,6 @@ func (p *kClient) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInf
 	_args.Req = req
 	var _result trace.TraceServiceExtractSpanInfoResult
 	if err = p.c.Call(ctx, "ExtractSpanInfo", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) CheckTaskName(ctx context.Context, req *trace.CheckTaskNameRequest) (r *trace.CheckTaskNameResponse, err error) {
-	var _args trace.TraceServiceCheckTaskNameArgs
-	_args.Req = req
-	var _result trace.TraceServiceCheckTaskNameResult
-	if err = p.c.Call(ctx, "CheckTaskName", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) CreateTask(ctx context.Context, req *trace.CreateTaskRequest) (r *trace.CreateTaskResponse, err error) {
-	var _args trace.TraceServiceCreateTaskArgs
-	_args.Req = req
-	var _result trace.TraceServiceCreateTaskResult
-	if err = p.c.Call(ctx, "CreateTask", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) UpdateTask(ctx context.Context, req *trace.UpdateTaskRequest) (r *trace.UpdateTaskResponse, err error) {
-	var _args trace.TraceServiceUpdateTaskArgs
-	_args.Req = req
-	var _result trace.TraceServiceUpdateTaskResult
-	if err = p.c.Call(ctx, "UpdateTask", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) ListTasks(ctx context.Context, req *trace.ListTasksRequest) (r *trace.ListTasksResponse, err error) {
-	var _args trace.TraceServiceListTasksArgs
-	_args.Req = req
-	var _result trace.TraceServiceListTasksResult
-	if err = p.c.Call(ctx, "ListTasks", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) GetTask(ctx context.Context, req *trace.GetTaskRequest) (r *trace.GetTaskResponse, err error) {
-	var _args trace.TraceServiceGetTaskArgs
-	_args.Req = req
-	var _result trace.TraceServiceGetTaskResult
-	if err = p.c.Call(ctx, "GetTask", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

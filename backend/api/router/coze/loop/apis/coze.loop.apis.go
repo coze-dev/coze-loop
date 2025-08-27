@@ -249,11 +249,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations.POST("/change_eEvaluator_sScore", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
 				_annotations.POST("/lis_annotation_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
-				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)
-				_tasks := _v14.Group("/tasks", _tasksMw(handler)...)
-				_tasks.POST("/list", append(_listtasksMw(handler), apis.ListTasks)...)
-				_tasks.GET("/:task_id", append(_gettaskMw(handler), apis.GetTask)...)
-				_tasks.PUT("/:task_id", append(_updatetaskMw(handler), apis.UpdateTask)...)
 				_v14.POST("/views", append(_viewsMw(handler), apis.CreateView)...)
 				_views := _v14.Group("/views", _viewsMw(handler)...)
 				_views.POST("/list", append(_listviewsMw(handler), apis.ListViews)...)
@@ -262,10 +257,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
-				}
-				{
-					_tasks0 := _v14.Group("/tasks", _tasks0Mw(handler)...)
-					_tasks0.GET("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
 				}
 				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
