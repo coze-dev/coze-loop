@@ -212,7 +212,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				tc.setupMocks()
 			}
 
-			output, status, _ := service.Run(ctx, tc.evaluator, tc.input)
+			output, status, _ := service.Run(ctx, tc.evaluator, tc.input, false)
 
 			assert.Equal(t, tc.expectedStatus, status)
 			if tc.checkOutputFunc != nil {
@@ -489,7 +489,7 @@ func TestEvaluatorSourcePromptServiceImpl_ComplexBusinessLogic(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				err := renderTemplate(ctx, evaluatorVersion, input)
+				err := renderTemplate(ctx, evaluatorVersion, input, false)
 
 				assert.NoError(t, err)
 				assert.Len(t, evaluatorVersion.MessageList, 1)
@@ -543,7 +543,7 @@ func TestEvaluatorSourcePromptServiceImpl_ComplexBusinessLogic(t *testing.T) {
 
 				ctx := context.Background()
 				start := time.Now()
-				err := renderTemplate(ctx, evaluatorVersion, largeInput)
+				err := renderTemplate(ctx, evaluatorVersion, largeInput, false)
 				duration := time.Since(start)
 
 				assert.NoError(t, err)
@@ -716,7 +716,7 @@ func TestParseOutput_ParseTypeContent(t *testing.T) {
 			Content:    gptr.Of("{score: 1.5, reason: 'good'}"),
 			TokenUsage: &entity.TokenUsage{InputTokens: 5, OutputTokens: 6},
 		}
-		output, err := parseOutput(context.Background(), evaluatorVersion, replyItem)
+		output, err := parseOutput(context.Background(), evaluatorVersion, replyItem, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, output)
 		assert.NotNil(t, output.EvaluatorResult)
