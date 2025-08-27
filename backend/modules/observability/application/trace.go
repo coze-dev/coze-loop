@@ -742,3 +742,61 @@ func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId i
 	_ = g.Wait()
 	return
 }
+
+func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) (*trace.ChangeEvaluatorScoreResponse, error) {
+	return
+}
+func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest) (*trace.ListAnnotationEvaluatorsResponse, error) {
+	return
+}
+func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (*trace.ExtractSpanInfoResponse, error) {
+	return
+}
+func (t *TraceApplication) CheckTaskName(ctx context.Context, req *trace.CheckTaskNameRequest) (*trace.CheckTaskNameResponse, error) {
+	return
+}
+func (t *TraceApplication) CreateTask(ctx context.Context, req *trace.CreateTaskRequest) (*trace.CreateTaskResponse, error) {
+	// 参数验证
+	if req == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.TaskName == "" {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid task_name"))
+	}
+	
+	// 权限检查 - 假设使用类似于CreateView的权限检查模式
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskCreate, // 假设有这样的权限动作
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	
+	// 获取用户ID
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	
+	// 数据转换 - 将DTO转换为DO/PO
+	taskPO := tconv.CreateTaskDTO2PO(req, userID) // 假设有这样的转换函数
+	
+	// 调用服务层或Repository创建任务
+	id, err := t.taskRepo.CreateTask(ctx, taskPO) // 假设有taskRepo
+	if err != nil {
+		return nil, err
+	}
+	
+	return &trace.CreateTaskResponse{
+		ID: id,
+	}, nil
+}
+func (t *TraceApplication) UpdateTask(ctx context.Context, req *trace.UpdateTaskRequest) (*trace.UpdateTaskResponse, error) {
+	return
+}
+func (t *TraceApplication) ListTasks(ctx context.Context, req *trace.ListTasksRequest) (*trace.ListTasksResponse, error) {
+	return
+}
+func (t *TraceApplication) GetTask(ctx context.Context, req *trace.GetTaskRequest) (*trace.GetTaskResponse, error) {
+	return
+}

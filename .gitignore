@@ -49,3 +49,4 @@ venv/
 release/deployment/helm-chart/umbrella/charts/
 release/deployment/helm-chart/umbrella/Chart.lock
 
+.coda/
