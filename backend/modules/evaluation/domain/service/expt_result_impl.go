@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1920,6 +1921,12 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 		turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState := e.createTurnKeyMaps(spaceID, itemResults)
 
 		for turnKey, _ := range turnKey2TurnResult {
+			turnKeyComponents, err := ParseTurnKey(turnKey)
+			if err != nil {
+				logs.CtxError(ctx, "CompareExptTurnResultFilters parse turnKey failed, turnKey: %v, err: %v", turnKey, err)
+				continue
+			}
+			itemID := turnKeyComponents.ItemID
 			const maxRetryTimes = 3
 			if exptTurnResultFilter, ok := turnKey2ExptTurnResultFilter[turnKey]; !ok {
 				if retryTimes >= maxRetryTimes {
@@ -1930,7 +1937,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 					err = e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
 						ExperimentID: exptID,
 						SpaceID:      spaceID,
-						ItemID:       []int64{processedItemIDs[0]},
+						ItemID:       []int64{itemID},
 						RetryTimes:   ptr.Of(retryTimes + 1),
 						FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
 					}, ptr.Of(10*time.Second))
@@ -1956,7 +1963,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 						err = e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
 							ExperimentID: exptID,
 							SpaceID:      spaceID,
-							ItemID:       []int64{processedItemIDs[0]},
+							ItemID:       []int64{itemID},
 							RetryTimes:   ptr.Of(retryTimes + 1),
 							FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
 						}, ptr.Of(10*time.Second))
@@ -1975,9 +1982,8 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 func (e ExptResultServiceImpl) createTurnKeyToFilterMap(exptTurnResultFilters []*entity.ExptTurnResultFilterEntity) map[string]*entity.ExptTurnResultFilterEntity {
 	turnKey2ExptTurnResultFilter := make(map[string]*entity.ExptTurnResultFilterEntity)
 	for _, filter := range exptTurnResultFilters {
-		turnKey2ExptTurnResultFilter[strconv.FormatInt(filter.SpaceID, 10)+"_"+strconv.FormatInt(filter.ExptID, 10)+"_"+
-			strconv.FormatInt(filter.ItemID, 10)+"_"+
-			strconv.FormatInt(filter.TurnID, 10)] = filter
+		turnKey := GenerateTurnKey(filter.SpaceID, filter.ExptID, filter.ItemID, filter.TurnID)
+		turnKey2ExptTurnResultFilter[turnKey] = filter
 	}
 	return turnKey2ExptTurnResultFilter
 }
@@ -2020,10 +2026,7 @@ func (e ExptResultServiceImpl) createTurnKeyMaps(spaceID int64, itemResults []*e
 			if len(turnResult.ExperimentResults) == 0 {
 				continue
 			}
-			turnKey := strconv.FormatInt(spaceID, 10) + "_" +
-				strconv.FormatInt(turnResult.ExperimentResults[0].ExperimentID, 10) + "_" +
-				strconv.FormatInt(itemResult.ItemID, 10) + "_" +
-				strconv.FormatInt(turnResult.TurnID, 10)
+			turnKey := GenerateTurnKey(spaceID, turnResult.ExperimentResults[0].ExperimentID, itemResult.ItemID, turnResult.TurnID)
 			turnKey2TurnResult[turnKey] = turnResult
 			turnKey2ItemIdx[turnKey] = ptr.From(itemResult.ItemIndex)
 			turnKey2ItemRunState[turnKey] = itemResult.SystemInfo.RunState
@@ -2205,4 +2208,52 @@ func (e ExptResultServiceImpl) compareEvaluatorScore(exptTurnResultFilter *entit
 	}
 
 	return diffExist
+}
+
+// TurnKeyComponents turnKey组件结构
+type TurnKeyComponents struct {
+	SpaceID int64
+	ExptID  int64
+	ItemID  int64
+	TurnID  int64
+}
+
+// GenerateTurnKey 生成turnKey
+func GenerateTurnKey(spaceID, exptID, itemID, turnID int64) string {
+	return fmt.Sprintf("%d_%d_%d_%d", spaceID, exptID, itemID, turnID)
+}
+
+// ParseTurnKey 解析turnKey
+func ParseTurnKey(turnKey string) (*TurnKeyComponents, error) {
+	parts := strings.Split(turnKey, "_")
+	if len(parts) != 4 {
+		return nil, fmt.Errorf("invalid turnKey format: %s", turnKey)
+	}
+
+	spaceID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid spaceID in turnKey: %s", parts[0])
+	}
+
+	exptID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid exptID in turnKey: %s", parts[1])
+	}
+
+	itemID, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid itemID in turnKey: %s", parts[2])
+	}
+
+	turnID, err := strconv.ParseInt(parts[3], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid turnID in turnKey: %s", parts[3])
+	}
+
+	return &TurnKeyComponents{
+		SpaceID: spaceID,
+		ExptID:  exptID,
+		ItemID:  itemID,
+		TurnID:  turnID,
+	}, nil
 }

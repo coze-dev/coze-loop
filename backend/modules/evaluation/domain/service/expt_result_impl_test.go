@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -3135,4 +3136,264 @@ func TestExptResultServiceImpl_ListTurnResult_EdgeCases(t *testing.T) {
 		assert.Nil(t, itemID2ItemRunState)
 		assert.Equal(t, int64(1), total)
 	})
+}
+
+func TestParseTurnKey(t *testing.T) {
+	tests := []struct {
+		name          string
+		turnKey       string
+		want          *TurnKeyComponents
+		wantErr       bool
+		expectedError string
+	}{
+		// 正常场景
+		{
+			name:    "正常解析-基本数值",
+			turnKey: "123_456_789_012",
+			want: &TurnKeyComponents{
+				SpaceID: 123,
+				ExptID:  456,
+				ItemID:  789,
+				TurnID:  12,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-零值",
+			turnKey: "0_0_0_0",
+			want: &TurnKeyComponents{
+				SpaceID: 0,
+				ExptID:  0,
+				ItemID:  0,
+				TurnID:  0,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-大数值",
+			turnKey: "999999999_888888888_777777777_666666666",
+			want: &TurnKeyComponents{
+				SpaceID: 999999999,
+				ExptID:  888888888,
+				ItemID:  777777777,
+				TurnID:  666666666,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-最大int64值",
+			turnKey: "9223372036854775807_9223372036854775807_9223372036854775807_9223372036854775807",
+			want: &TurnKeyComponents{
+				SpaceID: 9223372036854775807,
+				ExptID:  9223372036854775807,
+				ItemID:  9223372036854775807,
+				TurnID:  9223372036854775807,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-负数值",
+			turnKey: "-1_-2_-3_-4",
+			want: &TurnKeyComponents{
+				SpaceID: -1,
+				ExptID:  -2,
+				ItemID:  -3,
+				TurnID:  -4,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-混合正负数",
+			turnKey: "-1_2_-3_4",
+			want: &TurnKeyComponents{
+				SpaceID: -1,
+				ExptID:  2,
+				ItemID:  -3,
+				TurnID:  4,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-最小int64值",
+			turnKey: "-9223372036854775808_-9223372036854775808_-9223372036854775808_-9223372036854775808",
+			want: &TurnKeyComponents{
+				SpaceID: -9223372036854775808,
+				ExptID:  -9223372036854775808,
+				ItemID:  -9223372036854775808,
+				TurnID:  -9223372036854775808,
+			},
+			wantErr: false,
+		},
+		// 错误场景 - 格式错误
+		{
+			name:          "空字符串",
+			turnKey:       "",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "无分隔符",
+			turnKey:       "123456789012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "分隔符不足-1个",
+			turnKey:       "123_456",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "分隔符不足-2个",
+			turnKey:       "123_456_789",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "分隔符过多",
+			turnKey:       "123_456_789_012_345",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		// 错误场景 - 数值解析错误
+		{
+			name:          "spaceID非数字",
+			turnKey:       "abc_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "exptID非数字",
+			turnKey:       "123_abc_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid exptID in turnKey:",
+		},
+		{
+			name:          "itemID非数字",
+			turnKey:       "123_456_abc_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid itemID in turnKey:",
+		},
+		{
+			name:          "turnID非数字",
+			turnKey:       "123_456_789_abc",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnID in turnKey:",
+		},
+		{
+			name:          "spaceID为空",
+			turnKey:       "_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "exptID为空",
+			turnKey:       "123__789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid exptID in turnKey:",
+		},
+		{
+			name:          "itemID为空",
+			turnKey:       "123_456__012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid itemID in turnKey:",
+		},
+		{
+			name:          "turnID为空",
+			turnKey:       "123_456_789_",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnID in turnKey:",
+		},
+		{
+			name:          "spaceID超出int64范围",
+			turnKey:       "92233720368547758080_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含浮点数",
+			turnKey:       "123.5_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含特殊字符",
+			turnKey:       "123@_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含空格",
+			turnKey:       "123 _456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含制表符",
+			turnKey:       "123\t_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTurnKey(tt.turnKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseTurnKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ParseTurnKey() expected error but got none")
+					return
+				}
+				if tt.expectedError != "" && !strings.Contains(err.Error(), tt.expectedError) {
+					t.Errorf("ParseTurnKey() error = %v, expected to contain %v", err, tt.expectedError)
+				}
+				if got != nil {
+					t.Errorf("ParseTurnKey() expected nil result when error occurs, got %v", got)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ParseTurnKey() unexpected error = %v", err)
+					return
+				}
+				if got == nil {
+					t.Errorf("ParseTurnKey() expected non-nil result, got nil")
+					return
+				}
+				if got.SpaceID != tt.want.SpaceID {
+					t.Errorf("ParseTurnKey() got.SpaceID = %v, want %v", got.SpaceID, tt.want.SpaceID)
+				}
+				if got.ExptID != tt.want.ExptID {
+					t.Errorf("ParseTurnKey() got.ExptID = %v, want %v", got.ExptID, tt.want.ExptID)
+				}
+				if got.ItemID != tt.want.ItemID {
+					t.Errorf("ParseTurnKey() got.ItemID = %v, want %v", got.ItemID, tt.want.ItemID)
+				}
+				if got.TurnID != tt.want.TurnID {
+					t.Errorf("ParseTurnKey() got.TurnID = %v, want %v", got.TurnID, tt.want.TurnID)
+				}
+			}
+		})
+	}
 }
