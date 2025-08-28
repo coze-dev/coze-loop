@@ -1,8 +1,8 @@
 namespace go coze.loop.observability.task
 
 include "../../../base.thrift"
-include "./domain/filter.thrift"
-include "./domain/task.thrift"
+include "domain/filter.thrift"
+include "domain/task.thrift"
 
 struct CreateTaskRequest {
     1: required task.Task task (api.body = "task"),
