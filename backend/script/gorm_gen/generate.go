@@ -25,7 +25,7 @@ func main() {
 
 func initDB() *gorm.DB {
 	cli, err := gorm.Open(rawsql.New(rawsql.Config{
-		FilePath: []string{"../conf/default/mysql/init-sql"},
+		FilePath: []string{"../release/deployment/docker-compose/bootstrap/mysql-init/init-sql"},
 	}))
 	if err != nil {
 		panic(err)
@@ -228,8 +228,10 @@ func generateForObservability(db *gorm.DB) {
 
 	// 为 observability_view 表添加软删除字段
 	observabilityView := g.GenerateModelAs("observability_view", "ObservabilityView")
+	observabilityTask := g.GenerateModelAs("task", "ObservabilityTask")
 
 	g.ApplyBasic(observabilityView)
+	g.ApplyBasic(observabilityTask)
 	g.Execute()
 }
 
