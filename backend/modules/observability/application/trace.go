@@ -6,7 +6,9 @@ package application
 import (
 	"context"
 	"strconv"
+	"time"
 
+	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -806,5 +808,48 @@ func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *tr
 	return resp, nil
 }
 func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (*trace.ExtractSpanInfoResponse, error) {
-	return nil, nil
+	var resp *trace.ExtractSpanInfoResponse
+	if err := t.validateExtractSpanInfoReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	sResp, err := t.traceService.ExtractSpanInfo(ctx, &service.ExtractSpanInfoRequest{
+		WorkspaceID:   req.WorkspaceID,
+		TraceID:       "",
+		SpanIds:       req.SpanIds,
+		StartTime:     req.GetStartTime(),
+		EndTime:       req.GetEndTime(),
+		PlatformType:  loop_span.PlatformType(req.GetPlatformType()),
+		FieldMappings: req.FieldMappings,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp.SpanInfos = sResp.SpanInfos
+	return resp, nil
+}
+func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *trace.ExtractSpanInfoRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if len(req.SpanIds) > MaxSpanLength {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("span_ids length exceeds the limit"))
+	}
+	v := utils.DateValidator{
+		Start: req.GetStartTime(),
+		End:   req.GetEndTime(),
+	}
+
+	if newStartTime, newEndTime, err := v.CorrectDate(); err != nil {
+		return err
+	} else {
+		req.SetStartTime(lo.ToPtr(newStartTime - time.Minute.Milliseconds()))
+		req.SetEndTime(lo.ToPtr(newEndTime + time.Minute.Milliseconds()))
+	}
+	return nil
 }
