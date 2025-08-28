@@ -461,7 +461,7 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 				continue
 			}
 			for _, part := range val.MultiPartValues {
-				if part == nil || part.ImageURL == nil {
+				if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
 					continue
 				}
 				fileKeys = append(fileKeys, part.ImageURL.URI)
@@ -494,7 +494,7 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 				continue
 			}
 			for _, part := range val.MultiPartValues {
-				if part == nil || part.ImageURL == nil {
+				if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
 					continue
 				}
 				part.ImageURL.URL = urlMap[part.ImageURL.URI]
