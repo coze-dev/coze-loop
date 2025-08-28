@@ -541,7 +541,7 @@ func (p *EvaluatorSourcePromptServiceImpl) injectPromptTools(ctx context.Context
 
 func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, evaluatorDO *entity.Evaluator) {
 	// 注入后缀
-	if evaluatorDO.GetEvaluatorVersion() == nil || evaluatorDO.GetEvaluatorVersion().GetModelConfig() == nil {
+	if evaluatorDO.GetModelConfig() == nil {
 		return
 	}
 
