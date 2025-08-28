@@ -11,14 +11,14 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 	kutils "github.com/cloudwego/kitex/pkg/utils"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 )
 
 var (
-	_ = eval_set.KitexUnusedProtection
 	_ = common.KitexUnusedProtection
+	_ = dataset.KitexUnusedProtection
 	_ = filter.KitexUnusedProtection
 )
 
@@ -2113,7 +2113,7 @@ RequiredFieldNotSetError:
 
 func (p *FieldMapping) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := eval_set.NewFieldSchema()
+	_field := dataset.NewFieldSchema()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -2259,9 +2259,9 @@ func (p *FieldMapping) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _fieldSchema *eval_set.FieldSchema
+	var _fieldSchema *dataset.FieldSchema
 	if src.FieldSchema != nil {
-		_fieldSchema = &eval_set.FieldSchema{}
+		_fieldSchema = &dataset.FieldSchema{}
 		if err := _fieldSchema.DeepCopy(src.FieldSchema); err != nil {
 			return err
 		}

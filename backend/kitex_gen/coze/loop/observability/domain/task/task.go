@@ -5,8 +5,8 @@ package task
 import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"strings"
 )
@@ -2820,10 +2820,10 @@ func (p *TaskDetail) Field2DeepEqual(src *int64) bool {
 
 type FieldMapping struct {
 	// 数据集字段约束
-	FieldSchema        *eval_set.FieldSchema `thrift:"field_schema,1,required" frugal:"1,required,eval_set.FieldSchema" form:"field_schema,required" json:"field_schema,required" query:"field_schema,required"`
-	TraceFieldKey      string                `thrift:"trace_field_key,2,required" frugal:"2,required,string" form:"trace_field_key,required" json:"trace_field_key,required" query:"trace_field_key,required"`
-	TraceFieldJsonpath string                `thrift:"trace_field_jsonpath,3,required" frugal:"3,required,string" form:"trace_field_jsonpath,required" json:"trace_field_jsonpath,required" query:"trace_field_jsonpath,required"`
-	EvalSetName        *string               `thrift:"eval_set_name,4,optional" frugal:"4,optional,string" form:"eval_set_name" json:"eval_set_name,omitempty" query:"eval_set_name"`
+	FieldSchema        *dataset.FieldSchema `thrift:"field_schema,1,required" frugal:"1,required,dataset.FieldSchema" form:"field_schema,required" json:"field_schema,required" query:"field_schema,required"`
+	TraceFieldKey      string               `thrift:"trace_field_key,2,required" frugal:"2,required,string" form:"trace_field_key,required" json:"trace_field_key,required" query:"trace_field_key,required"`
+	TraceFieldJsonpath string               `thrift:"trace_field_jsonpath,3,required" frugal:"3,required,string" form:"trace_field_jsonpath,required" json:"trace_field_jsonpath,required" query:"trace_field_jsonpath,required"`
+	EvalSetName        *string              `thrift:"eval_set_name,4,optional" frugal:"4,optional,string" form:"eval_set_name" json:"eval_set_name,omitempty" query:"eval_set_name"`
 }
 
 func NewFieldMapping() *FieldMapping {
@@ -2833,9 +2833,9 @@ func NewFieldMapping() *FieldMapping {
 func (p *FieldMapping) InitDefault() {
 }
 
-var FieldMapping_FieldSchema_DEFAULT *eval_set.FieldSchema
+var FieldMapping_FieldSchema_DEFAULT *dataset.FieldSchema
 
-func (p *FieldMapping) GetFieldSchema() (v *eval_set.FieldSchema) {
+func (p *FieldMapping) GetFieldSchema() (v *dataset.FieldSchema) {
 	if p == nil {
 		return
 	}
@@ -2870,7 +2870,7 @@ func (p *FieldMapping) GetEvalSetName() (v string) {
 	}
 	return *p.EvalSetName
 }
-func (p *FieldMapping) SetFieldSchema(val *eval_set.FieldSchema) {
+func (p *FieldMapping) SetFieldSchema(val *dataset.FieldSchema) {
 	p.FieldSchema = val
 }
 func (p *FieldMapping) SetTraceFieldKey(val string) {
@@ -3000,7 +3000,7 @@ RequiredFieldNotSetError:
 }
 
 func (p *FieldMapping) ReadField1(iprot thrift.TProtocol) error {
-	_field := eval_set.NewFieldSchema()
+	_field := dataset.NewFieldSchema()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -3177,7 +3177,7 @@ func (p *FieldMapping) DeepEqual(ano *FieldMapping) bool {
 	return true
 }
 
-func (p *FieldMapping) Field1DeepEqual(src *eval_set.FieldSchema) bool {
+func (p *FieldMapping) Field1DeepEqual(src *dataset.FieldSchema) bool {
 
 	if !p.FieldSchema.DeepEqual(src) {
 		return false

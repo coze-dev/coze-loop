@@ -2,7 +2,7 @@ namespace go coze.loop.observability.domain.task
 
 include "common.thrift"
 include "filter.thrift"
-include "../../evaluation/domain/eval_set.thrift"
+include "export_dataset.thrift"
 
 typedef string TimeUnit (ts.enum="true")
 const TimeUnit TimeUnit_Day = "day"
@@ -74,7 +74,7 @@ struct TaskDetail {
 }
 
 struct FieldMapping {
-    1: required eval_set.FieldSchema field_schema   // 数据集字段约束
+    1: required export_dataset.FieldSchema field_schema   // 数据集字段约束
     2: required string trace_field_key
     3: required string trace_field_jsonpath
     4: optional string eval_set_name
