@@ -274,12 +274,6 @@ func convertContentDO2DTO(content *entity.Content) *dataset0.Content {
 func convertFieldListDO2DTO(fieldList []*entity.FieldData) []*dataset0.FieldData {
 	result := make([]*dataset0.FieldData, len(fieldList))
 	for i, field := range fieldList {
-		var multiPart []*dataset0.Content
-		if field.Content != nil && field.Content.MultiPart != nil {
-			for _, part := range field.Content.MultiPart {
-				multiPart = append(multiPart, convertContentDO2DTO(part)) //nolint:staticcheck
-			}
-		}
 		result[i] = &dataset0.FieldData{
 			Key:     gptr.Of(field.Key),
 			Name:    gptr.Of(field.Name),
