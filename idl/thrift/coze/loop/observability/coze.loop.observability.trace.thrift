@@ -8,7 +8,7 @@ include "./domain/filter.thrift"
 include "./domain/view.thrift"
 include "./domain/annotation.thrift"
 include "./domain/export_dataset.thrift"
-//include "./domain/task.thrift"
+include "./domain/task.thrift"
 
 struct ListSpansRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
@@ -328,7 +328,7 @@ struct ExtractSpanInfoRequest {
     4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.query="start_time", vt.gt="0")
     5: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.query="end_time", vt.gt="0")
     6: optional common.PlatformType platform_type (api.body="platform_type")
-//    7: optional list<task.FieldMapping> field_mappings (vt.min_size="1", vt.max_size="100")
+    7: optional list<task.FieldMapping> field_mappings (vt.min_size="1", vt.max_size="100")
 
     255: optional base.Base Base (api.none="true")
 }

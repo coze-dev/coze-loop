@@ -18,6 +18,7 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
 )
 
@@ -29,6 +30,7 @@ var (
 	_ = dataset0.KitexUnusedProtection
 	_ = filter.KitexUnusedProtection
 	_ = span.KitexUnusedProtection
+	_ = task.KitexUnusedProtection
 	_ = view.KitexUnusedProtection
 )
 
@@ -11937,6 +11939,20 @@ func (p *ExtractSpanInfoRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -12079,6 +12095,31 @@ func (p *ExtractSpanInfoRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExtractSpanInfoRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*task.FieldMapping, 0, size)
+	values := make([]task.FieldMapping, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.FieldMappings = _field
+	return offset, nil
+}
+
 func (p *ExtractSpanInfoRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -12104,6 +12145,7 @@ func (p *ExtractSpanInfoRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -12119,6 +12161,7 @@ func (p *ExtractSpanInfoRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -12176,6 +12219,22 @@ func (p *ExtractSpanInfoRequest) fastWriteField6(buf []byte, w thrift.NocopyWrit
 	if p.IsSetPlatformType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
+	}
+	return offset
+}
+
+func (p *ExtractSpanInfoRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFieldMappings() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 7)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.FieldMappings {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -12241,6 +12300,19 @@ func (p *ExtractSpanInfoRequest) field6Length() int {
 	return l
 }
 
+func (p *ExtractSpanInfoRequest) field7Length() int {
+	l := 0
+	if p.IsSetFieldMappings() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.FieldMappings {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *ExtractSpanInfoRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -12286,6 +12358,21 @@ func (p *ExtractSpanInfoRequest) DeepCopy(s interface{}) error {
 	if src.PlatformType != nil {
 		tmp := *src.PlatformType
 		p.PlatformType = &tmp
+	}
+
+	if src.FieldMappings != nil {
+		p.FieldMappings = make([]*task.FieldMapping, 0, len(src.FieldMappings))
+		for _, elem := range src.FieldMappings {
+			var _elem *task.FieldMapping
+			if elem != nil {
+				_elem = &task.FieldMapping{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.FieldMappings = append(p.FieldMappings, _elem)
+		}
 	}
 
 	var _base *base.Base
