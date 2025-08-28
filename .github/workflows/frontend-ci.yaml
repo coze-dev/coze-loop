@@ -2,12 +2,12 @@ name: CI@frontend - Main
 
 on:
   push:
-    branches: [ "main", "release/**", "integration**" ]
+    branches: ["main", "release/**"]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yaml'
   pull_request:
-    branches: [ "main", "release/**", "integration**" ]
+    branches: ["main", "release/**"]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yaml'

@@ -2,12 +2,12 @@ name: CI@backend
 
 on:
   push:
-    branches: [ "main", "release/**", "integration**" ]
+    branches: ["main", "release/**"]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yaml'
   pull_request:
-    branches: [ "main", "release/**", "integration**" ]
+    branches: ["main", "release/**"]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yaml'
