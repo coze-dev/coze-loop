@@ -121,6 +121,6 @@ service OpenAPIService {
     OtelIngestTracesResponse OtelIngestTraces(1: OtelIngestTracesRequest req) (api.post = '/v1/loop/opentelemetry/v1/traces')
     SearchTraceOApiResponse SearchTraceOApi(1: SearchTraceOApiRequest req) (api.post = '/v1/loop/traces/search')
     ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search')
-    CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req)
-    DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req)
+    CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations/create')
+    DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations/delete')
 }

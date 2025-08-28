@@ -179,6 +179,7 @@ func AnnotationListDO2DTO(
 		case loop_span.AnnotationTypeManualFeedback:
 			fallthrough
 		case loop_span.AnnotationTypeCozeFeedback:
+		case loop_span.AnnotationTypeOpenAPIFeedback:
 			ret = append(ret, AnnotationDO2DTO(a, userMap, evalMap, tagMap))
 		default:
 			continue

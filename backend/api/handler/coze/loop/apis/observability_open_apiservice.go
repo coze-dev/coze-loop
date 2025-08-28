@@ -54,3 +54,15 @@ func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// CreateAnnotation .
+// @router /v1/loop/annotations/create [POST]
+func CreateAnnotation(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.CreateAnnotation)
+}
+
+// DeleteAnnotation .
+// @router /v1/loop/annotations/delete [DELETE]
+func DeleteAnnotation(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.DeleteAnnotation)
+}
