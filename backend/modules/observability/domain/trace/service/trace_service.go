@@ -866,33 +866,51 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 }
 
 func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId, traceId, workspaceId string, startAt, endAt int64) (*loop_span.Span, error) {
-	if spanId == "" || traceId == "" || workspaceId == "" {
+	if traceId == "" || workspaceId == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		Tenants: tenants,
-		Filters: &loop_span.FilterFields{
-			FilterFields: []*loop_span.FilterField{
-				{
-					FieldName: loop_span.SpanFieldSpanId,
-					FieldType: loop_span.FieldTypeString,
-					Values:    []string{spanId},
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
-				{
-					FieldName: loop_span.SpanFieldSpaceId,
-					FieldType: loop_span.FieldTypeString,
-					Values:    []string{workspaceId},
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
-				{
-					FieldName: loop_span.SpanFieldTraceId,
-					FieldType: loop_span.FieldTypeString,
-					Values:    []string{traceId},
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
+	filter := &loop_span.FilterFields{
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldSpanId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{spanId},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+			{
+				FieldName: loop_span.SpanFieldSpaceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{workspaceId},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+			{
+				FieldName: loop_span.SpanFieldTraceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{traceId},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 			},
 		},
+	}
+	if spanId != "" {
+		filter.FilterFields = append(filter.FilterFields,
+			&loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpanId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{spanId},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			})
+	} else {
+		filter.FilterFields = append(filter.FilterFields,
+			&loop_span.FilterField{
+				FieldName: loop_span.SpanFieldParentID,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{"0", ""},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			})
+	}
+	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		Tenants:            tenants,
+		Filters:            filter,
 		StartAt:            startAt,
 		EndAt:              endAt,
 		NotQueryAnnotation: true,

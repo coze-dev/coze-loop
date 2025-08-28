@@ -18,6 +18,8 @@ const (
 
 	AnnotationTypeCozeFeedback = "coze_feedback"
 
+	AnnotationTypeOpenAPIFeedback = "openapi_feedback"
+
 	ValueTypeString = "string"
 
 	ValueTypeLong = "long"
