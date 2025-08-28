@@ -784,7 +784,26 @@ func (t *TraceApplication) validateChangeEvaluatorScoreReq(ctx context.Context, 
 	return nil
 }
 func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest) (*trace.ListAnnotationEvaluatorsResponse, error) {
-	return nil, nil
+	var resp *trace.ListAnnotationEvaluatorsResponse
+	if req == nil {
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskList,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	sResp, err := t.traceService.ListAnnotationEvaluators(ctx, &service.ListAnnotationEvaluatorsRequest{
+		WorkspaceID: req.WorkspaceID,
+		Name:        req.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp.Evaluators = sResp.Evaluators
+	return resp, nil
 }
 func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (*trace.ExtractSpanInfoResponse, error) {
 	return nil, nil

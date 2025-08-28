@@ -7,6 +7,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/bytedance/gg/gptr"
 	doevaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
@@ -75,4 +76,27 @@ func (r *EvaluatorRPCAdapter) UpdateEvaluatorRecord(ctx context.Context, param *
 	}
 
 	return nil
+}
+
+func (r *EvaluatorRPCAdapter) ListEvaluators(ctx context.Context, param *rpc.ListEvaluatorsParam) ([]*rpc.Evaluator, error) {
+	resp, err := r.client.ListEvaluators(ctx, &evaluator.ListEvaluatorsRequest{
+		WorkspaceID: param.WorkspaceID,
+		SearchName:  param.Name,
+		PageSize:    gptr.Of(int32(500)),
+		PageNumber:  gptr.Of(int32(1)),
+		WithVersion: gptr.Of(true),
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	logs.CtxInfo(ctx, "ListEvaluators: %v", resp.GetEvaluators())
+	evalInfos := make([]*rpc.Evaluator, 0)
+	for _, eval := range resp.GetEvaluators() {
+		evalInfos = append(evalInfos, &rpc.Evaluator{
+			EvaluatorVersionID: eval.GetCurrentVersion().GetID(),
+			EvaluatorName:      eval.GetName(),
+			EvaluatorVersion:   eval.GetCurrentVersion().GetVersion(),
+		})
+	}
+	return evalInfos, nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
@@ -169,8 +170,11 @@ type ChangeEvaluatorScoreResp struct {
 	Annotation *annotation.Annotation
 }
 type ListAnnotationEvaluatorsRequest struct {
+	WorkspaceID int64
+	Name        *string
 }
 type ListAnnotationEvaluatorsResp struct {
+	Evaluators []*trace.AnnotationEvaluator
 }
 type ExtractSpanInfoRequest struct {
 }
@@ -957,7 +961,69 @@ func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, annotati
 	return nil
 }
 func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
-	return nil, nil
+	resp := &ListAnnotationEvaluatorsResp{}
+	resp.Evaluators = make([]*trace.AnnotationEvaluator, 0)
+	var (
+		evaluators = make([]*rpc.Evaluator, 0)
+	)
+	var err error
+	if req.Name != nil {
+		// 有name直接模糊查询
+		evaluators, err = r.evalServiceAdaptor.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
+			WorkspaceID: req.WorkspaceID,
+			Name:        req.Name,
+		})
+		if err != nil {
+			return resp, err
+		}
+	} else {
+		// 没有name先查task
+		//tasksResp, err := service.ListTasks(ctx, &taskservice.ListTasksRequest{
+		//	WorkspaceID: req.WorkspaceID,
+		//	Limit:       gptr.Of(int32(500)),
+		//	Offset:      gptr.Of(int32(0)),
+		//})
+		if err != nil {
+			return nil, err
+		}
+		evaluatorVersionIDS := make(map[int64]bool)
+		//for _, task := range tasksResp.Tasks {
+		//	for _, evaluator := range task.TaskConfig.AutoEvaluateConfigs {
+		//		evaluatorVersionIDS[evaluator.EvaluatorVersionID] = true
+		//		if len(evaluatorVersionIDS) >= 30 {
+		//			break
+		//		}
+		//	}
+		//	if len(evaluatorVersionIDS) >= 30 {
+		//		break
+		//	}
+		//}
+		evaluatorVersionIDList := make([]int64, 0)
+		for k := range evaluatorVersionIDS {
+			evaluatorVersionIDList = append(evaluatorVersionIDList, k)
+		}
+		evaluators, _, err = r.evalServiceAdaptor.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         req.WorkspaceID,
+			EvaluatorVersionIds: evaluatorVersionIDList,
+		})
+		if err != nil {
+			return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithMsgParam("evaluatorVersionIDs is invalid, BatchGetEvaluators err: %v", err.Error()))
+		}
+	}
+	for _, evaluator := range evaluators {
+		re := &trace.AnnotationEvaluator{}
+		if evaluator.EvaluatorVersionID != 0 {
+			re.EvaluatorVersionID = evaluator.EvaluatorVersionID
+		}
+		if evaluator.EvaluatorName != "" {
+			re.EvaluatorName = evaluator.EvaluatorName
+		}
+		if evaluator.EvaluatorVersion != "" {
+			re.EvaluatorVersion = evaluator.EvaluatorVersion
+		}
+		resp.Evaluators = append(resp.Evaluators, re)
+	}
+	return resp, nil
 }
 func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error) {
 	return nil, nil
