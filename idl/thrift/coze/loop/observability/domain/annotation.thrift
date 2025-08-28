@@ -59,3 +59,9 @@ struct Annotation {
     101: optional AutoEvaluate auto_evaluate
     102: optional ManualFeedback manual_feedback
 }
+
+struct AnnotationEvaluator {
+    1: required i64 evaluator_version_id,
+    2: required string evaluator_name,
+    3: required string evaluator_version,
+}

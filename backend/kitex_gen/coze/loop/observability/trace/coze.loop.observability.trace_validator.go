@@ -420,9 +420,6 @@ func (p *ChangeEvaluatorScoreResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *AnnotationEvaluator) IsValid() error {
-	return nil
-}
 func (p *ListAnnotationEvaluatorsRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
@@ -476,25 +473,6 @@ func (p *ExtractSpanInfoRequest) IsValid() error {
 			return fmt.Errorf("field Base not valid, %w", err)
 		}
 	}
-	return nil
-}
-func (p *FieldData) IsValid() error {
-	if p.Content != nil {
-		if err := p.Content.IsValid(); err != nil {
-			return fmt.Errorf("field Content not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *Content) IsValid() error {
-	if p.Image != nil {
-		if err := p.Image.IsValid(); err != nil {
-			return fmt.Errorf("field Image not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *Image) IsValid() error {
 	return nil
 }
 func (p *SpanInfo) IsValid() error {

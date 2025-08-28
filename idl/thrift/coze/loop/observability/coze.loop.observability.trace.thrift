@@ -229,6 +229,7 @@ struct ListAnnotationsResponse {
 
     255: optional base.BaseResp BaseResp
 }
+
 struct ExportTracesToDatasetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
     2: required list<SpanID> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
@@ -305,11 +306,7 @@ struct ChangeEvaluatorScoreResponse {
     255: optional base.BaseResp BaseResp
 }
 
-struct AnnotationEvaluator {
-    1: required i64 evaluator_version_id,
-    2: required string evaluator_name,
-    3: required string evaluator_version,
-}
+
 
 struct ListAnnotationEvaluatorsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
@@ -319,7 +316,7 @@ struct ListAnnotationEvaluatorsRequest {
 }
 
 struct ListAnnotationEvaluatorsResponse {
-    1: required list<AnnotationEvaluator> evaluators
+    1: required list<annotation.AnnotationEvaluator> evaluators
 
     255: optional base.BaseResp BaseResp
 }
@@ -336,33 +333,9 @@ struct ExtractSpanInfoRequest {
     255: optional base.Base Base (api.none="true")
 }
 
-struct FieldData {
-    1: optional string key,
-    2: optional string name,
-    3: optional Content content,
-}
-typedef string ContentType
-
-const ContentType ContentType_Text = "Text" // 空间
-const ContentType ContentType_Image = "Image"
-const ContentType ContentType_Audio = "Audio"
-const ContentType ContentType_MultiPart = "MultiPart"
-
-struct Content {
-    1: optional ContentType contentType (agw.key = "content_type"  go.tag = "json:\"content_type\""),
-    10: optional string text (agw.key = "text" go.tag = "json:\"text\""),
-    11: optional Image image (agw.key = "image" go.tag = "json:\"image\""),               // 图片内容
-    12: optional list<Content> multiPart (agw.key = "multi_part" go.tag = "json:\"multi_part\""),          // 图文混排时，图文内容
-}
-
-struct Image {
-    1: optional string name (agw.key = "name" go.tag = "json:\"name\"")
-    2: optional string url  (agw.key = "url" go.tag = "json:\"url\"")
-}
-
 struct SpanInfo {
     1: required string span_id
-    2: required list<FieldData>  field_list
+    2: required list<export_dataset.FieldData>  field_list
 }
 struct ExtractSpanInfoResponse {
     1: required list<SpanInfo>  span_infos
