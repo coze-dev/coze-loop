@@ -370,8 +370,31 @@ func (l *LocalDatasetService) UpdateDatasetSchema(ctx context.Context, req *data
 	return result.GetSuccess(), nil
 }
 
-// BatchCreateDatasetItems
+// ValidateDatasetItems
 /* Dataset Item */
+// 校验数据
+func (l *LocalDatasetService) ValidateDatasetItems(ctx context.Context, req *dataset.ValidateDatasetItemsReq, callOptions ...callopt.Option) (*dataset.ValidateDatasetItemsResp, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*dataset.DatasetServiceValidateDatasetItemsArgs)
+		result := out.(*dataset.DatasetServiceValidateDatasetItemsResult)
+		resp, err := l.impl.ValidateDatasetItems(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &dataset.DatasetServiceValidateDatasetItemsArgs{Req: req}
+	result := &dataset.DatasetServiceValidateDatasetItemsResult{}
+	ctx = l.injectRPCInfo(ctx, "ValidateDatasetItems")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// BatchCreateDatasetItems
 // 批量新增数据
 func (l *LocalDatasetService) BatchCreateDatasetItems(ctx context.Context, req *dataset.BatchCreateDatasetItemsRequest, callOptions ...callopt.Option) (*dataset.BatchCreateDatasetItemsResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {

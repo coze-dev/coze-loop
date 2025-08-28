@@ -85,6 +85,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_dataset_io_jobs.GET("/:job_id", append(_getdatasetiojobMw(handler), apis.GetDatasetIOJob)...)
 				}
 				{
+					_dataset_items := _v10.Group("/dataset_items", _dataset_itemsMw(handler)...)
+					_dataset_items.POST("/validate", append(_validatedatasetitemsMw(handler), apis.ValidateDatasetItems)...)
+				}
+				{
 					_dataset_versions := _v10.Group("/dataset_versions", _dataset_versionsMw(handler)...)
 					_dataset_versions.POST("/batch_get", append(_batchgetdatasetversionsMw(handler), apis.BatchGetDatasetVersions)...)
 					_dataset_versions.GET("/:version_id", append(_getdatasetversionMw(handler), apis.GetDatasetVersion)...)
@@ -276,7 +280,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
+					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
+					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
 				}
 			}
@@ -328,12 +334,24 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)
 			}
 			{
+				_opentelemetry := _loop.Group("/opentelemetry", _opentelemetryMw(handler)...)
+				{
+					_v17 := _opentelemetry.Group("/v1", _v17Mw(handler)...)
+					_v17.POST("/traces", append(_otelingesttracesMw(handler), apis.OtelIngestTraces)...)
+				}
+			}
+			{
 				_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
 				_prompts0.POST("/mget", append(_batchgetpromptbypromptkeyMw(handler), apis.BatchGetPromptByPromptKey)...)
 			}
 			{
+				_spans0 := _loop.Group("/spans", _spans0Mw(handler)...)
+				_spans0.POST("/search", append(_listspansoapiMw(handler), apis.ListSpansOApi)...)
+			}
+			{
 				_traces0 := _loop.Group("/traces", _traces0Mw(handler)...)
 				_traces0.POST("/ingest", append(_ingesttracesMw(handler), apis.IngestTraces)...)
+				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
 			}
 		}
 	}

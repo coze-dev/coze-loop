@@ -57,8 +57,8 @@ func AnnotationPO2DO(annotation *model.ObservabilityAnnotation) *loop_span.Annot
 			} else {
 				ret.Metadata = metadata
 			}
-		case loop_span.AnnotationTypeManualEvaluationSet:
-			var metadata loop_span.ManualEvaluationSetMetadata
+		case loop_span.AnnotationTypeManualEvaluationSet, loop_span.AnnotationTypeManualDataset:
+			var metadata loop_span.ManualDatasetMetadata
 			err := json.Unmarshal([]byte(annotation.Metadata), &metadata)
 			if err != nil {
 				logs.Error("json unmarshal metadata error: %v", err)

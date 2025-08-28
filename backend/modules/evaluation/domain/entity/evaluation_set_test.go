@@ -91,7 +91,6 @@ func TestItemErrorType_String_FromString(t *testing.T) {
 	typ6, err := ItemErrorTypeFromString("UploadImageFailed")
 	assert.NoError(t, err)
 	assert.Equal(t, ItemErrorType_UploadImageFailed, typ6)
-
 }
 
 func TestFieldDisplayFormat_String_FromString_Ptr_Scan_Value(t *testing.T) {

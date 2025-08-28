@@ -10,15 +10,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
@@ -36,10 +41,14 @@ import (
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
 )
@@ -47,6 +56,7 @@ import (
 var (
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
+		service.NewTraceExportServiceImpl,
 		obrepo.NewTraceCKRepoImpl,
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
@@ -55,8 +65,11 @@ var (
 		mq2.NewAnnotationProducerImpl,
 		file.NewFileRPCProvider,
 		NewTraceConfigLoader,
-		NewTraceQueryProcessorBuilder,
+		NewTraceProcessorBuilder,
 		obconfig.NewTraceConfigCenter,
+		tenant.NewTenantProvider,
+		workspace.NewWorkspaceProvider,
+		NewDatasetServiceAdapter,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
@@ -85,7 +98,7 @@ var (
 	)
 )
 
-func NewTraceQueryProcessorBuilder(
+func NewTraceProcessorBuilder(
 	traceConfig config.ITraceConfig,
 	fileProvider rpc.IFileProvider,
 	benefitSvc benefit.IBenefitService,
@@ -113,6 +126,20 @@ func NewTraceQueryProcessorBuilder(
 		// batch get advance info processors
 		[]span_processor.Factory{
 			span_processor.NewCheckProcessorFactory(),
+		},
+		// ingest trace processors
+		[]span_processor.Factory{},
+		// search trace open api processors
+		[]span_processor.Factory{
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		// list trace open api processors
+		[]span_processor.Factory{
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		})
 }
 
@@ -134,18 +161,28 @@ func NewTraceConfigLoader(confFactory conf.IConfigLoaderFactory) (conf.IConfigLo
 	return confFactory.NewConfigLoader("observability.yaml")
 }
 
+func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datasetService datasetservice.Client) *service.DatasetServiceAdaptor {
+	adapter := service.NewDatasetServiceAdaptor()
+	datasetProvider := dataset.NewDatasetProvider(datasetService)
+	adapter.Register(entity.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
+	return adapter
+}
+
 func InitTraceApplication(
 	db db.Provider,
 	ckDb ck.Provider,
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
+	idgen idgen.IIDGenerator,
 	fileClient fileservice.Client,
 	benefit benefit.IBenefitService,
 	authClient authservice.Client,
 	userClient userservice.Client,
 	evalService evaluatorservice.Client,
+	evalSetService evaluationsetservice.Client,
 	tagService tagservice.Client,
+	datasetService datasetservice.Client,
 ) (ITraceApplication, error) {
 	wire.Build(traceSet)
 	return nil, nil
@@ -157,6 +194,7 @@ func InitOpenAPIApplication(
 	fileClient fileservice.Client,
 	ckDb ck.Provider,
 	benefit benefit.IBenefitService,
+	limiterFactory limiter.IRateLimiterFactory,
 	authClient authservice.Client,
 	meter metrics.Meter,
 ) (IObservabilityOpenAPIApplication, error) {

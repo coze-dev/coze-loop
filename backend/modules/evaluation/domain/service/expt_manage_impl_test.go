@@ -132,16 +132,16 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 	ctx := context.Background()
 	session := &entity.Session{UserID: "1"}
 	param := &entity.CreateExptParam{
-		WorkspaceID:           1,
-		Name:                  "expt",
-		EvalSetID:             2,
-		EvalSetVersionID:      3,
+		WorkspaceID:      1,
+		Name:             "expt",
+		EvalSetID:        2,
+		EvalSetVersionID: 3,
 		CreateEvalTargetParam: &entity.CreateEvalTargetParam{
 			EvalTargetType:      gptr.Of(entity.EvalTargetTypeLoopPrompt),
 			SourceTargetID:      gptr.Of("100"),
 			SourceTargetVersion: gptr.Of("v1"),
 		},
-		EvaluatorVersionIds:   []int64{10},
+		EvaluatorVersionIds: []int64{10},
 	}
 
 	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
@@ -152,7 +152,7 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		EXPECT().
 		GetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&entity.EvalTarget{
-			ID: 100,
+			ID:             100,
 			EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 			EvalTargetVersion: &entity.EvalTargetVersion{
 				OutputSchema: []*entity.ArgsSchema{},
@@ -172,8 +172,8 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		EXPECT().
 		BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return([]*entity.Evaluator{{
-			ID: 10, 
-			EvaluatorType: entity.EvaluatorTypePrompt, 
+			ID:                     10,
+			EvaluatorType:          entity.EvaluatorTypePrompt,
 			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 10},
 		}}, nil).AnyTimes()
 	mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(ctx, 2).Return([]int64{1, 2}, nil).AnyTimes()
@@ -187,7 +187,7 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		EXPECT().
 		Audit(gomock.Any(), gomock.Any()).
 		Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).AnyTimes()
-	
+
 	// Mock CheckRun dependencies
 	mgr.benefitService.(*benefitMocks.MockIBenefitService).
 		EXPECT().

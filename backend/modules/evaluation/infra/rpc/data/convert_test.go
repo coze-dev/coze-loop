@@ -547,30 +547,6 @@ func TestConvert2EvaluationSetFieldData(t *testing.T) {
 	}
 }
 
-// 辅助函数：创建基础的 FieldData
-func createBasicFieldData(key, name string) *dataset.FieldData {
-	return &dataset.FieldData{
-		Key:  gptr.Of(key),
-		Name: gptr.Of(name),
-	}
-}
-
-// 辅助函数：创建图片附件
-func createImageAttachment(name, url string) *dataset.ObjectStorage {
-	return &dataset.ObjectStorage{
-		Name: gptr.Of(name),
-		URL:  gptr.Of(url),
-	}
-}
-
-// 辅助函数：创建音频附件
-func createAudioAttachment(name, url string) *dataset.ObjectStorage {
-	return &dataset.ObjectStorage{
-		Name: gptr.Of(name),
-		URL:  gptr.Of(url),
-	}
-}
-
 // 辅助函数：创建嵌套的 Parts 结构
 func createNestedParts(depth int) []*dataset.FieldData {
 	if depth <= 0 {

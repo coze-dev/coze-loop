@@ -73,6 +73,36 @@ func (mr *MockTraceFilterProcessorBuilderMockRecorder) BuildGetTraceProcessors(a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildGetTraceProcessors", reflect.TypeOf((*MockTraceFilterProcessorBuilder)(nil).BuildGetTraceProcessors), arg0, arg1)
 }
 
+// BuildIngestTraceProcessors mocks base method.
+func (m *MockTraceFilterProcessorBuilder) BuildIngestTraceProcessors(arg0 context.Context, arg1 span_processor.Settings) ([]span_processor.Processor, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildIngestTraceProcessors", arg0, arg1)
+	ret0, _ := ret[0].([]span_processor.Processor)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuildIngestTraceProcessors indicates an expected call of BuildIngestTraceProcessors.
+func (mr *MockTraceFilterProcessorBuilderMockRecorder) BuildIngestTraceProcessors(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildIngestTraceProcessors", reflect.TypeOf((*MockTraceFilterProcessorBuilder)(nil).BuildIngestTraceProcessors), arg0, arg1)
+}
+
+// BuildListSpansOApiProcessors mocks base method.
+func (m *MockTraceFilterProcessorBuilder) BuildListSpansOApiProcessors(arg0 context.Context, arg1 span_processor.Settings) ([]span_processor.Processor, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildListSpansOApiProcessors", arg0, arg1)
+	ret0, _ := ret[0].([]span_processor.Processor)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuildListSpansOApiProcessors indicates an expected call of BuildListSpansOApiProcessors.
+func (mr *MockTraceFilterProcessorBuilderMockRecorder) BuildListSpansOApiProcessors(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildListSpansOApiProcessors", reflect.TypeOf((*MockTraceFilterProcessorBuilder)(nil).BuildListSpansOApiProcessors), arg0, arg1)
+}
+
 // BuildListSpansProcessors mocks base method.
 func (m *MockTraceFilterProcessorBuilder) BuildListSpansProcessors(arg0 context.Context, arg1 span_processor.Settings) ([]span_processor.Processor, error) {
 	m.ctrl.T.Helper()
@@ -101,4 +131,19 @@ func (m *MockTraceFilterProcessorBuilder) BuildPlatformRelatedFilter(arg0 contex
 func (mr *MockTraceFilterProcessorBuilderMockRecorder) BuildPlatformRelatedFilter(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildPlatformRelatedFilter", reflect.TypeOf((*MockTraceFilterProcessorBuilder)(nil).BuildPlatformRelatedFilter), arg0, arg1)
+}
+
+// BuildSearchTraceOApiProcessors mocks base method.
+func (m *MockTraceFilterProcessorBuilder) BuildSearchTraceOApiProcessors(arg0 context.Context, arg1 span_processor.Settings) ([]span_processor.Processor, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildSearchTraceOApiProcessors", arg0, arg1)
+	ret0, _ := ret[0].([]span_processor.Processor)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuildSearchTraceOApiProcessors indicates an expected call of BuildSearchTraceOApiProcessors.
+func (mr *MockTraceFilterProcessorBuilderMockRecorder) BuildSearchTraceOApiProcessors(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildSearchTraceOApiProcessors", reflect.TypeOf((*MockTraceFilterProcessorBuilder)(nil).BuildSearchTraceOApiProcessors), arg0, arg1)
 }

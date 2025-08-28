@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -2342,7 +2343,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		// 设置 ExptAnnotateRepo Mock 避免 PayloadBuilder 构建时的 panic
 		mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
 		mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
-		
+
 		// 设置实验信息Mock
 		mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Experiment{{
 			ID:               1,
@@ -2577,10 +2578,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			setup: func() {
 				// 基于 defaultSetup，但针对不同的 exptID 设置空过滤器
 				defaultSetup()
-				
+
 				// 覆盖过滤器设置，使其为空（模拟过滤器不存在的情况）
 				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "2", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
-				
+
 				// 设置 TurnResult 存在，确保会进入 for 循环
 				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(2), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
 					{
@@ -2591,7 +2592,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 						Status: 1,
 					},
 				}, int64(1), nil).AnyTimes()
-				
+
 				// 设置实验信息
 				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{2}, int64(100)).Return([]*entity.Experiment{{
 					ID:               2,
@@ -2600,9 +2601,104 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
-				
+
 				// 验证指标上报 - 过滤器不存在且重试次数超过最大值
 				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), false, false, true, true).Return().AnyTimes()
+			},
+			wantErr: false,
+		},
+		{
+			name: "itemIDs为空时获取所有item",
+			args: args{
+				spaceID:    100,
+				exptID:     3,
+				itemIDs:    []int64{}, // 空的itemIDs
+				retryTimes: 0,
+			},
+			setup: func() {
+				defaultSetup()
+
+				// 设置实验信息
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{3}, int64(100)).Return([]*entity.Experiment{{
+					ID:               3,
+					SpaceID:          100,
+					ExptType:         entity.ExptType_Offline,
+					StartAt:          &now,
+					EvalSetVersionID: 101,
+				}}, nil).AnyTimes()
+
+				// 模拟获取所有item的调用
+				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(3), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
+					{
+						ID:     1,
+						ExptID: 3,
+						ItemID: 10,
+						Status: 1,
+					},
+					{
+						ID:     2,
+						ExptID: 3,
+						ItemID: 20,
+						Status: 1,
+					},
+				}, int64(2), nil).Times(1)
+
+				// 设置过滤器查询
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "3", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+					{
+						SpaceID: 100,
+						ExptID:  3,
+						ItemID:  10,
+						ItemIdx: 1,
+						TurnID:  1,
+						Status:  1,
+						EvalTargetData: map[string]string{
+							"actual_output": "some output",
+						},
+						EvaluatorScore: map[string]float64{
+							"key1": 0.9,
+						},
+						EvaluatorScoreCorrected: true,
+						EvalSetVersionID:        1,
+					},
+					{
+						SpaceID: 100,
+						ExptID:  3,
+						ItemID:  20,
+						ItemIdx: 2,
+						TurnID:  1,
+						Status:  1,
+						EvalTargetData: map[string]string{
+							"actual_output": "some output",
+						},
+						EvaluatorScore: map[string]float64{
+							"key1": 0.9,
+						},
+						EvaluatorScoreCorrected: true,
+						EvalSetVersionID:        1,
+					},
+				}, nil).AnyTimes()
+
+				// 设置TurnResult查询
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(3), []int64{10, 20}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+					{
+						ID:     10,
+						ExptID: 3,
+						ItemID: 10,
+						TurnID: 1,
+						Status: 1,
+					},
+					{
+						ID:     20,
+						ExptID: 3,
+						ItemID: 20,
+						TurnID: 1,
+						Status: 1,
+					},
+				}, int64(2), nil).AnyTimes()
+
+				// 验证指标上报
+				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 			},
 			wantErr: false,
 		},
@@ -2619,6 +2715,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		})
 	}
 }
+
 func TestExptResultServiceImpl_ListTurnResult(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -3040,4 +3137,264 @@ func TestExptResultServiceImpl_ListTurnResult_EdgeCases(t *testing.T) {
 		assert.Nil(t, itemID2ItemRunState)
 		assert.Equal(t, int64(1), total)
 	})
+}
+
+func TestParseTurnKey(t *testing.T) {
+	tests := []struct {
+		name          string
+		turnKey       string
+		want          *TurnKeyComponents
+		wantErr       bool
+		expectedError string
+	}{
+		// 正常场景
+		{
+			name:    "正常解析-基本数值",
+			turnKey: "123_456_789_012",
+			want: &TurnKeyComponents{
+				SpaceID: 123,
+				ExptID:  456,
+				ItemID:  789,
+				TurnID:  12,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-零值",
+			turnKey: "0_0_0_0",
+			want: &TurnKeyComponents{
+				SpaceID: 0,
+				ExptID:  0,
+				ItemID:  0,
+				TurnID:  0,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-大数值",
+			turnKey: "999999999_888888888_777777777_666666666",
+			want: &TurnKeyComponents{
+				SpaceID: 999999999,
+				ExptID:  888888888,
+				ItemID:  777777777,
+				TurnID:  666666666,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-最大int64值",
+			turnKey: "9223372036854775807_9223372036854775807_9223372036854775807_9223372036854775807",
+			want: &TurnKeyComponents{
+				SpaceID: 9223372036854775807,
+				ExptID:  9223372036854775807,
+				ItemID:  9223372036854775807,
+				TurnID:  9223372036854775807,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-负数值",
+			turnKey: "-1_-2_-3_-4",
+			want: &TurnKeyComponents{
+				SpaceID: -1,
+				ExptID:  -2,
+				ItemID:  -3,
+				TurnID:  -4,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-混合正负数",
+			turnKey: "-1_2_-3_4",
+			want: &TurnKeyComponents{
+				SpaceID: -1,
+				ExptID:  2,
+				ItemID:  -3,
+				TurnID:  4,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "正常解析-最小int64值",
+			turnKey: "-9223372036854775808_-9223372036854775808_-9223372036854775808_-9223372036854775808",
+			want: &TurnKeyComponents{
+				SpaceID: -9223372036854775808,
+				ExptID:  -9223372036854775808,
+				ItemID:  -9223372036854775808,
+				TurnID:  -9223372036854775808,
+			},
+			wantErr: false,
+		},
+		// 错误场景 - 格式错误
+		{
+			name:          "空字符串",
+			turnKey:       "",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "无分隔符",
+			turnKey:       "123456789012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "分隔符不足-1个",
+			turnKey:       "123_456",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "分隔符不足-2个",
+			turnKey:       "123_456_789",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		{
+			name:          "分隔符过多",
+			turnKey:       "123_456_789_012_345",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnKey format:",
+		},
+		// 错误场景 - 数值解析错误
+		{
+			name:          "spaceID非数字",
+			turnKey:       "abc_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "exptID非数字",
+			turnKey:       "123_abc_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid exptID in turnKey:",
+		},
+		{
+			name:          "itemID非数字",
+			turnKey:       "123_456_abc_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid itemID in turnKey:",
+		},
+		{
+			name:          "turnID非数字",
+			turnKey:       "123_456_789_abc",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnID in turnKey:",
+		},
+		{
+			name:          "spaceID为空",
+			turnKey:       "_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "exptID为空",
+			turnKey:       "123__789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid exptID in turnKey:",
+		},
+		{
+			name:          "itemID为空",
+			turnKey:       "123_456__012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid itemID in turnKey:",
+		},
+		{
+			name:          "turnID为空",
+			turnKey:       "123_456_789_",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid turnID in turnKey:",
+		},
+		{
+			name:          "spaceID超出int64范围",
+			turnKey:       "92233720368547758080_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含浮点数",
+			turnKey:       "123.5_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含特殊字符",
+			turnKey:       "123@_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含空格",
+			turnKey:       "123 _456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+		{
+			name:          "包含制表符",
+			turnKey:       "123\t_456_789_012",
+			want:          nil,
+			wantErr:       true,
+			expectedError: "invalid spaceID in turnKey:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTurnKey(tt.turnKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseTurnKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ParseTurnKey() expected error but got none")
+					return
+				}
+				if tt.expectedError != "" && !strings.Contains(err.Error(), tt.expectedError) {
+					t.Errorf("ParseTurnKey() error = %v, expected to contain %v", err, tt.expectedError)
+				}
+				if got != nil {
+					t.Errorf("ParseTurnKey() expected nil result when error occurs, got %v", got)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ParseTurnKey() unexpected error = %v", err)
+					return
+				}
+				if got == nil {
+					t.Errorf("ParseTurnKey() expected non-nil result, got nil")
+					return
+				}
+				if got.SpaceID != tt.want.SpaceID {
+					t.Errorf("ParseTurnKey() got.SpaceID = %v, want %v", got.SpaceID, tt.want.SpaceID)
+				}
+				if got.ExptID != tt.want.ExptID {
+					t.Errorf("ParseTurnKey() got.ExptID = %v, want %v", got.ExptID, tt.want.ExptID)
+				}
+				if got.ItemID != tt.want.ItemID {
+					t.Errorf("ParseTurnKey() got.ItemID = %v, want %v", got.ItemID, tt.want.ItemID)
+				}
+				if got.TurnID != tt.want.TurnID {
+					t.Errorf("ParseTurnKey() got.TurnID = %v, want %v", got.TurnID, tt.want.TurnID)
+				}
+			}
+		})
+	}
 }

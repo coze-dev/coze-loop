@@ -43,5 +43,5 @@ func TestAnnotation(t *testing.T) {
 	assert.Equal(t, spans.GetUserIDs(), []string{"user1", "user2"})
 	assert.Equal(t, spans.GetAnnotationTagIDs(), []string{"123", "1234"})
 	assert.Equal(t, spans.GetEvaluatorVersionIDs(), []int64{})
-	assert.Equal(t, floatAnnotation2.GetEvaluationSetMetadata(), (*ManualEvaluationSetMetadata)(nil))
+	assert.Equal(t, floatAnnotation2.GetDatasetMetadata(), (*ManualDatasetMetadata)(nil))
 }

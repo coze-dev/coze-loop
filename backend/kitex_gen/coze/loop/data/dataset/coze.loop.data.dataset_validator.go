@@ -575,6 +575,60 @@ func (p *GetDatasetSchemaResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ValidateDatasetItemsReq) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if len(p.Items) < int(1) {
+		return fmt.Errorf("field Items MinLen rule failed, current value: %v", p.Items)
+	}
+	if len(p.Items) > int(500) {
+		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
+	}
+	for i := 0; i < len(p.Items); i++ {
+		_elem := p.Items[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	if p.DatasetID != nil {
+		if *p.DatasetID <= int64(0) {
+			return fmt.Errorf("field DatasetID gt rule failed, current value: %v", *p.DatasetID)
+		}
+	}
+	if p.DatasetCategory != nil {
+		if p.DatasetCategory.String() == "<UNSET>" {
+			return fmt.Errorf("field DatasetCategory defined_only rule failed")
+		}
+	}
+	for i := 0; i < len(p.DatasetFields); i++ {
+		_elem1 := p.DatasetFields[i]
+		if _elem1 != nil {
+			if err := _elem1.IsValid(); err != nil {
+				return fmt.Errorf("field _elem1 not valid, %w", err)
+			}
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ValidateDatasetItemsResp) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *BatchCreateDatasetItemsRequest) IsValid() error {
 	if p.WorkspaceID == nil {
 		return fmt.Errorf("field WorkspaceID not_nil rule failed")

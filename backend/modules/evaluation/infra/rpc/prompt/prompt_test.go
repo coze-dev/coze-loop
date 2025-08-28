@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package prompt
@@ -12,7 +12,7 @@ import (
 
 func TestPromptRPCAdapter_parseRuntimeParam(t *testing.T) {
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name    string
 		raw     string
@@ -63,13 +63,13 @@ func TestPromptRPCAdapter_parseRuntimeParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			adapter := PromptRPCAdapter{}
 			result, err := adapter.parseRuntimeParam(ctx, tt.raw)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
-				
+
 				// Validate parsing results for non-empty parameters
 				if tt.raw != "" && tt.name != "invalid JSON" {
 					assert.NotNil(t, result.ModelConfig)

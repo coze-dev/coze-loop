@@ -11,8 +11,8 @@ import (
 )
 
 type InsertAnnotationParam struct {
-	Table      string
-	Annotation *model.ObservabilityAnnotation
+	Table       string
+	Annotations []*model.ObservabilityAnnotation
 }
 
 type GetAnnotationParam struct {

@@ -3,7 +3,9 @@
 
 package entity
 
-import "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+import (
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+)
 
 type AnnotationEvent struct {
 	Annotation *loop_span.Annotation `json:"annotation"`

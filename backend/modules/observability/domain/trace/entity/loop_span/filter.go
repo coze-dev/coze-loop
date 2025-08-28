@@ -49,6 +49,7 @@ const (
 	PlatformPrompt     PlatformType = "prompt"
 	PlatformEvaluator  PlatformType = "evaluator"
 	PlatformEvalTarget PlatformType = "evaluation_target"
+	PlatformOpenAPI    PlatformType = "open_api"
 
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"
@@ -181,6 +182,7 @@ type FilterField struct {
 	QueryType  *QueryTypeEnum  `mapstructure:"query_type" json:"query_type"`
 	QueryAndOr *QueryAndOrEnum `mapstructure:"query_and_or" json:"query_and_or"`
 	SubFilter  *FilterFields   `mapstructure:"sub_filter" json:"sub_filter"`
+	IsSystem   bool            `mapstructure:"is_system" json:"is_system"`
 }
 
 func (f *FilterField) Validate() error {

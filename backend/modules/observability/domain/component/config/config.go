@@ -11,9 +11,11 @@ import (
 )
 
 type SystemView struct {
-	ID       int64  `mapstructure:"id" json:"id"`
-	ViewName string `mapstructure:"view_name" json:"view_name"`
-	Filters  string `mapstructure:"filters" json:"filters"`
+	ID           int64  `mapstructure:"id" json:"id"`
+	ViewName     string `mapstructure:"view_name" json:"view_name"`
+	Filters      string `mapstructure:"filters" json:"filters"`
+	PlatformType string `mapstructure:"platform_type" json:"platform_type"`
+	SpanListType string `mapstructure:"span_list_type" json:"span_list_type"`
 }
 
 type PlatformTenantsCfg struct {
@@ -22,6 +24,11 @@ type PlatformTenantsCfg struct {
 
 type SpanTransHandlerConfig struct {
 	PlatformCfg map[string]loop_span.SpanTransCfgList `mapstructure:"platform_cfg" json:"platform_cfg"`
+}
+
+type IngestConfig struct {
+	MaxSpanLength int           `mapstructure:"max_span_length" json:"max_span_length"`
+	MqProducer    MqProducerCfg `mapstructure:"mq_producer" json:"mq_producer"`
 }
 
 type MqProducerCfg struct {
@@ -90,12 +97,17 @@ type AnnotationConfig struct {
 	AnnotationType string   `mapstructure:"annotation_type" json:"annotation_type"`
 }
 
+type QueryTraceRateLimitConfig struct {
+	DefaultMaxQPS int            `mapstructure:"default_max_qps" json:"default_max_qps"`
+	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
+}
+
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
 	GetPlatformTenants(ctx context.Context) (*PlatformTenantsCfg, error)
 	GetPlatformSpansTrans(ctx context.Context) (*SpanTransHandlerConfig, error)
-	GetTraceMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
+	GetTraceIngestTenantProducerCfg(ctx context.Context) (map[string]*IngestConfig, error)
 	GetAnnotationMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetTraceCkCfg(ctx context.Context) (*TraceCKCfg, error)
 	GetTenantConfig(ctx context.Context) (*TenantCfg, error)
@@ -103,5 +115,7 @@ type ITraceConfig interface {
 	GetTraceDataMaxDurationDay(ctx context.Context, platformType *string) int64
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
+	GetQueryMaxQPSBySpace(ctx context.Context, workspaceID int64) (int, error)
+
 	conf.IConfigLoader
 }

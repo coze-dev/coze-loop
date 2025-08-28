@@ -6,6 +6,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -16,13 +17,14 @@ const (
 	systemViewsCfgKey          = "trace_system_view_cfg"
 	platformTenantCfgKey       = "trace_platform_tenants"
 	platformSpanHandlerCfgKey  = "trace_platform_span_handler_config"
-	traceMqProducerCfgKey      = "trace_mq_producer_config"
+	traceIngestTenantCfgKey    = "trace_ingest_tenant_config"
 	annotationMqProducerCfgKey = "annotation_mq_producer_config"
 	tenantTablesCfgKey         = "trace_tenant_cfg"
 	traceCkCfgKey              = "trace_ck_cfg"
 	traceFieldMetaInfoCfgKey   = "trace_field_meta_info"
 	traceMaxDurationDay        = "trace_max_duration_day"
 	annotationSourceCfgKey     = "annotation_source_cfg"
+	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
 )
 
 type TraceConfigCenter struct {
@@ -55,9 +57,9 @@ func (t *TraceConfigCenter) GetPlatformSpansTrans(ctx context.Context) (*config.
 	return cfg, nil
 }
 
-func (t *TraceConfigCenter) GetTraceMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
-	cfg := new(config.MqProducerCfg)
-	if err := t.UnmarshalKey(context.Background(), traceMqProducerCfgKey, cfg); err != nil {
+func (t *TraceConfigCenter) GetTraceIngestTenantProducerCfg(ctx context.Context) (map[string]*config.IngestConfig, error) {
+	cfg := make(map[string]*config.IngestConfig)
+	if err := t.UnmarshalKey(context.Background(), traceIngestTenantCfgKey, &cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil
@@ -139,6 +141,17 @@ func (t *TraceConfigCenter) GetAnnotationSourceCfg(ctx context.Context) (*config
 	return annotationSourceCfg, nil
 }
 
+func (t *TraceConfigCenter) GetQueryMaxQPSBySpace(ctx context.Context, workspaceID int64) (int, error) {
+	qpsConfig := new(config.QueryTraceRateLimitConfig)
+	if err := t.UnmarshalKey(ctx, queryTraceRateLimitCfgKey, &qpsConfig); err != nil {
+		return 0, err
+	}
+	if qps, ok := qpsConfig.SpaceMaxQPS[strconv.FormatInt(workspaceID, 10)]; ok {
+		return qps, nil
+	}
+	return qpsConfig.DefaultMaxQPS, nil
+}
+
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
 	ret := &TraceConfigCenter{
 		IConfigLoader: confP,
@@ -147,7 +160,7 @@ func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
 	if err != nil {
 		panic(err)
 	}
-	logs.Info("default trace ingest tenant is  %s", tenant)
+	logs.Info("default trace ingest tenant is %s", tenant)
 	ret.traceDefaultTenant = tenant
 	return ret
 }

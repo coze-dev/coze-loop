@@ -19,7 +19,7 @@ RUN mkdir -p ./bin && \
     go -C /coze-loop/src/backend build -gcflags="all=-N -l" -buildvcs=false -o /coze-loop/bin/main "./cmd"
 
 # Final minimal image (coze-loop)
-FROM compose-cn-beijing.cr.volces.com/coze/coze-loop:latest
+FROM ${COZE_LOOP_APP_IMAGE_REGISTRY:-docker.io}/${COZE_LOOP_APP_IMAGE_REPOSITORY:-cozedev}/${COZE_LOOP_APP_IMAGE_NAME:-coze-loop}:${COZE_LOOP_APP_IMAGE_TAG:-latest}
 
 WORKDIR /coze-loop
 

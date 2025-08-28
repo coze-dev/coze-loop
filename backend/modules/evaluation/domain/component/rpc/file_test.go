@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package rpc_test
@@ -128,7 +128,7 @@ func TestIFileProvider_Interface(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockProvider := mocks.NewMockIFileProvider(ctrl)
-	
+
 	// 验证方法签名正确
 	mockProvider.EXPECT().
 		MGetFileURL(gomock.Any(), gomock.Any()).

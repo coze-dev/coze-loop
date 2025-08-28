@@ -10,10 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -25,7 +28,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
-	"golang.org/x/sync/errgroup"
 )
 
 type ListSpansReq struct {
@@ -48,6 +50,7 @@ type ListSpansResp struct {
 
 type GetTraceReq struct {
 	WorkspaceID  int64
+	LogID        string
 	TraceID      string
 	StartTime    int64 // ms
 	EndTime      int64 // ms
@@ -58,6 +61,40 @@ type GetTraceReq struct {
 type GetTraceResp struct {
 	TraceId string
 	Spans   loop_span.SpanList
+}
+
+type SearchTraceOApiReq struct {
+	WorkspaceID  int64
+	Tenants      []string
+	TraceID      string
+	LogID        string
+	StartTime    int64 // ms
+	EndTime      int64 // ms
+	Limit        int32
+	PlatformType loop_span.PlatformType
+}
+
+type SearchTraceOApiResp struct {
+	Spans loop_span.SpanList
+}
+
+type ListSpansOApiReq struct {
+	WorkspaceID     int64
+	Tenants         []string
+	StartTime       int64 // ms
+	EndTime         int64 // ms
+	Filters         *loop_span.FilterFields
+	Limit           int32
+	DescByStartTime bool
+	PageToken       string
+	PlatformType    loop_span.PlatformType
+	SpanListType    loop_span.SpanListType
+}
+
+type ListSpansOApiResp struct {
+	Spans         loop_span.SpanList
+	NextPageToken string
+	HasMore       bool
 }
 
 type TraceQueryParam struct {
@@ -77,6 +114,7 @@ type GetTracesAdvanceInfoResp struct {
 }
 
 type IngestTracesReq struct {
+	Tenant           string
 	TTL              loop_span.TTL
 	WhichIsEnough    int
 	CozeAccountId    string
@@ -161,6 +199,8 @@ type IAnnotationEvent interface {
 type ITraceService interface {
 	ListSpans(ctx context.Context, req *ListSpansReq) (*ListSpansResp, error)
 	GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
+	SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error)
+	ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error)
 	GetTracesAdvanceInfo(ctx context.Context, req *GetTracesAdvanceInfoReq) (*GetTracesAdvanceInfoResp, error)
 	IngestTraces(ctx context.Context, req *IngestTracesReq) error
 	GetTracesMetaInfo(ctx context.Context, req *GetTracesMetaInfoReq) (*GetTracesMetaInfoResp, error)
@@ -180,6 +220,7 @@ func NewTraceServiceImpl(
 	annotationProducer mq.IAnnotationProducer,
 	metrics metrics.ITraceMetrics,
 	buildHelper TraceFilterProcessorBuilder,
+	tenantProvider tenant.ITenantProvider,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
@@ -187,6 +228,7 @@ func NewTraceServiceImpl(
 		traceProducer:      traceProducer,
 		annotationProducer: annotationProducer,
 		buildHelper:        buildHelper,
+		tenantProvider:     tenantProvider,
 		metrics:            metrics,
 	}, nil
 }
@@ -198,6 +240,7 @@ type TraceServiceImpl struct {
 	annotationProducer mq.IAnnotationProducer
 	metrics            metrics.ITraceMetrics
 	buildHelper        TraceFilterProcessorBuilder
+	tenantProvider     tenant.ITenantProvider
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -208,6 +251,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	st := time.Now()
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		Tenants: tenants,
+		LogID:   req.LogID,
 		TraceID: req.TraceID,
 		StartAt: req.StartTime,
 		EndAt:   req.EndTime,
@@ -296,9 +340,109 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	}, nil
 }
 
+func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
+	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+		Tenants:            req.Tenants,
+		TraceID:            req.TraceID,
+		LogID:              req.LogID,
+		StartAt:            req.StartTime,
+		EndAt:              req.EndTime,
+		Limit:              req.Limit,
+		NotQueryAnnotation: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	processors, err := r.buildHelper.BuildSearchTraceOApiProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    req.WorkspaceID,
+		QueryStartTime: req.StartTime,
+		QueryEndTime:   req.EndTime,
+		PlatformType:   req.PlatformType,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		spans, err = p.Transform(ctx, spans)
+		if err != nil {
+			return nil, err
+		}
+	}
+	spans.SortByStartTime(false)
+	return &SearchTraceOApiResp{
+		Spans: spans,
+	}, nil
+}
+
+func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error) {
+	if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+	}
+	platformFilter, err := r.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	builtinFilter, err := r.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+		WorkspaceID:  req.WorkspaceID,
+		SpanListType: req.SpanListType,
+	})
+	if err != nil {
+		return nil, err
+	} else if builtinFilter == nil {
+		return &ListSpansOApiResp{Spans: loop_span.SpanList{}}, nil
+	}
+	filters := r.combineFilters(builtinFilter, req.Filters)
+	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		Tenants:         req.Tenants,
+		Filters:         filters,
+		StartAt:         req.StartTime,
+		EndAt:           req.EndTime,
+		Limit:           req.Limit,
+		DescByStartTime: req.DescByStartTime,
+		PageToken:       req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	spans := tRes.Spans
+	processors, err := r.buildHelper.BuildListSpansOApiProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    req.WorkspaceID,
+		QueryStartTime: req.StartTime,
+		QueryEndTime:   req.EndTime,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		spans, err = p.Transform(ctx, spans)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ListSpansOApiResp{
+		Spans:         spans,
+		NextPageToken: tRes.PageToken,
+		HasMore:       tRes.HasMore,
+	}, nil
+}
+
 func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesReq) error {
+	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{
+		Tenant: req.Tenant,
+	})
+	if err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		req.Spans, err = p.Transform(ctx, req.Spans)
+		if err != nil {
+			return err
+		}
+	}
+
 	traceData := &entity.TraceData{
-		Tenant: r.traceConfig.GetDefaultTraceTenant(ctx),
+		Tenant: req.Tenant,
 		TenantInfo: entity.TenantInfo{
 			TTL:              req.TTL,
 			WorkspaceId:      req.Spans[0].WorkspaceID,
@@ -347,6 +491,10 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 				EndAt:              v.StartTime + defaultTimeRange,
 				Limit:              1000,
 				NotQueryAnnotation: true, // no need to query annotation
+				OmitColumns: []string{
+					loop_span.SpanFieldInput,
+					loop_span.SpanFieldOutput,
+				},
 			}
 			st := time.Now()
 			spans, err := r.traceRepo.GetTrace(ctx, qReq)
@@ -458,10 +606,10 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
-	if err := r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	}); err != nil {
 		return nil, err
 	}
@@ -514,10 +662,10 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		annotation.CreatedBy = existedAnno.CreatedBy
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -551,10 +699,10 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 	if err != nil || annotation.ID != req.AnnotationID {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -614,10 +762,10 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		annotation.CreatedBy = existedAnno.CreatedBy
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -664,10 +812,10 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
 	})
 }
 
@@ -704,10 +852,10 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 		return nil
 	}
 	// retry if failed
-	return r.traceRepo.InsertAnnotation(ctx, &repo.InsertAnnotationParam{
-		Tenant:     span.GetTenant(),
-		TTL:        span.GetTTL(ctx),
-		Annotation: event.Annotation,
+	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{event.Annotation},
 	})
 }
 
@@ -774,10 +922,10 @@ func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filte
 	env := &span_filter.SpanEnv{
 		WorkspaceId: req.WorkspaceID,
 	}
-	basicFilter, err := f.BuildBasicSpanFilter(ctx, env)
+	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
 	if err != nil {
 		return nil, err
-	} else if len(basicFilter) == 0 { // if it's null, no need to query from ck
+	} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
 		return nil, nil
 	}
 	filters = append(filters, basicFilter...)
@@ -803,10 +951,6 @@ func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filte
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span list type: %s"))
 	}
-	// not supposed to be here
-	if len(filters) == 0 {
-		return nil, nil
-	}
 	filterAggr := &loop_span.FilterFields{
 		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
 		FilterFields: filters,
@@ -831,17 +975,7 @@ func (r *TraceServiceImpl) combineFilters(filters ...*loop_span.FilterFields) *l
 }
 
 func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
-	cfg, err := r.traceConfig.GetPlatformTenants(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "fail to get platform tenants, %v", err)
-		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
-	}
-	if tenants, ok := cfg.Config[string(platform)]; ok {
-		return tenants, nil
-	} else {
-		logs.CtxError(ctx, "tenant not found for platform %s", platform)
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("tenant not found for the platform"))
-	}
+	return r.tenantProvider.GetTenantsByPlatformType(ctx, platform)
 }
 
 func processSpecificFilter(f *loop_span.FilterField) error {
@@ -918,13 +1052,19 @@ type TraceFilterProcessorBuilder interface {
 	BuildGetTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
 	BuildListSpansProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
 	BuildAdvanceInfoProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
+	BuildIngestTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
+	BuildSearchTraceOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
+	BuildListSpansOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
 }
 
 type TraceFilterProcessorBuilderImpl struct {
-	platformFilterFactory         span_filter.PlatformFilterFactory
-	getTraceProcessorFactories    []span_processor.Factory
-	listSpansProcessorFactories   []span_processor.Factory
-	advanceInfoProcessorFactories []span_processor.Factory
+	platformFilterFactory             span_filter.PlatformFilterFactory
+	getTraceProcessorFactories        []span_processor.Factory
+	listSpansProcessorFactories       []span_processor.Factory
+	advanceInfoProcessorFactories     []span_processor.Factory
+	ingestTraceProcessorFactories     []span_processor.Factory
+	searchTraceOApiProcessorFactories []span_processor.Factory
+	listSpansOApiProcessorFactories   []span_processor.Factory
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildPlatformRelatedFilter(
@@ -979,16 +1119,67 @@ func (t *TraceFilterProcessorBuilderImpl) BuildAdvanceInfoProcessors(
 	return ret, nil
 }
 
+func (t *TraceFilterProcessorBuilderImpl) BuildIngestTraceProcessors(
+	ctx context.Context,
+	set span_processor.Settings,
+) ([]span_processor.Processor, error) {
+	ret := make([]span_processor.Processor, 0)
+	for _, factory := range t.ingestTraceProcessorFactories {
+		p, err := factory.CreateProcessor(ctx, set)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, p)
+	}
+	return ret, nil
+}
+
+func (t *TraceFilterProcessorBuilderImpl) BuildSearchTraceOApiProcessors(
+	ctx context.Context,
+	set span_processor.Settings,
+) ([]span_processor.Processor, error) {
+	ret := make([]span_processor.Processor, 0)
+	for _, factory := range t.searchTraceOApiProcessorFactories {
+		p, err := factory.CreateProcessor(ctx, set)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, p)
+	}
+	return ret, nil
+}
+
+func (t *TraceFilterProcessorBuilderImpl) BuildListSpansOApiProcessors(
+	ctx context.Context,
+	set span_processor.Settings,
+) ([]span_processor.Processor, error) {
+	ret := make([]span_processor.Processor, 0)
+	for _, factory := range t.listSpansOApiProcessorFactories {
+		p, err := factory.CreateProcessor(ctx, set)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, p)
+	}
+	return ret, nil
+}
+
 func NewTraceFilterProcessorBuilder(
 	platformFilterFactory span_filter.PlatformFilterFactory,
 	getTraceProcessorFactories []span_processor.Factory,
 	listSpansProcessorFactories []span_processor.Factory,
 	advanceInfoProcessorFactories []span_processor.Factory,
+	ingestTraceProcessorFactories []span_processor.Factory,
+	searchTraceOApiProcessorFactories []span_processor.Factory,
+	listSpansOApiProcessorFactories []span_processor.Factory,
 ) TraceFilterProcessorBuilder {
 	return &TraceFilterProcessorBuilderImpl{
-		platformFilterFactory:         platformFilterFactory,
-		getTraceProcessorFactories:    getTraceProcessorFactories,
-		listSpansProcessorFactories:   listSpansProcessorFactories,
-		advanceInfoProcessorFactories: advanceInfoProcessorFactories,
+		platformFilterFactory:             platformFilterFactory,
+		getTraceProcessorFactories:        getTraceProcessorFactories,
+		listSpansProcessorFactories:       listSpansProcessorFactories,
+		advanceInfoProcessorFactories:     advanceInfoProcessorFactories,
+		ingestTraceProcessorFactories:     ingestTraceProcessorFactories,
+		searchTraceOApiProcessorFactories: searchTraceOApiProcessorFactories,
+		listSpansOApiProcessorFactories:   listSpansOApiProcessorFactories,
 	}
 }

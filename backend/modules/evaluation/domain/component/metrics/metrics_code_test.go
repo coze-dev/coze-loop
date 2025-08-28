@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package metrics
@@ -85,5 +85,3 @@ func TestGetCode_ErrorxNewByCode_AffectStabilityTrue(t *testing.T) {
 	assert.Equal(t, int64(c), codeVal)
 	assert.Equal(t, int64(1), isErr)
 }
-
-

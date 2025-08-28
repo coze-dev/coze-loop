@@ -42,7 +42,7 @@ func TestCozeLoopFilter_BuildBasicSpanFilter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &CozeLoopFilter{}
-			got, _ := f.BuildBasicSpanFilter(context.Background(), tt.env)
+			got, _, _ := f.BuildBasicSpanFilter(context.Background(), tt.env)
 			assert.Equal(t, tt.want, got)
 		})
 	}

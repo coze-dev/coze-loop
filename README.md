@@ -83,7 +83,7 @@ Procedure:
    ```
 
 2. Configure a model.
-   Go to the `coze-loop` directory and edit the `release/deployment/docker-compose/conf/model_config.yaml` file. Configure the following fields, using Volcengine Ark as an example:
+   Go to the `coze-loop` directory and edit the `release/deployment/helm-chart/umbrella/conf/model_config.yaml` file. Configure the following fields, using Volcengine Ark as an example:
    * api_key: Volcengine Ark API Key. Users in mainland China can refer to the [Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1541594), while users outside mainland China can refer to the [BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1361424?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
    * model: The Endpoint ID of the Volcengine Ark model access point. Users in China can refer to the [Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1099522), while users outside China can refer to the [BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
 3. Configure Ingress rules.

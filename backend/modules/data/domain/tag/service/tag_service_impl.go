@@ -642,7 +642,9 @@ func (s *TagServiceImpl) UpdateOptionTag(ctx context.Context, spaceID, tagKeyID 
 		logs.CtxWarn(ctx, "[UpdateOptionTag] other updating operation is processing, spaceID: %d, tagKeyID: %d", spaceID, tagKeyID)
 		return errno.BadReqErrorf("other updating operation is processing")
 	}
-	defer s.locker.Unlock(FormatUpdateTagKey(spaceID, tagKeyID))
+	defer func() {
+		_, _ = s.locker.Unlock(FormatUpdateTagKey(spaceID, tagKeyID))
+	}()
 	// get lastest tag
 	tagKeys, _, err := s.tagRepo.MGetTagKeys(ctx, &entity2.MGetTagKeyParam{
 		Paginator: pagination.New(),
@@ -745,7 +747,9 @@ func (s *TagServiceImpl) ArchiveOptionTag(ctx context.Context, spaceID, tagKeyID
 		logs.CtxWarn(ctx, "[UpdateTag] other updating operation is processing, spaceID: %d, tagKeyID: %d", spaceID, tagKeyID)
 		return errno.BadReqErrorf("other updating operation is processing")
 	}
-	defer s.locker.Unlock(FormatUpdateTagKey(spaceID, tagKeyID))
+	defer func() {
+		_, _ = s.locker.Unlock(FormatUpdateTagKey(spaceID, tagKeyID))
+	}()
 	// get lastest tag
 	preTagKey, err := s.GetLatestTag(ctx, spaceID, tagKeyID, append(opts, db.WithMaster())...)
 	if err != nil {

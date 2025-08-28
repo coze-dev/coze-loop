@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package service
@@ -213,7 +213,7 @@ func TestExptAnnotateServiceImpl_SaveAnnotateRecord(t *testing.T) {
 					Get(ctx, int64(1), int64(1), int64(1), int64(1)).
 					Return(turnResult, nil).Times(1)
 
-				//svc.txDB.(*dbMocks.MockProvider).EXPECT().
+				// svc.txDB.(*dbMocks.MockProvider).EXPECT().
 				//	Transaction(ctx, gomock.Any()).
 				//	Return(nil).Times(1)
 				svc.txDB.(*dbMocks.MockProvider).EXPECT().

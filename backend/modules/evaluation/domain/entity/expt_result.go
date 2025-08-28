@@ -506,9 +506,9 @@ const (
 	FieldTypeEvaluator FieldTypeMapping = 1
 	// FieldTypeManualAnnotation 人工标注类型
 	FieldTypeManualAnnotation FieldTypeMapping = 2
-	//FieldTypeManualAnnotationScore FieldTypeMapping = 2
-	//FieldTypeManualAnnotationText FieldTypeMapping = 2
-	//FieldTypeManualAnnotationCategorical FieldTypeMapping = 2
+	// FieldTypeManualAnnotationScore FieldTypeMapping = 2
+	// FieldTypeManualAnnotationText FieldTypeMapping = 2
+	// FieldTypeManualAnnotationCategorical FieldTypeMapping = 2
 
 )
 

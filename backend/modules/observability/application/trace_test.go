@@ -9,11 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmock "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	annodto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
@@ -21,6 +24,7 @@ import (
 	confmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
+	tenantmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -932,6 +936,7 @@ func TestTraceApplication_IngestTracesInner(t *testing.T) {
 	type fields struct {
 		traceSvc service.ITraceService
 		benefit  benefit.IBenefitService
+		tenant   tenant.ITenantProvider
 	}
 	type args struct {
 		ctx context.Context
@@ -950,10 +955,13 @@ func TestTraceApplication_IngestTracesInner(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockBenefit := benefitmock.NewMockIBenefitService(ctrl)
 				mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{IsEnough: true, AccountAvailable: true, StorageDuration: 7}, nil)
+				mockTenant := tenantmock.NewMockITenantProvider(ctrl)
+				mockTenant.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("")
 				mockSvc.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil)
 				return fields{
 					traceSvc: mockSvc,
 					benefit:  mockBenefit,
+					tenant:   mockTenant,
 				}
 			},
 			args: args{
@@ -979,6 +987,7 @@ func TestTraceApplication_IngestTracesInner(t *testing.T) {
 			app := &TraceApplication{
 				traceService: fields.traceSvc,
 				benefit:      fields.benefit,
+				tenant:       fields.tenant,
 			}
 			got, err := app.IngestTracesInner(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1366,6 +1375,376 @@ func TestTraceApplication_DeleteManualAnnotation(t *testing.T) {
 			}
 			_, err := tr.DeleteManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
+func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
+	type fields struct {
+		traceExportService service.ITraceExportService
+		authSvc            rpc.IAuthProvider
+		traceConfig        config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ExportTracesToDatasetRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ExportTracesToDatasetResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConfig := confmock.NewMockITraceConfig(ctrl)
+
+				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(nil)
+				mockExportSvc.EXPECT().ExportTracesToDataset(gomock.Any(), gomock.Any()).Return(&service.ExportTracesToDatasetResponse{
+					SuccessCount: 10,
+					DatasetID:    1,
+					DatasetName:  "test-dataset",
+				}, nil)
+
+				return fields{
+					traceExportService: mockExportSvc,
+					authSvc:            mockAuth,
+					traceConfig:        mockConfig,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					}, FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
+						},
+					},
+				},
+			},
+			want: &trace.ExportTracesToDatasetResponse{
+				SuccessCount: ptr.Of(int32(10)),
+				DatasetID:    ptr.Of(int64(1)),
+				DatasetName:  ptr.Of("test-dataset"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid request case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExportTracesToDatasetRequest{
+					WorkspaceID: 0, // invalid workspace ID
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "auth permission error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConfig := confmock.NewMockITraceConfig(ctrl)
+
+				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(fmt.Errorf("permission denied"))
+
+				return fields{
+					authSvc:     mockAuth,
+					traceConfig: mockConfig,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
+						},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConfig := confmock.NewMockITraceConfig(ctrl)
+
+				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(nil)
+				mockExportSvc.EXPECT().ExportTracesToDataset(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("service error"))
+
+				return fields{
+					traceExportService: mockExportSvc,
+					authSvc:            mockAuth,
+					traceConfig:        mockConfig,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
+						},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceExportService: fields.traceExportService,
+				authSvc:            fields.authSvc,
+				traceConfig:        fields.traceConfig,
+			}
+			got, err := tr.ExportTracesToDataset(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
+	type fields struct {
+		traceExportService service.ITraceExportService
+		authSvc            rpc.IAuthProvider
+		traceConfig        config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.PreviewExportTracesToDatasetRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.PreviewExportTracesToDatasetResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConfig := confmock.NewMockITraceConfig(ctrl)
+
+				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(nil)
+				mockExportSvc.EXPECT().PreviewExportTracesToDataset(gomock.Any(), gomock.Any()).Return(&service.PreviewExportTracesToDatasetResponse{
+					Items: []*entity.DatasetItem{
+						{
+							ID: 1,
+							FieldData: []*entity.FieldData{
+								{
+									Key:  "input",
+									Name: "Input",
+								},
+							},
+						},
+					},
+				}, nil)
+
+				return fields{
+					traceExportService: mockExportSvc,
+					authSvc:            mockAuth,
+					traceConfig:        mockConfig,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.PreviewExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
+						},
+					},
+				},
+			},
+			want: &trace.PreviewExportTracesToDatasetResponse{
+				Items: []*dataset0.Item{
+					{
+						Status: dataset0.ItemStatusSuccess,
+						FieldList: []*dataset0.FieldData{
+							{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid request case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.PreviewExportTracesToDatasetRequest{
+					WorkspaceID: 0, // invalid workspace ID
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "auth permission error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConfig := confmock.NewMockITraceConfig(ctrl)
+
+				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(fmt.Errorf("permission denied"))
+
+				return fields{
+					authSvc:     mockAuth,
+					traceConfig: mockConfig,
+				}
+			}, args: args{
+				ctx: context.Background(),
+				req: &trace.PreviewExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
+						},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConfig := confmock.NewMockITraceConfig(ctrl)
+
+				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(nil)
+				mockExportSvc.EXPECT().PreviewExportTracesToDataset(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("service error"))
+
+				return fields{
+					traceExportService: mockExportSvc,
+					authSvc:            mockAuth,
+					traceConfig:        mockConfig,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.PreviewExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
+						},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceExportService: fields.traceExportService,
+				authSvc:            fields.authSvc,
+				traceConfig:        fields.traceConfig,
+			}
+			got, err := tr.PreviewExportTracesToDataset(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

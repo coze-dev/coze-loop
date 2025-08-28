@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package experiment
@@ -25,7 +25,8 @@ type ExptAnnotateRepoImpl struct {
 
 func NewExptAnnotateRepo(exptTurnAnnotateRecordRefDAO mysql.IExptTurnAnnotateRecordRefDAO,
 	exptTurnResultTagRefDAO mysql.IExptTurnResultTagRefDAO,
-	annotateRecordDAO mysql.IAnnotateRecordDAO, idgenerator idgen.IIDGenerator) repo.IExptAnnotateRepo {
+	annotateRecordDAO mysql.IAnnotateRecordDAO, idgenerator idgen.IIDGenerator,
+) repo.IExptAnnotateRepo {
 	return &ExptAnnotateRepoImpl{
 		exptTurnAnnotateRecordRefDAO: exptTurnAnnotateRecordRefDAO,
 		exptTurnResultTagRefDAO:      exptTurnResultTagRefDAO,
@@ -170,7 +171,6 @@ func (e ExptAnnotateRepoImpl) BatchGetExptTurnResultTagRefs(ctx context.Context,
 }
 
 func (e ExptAnnotateRepoImpl) SaveAnnotateRecord(ctx context.Context, exptTurnResultID int64, record *entity.AnnotateRecord, opts ...db.Option) error {
-
 	id, err := e.idgenerator.GenID(ctx)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package evaluation_set
@@ -65,16 +65,16 @@ func TestEvaluationSetDO2DTO_Simple(t *testing.T) {
 				Name:    "Test Set",
 			},
 			expected: &eval_set.EvaluationSet{
-				ID:               gptr.Of(int64(1)),
-				AppID:            gptr.Of(int32(1)),
-				WorkspaceID:      gptr.Of(int64(1)),
-				Name:             gptr.Of("Test Set"),
-				Description:      gptr.Of(""),
-				Status:           gptr.Of(dataset.DatasetStatus(0)),
-				ItemCount:        gptr.Of(int64(0)),
+				ID:                gptr.Of(int64(1)),
+				AppID:             gptr.Of(int32(1)),
+				WorkspaceID:       gptr.Of(int64(1)),
+				Name:              gptr.Of("Test Set"),
+				Description:       gptr.Of(""),
+				Status:            gptr.Of(dataset.DatasetStatus(0)),
+				ItemCount:         gptr.Of(int64(0)),
 				ChangeUncommitted: gptr.Of(false),
-				LatestVersion:    gptr.Of(""),
-				NextVersionNum:   gptr.Of(int64(0)),
+				LatestVersion:     gptr.Of(""),
+				NextVersionNum:    gptr.Of(int64(0)),
 			},
 		},
 	}

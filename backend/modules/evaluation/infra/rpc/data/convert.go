@@ -523,6 +523,7 @@ func convertStorageProvider(provider *dataset.StorageProvider) *entity.StoragePr
 	entityProvider := entity.StorageProvider(*provider)
 	return &entityProvider
 }
+
 func convert2EvaluationSetTurn(ctx context.Context, data []*dataset.FieldData) (turns []*entity.Turn) {
 	if len(data) == 0 {
 		return nil

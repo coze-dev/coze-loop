@@ -1108,8 +1108,46 @@ func _gettagdetailMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _spans0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
 func _archiveoptiontagMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
+	return nil
+}
+
+func _searchspansMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtraceMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listspansoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtraceoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _opentelemetryMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _v17Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _otelingesttracesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1164,6 +1202,26 @@ func _exportexptresultMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _results0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _exporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _previewexporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _dataset_itemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _validatedatasetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

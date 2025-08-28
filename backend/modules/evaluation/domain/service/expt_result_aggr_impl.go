@@ -625,7 +625,6 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 	default:
 		return nil
 	}
-
 }
 
 func (e *ExptAggrResultServiceImpl) updateContinuousNumberExptAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam, annotateRecords []*entity.AnnotateRecord, version int64) error {

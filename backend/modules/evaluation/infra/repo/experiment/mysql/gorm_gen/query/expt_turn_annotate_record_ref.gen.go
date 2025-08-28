@@ -29,13 +29,13 @@ func newExptTurnAnnotateRecordRef(db *gorm.DB, opts ...gen.DOOption) exptTurnAnn
 	_exptTurnAnnotateRecordRef.ALL = field.NewAsterisk(tableName)
 	_exptTurnAnnotateRecordRef.ID = field.NewInt64(tableName, "id")
 	_exptTurnAnnotateRecordRef.SpaceID = field.NewInt64(tableName, "space_id")
+	_exptTurnAnnotateRecordRef.ExptID = field.NewInt64(tableName, "expt_id")
 	_exptTurnAnnotateRecordRef.ExptTurnResultID = field.NewInt64(tableName, "expt_turn_result_id")
 	_exptTurnAnnotateRecordRef.TagKeyID = field.NewInt64(tableName, "tag_key_id")
 	_exptTurnAnnotateRecordRef.AnnotateRecordID = field.NewInt64(tableName, "annotate_record_id")
 	_exptTurnAnnotateRecordRef.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTurnAnnotateRecordRef.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptTurnAnnotateRecordRef.DeletedAt = field.NewField(tableName, "deleted_at")
-	_exptTurnAnnotateRecordRef.ExptID = field.NewInt64(tableName, "expt_id")
 
 	_exptTurnAnnotateRecordRef.fillFieldMap()
 
@@ -49,13 +49,13 @@ type exptTurnAnnotateRecordRef struct {
 	ALL              field.Asterisk
 	ID               field.Int64 // id
 	SpaceID          field.Int64 // 空间 id
+	ExptID           field.Int64 // 实验 id
 	ExptTurnResultID field.Int64 // 实验 turn result id
 	TagKeyID         field.Int64 // 标签 id
 	AnnotateRecordID field.Int64 // 人工标注结果 id
 	CreatedAt        field.Time  // 创建时间
 	UpdatedAt        field.Time  // 更新时间
 	DeletedAt        field.Field // 删除时间
-	ExptID           field.Int64 // 实验 id
 
 	fieldMap map[string]field.Expr
 }
@@ -74,13 +74,13 @@ func (e *exptTurnAnnotateRecordRef) updateTableName(table string) *exptTurnAnnot
 	e.ALL = field.NewAsterisk(table)
 	e.ID = field.NewInt64(table, "id")
 	e.SpaceID = field.NewInt64(table, "space_id")
+	e.ExptID = field.NewInt64(table, "expt_id")
 	e.ExptTurnResultID = field.NewInt64(table, "expt_turn_result_id")
 	e.TagKeyID = field.NewInt64(table, "tag_key_id")
 	e.AnnotateRecordID = field.NewInt64(table, "annotate_record_id")
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
-	e.ExptID = field.NewInt64(table, "expt_id")
 
 	e.fillFieldMap()
 
@@ -114,13 +114,13 @@ func (e *exptTurnAnnotateRecordRef) fillFieldMap() {
 	e.fieldMap = make(map[string]field.Expr, 9)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
+	e.fieldMap["expt_id"] = e.ExptID
 	e.fieldMap["expt_turn_result_id"] = e.ExptTurnResultID
 	e.fieldMap["tag_key_id"] = e.TagKeyID
 	e.fieldMap["annotate_record_id"] = e.AnnotateRecordID
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
-	e.fieldMap["expt_id"] = e.ExptID
 }
 
 func (e exptTurnAnnotateRecordRef) clone(db *gorm.DB) exptTurnAnnotateRecordRef {

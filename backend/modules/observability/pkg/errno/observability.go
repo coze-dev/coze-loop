@@ -28,6 +28,10 @@ const (
 	commonResourceDuplicatedMessage           = "resource duplicated"
 	commonResourceDuplicatedNoAffectStability = true
 
+	CommonRequestRateLimitCode              = 600900205
+	CommonRequestRateLimitMessage           = "request is limited"
+	CommonRequestRateLimitNoAffectStability = true
+
 	CommonNetworkTimeOutCode              = 600900701
 	commonNetworkTimeOutMessage           = "network timeout"
 	commonNetworkTimeOutNoAffectStability = false
@@ -191,6 +195,12 @@ func init() {
 		CommonResourceDuplicatedCode,
 		commonResourceDuplicatedMessage,
 		code.WithAffectStability(!commonResourceDuplicatedNoAffectStability),
+	)
+
+	code.Register(
+		CommonRequestRateLimitCode,
+		CommonRequestRateLimitMessage,
+		code.WithAffectStability(!CommonRequestRateLimitNoAffectStability),
 	)
 
 	code.Register(

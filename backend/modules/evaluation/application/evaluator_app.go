@@ -27,7 +27,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
-	componentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
@@ -50,7 +49,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	userInfoService userinfo.UserInfoService,
 	auditClient audit.IAuditService,
 	benefitService benefit.IBenefitService,
-	fileProvider componentrpc.IFileProvider,
+	fileProvider rpc.IFileProvider,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                  idgen,
@@ -78,7 +77,7 @@ type EvaluatorHandlerImpl struct {
 	metrics                metrics.EvaluatorExecMetrics
 	userInfoService        userinfo.UserInfoService
 	benefitService         benefit.IBenefitService
-	fileProvider           componentrpc.IFileProvider
+	fileProvider           rpc.IFileProvider
 }
 
 // ListEvaluators 按查询条件查询 evaluator

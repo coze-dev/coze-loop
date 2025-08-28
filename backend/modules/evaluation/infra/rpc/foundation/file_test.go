@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package foundation
@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"github.com/cloudwego/kitex/client/callopt"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
@@ -159,7 +159,7 @@ func TestFileRPCAdapter_MGetFileURL_RequestValidation(t *testing.T) {
 	adapter := &FileRPCAdapter{client: mockClient}
 
 	keys := []string{"test-key"}
-	
+
 	// 设置mock返回
 	mockClient.mockResponse = &file.SignDownloadFileResponse{
 		Uris: []string{"https://example.com/test-file"},
@@ -199,7 +199,7 @@ func (m *mockFileServiceClient) SignUploadFile(ctx context.Context, req *file.Si
 func (m *mockFileServiceClient) SignDownloadFile(ctx context.Context, req *file.SignDownloadFileRequest, callOptions ...callopt.Option) (r *file.SignDownloadFileResponse, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.lastRequest = req
 	return m.mockResponse, m.mockError
 }

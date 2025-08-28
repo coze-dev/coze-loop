@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lodataset"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lotag"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_set"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loevaluator"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/lofile"
@@ -104,12 +105,16 @@ func Init(
 		return nil, err
 	}
 
-	observabilityHandler, err := apis.InitObservabilityHandler(ctx, db, ckDB, meter, mqFactory, configFactory, benefitSvc,
+	observabilityHandler, err := apis.InitObservabilityHandler(ctx, db, ckDB, meter, mqFactory, configFactory, idgen,
+		benefitSvc,
 		lofile.NewLocalFileService(foundationHandler.FileService),
 		loauth.NewLocalAuthService(foundationHandler.AuthService),
 		louser.NewLocalUserService(foundationHandler.UserService),
 		loevaluator.NewLocalEvaluatorService(evaluationHandler.EvaluatorService),
+		loeval_set.NewLocalEvaluationSetService(evaluationHandler.EvaluationSetService),
 		lotag.NewLocalTagService(dataHandler.TagService),
+		limiterFactory,
+		lodataset.NewLocalDatasetService(dataHandler.IDatasetApplication),
 	)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package service
@@ -42,7 +42,7 @@ func TestExptAppendExec_ScheduleStart_WithTargetSkip(t *testing.T) {
 				Status:       entity.ExptStatus_Processing,
 				TargetID:     10,
 				TargetType:   entity.EvalTargetTypeLoopPrompt,
-				MaxAliveTime: 3600000, // 1 hour
+				MaxAliveTime: 3600000,                                    // 1 hour
 				StartAt:      gptr.Of(time.Now().Add(-30 * time.Minute)), // Started 30 minutes ago
 			},
 			mockSetup: func(mockRepo *mock_repo.MockIExperimentRepo) {
@@ -82,7 +82,7 @@ func TestExptAppendExec_ScheduleStart_WithTargetSkip(t *testing.T) {
 				Status:       entity.ExptStatus_Processing,
 				TargetID:     10,
 				TargetType:   entity.EvalTargetTypeLoopPrompt,
-				MaxAliveTime: 3600000, // 1 hour
+				MaxAliveTime: 3600000,                                 // 1 hour
 				StartAt:      gptr.Of(time.Now().Add(-2 * time.Hour)), // Started 2 hours ago
 			},
 			mockSetup: func(mockRepo *mock_repo.MockIExperimentRepo) {
@@ -195,7 +195,7 @@ func TestExptAppendExec_ExptEnd_WithTargetSkip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			
+
 			f := &mockFields{
 				manager:   svcmocks.NewMockIExptManager(ctrl),
 				idem:      idemmocks.NewMockIdempotentService(ctrl),
@@ -203,11 +203,11 @@ func TestExptAppendExec_ExptEnd_WithTargetSkip(t *testing.T) {
 				itemRepo:  mock_repo.NewMockIExptItemResultRepo(ctrl),
 				publisher: eventmocks.NewMockExptEventPublisher(ctrl),
 			}
-			
+
 			if tc.mockSetup != nil {
 				tc.mockSetup(f)
 			}
-			
+
 			exec := &ExptAppendExec{
 				manager:            f.manager,
 				idem:               f.idem,
@@ -217,11 +217,11 @@ func TestExptAppendExec_ExptEnd_WithTargetSkip(t *testing.T) {
 			}
 
 			nextTick, err := exec.ExptEnd(context.Background(), tc.event, tc.expt, tc.toSubmit, tc.incomplete)
-			
+
 			if (err != nil) != tc.wantErr {
 				t.Errorf("ExptEnd() error = %v, wantErr %v", err, tc.wantErr)
 			}
-			
+
 			if nextTick != tc.wantTick {
 				t.Errorf("ExptEnd() nextTick = %v, want %v", nextTick, tc.wantTick)
 			}
@@ -297,23 +297,23 @@ func TestDefaultSchedulerModeFactory_NewSchedulerMode_Integration(t *testing.T) 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheduler, err := factory.NewSchedulerMode(tt.mode)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSchedulerMode() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if !tt.wantErr {
 				if scheduler == nil {
 					t.Errorf("NewSchedulerMode() returned nil scheduler")
 					return
 				}
-				
+
 				// Verify the returned scheduler mode matches the input
 				if scheduler.Mode() != tt.mode {
 					t.Errorf("NewSchedulerMode() returned scheduler with mode %v, want %v", scheduler.Mode(), tt.mode)
 				}
-				
+
 				// Verify the type is correct
 				actualType := fmt.Sprintf("%T", scheduler)
 				if actualType != tt.expectedType {

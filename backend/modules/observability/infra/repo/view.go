@@ -6,20 +6,23 @@ package repo
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 )
 
-func NewViewRepoImpl(viewDao mysql.IViewDao) repo.IViewRepo {
+func NewViewRepoImpl(viewDao mysql.IViewDao, idGenerator idgen.IIDGenerator) repo.IViewRepo {
 	return &ViewRepoImpl{
-		viewDao: viewDao,
+		viewDao:     viewDao,
+		idGenerator: idGenerator,
 	}
 }
 
 type ViewRepoImpl struct {
-	viewDao mysql.IViewDao
+	viewDao     mysql.IViewDao
+	idGenerator idgen.IIDGenerator
 }
 
 func (v *ViewRepoImpl) GetView(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityView, error) {
@@ -43,7 +46,12 @@ func (v *ViewRepoImpl) ListViews(ctx context.Context, workspaceID int64, userID 
 }
 
 func (v *ViewRepoImpl) CreateView(ctx context.Context, do *entity.ObservabilityView) (int64, error) {
+	id, err := v.idGenerator.GenID(ctx)
+	if err != nil {
+		return 0, err
+	}
 	viewPo := convertor.ViewDO2PO(do)
+	viewPo.ID = id
 	return v.viewDao.CreateView(ctx, viewPo)
 }
 

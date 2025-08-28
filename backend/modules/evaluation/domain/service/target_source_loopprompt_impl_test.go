@@ -1610,20 +1610,20 @@ func TestPromptSourceEvalTargetServiceImpl_RuntimeParam(t *testing.T) {
 
 	// Test RuntimeParam method
 	runtimeParam := service.RuntimeParam()
-	
+
 	// Verify that PromptRuntimeParam type is returned
 	assert.NotNil(t, runtimeParam)
 	promptParam, ok := runtimeParam.(*entity.PromptRuntimeParam)
 	assert.True(t, ok, "RuntimeParam should return PromptRuntimeParam type")
-	
+
 	// Verify that initialized ModelConfig is nil (because nil was passed in)
 	assert.Nil(t, promptParam.ModelConfig)
-	
+
 	// Verify that IRuntimeParam interface methods can be called normally
 	demo := runtimeParam.GetJSONDemo()
 	assert.NotEmpty(t, demo)
 	assert.Contains(t, demo, "model_config")
-	
+
 	jsonValue := runtimeParam.GetJSONValue()
 	assert.NotEmpty(t, jsonValue)
 }

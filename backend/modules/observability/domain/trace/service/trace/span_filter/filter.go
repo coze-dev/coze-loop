@@ -22,7 +22,7 @@ type Factory interface {
 
 //go:generate mockgen -destination=mocks/filter.go -package=mocks . Filter
 type Filter interface {
-	BuildBasicSpanFilter(context.Context, *SpanEnv) ([]*loop_span.FilterField, error)
+	BuildBasicSpanFilter(context.Context, *SpanEnv) ([]*loop_span.FilterField, bool, error)
 	BuildRootSpanFilter(context.Context, *SpanEnv) ([]*loop_span.FilterField, error)
 	BuildLLMSpanFilter(context.Context, *SpanEnv) ([]*loop_span.FilterField, error)
 	BuildALLSpanFilter(context.Context, *SpanEnv) ([]*loop_span.FilterField, error)

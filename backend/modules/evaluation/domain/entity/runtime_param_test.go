@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package entity
@@ -13,7 +13,7 @@ import (
 func TestPromptRuntimeParam_GetJSONDemo(t *testing.T) {
 	param := &PromptRuntimeParam{}
 	demo := param.GetJSONDemo()
-	
+
 	assert.NotEmpty(t, demo)
 	assert.Contains(t, demo, "model_config")
 	assert.Contains(t, demo, "max_tokens")
@@ -33,7 +33,7 @@ func TestPromptRuntimeParam_GetJSONValue(t *testing.T) {
 			JSONExt:     gptr.Of(`{"key":"value"}`),
 		},
 	}
-	
+
 	jsonValue := param.GetJSONValue()
 	assert.NotEmpty(t, jsonValue)
 	assert.Contains(t, jsonValue, "model_config")
@@ -77,7 +77,7 @@ func TestPromptRuntimeParam_ParseFromJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			param := &PromptRuntimeParam{}
 			result, err := param.ParseFromJSON(tt.jsonStr)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, result)
@@ -95,10 +95,10 @@ func TestNewPromptRuntimeParam(t *testing.T) {
 		ModelID:   123,
 		ModelName: "test_model",
 	}
-	
+
 	param := NewPromptRuntimeParam(modelConfig)
 	assert.NotNil(t, param)
-	
+
 	promptParam, ok := param.(*PromptRuntimeParam)
 	assert.True(t, ok)
 	assert.Equal(t, modelConfig, promptParam.ModelConfig)
@@ -107,20 +107,20 @@ func TestNewPromptRuntimeParam(t *testing.T) {
 func TestDummyRuntimeParam_GetJSONDemo(t *testing.T) {
 	param := &DummyRuntimeParam{}
 	demo := param.GetJSONDemo()
-	
+
 	assert.Equal(t, "{}", demo)
 }
 
 func TestDummyRuntimeParam_GetJSONValue(t *testing.T) {
 	param := &DummyRuntimeParam{}
 	jsonValue := param.GetJSONValue()
-	
+
 	assert.Equal(t, "{}", jsonValue)
 }
 
 func TestDummyRuntimeParam_ParseFromJSON(t *testing.T) {
 	param := &DummyRuntimeParam{}
-	
+
 	tests := []struct {
 		name    string
 		jsonStr string
@@ -142,7 +142,7 @@ func TestDummyRuntimeParam_ParseFromJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := param.ParseFromJSON(tt.jsonStr)
-			
+
 			assert.NoError(t, err)
 			assert.NotNil(t, result)
 			assert.IsType(t, &DummyRuntimeParam{}, result)
