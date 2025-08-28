@@ -9,7 +9,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 )
 
@@ -163,4 +165,20 @@ func BatchGetDatasetVersions(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v3/datasets/:dataset_id/clear [POST]
 func ClearDatasetItem(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localDataSvc.ClearDatasetItem)
+}
+
+// ValidateDatasetItems .
+// @router /api/data/v1/dataset_items/validate [POST]
+func ValidateDatasetItems(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req dataset.ValidateDatasetItemsReq
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(dataset.ValidateDatasetItemsResp)
+
+	c.JSON(consts.StatusOK, resp)
 }

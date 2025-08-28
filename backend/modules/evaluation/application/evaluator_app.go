@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
+	evaluatorcommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
@@ -48,6 +49,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	userInfoService userinfo.UserInfoService,
 	auditClient audit.IAuditService,
 	benefitService benefit.IBenefitService,
+	fileProvider rpc.IFileProvider,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                  idgen,
@@ -59,6 +61,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		metrics:                metrics,
 		userInfoService:        userInfoService,
 		benefitService:         benefitService,
+		fileProvider:           fileProvider,
 	}
 	return handler
 }
@@ -74,6 +77,7 @@ type EvaluatorHandlerImpl struct {
 	metrics                metrics.EvaluatorExecMetrics
 	userInfoService        userinfo.UserInfoService
 	benefitService         benefit.IBenefitService
+	fileProvider           rpc.IFileProvider
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -705,6 +709,15 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 		return nil, errorx.NewByCode(errno.EvaluatorBenefitDenyCode)
 	}
 
+	// URI转换处理
+	if request.InputData != nil {
+		err = e.transformURIsToURLs(ctx, request.InputData.InputFields)
+		if err != nil {
+			logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+			return nil, err
+		}
+	}
+
 	dto := &evaluatordto.Evaluator{
 		WorkspaceID:   gptr.Of(request.WorkspaceID),
 		EvaluatorType: gptr.Of(request.EvaluatorType),
@@ -866,4 +879,72 @@ func (e *EvaluatorHandlerImpl) CheckEvaluatorName(ctx context.Context, request *
 	return &evaluatorservice.CheckEvaluatorNameResponse{
 		Pass: gptr.Of(true),
 	}, nil
+}
+
+// transformURIsToURLs 将InputFields中的URI转换为URL
+func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFields map[string]*evaluatorcommon.Content) error {
+	if len(inputFields) == 0 {
+		return nil
+	}
+
+	// 收集所有需要转换的URI
+	uriToContentMap := make(map[string][]*evaluatorcommon.Image)
+	e.collectURIs(inputFields, uriToContentMap)
+
+	if len(uriToContentMap) == 0 {
+		return nil
+	}
+
+	// 批量获取URL
+	uris := make([]string, 0, len(uriToContentMap))
+	for uri := range uriToContentMap {
+		uris = append(uris, uri)
+	}
+
+	urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
+	if err != nil {
+		return fmt.Errorf("failed to get file URLs: %w", err)
+	}
+
+	// 回填URL到原始数据
+	e.fillURLs(uriToContentMap, urlMap)
+
+	return nil
+}
+
+// collectURIs 递归收集所有需要转换的URI
+func (e *EvaluatorHandlerImpl) collectURIs(inputFields map[string]*evaluatorcommon.Content, uriToContentMap map[string][]*evaluatorcommon.Image) {
+	for _, content := range inputFields {
+		e.collectURIsFromContent(content, uriToContentMap)
+	}
+}
+
+// collectURIsFromContent 从单个Content中收集URI
+func (e *EvaluatorHandlerImpl) collectURIsFromContent(content *evaluatorcommon.Content, uriToContentMap map[string][]*evaluatorcommon.Image) {
+	if content == nil {
+		return
+	}
+
+	switch content.GetContentType() {
+	case evaluatorcommon.ContentTypeImage:
+		if content.Image != nil && content.Image.URI != nil && *content.Image.URI != "" {
+			uri := *content.Image.URI
+			uriToContentMap[uri] = append(uriToContentMap[uri], content.Image)
+		}
+	case evaluatorcommon.ContentTypeMultiPart:
+		for _, subContent := range content.MultiPart {
+			e.collectURIsFromContent(subContent, uriToContentMap)
+		}
+	}
+}
+
+// fillURLs 将转换后的URL填充回原始数据
+func (e *EvaluatorHandlerImpl) fillURLs(uriToContentMap map[string][]*evaluatorcommon.Image, urlMap map[string]string) {
+	for uri, images := range uriToContentMap {
+		if url, exists := urlMap[uri]; exists {
+			for _, image := range images {
+				image.URL = &url
+			}
+		}
+	}
 }

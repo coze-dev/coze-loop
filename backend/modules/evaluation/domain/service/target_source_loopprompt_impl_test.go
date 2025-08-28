@@ -39,7 +39,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 		wantErrCode    int32
 	}{
 		{
-			name:    "成功执行 - 返回文本内容",
+			name:    "successful execution - return text content",
 			spaceID: 123,
 			param: &entity.ExecuteEvalTargetParam{
 				TargetID:            1,
@@ -50,6 +50,10 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 						"var1": {
 							ContentType: gptr.Of(entity.ContentTypeText),
 							Text:        gptr.Of("test input"),
+						},
+						"var2": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("[{\"content\":{}}]"),
 						},
 					},
 					HistoryMessages: []*entity.Message{
@@ -66,25 +70,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockPromptRPCAdapter.EXPECT().
-					ExecutePrompt(gomock.Any(), int64(123), &rpc.ExecutePromptParam{
-						PromptID:      456,
-						PromptVersion: "v1",
-						Variables: []*entity.VariableVal{
-							{
-								Key:   gptr.Of("var1"),
-								Value: gptr.Of("test input"),
-							},
-						},
-						History: []*entity.Message{
-							{
-								Role: entity.RoleUser,
-								Content: &entity.Content{
-									ContentType: gptr.Of(entity.ContentTypeText),
-									Text:        gptr.Of("test message"),
-								},
-							},
-						},
-					}).
+					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
 						Content: gptr.Of("test output"),
 						TokenUsage: &entity.TokenUsage{
@@ -110,7 +96,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:    "执行失败 - 无效的 SourceTargetID",
+			name:    "execution failed - invalid SourceTargetID",
 			spaceID: 123,
 			param: &entity.ExecuteEvalTargetParam{
 				TargetID:            1,
@@ -125,7 +111,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 			wantErrCode: errno.CommonInvalidParamCode,
 		},
 		{
-			name:    "执行失败 - RPC 调用错误",
+			name:    "execution failed - RPC call error",
 			spaceID: 123,
 			param: &entity.ExecuteEvalTargetParam{
 				TargetID:            1,
@@ -144,7 +130,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 			wantErrCode: errno.CommonInternalErrorCode,
 		},
 		{
-			name:    "成功执行 - 返回工具调用结果",
+			name:    "successful execution - return tool call results",
 			spaceID: 123,
 			param: &entity.ExecuteEvalTargetParam{
 				TargetID:            1,
@@ -210,14 +196,14 @@ func TestPromptSourceEvalTargetServiceImpl_Execute(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, gotStatus)
 
 			if tt.wantOutputData != nil {
-				// 验证输出字段
+				// Validate output fields
 				assert.Equal(t, gptr.Indirect(tt.wantOutputData.OutputFields[consts.OutputSchemaKey].Text), gptr.Indirect(gotOutputData.OutputFields[consts.OutputSchemaKey].Text))
-				// 验证使用情况
+				// Validate usage
 				if tt.wantOutputData.EvalTargetUsage != nil {
 					assert.Equal(t, tt.wantOutputData.EvalTargetUsage.InputTokens, gotOutputData.EvalTargetUsage.InputTokens)
 					assert.Equal(t, tt.wantOutputData.EvalTargetUsage.OutputTokens, gotOutputData.EvalTargetUsage.OutputTokens)
 				}
-				// 验证执行时间
+				// Validate execution time
 				assert.NotNil(t, gotOutputData.TimeConsumingMS)
 				assert.GreaterOrEqual(t, *gotOutputData.TimeConsumingMS, int64(0))
 			}
@@ -250,7 +236,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 		wantErrCheck        func(t *testing.T, err error)
 	}{
 		{
-			name:                "成功场景 - 完整数据",
+			name:                "success scenario - complete data",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -261,8 +247,16 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 						Detail: &rpc.PromptDetail{
 							PromptTemplate: &rpc.PromptTemplate{
 								VariableDefs: []*rpc.VariableDef{
-									{Key: gptr.Of("var1")},
-									{Key: gptr.Of("var2")},
+									{Key: gptr.Of("var1"), Type: gptr.Of(rpc.VariableTypeString)},
+									{Key: gptr.Of("var2"), Type: gptr.Of(rpc.VariableTypeInteger)},
+									{Key: gptr.Of("var3"), Type: gptr.Of(rpc.VariableTypeBoolean)},
+									{Key: gptr.Of("var4"), Type: gptr.Of(rpc.VariableTypeFloat)},
+									{Key: gptr.Of("var5"), Type: gptr.Of(rpc.VariableTypeObject)},
+									{Key: gptr.Of("var6"), Type: gptr.Of(rpc.VariableTypeArrayInteger)},
+									{Key: gptr.Of("var7"), Type: gptr.Of(rpc.VariableTypeArrayString)},
+									{Key: gptr.Of("var8"), Type: gptr.Of(rpc.VariableTypeArrayFloat)},
+									{Key: gptr.Of("var9"), Type: gptr.Of(rpc.VariableTypeArrayBoolean)},
+									{Key: gptr.Of("var10"), Type: gptr.Of(rpc.VariableTypeArrayObject)},
 								},
 							},
 						},
@@ -296,8 +290,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				assert.Equal(t, defaultSourceTargetIDInt, evalTarget.EvalTargetVersion.Prompt.PromptID)
 				assert.Equal(t, defaultSourceTargetVersion, evalTarget.EvalTargetVersion.Prompt.Version)
 
-				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 2)
-				if len(evalTarget.EvalTargetVersion.InputSchema) == 2 {
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 10)
+				if len(evalTarget.EvalTargetVersion.InputSchema) == 10 {
 					assert.Equal(t, "var1", *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
@@ -314,7 +308,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:                "成功场景 - PromptCommit.Detail.PromptTemplate.VariableDefs 为空",
+			name:                "success scenario - PromptCommit.Detail.PromptTemplate.VariableDefs is empty",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -339,7 +333,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:                "成功场景 - PromptCommit.Detail.PromptTemplate 为 nil",
+			name:                "success scenario - PromptCommit.Detail.PromptTemplate is nil",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -362,7 +356,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:                "成功场景 - PromptCommit.Detail 为 nil",
+			name:                "success scenario - PromptCommit.Detail is nil",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -383,7 +377,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:                "成功场景 - PromptCommit 为 nil",
+			name:                "success scenario - PromptCommit is nil",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -401,7 +395,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:                "失败场景 - strconv.ParseInt 失败",
+			name:                "failure scenario - strconv.ParseInt failed",
 			sourceTargetID:      "not-an-int",
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup:           func() {},
@@ -417,7 +411,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			},
 		},
 		{
-			name:                "失败场景 - promptRPCAdapter.GetPrompt 返回错误",
+			name:                "failure scenario - promptRPCAdapter.GetPrompt returns error",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -439,7 +433,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			},
 		},
 		{
-			name:                "失败场景 - promptRPCAdapter.GetPrompt 返回 nil prompt",
+			name:                "failure scenario - promptRPCAdapter.GetPrompt returns nil prompt",
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
@@ -505,11 +499,11 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 		expectedErrorMsg string
 	}{
 		{
-			name: "成功获取列表 - cursor为nil, 有更多数据",
+			name: "successfully get list - cursor is nil, has more data",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](1),
 				PageSize: gptr.Of[int32](1),
-				Cursor:   nil, // page 将为 1
+				Cursor:   nil, // page will be 1
 				KeyWord:  gptr.Of("test"),
 			},
 			setupMocks: func(adapter *mocks.MockIPromptRPCAdapter) {
@@ -528,7 +522,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 							LatestVersion: gptr.Of("v1.0"), // Submitted
 						},
 					},
-				}, gptr.Of[int32](1), nil) // total 字段在 ListSource 中未使用，可以为任意值
+				}, gptr.Of[int32](1), nil) // total field is not used in ListSource, can be any value
 			},
 			wantTargets: []*entity.EvalTarget{
 				{
@@ -544,6 +538,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 							Description:  "Desc 1",
 							SubmitStatus: entity.SubmitStatus_Submitted,
 						},
+						RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 					},
 				},
 			},
@@ -552,11 +547,11 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "成功获取列表 - cursor有效, 没有更多数据",
+			name: "successfully get list - cursor is valid, no more data",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](2),
 				PageSize: gptr.Of[int32](2),
-				Cursor:   gptr.Of("2"), // page 将为 2
+				Cursor:   gptr.Of("2"), // page will be 2
 				KeyWord:  nil,
 			},
 			setupMocks: func(adapter *mocks.MockIPromptRPCAdapter) {
@@ -591,6 +586,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 							Description:  "Desc 2",
 							SubmitStatus: entity.SubmitStatus_UnSubmit,
 						},
+						RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 					},
 				},
 			},
@@ -599,7 +595,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "成功获取列表 - PromptBasic为nil",
+			name: "successfully get list - PromptBasic is nil",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](3),
 				PageSize: gptr.Of[int32](1),
@@ -627,6 +623,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 							Name:        "", // Default from gptr.From
 							Description: "", // Default from gptr.From
 						},
+						RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 					},
 				},
 			},
@@ -635,7 +632,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "成功获取列表 - 返回空列表",
+			name: "successfully get list - return empty list",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](4),
 				PageSize: gptr.Of[int32](5),
@@ -650,7 +647,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "失败 - buildPageByCursor返回错误 (无效cursor)",
+			name: "failure - buildPageByCursor returns error (invalid cursor)",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](5),
 				PageSize: gptr.Of[int32](1),
@@ -664,7 +661,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 			expectedErrorMsg: "strconv.ParseInt: parsing \"abc\": invalid syntax",
 		},
 		{
-			name: "失败 - promptRPCAdapter.ListPrompt返回错误",
+			name: "failure - promptRPCAdapter.ListPrompt returns error",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](6),
 				PageSize: gptr.Of[int32](1),
@@ -680,7 +677,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 			expectedErrorMsg: "RPC error",
 		},
 		{
-			name: "边界情况 - PageSize为nil (gptr.From会处理为0)",
+			name: "boundary case - PageSize is nil (gptr.From will handle as 0)",
 			param: &entity.ListSourceParam{
 				SpaceID:  gptr.Of[int64](7),
 				PageSize: nil, // gptr.Indirect(param.PageSize) will be 0
@@ -710,6 +707,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSource(t *testing.T) {
 							Description:  "",
 							SubmitStatus: entity.SubmitStatus_UnSubmit,
 						},
+						RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 					},
 				},
 			},
@@ -770,7 +768,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 		expectedErrCode  int32
 	}{
 		{
-			name: "成功获取版本列表 - 有数据，有下一页",
+			name: "successfully get version list - has data, has next page",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -809,6 +807,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 						SubmitStatus: entity.SubmitStatus_Submitted,
 						Description:  "Version 1.0 desc",
 					},
+					RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 				},
 			},
 			wantNextCursor: "cursor_next",
@@ -816,7 +815,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "成功获取版本列表 - 有数据，没有下一页",
+			name: "successfully get version list - has data, no next page",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -855,6 +854,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 						SubmitStatus: entity.SubmitStatus_UnSubmit,
 						Description:  "Version 0.1 desc",
 					},
+					RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 				},
 			},
 			wantNextCursor: "cursor_final",
@@ -862,7 +862,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "成功获取版本列表 - PromptBasic 为 nil",
+			name: "successfully get version list - PromptBasic is nil",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -892,6 +892,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 						PromptKey:   "key_no_basic",
 						Description: "Desc",
 					},
+					RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 				},
 			},
 			wantNextCursor: "next",
@@ -899,7 +900,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "成功获取版本列表 - ListPromptVersion 返回空列表",
+			name: "successfully get version list - ListPromptVersion returns empty list",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -917,7 +918,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "失败 - 无效的 SourceTargetID (strconv.ParseInt 失败)",
+			name: "failure - invalid SourceTargetID (strconv.ParseInt failed)",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: "not-an-int",
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -930,7 +931,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			expectedErrorMsg: "strconv.ParseInt: parsing \"not-an-int\": invalid syntax",
 		},
 		{
-			name: "失败 - GetPrompt 返回错误",
+			name: "failure - GetPrompt returns error",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -946,7 +947,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			expectedErrorMsg: "GetPrompt RPC error",
 		},
 		{
-			name: "失败 - GetPrompt 返回 nil prompt (ResourceNotFound)",
+			name: "failure - GetPrompt returns nil prompt (ResourceNotFound)",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -959,11 +960,11 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			wantNextCursor:   "",
 			wantHasMore:      false,
 			wantErr:          true,
-			expectedErrorMsg: errorx.NewByCode(errno.ResourceNotFoundCode).Error(), // 比较具体的错误信息
+			expectedErrorMsg: errorx.NewByCode(errno.ResourceNotFoundCode).Error(), // compare specific error message
 			expectedErrCode:  errno.ResourceNotFoundCode,
 		},
 		{
-			name: "失败 - ListPromptVersion 返回错误",
+			name: "failure - ListPromptVersion returns error",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -981,7 +982,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			expectedErrorMsg: "ListPromptVersion RPC error",
 		},
 		{
-			name: "边界情况 - PageSize为nil (gptr.From会处理为0), hasMore判断依赖RPC返回数量",
+			name: "boundary case - PageSize is nil (gptr.From will handle as 0), hasMore depends on RPC return count",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -1024,6 +1025,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 						SubmitStatus: entity.SubmitStatus_Submitted,
 						Description:  "Desc A.1",
 					},
+					RuntimeParamDemo: gptr.Of("{\"model_config\":{\"model_id\":\"0\",\"model_name\":\"\",\"max_tokens\":0,\"temperature\":0,\"top_p\":0,\"tool_choice\":\"\",\"json_ext\":\"{}\"}}"),
 				},
 			},
 			wantNextCursor: "cursor_pagesize_nil",
@@ -1031,7 +1033,7 @@ func TestPromptSourceEvalTargetServiceImpl_ListSourceVersion(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "边界情况 - PageSize为nil, ListPromptVersion返回空列表, hasMore为true",
+			name: "boundary case - PageSize is nil, ListPromptVersion returns empty list, hasMore is true",
 			param: &entity.ListSourceVersionParam{
 				SourceTargetID: defaultPromptIDStr,
 				SpaceID:        gptr.Of(defaultSpaceID),
@@ -1095,13 +1097,13 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 	tests := []struct {
 		name         string
 		spaceID      int64
-		dos          []*entity.EvalTarget // 输入的 dos，会被方法修改
+		dos          []*entity.EvalTarget // input dos, will be modified by method
 		setupMocks   func(adapter *mocks.MockIPromptRPCAdapter, dos []*entity.EvalTarget)
-		wantErr      bool // PackSourceInfo 设计上不返回 error，所以通常为 false
+		wantErr      bool // PackSourceInfo is designed not to return error, so usually false
 		wantDosCheck func(t *testing.T, gotDos []*entity.EvalTarget)
 	}{
 		{
-			name:    "成功场景 - 正常打包信息",
+			name:    "success scenario - normal pack information",
 			spaceID: 1,
 			dos: []*entity.EvalTarget{
 				{SourceTargetID: "101", EvalTargetType: entity.EvalTargetTypeLoopPrompt},
@@ -1132,11 +1134,11 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 			},
 		},
 		{
-			name:    "成功场景 - 包含非LoopPrompt类型及MGetPrompt部分匹配",
+			name:    "success scenario - contains non-LoopPrompt types and MGetPrompt partial match",
 			spaceID: 2,
 			dos: []*entity.EvalTarget{
 				{SourceTargetID: "201", EvalTargetType: entity.EvalTargetTypeLoopPrompt},
-				{SourceTargetID: "202", EvalTargetType: entity.EvalTargetTypeCozeBot}, // 非LoopPrompt
+				{SourceTargetID: "202", EvalTargetType: entity.EvalTargetTypeCozeBot}, // non-LoopPrompt
 				{SourceTargetID: "203", EvalTargetType: entity.EvalTargetTypeLoopPrompt},
 			},
 			setupMocks: func(adapter *mocks.MockIPromptRPCAdapter, dos []*entity.EvalTarget) {
@@ -1149,7 +1151,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 					},
 				)).Return([]*rpc.LoopPrompt{
 					{ID: id201, PromptBasic: &rpc.PromptBasic{DisplayName: gptr.Of("Prompt 201")}},
-					// ID 203 不在返回结果中
+					// ID 203 is not in the return results
 				}, nil)
 			},
 			wantErr: false,
@@ -1158,12 +1160,12 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 				assert.NotNil(t, gotDos[0].EvalTargetVersion)
 				assert.NotNil(t, gotDos[0].EvalTargetVersion.Prompt)
 				assert.Equal(t, "Prompt 201", gotDos[0].EvalTargetVersion.Prompt.Name)
-				assert.Nil(t, gotDos[1].EvalTargetVersion) // 非LoopPrompt类型，应未被处理
-				assert.Nil(t, gotDos[2].EvalTargetVersion) // LoopPrompt类型，但MGetPrompt未返回，应未被处理
+				assert.Nil(t, gotDos[1].EvalTargetVersion) // non-LoopPrompt type, should not be processed
+				assert.Nil(t, gotDos[2].EvalTargetVersion) // LoopPrompt type, but MGetPrompt didn't return, should not be processed
 			},
 		},
 		{
-			name:    "成功场景 - MGetPrompt返回的PromptBasic为nil或DisplayName为nil",
+			name:    "success scenario - MGetPrompt returns PromptBasic is nil or DisplayName is nil",
 			spaceID: 3,
 			dos: []*entity.EvalTarget{
 				{SourceTargetID: "301", EvalTargetType: entity.EvalTargetTypeLoopPrompt}, // PromptBasic is nil
@@ -1194,22 +1196,22 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 			},
 		},
 		{
-			name:       "边界场景 - dos 为空",
+			name:       "boundary scenario - dos is empty",
 			spaceID:    4,
 			dos:        []*entity.EvalTarget{},
-			setupMocks: nil, // MGetPrompt 不会被调用
+			setupMocks: nil, // MGetPrompt will not be called
 			wantErr:    false,
 			wantDosCheck: func(t *testing.T, gotDos []*entity.EvalTarget) {
 				assert.Empty(t, gotDos)
 			},
 		},
 		{
-			name:    "边界场景 - dos 中无 LoopPrompt 类型",
+			name:    "boundary scenario - no LoopPrompt type in dos",
 			spaceID: 5,
 			dos: []*entity.EvalTarget{
 				{SourceTargetID: "501", EvalTargetType: entity.EvalTargetTypeCozeBot},
 			},
-			setupMocks: nil, // MGetPrompt 不会被调用
+			setupMocks: nil, // MGetPrompt will not be called
 			wantErr:    false,
 			wantDosCheck: func(t *testing.T, gotDos []*entity.EvalTarget) {
 				assert.Len(t, gotDos, 1)
@@ -1217,7 +1219,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 			},
 		},
 		{
-			name:    "边界场景 - MGetPrompt 返回空列表",
+			name:    "boundary scenario - MGetPrompt returns empty list",
 			spaceID: 6,
 			dos: []*entity.EvalTarget{
 				{SourceTargetID: "601", EvalTargetType: entity.EvalTargetTypeLoopPrompt},
@@ -1231,37 +1233,37 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 			wantErr: false,
 			wantDosCheck: func(t *testing.T, gotDos []*entity.EvalTarget) {
 				assert.Len(t, gotDos, 1)
-				assert.Nil(t, gotDos[0].EvalTargetVersion) // MGetPrompt返回空，未找到匹配，不应填充
+				assert.Nil(t, gotDos[0].EvalTargetVersion) // MGetPrompt returns empty, no match found, should not be filled
 			},
 		},
 		{
-			name:    "异常场景 - strconv.ParseInt 失败 (函数内部处理，不返回error)",
+			name:    "abnormal scenario - strconv.ParseInt failed (handled internally, no error returned)",
 			spaceID: 7,
 			dos: []*entity.EvalTarget{
-				{SourceTargetID: "abc", EvalTargetType: entity.EvalTargetTypeLoopPrompt}, // 无效ID
+				{SourceTargetID: "abc", EvalTargetType: entity.EvalTargetTypeLoopPrompt}, // invalid ID
 				{SourceTargetID: "701", EvalTargetType: entity.EvalTargetTypeLoopPrompt},
 			},
 			setupMocks: func(adapter *mocks.MockIPromptRPCAdapter, dos []*entity.EvalTarget) {
-				// "abc" 会导致 ParseInt 失败，所以 MGetPrompt 只会查询 "701"
+				// "abc" will cause ParseInt to fail, so MGetPrompt will only query "701"
 				id701, _ := strconv.ParseInt(dos[1].SourceTargetID, 10, 64)
 				adapter.EXPECT().MGetPrompt(gomock.Any(), int64(7), []*rpc.MGetPromptQuery{
 					{PromptID: id701, Version: nil},
 				}).Return([]*rpc.LoopPrompt{
 					{ID: id701, PromptBasic: &rpc.PromptBasic{DisplayName: gptr.Of("Prompt 701")}},
 				}, nil)
-				// 注意：这里可以mock logs.CtxError 来验证它是否被调用，但通常不这么做，而是检查其副作用
+				// Note: here we can mock logs.CtxError to verify if it's called, but usually we don't do this, instead check its side effects
 			},
-			wantErr: false, // PackSourceInfo 内部处理了ParseInt错误，不向外抛出
+			wantErr: false, // PackSourceInfo handles ParseInt error internally, doesn't throw outward
 			wantDosCheck: func(t *testing.T, gotDos []*entity.EvalTarget) {
 				assert.Len(t, gotDos, 2)
-				assert.Nil(t, gotDos[0].EvalTargetVersion) // ParseInt 失败，未处理
+				assert.Nil(t, gotDos[0].EvalTargetVersion) // ParseInt failed, not processed
 				assert.NotNil(t, gotDos[1].EvalTargetVersion)
 				assert.NotNil(t, gotDos[1].EvalTargetVersion.Prompt)
 				assert.Equal(t, "Prompt 701", gotDos[1].EvalTargetVersion.Prompt.Name)
 			},
 		},
 		{
-			name:    "异常场景 - MGetPrompt 返回错误 (函数内部处理，不返回error)",
+			name:    "abnormal scenario - MGetPrompt returns error (handled internally, no error returned)",
 			spaceID: 8,
 			dos: []*entity.EvalTarget{
 				{SourceTargetID: "801", EvalTargetType: entity.EvalTargetTypeLoopPrompt},
@@ -1272,18 +1274,18 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 					{PromptID: id801, Version: nil},
 				}).Return(nil, errors.New("RPC MGetPrompt error"))
 			},
-			wantErr: false, // PackSourceInfo 内部处理了MGetPrompt错误，不向外抛出
+			wantErr: false, // PackSourceInfo handles MGetPrompt error internally, doesn't throw outward
 			wantDosCheck: func(t *testing.T, gotDos []*entity.EvalTarget) {
 				assert.Len(t, gotDos, 1)
-				assert.Nil(t, gotDos[0].EvalTargetVersion) // MGetPrompt 失败，未处理
+				assert.Nil(t, gotDos[0].EvalTargetVersion) // MGetPrompt failed, not processed
 			},
 		},
 		{
-			name:    "成功场景 - dos 为 nil (函数应能处理)",
+			name:    "success scenario - dos is nil (function should handle)",
 			spaceID: 9,
 			dos:     nil,
 			setupMocks: func(adapter *mocks.MockIPromptRPCAdapter, dos []*entity.EvalTarget) {
-				// MGetPrompt 不会被调用
+				// MGetPrompt will not be called
 			},
 			wantErr: false,
 			wantDosCheck: func(t *testing.T, gotDos []*entity.EvalTarget) {
@@ -1294,29 +1296,28 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceInfo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 为每个测试用例复制一份dos，以避免并发修改或跨测试用例影响
-			// 对于指针切片，浅拷贝元素指针是可以的，因为方法内部是修改元素指向的结构体字段，
-			// 或者替换元素（如果方法会重新分配EvalTargetVersion）。
-			// 在这个特定的PackSourceInfo方法中，它修改的是dos[i].EvalTargetVersion，所以原始dos会被修改。
-			// 如果测试用例的dos需要在多个地方复用且不想被修改，则需要深拷贝。
-			// 这里我们直接传入tt.dos，因为每个t.Run是独立的。
+			// Copy dos for each test case to avoid concurrent modification or cross-test case impact
+			// For pointer slices, shallow copying element pointers is fine, because the method internally modifies struct fields pointed to by elements,
+			// or replaces elements (if the method reallocates EvalTargetVersion).
+			// In this specific PackSourceInfo method, it modifies dos[i].EvalTargetVersion, so the original dos will be modified.
+			// If the test case's dos needs to be reused in multiple places and should not be modified, deep copy is needed.
+			// Here we directly pass tt.dos because each t.Run is independent.
 			currentDos := make([]*entity.EvalTarget, len(tt.dos))
-			for i, d := range tt.dos { // 简单的浅拷贝，如果EvalTarget内部有指针字段且会被修改，则需要更深的拷贝
-				if d != nil {
-					// 创建一个新的EvalTarget副本，以避免修改原始测试数据中的EvalTarget
-					// 这对于确保每个子测试的隔离性很重要，特别是如果EvalTarget结构复杂且其字段会被修改
-					copiedTarget := *d
-					// 如果EvalTargetVersion等也是指针，并且会被修改，也需要深拷贝
-					// 在此例中，EvalTargetVersion会被重新赋值，所以浅拷贝EvalTarget本身，然后让方法内部创建新的EvalTargetVersion是OK的
-					currentDos[i] = &copiedTarget
+			for i, d := range tt.dos { // Simple shallow copy, if EvalTarget has internal pointer fields that will be modified, deeper copy is needed
+				currentDos[i] = &entity.EvalTarget{
+					// Create a new EvalTarget copy to avoid modifying EvalTarget in original test data
+					// This is important for ensuring isolation of each sub-test, especially if EvalTarget structure is complex and its fields will be modified
+					SourceTargetID: d.SourceTargetID, EvalTargetType: d.EvalTargetType,
+					// If EvalTargetVersion etc. are also pointers and will be modified, deep copy is also needed
+					// In this case, EvalTargetVersion will be reassigned, so shallow copying EvalTarget itself and letting the method internally create new EvalTargetVersion is OK
 				}
 			}
-			if tt.dos == nil { // 处理dos为nil的情况
+			if tt.dos == nil { // Handle case where dos is nil
 				currentDos = nil
 			}
 
 			if tt.setupMocks != nil {
-				tt.setupMocks(mockPromptRPCAdapter, currentDos) // 传递 currentDos 给 mock 设置
+				tt.setupMocks(mockPromptRPCAdapter, currentDos) // Pass currentDos to mock setup
 			}
 
 			err := service.PackSourceInfo(ctx, tt.spaceID, currentDos)
@@ -1352,7 +1353,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:    "成功场景 - 正常获取Prompt信息",
+			name:    "success scenario - normal get Prompt information",
 			spaceID: 123,
 			dos: []*entity.EvalTarget{
 				{
@@ -1395,11 +1396,11 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "成功场景 - 空输入切片",
+			name:    "success scenario - empty input slice",
 			spaceID: 123,
 			dos:     []*entity.EvalTarget{},
 			mockSetup: func() {
-				// 空输入不应该调用RPC
+				// Empty input should not call RPC
 			},
 			wantCheck: func(t *testing.T, dos []*entity.EvalTarget) {
 				assert.Empty(t, dos)
@@ -1407,7 +1408,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "成功场景 - Prompt已删除",
+			name:    "success scenario - Prompt deleted",
 			spaceID: 123,
 			dos: []*entity.EvalTarget{
 				{
@@ -1425,7 +1426,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 			mockSetup: func() {
 				mockPromptRPCAdapter.EXPECT().
 					MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]*rpc.LoopPrompt{}, nil) // 返回空结果表示Prompt不存在
+					Return([]*rpc.LoopPrompt{}, nil) // Return empty result indicates Prompt doesn't exist
 			},
 			wantCheck: func(t *testing.T, dos []*entity.EvalTarget) {
 			},
@@ -1595,6 +1596,298 @@ func TestPromptSourceEvalTargetServiceImpl_BatchGetSource(t *testing.T) {
 					assert.Equal(t, want.EvalTargetVersion.Prompt.Name, got.EvalTargetVersion.Prompt.Name)
 					assert.Equal(t, want.EvalTargetVersion.Prompt.Description, got.EvalTargetVersion.Prompt.Description)
 				}
+			}
+		})
+	}
+}
+
+func TestPromptSourceEvalTargetServiceImpl_RuntimeParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockPromptRPCAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+	service := NewPromptSourceEvalTargetServiceImpl(mockPromptRPCAdapter)
+
+	// Test RuntimeParam method
+	runtimeParam := service.RuntimeParam()
+
+	// Verify that PromptRuntimeParam type is returned
+	assert.NotNil(t, runtimeParam)
+	promptParam, ok := runtimeParam.(*entity.PromptRuntimeParam)
+	assert.True(t, ok, "RuntimeParam should return PromptRuntimeParam type")
+
+	// Verify that initialized ModelConfig is nil (because nil was passed in)
+	assert.Nil(t, promptParam.ModelConfig)
+
+	// Verify that IRuntimeParam interface methods can be called normally
+	demo := runtimeParam.GetJSONDemo()
+	assert.NotEmpty(t, demo)
+	assert.Contains(t, demo, "model_config")
+
+	jsonValue := runtimeParam.GetJSONValue()
+	assert.NotEmpty(t, jsonValue)
+}
+
+func TestPromptSourceEvalTargetServiceImpl_EvalType(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockPromptRPCAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+	service := NewPromptSourceEvalTargetServiceImpl(mockPromptRPCAdapter)
+
+	// Test EvalType method
+	evalType := service.EvalType()
+	assert.Equal(t, entity.EvalTargetTypeLoopPrompt, evalType)
+}
+
+func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockPromptRPCAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+	service := NewPromptSourceEvalTargetServiceImpl(mockPromptRPCAdapter)
+
+	tests := []struct {
+		name           string
+		spaceID        int64
+		param          *entity.ExecuteEvalTargetParam
+		mockSetup      func()
+		wantOutputData *entity.EvalTargetOutputData
+		wantStatus     entity.EvalTargetRunStatus
+		wantErr        bool
+		wantErrCode    int32
+	}{
+		{
+			name:    "successful execution with runtime param",
+			spaceID: 123,
+			param: &entity.ExecuteEvalTargetParam{
+				TargetID:            1,
+				SourceTargetID:      "456",
+				SourceTargetVersion: "v1",
+				Input: &entity.EvalTargetInputData{
+					InputFields: map[string]*entity.Content{
+						"var1": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("test input"),
+						},
+					},
+					Ext: map[string]string{
+						consts.TargetExecuteExtRuntimeParamKey: `{"model_config":{"model_id":"test_model","temperature":0.7}}`,
+					},
+				},
+				TargetType: entity.EvalTargetTypeLoopPrompt,
+			},
+			mockSetup: func() {
+				expectedParam := &rpc.ExecutePromptParam{
+					PromptID:      456,
+					PromptVersion: "v1",
+					Variables: []*entity.VariableVal{
+						{
+							Key:   gptr.Of("var1"),
+							Value: gptr.Of("test input"),
+						},
+					},
+					History:      nil,
+					RuntimeParam: gptr.Of(`{"model_config":{"model_id":"test_model","temperature":0.7}}`),
+				}
+				mockPromptRPCAdapter.EXPECT().
+					ExecutePrompt(gomock.Any(), int64(123), expectedParam).
+					Return(&rpc.ExecutePromptResult{
+						Content: gptr.Of("test output with runtime param"),
+						TokenUsage: &entity.TokenUsage{
+							InputTokens:  120,
+							OutputTokens: 60,
+						},
+					}, nil)
+			},
+			wantOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{
+					consts.OutputSchemaKey: {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Format:      gptr.Of(entity.Markdown),
+						Text:        gptr.Of("test output with runtime param"),
+					},
+				},
+				EvalTargetUsage: &entity.EvalTargetUsage{
+					InputTokens:  120,
+					OutputTokens: 60,
+				},
+			},
+			wantStatus: entity.EvalTargetRunStatusSuccess,
+			wantErr:    false,
+		},
+		{
+			name:    "successful execution without runtime param",
+			spaceID: 123,
+			param: &entity.ExecuteEvalTargetParam{
+				TargetID:            1,
+				SourceTargetID:      "456",
+				SourceTargetVersion: "v1",
+				Input: &entity.EvalTargetInputData{
+					InputFields: map[string]*entity.Content{
+						"var1": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("test input"),
+						},
+					},
+					Ext: map[string]string{}, // No runtime param
+				},
+				TargetType: entity.EvalTargetTypeLoopPrompt,
+			},
+			mockSetup: func() {
+				expectedParam := &rpc.ExecutePromptParam{
+					PromptID:      456,
+					PromptVersion: "v1",
+					Variables: []*entity.VariableVal{
+						{
+							Key:   gptr.Of("var1"),
+							Value: gptr.Of("test input"),
+						},
+					},
+					History:      nil,
+					RuntimeParam: nil, // No runtime param
+				}
+				mockPromptRPCAdapter.EXPECT().
+					ExecutePrompt(gomock.Any(), int64(123), expectedParam).
+					Return(&rpc.ExecutePromptResult{
+						Content: gptr.Of("test output without runtime param"),
+						TokenUsage: &entity.TokenUsage{
+							InputTokens:  100,
+							OutputTokens: 50,
+						},
+					}, nil)
+			},
+			wantOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{
+					consts.OutputSchemaKey: {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Format:      gptr.Of(entity.Markdown),
+						Text:        gptr.Of("test output without runtime param"),
+					},
+				},
+				EvalTargetUsage: &entity.EvalTargetUsage{
+					InputTokens:  100,
+					OutputTokens: 50,
+				},
+			},
+			wantStatus: entity.EvalTargetRunStatusSuccess,
+			wantErr:    false,
+		},
+		{
+			name:    "successful execution with empty runtime param",
+			spaceID: 123,
+			param: &entity.ExecuteEvalTargetParam{
+				TargetID:            1,
+				SourceTargetID:      "456",
+				SourceTargetVersion: "v1",
+				Input: &entity.EvalTargetInputData{
+					InputFields: map[string]*entity.Content{},
+					Ext: map[string]string{
+						consts.TargetExecuteExtRuntimeParamKey: "", // Empty runtime param
+					},
+				},
+				TargetType: entity.EvalTargetTypeLoopPrompt,
+			},
+			mockSetup: func() {
+				expectedParam := &rpc.ExecutePromptParam{
+					PromptID:      456,
+					PromptVersion: "v1",
+					Variables:     []*entity.VariableVal{},
+					History:       nil,
+					RuntimeParam:  nil, // Empty string should not set RuntimeParam
+				}
+				mockPromptRPCAdapter.EXPECT().
+					ExecutePrompt(gomock.Any(), int64(123), expectedParam).
+					Return(&rpc.ExecutePromptResult{
+						Content: gptr.Of("test output"),
+					}, nil)
+			},
+			wantOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{
+					consts.OutputSchemaKey: {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Format:      gptr.Of(entity.Markdown),
+						Text:        gptr.Of("test output"),
+					},
+				},
+			},
+			wantStatus: entity.EvalTargetRunStatusSuccess,
+			wantErr:    false,
+		},
+		{
+			name:    "successful execution with runtime param and other ext values",
+			spaceID: 123,
+			param: &entity.ExecuteEvalTargetParam{
+				TargetID:            1,
+				SourceTargetID:      "456",
+				SourceTargetVersion: "v1",
+				Input: &entity.EvalTargetInputData{
+					InputFields: map[string]*entity.Content{},
+					Ext: map[string]string{
+						consts.TargetExecuteExtRuntimeParamKey: `{"model_config":{"model_id":"test_model"}}`,
+						"other_ext_key":                        "other_ext_value",
+					},
+				},
+				TargetType: entity.EvalTargetTypeLoopPrompt,
+			},
+			mockSetup: func() {
+				expectedParam := &rpc.ExecutePromptParam{
+					PromptID:      456,
+					PromptVersion: "v1",
+					Variables:     []*entity.VariableVal{},
+					History:       nil,
+					RuntimeParam:  gptr.Of(`{"model_config":{"model_id":"test_model"}}`),
+				}
+				mockPromptRPCAdapter.EXPECT().
+					ExecutePrompt(gomock.Any(), int64(123), expectedParam).
+					Return(&rpc.ExecutePromptResult{
+						Content: gptr.Of("test output with mixed ext"),
+					}, nil)
+			},
+			wantOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{
+					consts.OutputSchemaKey: {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Format:      gptr.Of(entity.Markdown),
+						Text:        gptr.Of("test output with mixed ext"),
+					},
+				},
+			},
+			wantStatus: entity.EvalTargetRunStatusSuccess,
+			wantErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			gotOutputData, gotStatus, err := service.Execute(context.Background(), tt.spaceID, tt.param)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.wantStatus, gotStatus)
+
+			if tt.wantOutputData != nil {
+				// Validate output fields
+				assert.Equal(t, gptr.Indirect(tt.wantOutputData.OutputFields[consts.OutputSchemaKey].Text), gptr.Indirect(gotOutputData.OutputFields[consts.OutputSchemaKey].Text))
+				// Validate usage
+				if tt.wantOutputData.EvalTargetUsage != nil {
+					assert.Equal(t, tt.wantOutputData.EvalTargetUsage.InputTokens, gotOutputData.EvalTargetUsage.InputTokens)
+					assert.Equal(t, tt.wantOutputData.EvalTargetUsage.OutputTokens, gotOutputData.EvalTargetUsage.OutputTokens)
+				}
+				// Validate execution time
+				assert.NotNil(t, gotOutputData.TimeConsumingMS)
+				assert.GreaterOrEqual(t, *gotOutputData.TimeConsumingMS, int64(0))
 			}
 		})
 	}

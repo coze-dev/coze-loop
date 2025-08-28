@@ -36,11 +36,43 @@ func SpanDO2DTO(
 		Output:          s.Output,
 		LogicDeleteDate: ptr.Of(time_util.MicroSec2MillSec(s.LogicDeleteTime)), // to ms
 	}
+	if s.PSM != "" {
+		outSpan.ServiceName = ptr.Of(s.PSM)
+	}
+	if s.LogID != "" {
+		outSpan.Logid = ptr.Of(s.LogID)
+	}
 	switch s.SpanType {
 	case loop_span.SpanTypePrompt:
 		outSpan.SetType(span.SpanTypePrompt)
 	case loop_span.SpanTypeModel:
 		outSpan.SetType(span.SpanTypeModel)
+	case loop_span.SpanTypeParser:
+		outSpan.SetType(span.SpanTypeParser)
+	case loop_span.SpanTypeEmbedding:
+		outSpan.SetType(span.SpanTypeEmbedding)
+	case loop_span.SpanTypeMemory:
+		outSpan.SetType(span.SpanTypeMemory)
+	case loop_span.SpanTypePlugin:
+		outSpan.SetType(span.SpanTypePlugin)
+	case loop_span.SpanTypeFunction:
+		outSpan.SetType(span.SpanTypeFunction)
+	case loop_span.SpanTypeGraph:
+		outSpan.SetType(span.SpanTypeGraph)
+	case loop_span.SpanTypeRemote:
+		outSpan.SetType(span.SpanTypeRemote)
+	case loop_span.SpanTypeLoader:
+		outSpan.SetType(span.SpanTypeLoader)
+	case loop_span.SpanTypeTransformer:
+		outSpan.SetType(span.SpanTypeTransformer)
+	case loop_span.SpanTypeVectorStore:
+		outSpan.SetType(span.SpanTypeVectorStore)
+	case loop_span.SpanTypeVectorRetriever:
+		outSpan.SetType(span.SpanTypeVectorRetriever)
+	case loop_span.SpanTypeAgent:
+		outSpan.SetType(span.SpanTypeAgent)
+	case loop_span.SpanTypeLLMCall:
+		outSpan.SetType(span.SpanTypeLLMCall)
 	default:
 		outSpan.SetType(span.SpanTypeUnknown)
 	}
@@ -110,6 +142,12 @@ func SpanDTO2DO(span *span.InputSpan) *loop_span.Span {
 	}
 	if span.DurationMicros != nil {
 		outSpan.DurationMicros = *span.DurationMicros
+	}
+	if span.LogID != nil {
+		outSpan.LogID = *span.LogID
+	}
+	if span.ServiceName != nil {
+		outSpan.PSM = *span.ServiceName
 	}
 	return outSpan
 }

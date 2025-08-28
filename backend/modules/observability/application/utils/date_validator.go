@@ -53,5 +53,5 @@ func StartTimeOfDay(from int64) int64 {
 
 func EndTimeOfDay(from int64) int64 {
 	year, month, day := time.UnixMilli(from).Date()
-	return time.Date(year, month, day, 23, 59, 59, int(999*time.Millisecond), time.Local).UnixMilli()
+	return time.Date(year, month, day, 23, 59, 59, 999999999, time.Local).UnixMilli()
 }

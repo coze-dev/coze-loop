@@ -21,6 +21,32 @@ const (
 	SpanTypePrompt = "prompt"
 
 	SpanTypeModel = "model"
+
+	SpanTypeParser = "parser"
+
+	SpanTypeEmbedding = "embedding"
+
+	SpanTypeMemory = "memory"
+
+	SpanTypePlugin = "plugin"
+
+	SpanTypeFunction = "function"
+
+	SpanTypeGraph = "graph"
+
+	SpanTypeRemote = "remote"
+
+	SpanTypeLoader = "loader"
+
+	SpanTypeTransformer = "transformer"
+
+	SpanTypeVectorStore = "vector_store"
+
+	SpanTypeVectorRetriever = "vector_retriever"
+
+	SpanTypeAgent = "agent"
+
+	SpanTypeLLMCall = "LLMCall"
 )
 
 type SpanStatus = string
@@ -406,6 +432,8 @@ type OutputSpan struct {
 	Input           string                   `thrift:"input,11,required" frugal:"11,required,string" form:"input,required" json:"input,required" query:"input,required"`
 	Output          string                   `thrift:"output,12,required" frugal:"12,required,string" form:"output,required" json:"output,required" query:"output,required"`
 	LogicDeleteDate *int64                   `thrift:"logic_delete_date,13,optional" frugal:"13,optional,i64" json:"logic_delete_date" form:"logic_delete_date" query:"logic_delete_date"`
+	ServiceName     *string                  `thrift:"service_name,14,optional" frugal:"14,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
+	Logid           *string                  `thrift:"logid,15,optional" frugal:"15,optional,string" form:"logid" json:"logid,omitempty" query:"logid"`
 	CustomTags      map[string]string        `thrift:"custom_tags,101,optional" frugal:"101,optional,map<string:string>" form:"custom_tags" json:"custom_tags,omitempty" query:"custom_tags"`
 	AttrTos         *AttrTos                 `thrift:"attr_tos,102,optional" frugal:"102,optional,AttrTos" form:"attr_tos" json:"attr_tos,omitempty" query:"attr_tos"`
 	SystemTags      map[string]string        `thrift:"system_tags,103,optional" frugal:"103,optional,map<string:string>" form:"system_tags" json:"system_tags,omitempty" query:"system_tags"`
@@ -515,6 +543,30 @@ func (p *OutputSpan) GetLogicDeleteDate() (v int64) {
 	return *p.LogicDeleteDate
 }
 
+var OutputSpan_ServiceName_DEFAULT string
+
+func (p *OutputSpan) GetServiceName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetServiceName() {
+		return OutputSpan_ServiceName_DEFAULT
+	}
+	return *p.ServiceName
+}
+
+var OutputSpan_Logid_DEFAULT string
+
+func (p *OutputSpan) GetLogid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogid() {
+		return OutputSpan_Logid_DEFAULT
+	}
+	return *p.Logid
+}
+
 var OutputSpan_CustomTags_DEFAULT map[string]string
 
 func (p *OutputSpan) GetCustomTags() (v map[string]string) {
@@ -601,6 +653,12 @@ func (p *OutputSpan) SetOutput(val string) {
 func (p *OutputSpan) SetLogicDeleteDate(val *int64) {
 	p.LogicDeleteDate = val
 }
+func (p *OutputSpan) SetServiceName(val *string) {
+	p.ServiceName = val
+}
+func (p *OutputSpan) SetLogid(val *string) {
+	p.Logid = val
+}
 func (p *OutputSpan) SetCustomTags(val map[string]string) {
 	p.CustomTags = val
 }
@@ -628,6 +686,8 @@ var fieldIDToName_OutputSpan = map[int16]string{
 	11:  "input",
 	12:  "output",
 	13:  "logic_delete_date",
+	14:  "service_name",
+	15:  "logid",
 	101: "custom_tags",
 	102: "attr_tos",
 	103: "system_tags",
@@ -636,6 +696,14 @@ var fieldIDToName_OutputSpan = map[int16]string{
 
 func (p *OutputSpan) IsSetLogicDeleteDate() bool {
 	return p.LogicDeleteDate != nil
+}
+
+func (p *OutputSpan) IsSetServiceName() bool {
+	return p.ServiceName != nil
+}
+
+func (p *OutputSpan) IsSetLogid() bool {
+	return p.Logid != nil
 }
 
 func (p *OutputSpan) IsSetCustomTags() bool {
@@ -795,6 +863,22 @@ func (p *OutputSpan) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1065,6 +1149,28 @@ func (p *OutputSpan) ReadField13(iprot thrift.TProtocol) error {
 	p.LogicDeleteDate = _field
 	return nil
 }
+func (p *OutputSpan) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ServiceName = _field
+	return nil
+}
+func (p *OutputSpan) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Logid = _field
+	return nil
+}
 func (p *OutputSpan) ReadField101(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -1211,6 +1317,14 @@ func (p *OutputSpan) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -1457,6 +1571,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
+func (p *OutputSpan) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetServiceName() {
+		if err = oprot.WriteFieldBegin("service_name", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ServiceName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+func (p *OutputSpan) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogid() {
+		if err = oprot.WriteFieldBegin("logid", thrift.STRING, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Logid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
 func (p *OutputSpan) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCustomTags() {
 		if err = oprot.WriteFieldBegin("custom_tags", thrift.MAP, 101); err != nil {
@@ -1613,6 +1763,12 @@ func (p *OutputSpan) DeepEqual(ano *OutputSpan) bool {
 	if !p.Field13DeepEqual(ano.LogicDeleteDate) {
 		return false
 	}
+	if !p.Field14DeepEqual(ano.ServiceName) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.Logid) {
+		return false
+	}
 	if !p.Field101DeepEqual(ano.CustomTags) {
 		return false
 	}
@@ -1724,6 +1880,30 @@ func (p *OutputSpan) Field13DeepEqual(src *int64) bool {
 	}
 	return true
 }
+func (p *OutputSpan) Field14DeepEqual(src *string) bool {
+
+	if p.ServiceName == src {
+		return true
+	} else if p.ServiceName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ServiceName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *OutputSpan) Field15DeepEqual(src *string) bool {
+
+	if p.Logid == src {
+		return true
+	} else if p.Logid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Logid, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *OutputSpan) Field101DeepEqual(src map[string]string) bool {
 
 	if len(p.CustomTags) != len(src) {
@@ -1773,10 +1953,12 @@ func (p *OutputSpan) Field104DeepEqual(src []*annotation.Annotation) bool {
 
 type InputSpan struct {
 	StartedAtMicros  int64              `thrift:"started_at_micros,1,required" frugal:"1,required,i64" json:"started_at_micros" form:"started_at_micros,required" query:"started_at_micros,required"`
+	LogID            *string            `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
 	SpanID           string             `thrift:"span_id,3,required" frugal:"3,required,string" form:"span_id,required" json:"span_id,required" query:"span_id,required"`
 	ParentID         string             `thrift:"parent_id,4,required" frugal:"4,required,string" form:"parent_id,required" json:"parent_id,required" query:"parent_id,required"`
 	TraceID          string             `thrift:"trace_id,5,required" frugal:"5,required,string" form:"trace_id,required" json:"trace_id,required" query:"trace_id,required"`
 	Duration         int64              `thrift:"duration,6,required" frugal:"6,required,i64" json:"duration" form:"duration,required" query:"duration,required"`
+	ServiceName      *string            `thrift:"service_name,7,optional" frugal:"7,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
 	CallType         *string            `thrift:"call_type,8,optional" frugal:"8,optional,string" form:"call_type" json:"call_type,omitempty" query:"call_type"`
 	WorkspaceID      string             `thrift:"workspace_id,9,required" frugal:"9,required,string" form:"workspace_id,required" json:"workspace_id,required" query:"workspace_id,required"`
 	SpanName         string             `thrift:"span_name,10,required" frugal:"10,required,string" form:"span_name,required" json:"span_name,required" query:"span_name,required"`
@@ -1811,6 +1993,18 @@ func (p *InputSpan) GetStartedAtMicros() (v int64) {
 	return
 }
 
+var InputSpan_LogID_DEFAULT string
+
+func (p *InputSpan) GetLogID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogID() {
+		return InputSpan_LogID_DEFAULT
+	}
+	return *p.LogID
+}
+
 func (p *InputSpan) GetSpanID() (v string) {
 	if p != nil {
 		return p.SpanID
@@ -1837,6 +2031,18 @@ func (p *InputSpan) GetDuration() (v int64) {
 		return p.Duration
 	}
 	return
+}
+
+var InputSpan_ServiceName_DEFAULT string
+
+func (p *InputSpan) GetServiceName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetServiceName() {
+		return InputSpan_ServiceName_DEFAULT
+	}
+	return *p.ServiceName
 }
 
 var InputSpan_CallType_DEFAULT string
@@ -2022,6 +2228,9 @@ func (p *InputSpan) GetDurationMicros() (v int64) {
 func (p *InputSpan) SetStartedAtMicros(val int64) {
 	p.StartedAtMicros = val
 }
+func (p *InputSpan) SetLogID(val *string) {
+	p.LogID = val
+}
 func (p *InputSpan) SetSpanID(val string) {
 	p.SpanID = val
 }
@@ -2033,6 +2242,9 @@ func (p *InputSpan) SetTraceID(val string) {
 }
 func (p *InputSpan) SetDuration(val int64) {
 	p.Duration = val
+}
+func (p *InputSpan) SetServiceName(val *string) {
+	p.ServiceName = val
 }
 func (p *InputSpan) SetCallType(val *string) {
 	p.CallType = val
@@ -2091,10 +2303,12 @@ func (p *InputSpan) SetDurationMicros(val *int64) {
 
 var fieldIDToName_InputSpan = map[int16]string{
 	1:  "started_at_micros",
+	2:  "log_id",
 	3:  "span_id",
 	4:  "parent_id",
 	5:  "trace_id",
 	6:  "duration",
+	7:  "service_name",
 	8:  "call_type",
 	9:  "workspace_id",
 	10: "span_name",
@@ -2113,6 +2327,14 @@ var fieldIDToName_InputSpan = map[int16]string{
 	23: "tags_bool",
 	24: "tags_bytes",
 	25: "duration_micros",
+}
+
+func (p *InputSpan) IsSetLogID() bool {
+	return p.LogID != nil
+}
+
+func (p *InputSpan) IsSetServiceName() bool {
+	return p.ServiceName != nil
 }
 
 func (p *InputSpan) IsSetCallType() bool {
@@ -2198,6 +2420,14 @@ func (p *InputSpan) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
@@ -2231,6 +2461,14 @@ func (p *InputSpan) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetDuration = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -2486,6 +2724,17 @@ func (p *InputSpan) ReadField1(iprot thrift.TProtocol) error {
 	p.StartedAtMicros = _field
 	return nil
 }
+func (p *InputSpan) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LogID = _field
+	return nil
+}
 func (p *InputSpan) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field string
@@ -2528,6 +2777,17 @@ func (p *InputSpan) ReadField6(iprot thrift.TProtocol) error {
 		_field = v
 	}
 	p.Duration = _field
+	return nil
+}
+func (p *InputSpan) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ServiceName = _field
 	return nil
 }
 func (p *InputSpan) ReadField8(iprot thrift.TProtocol) error {
@@ -2883,6 +3143,10 @@ func (p *InputSpan) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
 			goto WriteFieldError
@@ -2897,6 +3161,10 @@ func (p *InputSpan) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField8(oprot); err != nil {
@@ -3005,6 +3273,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *InputSpan) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogID() {
+		if err = oprot.WriteFieldBegin("log_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LogID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *InputSpan) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("span_id", thrift.STRING, 3); err != nil {
 		goto WriteFieldBeginError
@@ -3068,6 +3354,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *InputSpan) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetServiceName() {
+		if err = oprot.WriteFieldBegin("service_name", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ServiceName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 func (p *InputSpan) writeField8(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCallType() {
@@ -3485,6 +3789,9 @@ func (p *InputSpan) DeepEqual(ano *InputSpan) bool {
 	if !p.Field1DeepEqual(ano.StartedAtMicros) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.LogID) {
+		return false
+	}
 	if !p.Field3DeepEqual(ano.SpanID) {
 		return false
 	}
@@ -3495,6 +3802,9 @@ func (p *InputSpan) DeepEqual(ano *InputSpan) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.Duration) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.ServiceName) {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.CallType) {
@@ -3561,6 +3871,18 @@ func (p *InputSpan) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
+func (p *InputSpan) Field2DeepEqual(src *string) bool {
+
+	if p.LogID == src {
+		return true
+	} else if p.LogID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LogID, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *InputSpan) Field3DeepEqual(src string) bool {
 
 	if strings.Compare(p.SpanID, src) != 0 {
@@ -3585,6 +3907,18 @@ func (p *InputSpan) Field5DeepEqual(src string) bool {
 func (p *InputSpan) Field6DeepEqual(src int64) bool {
 
 	if p.Duration != src {
+		return false
+	}
+	return true
+}
+func (p *InputSpan) Field7DeepEqual(src *string) bool {
+
+	if p.ServiceName == src {
+		return true
+	} else if p.ServiceName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ServiceName, *src) != 0 {
 		return false
 	}
 	return true

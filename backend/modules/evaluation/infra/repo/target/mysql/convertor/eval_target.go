@@ -144,6 +144,7 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 	targetVersionDO.SpaceID = targetVersionPO.SpaceID
 	targetVersionDO.TargetID = targetVersionPO.TargetID
 	targetVersionDO.SourceTargetVersion = targetVersionPO.SourceTargetVersion
+	targetVersionDO.RuntimeParamDemo = gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo())
 
 	targetVersionDO.BaseInfo = &entity.BaseInfo{
 		CreatedBy: &entity.UserInfo{

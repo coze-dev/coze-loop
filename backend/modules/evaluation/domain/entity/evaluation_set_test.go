@@ -60,6 +60,10 @@ func TestItemErrorType_String_FromString(t *testing.T) {
 	assert.Equal(t, "MissingRequiredField", ItemErrorType_MissingRequiredField.String())
 	assert.Equal(t, "ExceedMaxNestedDepth", ItemErrorType_ExceedMaxNestedDepth.String())
 	assert.Equal(t, "TransformItemFailed", ItemErrorType_TransformItemFailed.String())
+	assert.Equal(t, "ExceedMaxImageCount", ItemErrorType_ExceedMaxImageCount.String())
+	assert.Equal(t, "ExceedMaxImageSize", ItemErrorType_ExceedMaxImageSize.String())
+	assert.Equal(t, "GetImageFailed", ItemErrorType_GetImageFailed.String())
+	assert.Equal(t, "UploadImageFailed", ItemErrorType_UploadImageFailed.String())
 	var unknown ItemErrorType = 99
 	assert.Equal(t, "<UNSET>", unknown.String())
 
@@ -74,6 +78,19 @@ func TestItemErrorType_String_FromString(t *testing.T) {
 	assert.Equal(t, ItemErrorType_ExceedMaxNestedDepth, typ2)
 	_, err = ItemErrorTypeFromString("not-exist")
 	assert.Error(t, err)
+
+	typ3, err := ItemErrorTypeFromString("ExceedMaxImageCount")
+	assert.NoError(t, err)
+	assert.Equal(t, ItemErrorType_ExceedMaxImageCount, typ3)
+	typ4, err := ItemErrorTypeFromString("ExceedMaxImageSize")
+	assert.NoError(t, err)
+	assert.Equal(t, ItemErrorType_ExceedMaxImageSize, typ4)
+	typ5, err := ItemErrorTypeFromString("GetImageFailed")
+	assert.NoError(t, err)
+	assert.Equal(t, ItemErrorType_GetImageFailed, typ5)
+	typ6, err := ItemErrorTypeFromString("UploadImageFailed")
+	assert.NoError(t, err)
+	assert.Equal(t, ItemErrorType_UploadImageFailed, typ6)
 }
 
 func TestFieldDisplayFormat_String_FromString_Ptr_Scan_Value(t *testing.T) {

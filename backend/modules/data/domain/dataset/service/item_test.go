@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"gorm.io/gorm"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/db/mocks"
@@ -998,6 +999,196 @@ func TestDatasetServiceImpl_acquireItemCount(t *testing.T) {
 				// For non-partial adds, we should get either all or nothing
 				assert.True(t, got == tt.want || got == 0)
 			}
+		})
+	}
+}
+
+func TestDatasetServiceImpl_ValidateDatasetItems(t *testing.T) {
+	item := &entity.Item{
+		Data: []*entity.FieldData{
+			{Key: "field1", Content: "test content"},
+		},
+	}
+
+	intFieldSchema := &entity.FieldSchema{
+		Key:         "field1",
+		Name:        "field1",
+		ContentType: entity.ContentTypeText,
+		SchemaKey:   entity.SchemaKeyInteger,
+	}
+	strFieldSchema := &entity.FieldSchema{
+		Key:         "field1",
+		Name:        "field1",
+		ContentType: entity.ContentTypeText,
+		SchemaKey:   entity.SchemaKeyString,
+	}
+
+	tests := []struct {
+		name         string
+		param        *ValidateDatasetItemsParam
+		want         *ValidateDatasetItemsResult
+		mockSetup    func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI)
+		wantErr      assert.ErrorAssertionFunc
+		assertResult func(t *testing.T, got *ValidateDatasetItemsResult)
+	}{
+		{
+			name: "empty items",
+			param: &ValidateDatasetItemsParam{
+				DatasetID:       1,
+				DatasetCategory: entity.DatasetCategoryGeneral,
+				DatasetFields:   []*entity.FieldSchema{strFieldSchema},
+				Items:           []*entity.Item{},
+			},
+			mockSetup:    func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI) {},
+			wantErr:      assert.NoError,
+			assertResult: func(t *testing.T, got *ValidateDatasetItemsResult) {},
+		},
+		{
+			name: "new dataset without fields",
+			param: &ValidateDatasetItemsParam{
+				DatasetID:       0,
+				DatasetCategory: entity.DatasetCategoryGeneral,
+				DatasetFields:   []*entity.FieldSchema{},
+				Items:           []*entity.Item{item},
+			},
+			mockSetup: func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI) {},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.ErrorContains(t, err, "dataset_fields is required")
+			},
+			assertResult: func(t *testing.T, got *ValidateDatasetItemsResult) {},
+		},
+		{
+			name: "new dataset with fields",
+			param: &ValidateDatasetItemsParam{
+				DatasetID:       0,
+				DatasetCategory: entity.DatasetCategoryGeneral,
+				DatasetFields:   []*entity.FieldSchema{strFieldSchema},
+				Items:           []*entity.Item{item},
+			},
+			mockSetup: func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI) {},
+			wantErr:   assert.NoError,
+			assertResult: func(t *testing.T, got *ValidateDatasetItemsResult) {
+				assert.Len(t, got.ValidItemIndices, 1)
+				assert.Len(t, got.ErrorGroups, 0)
+			},
+		},
+		{
+			name: "schema mismatch",
+			param: &ValidateDatasetItemsParam{
+				DatasetID:       1,
+				DatasetCategory: entity.DatasetCategoryGeneral,
+				DatasetFields:   []*entity.FieldSchema{intFieldSchema}, // 覆盖已有 schema
+				Items:           []*entity.Item{item},
+			},
+			mockSetup: func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI) {
+				dataset := &entity.Dataset{
+					ID:       1,
+					Spec:     &entity.DatasetSpec{MaxItemCount: 100},
+					Features: &entity.DatasetFeatures{},
+				}
+				mockRepo.EXPECT().GetDataset(gomock.Any(), gomock.Any(), gomock.Any()).Return(dataset, nil)
+			},
+			wantErr: assert.NoError,
+			assertResult: func(t *testing.T, got *ValidateDatasetItemsResult) {
+				assert.Len(t, got.ValidItemIndices, 0)
+				assert.Len(t, got.ErrorGroups, 1)
+				eg := got.ErrorGroups[0]
+				assert.Equal(t, entity.ItemErrorType_MismatchSchema, *eg.Type)
+				assert.Equal(t, int32(1), *eg.ErrorCount)
+			},
+		},
+		{
+			name: "capacity exceeded",
+			param: &ValidateDatasetItemsParam{
+				DatasetID: 1,
+				Items:     []*entity.Item{item},
+			},
+			mockSetup: func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI) {
+				dataset := &entity.Dataset{
+					ID:       1,
+					Spec:     &entity.DatasetSpec{MaxItemCount: 100},
+					Features: &entity.DatasetFeatures{},
+				}
+				schema := &entity.DatasetSchema{
+					ID:            1,
+					UpdateVersion: 1,
+					Fields:        []*entity.FieldSchema{strFieldSchema},
+				}
+				mockRepo.EXPECT().GetDataset(gomock.Any(), gomock.Any(), gomock.Any()).Return(dataset, nil)
+				mockRepo.EXPECT().GetSchema(gomock.Any(), gomock.Any(), gomock.Any()).Return(schema, nil)
+				mockRepo.EXPECT().GetItemCount(gomock.Any(), gomock.Any()).Return(int64(100), nil)
+			},
+			wantErr: assert.NoError,
+			assertResult: func(t *testing.T, got *ValidateDatasetItemsResult) {
+				assert.Len(t, got.ValidItemIndices, 0)
+				assert.Len(t, got.ErrorGroups, 1)
+				eg := got.ErrorGroups[0]
+				assert.Equal(t, entity.ItemErrorType_ExceedDatasetCapacity, *eg.Type)
+				assert.Equal(t, int32(1), *eg.ErrorCount)
+			},
+		},
+		{
+			name: "ignore current item count",
+			param: &ValidateDatasetItemsParam{
+				DatasetID:              1,
+				IgnoreCurrentItemCount: true,
+				Items:                  []*entity.Item{item, item}, // add 2 items
+			},
+			mockSetup: func(t *testing.T, mockRepo *mock_repo.MockIDatasetAPI) {
+				dataset := &entity.Dataset{
+					ID:       1,
+					Spec:     &entity.DatasetSpec{MaxItemCount: 1},
+					Features: &entity.DatasetFeatures{},
+				}
+				schema := &entity.DatasetSchema{
+					ID:            1,
+					UpdateVersion: 1,
+					Fields:        []*entity.FieldSchema{strFieldSchema},
+				}
+				mockRepo.EXPECT().GetDataset(gomock.Any(), gomock.Any(), gomock.Any()).Return(dataset, nil)
+				mockRepo.EXPECT().GetSchema(gomock.Any(), gomock.Any(), gomock.Any()).Return(schema, nil)
+			},
+			wantErr: assert.NoError,
+			assertResult: func(t *testing.T, got *ValidateDatasetItemsResult) {
+				// 1 item added, 1 item failed due to capacity
+				assert.Len(t, got.ValidItemIndices, 1)
+				assert.Len(t, got.ErrorGroups, 1)
+				eg := got.ErrorGroups[0]
+				assert.Equal(t, entity.ItemErrorType_ExceedDatasetCapacity, *eg.Type)
+				assert.Equal(t, int32(1), *eg.ErrorCount)
+				assert.Equal(t, int32(1), *eg.Details[0].Index)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mock_repo.NewMockIDatasetAPI(ctrl)
+			service := &DatasetServiceImpl{
+				repo: mockRepo,
+				featConfig: func() *conf.DatasetFeature {
+					return &conf.DatasetFeature{
+						Feature: &entity.DatasetFeatures{},
+					}
+				},
+				specConfig: func() *conf.DatasetSpec {
+					return &conf.DatasetSpec{
+						Spec: &entity.DatasetSpec{
+							MaxItemCount: 100,
+						},
+					}
+				},
+			}
+			tt.mockSetup(t, mockRepo)
+			ctx := context.Background()
+			got, err := service.ValidateDatasetItems(ctx, tt.param)
+			if !tt.wantErr(t, err) {
+				return
+			}
+			tt.assertResult(t, got)
 		})
 	}
 }

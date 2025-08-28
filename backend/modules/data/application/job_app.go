@@ -23,20 +23,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/errno"
 )
 
-func (d *DatasetApplicationImpl) ImportDataset(ctx context.Context, req *dataset.ImportDatasetRequest) (r *dataset.ImportDatasetResponse, err error) {
+func (h *DatasetApplicationImpl) ImportDataset(ctx context.Context, req *dataset.ImportDatasetRequest) (r *dataset.ImportDatasetResponse, err error) {
 	// 鉴权
-	err = d.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
+	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
 	if err != nil {
 		return nil, err
 	}
-	ds, err := d.checkImportDatasetReq(ctx, req)
+	ds, err := h.checkImportDatasetReq(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	job := d.buildJob(ctx, req, ds)
+	job := h.buildJob(ctx, req, ds)
 	do := convertor.IOJobDTO2DO(job)
-	if err := d.svc.CreateIOJob(ctx, do); err != nil {
+	if err := h.svc.CreateIOJob(ctx, do); err != nil {
 		return nil, err
 	}
 
@@ -96,22 +96,22 @@ func (h *DatasetApplicationImpl) buildJob(ctx context.Context, req *dataset.Impo
 	return j
 }
 
-func (d *DatasetApplicationImpl) GetDatasetIOJob(ctx context.Context, req *dataset.GetDatasetIOJobRequest) (r *dataset.GetDatasetIOJobResponse, err error) {
+func (h *DatasetApplicationImpl) GetDatasetIOJob(ctx context.Context, req *dataset.GetDatasetIOJobRequest) (r *dataset.GetDatasetIOJobResponse, err error) {
 	// 鉴权
-	err = d.authByJobID(ctx, req.GetWorkspaceID(), req.GetJobID(), rpc.CommonActionRead)
+	err = h.authByJobID(ctx, req.GetWorkspaceID(), req.GetJobID(), rpc.CommonActionRead)
 	if err != nil {
 		return nil, err
 	}
-	job, err := d.svc.GetIOJob(ctx, req.GetJobID())
+	job, err := h.svc.GetIOJob(ctx, req.GetJobID())
 	if err != nil {
 		return nil, err
 	}
 	return &dataset.GetDatasetIOJobResponse{Job: convertor.IOJobDO2DTO(job)}, nil
 }
 
-func (d *DatasetApplicationImpl) ListDatasetIOJobs(ctx context.Context, req *dataset.ListDatasetIOJobsRequest) (r *dataset.ListDatasetIOJobsResponse, err error) {
+func (h *DatasetApplicationImpl) ListDatasetIOJobs(ctx context.Context, req *dataset.ListDatasetIOJobsRequest) (r *dataset.ListDatasetIOJobsResponse, err error) {
 	// 鉴权
-	err = d.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionListLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
@@ -119,7 +119,7 @@ func (d *DatasetApplicationImpl) ListDatasetIOJobs(ctx context.Context, req *dat
 	if err != nil {
 		return nil, err
 	}
-	jobs, err := d.repo.ListIOJobs(ctx, &repo.ListIOJobsParams{
+	jobs, err := h.repo.ListIOJobs(ctx, &repo.ListIOJobsParams{
 		SpaceID:   req.GetWorkspaceID(),
 		DatasetID: req.GetDatasetID(),
 		Types:     gslice.Map(req.GetTypes(), func(t dataset_job.JobType) entity.JobType { return entity.JobType(t) }),

@@ -10,10 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -93,17 +95,11 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx) (*entity.EvalTargetRecord, error) {
-	if etec.Expt.ExptType == entity.ExptType_Online {
-		logs.CtxInfo(ctx, "[ExptTurnEval] expt type is online, skip call target, expt_id: %v, expt_run_id: %v, item_id: %v, turn_id: %v")
-		return &entity.EvalTargetRecord{
-			EvalTargetOutputData: &entity.EvalTargetOutputData{
-				OutputFields: make(map[string]*entity.Content),
-			},
-		}, nil
+	if e.skipTargetNode(etec.Expt) {
+		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
-	existResult := etec.ExptTurnRunResult.TargetResult
 
-	if existResult != nil && existResult.Status != nil && *existResult.Status == entity.EvalTargetRunStatusSuccess {
+	if existResult := etec.ExptTurnRunResult.TargetResult; existResult != nil && existResult.Status != nil && *existResult.Status == entity.EvalTargetRunStatusSuccess {
 		return existResult, nil
 	}
 
@@ -112,6 +108,20 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	}
 
 	return e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
+}
+
+func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) bool {
+	if expt.EvalConf.ConnectorConf.TargetConf == nil {
+		return true
+	}
+	if expt.ExptType == entity.ExptType_Online {
+		return true
+	}
+	return false
+}
+
+func (e *DefaultExptTurnEvaluationImpl) skipEvaluatorNode(expt *entity.Experiment) bool {
+	return expt.EvalConf.ConnectorConf.EvaluatorsConf == nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID, spaceID int64, freeCost bool, session *entity.Session) error {
@@ -168,6 +178,15 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		fields[fc.FieldName] = content
 	}
 
+	ext := gmap.Clone(etec.Ext)
+	if targetConf.IngressConf.CustomConf != nil {
+		for _, fc := range targetConf.IngressConf.CustomConf.FieldConfs {
+			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+				ext[consts.TargetExecuteExtRuntimeParamKey] = fc.Value
+			}
+		}
+	}
+
 	targetRecord, err := e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, &entity.ExecuteTargetCtx{
 		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
 		ItemID:          etec.EvalSetItem.ItemID,
@@ -175,7 +194,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}, &entity.EvalTargetInputData{
 		HistoryMessages: history,
 		InputFields:     fields,
-		Ext:             etec.Ext,
+		Ext:             ext,
 	})
 	if err != nil {
 		return nil, err
@@ -185,6 +204,10 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) (map[int64]*entity.EvaluatorRecord, error) {
+	if e.skipEvaluatorNode(etec.Expt) {
+		return make(map[int64]*entity.EvaluatorRecord), nil
+	}
+
 	expt := etec.Expt
 	evaluatorResults := make(map[int64]*entity.EvaluatorRecord)
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))

@@ -5,14 +5,18 @@ package service
 
 import (
 	"context"
+	json2 "encoding/json"
+	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/bytedance/gg/gmap"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+
 	"github.com/bytedance/gg/gptr"
-	"github.com/coze-dev/cozeloop-go"
+	"github.com/bytedance/sonic"
 	"github.com/kaptinlin/jsonrepair"
 	"github.com/valyala/fasttemplate"
 
@@ -190,9 +194,9 @@ func newEvaluatorSpan(ctx context.Context, spanName, spanType, spaceID string, a
 	var evalSpan looptracer.Span
 	var nctx context.Context
 	if asyncChild {
-		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, cozeloop.WithSpanWorkspaceID(spaceID))
+		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, looptracer.WithSpanWorkspaceID(spaceID))
 	} else {
-		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, cozeloop.WithStartNewTrace(), cozeloop.WithSpanWorkspaceID(spaceID))
+		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(spaceID))
 	}
 
 	return &evaluatorSpan{
@@ -318,50 +322,13 @@ func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVe
 		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, err: resp is nil")
 		return output, errorx.NewByCode(errno.LLMOutputEmptyCode, errorx.WithExtraMsg(" resp is nil"))
 	}
-	var repairArgs string
+
 	if evaluatorVersion.ParseType == entity.ParseTypeContent {
-		repairArgs, err = jsonrepair.JSONRepair(gptr.Indirect(replyItem.Content))
-		if err != nil {
-			logs.CtxWarn(ctx, "[RunEvaluator] parseOutput Content RepairJSON fail, origin content: %v, err: %v", gptr.Indirect(replyItem.Content), err)
-			return output, errorx.NewByCode(errno.InvalidOutputFromModelCode)
-		}
+		err = parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 	} else {
-		if len(replyItem.ToolCalls) == 0 {
-			logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, err: tool call empty")
-			return output, errorx.NewByCode(errno.LLMToolCallFailCode)
-		}
-		repairArgs, err = jsonrepair.JSONRepair(gptr.Indirect(replyItem.ToolCalls[0].FunctionCall.Arguments))
-		if err != nil {
-			logs.CtxWarn(ctx, "[RunEvaluator] parseOutput ToolCalls RepairJSON fail, origin content: %v, err: %v", gptr.Indirect(replyItem.ToolCalls[0].FunctionCall.Arguments), err)
-			return output, errorx.NewByCode(errno.InvalidOutputFromModelCode)
-		}
+		err = parseFunctionCallOutput(ctx, evaluatorVersion, replyItem, output)
 	}
-	// 解析输出数据
-	params := evaluatorVersion.Tools[0].Function.Parameters
-	var scoreFieldValue any
-	scoreFieldValue, err = json.ExtractFieldValue(params, repairArgs, "score")
-	if err != nil {
-		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput ExtractFieldValue score fail, repairArgs: %v, err: %v", repairArgs, err)
-		err = errorx.NewByCode(errno.InvalidOutputFromModelCode)
-	}
-	if score, ok := scoreFieldValue.(float64); ok {
-		output.EvaluatorResult.Score = &score
-	} else {
-		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, repairArgs: %v, err: score not float64", repairArgs)
-		err = errorx.NewByCode(errno.InvalidOutputFromModelCode)
-	}
-	var reasonFieldValue any
-	reasonFieldValue, err = json.ExtractFieldValue(params, repairArgs, "reason")
-	if err != nil {
-		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput ReasonFieldValue reason fail, repairArgs: %v, err: %v", repairArgs, err)
-		err = errorx.NewByCode(errno.InvalidOutputFromModelCode)
-	}
-	if reason, ok := reasonFieldValue.(string); ok {
-		output.EvaluatorResult.Reasoning = reason
-	} else {
-		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, repairArgs: %v, err: reason not string", repairArgs)
-		err = errorx.NewByCode(errno.InvalidOutputFromModelCode)
-	}
+
 	if replyItem.TokenUsage != nil {
 		output.EvaluatorUsage.InputTokens = replyItem.TokenUsage.InputTokens
 		output.EvaluatorUsage.OutputTokens = replyItem.TokenUsage.OutputTokens
@@ -370,27 +337,163 @@ func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVe
 	return output, err
 }
 
+type outputMsgFormat struct {
+	Score  json2.Number `json:"score"`
+	Reason string       `json:"reason"`
+}
+
+// 优化后的正则表达式，支持 score 为 number 或 string 类型
+var jsonRe = regexp.MustCompile(`\{(?s:.*?"score"\s*:\s*(?:"([\d.]+)"|([\d.]+)).*?"reason"\s*:\s*"((?:[^"\\]|\\.)*)".*?)}`)
+
+func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
+	content := gptr.Indirect(replyItem.Content)
+	var outputMsg outputMsgFormat
+	b := []byte(content)
+
+	// 尝试直接解析整个 content
+	if err := sonic.Unmarshal(b, &outputMsg); err == nil {
+		if outputMsg.Reason != "" {
+			score, err := outputMsg.Score.Float64()
+			if err != nil {
+				err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
+				return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+			}
+			output.EvaluatorResult.Score = &score
+			output.EvaluatorResult.Reasoning = outputMsg.Reason
+			return nil
+		}
+	}
+
+	// 新增：尝试使用jsonrepair修复整个content
+	repairedContent, repairErr := jsonrepair.JSONRepair(content)
+	if repairErr == nil {
+		if err := sonic.Unmarshal([]byte(repairedContent), &outputMsg); err == nil {
+			if outputMsg.Reason != "" {
+				score, err := outputMsg.Score.Float64()
+				if err != nil {
+					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
+					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+				}
+				output.EvaluatorResult.Score = &score
+				output.EvaluatorResult.Reasoning = outputMsg.Reason
+				return nil
+			}
+		}
+	}
+
+	// 保留原有逻辑：使用正则表达式查找 JSON 片段
+	all := jsonRe.FindAll(b, -1)
+	for _, bb := range all {
+		// 首先尝试直接解析原始片段
+		if err := sonic.Unmarshal(bb, &outputMsg); err == nil {
+			if outputMsg.Reason != "" {
+				score, err := outputMsg.Score.Float64()
+				if err != nil {
+					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
+					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+				}
+				output.EvaluatorResult.Score = &score
+				output.EvaluatorResult.Reasoning = outputMsg.Reason
+				return nil
+			}
+		}
+
+		// 如果直接解析失败，尝试修复后再解析
+		repairedFragment, repairErr := jsonrepair.JSONRepair(string(bb))
+		if repairErr == nil {
+			if err := sonic.Unmarshal([]byte(repairedFragment), &outputMsg); err == nil {
+				if outputMsg.Reason != "" {
+					score, err := outputMsg.Score.Float64()
+					if err != nil {
+						err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
+						return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+					}
+					output.EvaluatorResult.Score = &score
+					output.EvaluatorResult.Reasoning = outputMsg.Reason
+					return nil
+				}
+			}
+		}
+	}
+
+	// 若都没有找到合法的解析结果，返回错误
+	err := fmt.Errorf("[parseContentOutput] parse failed, content does not contain both score and reason: %s", content)
+	return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+}
+
+func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
+	if len(replyItem.ToolCalls) == 0 {
+		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, err: tool call empty")
+		return errorx.NewByCode(errno.LLMToolCallFailCode)
+	}
+	repairArgs, err := jsonrepair.JSONRepair(gptr.Indirect(replyItem.ToolCalls[0].FunctionCall.Arguments))
+	if err != nil {
+		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput ToolCalls RepairJSON fail, origin content: %v, err: %v", gptr.Indirect(replyItem.ToolCalls[0].FunctionCall.Arguments), err)
+		return errorx.NewByCode(errno.InvalidOutputFromModelCode)
+	}
+	// 解析输出数据
+	params := evaluatorVersion.Tools[0].Function.Parameters
+	var scoreFieldValue any
+	scoreFieldValue, err = json.ExtractFieldValue(params, repairArgs, "score")
+	if err != nil {
+		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput ExtractFieldValue score fail, repairArgs: %v, err: %v", repairArgs, err)
+		return errorx.NewByCode(errno.InvalidOutputFromModelCode)
+	}
+	if score, ok := scoreFieldValue.(float64); ok {
+		output.EvaluatorResult.Score = &score
+	} else {
+		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, repairArgs: %v, err: score not float64", repairArgs)
+		return errorx.NewByCode(errno.InvalidOutputFromModelCode)
+	}
+	var reasonFieldValue any
+	reasonFieldValue, err = json.ExtractFieldValue(params, repairArgs, "reason")
+	if err != nil {
+		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput ReasonFieldValue reason fail, repairArgs: %v, err: %v", repairArgs, err)
+		return errorx.NewByCode(errno.InvalidOutputFromModelCode)
+	}
+	if reason, ok := reasonFieldValue.(string); ok {
+		output.EvaluatorResult.Reasoning = reason
+	} else {
+		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, repairArgs: %v, err: reason not string", repairArgs)
+		return errorx.NewByCode(errno.InvalidOutputFromModelCode)
+	}
+	return nil
+}
+
 func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, input *entity.EvaluatorInputData) error {
 	// 实现渲染模板的逻辑
+	variables := make([]*tracespec.PromptArgument, 0)
+	for k, v := range input.InputFields {
+		if v == nil {
+			variables = append(variables, &tracespec.PromptArgument{
+				Key:    k,
+				Source: "input",
+			})
+			continue
+		}
+		var value any
+		var valueType tracespec.PromptArgumentValueType
+		switch gptr.Indirect(v.ContentType) {
+		case entity.ContentTypeText:
+			value = v.Text
+			valueType = tracespec.PromptArgumentValueTypeText
+		case entity.ContentTypeMultipart:
+			value = tracer.ContentToSpanParts(v.MultiPart)
+			valueType = tracespec.PromptArgumentValueTypeMessagePart
+		}
+		variables = append(variables, &tracespec.PromptArgument{
+			Key:       k,
+			Value:     value,
+			Source:    "input",
+			ValueType: valueType,
+		})
+	}
 	renderTemplateSpan, ctx := newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
-	renderTemplateSpan.SetInput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList,
-		gmap.Map(input.InputFields, func(key string, value *entity.Content) (string, any) {
-			if value == nil {
-				return key, nil
-			}
-			return key, value.Text
-		}))))
+	renderTemplateSpan.SetInput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, variables)))
 	for _, message := range evaluatorVersion.MessageList {
-		// 现阶段只支持text类型模板渲染
-		if gptr.Indirect(message.Content.ContentType) == entity.ContentTypeText {
-			message.Content.Text = gptr.Of(fasttemplate.ExecuteFuncString(gptr.Indirect(message.Content.Text), TemplateStartTag, TemplateEndTag, func(w io.Writer, tag string) (int, error) {
-				// 输入变量里没有就不做替换直接返回
-				if v, ok := input.InputFields[tag]; !ok || v == nil {
-					return w.Write([]byte(""))
-				}
-				// 目前仅适用text替换
-				return w.Write([]byte(gptr.Indirect(input.InputFields[tag].Text)))
-			}))
+		if err := processMessageContent(message.Content, input.InputFields); err != nil {
+			logs.CtxError(ctx, "[renderTemplate] process message content failed: %v", err)
+			return err
 		}
 	}
 	if len(evaluatorVersion.MessageList) > 0 {
@@ -438,6 +541,9 @@ func (p *EvaluatorSourcePromptServiceImpl) injectPromptTools(ctx context.Context
 
 func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, evaluatorDO *entity.Evaluator) {
 	// 注入后缀
+	if evaluatorDO.GetEvaluatorVersion() == nil || evaluatorDO.GetEvaluatorVersion().GetModelConfig() == nil {
+		return
+	}
 	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetEvaluatorVersion().GetModelConfig().ModelID, 10)]; ok {
 		evaluatorDO.GetEvaluatorVersion().SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[suffixKey])
 		evaluatorDO.GetEvaluatorVersion().SetParseType(entity.ParseType(suffixKey))
@@ -445,4 +551,98 @@ func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, 
 		evaluatorDO.GetEvaluatorVersion().SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[consts.DefaultEvaluatorPromptSuffixKey])
 		evaluatorDO.GetEvaluatorVersion().SetParseType(entity.ParseTypeContent)
 	}
+}
+
+// processMessageContent 处理消息内容，支持Text和MultiPart类型
+func processMessageContent(content *entity.Content, inputFields map[string]*entity.Content) error {
+	if content == nil {
+		return nil
+	}
+
+	switch gptr.Indirect(content.ContentType) {
+	case entity.ContentTypeText:
+		// 处理文本类型，保持现有逻辑
+		content.Text = gptr.Of(fasttemplate.ExecuteFuncString(gptr.Indirect(content.Text), TemplateStartTag, TemplateEndTag, func(w io.Writer, tag string) (int, error) {
+			// 输入变量里没有就不做替换直接返回
+			if v, ok := inputFields[tag]; !ok || v == nil {
+				return w.Write([]byte(""))
+			}
+			// 目前仅适用text替换
+			return w.Write([]byte(gptr.Indirect(inputFields[tag].Text)))
+		}))
+	case entity.ContentTypeMultipart:
+		// 处理多模态类型
+		if err := processMultiPartContent(content, inputFields); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// processMultiPartContent 处理多模态内容
+func processMultiPartContent(content *entity.Content, inputFields map[string]*entity.Content) error {
+	if content == nil || content.MultiPart == nil {
+		return nil
+	}
+
+	var newMultiPart []*entity.Content
+	for _, part := range content.MultiPart {
+		if part == nil {
+			continue
+		}
+
+		switch gptr.Indirect(part.ContentType) {
+		case entity.ContentTypeText:
+			// 对文本部分执行模板替换
+			part.Text = gptr.Of(fasttemplate.ExecuteFuncString(gptr.Indirect(part.Text), TemplateStartTag, TemplateEndTag, func(w io.Writer, tag string) (int, error) {
+				// 输入变量里没有就不做替换直接返回
+				if v, ok := inputFields[tag]; !ok || v == nil {
+					return w.Write([]byte(""))
+				}
+				// 目前仅适用text替换
+				return w.Write([]byte(gptr.Indirect(inputFields[tag].Text)))
+			}))
+			newMultiPart = append(newMultiPart, part)
+		case entity.ContentTypeMultipartVariable:
+			// 处理多模态变量，进行变量展开
+			expandedParts, err := expandMultiPartVariable(part, inputFields)
+			if err != nil {
+				return err
+			}
+			newMultiPart = append(newMultiPart, expandedParts...)
+		default:
+			// 其他类型保持不变
+			newMultiPart = append(newMultiPart, part)
+		}
+	}
+
+	content.MultiPart = newMultiPart
+	return nil
+}
+
+// expandMultiPartVariable 展开多模态变量
+func expandMultiPartVariable(variablePart *entity.Content, inputFields map[string]*entity.Content) ([]*entity.Content, error) {
+	if variablePart == nil || variablePart.Text == nil {
+		return nil, nil
+	}
+
+	variableName := gptr.Indirect(variablePart.Text)
+	if variableName == "" {
+		return nil, nil
+	}
+
+	// 从输入字段中查找变量值
+	variableValue, exists := inputFields[variableName]
+	if !exists || variableValue == nil {
+		// 变量不存在，返回空内容
+		return nil, nil
+	}
+	res := make([]*entity.Content, 0)
+	for _, part := range variableValue.MultiPart {
+		if part == nil {
+			continue
+		}
+		res = append(res, part)
+	}
+	return res, nil
 }

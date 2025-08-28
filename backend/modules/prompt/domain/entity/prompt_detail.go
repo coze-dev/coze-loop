@@ -4,14 +4,19 @@
 package entity
 
 import (
+	"fmt"
 	"io"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/valyala/fasttemplate"
 
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/template"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -21,10 +26,11 @@ const (
 )
 
 type PromptDetail struct {
-	PromptTemplate *PromptTemplate `json:"prompt_template,omitempty"`
-	Tools          []*Tool         `json:"tools,omitempty"`
-	ToolCallConfig *ToolCallConfig `json:"tool_call_config,omitempty"`
-	ModelConfig    *ModelConfig    `json:"model_config,omitempty"`
+	PromptTemplate *PromptTemplate   `json:"prompt_template,omitempty"`
+	Tools          []*Tool           `json:"tools,omitempty"`
+	ToolCallConfig *ToolCallConfig   `json:"tool_call_config,omitempty"`
+	ModelConfig    *ModelConfig      `json:"model_config,omitempty"`
+	ExtInfos       map[string]string `json:"ext_infos,omitempty"`
 }
 
 type PromptTemplate struct {
@@ -37,6 +43,7 @@ type TemplateType string
 
 const (
 	TemplateTypeNormal TemplateType = "normal"
+	TemplateTypeJinja2 TemplateType = "jinja2"
 )
 
 type Message struct {
@@ -77,16 +84,26 @@ type ImageURL struct {
 }
 
 type VariableDef struct {
-	Key  string       `json:"key"`
-	Desc string       `json:"desc"`
-	Type VariableType `json:"type"`
+	Key      string       `json:"key"`
+	Desc     string       `json:"desc"`
+	Type     VariableType `json:"type"`
+	TypeTags []string     `json:"type_tags,omitempty"`
 }
 
 type VariableType string
 
 const (
-	VariableTypeString      VariableType = "string"
-	VariableTypePlaceholder VariableType = "placeholder"
+	VariableTypeString       VariableType = "string"
+	VariableTypePlaceholder  VariableType = "placeholder"
+	VariableTypeBoolean      VariableType = "boolean"
+	VariableTypeInteger      VariableType = "integer"
+	VariableTypeFloat        VariableType = "float"
+	VariableTypeObject       VariableType = "object"
+	VariableTypeArrayString  VariableType = "array<string>"
+	VariableTypeArrayBoolean VariableType = "array<boolean>"
+	VariableTypeArrayInteger VariableType = "array<integer>"
+	VariableTypeArrayFloat   VariableType = "array<float>"
+	VariableTypeArrayObject  VariableType = "array<object>"
 )
 
 type VariableVal struct {
@@ -231,11 +248,123 @@ func formatText(templateType TemplateType, templateStr string, defMap map[string
 				}
 				return 0, nil
 			}), nil
+	case TemplateTypeJinja2:
+		return renderJinja2Template(templateStr, defMap, valMap)
 	default:
-		return "", errorx.New("unknown template type")
+		return "", errorx.NewByCode(prompterr.UnsupportedTemplateTypeCode, errorx.WithExtraMsg("unknown template type: "+string(templateType)))
 	}
+}
+
+// renderJinja2Template 渲染 Jinja2 模板
+func renderJinja2Template(templateStr string, defMap map[string]*VariableDef, valMap map[string]*VariableVal) (string, error) {
+	// 转换变量为 map[string]any 格式
+	variables, err := convertVariablesToMap(defMap, valMap)
+	if err != nil {
+		return "", err
+	}
+
+	return template.InterpolateJinja2(templateStr, variables)
+}
+
+// convertVariablesToMap 将变量定义和变量值转换为模板引擎可用的 map
+func convertVariablesToMap(defMap map[string]*VariableDef, valMap map[string]*VariableVal) (map[string]any, error) {
+	if len(defMap) == 0 || len(valMap) == 0 {
+		return nil, nil
+	}
+
+	result := make(map[string]any)
+
+	// 遍历变量值
+	for key, v := range valMap {
+		if v == nil || v.Value == nil || ptr.From(v.Value) == "" {
+			continue
+		}
+
+		// 查找对应的变量定义
+		if def, ok := defMap[key]; ok {
+			switch def.Type {
+			case VariableTypeBoolean:
+				result[key] = ptr.From(v.Value) == "true"
+
+			case VariableTypeInteger:
+				valueStr := ptr.From(v.Value)
+				vInt64, err := strconv.ParseInt(valueStr, 10, 64) // 解析为 int64
+				if err != nil {
+					return nil, errorx.NewByCode(prompterr.CommonInvalidParamCode,
+						errorx.WithExtraMsg(fmt.Sprintf("parse variable %s error with type:%s, value:%s",
+							v.Key, def.Type, json.Jsonify(v))))
+				}
+				result[key] = vInt64
+
+			case VariableTypeFloat:
+				valueStr := ptr.From(v.Value)
+				vFloat64, err := strconv.ParseFloat(valueStr, 64) // 解析为 float64
+				if err != nil {
+					return nil, errorx.NewByCode(prompterr.CommonInvalidParamCode,
+						errorx.WithExtraMsg(fmt.Sprintf("parse variable %s error with type:%s, value:%s",
+							v.Key, def.Type, json.Jsonify(v))))
+				}
+				result[key] = vFloat64
+
+			case VariableTypeArrayString:
+				var vArray []string
+				err := Decode(&vArray, def, v)
+				if err != nil {
+					return nil, err
+				}
+				result[key] = vArray
+
+			case VariableTypeArrayBoolean:
+				var vArray []bool
+				err := Decode(&vArray, def, v)
+				if err != nil {
+					return nil, err
+				}
+				result[key] = vArray
+
+			case VariableTypeArrayInteger:
+				var vArray []int64
+				err := Decode(&vArray, def, v)
+				if err != nil {
+					return nil, err
+				}
+				result[key] = vArray
+
+			case VariableTypeArrayFloat:
+				var vArray []float64
+				err := Decode(&vArray, def, v)
+				if err != nil {
+					return nil, err
+				}
+				result[key] = vArray
+
+			case VariableTypeObject, VariableTypeArrayObject:
+				var vAny interface{}
+				err := Decode(&vAny, def, v)
+				if err != nil {
+					return nil, err
+				}
+				result[key] = vAny
+
+			default:
+				result[key] = ptr.From(v.Value)
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (pd *PromptDetail) DeepEqual(other *PromptDetail) bool {
 	return cmp.Equal(pd, other)
+}
+
+func Decode(vAny interface{}, def *VariableDef, v *VariableVal) error {
+	decoder := json.NewDecoder(strings.NewReader(ptr.From(v.Value)))
+	if err := decoder.Decode(&vAny); err != nil {
+		return errorx.WrapByCode(err, prompterr.CommonInvalidParamCode,
+			errorx.WithExtraMsg(fmt.Sprintf("parse variable %s error with type:%s, value:%s",
+				v.Key, def.Type, json.Jsonify(v))))
+	}
+	return nil
 }

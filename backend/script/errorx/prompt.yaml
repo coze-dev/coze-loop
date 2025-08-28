@@ -12,6 +12,18 @@ error_code:
     code: 1003
     message: prompt not committed
     no_affect_stability: true
+  - name: TemplateParseError
+    code: 1004
+    message: template parse error
+    no_affect_stability: true
+  - name: TemplateRenderError
+    code: 1005
+    message: template render error
+    no_affect_stability: true
+  - name: UnsupportedTemplateType
+    code: 1006
+    message: unsupported template type
+    no_affect_stability: true
   # 2xxx
   - name: PromptHubQPSLimit
     code: 2001

@@ -2054,6 +2054,7 @@ func (p *DeletePromptResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type GetPromptRequest struct {
 	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID       *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
 	WithCommit        *bool      `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
 	CommitVersion     *string    `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
 	WithDraft         *bool      `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
@@ -2078,6 +2079,18 @@ func (p *GetPromptRequest) GetPromptID() (v int64) {
 		return GetPromptRequest_PromptID_DEFAULT
 	}
 	return *p.PromptID
+}
+
+var GetPromptRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetPromptRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetPromptRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var GetPromptRequest_WithCommit_DEFAULT bool
@@ -2142,6 +2155,9 @@ func (p *GetPromptRequest) GetBase() (v *base.Base) {
 func (p *GetPromptRequest) SetPromptID(val *int64) {
 	p.PromptID = val
 }
+func (p *GetPromptRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *GetPromptRequest) SetWithCommit(val *bool) {
 	p.WithCommit = val
 }
@@ -2160,6 +2176,7 @@ func (p *GetPromptRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_GetPromptRequest = map[int16]string{
 	1:   "prompt_id",
+	2:   "workspace_id",
 	11:  "with_commit",
 	12:  "commit_version",
 	21:  "with_draft",
@@ -2169,6 +2186,10 @@ var fieldIDToName_GetPromptRequest = map[int16]string{
 
 func (p *GetPromptRequest) IsSetPromptID() bool {
 	return p.PromptID != nil
+}
+
+func (p *GetPromptRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *GetPromptRequest) IsSetWithCommit() bool {
@@ -2212,6 +2233,14 @@ func (p *GetPromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2297,6 +2326,17 @@ func (p *GetPromptRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.PromptID = _field
 	return nil
 }
+func (p *GetPromptRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *GetPromptRequest) ReadField11(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -2360,6 +2400,10 @@ func (p *GetPromptRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
 			goto WriteFieldError
@@ -2415,6 +2459,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetPromptRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetPromptRequest) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWithCommit() {
@@ -2524,6 +2586,9 @@ func (p *GetPromptRequest) DeepEqual(ano *GetPromptRequest) bool {
 	if !p.Field1DeepEqual(ano.PromptID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.WithCommit) {
 		return false
 	}
@@ -2550,6 +2615,18 @@ func (p *GetPromptRequest) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.PromptID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetPromptRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
 		return false
 	}
 	return true

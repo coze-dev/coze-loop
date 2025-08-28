@@ -10,7 +10,6 @@ import (
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	commonentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 )
 
 type ChatMessagePartType string
@@ -21,18 +20,10 @@ const (
 	ChatMessagePartTypeImageURL    ChatMessagePartType = "image_url"
 )
 
-func ConvertPrompt2Ob(originMessages []*commonentity.Message, variables map[string]any) *tracespec.PromptInput {
-	templates := gslice.Map(originMessages, ConvertMsg2Ob)
-	arguments := maps.ToSlice(variables, func(key string, value any) *tracespec.PromptArgument {
-		return &tracespec.PromptArgument{
-			Key:    key,
-			Value:  value,
-			Source: "input",
-		}
-	})
+func ConvertPrompt2Ob(originMessages []*commonentity.Message, variables []*tracespec.PromptArgument) *tracespec.PromptInput {
 	return &tracespec.PromptInput{
-		Templates: templates,
-		Arguments: arguments,
+		Templates: gslice.Map(originMessages, ConvertMsg2Ob),
+		Arguments: variables,
 	}
 }
 
@@ -88,6 +79,8 @@ func ConvertContent2Ob(content *commonentity.Content) *tracespec.ModelMessagePar
 		contentType = string(ChatMessagePartTypeText)
 	case commonentity.ContentTypeImage:
 		contentType = string(ChatMessagePartTypeImageURL)
+	case commonentity.ContentTypeMultipartVariable:
+		contentType = string(commonentity.ContentTypeMultipartVariable)
 	default:
 		contentType = string(ChatMessagePartTypeText)
 	}
@@ -97,6 +90,7 @@ func ConvertContent2Ob(content *commonentity.Content) *tracespec.ModelMessagePar
 	}
 	if content.Image != nil {
 		part.ImageURL = &tracespec.ModelImageURL{
+			Name:   gptr.Indirect(content.Image.Name),
 			URL:    gptr.Indirect(content.Image.URL),
 			Detail: "",
 		}
@@ -138,4 +132,32 @@ func Convert2TraceString(input any) string {
 	}
 
 	return str
+}
+
+func ContentToSpanParts(parts []*commonentity.Content) []*tracespec.ModelMessagePart {
+	if parts == nil {
+		return nil
+	}
+	spanParts := make([]*tracespec.ModelMessagePart, 0)
+	for _, part := range parts {
+		if part == nil {
+			continue
+		}
+		partSpan := &tracespec.ModelMessagePart{}
+		switch gptr.Indirect(part.ContentType) {
+		case commonentity.ContentTypeText:
+			partSpan.Text = gptr.Indirect(part.Text)
+			partSpan.Type = tracespec.ModelMessagePartTypeText
+		case commonentity.ContentTypeImage:
+			partSpan.Type = tracespec.ModelMessagePartTypeImage
+			if part.Image != nil {
+				partSpan.ImageURL = &tracespec.ModelImageURL{
+					URL:  gptr.Indirect(part.Image.URL),
+					Name: gptr.Indirect(part.Image.Name),
+				}
+			}
+		}
+		spanParts = append(spanParts, partSpan)
+	}
+	return spanParts
 }

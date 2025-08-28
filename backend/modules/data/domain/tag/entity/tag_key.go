@@ -45,6 +45,30 @@ type TagKey struct {
 	ContentSpec    *TagContentSpec `json:"tag_content_spec,omitempty"`
 }
 
+// RetainTagKeyID 仅仅只保留TagKeyID信息
+func (t *TagKey) RetainTagKeyID() {
+	if t == nil {
+		return
+	}
+	t.ID = 0
+	t.AppID = 0
+	t.SpaceID = 0
+	t.Version = nil
+	t.VersionNum = nil
+	t.TagKeyName = ""
+	t.Description = nil
+	t.Status = ""
+	t.TagType = ""
+	t.TagTargetType = nil
+	t.ParentKeyID = nil
+	t.TagValues = nil
+	t.ChangeLogs = nil
+	t.CreatedBy = nil
+	t.UpdatedBy = nil
+	t.TagContentType = ""
+	t.ContentSpec = nil
+}
+
 func (t *TagKey) ToPO() (*model.TagKey, error) {
 	if t == nil {
 		return nil, nil
@@ -272,9 +296,6 @@ func (t *TagKey) Validate(spec *TagSpec) error {
 	}
 	if t.TagType == TagTypeUndefined {
 		return errno.InvalidParamErrorf("tag type is undefined")
-	}
-	if t.Status == TagStatusUndefined {
-		t.Status = TagStatusActive
 	}
 	if t.TagContentType == TagContentTypeUndefined {
 		return errno.InvalidParamErrorf("tag content type is undefined")

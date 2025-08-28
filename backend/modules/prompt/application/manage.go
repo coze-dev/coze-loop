@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/samber/lo"
 	"golang.org/x/exp/maps"
@@ -18,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
@@ -235,6 +234,11 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 	err = app.authRPCProvider.MCheckPromptPermission(ctx, promptDO.SpaceID, []int64{request.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return r, err
+	}
+
+	// 空间权限
+	if request.GetWorkspaceID() > 0 && request.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
 	}
 
 	// 返回

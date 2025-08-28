@@ -27,6 +27,7 @@ type ExptAggrResultDAO interface {
 	BatchCreateExptAggrResult(ctx context.Context, exptAggrResults []*model.ExptAggrResult, opts ...db.Option) error
 	UpdateExptAggrResultByVersion(ctx context.Context, exptAggrResult *model.ExptAggrResult, taskVersion int64, opts ...db.Option) error
 	UpdateAndGetLatestVersion(ctx context.Context, experimentID int64, fieldType int32, fieldKey string, opts ...db.Option) (int64, error)
+	DeleteExptAggrResult(ctx context.Context, exptAggrResult *model.ExptAggrResult, opts ...db.Option) error
 }
 
 type ExptAggrResultDAOImpl struct {
@@ -142,4 +143,17 @@ func (dao *ExptAggrResultDAOImpl) UpdateAndGetLatestVersion(ctx context.Context,
 	}
 
 	return po.Version, nil
+}
+
+func (dao *ExptAggrResultDAOImpl) DeleteExptAggrResult(ctx context.Context, exptAggrResult *model.ExptAggrResult, opts ...db.Option) error {
+	// 硬删除 可能删除后再创建
+	po := &model.ExptAggrResult{}
+	db := dao.provider.NewSession(ctx, opts...)
+	err := db.Unscoped().Where("space_id = ? AND experiment_id = ?  AND field_type = ? AND field_key = ?", exptAggrResult.SpaceID, exptAggrResult.ExperimentID, exptAggrResult.FieldType, exptAggrResult.FieldKey).
+		Delete(po).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

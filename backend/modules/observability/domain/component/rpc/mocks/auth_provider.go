@@ -40,6 +40,34 @@ func (m *MockIAuthProvider) EXPECT() *MockIAuthProviderMockRecorder {
 	return m.recorder
 }
 
+// CheckIngestPermission mocks base method.
+func (m *MockIAuthProvider) CheckIngestPermission(ctx context.Context, workspaceId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckIngestPermission", ctx, workspaceId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckIngestPermission indicates an expected call of CheckIngestPermission.
+func (mr *MockIAuthProviderMockRecorder) CheckIngestPermission(ctx, workspaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckIngestPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckIngestPermission), ctx, workspaceId)
+}
+
+// CheckQueryPermission mocks base method.
+func (m *MockIAuthProvider) CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckQueryPermission", ctx, workspaceId, platformType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckQueryPermission indicates an expected call of CheckQueryPermission.
+func (mr *MockIAuthProviderMockRecorder) CheckQueryPermission(ctx, workspaceId, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckQueryPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckQueryPermission), ctx, workspaceId, platformType)
+}
+
 // CheckViewPermission mocks base method.
 func (m *MockIAuthProvider) CheckViewPermission(ctx context.Context, action, workspaceId, viewId string) error {
 	m.ctrl.T.Helper()

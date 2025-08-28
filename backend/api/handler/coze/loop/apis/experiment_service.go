@@ -132,3 +132,115 @@ func UpsertExptTurnResultFilter(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// AssociateAnnotationTag .
+// @router /api/evaluation/v1/experiments/:expt_id/associate_tag [POST]
+func AssociateAnnotationTag(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.AssociateAnnotationTagReq
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.AssociateAnnotationTagResp)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// DeleteAnnotationTag .
+// @router /api/evaluation/v1/experiments/:expt_id/delete_tag [DELETE]
+func DeleteAnnotationTag(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.DeleteAnnotationTagReq
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.DeleteAnnotationTagResp)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// CreateAnnotateRecord .
+// @router /api/evaluation/v1/experiments/:expt_id/annotate_record/create [POST]
+func CreateAnnotateRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.CreateAnnotateRecordReq
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.CreateAnnotateRecordResp)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// UpdateAnnotateRecord .
+// @router /api/evaluation/v1/experiments/:expt_id/annotate_record/update [POST]
+func UpdateAnnotateRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.UpdateAnnotateRecordReq
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.UpdateAnnotateRecordResp)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ExportExptResult .
+// @router /api/evaluation/v1/experiments/:expt_id/results/export [POST]
+func ExportExptResult(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.ExportExptResultRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.ExportExptResultResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListExptResultExportRecord .
+// @router /api/evaluation/v1/experiments/:expt_id/export_records/list [POST]
+func ListExptResultExportRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.ListExptResultExportRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.ListExptResultExportRecordResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetExptResultExportRecord .
+// @router /api/evaluation/v1/experiments/:expt_id/export_records/:export_id [POST]
+func GetExptResultExportRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.GetExptResultExportRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.GetExptResultExportRecordResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

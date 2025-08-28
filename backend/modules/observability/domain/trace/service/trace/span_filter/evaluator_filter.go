@@ -13,7 +13,7 @@ import (
 
 type EvaluatorFilter struct{}
 
-func (e *EvaluatorFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) ([]*loop_span.FilterField, error) {
+func (e *EvaluatorFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) ([]*loop_span.FilterField, bool, error) {
 	return []*loop_span.FilterField{
 		{
 			FieldName: loop_span.SpanFieldSpaceId,
@@ -27,7 +27,7 @@ func (e *EvaluatorFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv
 			Values:    []string{"Evaluator"},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
-	}, nil
+	}, false, nil
 }
 
 func (e *EvaluatorFilter) BuildRootSpanFilter(ctx context.Context, _ *SpanEnv) ([]*loop_span.FilterField, error) {

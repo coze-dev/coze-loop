@@ -17,6 +17,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type PromptRPCAdapter struct {
@@ -40,8 +42,25 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		VariableVals: nil,
 		Scenario:     gptr.Of(prompt.ScenarioEvalTarget),
 	}
+	// logs.CtxInfo(ctx, "ExecutePrompt History=%v, Variables=%v", json.Jsonify(param.History), json.Jsonify(param.Variables))
 	req.VariableVals = ConvertVariables2Prompt(param.Variables)
+
 	req.Messages = ConvertMessages2Prompt(param.History)
+
+	if runtimeParam, err := p.parseRuntimeParam(ctx, gptr.Indirect(param.RuntimeParam)); err != nil {
+		logs.CtxError(ctx, "prompt execute parse runtime param fail, err=%v", err)
+	} else {
+		if runtimeParam != nil && runtimeParam.ModelConfig != nil {
+			req.OverridePromptParams = &prompt.OverridePromptParams{
+				ModelConfig: &prompt.ModelConfig{
+					ModelID:     gptr.Of(runtimeParam.ModelConfig.ModelID),
+					MaxTokens:   runtimeParam.ModelConfig.MaxTokens,
+					Temperature: runtimeParam.ModelConfig.Temperature,
+					TopP:        runtimeParam.ModelConfig.TopP,
+				},
+			}
+		}
+	}
 
 	resp, err := p.executeClient.ExecuteInternal(ctx, req)
 	if err != nil {
@@ -66,6 +85,17 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		OutputTokens: resp.GetUsage().GetOutputTokens(),
 	}
 	return result, nil
+}
+
+func (p PromptRPCAdapter) parseRuntimeParam(ctx context.Context, rtp string) (*entity.PromptRuntimeParam, error) {
+	if len(rtp) == 0 {
+		return &entity.PromptRuntimeParam{}, nil
+	}
+	runtimeParam := new(entity.PromptRuntimeParam)
+	if err := js_conv.GetUnmarshaler()([]byte(rtp), runtimeParam); err != nil {
+		return runtimeParam, errorx.Wrapf(err, "PromptRuntimeParam json unmarshal fail, raw: %s", rtp)
+	}
+	return runtimeParam, nil
 }
 
 func (p PromptRPCAdapter) GetPrompt(ctx context.Context, spaceID, promptID int64, params rpc.GetPromptParams) (prompt *rpc.LoopPrompt, err error) {

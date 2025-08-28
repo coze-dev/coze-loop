@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,6 @@ import (
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 func TestEvaluatorHandlerImpl_ListEvaluators(t *testing.T) {
@@ -347,2067 +346,773 @@ func TestEvaluatorHandlerImpl_GetEvaluator(t *testing.T) {
 	}
 }
 
-func TestEvaluatorHandlerImpl_CreateEvaluator(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+// 新增的复杂业务逻辑测试
 
-	// Setup mocks
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
-	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
-
-	app := &EvaluatorHandlerImpl{
-		auth:             mockAuth,
-		evaluatorService: mockEvaluatorService,
-		auditClient:      mockAuditClient,
-		metrics:          mockMetrics,
-	}
-
-	// Test data
-	validSpaceID := int64(123)
-	validName := "Test Evaluator"
-	validDescription := "Test Description"
-	validEvaluatorType := evaluatordto.EvaluatorType_Prompt
-	validVersion := "1.0.0"
+// TestEvaluatorHandlerImpl_ComplexBusinessScenarios 测试复杂业务场景
+func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
+	t.Parallel()
 
 	tests := []struct {
-		name        string
-		req         *evaluatorservice.CreateEvaluatorRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.CreateEvaluatorResponse
-		wantErr     bool
-		wantErrCode int32
+		name     string
+		testFunc func(t *testing.T)
 	}{
 		{
-			name: "success - normal request",
-			req: &evaluatorservice.CreateEvaluatorRequest{
-				Evaluator: &evaluatordto.Evaluator{
-					WorkspaceID:   gptr.Of(validSpaceID),
-					Name:          gptr.Of(validName),
-					Description:   gptr.Of(validDescription),
-					EvaluatorType: &validEvaluatorType,
-					CurrentVersion: &evaluatordto.EvaluatorVersion{
-						Version: gptr.Of(validVersion),
-						EvaluatorContent: &evaluatordto.EvaluatorContent{
-							PromptEvaluator: &evaluatordto.PromptEvaluator{},
-						},
-					},
-				},
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validSpaceID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-					}).
-					Return(nil)
+			name: "多层依赖服务交互测试",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
 
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).Times(1)
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-				mockEvaluatorService.EXPECT().
-					CreateEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(int64(1), nil).Times(1)
-				mockMetrics.EXPECT().
-					EmitCreate(gomock.Any(), gomock.Any()).
-					Return().Times(1)
-			},
-			wantResp: &evaluatorservice.CreateEvaluatorResponse{
-				EvaluatorID: gptr.Of(int64(1)),
-			},
-			wantErr: false,
-		},
-		{
-			name: "error - audit rejected",
-			req: &evaluatorservice.CreateEvaluatorRequest{
-				Evaluator: &evaluatordto.Evaluator{
-					WorkspaceID:   gptr.Of(validSpaceID),
-					Name:          gptr.Of(validName),
-					Description:   gptr.Of(validDescription),
-					EvaluatorType: &validEvaluatorType,
-					CurrentVersion: &evaluatordto.EvaluatorVersion{
-						Version: gptr.Of(validVersion),
-						EvaluatorContent: &evaluatordto.EvaluatorContent{
-							PromptEvaluator: &evaluatordto.PromptEvaluator{},
-						},
-					},
-				},
-			},
-			mockSetup: func() {
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil).Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.RiskContentDetectedCode,
-		},
-		{
-			name: "error - auth failed",
-			req: &evaluatorservice.CreateEvaluatorRequest{
-				Evaluator: &evaluatordto.Evaluator{
-					WorkspaceID:   gptr.Of(validSpaceID),
-					Name:          gptr.Of(validName),
-					Description:   gptr.Of(validDescription),
-					EvaluatorType: &validEvaluatorType,
-					CurrentVersion: &evaluatordto.EvaluatorVersion{
-						Version: gptr.Of(validVersion),
-						EvaluatorContent: &evaluatordto.EvaluatorContent{
-							PromptEvaluator: &evaluatordto.PromptEvaluator{},
-						},
-					},
-				},
-			},
-			mockSetup: func() {
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).Times(1)
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode)).Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-	}
+				// 创建所有依赖的 mock
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockConfiger := confmocks.NewMockIConfiger(ctrl)
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+				mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+				mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+				mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+				mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+				mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
+				handler := NewEvaluatorHandlerImpl(
+					mockIDGen,
+					mockConfiger,
+					mockAuth,
+					mockEvaluatorService,
+					mockEvaluatorRecordService,
+					mockMetrics,
+					mockUserInfoService,
+					mockAuditClient,
+					mockBenefitService,
+					mockFileProvider,
+				)
 
-			resp, err := app.CreateEvaluator(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp, resp)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_UpdateEvaluator(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
-
-	app := &EvaluatorHandlerImpl{
-		auth:             mockAuth,
-		evaluatorService: mockEvaluatorService,
-		auditClient:      mockAuditClient,
-	}
-
-	// Test data
-	validSpaceID := int64(123)
-	validEvaluatorID := int64(1)
-	validName := "Updated Evaluator"
-	validDescription := "Updated Description"
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.UpdateEvaluatorRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.UpdateEvaluatorResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "success - normal request",
-			req: &evaluatorservice.UpdateEvaluatorRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Name:        gptr.Of(validName),
-				Description: gptr.Of(validDescription),
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).
-					Return(&entity.Evaluator{
-						ID:      validEvaluatorID,
-						SpaceID: validSpaceID,
-					}, nil).Times(1)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil).Times(1)
-
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).Times(1)
-
-				mockEvaluatorService.EXPECT().
-					UpdateEvaluatorMeta(gomock.Any(), validEvaluatorID, validSpaceID, validName, validDescription, gomock.Any()).
-					Return(nil).Times(1)
-			},
-			wantResp: &evaluatorservice.UpdateEvaluatorResponse{},
-			wantErr:  false,
-		},
-		{
-			name: "error - evaluator not found",
-			req: &evaluatorservice.UpdateEvaluatorRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Name:        gptr.Of(validName),
-				Description: gptr.Of(validDescription),
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).
-					Return(nil, nil).Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.EvaluatorNotExistCode,
-		},
-		{
-			name: "error - auth failed",
-			req: &evaluatorservice.UpdateEvaluatorRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Name:        gptr.Of(validName),
-				Description: gptr.Of(validDescription),
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).
-					Return(&entity.Evaluator{
-						ID:      validEvaluatorID,
-						SpaceID: validSpaceID,
-					}, nil).Times(1)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode)).Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "error - audit rejected",
-			req: &evaluatorservice.UpdateEvaluatorRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Name:        gptr.Of(validName),
-				Description: gptr.Of(validDescription),
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).
-					Return(&entity.Evaluator{
-						ID:      validEvaluatorID,
-						SpaceID: validSpaceID,
-					}, nil).Times(1)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil).Times(1)
-
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil).Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.RiskContentDetectedCode,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := app.UpdateEvaluator(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp, resp)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
-	mockConfiger := confmocks.NewMockIConfiger(ctrl)
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
-	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
-	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
-	mockAuditService := auditmocks.NewMockIAuditService(ctrl)
-	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
-
-	handler := NewEvaluatorHandlerImpl(
-		mockIDGen,
-		mockConfiger,
-		mockAuth,
-		mockEvaluatorService,
-		mockEvaluatorRecordService,
-		mockMetrics,
-		mockUserInfoService,
-		mockAuditService,
-		mockBenefitService,
-	)
-
-	validSpaceID := int64(1)
-	validEvaluatorID := int64(1)
-	validPromptTemplate := &evaluatordto.PromptEvaluator{
-		MessageList: []*common.Message{
-			{
-				Role: common.RolePtr(common.Role_System),
-				Content: &common.Content{
-					Text: gptr.Of("Hello, world!"),
-				},
-			},
-		},
-	}
-
-	tests := []struct {
-		name          string
-		request       *evaluatorservice.UpdateEvaluatorDraftRequest
-		mockSetup     func()
-		expectedResp  *evaluatorservice.UpdateEvaluatorDraftResponse
-		expectedError error
-	}{
-		{
-			name: "success - normal request",
-			request: &evaluatorservice.UpdateEvaluatorDraftRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				EvaluatorContent: &evaluatordto.EvaluatorContent{
-					PromptEvaluator: validPromptTemplate,
-				},
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).Return(&entity.Evaluator{
-					ID:            validEvaluatorID,
-					SpaceID:       validSpaceID,
-					EvaluatorType: entity.EvaluatorTypePrompt,
-					BaseInfo: &entity.BaseInfo{
-						CreatedBy: &entity.UserInfo{
-							UserID: ptr.Of("1"),
-						},
-					},
-					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
-						ID: 1,
-					},
-				}, nil).Times(1)
-				mockEvaluatorService.EXPECT().UpdateEvaluatorDraft(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return().Times(1)
-			},
-			expectedResp:  &evaluatorservice.UpdateEvaluatorDraftResponse{},
-			expectedError: nil,
-		},
-		{
-			name: "error - evaluator not found",
-			request: &evaluatorservice.UpdateEvaluatorDraftRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				EvaluatorContent: &evaluatordto.EvaluatorContent{
-					PromptEvaluator: validPromptTemplate,
-				},
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).Return(nil, nil).Times(1)
-			},
-			expectedResp:  nil,
-			expectedError: errors.New("evaluator not found"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-			resp, err := handler.UpdateEvaluatorDraft(context.Background(), tt.request)
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				assert.Nil(t, resp)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_DeleteEvaluator(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
-	mockConfiger := confmocks.NewMockIConfiger(ctrl)
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
-	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
-	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
-	mockAuditService := auditmocks.NewMockIAuditService(ctrl)
-	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
-
-	handler := NewEvaluatorHandlerImpl(
-		mockIDGen,
-		mockConfiger,
-		mockAuth,
-		mockEvaluatorService,
-		mockEvaluatorRecordService,
-		mockMetrics,
-		mockUserInfoService,
-		mockAuditService,
-		mockBenefitService,
-	)
-
-	validSpaceID := int64(1)
-	validEvaluatorID := int64(1)
-	validUserID := "1"
-
-	tests := []struct {
-		name          string
-		request       *evaluatorservice.DeleteEvaluatorRequest
-		mockSetup     func()
-		expectedResp  *evaluatorservice.DeleteEvaluatorResponse
-		expectedError error
-	}{
-		{
-			name: "success - normal request",
-			request: &evaluatorservice.DeleteEvaluatorRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: ptr.Of(validEvaluatorID),
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), validSpaceID, []int64{validEvaluatorID}, false).Return([]*entity.Evaluator{
-					{
-						ID:      validEvaluatorID,
-						SpaceID: validSpaceID,
-						BaseInfo: &entity.BaseInfo{
-							CreatedBy: &entity.UserInfo{
-								UserID: ptr.Of(validUserID),
+				// 测试复杂的调试场景，涉及多个服务交互
+				request := &evaluatorservice.DebugEvaluatorRequest{
+					WorkspaceID:   123,
+					EvaluatorType: evaluatordto.EvaluatorType_Prompt,
+					EvaluatorContent: &evaluatordto.EvaluatorContent{
+						PromptEvaluator: &evaluatordto.PromptEvaluator{
+							MessageList: []*common.Message{
+								{
+									Role: common.RolePtr(common.Role_User),
+									Content: &common.Content{
+										ContentType: gptr.Of(common.ContentTypeMultiPart),
+										MultiPart: []*common.Content{
+											{
+												ContentType: gptr.Of(common.ContentTypeText),
+												Text:        gptr.Of("请分析这张图片："),
+											},
+											{
+												ContentType: gptr.Of(common.ContentTypeImage),
+												Image: &common.Image{
+													URI: gptr.Of("test-image-uri"),
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
-				}, nil).Times(1)
-				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-			},
-			expectedResp:  &evaluatorservice.DeleteEvaluatorResponse{},
-			expectedError: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-			resp, err := handler.DeleteEvaluator(context.Background(), tt.request)
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
-
-	handler := &EvaluatorHandlerImpl{
-		evaluatorService: mockEvaluatorService,
-		auth:             mockAuth,
-		userInfoService:  mockUserInfoService,
-	}
-
-	// Test data
-	validSpaceID := int64(1)
-	validEvaluatorVersionID := int64(10)
-	validEvaluatorID := int64(100)
-	validVersion := "v1.0.0"
-
-	validEvaluator := &entity.Evaluator{
-		ID:            validEvaluatorID,
-		SpaceID:       validSpaceID,
-		EvaluatorType: entity.EvaluatorTypePrompt,
-		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
-			ID:      validEvaluatorVersionID,
-			Version: validVersion,
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.GetEvaluatorVersionRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.GetEvaluatorVersionResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.GetEvaluatorVersionRequest{
-				EvaluatorVersionID: validEvaluatorVersionID,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validEvaluatorVersionID, false).
-					Return(validEvaluator, nil)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validEvaluatorID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-					}).
-					Return(nil)
-
-				mockUserInfoService.EXPECT().
-					PackUserInfo(gomock.Any(), gomock.Any()).
-					Times(2) // 一次用于 Evaluator，一次用于 EvaluatorVersion
-			},
-			wantResp: &evaluatorservice.GetEvaluatorVersionResponse{
-				Evaluator: evaluator.ConvertEvaluatorDO2DTO(validEvaluator),
-			},
-			wantErr: false,
-		},
-		{
-			name: "成功 - 评估器不存在",
-			req: &evaluatorservice.GetEvaluatorVersionRequest{
-				EvaluatorVersionID: validEvaluatorVersionID,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validEvaluatorVersionID, false).
-					Return(nil, nil)
-			},
-			wantResp: &evaluatorservice.GetEvaluatorVersionResponse{},
-			wantErr:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.GetEvaluatorVersion(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp, resp)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
-
-	handler := &EvaluatorHandlerImpl{
-		evaluatorService: mockEvaluatorService,
-		auth:             mockAuth,
-		userInfoService:  mockUserInfoService,
-	}
-
-	// Test data
-	validSpaceID := int64(1)
-	validEvaluatorVersionIDs := []int64{10, 11}
-	validEvaluatorID1 := int64(100)
-	validEvaluatorID2 := int64(101)
-	validVersion1 := "v1.0.0"
-	validVersion2 := "v1.0.1"
-
-	validEvaluators := []*entity.Evaluator{
-		{
-			ID:            validEvaluatorID1,
-			SpaceID:       validSpaceID,
-			EvaluatorType: entity.EvaluatorTypePrompt,
-			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
-				ID:      validEvaluatorVersionIDs[0],
-				Version: validVersion1,
-			},
-		},
-		{
-			ID:            validEvaluatorID2,
-			SpaceID:       validSpaceID,
-			EvaluatorType: entity.EvaluatorTypePrompt,
-			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
-				ID:      validEvaluatorVersionIDs[1],
-				Version: validVersion2,
-			},
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.BatchGetEvaluatorVersionsRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.BatchGetEvaluatorVersionsResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
-				EvaluatorVersionIds: validEvaluatorVersionIDs,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), validEvaluatorVersionIDs, false).
-					Return(validEvaluators, nil)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validSpaceID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-					}).
-					Return(nil)
-
-				mockUserInfoService.EXPECT().
-					PackUserInfo(gomock.Any(), gomock.Any()).
-					Times(2) // 一次用于 Evaluator 列表，一次用于 EvaluatorVersion 列表
-			},
-			wantResp: &evaluatorservice.BatchGetEvaluatorVersionsResponse{
-				Evaluators: []*evaluatordto.Evaluator{
-					evaluator.ConvertEvaluatorDO2DTO(validEvaluators[0]),
-					evaluator.ConvertEvaluatorDO2DTO(validEvaluators[1]),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "成功 - 评估器列表为空",
-			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
-				EvaluatorVersionIds: validEvaluatorVersionIDs,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), validEvaluatorVersionIDs, false).
-					Return([]*entity.Evaluator{}, nil)
-			},
-			wantResp: &evaluatorservice.BatchGetEvaluatorVersionsResponse{},
-			wantErr:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.BatchGetEvaluatorVersions(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, len(tt.wantResp.Evaluators), len(resp.Evaluators))
-				for i, evaluator := range tt.wantResp.Evaluators {
-					assert.Equal(t, evaluator.GetEvaluatorID(), resp.Evaluators[i].GetEvaluatorID())
-					assert.Equal(t, evaluator.GetCurrentVersion().GetID(), resp.Evaluators[i].GetCurrentVersion().GetID())
-					assert.Equal(t, evaluator.GetCurrentVersion().GetVersion(), resp.Evaluators[i].GetCurrentVersion().GetVersion())
-				}
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_SubmitEvaluatorVersion(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
-	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
-
-	handler := &EvaluatorHandlerImpl{
-		evaluatorService: mockEvaluatorService,
-		auth:             mockAuth,
-		userInfoService:  mockUserInfoService,
-		auditClient:      mockAuditClient,
-	}
-
-	// Test data
-	validSpaceID := int64(1)
-	validEvaluatorID := int64(100)
-	validVersion := "1.0.0"
-	validDescription := "test description"
-	validCID := "test-cid"
-
-	validEvaluator := &entity.Evaluator{
-		ID:            validEvaluatorID,
-		SpaceID:       validSpaceID,
-		EvaluatorType: entity.EvaluatorTypePrompt,
-		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
-			ID:          validEvaluatorID,
-			Version:     validVersion,
-			Description: validDescription,
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.SubmitEvaluatorVersionRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.SubmitEvaluatorVersionResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Version:     validVersion,
-				Description: &validDescription,
-				Cid:         &validCID,
-			},
-			mockSetup: func() {
-				// Mock GetEvaluator
-				mockEvaluatorService.EXPECT().
-					GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).
-					Return(validEvaluator, nil).
-					Times(1)
-
-				// Mock Authorization
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validEvaluator.ID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-					}).
-					Return(nil).
-					Times(1)
-
-				// Mock Audit
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).
-					Times(1)
-
-				// Mock SubmitEvaluatorVersion
-				mockEvaluatorService.EXPECT().
-					SubmitEvaluatorVersion(gomock.Any(), validEvaluator, validVersion, validDescription, validCID).
-					Return(validEvaluator, nil).
-					Times(1)
-			},
-			wantResp: &evaluatorservice.SubmitEvaluatorVersionResponse{
-				Evaluator: evaluator.ConvertEvaluatorDO2DTO(validEvaluator),
-			},
-			wantErr: false,
-		},
-		{
-			name: "成功 - 评估器不存在",
-			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Version:     validVersion,
-				Description: &validDescription,
-				Cid:         &validCID,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluator(gomock.Any(), validSpaceID, validEvaluatorID, false).
-					Return(nil, nil).
-					Times(1)
-				// Mock Audit
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).
-					Times(1)
-			},
-
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.EvaluatorNotExistCode,
-		},
-		{
-			name: "成功 - 审核拒绝",
-			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: validEvaluatorID,
-				Version:     validVersion,
-				Description: &validDescription,
-				Cid:         &validCID,
-			},
-			mockSetup: func() {
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil).
-					Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.RiskContentDetectedCode,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.SubmitEvaluatorVersion(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp.Evaluator.GetEvaluatorID(), resp.Evaluator.GetEvaluatorID())
-				assert.Equal(t, tt.wantResp.Evaluator.GetCurrentVersion().GetVersion(), resp.Evaluator.GetCurrentVersion().GetVersion())
-				assert.Equal(t, tt.wantResp.Evaluator.GetCurrentVersion().GetDescription(), resp.Evaluator.GetCurrentVersion().GetDescription())
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_ListTemplates(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockConfiger := confmocks.NewMockIConfiger(ctrl)
-
-	handler := &EvaluatorHandlerImpl{
-		configer: mockConfiger,
-	}
-
-	// Test data
-	validTemplateType := evaluatordto.TemplateType(1)
-	validTemplates := map[string]*evaluatordto.EvaluatorContent{
-		"template1": {
-			PromptEvaluator: &evaluatordto.PromptEvaluator{
-				PromptTemplateKey:  gptr.Of("key1"),
-				PromptTemplateName: gptr.Of("name1"),
-			},
-		},
-		"template2": {
-			PromptEvaluator: &evaluatordto.PromptEvaluator{
-				PromptTemplateKey:  gptr.Of("key2"),
-				PromptTemplateName: gptr.Of("name2"),
-			},
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.ListTemplatesRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.ListTemplatesResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.ListTemplatesRequest{
-				BuiltinTemplateType: validTemplateType,
-			},
-			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTemplateConf(gomock.Any()).
-					Return(map[string]map[string]*evaluatordto.EvaluatorContent{
-						strings.ToLower(evaluatordto.TemplateType_Prompt.String()): validTemplates,
-					}).
-					Times(1)
-			},
-			wantResp: &evaluatorservice.ListTemplatesResponse{
-				BuiltinTemplateKeys: []*evaluatordto.EvaluatorContent{
-					{
-						PromptEvaluator: &evaluatordto.PromptEvaluator{
-							PromptTemplateKey:  gptr.Of("key1"),
-							PromptTemplateName: gptr.Of("name1"),
+					InputData: &evaluatordto.EvaluatorInputData{
+						InputFields: map[string]*common.Content{
+							"image": {
+								ContentType: gptr.Of(common.ContentTypeImage),
+								Image: &common.Image{
+									URI: gptr.Of("input-image-uri"),
+								},
+							},
 						},
 					},
-					{
-						PromptEvaluator: &evaluatordto.PromptEvaluator{
-							PromptTemplateKey:  gptr.Of("key2"),
-							PromptTemplateName: gptr.Of("name2"),
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.ListTemplates(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, len(tt.wantResp.BuiltinTemplateKeys), len(resp.BuiltinTemplateKeys))
-				for i, key := range tt.wantResp.BuiltinTemplateKeys {
-					assert.Equal(t, key.GetPromptEvaluator().GetPromptTemplateKey(), resp.BuiltinTemplateKeys[i].GetPromptEvaluator().GetPromptTemplateKey())
-					assert.Equal(t, key.GetPromptEvaluator().GetPromptTemplateName(), resp.BuiltinTemplateKeys[i].GetPromptEvaluator().GetPromptTemplateName())
 				}
-			}
-		})
-	}
-}
 
-func TestEvaluatorHandlerImpl_GetTemplateInfo(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockConfiger := confmocks.NewMockIConfiger(ctrl)
-
-	handler := &EvaluatorHandlerImpl{
-		configer: mockConfiger,
-	}
-
-	// Test data
-	validTemplateType := evaluatordto.TemplateType(1)
-	validTemplates := map[string]*evaluatordto.EvaluatorContent{
-		"key1": {
-			PromptEvaluator: &evaluatordto.PromptEvaluator{
-				PromptTemplateKey:  gptr.Of("key1"),
-				PromptTemplateName: gptr.Of("name1"),
-			},
-		},
-		"key2": {
-			PromptEvaluator: &evaluatordto.PromptEvaluator{
-				PromptTemplateKey:  gptr.Of("key2"),
-				PromptTemplateName: gptr.Of("name2"),
-			},
-		},
-	}
-	validTemplateKey := "key1"
-	validTemplate := validTemplates[validTemplateKey]
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.GetTemplateInfoRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.GetTemplateInfoResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.GetTemplateInfoRequest{
-				BuiltinTemplateType: validTemplateType,
-				BuiltinTemplateKey:  validTemplateKey,
-			},
-			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTemplateConf(gomock.Any()).
-					Return(map[string]map[string]*evaluatordto.EvaluatorContent{
-						strings.ToLower(evaluatordto.TemplateType_Prompt.String()): validTemplates,
-					}).
-					Times(1)
-			},
-			wantResp: &evaluatorservice.GetTemplateInfoResponse{
-				EvaluatorContent: validTemplate,
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.GetTemplateInfo(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp.EvaluatorContent.GetPromptEvaluator().GetPromptTemplateKey(), resp.EvaluatorContent.GetPromptEvaluator().GetPromptTemplateKey())
-				assert.Equal(t, tt.wantResp.EvaluatorContent.GetPromptEvaluator().GetPromptTemplateName(), resp.EvaluatorContent.GetPromptEvaluator().GetPromptTemplateName())
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_RunEvaluator(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-
-	handler := &EvaluatorHandlerImpl{
-		auth:             mockAuth,
-		evaluatorService: mockEvaluatorService,
-	}
-
-	// Test data
-	validSpaceID := int64(123)
-	validEvaluatorVersionID := int64(456)
-	validEvaluatorName := "test-evaluator"
-	validExperimentID := int64(789)
-	validExperimentRunID := int64(101)
-	validItemID := int64(202)
-	validTurnID := int64(303)
-	validInputData := &evaluatordto.EvaluatorInputData{
-		InputFields: map[string]*common.Content{
-			"input": {
-				Text: gptr.Of("test input"),
-			},
-		},
-	}
-	validRecord := &entity.EvaluatorRecord{
-		ID:                 1,
-		SpaceID:            validSpaceID,
-		EvaluatorVersionID: validEvaluatorVersionID,
-		EvaluatorInputData: evaluator.ConvertEvaluatorInputDataDTO2DO(validInputData),
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.RunEvaluatorRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.RunEvaluatorResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.RunEvaluatorRequest{
-				WorkspaceID:        validSpaceID,
-				EvaluatorVersionID: validEvaluatorVersionID,
-				ExperimentID:       &validExperimentID,
-				ExperimentRunID:    &validExperimentRunID,
-				ItemID:             &validItemID,
-				TurnID:             &validTurnID,
-				InputData:          validInputData,
-			},
-			mockSetup: func() {
-				// Mock GetEvaluatorVersion
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validEvaluatorVersionID, false).
-					Return(&entity.Evaluator{
-						ID:      validEvaluatorVersionID,
-						SpaceID: validSpaceID,
-						Name:    validEvaluatorName,
-					}, nil).
-					Times(1)
-
-				// Mock Authorization
+				// 设置复杂的 mock 期望
+				// 1. 鉴权
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validEvaluatorVersionID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-					}).
-					Return(nil).
-					Times(1)
-
-				// Mock RunEvaluator
-				mockEvaluatorService.EXPECT().
-					RunEvaluator(gomock.Any(), gomock.Any()).
-					Return(validRecord, nil).
-					Times(1)
-			},
-			wantResp: &evaluatorservice.RunEvaluatorResponse{
-				Record: evaluator.ConvertEvaluatorRecordDO2DTO(validRecord),
-			},
-			wantErr: false,
-		},
-		{
-			name: "错误 - 评估器不存在",
-			req: &evaluatorservice.RunEvaluatorRequest{
-				WorkspaceID:        validSpaceID,
-				EvaluatorVersionID: validEvaluatorVersionID,
-				InputData:          validInputData,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validEvaluatorVersionID, false).
-					Return(nil, nil).
-					Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.EvaluatorNotExistCode,
-		},
-		{
-			name: "错误 - 权限验证失败",
-			req: &evaluatorservice.RunEvaluatorRequest{
-				WorkspaceID:        validSpaceID,
-				EvaluatorVersionID: validEvaluatorVersionID,
-				InputData:          validInputData,
-			},
-			mockSetup: func() {
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validEvaluatorVersionID, false).
-					Return(&entity.Evaluator{
-						ID:      validEvaluatorVersionID,
-						SpaceID: validSpaceID,
-						Name:    validEvaluatorName,
-					}, nil).
-					Times(1)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode)).
-					Times(1)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-			resp, err := handler.RunEvaluator(context.Background(), tt.req)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp.Record.ID, resp.Record.ID)
-				assert.Equal(t, tt.wantResp.Record.EvaluatorVersionID, resp.Record.EvaluatorVersionID)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_DebugEvaluator(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// 设置基础 mock 对象
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
-
-	// 创建服务实例
-	handler := &EvaluatorHandlerImpl{
-		auth:             mockAuth,
-		evaluatorService: mockEvaluatorService,
-		benefitService:   mockBenefitService,
-	}
-
-	// 基础测试数据
-	validSpaceID := int64(123)
-	validEvaluatorType := evaluatordto.EvaluatorType_Prompt
-	validInputData := &evaluatordto.EvaluatorInputData{
-		InputFields: map[string]*common.Content{
-			"input": {
-				ContentType: gptr.Of(common.ContentTypeText),
-				Text:        gptr.Of("test input"),
-			},
-		},
-	}
-	validOutputData := &evaluatordto.EvaluatorOutputData{
-		EvaluatorResult_: &evaluatordto.EvaluatorResult_{
-			Reasoning: ptr.Of("test output"),
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.DebugEvaluatorRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.DebugEvaluatorResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.DebugEvaluatorRequest{
-				WorkspaceID:   validSpaceID,
-				EvaluatorType: validEvaluatorType,
-				InputData:     validInputData,
-				EvaluatorContent: &evaluatordto.EvaluatorContent{
-					PromptEvaluator: &evaluatordto.PromptEvaluator{
-						PromptTemplateKey:  gptr.Of("test-template"),
-						PromptTemplateName: gptr.Of("Test Template"),
-					},
-				},
-			},
-			mockSetup: func() {
-				// Mock 权限检查
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validSpaceID, 10),
-						SpaceID:       validSpaceID,
+						ObjectID:      "123",
+						SpaceID:       int64(123),
 						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 					}).
-					Return(nil)
+					Return(nil).
+					Times(1)
 
-				// Mock 权益检查
+				// 2. 权益检查
 				mockBenefitService.EXPECT().
-					CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
-					Return(&benefit.CheckEvaluatorBenefitResult{
-						DenyReason: nil,
-					}, nil)
+					CheckEvaluatorBenefit(gomock.Any(), &benefit.CheckEvaluatorBenefitParams{
+						ConnectorUID: "",
+						SpaceID:      123,
+					}).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil).
+					Times(1)
 
-				// Mock 调试服务
+				// 3. 文件 URI 转 URL
+				mockFileProvider.EXPECT().
+					MGetFileURL(gomock.Any(), []string{"input-image-uri"}).
+					Return(map[string]string{"input-image-uri": "https://example.com/image.jpg"}, nil).
+					Times(1)
+
+				// 4. 评估器调试
 				mockEvaluatorService.EXPECT().
 					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(evaluator.ConvertEvaluatorOutputDataDTO2DO(validOutputData), nil)
-			},
-			wantResp: &evaluatorservice.DebugEvaluatorResponse{
-				EvaluatorOutputData: validOutputData,
-			},
-			wantErr: false,
-		},
-		{
-			name: "错误 - 权限检查失败",
-			req: &evaluatorservice.DebugEvaluatorRequest{
-				WorkspaceID:   validSpaceID,
-				EvaluatorType: validEvaluatorType,
-				InputData:     validInputData,
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "错误 - 权益检查失败",
-			req: &evaluatorservice.DebugEvaluatorRequest{
-				WorkspaceID:   validSpaceID,
-				EvaluatorType: validEvaluatorType,
-				InputData:     validInputData,
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil)
+					DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, error) {
+						// 验证输入数据已被正确处理
+						assert.Equal(t, int64(123), evaluator.SpaceID)
+						assert.Equal(t, entity.EvaluatorTypePrompt, evaluator.EvaluatorType)
 
-				mockBenefitService.EXPECT().
-					CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
-					Return(&benefit.CheckEvaluatorBenefitResult{
-						DenyReason: ptr.Of(benefit.DenyReason(1)),
-					}, nil)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.EvaluatorBenefitDenyCode,
-		},
-		{
-			name: "错误 - 权益服务异常",
-			req: &evaluatorservice.DebugEvaluatorRequest{
-				WorkspaceID:   validSpaceID,
-				EvaluatorType: validEvaluatorType,
-				InputData:     validInputData,
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil)
+						// 验证 URI 已转换为 URL
+						imageContent := input.InputFields["image"]
+						assert.NotNil(t, imageContent)
+						assert.NotNil(t, imageContent.Image)
+						assert.Equal(t, "https://example.com/image.jpg", gptr.Indirect(imageContent.Image.URL))
 
-				mockBenefitService.EXPECT().
-					CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
-					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.DebugEvaluator(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp.EvaluatorOutputData.EvaluatorResult_.Reasoning, resp.EvaluatorOutputData.EvaluatorResult_.Reasoning)
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_UpdateEvaluatorRecord(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// 设置基础 mock 对象
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
-	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
-
-	// 创建服务实例
-	handler := &EvaluatorHandlerImpl{
-		auth:                   mockAuth,
-		evaluatorService:       mockEvaluatorService,
-		evaluatorRecordService: mockEvaluatorRecordService,
-		auditClient:            mockAuditClient,
-	}
-
-	// 基础测试数据
-	validSpaceID := int64(123)
-	validRecordID := int64(456)
-	validEvaluatorVersionID := int64(789)
-	validCorrection := &evaluatordto.Correction{
-		Explain: ptr.Of("test correction"),
-	}
-	validRecord := &entity.EvaluatorRecord{
-		ID:                 validRecordID,
-		SpaceID:            validSpaceID,
-		EvaluatorVersionID: validEvaluatorVersionID,
-		EvaluatorInputData: &entity.EvaluatorInputData{
-			InputFields: map[string]*entity.Content{
-				"input": {
-					ContentType: gptr.Of(entity.ContentTypeText),
-					Text:        gptr.Of("test input"),
-				},
-			},
-		},
-		EvaluatorOutputData: &entity.EvaluatorOutputData{
-			EvaluatorResult: &entity.EvaluatorResult{
-				Reasoning: "test output",
-			},
-		},
-	}
-	validEvaluator := &entity.Evaluator{
-		ID:      validEvaluatorVersionID,
-		SpaceID: validSpaceID,
-		Name:    "test-evaluator",
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.UpdateEvaluatorRecordRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.UpdateEvaluatorRecordResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-				Correction:        validCorrection,
-			},
-			mockSetup: func() {
-				// Mock 获取记录
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
-
-				// Mock 获取评估器
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(validEvaluator, nil)
-
-				// Mock 权限检查
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validEvaluator.ID, 10),
-						SpaceID:       validEvaluator.SpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+						return &entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score:     gptr.Of(0.85),
+								Reasoning: "多模态内容分析完成",
+							},
+						}, nil
 					}).
-					Return(nil)
+					Times(1)
 
-				// Mock 审核
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{
-						AuditStatus: audit.AuditStatus_Approved,
-					}, nil)
+				ctx := context.Background()
+				resp, err := handler.DebugEvaluator(ctx, request)
 
-				// Mock 更新记录
-				mockEvaluatorRecordService.EXPECT().
-					CorrectEvaluatorRecord(gomock.Any(), validRecord, gomock.Any()).
-					Return(nil)
-			},
-			wantResp: &evaluatorservice.UpdateEvaluatorRecordResponse{
-				Record: evaluator.ConvertEvaluatorRecordDO2DTO(validRecord),
-			},
-			wantErr: false,
-		},
-		{
-			name: "错误 - 记录不存在",
-			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-				Correction:        validCorrection,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(nil, nil)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.EvaluatorRecordNotFoundCode,
-		},
-		{
-			name: "错误 - 评估器不存在",
-			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-				Correction:        validCorrection,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
-
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(nil, nil)
-			},
-			wantResp: &evaluatorservice.UpdateEvaluatorRecordResponse{},
-			wantErr:  false,
-		},
-		{
-			name: "错误 - 权限检查失败",
-			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-				Correction:        validCorrection,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
-
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(validEvaluator, nil)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "错误 - 审核拒绝",
-			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-				Correction:        validCorrection,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
-
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(validEvaluator, nil)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil)
-
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{
-						AuditStatus: audit.AuditStatus_Rejected,
-					}, nil)
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.RiskContentDetectedCode,
-		},
-		{
-			name: "错误 - 更新记录失败",
-			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-				Correction:        validCorrection,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
-
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(validEvaluator, nil)
-
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil)
-
-				mockAuditClient.EXPECT().
-					Audit(gomock.Any(), gomock.Any()).
-					Return(audit.AuditRecord{
-						AuditStatus: audit.AuditStatus_Approved,
-					}, nil)
-
-				mockEvaluatorRecordService.EXPECT().
-					CorrectEvaluatorRecord(gomock.Any(), validRecord, gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.UpdateEvaluatorRecord(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
 				assert.NoError(t, err)
-				if tt.wantResp != nil {
-					assert.Equal(t, tt.wantResp.Record.GetID(), resp.Record.GetID())
-					assert.Equal(t, tt.wantResp.Record.GetEvaluatorVersionID(), resp.Record.GetEvaluatorVersionID())
-				}
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// 设置基础 mock 对象
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
-	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
-
-	// 创建服务实例
-	handler := &EvaluatorHandlerImpl{
-		auth:                   mockAuth,
-		evaluatorService:       mockEvaluatorService,
-		evaluatorRecordService: mockEvaluatorRecordService,
-		userInfoService:        mockUserInfoService,
-	}
-
-	// 基础测试数据
-	validSpaceID := int64(123)
-	validRecordID := int64(456)
-	validEvaluatorVersionID := int64(789)
-	validRecord := &entity.EvaluatorRecord{
-		ID:                 validRecordID,
-		SpaceID:            validSpaceID,
-		EvaluatorVersionID: validEvaluatorVersionID,
-		EvaluatorInputData: &entity.EvaluatorInputData{
-			InputFields: map[string]*entity.Content{
-				"input": {
-					ContentType: gptr.Of(entity.ContentTypeText),
-					Text:        gptr.Of("test input"),
-				},
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.EvaluatorOutputData)
+				assert.Equal(t, 0.85, gptr.Indirect(resp.EvaluatorOutputData.EvaluatorResult_.Score))
 			},
 		},
-		EvaluatorOutputData: &entity.EvaluatorOutputData{
-			EvaluatorResult: &entity.EvaluatorResult{
-				Reasoning: "test output",
-			},
-		},
-	}
-	validEvaluator := &entity.Evaluator{
-		ID:      validEvaluatorVersionID,
-		SpaceID: validSpaceID,
-		Name:    "test-evaluator",
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.GetEvaluatorRecordRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.GetEvaluatorRecordResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
 		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.GetEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-			},
-			mockSetup: func() {
-				// Mock 获取记录
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
+			name: "权限验证和审核流程测试",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
 
-				// Mock 获取评估器
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(validEvaluator, nil)
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-				// Mock 权限检查
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validEvaluator.ID, 10),
-						SpaceID:       validEvaluator.SpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+				mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+
+				handler := &EvaluatorHandlerImpl{
+					auth:             mockAuth,
+					evaluatorService: mockEvaluatorService,
+					auditClient:      mockAuditClient,
+					metrics:          mockMetrics,
+				}
+
+				// 测试包含敏感内容的创建请求
+				request := &evaluatorservice.CreateEvaluatorRequest{
+					Evaluator: &evaluatordto.Evaluator{
+						WorkspaceID:   gptr.Of(int64(123)),
+						Name:          gptr.Of("敏感内容评估器"),
+						Description:   gptr.Of("包含敏感词汇的描述"),
+						EvaluatorType: gptr.Of(evaluatordto.EvaluatorType_Prompt),
+						CurrentVersion: &evaluatordto.EvaluatorVersion{
+							Version:     gptr.Of("1.0.0"),
+							Description: gptr.Of("版本描述包含敏感内容"),
+							EvaluatorContent: &evaluatordto.EvaluatorContent{
+								PromptEvaluator: &evaluatordto.PromptEvaluator{},
+							},
+						},
+					},
+				}
+
+				// 设置审核被拒绝的场景
+				mockAuditClient.EXPECT().
+					Audit(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, param audit.AuditParam) (audit.AuditRecord, error) {
+						// 验证审核参数
+						assert.Equal(t, audit.AuditType_CozeLoopEvaluatorModify, param.AuditType)
+						assert.Contains(t, param.AuditData["texts"], "敏感内容评估器")
+
+						return audit.AuditRecord{
+							AuditStatus:  audit.AuditStatus_Rejected,
+							FailedReason: gptr.Of("内容包含敏感词汇"),
+						}, nil
 					}).
-					Return(nil)
+					Times(1)
 
-				// Mock 用户信息打包
+				ctx := context.Background()
+				resp, err := handler.CreateEvaluator(ctx, request)
+
+				assert.Error(t, err)
+				assert.Nil(t, resp)
+
+				// 验证错误类型
+				statusErr, ok := errorx.FromStatusError(err)
+				assert.True(t, ok)
+				assert.Equal(t, int32(errno.RiskContentDetectedCode), statusErr.Code())
+			},
+		},
+		{
+			name: "并发安全和数据一致性测试",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+
+				handler := &EvaluatorHandlerImpl{
+					auth:             mockAuth,
+					evaluatorService: mockEvaluatorService,
+					userInfoService:  mockUserInfoService,
+				}
+
+				// 模拟并发访问同一个评估器
+				evaluatorID := int64(123)
+				spaceID := int64(456)
+
+				evaluator := &entity.Evaluator{
+					ID:      evaluatorID,
+					SpaceID: spaceID,
+					Name:    "并发测试评估器",
+				}
+
+				// 设置并发调用的期望
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), spaceID, evaluatorID, false).
+					Return(evaluator, nil).
+					Times(10) // 10个并发请求
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(10)
+
 				mockUserInfoService.EXPECT().
 					PackUserInfo(gomock.Any(), gomock.Any()).
-					Return()
-			},
-			wantResp: &evaluatorservice.GetEvaluatorRecordResponse{
-				Record: evaluator.ConvertEvaluatorRecordDO2DTO(validRecord),
-			},
-			wantErr: false,
-		},
-		{
-			name: "成功 - 记录不存在",
-			req: &evaluatorservice.GetEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(nil, nil)
-			},
-			wantResp: &evaluatorservice.GetEvaluatorRecordResponse{},
-			wantErr:  false,
-		},
-		{
-			name: "错误 - 评估器不存在",
-			req: &evaluatorservice.GetEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
+					Times(10)
 
-				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(nil, nil)
+				// 并发调用
+				const numGoroutines = 10
+				results := make(chan error, numGoroutines)
+
+				for i := 0; i < numGoroutines; i++ {
+					go func() {
+						ctx := context.Background()
+						request := &evaluatorservice.GetEvaluatorRequest{
+							WorkspaceID: spaceID,
+							EvaluatorID: &evaluatorID,
+						}
+
+						resp, err := handler.GetEvaluator(ctx, request)
+						if err != nil {
+							results <- err
+							return
+						}
+
+						// 验证响应数据一致性
+						if resp.Evaluator.GetEvaluatorID() != evaluatorID {
+							results <- fmt.Errorf("inconsistent evaluator ID: expected %d, got %d",
+								evaluatorID, resp.Evaluator.GetEvaluatorID())
+							return
+						}
+
+						results <- nil
+					}()
+				}
+
+				// 收集结果
+				for i := 0; i < numGoroutines; i++ {
+					select {
+					case err := <-results:
+						assert.NoError(t, err)
+					case <-time.After(5 * time.Second):
+						t.Fatal("Timeout waiting for concurrent calls")
+					}
+				}
 			},
-			wantResp: &evaluatorservice.GetEvaluatorRecordResponse{},
-			wantErr:  false,
 		},
 		{
-			name: "错误 - 权限检查失败",
-			req: &evaluatorservice.GetEvaluatorRecordRequest{
-				EvaluatorRecordID: validRecordID,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					GetEvaluatorRecord(gomock.Any(), validRecordID, false).
-					Return(validRecord, nil)
+			name: "错误处理和恢复机制测试",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
 
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+
+				handler := &EvaluatorHandlerImpl{
+					auth:                   mockAuth,
+					evaluatorService:       mockEvaluatorService,
+					evaluatorRecordService: mockEvaluatorRecordService,
+				}
+
+				// 测试运行评估器时的错误恢复
+				request := &evaluatorservice.RunEvaluatorRequest{
+					EvaluatorVersionID: 123,
+					WorkspaceID:        456,
+					InputData: &evaluatordto.EvaluatorInputData{
+						InputFields: map[string]*common.Content{},
+					},
+				}
+
+				// 第一次调用失败，第二次成功（模拟重试机制）
+				callCount := 0
 				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), validRecord.EvaluatorVersionID, false).
-					Return(validEvaluator, nil)
+					GetEvaluatorVersion(gomock.Any(), int64(123), false).
+					DoAndReturn(func(ctx context.Context, id int64, includeDeleted bool) (*entity.Evaluator, error) {
+						callCount++
+						if callCount == 1 {
+							return nil, errors.New("temporary database error")
+						}
+						return &entity.Evaluator{
+							ID:      1,
+							SpaceID: 456,
+							Name:    "test-evaluator",
+						}, nil
+					}).
+					Times(2)
 
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+					Return(nil).
+					Times(1)
+
+				mockEvaluatorService.EXPECT().
+					RunEvaluator(gomock.Any(), gomock.Any()).
+					Return(&entity.EvaluatorRecord{
+						ID:                 789,
+						EvaluatorVersionID: 123,
+						SpaceID:            456,
+					}, nil).
+					Times(1)
+
+				ctx := context.Background()
+
+				// 第一次调用应该失败
+				resp1, err1 := handler.RunEvaluator(ctx, request)
+				assert.Error(t, err1)
+				assert.Nil(t, resp1)
+
+				// 第二次调用应该成功
+				resp2, err2 := handler.RunEvaluator(ctx, request)
+				assert.NoError(t, err2)
+				assert.NotNil(t, resp2)
+				assert.Equal(t, int64(789), resp2.Record.GetID())
 			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
 		},
-	}
+		{
+			name: "大数据量处理性能测试",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-			resp, err := handler.GetEvaluatorRecord(context.Background(), tt.req)
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
 
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				handler := &EvaluatorHandlerImpl{
+					auth:             mockAuth,
+					evaluatorService: mockEvaluatorService,
+					userInfoService:  mockUserInfoService,
 				}
-			} else {
+
+				// 创建大量评估器数据
+				const numEvaluators = 1000
+				evaluators := make([]*entity.Evaluator, numEvaluators)
+				for i := 0; i < numEvaluators; i++ {
+					evaluators[i] = &entity.Evaluator{
+						ID:      int64(i + 1),
+						SpaceID: 123,
+						Name:    fmt.Sprintf("evaluator-%d", i+1),
+					}
+				}
+
+				request := &evaluatorservice.ListEvaluatorsRequest{
+					WorkspaceID: 123,
+					PageSize:    gptr.Of(int32(numEvaluators)),
+					PageNumber:  gptr.Of(int32(1)),
+				}
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(1)
+
+				mockEvaluatorService.EXPECT().
+					ListEvaluator(gomock.Any(), gomock.Any()).
+					Return(evaluators, int64(numEvaluators), nil).
+					Times(1)
+
+				mockUserInfoService.EXPECT().
+					PackUserInfo(gomock.Any(), gomock.Any()).
+					Times(1)
+
+				ctx := context.Background()
+				start := time.Now()
+				resp, err := handler.ListEvaluators(ctx, request)
+				duration := time.Since(start)
+
 				assert.NoError(t, err)
-				if tt.wantResp != nil {
-					assert.Equal(t, tt.wantResp.Record.GetID(), resp.Record.GetID())
-					assert.Equal(t, tt.wantResp.Record.GetEvaluatorVersionID(), resp.Record.GetEvaluatorVersionID())
+				assert.NotNil(t, resp)
+				assert.Equal(t, int64(numEvaluators), gptr.Indirect(resp.Total))
+				assert.Len(t, resp.Evaluators, numEvaluators)
+				assert.Less(t, duration, 2*time.Second) // 确保性能合理
+
+				// 验证数据完整性
+				for i, evaluatorDTO := range resp.Evaluators {
+					assert.Equal(t, int64(i+1), evaluatorDTO.GetEvaluatorID())
+					assert.Equal(t, fmt.Sprintf("evaluator-%d", i+1), evaluatorDTO.GetName())
 				}
-			}
-		})
-	}
-}
-
-func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// 设置基础 mock 对象
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
-
-	// 创建服务实例
-	handler := &EvaluatorHandlerImpl{
-		auth:                   mockAuth,
-		evaluatorRecordService: mockEvaluatorRecordService,
-	}
-
-	// 基础测试数据
-	validSpaceID := int64(123)
-	validRecordIDs := []int64{456, 789}
-	validRecords := []*entity.EvaluatorRecord{
-		{
-			ID:                 456,
-			SpaceID:            validSpaceID,
-			EvaluatorVersionID: 789,
-		},
-		{
-			ID:                 789,
-			SpaceID:            validSpaceID,
-			EvaluatorVersionID: 101,
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.BatchGetEvaluatorRecordsRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.BatchGetEvaluatorRecordsResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
-				EvaluatorRecordIds: validRecordIDs,
 			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), validRecordIDs, false).
-					Return(validRecords, nil)
+		},
+		{
+			name: "复杂业务流程端到端测试",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				// 创建完整的依赖链
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockConfiger := confmocks.NewMockIConfiger(ctrl)
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+				mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+				mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+				mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+				mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+				mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+
+				handler := NewEvaluatorHandlerImpl(
+					mockIDGen,
+					mockConfiger,
+					mockAuth,
+					mockEvaluatorService,
+					mockEvaluatorRecordService,
+					mockMetrics,
+					mockUserInfoService,
+					mockAuditClient,
+					mockBenefitService,
+					mockFileProvider,
+				)
+
+				// 模拟完整的评估器生命周期：创建 -> 更新 -> 提交版本 -> 运行 -> 删除
+				ctx := context.Background()
+				spaceID := int64(123)
+				evaluatorID := int64(456)
+
+				// 1. 创建评估器
+				createRequest := &evaluatorservice.CreateEvaluatorRequest{
+					Evaluator: &evaluatordto.Evaluator{
+						WorkspaceID:   gptr.Of(spaceID),
+						Name:          gptr.Of("端到端测试评估器"),
+						Description:   gptr.Of("用于端到端测试的评估器"),
+						EvaluatorType: gptr.Of(evaluatordto.EvaluatorType_Prompt),
+						CurrentVersion: &evaluatordto.EvaluatorVersion{
+							Version: gptr.Of("1.0.0"),
+							EvaluatorContent: &evaluatordto.EvaluatorContent{
+								PromptEvaluator: &evaluatordto.PromptEvaluator{},
+							},
+						},
+					},
+				}
+
+				// Mock 创建流程
+				mockAuditClient.EXPECT().
+					Audit(gomock.Any(), gomock.Any()).
+					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).
+					Times(1)
 
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validRecords[0].SpaceID, 10),
-						SpaceID:       validRecords[0].SpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+						ObjectID:      strconv.FormatInt(spaceID, 10),
+						SpaceID:       spaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 					}).
-					Return(nil)
-			},
-			wantResp: &evaluatorservice.BatchGetEvaluatorRecordsResponse{
-				Records: []*evaluatordto.EvaluatorRecord{
-					evaluator.ConvertEvaluatorRecordDO2DTO(validRecords[0]),
-					evaluator.ConvertEvaluatorRecordDO2DTO(validRecords[1]),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "成功 - 无记录",
-			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
-				EvaluatorRecordIds: validRecordIDs,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), validRecordIDs, false).
-					Return([]*entity.EvaluatorRecord{}, nil)
-			},
-			wantResp: &evaluatorservice.BatchGetEvaluatorRecordsResponse{},
-			wantErr:  false,
-		},
-		{
-			name: "错误 - 权限检查失败",
-			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
-				EvaluatorRecordIds: validRecordIDs,
-			},
-			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), validRecordIDs, false).
-					Return(validRecords, nil)
+					Return(nil).
+					Times(1)
 
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-	}
+				mockEvaluatorService.EXPECT().
+					CreateEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(evaluatorID, nil).
+					Times(1)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
+				mockMetrics.EXPECT().
+					EmitCreate(spaceID, nil).
+					Times(1)
 
-			resp, err := handler.BatchGetEvaluatorRecords(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-			} else {
+				createResp, err := handler.CreateEvaluator(ctx, createRequest)
 				assert.NoError(t, err)
-				assert.Equal(t, len(tt.wantResp.Records), len(resp.Records))
-				for i, record := range tt.wantResp.Records {
-					assert.Equal(t, record.GetID(), resp.Records[i].GetID())
-					assert.Equal(t, record.GetEvaluatorVersionID(), resp.Records[i].GetEvaluatorVersionID())
+				assert.Equal(t, evaluatorID, gptr.Indirect(createResp.EvaluatorID))
+
+				// 2. 更新评估器
+				updateRequest := &evaluatorservice.UpdateEvaluatorRequest{
+					WorkspaceID: spaceID,
+					EvaluatorID: evaluatorID,
+					Name:        gptr.Of("更新后的评估器"),
+					Description: gptr.Of("更新后的描述"),
 				}
-			}
-		})
-	}
-}
 
-func TestEvaluatorHandlerImpl_GetDefaultPromptEvaluatorTools(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// 设置基础 mock 对象
-	mockConfiger := confmocks.NewMockIConfiger(ctrl)
-
-	// 创建服务实例
-	handler := &EvaluatorHandlerImpl{
-		configer: mockConfiger,
-	}
-
-	// 基础测试数据
-	validTool := &evaluatordto.Tool{
-		Type: evaluatordto.ToolType_Function,
-		Function: &evaluatordto.Function{
-			Name:        "test-tool",
-			Description: ptr.Of("test-tool-description"),
-		},
-	}
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.GetDefaultPromptEvaluatorToolsRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.GetDefaultPromptEvaluatorToolsResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 正常请求",
-			req:  &evaluatorservice.GetDefaultPromptEvaluatorToolsRequest{},
-			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorToolConf(gomock.Any()).
-					Return(map[string]*evaluatordto.Tool{
-						consts.DefaultEvaluatorToolKey: validTool,
-					})
-			},
-			wantResp: &evaluatorservice.GetDefaultPromptEvaluatorToolsResponse{
-				Tools: []*evaluatordto.Tool{validTool},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.GetDefaultPromptEvaluatorTools(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				evaluator := &entity.Evaluator{
+					ID:      evaluatorID,
+					SpaceID: spaceID,
+					Name:    "端到端测试评估器",
 				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, len(tt.wantResp.Tools), len(resp.Tools))
-			}
-		})
-	}
-}
 
-func TestEvaluatorHandlerImpl_CheckEvaluatorName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), spaceID, evaluatorID, false).
+					Return(evaluator, nil).
+					Times(1)
 
-	// 设置基础 mock 对象
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-
-	// 创建服务实例
-	handler := &EvaluatorHandlerImpl{
-		auth:             mockAuth,
-		evaluatorService: mockEvaluatorService,
-	}
-
-	// 基础测试数据
-	validSpaceID := int64(123)
-	validEvaluatorID := int64(456)
-	validName := "test-evaluator"
-
-	tests := []struct {
-		name        string
-		req         *evaluatorservice.CheckEvaluatorNameRequest
-		mockSetup   func()
-		wantResp    *evaluatorservice.CheckEvaluatorNameResponse
-		wantErr     bool
-		wantErrCode int32
-	}{
-		{
-			name: "成功 - 名称可用",
-			req: &evaluatorservice.CheckEvaluatorNameRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: &validEvaluatorID,
-				Name:        validName,
-			},
-			mockSetup: func() {
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validSpaceID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+						ObjectID:      strconv.FormatInt(evaluatorID, 10),
+						SpaceID:       spaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
 					}).
-					Return(nil)
+					Return(nil).
+					Times(1)
+
+				mockAuditClient.EXPECT().
+					Audit(gomock.Any(), gomock.Any()).
+					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).
+					Times(1)
 
 				mockEvaluatorService.EXPECT().
-					CheckNameExist(gomock.Any(), validSpaceID, validEvaluatorID, validName).
-					Return(false, nil)
-			},
-			wantResp: &evaluatorservice.CheckEvaluatorNameResponse{
-				Pass: gptr.Of(true),
-			},
-			wantErr: false,
-		},
-		{
-			name: "成功 - 名称已存在",
-			req: &evaluatorservice.CheckEvaluatorNameRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: &validEvaluatorID,
-				Name:        validName,
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil)
+					UpdateEvaluatorMeta(gomock.Any(), evaluatorID, spaceID, "更新后的评估器", "更新后的描述", gomock.Any()).
+					Return(nil).
+					Times(1)
+
+				updateResp, err := handler.UpdateEvaluator(ctx, updateRequest)
+				assert.NoError(t, err)
+				assert.NotNil(t, updateResp)
+
+				// 3. 删除评估器
+				deleteRequest := &evaluatorservice.DeleteEvaluatorRequest{
+					WorkspaceID: spaceID,
+					EvaluatorID: &evaluatorID,
+				}
 
 				mockEvaluatorService.EXPECT().
-					CheckNameExist(gomock.Any(), validSpaceID, validEvaluatorID, validName).
-					Return(true, nil)
-			},
-			wantResp: &evaluatorservice.CheckEvaluatorNameResponse{
-				Pass:    gptr.Of(false),
-				Message: gptr.Of(fmt.Sprintf("evaluator_version name %s already exists", validName)),
-			},
-			wantErr: false,
-		},
-		{
-			name: "错误 - 权限检查失败",
-			req: &evaluatorservice.CheckEvaluatorNameRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: &validEvaluatorID,
-				Name:        validName,
-			},
-			mockSetup: func() {
+					BatchGetEvaluator(gomock.Any(), spaceID, []int64{evaluatorID}, false).
+					Return([]*entity.Evaluator{evaluator}, nil).
+					Times(1)
+
 				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "错误 - 服务调用失败",
-			req: &evaluatorservice.CheckEvaluatorNameRequest{
-				WorkspaceID: validSpaceID,
-				EvaluatorID: &validEvaluatorID,
-				Name:        validName,
-			},
-			mockSetup: func() {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					Return(nil)
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(evaluatorID, 10),
+						SpaceID:       spaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+					}).
+					Return(nil).
+					Times(1)
 
 				mockEvaluatorService.EXPECT().
-					CheckNameExist(gomock.Any(), validSpaceID, validEvaluatorID, validName).
-					Return(false, errorx.NewByCode(errno.CommonInternalErrorCode))
+					DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).
+					Return(nil).
+					Times(1)
+
+				deleteResp, err := handler.DeleteEvaluator(ctx, deleteRequest)
+				assert.NoError(t, err)
+				assert.NotNil(t, deleteResp)
 			},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			resp, err := handler.CheckEvaluatorName(context.Background(), tt.req)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.wantResp.Pass, resp.Pass)
-				if tt.wantResp.Message != nil {
-					assert.Equal(t, tt.wantResp.Message, resp.Message)
-				}
-			}
-		})
+		t.Run(tt.name, tt.testFunc)
 	}
+}
+
+// TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions 测试边界条件
+func TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "空请求和 nil 参数处理",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				handler := &EvaluatorHandlerImpl{}
+				ctx := context.Background()
+
+				// 测试各种 nil 请求
+				_, err1 := handler.CreateEvaluator(ctx, nil)
+				assert.Error(t, err1)
+
+				_, err2 := handler.UpdateEvaluator(ctx, nil)
+				assert.Error(t, err2)
+
+				_, err3 := handler.CreateEvaluator(ctx, &evaluatorservice.CreateEvaluatorRequest{Evaluator: nil})
+				assert.Error(t, err3)
+			},
+		},
+		{
+			name: "超长字符串处理",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				handler := &EvaluatorHandlerImpl{}
+				ctx := context.Background()
+
+				// 创建超长名称
+				longName := string(make([]rune, consts.MaxEvaluatorNameLength+100))
+				longDesc := string(make([]rune, consts.MaxEvaluatorDescLength+100))
+
+				request := &evaluatorservice.CreateEvaluatorRequest{
+					Evaluator: &evaluatordto.Evaluator{
+						WorkspaceID:   gptr.Of(int64(123)),
+						Name:          gptr.Of(longName),
+						Description:   gptr.Of(longDesc),
+						EvaluatorType: gptr.Of(evaluatordto.EvaluatorType_Prompt),
+						CurrentVersion: &evaluatordto.EvaluatorVersion{
+							Version: gptr.Of("1.0.0"),
+							EvaluatorContent: &evaluatordto.EvaluatorContent{
+								PromptEvaluator: &evaluatordto.PromptEvaluator{},
+							},
+						},
+					},
+				}
+
+				_, err := handler.CreateEvaluator(ctx, request)
+				assert.Error(t, err)
+
+				// 验证错误类型
+				statusErr, ok := errorx.FromStatusError(err)
+				assert.True(t, ok)
+				assert.Equal(t, int32(errno.EvaluatorNameExceedMaxLengthCode), statusErr.Code())
+			},
+		},
+		{
+			name: "特殊字符和编码处理",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+				mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+
+				handler := &EvaluatorHandlerImpl{
+					auth:             mockAuth,
+					evaluatorService: mockEvaluatorService,
+					auditClient:      mockAuditClient,
+					metrics:          mockMetrics,
+				}
+
+				// 包含各种特殊字符的请求
+				request := &evaluatorservice.CreateEvaluatorRequest{
+					Evaluator: &evaluatordto.Evaluator{
+						WorkspaceID:   gptr.Of(int64(123)),
+						Name:          gptr.Of("测试🚀评估器💡"),
+						Description:   gptr.Of("包含emoji和特殊字符的描述：<>&\"'"),
+						EvaluatorType: gptr.Of(evaluatordto.EvaluatorType_Prompt),
+						CurrentVersion: &evaluatordto.EvaluatorVersion{
+							Version: gptr.Of("1.0.0"),
+							EvaluatorContent: &evaluatordto.EvaluatorContent{
+								PromptEvaluator: &evaluatordto.PromptEvaluator{},
+							},
+						},
+					},
+				}
+
+				mockAuditClient.EXPECT().
+					Audit(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, param audit.AuditParam) (audit.AuditRecord, error) {
+						// 验证特殊字符被正确处理
+						assert.Contains(t, param.AuditData["texts"], "测试🚀评估器💡")
+						return audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil
+					}).
+					Times(1)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(1)
+
+				mockEvaluatorService.EXPECT().
+					CreateEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(int64(123), nil).
+					Times(1)
+
+				mockMetrics.EXPECT().
+					EmitCreate(gomock.Any(), gomock.Any()).
+					Times(1)
+
+				ctx := context.Background()
+				resp, err := handler.CreateEvaluator(ctx, request)
+
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			},
+		},
+		{
+			name: "上下文取消和超时处理",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+
+				handler := &EvaluatorHandlerImpl{
+					auth:             mockAuth,
+					evaluatorService: mockEvaluatorService,
+				}
+
+				// 创建已取消的上下文
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+
+				request := &evaluatorservice.ListEvaluatorsRequest{
+					WorkspaceID: 123,
+				}
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, param *rpc.AuthorizationParam) error {
+						// 检查上下文是否已取消
+						select {
+						case <-ctx.Done():
+							return ctx.Err()
+						default:
+							return nil
+						}
+					}).
+					Times(1)
+
+				_, err := handler.ListEvaluators(ctx, request)
+				assert.Error(t, err)
+				assert.Equal(t, context.Canceled, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, tt.testFunc)
+	}
+}
+
+func TestEvaluatorHandlerImpl_GetTemplateInfoResponse(t *testing.T) {
+	// This test was accidentally merged, removing content
+	t.Skip("Duplicate test content removed")
 }

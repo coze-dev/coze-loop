@@ -40,6 +40,10 @@ func Valid(data []byte) bool {
 	return stdConfig.Valid(data)
 }
 
+func NewDecoder(reader io.Reader) sonic.Decoder {
+	return stdConfig.NewDecoder(reader)
+}
+
 func Jsonify(data interface{}) string {
 	dump, _ := sonic.MarshalString(data)
 	return dump

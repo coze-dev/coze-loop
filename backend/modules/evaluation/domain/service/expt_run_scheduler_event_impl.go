@@ -269,6 +269,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 }
 
 func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode) error {
+	time.Sleep(time.Millisecond * 1000) // avoid master-slave delay caused by asynchronous and other factors
 	for _, item := range completeItems {
 		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)

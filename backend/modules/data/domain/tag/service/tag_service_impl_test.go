@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
 	mocks3 "github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/tag/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/data/domain/tag/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/tag/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/pagination"
 )
@@ -147,30 +148,6 @@ func TestTagServiceImpl_CreateTag(t *testing.T) {
 				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{{}, {}}, nil, nil)
-			},
-		},
-		{
-			name:    "version check failed",
-			spaceID: 123,
-			key: &entity.TagKey{
-				TagType:        entity.TagTypeTag,
-				TagContentType: entity.TagContentTypeFreeText,
-				TagKeyName:     "123",
-				Version:        gptr.Of("asdfasdf"),
-			},
-			wantErr: true,
-			want:    0,
-			mockSetup: func() {
-				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
-					DefaultSpec: &entity.TagSpec{
-						MaxWidth:  20,
-						MaxHeight: 1,
-					},
-					SpecsBySpace: nil,
-				})
-				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
-				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil)
 			},
 		},
 		{
@@ -656,32 +633,6 @@ func TestTagServiceImpl_UpdateTag(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "check version failed",
-			patch: &entity.TagKey{
-				TagKeyName:     "123",
-				TagType:        entity.TagTypeTag,
-				TagContentType: entity.TagContentTypeCategorical,
-				Version:        gptr.Of("123"),
-			},
-			mockSetup: func() {
-				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
-					DefaultSpec: &entity.TagSpec{
-						MaxHeight: 2,
-						MaxWidth:  30,
-					},
-				})
-				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil)
-				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
-				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{{
-					Version:    gptr.Of("1.1.2"),
-					VersionNum: gptr.Of(int32(122)),
-				}}, nil, nil)
-				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &pagination.PageResult{}, nil)
-			},
-			wantErr: true,
-		},
-		{
 			name: "update tag status failed",
 			patch: &entity.TagKey{
 				TagKeyName:     "123",
@@ -1141,28 +1092,6 @@ func TestTagServiceImpl_BatchUpdateTagStatus(t *testing.T) {
 			},
 		},
 		{
-			name:      "increase version failed",
-			spaceID:   int64(123),
-			tagKeyIDs: []int64{123},
-			toStatus:  entity.TagStatusActive,
-			mockSetup: func() {
-				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
-				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
-					{
-						Status:     entity.TagStatusInactive,
-						VersionNum: gptr.Of(int32(123)),
-						Version:    gptr.Of("123123"),
-					},
-				}, &pagination.PageResult{}, nil)
-				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &pagination.PageResult{}, nil)
-			},
-			wantErr: false,
-			want: map[int64]string{
-				int64(123): "is invalid",
-			},
-		},
-		{
 			name:      "normal case",
 			spaceID:   int64(123),
 			tagKeyIDs: []int64{123},
@@ -1557,6 +1486,835 @@ func TestTagServiceImpl_BatchGetTags(t *testing.T) {
 				for i := 0; i < len(tt.wantTagKeyIDs); i++ {
 					assert.Equal(t, tt.wantTagKeyIDs[i], resp[i].TagKeyID)
 				}
+			}
+		})
+	}
+}
+
+func TestTagServiceImpl_isTagNameExisted(t *testing.T) {
+	type fields struct {
+		tagRepo repo.ITagAPI
+	}
+	type args struct {
+		ctx      context.Context
+		spaceID  int64
+		tagKeyID int64
+		tagName  string
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name: "no existing tags",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tagRepo := mocks.NewMockITagAPI(ctrl)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, &pagination.PageResult{}, nil)
+				return fields{tagRepo: tagRepo}
+			},
+			args: args{
+				ctx:      context.Background(),
+				spaceID:  123,
+				tagKeyID: 0,
+				tagName:  "test_tag",
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "tag exists for create operation",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tagRepo := mocks.NewMockITagAPI(ctrl)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{{TagKeyName: "test_tag"}}, &pagination.PageResult{}, nil)
+				return fields{tagRepo: tagRepo}
+			},
+			args: args{
+				ctx:      context.Background(),
+				spaceID:  123,
+				tagKeyID: 0,
+				tagName:  "test_tag",
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "tag exists but same tag key ID",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tagRepo := mocks.NewMockITagAPI(ctrl)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{{TagKeyID: 456, TagKeyName: "test_tag"}}, &pagination.PageResult{}, nil)
+				return fields{tagRepo: tagRepo}
+			},
+			args: args{
+				ctx:      context.Background(),
+				spaceID:  123,
+				tagKeyID: 456,
+				tagName:  "test_tag",
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "tag exists with different tag key ID",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tagRepo := mocks.NewMockITagAPI(ctrl)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{{TagKeyID: 789, TagKeyName: "test_tag"}}, &pagination.PageResult{}, nil)
+				return fields{tagRepo: tagRepo}
+			},
+			args: args{
+				ctx:      context.Background(),
+				spaceID:  123,
+				tagKeyID: 456,
+				tagName:  "test_tag",
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "multiple tags exist",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tagRepo := mocks.NewMockITagAPI(ctrl)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{{TagKeyID: 456}, {TagKeyID: 789}}, &pagination.PageResult{}, nil)
+				return fields{tagRepo: tagRepo}
+			},
+			args: args{
+				ctx:      context.Background(),
+				spaceID:  123,
+				tagKeyID: 456,
+				tagName:  "test_tag",
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "database error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tagRepo := mocks.NewMockITagAPI(ctrl)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, errors.New("db error"))
+				return fields{tagRepo: tagRepo}
+			},
+			args: args{
+				ctx:      context.Background(),
+				spaceID:  123,
+				tagKeyID: 0,
+				tagName:  "test_tag",
+			},
+			want:    false,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			fields := tt.fieldsGetter(ctrl)
+			s := &TagServiceImpl{
+				tagRepo: fields.tagRepo,
+			}
+			got, err := s.isTagNameExisted(tt.args.ctx, tt.args.spaceID, tt.args.tagKeyID, tt.args.tagName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("isTagNameExisted() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("isTagNameExisted() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTagServiceImpl_UpdateOptionTag(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tagRepo := mocks.NewMockITagAPI(ctrl)
+	db := dbmock.NewMockProvider(ctrl)
+	locker := mocks2.NewMockILocker(ctrl)
+	cfg := mocks3.NewMockIConfig(ctrl)
+
+	svc := NewTagServiceImpl(
+		tagRepo,
+		db,
+		locker,
+		cfg,
+	)
+	ctx := context.Background()
+	spaceID := int64(123)
+	tagKeyID := int64(456)
+
+	tests := []struct {
+		name      string
+		spaceID   int64
+		tagKeyID  int64
+		val       *entity.TagKey
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name:     "validate failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val:      &entity.TagKey{}, // 无效的TagKey
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+			},
+			wantErr: true,
+		},
+		{
+			name:     "lock failed - error",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("lock error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "lock failed - busy",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:     "get existing tag failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "tag key not existed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:     "update tag status failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil)
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("update error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "create tag keys failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil)
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("create error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "create tag values failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+				TagValues: []*entity.TagValue{
+					{
+						TagValueName: "value1",
+					},
+				},
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil)
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagValues(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("create values error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "normal case",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+				TagValues: []*entity.TagValue{
+					{
+						TagValueName: "value1",
+						Children: []*entity.TagValue{
+							{
+								TagValueName: "child1",
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 3,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil)
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagValues(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2) // 两层标签值
+			},
+			wantErr: false,
+		},
+		{
+			name:     "normal case without tag values",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeOption,
+				TagContentType: entity.TagContentTypeCategorical,
+				TagValues:      nil, // 没有标签值
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil)
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				// 没有标签值时不会调用MCreateTagValues
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			err := svc.UpdateOptionTag(ctx, tt.spaceID, tt.tagKeyID, tt.val)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdateOptionTag() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestTagServiceImpl_ArchiveOptionTag(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tagRepo := mocks.NewMockITagAPI(ctrl)
+	db := dbmock.NewMockProvider(ctrl)
+	locker := mocks2.NewMockILocker(ctrl)
+	cfg := mocks3.NewMockIConfig(ctrl)
+
+	svc := NewTagServiceImpl(
+		tagRepo,
+		db,
+		locker,
+		cfg,
+	)
+	ctx := context.Background()
+	spaceID := int64(123)
+	tagKeyID := int64(456)
+
+	tests := []struct {
+		name      string
+		spaceID   int64
+		tagKeyID  int64
+		val       *entity.TagKey
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name:     "validate failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val:      &entity.TagKey{}, // 无效的TagKey
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+			},
+			wantErr: true,
+		},
+		{
+			name:     "check tag name existed failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "tag name already existed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   789, // 不同的TagKeyID
+						TagKeyName: "test_tag",
+					},
+				}, nil, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:     "lock failed - error",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称不存在
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("lock error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "lock failed - busy",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称不存在
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:     "get latest tag failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称检查
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, errors.New("get latest error")) // GetLatestTag调用
+			},
+			wantErr: true,
+		},
+
+		{
+			name:     "update tag status failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+				Version:        gptr.Of("1.0.0"),
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称检查
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil) // GetLatestTag调用
+				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagValue{}, &pagination.PageResult{}, nil) // GetAndBuildTagValues调用
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("update error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "create tag keys failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+				Version:        gptr.Of("1.0.0"),
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称检查
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil) // GetLatestTag调用
+				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagValue{}, &pagination.PageResult{}, nil) // GetAndBuildTagValues调用
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("create error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "create tag values failed",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+				Version:        gptr.Of("1.0.0"),
+				TagValues: []*entity.TagValue{
+					{
+						TagValueName: "value1",
+					},
+				},
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称检查
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil) // GetLatestTag调用
+				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagValue{}, &pagination.PageResult{}, nil) // GetAndBuildTagValues调用
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagValues(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("create values error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "normal case",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+				Version:        gptr.Of("1.0.0"),
+				TagValues: []*entity.TagValue{
+					{
+						TagValueName: "value1",
+						Children: []*entity.TagValue{
+							{
+								TagValueName: "child1",
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 3,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称检查
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil) // GetLatestTag调用
+				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagValue{}, &pagination.PageResult{}, nil) // GetAndBuildTagValues调用
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagValues(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2) // 两层标签值
+			},
+			wantErr: false,
+		},
+		{
+			name:     "normal case without tag values",
+			spaceID:  spaceID,
+			tagKeyID: tagKeyID,
+			val: &entity.TagKey{
+				TagKeyName:     "test_tag",
+				TagType:        entity.TagTypeTag,
+				TagContentType: entity.TagContentTypeCategorical,
+				Version:        gptr.Of("1.0.0"),
+				TagValues:      nil, // 没有标签值
+			},
+			mockSetup: func() {
+				cfg.EXPECT().GetTagSpec().Return(&conf.TagSpec{
+					DefaultSpec: &entity.TagSpec{
+						MaxHeight: 2,
+						MaxWidth:  20,
+					},
+				})
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{}, nil, nil) // 名称检查
+				locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				tagRepo.EXPECT().MGetTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagKey{
+					{
+						TagKeyID:   tagKeyID,
+						VersionNum: gptr.Of(int32(1)),
+						CreatedBy:  gptr.Of("user123"),
+					},
+				}, nil, nil) // GetLatestTag调用
+				tagRepo.EXPECT().MGetTagValue(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.TagValue{}, &pagination.PageResult{}, nil) // GetAndBuildTagValues调用
+				db.EXPECT().Transaction(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db2.Option) error {
+					return fn(&gorm.DB{Config: &gorm.Config{}})
+				}).Times(2) // 主事务和UpdateTagStatus的事务
+				tagRepo.EXPECT().UpdateTagKeysStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().UpdateTagValuesStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				tagRepo.EXPECT().MCreateTagKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				// 没有标签值时不会调用MCreateTagValues
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			err := svc.ArchiveOptionTag(ctx, tt.spaceID, tt.tagKeyID, tt.val)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ArchiveOptionTag() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

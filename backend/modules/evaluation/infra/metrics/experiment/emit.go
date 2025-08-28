@@ -101,12 +101,13 @@ func (e ExperimentMetricImpl) EmitCalculateExptAggrResult(spaceID, mode int64, i
 		metrics.Timer(time.Now().Unix()-startTime, metrics.WithSuffix(latencySuffix)))
 }
 
-func (e ExperimentMetricImpl) EmitExptTurnResultFilterCheck(spaceID int64, evaluatorScoreDiff, actualOutputDiff, diff bool) {
+func (e ExperimentMetricImpl) EmitExptTurnResultFilterCheck(spaceID int64, evaluatorScoreDiff, actualOutputDiff, diff, resultMissing bool) {
 	e.exptTurnResultFilterMtr.Emit([]metrics.T{
 		{Name: tagSpaceID, Value: strconv.FormatInt(spaceID, 10)},
 		{Name: tagActualOutputDiff, Value: strconv.FormatBool(actualOutputDiff)},
 		{Name: tagEvaluatorScoreDiff, Value: strconv.FormatBool(evaluatorScoreDiff)},
 		{Name: tagDiff, Value: strconv.FormatBool(diff)},
+		{Name: tagResultMissing, Value: strconv.FormatBool(resultMissing)},
 	}, metrics.Counter(1, metrics.WithSuffix("check")))
 }
 

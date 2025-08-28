@@ -23,6 +23,7 @@ type ExecutePromptParam struct {
 	PromptVersion string
 	Variables     []*entity.VariableVal
 	History       []*entity.Message
+	RuntimeParam  *string
 }
 
 type ExecutePromptResult struct {
@@ -62,8 +63,27 @@ type PromptTemplate struct {
 }
 
 type VariableDef struct {
-	Key *string
+	Key      *string
+	Type     *VariableType `thrift:"type,3,optional" frugal:"3,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	TypeTags []string      `thrift:"type_tags,4,optional" frugal:"4,optional,list<string>" form:"type_tags" json:"type_tags,omitempty" query:"type_tags"`
 }
+
+type VariableType = string
+
+const (
+	VariableTypeString       = "string"
+	VariableTypeBoolean      = "boolean"
+	VariableTypeInteger      = "integer"
+	VariableTypeFloat        = "float"
+	VariableTypeObject       = "object"
+	VariableTypeArrayString  = "array<string>"
+	VariableTypeArrayBoolean = "array<boolean>"
+	VariableTypeArrayInteger = "array<integer>"
+	VariableTypeArrayFloat   = "array<float>"
+	VariableTypeArrayObject  = "array<object>"
+
+	VariableTypePlaceholder = "placeholder"
+)
 
 type CommitInfo struct {
 	Version     *string

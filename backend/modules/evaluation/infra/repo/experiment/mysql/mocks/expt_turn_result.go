@@ -8,10 +8,11 @@ import (
 	context "context"
 	reflect "reflect"
 
+	"go.uber.org/mock/gomock"
+
 	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockExptTurnResultDAO is a mock of ExptTurnResultDAO interface.
@@ -112,6 +113,26 @@ func (mr *MockExptTurnResultDAOMockRecorder) CreateTurnEvaluatorRefs(arg0, arg1 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTurnEvaluatorRefs", reflect.TypeOf((*MockExptTurnResultDAO)(nil).CreateTurnEvaluatorRefs), varargs...)
+}
+
+// Get mocks base method.
+func (m *MockExptTurnResultDAO) Get(arg0 context.Context, arg1, arg2, arg3, arg4 int64, arg5 ...db.Option) (*model.ExptTurnResult, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
+	ret0, _ := ret[0].(*model.ExptTurnResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockExptTurnResultDAOMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockExptTurnResultDAO)(nil).Get), varargs...)
 }
 
 // GetItemTurnResults mocks base method.

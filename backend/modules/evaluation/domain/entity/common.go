@@ -3,6 +3,8 @@
 
 package entity
 
+import "fmt"
+
 // ContentType 定义内容类型
 type ContentType string
 
@@ -11,15 +13,17 @@ const (
 	ContentTypeImage ContentType = "Image"
 	ContentTypeAudio ContentType = "Audio"
 
-	ContentTypeMultipart ContentType = "MultiPart"
+	ContentTypeMultipart         ContentType = "MultiPart"
+	ContentTypeMultipartVariable ContentType = "multi_part_variable"
 )
 
 // Image 图片结构体
 type Image struct {
-	Name     *string `json:"name,omitempty"`
-	URL      *string `json:"url,omitempty"`
-	URI      *string `json:"uri,omitempty"`
-	ThumbURL *string `json:"thumb_url,omitempty"`
+	Name            *string          `json:"name,omitempty"`
+	URL             *string          `json:"url,omitempty"`
+	URI             *string          `json:"uri,omitempty"`
+	ThumbURL        *string          `json:"thumb_url,omitempty"`
+	StorageProvider *StorageProvider `json:"storage_provider,omitempty"`
 }
 
 // Content 内容结构体
@@ -242,9 +246,11 @@ type ModelConfig struct {
 	MaxTokens   *int32         `json:"max_tokens,omitempty"`
 	Temperature *float64       `json:"temperature,omitempty"`
 	TopP        *float64       `json:"top_p,omitempty"`
-	ToolChoice  ToolChoiceType `json:"tool_choice"`
+	ToolChoice  ToolChoiceType `json:"tool_choice" jsonschema:"-"`
 
-	ProviderModelID *string `json:"provider_model_id,omitempty"`
+	ProviderModelID *string `json:"provider_model_id,omitempty" jsonschema:"-"`
+
+	JSONExt *string `json:"json_ext,omitempty"`
 }
 
 type Reply struct {
@@ -288,3 +294,63 @@ const (
 	ScoreTypeRange ScoreType = 1
 	ScoreTypeEnum  ScoreType = 2
 )
+
+type StorageProvider int64
+
+const (
+	StorageProvider_TOS    StorageProvider = 1
+	StorageProvider_VETOS  StorageProvider = 2
+	StorageProvider_HDFS   StorageProvider = 3
+	StorageProvider_ImageX StorageProvider = 4
+	StorageProvider_S3     StorageProvider = 5
+	/* 后端内部使用 */
+	StorageProvider_Abase   StorageProvider = 100
+	StorageProvider_RDS     StorageProvider = 101
+	StorageProvider_LocalFS StorageProvider = 102
+)
+
+func (p StorageProvider) String() string {
+	switch p {
+	case StorageProvider_TOS:
+		return "TOS"
+	case StorageProvider_VETOS:
+		return "VETOS"
+	case StorageProvider_HDFS:
+		return "HDFS"
+	case StorageProvider_ImageX:
+		return "ImageX"
+	case StorageProvider_S3:
+		return "S3"
+	case StorageProvider_Abase:
+		return "Abase"
+	case StorageProvider_RDS:
+		return "RDS"
+	case StorageProvider_LocalFS:
+		return "LocalFS"
+	}
+	return "<UNSET>"
+}
+
+func StorageProviderFromString(s string) (StorageProvider, error) {
+	switch s {
+	case "TOS":
+		return StorageProvider_TOS, nil
+	case "VETOS":
+		return StorageProvider_VETOS, nil
+	case "HDFS":
+		return StorageProvider_HDFS, nil
+	case "ImageX":
+		return StorageProvider_ImageX, nil
+	case "S3":
+		return StorageProvider_S3, nil
+	case "Abase":
+		return StorageProvider_Abase, nil
+	case "RDS":
+		return StorageProvider_RDS, nil
+	case "LocalFS":
+		return StorageProvider_LocalFS, nil
+	}
+	return StorageProvider(0), fmt.Errorf("not a valid StorageProvider string")
+}
+
+func StorageProviderPtr(v StorageProvider) *StorageProvider { return &v }

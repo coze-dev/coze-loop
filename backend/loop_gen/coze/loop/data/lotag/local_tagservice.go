@@ -184,6 +184,29 @@ func (l *LocalTagService) BatchGetTags(ctx context.Context, req *tag.BatchGetTag
 	return result.GetSuccess(), nil
 }
 
+// ArchiveOptionTag
+// 将单选标签归档进标签管理
+func (l *LocalTagService) ArchiveOptionTag(ctx context.Context, request *tag.ArchiveOptionTagRequest, callOptions ...callopt.Option) (*tag.ArchiveOptionTagResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*tag.TagServiceArchiveOptionTagArgs)
+		result := out.(*tag.TagServiceArchiveOptionTagResult)
+		resp, err := l.impl.ArchiveOptionTag(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &tag.TagServiceArchiveOptionTagArgs{Request: request}
+	result := &tag.TagServiceArchiveOptionTagResult{}
+	ctx = l.injectRPCInfo(ctx, "ArchiveOptionTag")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTagService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

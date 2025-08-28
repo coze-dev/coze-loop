@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/collection/set"
@@ -307,18 +308,18 @@ func (h *DatasetApplicationImpl) BatchGetDatasetItemsByVersion(ctx context.Conte
 	return &dataset.BatchGetDatasetItemsByVersionResponse{Items: gslice.Map(items, convertor.ItemDO2DTO)}, nil
 }
 
-func (d *DatasetApplicationImpl) ClearDatasetItem(ctx context.Context, req *dataset.ClearDatasetItemRequest) (r *dataset.ClearDatasetItemResponse, err error) {
+func (h *DatasetApplicationImpl) ClearDatasetItem(ctx context.Context, req *dataset.ClearDatasetItemRequest) (r *dataset.ClearDatasetItemResponse, err error) {
 	// 鉴权
-	err = d.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
+	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
 	if err != nil {
 		return nil, err
 	}
-	ds, err := d.svc.GetDataset(ctx, req.GetWorkspaceID(), req.GetDatasetID())
+	ds, err := h.svc.GetDataset(ctx, req.GetWorkspaceID(), req.GetDatasetID())
 	if err != nil {
 		return nil, err
 	}
 	ds.UpdatedBy = session.UserIDInCtxOrEmpty(ctx)
-	err = d.svc.ClearDataset(ctx, ds)
+	err = h.svc.ClearDataset(ctx, ds)
 	if err != nil {
 		return nil, err
 	}
@@ -495,4 +496,44 @@ func (h *DatasetApplicationImpl) buildItem(ctx context.Context, req *dataset.Upd
 	}
 	item.AddVN = ds.NextVersionNum
 	item.DelVN = consts.MaxVersionNum
+}
+
+func (h *DatasetApplicationImpl) ValidateDatasetItems(ctx context.Context, req *dataset.ValidateDatasetItemsReq) (r *dataset.ValidateDatasetItemsResp, err error) {
+	// 鉴权
+	if req.GetDatasetID() > 0 {
+		err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionEdit)
+	} else {
+		err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+			SpaceID:       req.GetDatasetID(),
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionListLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		})
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	fields, err := gslice.TryMap(req.GetDatasetFields(), convertor.FieldSchemaDTO2DO).Get()
+	if err != nil {
+		return nil, errno.BadReqErr(err, "convert dataset fields")
+	}
+
+	param := &service.ValidateDatasetItemsParam{
+		SpaceID:                req.GetWorkspaceID(),
+		DatasetID:              req.GetDatasetID(),
+		DatasetCategory:        convertor.ConvertCategoryDTO2DO(req.GetDatasetCategory()),
+		DatasetFields:          fields,
+		Items:                  gslice.Map(req.GetItems(), convertor.ItemDTO2DO),
+		IgnoreCurrentItemCount: req.GetIgnoreCurrentItemCount(),
+	}
+
+	results, err := h.svc.ValidateDatasetItems(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dataset.ValidateDatasetItemsResp{
+		ValidItemIndices: results.ValidItemIndices,
+		Errors:           gslice.Map(results.ErrorGroups, func(e *entity.ItemErrorGroup) *idl.ItemErrorGroup { return convertor.ItemErrorGroupDO2DTO(e) }),
+	}, nil
 }

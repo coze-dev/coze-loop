@@ -53,6 +53,8 @@ struct PromptDetail {
     2: optional list<Tool> tools
     3: optional ToolCallConfig tool_call_config
     4: optional ModelConfig model_config
+
+    255: optional map<string, string> ext_infos
 }
 
 struct PromptTemplate {
@@ -63,6 +65,7 @@ struct PromptTemplate {
 
 typedef string TemplateType (ts.enum="true")
 const TemplateType TemplateType_Normal = "normal"
+const TemplateType TemplateType_Jinja2 = "jinja2"
 
 struct Tool {
     1: optional ToolType type
@@ -144,6 +147,7 @@ struct VariableDef {
     1: optional string key
     2: optional string desc
     3: optional VariableType type
+    4: optional list<string> type_tags
 }
 
 struct VariableVal {
@@ -154,6 +158,15 @@ struct VariableVal {
 
 typedef string VariableType (ts.enum="true")
 const VariableType VariableType_String = "string"
+const VariableType VariableType_Boolean = "boolean"
+const VariableType VariableType_Integer = "integer"
+const VariableType VariableType_Float = "float"
+const VariableType VariableType_Object = "object"
+const VariableType VariableType_Array_String = "array<string>"
+const VariableType VariableType_Array_Boolean = "array<boolean>"
+const VariableType VariableType_Array_Integer = "array<integer>"
+const VariableType VariableType_Array_Float = "array<float>"
+const VariableType VariableType_Array_Object = "array<object>"
 const VariableType VariableType_Placeholder = "placeholder"
 
 struct TokenUsage {

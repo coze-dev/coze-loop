@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -715,8 +716,8 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 }
 
 func (e *exptBaseExec) getItemConcurNum(ctx context.Context, expt *entity.Experiment) int {
-	if expt.EvalConf.ItemConcurNum != nil {
-		return *expt.EvalConf.ItemConcurNum
+	if val := gptr.Indirect(expt.EvalConf.ItemConcurNum); val > 0 && val <= consts.MaxItemConcurrentNum {
+		return val
 	}
 	concurNum := e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetConcurNum()
 	logs.CtxInfo(ctx, "GetConcurNum, expt_id: %v, concur_num: %v", expt.ID, concurNum)

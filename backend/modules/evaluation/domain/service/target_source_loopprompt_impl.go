@@ -33,6 +33,10 @@ type PromptSourceEvalTargetServiceImpl struct {
 	promptRPCAdapter rpc.IPromptRPCAdapter
 }
 
+func (t *PromptSourceEvalTargetServiceImpl) RuntimeParam() entity.IRuntimeParam {
+	return entity.NewPromptRuntimeParam(nil)
+}
+
 func (t *PromptSourceEvalTargetServiceImpl) EvalType() entity.EvalTargetType {
 	return entity.EvalTargetTypeLoopPrompt
 }
@@ -82,15 +86,26 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 			// placeholder
 			placeholder := make([]*entity.Message, 0)
 			if content.Text != nil {
+				// 如果能反序列化成placeholder就传递给PE
 				err = json.Unmarshal([]byte(*content.Text), &placeholder)
 				if err == nil {
-					variable.PlaceholderMessages = placeholder
+					placeholderMessages := make([]*entity.Message, 0)
+					for _, message := range placeholder {
+						if message != nil && message.Content != nil {
+							placeholderMessages = append(placeholderMessages, message)
+						}
+					}
+					variable.PlaceholderMessages = placeholderMessages
 				}
 			}
 			vals = append(vals, variable)
 		}
 	}
 	exePromptParam.Variables = vals
+
+	if rtp := param.Input.Ext[consts.TargetExecuteExtRuntimeParamKey]; len(rtp) > 0 {
+		exePromptParam.RuntimeParam = gptr.Of(rtp)
+	}
 
 	// ExecutePrompt
 	executePromptResult, err := t.promptRPCAdapter.ExecutePrompt(ctx, spaceID, exePromptParam)
@@ -146,11 +161,35 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 	if prompt.PromptCommit != nil && prompt.PromptCommit.Detail != nil && prompt.PromptCommit.Detail.PromptTemplate != nil {
 		inputSchema = make([]*entity.ArgsSchema, 0)
 		for _, p := range prompt.PromptCommit.Detail.PromptTemplate.VariableDefs {
+			var jsonschema string
+			switch gptr.Indirect(p.Type) {
+			case rpc.VariableTypeString:
+				jsonschema = consts.StringJsonSchema
+			case rpc.VariableTypeInteger:
+				jsonschema = consts.IntegerJsonSchema
+			case rpc.VariableTypeFloat:
+				jsonschema = consts.NumberJsonSchema
+			case rpc.VariableTypeBoolean:
+				jsonschema = consts.BooleanJsonSchema
+			case rpc.VariableTypeObject:
+				jsonschema = consts.ObjectJsonSchema
+			case rpc.VariableTypeArrayString:
+				jsonschema = consts.ArrayStringJsonSchema
+			case rpc.VariableTypeArrayInteger:
+				jsonschema = consts.ArrayIntegerJsonSchema
+			case rpc.VariableTypeArrayFloat:
+				jsonschema = consts.ArrayNumberJsonSchema
+			case rpc.VariableTypeArrayBoolean:
+				jsonschema = consts.ArrayBooleanJsonSchema
+			case rpc.VariableTypeArrayObject:
+				jsonschema = consts.ArrayObjectJsonSchema
+			default:
+				jsonschema = consts.StringJsonSchema // 默认是string，例如placeholder，评测不严格规定placeholder的类型
+			}
 			inputSchema = append(inputSchema, &entity.ArgsSchema{
-				Key: p.Key,
-				// 目前prompt变量只支持text string类型，后续可以拓展其他类型
+				Key:                 p.Key,
 				SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
-				JsonSchema:          gptr.Of(consts.StringJsonSchema),
+				JsonSchema:          gptr.Of(jsonschema),
 			})
 		}
 	}
@@ -176,6 +215,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 					JsonSchema:          gptr.Of(consts.StringJsonSchema),
 				},
 			},
+			RuntimeParamDemo: gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo()),
 			BaseInfo: &entity.BaseInfo{
 				CreatedBy: &entity.UserInfo{
 					UserID: gptr.Of(userIDInContext),
@@ -236,6 +276,7 @@ func (t *PromptSourceEvalTargetServiceImpl) ListSource(ctx context.Context, para
 					Description:  desc,
 					SubmitStatus: status,
 				},
+				RuntimeParamDemo: gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo()),
 			},
 		})
 	}
@@ -284,6 +325,7 @@ func (t *PromptSourceEvalTargetServiceImpl) ListSourceVersion(ctx context.Contex
 				SubmitStatus: status,
 				Description:  gptr.Indirect(desc),
 			},
+			RuntimeParamDemo: gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo()),
 		})
 	}
 	return versions, nextCursor, len(info) == int(gptr.Indirect(param.PageSize)), nil

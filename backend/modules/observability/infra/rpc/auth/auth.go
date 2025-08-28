@@ -113,6 +113,14 @@ func (a *AuthProviderImpl) CheckViewPermission(ctx context.Context, action, work
 	return nil
 }
 
+func (a *AuthProviderImpl) CheckIngestPermission(ctx context.Context, workspaceId string) error {
+	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceIngest, workspaceId)
+}
+
+func (a *AuthProviderImpl) CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error {
+	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceRead, workspaceId)
+}
+
 func NewAuthProvider(cli authservice.Client) rpc.IAuthProvider {
 	return &AuthProviderImpl{
 		cli: cli,

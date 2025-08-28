@@ -110,9 +110,21 @@ func TestTagApplicationImpl_UpdateTag(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "get latest tag failed",
+			mockSetup: func() {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				tagSvc.EXPECT().GetLatestTag(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("123"))
+			},
+			req:     &tag.UpdateTagRequest{},
+			wantErr: true,
+		},
+		{
 			name: "update tag failed",
 			mockSetup: func() {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				tagSvc.EXPECT().GetLatestTag(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.TagKey{
+					TagType: entity.TagTypeTag,
+				}, nil)
 				tagSvc.EXPECT().UpdateTag(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("123"))
 			},
 			req:     &tag.UpdateTagRequest{},
@@ -122,6 +134,9 @@ func TestTagApplicationImpl_UpdateTag(t *testing.T) {
 			name: "normal case",
 			mockSetup: func() {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				tagSvc.EXPECT().GetLatestTag(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.TagKey{
+					TagType: entity.TagTypeTag,
+				}, nil)
 				tagSvc.EXPECT().UpdateTag(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			req:     &tag.UpdateTagRequest{},

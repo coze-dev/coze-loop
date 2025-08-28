@@ -5,13 +5,12 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
+	db "github.com/coze-dev/coze-loop/backend/infra/db"
+	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"go.uber.org/mock/gomock"
-
-	"github.com/coze-dev/coze-loop/backend/infra/db"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 )
 
 // MockIExptTurnResultFilterKeyMappingDAO is a mock of IExptTurnResultFilterKeyMappingDAO interface.
@@ -35,6 +34,25 @@ func NewMockIExptTurnResultFilterKeyMappingDAO(ctrl *gomock.Controller) *MockIEx
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockIExptTurnResultFilterKeyMappingDAO) EXPECT() *MockIExptTurnResultFilterKeyMappingDAOMockRecorder {
 	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockIExptTurnResultFilterKeyMappingDAO) Delete(arg0 context.Context, arg1 *model.ExptTurnResultFilterKeyMapping, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockIExptTurnResultFilterKeyMappingDAOMockRecorder) Delete(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptTurnResultFilterKeyMappingDAO)(nil).Delete), varargs...)
 }
 
 // GetByExptID mocks base method.

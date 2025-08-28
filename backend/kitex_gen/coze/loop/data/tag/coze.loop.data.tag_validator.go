@@ -206,3 +206,25 @@ func (p *BatchGetTagsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ArchiveOptionTagRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.TagKeyID <= int64(0) {
+		return fmt.Errorf("field TagKeyID gt rule failed, current value: %v", p.TagKeyID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ArchiveOptionTagResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

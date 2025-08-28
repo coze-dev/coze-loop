@@ -26,6 +26,7 @@ type ExptTurnResultDAO interface {
 	ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error)
 	ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
+	Get(ctx context.Context, spaceID int64, exptID int64, itemID, turnID int64, opts ...db.Option) (*model.ExptTurnResult, error)
 	CreateTurnEvaluatorRefs(ctx context.Context, turnResults []*model.ExptTurnEvaluatorResultRef, opts ...db.Option) error
 	BatchCreateNX(ctx context.Context, turnResults []*model.ExptTurnResult, opts ...db.Option) error
 	GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
@@ -175,6 +176,16 @@ func (dao *ExptTurnResultDAOImpl) BatchGet(ctx context.Context, spaceID int64, e
 		return nil, err
 	}
 	return finds, nil
+}
+
+func (dao *ExptTurnResultDAOImpl) Get(ctx context.Context, spaceID int64, exptID int64, itemID, turnID int64, opts ...db.Option) (*model.ExptTurnResult, error) {
+	db := dao.provider.NewSession(ctx, opts...)
+	q := query.Use(db).ExptTurnResult
+	find, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.Eq(itemID), q.TurnID.Eq(turnID)).First()
+	if err != nil {
+		return nil, err
+	}
+	return find, nil
 }
 
 func (dao *ExptTurnResultDAOImpl) SaveTurnResults(ctx context.Context, turnResults []*model.ExptTurnResult, opts ...db.Option) error {

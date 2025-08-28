@@ -6,11 +6,14 @@ package application
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 	"github.com/bytedance/gg/gvalue"
 
+	"github.com/coze-dev/coze-loop/backend/infra/db"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	tag2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/rpc"
@@ -67,6 +70,9 @@ func (t *TagApplicationImpl) CreateTag(ctx context.Context, req *tag.CreateTagRe
 		ContentSpec: entity2.NewTagContentSpec(req.GetTagContentSpec()),
 		Version:     req.Version,
 	}
+	if req.TagType != nil {
+		tagKey.TagType = entity2.NewTagTypeFromDTO(*req.TagType)
+	}
 	tagKeyID, err := t.tagSvc.CreateTag(ctx, req.GetWorkspaceID(), tagKey)
 	if err != nil {
 		return nil, err
@@ -88,28 +94,60 @@ func (t *TagApplicationImpl) UpdateTag(ctx context.Context, req *tag.UpdateTagRe
 		return nil, err
 	}
 
-	tagKey := &entity2.TagKey{
-		TagKeyName:     req.GetTagKeyName(),
-		TagKeyID:       req.GetTagKeyID(),
-		Description:    req.Description,
-		Status:         entity2.TagStatusActive,
-		TagType:        entity2.TagTypeTag,
-		TagContentType: entity2.NewTagContentTypeFromDTO(req.GetTagContentType()),
-		TagTargetType:  gslice.Map(req.TagDomainTypes, entity2.NewTagTargetTypeFromDTO),
-		TagValues: gslice.Map(req.TagValues, func(val *tag2.TagValue) *entity2.TagValue {
-			return entity2.NewTagValueFromDTO(val, func(v *entity2.TagValue) {
-				if v == nil {
-					return
-				}
-				if v.Status == entity2.TagStatusUndefined {
-					v.Status = entity2.TagStatusActive
-				}
-			})
-		}),
-		ContentSpec: entity2.NewTagContentSpec(req.GetTagContentSpec()),
-		Version:     req.Version,
+	oldTag, err := t.tagSvc.GetLatestTag(ctx, req.GetWorkspaceID(), req.GetTagKeyID(), db.WithMaster())
+	if err != nil {
+		logs.CtxWarn(ctx, "[UpdateTag] get latest tag failed, err: %v", err)
+		return nil, err
 	}
-	err = t.tagSvc.UpdateTag(ctx, req.GetWorkspaceID(), req.GetTagKeyID(), tagKey)
+	if oldTag == nil {
+		logs.CtxError(ctx, "[UpdateTag] tag is not existed, spaceID: %v, tagKeyID: %v", req.GetWorkspaceID(), req.GetTagKeyID())
+		return nil, errno.InvalidParamErrorf("tag is not existed")
+	}
+	switch oldTag.TagType {
+	case entity2.TagTypeTag:
+		tagKey := &entity2.TagKey{
+			TagKeyName:     req.GetTagKeyName(),
+			TagKeyID:       req.GetTagKeyID(),
+			Description:    req.Description,
+			TagType:        entity2.TagTypeTag,
+			Status:         oldTag.Status,
+			TagContentType: entity2.NewTagContentTypeFromDTO(req.GetTagContentType()),
+			TagTargetType:  gslice.Map(req.TagDomainTypes, entity2.NewTagTargetTypeFromDTO),
+			TagValues: gslice.Map(req.TagValues, func(val *tag2.TagValue) *entity2.TagValue {
+				return entity2.NewTagValueFromDTO(val, func(v *entity2.TagValue) {
+					if v == nil {
+						return
+					}
+					if v.Status == entity2.TagStatusUndefined {
+						v.Status = entity2.TagStatusActive
+					}
+				})
+			}),
+			ContentSpec: entity2.NewTagContentSpec(req.GetTagContentSpec()),
+			Version:     req.Version,
+		}
+		err = t.tagSvc.UpdateTag(ctx, req.GetWorkspaceID(), req.GetTagKeyID(), tagKey)
+	case entity2.TagTypeOption:
+		tagKey := &entity2.TagKey{
+			TagKeyID:       req.GetTagKeyID(),
+			TagType:        entity2.TagTypeOption,
+			TagContentType: oldTag.TagContentType,
+			Status:         oldTag.Status,
+			TagValues: gslice.Map(req.TagValues, func(val *tag2.TagValue) *entity2.TagValue {
+				return entity2.NewTagValueFromDTO(val, func(v *entity2.TagValue) {
+					if v == nil {
+						return
+					}
+					if v.Status == entity2.TagStatusUndefined {
+						v.Status = entity2.TagStatusActive
+					}
+				})
+			}),
+		}
+		err = t.tagSvc.UpdateOptionTag(ctx, req.GetWorkspaceID(), req.GetTagKeyID(), tagKey)
+	default:
+		err = errno.InvalidParamErrorf("tag type is undefained")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -259,5 +297,40 @@ func (t *TagApplicationImpl) BatchGetTags(ctx context.Context, req *tag.BatchGet
 	dtos := gslice.Map(tagKeys, (*entity2.TagKey).ToTagInfoDTO)
 	t.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier(dtos))
 	resp.SetTagInfoList(dtos)
+	return resp, nil
+}
+
+func (t *TagApplicationImpl) ArchiveOptionTag(ctx context.Context, req *tag.ArchiveOptionTagRequest) (r *tag.ArchiveOptionTagResponse, err error) {
+	resp := tag.NewArchiveOptionTagResponse()
+	// auth check
+	err = t.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionCreateLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// get latest tag key
+	tagKey, err := t.tagSvc.GetLatestTag(ctx, req.GetWorkspaceID(), req.GetTagKeyID(), db.WithMaster())
+	if err != nil {
+		return nil, err
+	}
+	if tagKey.TagType != entity2.TagTypeOption {
+		logs.CtxError(ctx, "[ArchiveOptionTag] tag key is not option tag, spaceID: %d, tagKeyID %d",
+			req.GetWorkspaceID(), req.GetTagKeyID())
+		return nil, errno.InvalidParamErrorf("tag key is not option tag")
+	}
+	tagKey.TagType = entity2.TagTypeTag
+	tagKey.SetUpdatedBy(session.UserIDInCtxOrEmpty(ctx))
+	tagKey.SetUpdatedAt(time.Now())
+	tagKey.Description = req.Description
+	tagKey.TagKeyName = req.GetName()
+	tagKey.Version = gptr.Of("0.0.1")
+	err = t.tagSvc.ArchiveOptionTag(ctx, req.GetWorkspaceID(), req.GetTagKeyID(), tagKey)
+	if err != nil {
+		return nil, err
+	}
 	return resp, nil
 }

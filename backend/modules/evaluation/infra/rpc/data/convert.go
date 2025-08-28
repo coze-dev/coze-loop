@@ -5,6 +5,7 @@ package data
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -169,9 +170,10 @@ func convert2EvaluationSetSpec(ctx context.Context, spec *dataset.DatasetSpec) (
 		return nil
 	}
 	evaluationSetSpec = &entity.DatasetSpec{
-		MaxFieldCount: gptr.Indirect(spec.MaxFieldCount),
-		MaxItemCount:  gptr.Indirect(spec.MaxItemCount),
-		MaxItemSize:   gptr.Indirect(spec.MaxItemSize),
+		MaxFieldCount:  gptr.Indirect(spec.MaxFieldCount),
+		MaxItemCount:   gptr.Indirect(spec.MaxItemCount),
+		MaxItemSize:    gptr.Indirect(spec.MaxItemSize),
+		MultiModalSpec: convert2EvaluationSetMultiModalSpec(ctx, spec.MultiModalSpec),
 	}
 	return evaluationSetSpec
 }
@@ -346,17 +348,180 @@ func convert2EvaluationSetFieldData(ctx context.Context, fieldData *dataset.Fiel
 	if fieldData == nil {
 		return nil
 	}
+
+	// 转换 Parts 为 MultiPart
+	var multiPart []*entity.Content
+	if len(fieldData.Parts) > 0 {
+		multiPart = make([]*entity.Content, 0, len(fieldData.Parts))
+		for _, part := range fieldData.Parts {
+			// 为每个 part 创建 Content，包含完整的多媒体转换
+			partContent := &entity.Content{
+				ContentType: gptr.Of(common.ConvertContentTypeDTO2DO(part.GetContentType().String())),
+				Format:      gptr.Of(common.ConvertFieldDisplayFormatDTO2DO(int64(gptr.Indirect(part.Format)))),
+				Text:        part.Content,
+				Image:       convertObjectStorageToImage(ctx, part.Attachments),
+				Audio:       convertObjectStorageToAudio(ctx, part.Attachments),
+			}
+
+			// 如果 part 还有嵌套的 Parts，递归处理
+			if len(part.Parts) > 0 {
+				nestedMultiPart := make([]*entity.Content, 0, len(part.Parts))
+				for _, nestedPart := range part.Parts {
+					nestedFieldData := convert2EvaluationSetFieldData(ctx, nestedPart)
+					if nestedFieldData != nil && nestedFieldData.Content != nil {
+						nestedMultiPart = append(nestedMultiPart, nestedFieldData.Content)
+					}
+				}
+				partContent.MultiPart = nestedMultiPart
+			}
+
+			multiPart = append(multiPart, partContent)
+		}
+	}
+
 	evalSetFieldData = &entity.FieldData{
 		Key:  gptr.Indirect(fieldData.Key),
 		Name: gptr.Indirect(fieldData.Name),
 		Content: &entity.Content{
 			ContentType: gptr.Of(common.ConvertContentTypeDTO2DO(fieldData.GetContentType().String())),
 			Format:      gptr.Of(common.ConvertFieldDisplayFormatDTO2DO(int64(gptr.Indirect(fieldData.Format)))),
-			// TODO image multi-parts本期不支持，故暂不实现
-			Text: fieldData.Content,
+			Text:        fieldData.Content,
+			Image:       convertObjectStorageToImage(ctx, fieldData.Attachments),
+			Audio:       convertObjectStorageToAudio(ctx, fieldData.Attachments),
+			MultiPart:   multiPart,
 		},
 	}
 	return evalSetFieldData
+}
+
+// convertObjectStorageToImage 从 ObjectStorage 列表中提取图片信息并转换为 entity.Image
+func convertObjectStorageToImage(ctx context.Context, attachments []*dataset.ObjectStorage) *entity.Image {
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	// 查找第一个图片类型的 attachment
+	for _, attachment := range attachments {
+		if attachment == nil {
+			continue
+		}
+
+		// 根据文件名或其他信息判断是否为图片
+		if isImageAttachment(attachment) {
+			return &entity.Image{
+				Name:            attachment.Name,
+				URL:             attachment.URL,
+				URI:             attachment.URI,
+				ThumbURL:        attachment.ThumbURL,
+				StorageProvider: convertStorageProvider(attachment.Provider),
+			}
+		}
+	}
+
+	return nil
+}
+
+// convertObjectStorageToAudio 从 ObjectStorage 列表中提取音频信息并转换为 entity.Audio
+func convertObjectStorageToAudio(ctx context.Context, attachments []*dataset.ObjectStorage) *entity.Audio {
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	// 查找第一个音频类型的 attachment
+	for _, attachment := range attachments {
+		if attachment == nil {
+			continue
+		}
+
+		// 根据文件名或其他信息判断是否为音频
+		if isAudioAttachment(attachment) {
+			return &entity.Audio{
+				Format: getAudioFormat(attachment),
+				URL:    attachment.URL,
+			}
+		}
+	}
+
+	return nil
+}
+
+// isImageAttachment 判断 ObjectStorage 是否为图片类型
+func isImageAttachment(attachment *dataset.ObjectStorage) bool {
+	if attachment == nil || attachment.Name == nil {
+		return false
+	}
+
+	name := *attachment.Name
+	// 根据文件扩展名判断是否为图片
+	imageExtensions := []string{".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tiff", ".tif"}
+	for _, ext := range imageExtensions {
+		if len(name) >= len(ext) && name[len(name)-len(ext):] == ext {
+			return true
+		}
+		// 也检查大写版本
+		if len(name) >= len(ext) {
+			nameExt := name[len(name)-len(ext):]
+			if nameExt == strings.ToUpper(ext) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isAudioAttachment 判断 ObjectStorage 是否为音频类型
+func isAudioAttachment(attachment *dataset.ObjectStorage) bool {
+	if attachment == nil || attachment.Name == nil {
+		return false
+	}
+
+	name := *attachment.Name
+	// 根据文件扩展名判断是否为音频
+	audioExtensions := []string{".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".amr"}
+	for _, ext := range audioExtensions {
+		if len(name) >= len(ext) && name[len(name)-len(ext):] == ext {
+			return true
+		}
+		// 也检查大写版本
+		if len(name) >= len(ext) {
+			nameExt := name[len(name)-len(ext):]
+			if nameExt == strings.ToUpper(ext) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// getAudioFormat 从 ObjectStorage 中获取音频格式
+func getAudioFormat(attachment *dataset.ObjectStorage) *string {
+	if attachment == nil || attachment.Name == nil {
+		return nil
+	}
+
+	name := *attachment.Name
+	// 提取文件扩展名作为格式
+	for i := len(name) - 1; i >= 0; i-- {
+		if name[i] == '.' {
+			format := name[i+1:]
+			return &format
+		}
+	}
+
+	return nil
+}
+
+// convertStorageProvider 转换存储提供商类型
+func convertStorageProvider(provider *dataset.StorageProvider) *entity.StorageProvider {
+	if provider == nil {
+		return nil
+	}
+
+	// 将 dataset.StorageProvider 转换为 entity.StorageProvider
+	entityProvider := entity.StorageProvider(*provider)
+	return &entityProvider
 }
 
 func convert2EvaluationSetTurn(ctx context.Context, data []*dataset.FieldData) (turns []*entity.Turn) {

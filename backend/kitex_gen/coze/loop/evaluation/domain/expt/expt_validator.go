@@ -47,6 +47,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
 		}
 	}
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *TokenUsage) IsValid() error {
@@ -86,6 +91,9 @@ func (p *ItemSystemInfo) IsValid() error {
 			return fmt.Errorf("field Error not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ExptColumnEvaluator) IsValid() error {
 	return nil
 }
 func (p *ColumnEvaluator) IsValid() error {
@@ -143,6 +151,12 @@ func (p *TurnTargetOutput) IsValid() error {
 func (p *TurnEvaluatorOutput) IsValid() error {
 	return nil
 }
+func (p *TurnAnnotateResult_) IsValid() error {
+	return nil
+}
+func (p *AnnotateRecord) IsValid() error {
+	return nil
+}
 func (p *ExperimentTurnPayload) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {
@@ -162,6 +176,11 @@ func (p *ExperimentTurnPayload) IsValid() error {
 	if p.SystemInfo != nil {
 		if err := p.SystemInfo.IsValid(); err != nil {
 			return fmt.Errorf("field SystemInfo not valid, %w", err)
+		}
+	}
+	if p.AnnotateResult_ != nil {
+		if err := p.AnnotateResult_.IsValid(); err != nil {
+			return fmt.Errorf("field AnnotateResult_ not valid, %w", err)
 		}
 	}
 	return nil
@@ -210,6 +229,9 @@ func (p *ExptAggregateResult_) IsValid() error {
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }
+func (p *AnnotationAggregateResult_) IsValid() error {
+	return nil
+}
 func (p *AggregatorResult_) IsValid() error {
 	if p.Data != nil {
 		if err := p.Data.IsValid(); err != nil {
@@ -230,12 +252,47 @@ func (p *AggregateData) IsValid() error {
 			return fmt.Errorf("field ScoreDistribution not valid, %w", err)
 		}
 	}
+	if p.OptionDistribution != nil {
+		if err := p.OptionDistribution.IsValid(); err != nil {
+			return fmt.Errorf("field OptionDistribution not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *OptionDistribution) IsValid() error {
+	return nil
+}
+func (p *OptionDistributionItem) IsValid() error {
 	return nil
 }
 func (p *ExptStatsInfo) IsValid() error {
 	if p.ExptStats != nil {
 		if err := p.ExptStats.IsValid(); err != nil {
 			return fmt.Errorf("field ExptStats not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExptColumnAnnotation) IsValid() error {
+	return nil
+}
+func (p *ColumnAnnotation) IsValid() error {
+	if p.ContentSpec != nil {
+		if err := p.ContentSpec.IsValid(); err != nil {
+			return fmt.Errorf("field ContentSpec not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExptResultExportRecord) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
 		}
 	}
 	return nil

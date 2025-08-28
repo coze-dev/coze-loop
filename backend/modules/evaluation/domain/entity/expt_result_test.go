@@ -193,3 +193,311 @@ func TestExptEvalItem_SetState_AllStates(t *testing.T) {
 		})
 	}
 }
+
+func TestExptTurnResultFilterAccelerator_HasFilters(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter *ExptTurnResultFilterAccelerator
+		want   bool
+	}{
+		{
+			name:   "empty filter",
+			filter: &ExptTurnResultFilterAccelerator{},
+			want:   false,
+		},
+		{
+			name: "has EvaluatorScoreCorrected",
+			filter: &ExptTurnResultFilterAccelerator{
+				EvaluatorScoreCorrected: &FieldFilter{
+					Key: "test",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has ItemIDs",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemIDs: []*FieldFilter{
+					{Key: "test"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has ItemRunStatus",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemRunStatus: []*FieldFilter{
+					{Key: "test"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has TurnRunStatus",
+			filter: &ExptTurnResultFilterAccelerator{
+				TurnRunStatus: []*FieldFilter{
+					{Key: "test"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has MapCond with EvalTargetDataFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetDataFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has MapCond with EvaluatorScoreFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvaluatorScoreFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has MapCond with AnnotationFloatFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					AnnotationFloatFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has MapCond with AnnotationBoolFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					AnnotationBoolFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has MapCond with AnnotationStringFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					AnnotationStringFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has ItemSnapshotCond with BoolMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					BoolMapFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has ItemSnapshotCond with FloatMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					FloatMapFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has ItemSnapshotCond with IntMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					IntMapFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has ItemSnapshotCond with StringMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					StringMapFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has KeywordSearch with ItemSnapshotFilter BoolMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{
+						BoolMapFilters: []*FieldFilter{
+							{Key: "test"},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has KeywordSearch with ItemSnapshotFilter FloatMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{
+						FloatMapFilters: []*FieldFilter{
+							{Key: "test"},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has KeywordSearch with ItemSnapshotFilter IntMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{
+						IntMapFilters: []*FieldFilter{
+							{Key: "test"},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has KeywordSearch with ItemSnapshotFilter StringMapFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{
+						StringMapFilters: []*FieldFilter{
+							{Key: "test"},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has KeywordSearch with EvalTargetDataFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					EvalTargetDataFilters: []*FieldFilter{
+						{Key: "test"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "empty MapCond",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{},
+			},
+			want: false,
+		},
+		{
+			name: "empty ItemSnapshotCond",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{},
+			},
+			want: false,
+		},
+		{
+			name: "empty KeywordSearch",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{},
+			},
+			want: false,
+		},
+		{
+			name: "KeywordSearch with empty ItemSnapshotFilter",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "multiple filters combination",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemIDs: []*FieldFilter{
+					{Key: "test1"},
+				},
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvaluatorScoreFilters: []*FieldFilter{
+						{Key: "test2"},
+					},
+				},
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					BoolMapFilters: []*FieldFilter{
+						{Key: "test3"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "complex nested structure with filters",
+			filter: &ExptTurnResultFilterAccelerator{
+				EvaluatorScoreCorrected: &FieldFilter{Key: "corrected"},
+				ItemIDs:                 []*FieldFilter{{Key: "item1"}, {Key: "item2"}},
+				ItemRunStatus:           []*FieldFilter{{Key: "status1"}},
+				TurnRunStatus:           []*FieldFilter{{Key: "turn1"}},
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetDataFilters:   []*FieldFilter{{Key: "target1"}},
+					EvaluatorScoreFilters:   []*FieldFilter{{Key: "score1"}},
+					AnnotationFloatFilters:  []*FieldFilter{{Key: "float1"}},
+					AnnotationBoolFilters:   []*FieldFilter{{Key: "bool1"}},
+					AnnotationStringFilters: []*FieldFilter{{Key: "string1"}},
+				},
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					BoolMapFilters:   []*FieldFilter{{Key: "snapBool"}},
+					FloatMapFilters:  []*FieldFilter{{Key: "snapFloat"}},
+					IntMapFilters:    []*FieldFilter{{Key: "snapInt"}},
+					StringMapFilters: []*FieldFilter{{Key: "snapString"}},
+				},
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{
+						BoolMapFilters:   []*FieldFilter{{Key: "keyBool"}},
+						FloatMapFilters:  []*FieldFilter{{Key: "keyFloat"}},
+						IntMapFilters:    []*FieldFilter{{Key: "keyInt"}},
+						StringMapFilters: []*FieldFilter{{Key: "keyString"}},
+					},
+					EvalTargetDataFilters: []*FieldFilter{{Key: "keyTarget"}},
+				},
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.filter.HasFilters()
+			assert.Equal(t, tt.want, got, "HasFilters() = %v, want %v", got, tt.want)
+		})
+	}
+}
+
+func TestExptTurnResultFilterAccelerator_HasFilters_NilPointer(t *testing.T) {
+	var filter *ExptTurnResultFilterAccelerator
+
+	assert.Panics(t, func() {
+		filter.HasFilters()
+	}, "Calling HasFilters on nil pointer should panic")
+}
