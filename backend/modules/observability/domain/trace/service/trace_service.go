@@ -15,6 +15,8 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -215,7 +217,7 @@ type ListAnnotationEvaluatorsRequest struct {
 	Name        *string
 }
 type ListAnnotationEvaluatorsResp struct {
-	Evaluators []*trace.AnnotationEvaluator
+	Evaluators []*annotation.AnnotationEvaluator
 }
 type ExtractSpanInfoRequest struct {
 	WorkspaceID   int64
@@ -1114,7 +1116,7 @@ func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, annotati
 }
 func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
 	resp := &ListAnnotationEvaluatorsResp{}
-	resp.Evaluators = make([]*trace.AnnotationEvaluator, 0)
+	resp.Evaluators = make([]*annotation.AnnotationEvaluator, 0)
 	var (
 		evaluators = make([]*rpc.Evaluator, 0)
 	)
@@ -1163,7 +1165,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		}
 	}
 	for _, evaluator := range evaluators {
-		re := &trace.AnnotationEvaluator{}
+		re := &annotation.AnnotationEvaluator{}
 		if evaluator.EvaluatorVersionID != 0 {
 			re.EvaluatorVersionID = evaluator.EvaluatorVersionID
 		}
@@ -1200,7 +1202,7 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 	}
 	logs.CtxInfo(ctx, "Get spans success, total conut:%v", len(spans))
 	for _, span := range spans {
-		var fieldList []*trace.FieldData
+		var fieldList []*dataset.FieldData
 		for _, mapping := range req.FieldMappings {
 			value, err := buildExtractSpanInfo(ctx, span, mapping)
 			if err != nil {
@@ -1214,7 +1216,7 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 				continue
 			}
 			content := buildContent(value)
-			fieldList = append(fieldList, &trace.FieldData{
+			fieldList = append(fieldList, &dataset.FieldData{
 				Key:     gptr.Of(mapping.GetFieldSchema().GetKey()),
 				Name:    gptr.Of(mapping.GetFieldSchema().GetName()),
 				Content: content,
@@ -1233,12 +1235,12 @@ func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMappin
 	return "", nil
 }
 
-func buildContent(value string) *trace.Content {
-	var content *trace.Content
+func buildContent(value string) *dataset.Content {
+	var content *dataset.Content
 	err := json.Unmarshal([]byte(value), &content)
 	if err != nil {
-		content = &trace.Content{
-			ContentType: gptr.Of(trace.ContentTypeText),
+		content = &dataset.Content{
+			ContentType: gptr.Of(common.ContentTypeText),
 			Text:        gptr.Of(value),
 		}
 	}
