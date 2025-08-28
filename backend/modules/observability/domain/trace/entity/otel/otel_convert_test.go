@@ -1129,12 +1129,6 @@ func createTestResourceScopeSpanWithAttributes(name, startTime, endTime string, 
 	return span
 }
 
-func createTestResourceScopeSpanWithEvents(name, startTime, endTime string, events []*SpanEvent) *ResourceScopeSpan {
-	span := createTestResourceScopeSpan(name, startTime, endTime)
-	span.Span.Events = events
-	return span
-}
-
 func TestCalRuntime(t *testing.T) {
 	tests := []struct {
 		name              string

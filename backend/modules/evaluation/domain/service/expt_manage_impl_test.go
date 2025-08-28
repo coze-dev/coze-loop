@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	auditMocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -26,7 +27,6 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
-	"github.com/bytedance/gg/gptr"
 )
 
 func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {

@@ -4,17 +4,19 @@
 package application
 
 import (
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"context"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmock "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	annodto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
@@ -30,7 +32,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	svcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -1401,7 +1402,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
-				
+
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(nil)
 				mockExportSvc.EXPECT().ExportTracesToDataset(gomock.Any(), gomock.Any()).Return(&service.ExportTracesToDatasetResponse{
@@ -1409,7 +1410,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 					DatasetID:    1,
 					DatasetName:  "test-dataset",
 				}, nil)
-				
+
 				return fields{
 					traceExportService: mockExportSvc,
 					authSvc:            mockAuth,
@@ -1424,7 +1425,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 					EndTime:     time.Now().UnixMilli(),
 					SpanIds: []*trace.SpanID{
 						{TraceID: "trace1", SpanID: "span1"},
-					},					FieldMappings: []*dataset0.FieldMapping{
+					}, FieldMappings: []*dataset0.FieldMapping{
 						{
 							FieldSchema: &dataset0.FieldSchema{
 								Key:  ptr.Of("input"),
@@ -1462,10 +1463,10 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
-				
+
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(fmt.Errorf("permission denied"))
-				
+
 				return fields{
 					authSvc:     mockAuth,
 					traceConfig: mockConfig,
@@ -1501,11 +1502,11 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
-				
+
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(nil)
 				mockExportSvc.EXPECT().ExportTracesToDataset(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("service error"))
-				
+
 				return fields{
 					traceExportService: mockExportSvc,
 					authSvc:            mockAuth,
@@ -1537,7 +1538,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -1578,7 +1579,7 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
-				
+
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(nil)
 				mockExportSvc.EXPECT().PreviewExportTracesToDataset(gomock.Any(), gomock.Any()).Return(&service.PreviewExportTracesToDatasetResponse{
@@ -1594,7 +1595,7 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 						},
 					},
 				}, nil)
-				
+
 				return fields{
 					traceExportService: mockExportSvc,
 					authSvc:            mockAuth,
@@ -1656,15 +1657,15 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
-				
+
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(fmt.Errorf("permission denied"))
-				
+
 				return fields{
 					authSvc:     mockAuth,
 					traceConfig: mockConfig,
 				}
-			},			args: args{
+			}, args: args{
 				ctx: context.Background(),
 				req: &trace.PreviewExportTracesToDatasetRequest{
 					WorkspaceID: 123,
@@ -1694,11 +1695,11 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 				mockExportSvc := svcmock.NewMockITraceExportService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
-				
+
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(nil)
 				mockExportSvc.EXPECT().PreviewExportTracesToDataset(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("service error"))
-				
+
 				return fields{
 					traceExportService: mockExportSvc,
 					authSvc:            mockAuth,
@@ -1730,7 +1731,7 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)

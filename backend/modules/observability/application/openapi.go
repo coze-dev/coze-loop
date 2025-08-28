@@ -14,6 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
+	"github.com/bytedance/sonic"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
@@ -22,10 +27,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel"
-	"github.com/bytedance/gg/gptr"
-	"github.com/bytedance/sonic"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -267,7 +268,6 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 				partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
 				continue
 			}
-
 		}
 	}
 	respSpanProto := &coltracepb.ExportTraceServiceResponse{
@@ -308,7 +308,9 @@ func ungzip(contentEncoding string, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer gzipReader.Close()
+	defer func() {
+		_ = gzipReader.Close()
+	}()
 
 	var uncompressedData bytes.Buffer
 	_, err = io.Copy(&uncompressedData, gzipReader)

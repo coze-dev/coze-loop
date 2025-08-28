@@ -25,7 +25,8 @@ type ExptAnnotateRepoImpl struct {
 
 func NewExptAnnotateRepo(exptTurnAnnotateRecordRefDAO mysql.IExptTurnAnnotateRecordRefDAO,
 	exptTurnResultTagRefDAO mysql.IExptTurnResultTagRefDAO,
-	annotateRecordDAO mysql.IAnnotateRecordDAO, idgenerator idgen.IIDGenerator) repo.IExptAnnotateRepo {
+	annotateRecordDAO mysql.IAnnotateRecordDAO, idgenerator idgen.IIDGenerator,
+) repo.IExptAnnotateRepo {
 	return &ExptAnnotateRepoImpl{
 		exptTurnAnnotateRecordRefDAO: exptTurnAnnotateRecordRefDAO,
 		exptTurnResultTagRefDAO:      exptTurnResultTagRefDAO,
@@ -170,7 +171,6 @@ func (e ExptAnnotateRepoImpl) BatchGetExptTurnResultTagRefs(ctx context.Context,
 }
 
 func (e ExptAnnotateRepoImpl) SaveAnnotateRecord(ctx context.Context, exptTurnResultID int64, record *entity.AnnotateRecord, opts ...db.Option) error {
-
 	id, err := e.idgenerator.GenID(ctx)
 	if err != nil {
 		return err

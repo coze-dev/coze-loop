@@ -756,7 +756,8 @@ func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId i
 }
 
 func (t *TraceApplication) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest) (
-	r *trace.ExportTracesToDatasetResponse, err error) {
+	r *trace.ExportTracesToDatasetResponse, err error,
+) {
 	if err := req.IsValid(); err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
@@ -791,7 +792,8 @@ func (t *TraceApplication) ExportTracesToDataset(ctx context.Context, req *trace
 }
 
 func (t *TraceApplication) PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest) (
-	r *trace.PreviewExportTracesToDatasetResponse, err error) {
+	r *trace.PreviewExportTracesToDatasetResponse, err error,
+) {
 	if err := req.IsValid(); err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 	}

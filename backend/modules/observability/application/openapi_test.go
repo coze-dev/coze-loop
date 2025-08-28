@@ -10,6 +10,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytedance/sonic"
+	"github.com/stretchr/testify/assert"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"go.uber.org/mock/gomock"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
@@ -32,14 +41,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"github.com/bytedance/sonic"
-	"github.com/stretchr/testify/assert"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"go.uber.org/mock/gomock"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestOpenAPIApplication_IngestTraces(t *testing.T) {
@@ -1098,8 +1099,8 @@ func createValidProtoBufTraceData() []byte {
 func createGzipData(data []byte) []byte {
 	var buf bytes.Buffer
 	writer := gzip.NewWriter(&buf)
-	writer.Write(data)
-	writer.Close()
+	_, _ = writer.Write(data)
+	_ = writer.Close()
 	return buf.Bytes()
 }
 

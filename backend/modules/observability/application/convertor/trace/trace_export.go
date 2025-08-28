@@ -5,6 +5,7 @@ package trace
 
 import (
 	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	eval_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
@@ -246,6 +247,7 @@ func convertItemErrorGroupsDO2DTO(errors []entity.ItemErrorGroup) []*dataset.Ite
 
 	return result
 }
+
 func convertContentDO2DTO(content *entity.Content) *dataset0.Content {
 	var result *dataset0.Content
 	if content == nil {
@@ -268,13 +270,14 @@ func convertContentDO2DTO(content *entity.Content) *dataset0.Content {
 	}
 	return result
 }
+
 func convertFieldListDO2DTO(fieldList []*entity.FieldData) []*dataset0.FieldData {
 	result := make([]*dataset0.FieldData, len(fieldList))
 	for i, field := range fieldList {
 		var multiPart []*dataset0.Content
 		if field.Content != nil && field.Content.MultiPart != nil {
 			for _, part := range field.Content.MultiPart {
-				multiPart = append(multiPart, convertContentDO2DTO(part))
+				multiPart = append(multiPart, convertContentDO2DTO(part)) //nolint:staticcheck
 			}
 		}
 		result[i] = &dataset0.FieldData{

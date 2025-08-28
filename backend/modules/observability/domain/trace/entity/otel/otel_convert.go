@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel/open_inference"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -436,8 +437,8 @@ func calLatencyFirstResp(tagsLong map[string]int64, startTimeUnixNanoInt64 int64
 }
 
 func calTokens(tagsLong map[string]int64) {
-	inputTokens, _ := tagsLong[tracespec.InputTokens]
-	outputTokens, _ := tagsLong[tracespec.OutputTokens]
+	inputTokens := tagsLong[tracespec.InputTokens]
+	outputTokens := tagsLong[tracespec.OutputTokens]
 	if inputTokens > 0 || outputTokens > 0 {
 		tagsLong[tracespec.Tokens] = inputTokens + outputTokens
 	}
@@ -445,13 +446,13 @@ func calTokens(tagsLong map[string]int64) {
 
 func calCallOptions(ctx context.Context, tagsDouble map[string]float64, tagsLong map[string]int64, tagsString map[string]string) {
 	modelCallOption := &tracespec.ModelCallOption{}
-	temperature, _ := tagsDouble["temperature"]
-	topP, _ := tagsDouble["top_p"]
-	maxTokens, _ := tagsLong["max_tokens"]
-	frequencyPenalty, _ := tagsDouble["frequency_penalty"]
-	presencePenalty, _ := tagsDouble["presence_penalty"]
-	stopSequences, _ := tagsString["stop_sequences"]
-	topK, _ := tagsLong["top_k"]
+	temperature := tagsDouble["temperature"]
+	topP := tagsDouble["top_p"]
+	maxTokens := tagsLong["max_tokens"]
+	frequencyPenalty := tagsDouble["frequency_penalty"]
+	presencePenalty := tagsDouble["presence_penalty"]
+	stopSequences := tagsString["stop_sequences"]
+	topK := tagsLong["top_k"]
 	if temperature > 0 || topP > 0 || topK > 0 || maxTokens > 0 || frequencyPenalty > 0 || presencePenalty > 0 || len(stopSequences) > 0 {
 		modelCallOption.Temperature = float32(temperature)
 		delete(tagsDouble, "temperature")
@@ -934,7 +935,7 @@ func insertIntoStructure(structure map[string]interface{}, keys []string, value 
 			if arr[index] == nil {
 				arr[index] = make(map[string]interface{})
 			}
-			current, ok = arr[index].(map[string]interface{})
+			current, ok = arr[index].(map[string]interface{}) //nolint:staticcheck
 			if !ok {
 				// no way, just skip code check
 				continue
@@ -945,7 +946,7 @@ func insertIntoStructure(structure map[string]interface{}, keys []string, value 
 				current[key] = make(map[string]interface{})
 			}
 			var ok bool
-			current, ok = current[key].(map[string]interface{})
+			current, ok = current[key].(map[string]interface{}) //nolint:staticcheck
 			if !ok {
 				// no way, just skip code check
 				continue

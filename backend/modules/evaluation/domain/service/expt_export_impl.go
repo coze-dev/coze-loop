@@ -99,7 +99,7 @@ func (e ExptResultExportService) ExportCSV(ctx context.Context, spaceID, exptID 
 			return 0, err
 		}
 
-		if result == nil || result.Results == nil || !result.Results["exp_download_report_enabled"] == true {
+		if result == nil || result.Results == nil || !result.Results["exp_download_report_enabled"] {
 			return 0, errorx.NewByCode(errno.ExperimentExportValidateFailCode)
 		}
 	}
@@ -151,7 +151,6 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 	exportRecord.Expired = isExportRecordExpired(exportRecord.StartAt)
 
 	return exportRecord, nil
-
 }
 
 func isExportRecordExpired(targetTime *time.Time) bool {
@@ -188,9 +187,7 @@ func (e ExptResultExportService) ListExportRecord(ctx context.Context, spaceID, 
 }
 
 func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptID, exportID int64) (err error) {
-	var (
-		fileName string
-	)
+	var fileName string
 	defer func() {
 		record := &entity.ExptResultExportRecord{
 			ID:              exportID,
@@ -227,7 +224,7 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 	var (
 		pageNum  = 1
 		pageSize = 100
-		//total    int64
+		// total    int64
 		maxPage = 500
 
 		colEvaluators    []*entity.ColumnEvaluator
@@ -314,13 +311,11 @@ type exportCSVHelper struct {
 	colAnnotations   []*entity.ColumnAnnotation
 	allItemResults   []*entity.ItemResult
 
-	evaluationSetVersionService EvaluationSetVersionService
-	repo                        repo.IExptResultExportRecordRepo
-	exptRepo                    repo.IExperimentRepo
-	exptTurnResultRepo          repo.IExptTurnResultRepo
-	exptPublisher               events.ExptEventPublisher
-	exptResultService           ExptResultService
-	fileClient                  fileserver.ObjectStorage
+	exptRepo           repo.IExperimentRepo
+	exptTurnResultRepo repo.IExptTurnResultRepo
+	exptPublisher      events.ExptEventPublisher
+	exptResultService  ExptResultService
+	fileClient         fileserver.ObjectStorage
 }
 
 func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
@@ -340,9 +335,7 @@ func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
 
 	// 合并表头和数据
 	fileData = append(fileData, columns)
-	for _, row := range rows {
-		fileData = append(fileData, row)
-	}
+	fileData = append(fileData, rows...)
 
 	err = e.createAndUploadCSV(ctx, e.fileName, fileData)
 	if err != nil {
@@ -425,7 +418,7 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 			}
 			rowData = append(rowData, runState)
 
-			if turnResult.ExperimentResults == nil || len(turnResult.ExperimentResults) == 0 || turnResult.ExperimentResults[0] == nil {
+			if len(turnResult.ExperimentResults) == 0 || turnResult.ExperimentResults[0] == nil {
 				logs.CtxWarn(ctx, "turnResult.ExperimentResults is nil")
 				continue
 			}
@@ -463,21 +456,20 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 					continue
 				}
 
-				evaluatorRecord, _ := evaluatorRecords[colEvaluator.EvaluatorVersionID]
+				evaluatorRecord := evaluatorRecords[colEvaluator.EvaluatorVersionID]
 				rowData = append(rowData, getEvaluatorScore(evaluatorRecord))
 				rowData = append(rowData, getEvaluatorReason(evaluatorRecord))
 			}
 
 			// 标注结果，按Annotation的顺序排序
-			annotateRecords := make(map[int64]*entity.AnnotateRecord)
 			if payload.AnnotateResult != nil && payload.AnnotateResult.AnnotateRecords != nil {
-				annotateRecords = payload.AnnotateResult.AnnotateRecords
+				annotateRecords := payload.AnnotateResult.AnnotateRecords
 				for _, colAnnotation := range e.colAnnotations {
 					if colAnnotation == nil {
 						continue
 					}
 
-					annotateRecord, _ := annotateRecords[colAnnotation.TagKeyID]
+					annotateRecord := annotateRecords[colAnnotation.TagKeyID]
 					rowData = append(rowData, getAnnotationData(annotateRecord, colAnnotation))
 				}
 			}
@@ -529,7 +521,6 @@ func getDatasetFields(colEvalSetFields []*entity.ColumnEvalSetField, fieldDataLi
 	}
 
 	return fields
-
 }
 
 func geDatasetCellOrActualOutputData(data *entity.Content) string {
@@ -637,7 +628,9 @@ func (e *exportCSVHelper) createAndUploadCSV(ctx context.Context, fileName strin
 	if err != nil {
 		return err
 	}
-	defer csvFile.Close()
+	defer func() {
+		_ = csvFile.Close()
+	}()
 
 	fileReader := bufio.NewReader(csvFile)
 
@@ -661,7 +654,9 @@ func (e *exportCSVHelper) createCSV(ctx context.Context, fileName string, fileDa
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, err = file.WriteString("\xEF\xBB\xBF") // 写入UTF-8 BOM，避免使用Excel打开乱码
 	if err != nil {

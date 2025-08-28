@@ -113,7 +113,7 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 					},
 				}
 				if args, ok := function["arguments"].(string); ok {
-					modelCall["function"].(map[string]interface{})["arguments"] = string(args)
+					modelCall["function"].(map[string]interface{})["arguments"] = args
 				}
 				calls = append(calls, modelCall)
 			}

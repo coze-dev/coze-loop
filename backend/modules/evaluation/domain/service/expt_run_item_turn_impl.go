@@ -121,11 +121,7 @@ func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) 
 }
 
 func (e *DefaultExptTurnEvaluationImpl) skipEvaluatorNode(expt *entity.Experiment) bool {
-	if expt.EvalConf.ConnectorConf.EvaluatorsConf == nil {
-		return true
-	}
-
-	return false
+	return expt.EvalConf.ConnectorConf.EvaluatorsConf == nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID, spaceID int64, freeCost bool, session *entity.Session) error {

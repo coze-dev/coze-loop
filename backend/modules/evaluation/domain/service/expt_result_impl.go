@@ -630,7 +630,7 @@ func (e ExptResultServiceImpl) getColumnAnnotations(ctx context.Context, spaceID
 	for _, tagRef := range tagRefs {
 		tagKeyIDs = append(tagKeyIDs, tagRef.TagKeyID)
 	}
-	//columnAnnotations := make([]*entity.ColumnAnnotation, 0)
+	// columnAnnotations := make([]*entity.ColumnAnnotation, 0)
 	exptID2columnAnnotations := make(map[int64][]*entity.ColumnAnnotation)
 	tagInfos, err := e.tagRPCAdapter.BatchGetTagInfo(ctx, spaceID, tagKeyIDs)
 	if err != nil {
@@ -1920,7 +1920,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 		// 创建轮次键到轮次结果、项索引和项运行状态的映射
 		turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState := e.createTurnKeyMaps(spaceID, itemResults)
 
-		for turnKey, _ := range turnKey2TurnResult {
+		for turnKey := range turnKey2TurnResult {
 			turnKeyComponents, err := ParseTurnKey(turnKey)
 			if err != nil {
 				logs.CtxError(ctx, "CompareExptTurnResultFilters parse turnKey failed, turnKey: %v, err: %v", turnKey, err)
@@ -2195,7 +2195,7 @@ func (e ExptResultServiceImpl) compareEvaluatorScore(exptTurnResultFilter *entit
 		}
 	}
 
-	// 第三步：双向对比 - RDS -> ClickHouse  
+	// 第三步：双向对比 - RDS -> ClickHouse
 	// 检查RDS中存在的评估器分数在ClickHouse中是否存在
 	for rdsKey, rdsScore := range rdsEvaluatorScores {
 		if _, exists := exptTurnResultFilter.EvaluatorScore[rdsKey]; !exists {

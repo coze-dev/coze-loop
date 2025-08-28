@@ -305,7 +305,8 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			spaceID: 100,
 			exptIDs: []int64{1},
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
-				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo) {
+				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
+			) {
 				// 设置获取聚合结果的mock
 				aggrResult := &entity.AggregateResult{
 					AggregatorResults: []*entity.AggregatorResult{
@@ -360,7 +361,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{1}, true).
 					Return([]*entity.Evaluator{evaluator}, nil)
 				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(
-					map[int64]*entity.TagInfo{1: &entity.TagInfo{
+					map[int64]*entity.TagInfo{1: {
 						TagKeyId:       1,
 						TagKeyName:     "123",
 						Description:    "123",
@@ -423,7 +424,8 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			spaceID: 100,
 			exptIDs: []int64{1},
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
-				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo) {
+				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
+			) {
 				mockExptAggrResultRepo.EXPECT().
 					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), []int64{1}).
 					Return(nil, errorx.NewByCode(500, errorx.WithExtraMsg("db error")))

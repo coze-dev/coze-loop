@@ -213,7 +213,7 @@ func TestExptAnnotateServiceImpl_SaveAnnotateRecord(t *testing.T) {
 					Get(ctx, int64(1), int64(1), int64(1), int64(1)).
 					Return(turnResult, nil).Times(1)
 
-				//svc.txDB.(*dbMocks.MockProvider).EXPECT().
+				// svc.txDB.(*dbMocks.MockProvider).EXPECT().
 				//	Transaction(ctx, gomock.Any()).
 				//	Return(nil).Times(1)
 				svc.txDB.(*dbMocks.MockProvider).EXPECT().

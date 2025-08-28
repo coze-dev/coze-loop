@@ -309,7 +309,7 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		if etids.VersionedTargetID != nil {
 			versionedTargetIDs = append(versionedTargetIDs, etids.VersionedTargetID)
 		}
-		if etids.EvaluatorVersionIDs != nil && len(etids.EvaluatorVersionIDs) > 0 {
+		if len(etids.EvaluatorVersionIDs) > 0 {
 			evaluatorVersionIDs = append(evaluatorVersionIDs, etids.EvaluatorVersionIDs...)
 		}
 	}
@@ -424,12 +424,12 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		//}
 		tuple := &entity.ExptTuple{
 			EvalSet: evalSetMap[tupleIDs.VersionedEvalSetID.VersionID],
-			//Evaluators: cevaluators,
+			// Evaluators: cevaluators,
 		}
 		if tupleIDs.VersionedTargetID != nil {
 			tuple.Target = targetMap[tupleIDs.VersionedTargetID.VersionID]
 		}
-		if tupleIDs.EvaluatorVersionIDs != nil && len(tupleIDs.EvaluatorVersionIDs) > 0 {
+		if len(tupleIDs.EvaluatorVersionIDs) > 0 {
 			cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
 			for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
 				cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
@@ -453,7 +453,7 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 			EvalSetID: expt.EvalSetID,
 			VersionID: expt.EvalSetVersionID,
 		},
-		//EvaluatorVersionIDs: evaluatorVersionIDs,
+		// EvaluatorVersionIDs: evaluatorVersionIDs,
 	}
 
 	if expt.TargetID > 0 || expt.TargetVersionID > 0 {
@@ -463,7 +463,7 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 		}
 	}
 
-	if expt.EvaluatorVersionRef != nil && len(expt.EvaluatorVersionRef) > 0 {
+	if len(expt.EvaluatorVersionRef) > 0 {
 		evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
 		for _, ref := range expt.EvaluatorVersionRef {
 			evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)

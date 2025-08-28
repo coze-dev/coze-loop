@@ -82,7 +82,7 @@ var otelMessageEventNameMap = []string{
 	otelEventModelChoice,
 }
 
-var otelMessageAttributeKeyMap = []string{
+var otelMessageAttributeKeyMap = []string{ //nolint:unused
 	string(semconv1_27_0.GenAIPromptKey),
 	string(semconv1_27_0.GenAICompletionKey),
 }
@@ -97,20 +97,18 @@ const (
 	tagKeyStartTimeFirstResp = "start_time_first_resp"
 )
 
-var (
-	otelModelSpanTypeMap = map[string]string{
-		"": "custom",
-		// 以下为otel的span type
-		"chat":             tracespec.VModelSpanType,
-		"execute_tool":     tracespec.VToolSpanType,
-		"generate_content": tracespec.VModelSpanType,
-		"text_completion":  tracespec.VModelSpanType,
-		// 以下为openinference的span type
-		"TOOL":      tracespec.VToolSpanType,
-		"LLM":       tracespec.VModelSpanType,
-		"RETRIEVER": tracespec.VRetrieverSpanType,
-	}
-)
+var otelModelSpanTypeMap = map[string]string{
+	"": "custom",
+	// 以下为otel的span type
+	"chat":             tracespec.VModelSpanType,
+	"execute_tool":     tracespec.VToolSpanType,
+	"generate_content": tracespec.VModelSpanType,
+	"text_completion":  tracespec.VModelSpanType,
+	// 以下为openinference的span type
+	"TOOL":      tracespec.VToolSpanType,
+	"LLM":       tracespec.VModelSpanType,
+	"RETRIEVER": tracespec.VRetrieverSpanType,
+}
 
 // inner process key
 const (

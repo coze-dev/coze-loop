@@ -9,8 +9,9 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	v1 "go.opentelemetry.io/proto/otlp/trace/v1"
+
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // ExportTraceServiceRequest Internal struct, compared to PB struct: TraceID & SpanID & ParentSpanId is string, int64/uint64 -> string, can support otel json source data
@@ -406,8 +407,5 @@ func (anyV *AnyValue) TryGetBoolValue() bool {
 		return true
 	}
 	sv := anyV.GetStringValue()
-	if sv == "true" {
-		return true
-	}
-	return false
+	return sv == "true"
 }

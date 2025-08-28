@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
@@ -26,7 +28,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
-	"golang.org/x/sync/errgroup"
 )
 
 type ListSpansReq struct {
@@ -400,6 +401,9 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 		DescByStartTime: req.DescByStartTime,
 		PageToken:       req.PageToken,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	spans := tRes.Spans
 	processors, err := r.buildHelper.BuildListSpansOApiProcessors(ctx, span_processor.Settings{

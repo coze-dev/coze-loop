@@ -194,8 +194,7 @@ func (e *ExptMangerImpl) fixTargetConf(expt *entity.Experiment) {
 }
 
 func (e *ExptMangerImpl) checkEvaluatorsConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt.Evaluators == nil ||
-		len(expt.Evaluators) == 0 {
+	if len(expt.Evaluators) == 0 {
 		return nil
 	}
 	connectorConf := expt.EvalConf.ConnectorConf

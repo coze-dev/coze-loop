@@ -114,7 +114,8 @@ type TraceExportServiceImpl struct {
 }
 
 func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req *ExportTracesToDatasetRequest) (
-	*ExportTracesToDatasetResponse, error) {
+	*ExportTracesToDatasetResponse, error,
+) {
 	resp := &ExportTracesToDatasetResponse{}
 
 	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
@@ -159,7 +160,8 @@ func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req 
 }
 
 func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Context, req *ExportTracesToDatasetRequest) (
-	*PreviewExportTracesToDatasetResponse, error) {
+	*PreviewExportTracesToDatasetResponse, error,
+) {
 	resp := &PreviewExportTracesToDatasetResponse{}
 	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
 	if err != nil {
@@ -301,7 +303,8 @@ func (r *TraceExportServiceImpl) clearDataset(ctx context.Context, datasetID int
 }
 
 func (r *TraceExportServiceImpl) addToDataset(ctx context.Context, spans []*loop_span.Span, fieldMappings []entity.FieldMapping,
-	workspaceID int64, dataset *entity.Dataset) ([]*entity.DatasetItem, []entity.ItemErrorGroup, error) {
+	workspaceID int64, dataset *entity.Dataset,
+) ([]*entity.DatasetItem, []entity.ItemErrorGroup, error) {
 	successItems, failedItems, _ := r.buildDatasetItems(ctx, spans, fieldMappings, workspaceID, dataset)
 	logs.CtxInfo(ctx, "Build dataset items success, success count:%v, failed count:%v", len(successItems), len(failedItems))
 
@@ -388,7 +391,8 @@ func (r *TraceExportServiceImpl) addSpanAnnotations(ctx context.Context, spans [
 }
 
 func (r *TraceExportServiceImpl) buildDatasetItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []entity.FieldMapping,
-	workspaceID int64, dataset *entity.Dataset) (successItems, failedItems, allItems []*entity.DatasetItem) {
+	workspaceID int64, dataset *entity.Dataset,
+) (successItems, failedItems, allItems []*entity.DatasetItem) {
 	successItems = make([]*entity.DatasetItem, 0, len(spans))
 	failedItems = make([]*entity.DatasetItem, 0)
 	allItems = make([]*entity.DatasetItem, 0, len(spans))
@@ -406,7 +410,8 @@ func (r *TraceExportServiceImpl) buildDatasetItems(ctx context.Context, spans []
 }
 
 func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64,
-	dataset *entity.Dataset) *entity.DatasetItem {
+	dataset *entity.Dataset,
+) *entity.DatasetItem {
 	item := entity.NewDatasetItem(workspaceID, dataset.ID, span.SpanID)
 	for _, mapping := range fieldMappings {
 		value, err := span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)

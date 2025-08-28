@@ -342,10 +342,8 @@ type outputMsgFormat struct {
 	Reason string       `json:"reason"`
 }
 
-var (
-	// 优化后的正则表达式，支持 score 为 number 或 string 类型
-	jsonRe = regexp.MustCompile(`\{(?s:.*?"score"\s*:\s*(?:"([\d.]+)"|([\d.]+)).*?"reason"\s*:\s*"((?:[^"\\]|\\.)*)".*?)}`)
-)
+// 优化后的正则表达式，支持 score 为 number 或 string 类型
+var jsonRe = regexp.MustCompile(`\{(?s:.*?"score"\s*:\s*(?:"([\d.]+)"|([\d.]+)).*?"reason"\s*:\s*"((?:[^"\\]|\\.)*)".*?)}`)
 
 func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
 	content := gptr.Indirect(replyItem.Content)

@@ -39,6 +39,7 @@ func otelAnyValuePbToJson(src *v2.AnyValue) *AnyValue {
 	}
 	return innerAnyValue
 }
+
 func otelArrayValuePbToJson(src *v2.ArrayValue) *ArrayValue {
 	if src == nil {
 		return nil
@@ -50,6 +51,7 @@ func otelArrayValuePbToJson(src *v2.ArrayValue) *ArrayValue {
 	}
 	return innerArrayValue
 }
+
 func otelKeyValueListPbToJson(src *v2.KeyValueList) *KeyValueList {
 	if src == nil {
 		return nil

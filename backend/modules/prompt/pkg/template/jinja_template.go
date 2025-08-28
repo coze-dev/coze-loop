@@ -7,12 +7,13 @@ import (
 	"bytes"
 	"fmt"
 
-	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/nikolalohinski/gonja/v2"
 	"github.com/nikolalohinski/gonja/v2/exec"
 	"github.com/nikolalohinski/gonja/v2/nodes"
 	"github.com/nikolalohinski/gonja/v2/parser"
+
+	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func init() {
@@ -20,10 +21,10 @@ func init() {
 	nilParser := func(p *parser.Parser, args *parser.Parser) (nodes.ControlStructure, error) {
 		return nil, fmt.Errorf("invalid statement")
 	}
-	gonja.DefaultEnvironment.ControlStructures.Replace("include", nilParser)
-	gonja.DefaultEnvironment.ControlStructures.Replace("extends", nilParser)
-	gonja.DefaultEnvironment.ControlStructures.Replace("import", nilParser)
-	gonja.DefaultEnvironment.ControlStructures.Replace("from", nilParser)
+	_ = gonja.DefaultEnvironment.ControlStructures.Replace("include", nilParser)
+	_ = gonja.DefaultEnvironment.ControlStructures.Replace("extends", nilParser)
+	_ = gonja.DefaultEnvironment.ControlStructures.Replace("import", nilParser)
+	_ = gonja.DefaultEnvironment.ControlStructures.Replace("from", nilParser)
 }
 
 func InterpolateJinja2(templateStr string, variables map[string]any) (string, error) {

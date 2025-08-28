@@ -21,15 +21,11 @@ type IDatasetProvider interface {
 	ValidateDatasetItems(ctx context.Context, dataset *entity.Dataset, items []*entity.DatasetItem, ignoreCurrentCount *bool) ([]*entity.DatasetItem, []entity.ItemErrorGroup, error)
 }
 
-var (
-	NoopDatasetProvider = &noopDatasetProvider{}
-)
+var NoopDatasetProvider = &noopDatasetProvider{}
 
 type noopDatasetProvider struct{}
 
-var (
-	_ IDatasetProvider = (*noopDatasetProvider)(nil)
-)
+var _ IDatasetProvider = (*noopDatasetProvider)(nil)
 
 func (d *noopDatasetProvider) CreateDataset(ctx context.Context, dataset *entity.Dataset) (int64, error) {
 	return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("dataset category is invalid"))

@@ -28,9 +28,7 @@ type EvaluationSetProvider struct {
 	datasetProvider *dataset.DatasetProvider
 }
 
-var (
-	_ rpc.IDatasetProvider = (*EvaluationSetProvider)(nil)
-)
+var _ rpc.IDatasetProvider = (*EvaluationSetProvider)(nil)
 
 func NewEvaluationSetProvider(client evaluationsetservice.Client, datasetProvider *dataset.DatasetProvider) *EvaluationSetProvider {
 	return &EvaluationSetProvider{client: client, datasetProvider: datasetProvider}
@@ -383,6 +381,7 @@ func fieldSchemaDTO2DO(fs *eval_set_domain.FieldSchema) entity.FieldSchema {
 
 	return fieldSchema
 }
+
 func convertContentDO2DTO(content *entity.Content) *common.Content {
 	var result *common.Content
 	if content == nil {

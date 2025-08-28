@@ -37,7 +37,7 @@ func TagDTO2DO(tagInfo *tag.TagInfo) *entity.TagInfo {
 		InActive:       ptr.From(tagInfo.Status) != "active",
 		TagValues:      TagValueListDTO2DO(tagInfo.TagValues),
 		TagContentType: entity.TagContentType(ptr.From(tagInfo.ContentType)),
-		TagStatus:      entity.TagStatus(ptr.From(tagInfo.Status)),
+		TagStatus:      ptr.From(tagInfo.Status),
 	}
 
 	if tagInfo.ContentSpec != nil && tagInfo.ContentSpec.ContinuousNumberSpec != nil {

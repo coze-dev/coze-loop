@@ -192,7 +192,6 @@ func (e ExptAnnotateServiceImpl) SaveAnnotateRecord(ctx context.Context, exptID 
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}

@@ -80,7 +80,6 @@ func (e exptResultExportRecordDAO) List(ctx context.Context, spaceID, exptID int
 func (e exptResultExportRecordDAO) Get(ctx context.Context, spaceID, exportID int64, opts ...db.Option) (*model.ExptResultExportRecord, error) {
 	record := &model.ExptResultExportRecord{}
 	err := e.db.NewSession(ctx, opts...).Where("space_id = ?", spaceID).Where("id = ?", exportID).First(record).Error
-
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errorx.WrapByCode(err, errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("ExptResultExportRecord %d not found", exportID)))

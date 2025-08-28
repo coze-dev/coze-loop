@@ -2617,7 +2617,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			},
 			setup: func() {
 				defaultSetup()
-				
+
 				// 设置实验信息
 				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{3}, int64(100)).Return([]*entity.Experiment{{
 					ID:               3,
@@ -2626,7 +2626,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
-				
+
 				// 模拟获取所有item的调用
 				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(3), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
 					{
@@ -2642,7 +2642,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 						Status: 1,
 					},
 				}, int64(2), nil).Times(1)
-				
+
 				// 设置过滤器查询
 				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "3", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
 					{
@@ -2678,7 +2678,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 						EvalSetVersionID:        1,
 					},
 				}, nil).AnyTimes()
-				
+
 				// 设置TurnResult查询
 				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(3), []int64{10, 20}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
 					{
@@ -2696,7 +2696,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 						Status: 1,
 					},
 				}, int64(2), nil).AnyTimes()
-				
+
 				// 验证指标上报
 				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 			},
@@ -2715,6 +2715,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		})
 	}
 }
+
 func TestExptResultServiceImpl_ListTurnResult(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

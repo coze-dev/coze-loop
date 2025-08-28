@@ -2115,13 +2115,12 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 
 func TestTraceServiceImpl_GetTrace(t *testing.T) {
 	type fields struct {
-		traceRepo          repo.ITraceRepo
-		traceConfig        config.ITraceConfig
-		traceProducer      mq.ITraceProducer
-		annotationProducer mq.IAnnotationProducer
-		metrics            metrics.ITraceMetrics
-		buildHelper        TraceFilterProcessorBuilder
-		tenantProvider     tenant.ITenantProvider
+		traceRepo      repo.ITraceRepo
+		traceConfig    config.ITraceConfig
+		traceProducer  mq.ITraceProducer
+		metrics        metrics.ITraceMetrics
+		buildHelper    TraceFilterProcessorBuilder
+		tenantProvider tenant.ITenantProvider
 	}
 	type args struct {
 		ctx context.Context
