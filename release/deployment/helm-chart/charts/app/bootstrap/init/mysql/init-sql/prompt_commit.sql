@@ -21,5 +21,5 @@ CREATE TABLE IF NOT EXISTS `prompt_commit`
     UNIQUE KEY `uniq_prompt_id_version` (`prompt_id`, `version`),
     KEY `idx_prompt_key_version` (`prompt_key`, `version`) USING BTREE
 ) ENGINE = InnoDB
-DEFAULT CHARSET = utf8mb4
-COLLATE = utf8mb4_general_ci COMMENT ='Commit表';
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='Commit表';

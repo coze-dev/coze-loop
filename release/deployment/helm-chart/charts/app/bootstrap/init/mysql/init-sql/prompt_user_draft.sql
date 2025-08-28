@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS `prompt_user_draft`
     UNIQUE KEY `uniq_prompt_id_user_id_deleted_at` (`prompt_id`, `user_id`, `deleted_at`),
     KEY `idx_prompt_id_user_id` (`prompt_id`, `user_id`)
 ) ENGINE = InnoDB
-DEFAULT CHARSET = utf8mb4
-COLLATE = utf8mb4_general_ci COMMENT ='Draft表';
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='Draft表';
