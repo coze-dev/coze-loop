@@ -1,8 +1,6 @@
 module github.com/coze-dev/coze-loop/backend
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.24.4
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
@@ -62,6 +60,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/modern-go/reflect2 v1.0.2
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
+	github.com/nikolalohinski/gonja/v2 v2.4.0
 	github.com/ohler55/ojg v1.26.8
 	github.com/ollama/ollama v0.10.1
 	github.com/panjf2000/ants/v2 v2.11.3
@@ -79,6 +78,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/volcengine/volcengine-go-sdk v1.1.4
 	github.com/xeipuuv/gojsonschema v1.2.0
+	go.opentelemetry.io/proto/otlp v1.0.0
 	go.uber.org/mock v0.4.0
 	golang.org/x/crypto v0.39.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
@@ -95,7 +95,10 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/apaxa-go/helper v0.0.0-20180607175117-61d31b1c31c3 // indirect
+require (
+	github.com/apaxa-go/helper v0.0.0-20180607175117-61d31b1c31c3
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+)
 
 require (
 	cloud.google.com/go v0.116.0 // indirect
@@ -155,7 +158,7 @@ require (
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-kit/kit v0.12.1-0.20220826005032-a7ba4fa4e289 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
@@ -166,7 +169,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
+	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
@@ -232,9 +235,9 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.54.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
-	go.opentelemetry.io/otel v1.35.0 // indirect
-	go.opentelemetry.io/otel/metric v1.35.0 // indirect
-	go.opentelemetry.io/otel/trace v1.35.0 // indirect
+	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel/metric v1.37.0 // indirect
+	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
@@ -248,7 +251,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 	google.golang.org/grpc v1.67.3 // indirect
-	google.golang.org/protobuf v1.36.1 // indirect
+	google.golang.org/protobuf v1.36.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/src-d/go-errors.v1 v1.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
