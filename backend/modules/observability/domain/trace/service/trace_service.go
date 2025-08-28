@@ -153,6 +153,19 @@ type ListAnnotationsResp struct {
 	Annotations loop_span.AnnotationList
 }
 
+type ChangeEvaluatorScoreRequest struct {
+}
+type ChangeEvaluatorScoreResp struct {
+}
+type ListAnnotationEvaluatorsRequest struct {
+}
+type ListAnnotationEvaluatorsResp struct {
+}
+type ExtractSpanInfoRequest struct {
+}
+type ExtractSpanInfoResp struct {
+}
+
 type IAnnotationEvent interface {
 	Send(ctx context.Context, msg *entity.AnnotationEvent) error
 }
@@ -171,6 +184,9 @@ type ITraceService interface {
 	UpdateManualAnnotation(ctx context.Context, req *UpdateManualAnnotationReq) error
 	DeleteManualAnnotation(ctx context.Context, req *DeleteManualAnnotationReq) error
 	IAnnotationEvent
+	ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error)
+	ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error)
+	ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error)
 }
 
 func NewTraceServiceImpl(
@@ -842,6 +858,16 @@ func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.Pl
 		logs.CtxError(ctx, "tenant not found for platform %s", platform)
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("tenant not found for the platform"))
 	}
+}
+
+func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error) {
+	return nil, nil
+}
+func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
+	return nil, nil
+}
+func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error) {
+	return nil, nil
 }
 
 func processSpecificFilter(f *loop_span.FilterField) error {

@@ -83,6 +83,11 @@ var (
 		auth.NewAuthProvider,
 		traceDomainSet,
 	)
+	taskSet = wire.NewSet(
+		NewTaskApplication,
+		auth.NewAuthProvider,
+		traceDomainSet,
+	)
 )
 
 func NewTraceQueryProcessorBuilder(

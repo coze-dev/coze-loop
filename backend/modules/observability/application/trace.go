@@ -744,7 +744,31 @@ func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId i
 }
 
 func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) (*trace.ChangeEvaluatorScoreResponse, error) {
+	if err := t.validateChangeEvaluatorScoreReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskCreate,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
+}
+
+func (t *TraceApplication) validateChangeEvaluatorScoreReq(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.GetEvaluatorRecordID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid evaluator_record_id"))
+	} else if req.GetStartTime() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid start_time"))
+	} else if req.GetCorrection() == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid correction"))
+	}
+	return nil
 }
 func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest) (*trace.ListAnnotationEvaluatorsResponse, error) {
 	return nil, nil
