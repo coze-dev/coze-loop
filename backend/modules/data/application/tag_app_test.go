@@ -126,7 +126,6 @@ func TestTagApplicationImpl_UpdateTag(t *testing.T) {
 					TagType: entity.TagTypeTag,
 				}, nil)
 				tagSvc.EXPECT().UpdateTag(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("123"))
-
 			},
 			req:     &tag.UpdateTagRequest{},
 			wantErr: true,
