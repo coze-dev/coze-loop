@@ -105,6 +105,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ExportTracesToDataset": kitex.NewMethodInfo(
+		exportTracesToDatasetHandler,
+		newTraceServiceExportTracesToDatasetArgs,
+		newTraceServiceExportTracesToDatasetResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"PreviewExportTracesToDataset": kitex.NewMethodInfo(
+		previewExportTracesToDatasetHandler,
+		newTraceServicePreviewExportTracesToDatasetArgs,
+		newTraceServicePreviewExportTracesToDatasetResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ChangeEvaluatorScore": kitex.NewMethodInfo(
 		changeEvaluatorScoreHandler,
 		newTraceServiceChangeEvaluatorScoreArgs,
@@ -406,6 +420,44 @@ func newTraceServiceListAnnotationsResult() interface{} {
 	return trace.NewTraceServiceListAnnotationsResult()
 }
 
+func exportTracesToDatasetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceExportTracesToDatasetArgs)
+	realResult := result.(*trace.TraceServiceExportTracesToDatasetResult)
+	success, err := handler.(trace.TraceService).ExportTracesToDataset(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceExportTracesToDatasetArgs() interface{} {
+	return trace.NewTraceServiceExportTracesToDatasetArgs()
+}
+
+func newTraceServiceExportTracesToDatasetResult() interface{} {
+	return trace.NewTraceServiceExportTracesToDatasetResult()
+}
+
+func previewExportTracesToDatasetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServicePreviewExportTracesToDatasetArgs)
+	realResult := result.(*trace.TraceServicePreviewExportTracesToDatasetResult)
+	success, err := handler.(trace.TraceService).PreviewExportTracesToDataset(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServicePreviewExportTracesToDatasetArgs() interface{} {
+	return trace.NewTraceServicePreviewExportTracesToDatasetArgs()
+}
+
+func newTraceServicePreviewExportTracesToDatasetResult() interface{} {
+	return trace.NewTraceServicePreviewExportTracesToDatasetResult()
+}
+
 func changeEvaluatorScoreHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*trace.TraceServiceChangeEvaluatorScoreArgs)
 	realResult := result.(*trace.TraceServiceChangeEvaluatorScoreResult)
@@ -600,6 +652,26 @@ func (p *kClient) ListAnnotations(ctx context.Context, req *trace.ListAnnotation
 	_args.Req = req
 	var _result trace.TraceServiceListAnnotationsResult
 	if err = p.c.Call(ctx, "ListAnnotations", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest) (r *trace.ExportTracesToDatasetResponse, err error) {
+	var _args trace.TraceServiceExportTracesToDatasetArgs
+	_args.Req = req
+	var _result trace.TraceServiceExportTracesToDatasetResult
+	if err = p.c.Call(ctx, "ExportTracesToDataset", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest) (r *trace.PreviewExportTracesToDatasetResponse, err error) {
+	var _args trace.TraceServicePreviewExportTracesToDatasetArgs
+	_args.Req = req
+	var _result trace.TraceServicePreviewExportTracesToDatasetResult
+	if err = p.c.Call(ctx, "PreviewExportTracesToDataset", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

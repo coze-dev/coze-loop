@@ -270,8 +270,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
+					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
+					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
 				}
 			}

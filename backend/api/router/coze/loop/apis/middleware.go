@@ -1162,3 +1162,13 @@ func _extractspaninfoMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _exporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _previewexporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

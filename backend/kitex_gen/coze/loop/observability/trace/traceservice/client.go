@@ -24,6 +24,8 @@ type Client interface {
 	UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.UpdateManualAnnotationResponse, err error)
 	DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.DeleteManualAnnotationResponse, err error)
 	ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error)
+	ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.ExportTracesToDatasetResponse, err error)
+	PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.PreviewExportTracesToDatasetResponse, err error)
 	ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error)
 	ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationEvaluatorsResponse, err error)
 	ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest, callOptions ...callopt.Option) (r *trace.ExtractSpanInfoResponse, err error)
@@ -121,6 +123,16 @@ func (p *kTraceServiceClient) DeleteManualAnnotation(ctx context.Context, req *t
 func (p *kTraceServiceClient) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListAnnotations(ctx, req)
+}
+
+func (p *kTraceServiceClient) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.ExportTracesToDatasetResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ExportTracesToDataset(ctx, req)
+}
+
+func (p *kTraceServiceClient) PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.PreviewExportTracesToDatasetResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.PreviewExportTracesToDataset(ctx, req)
 }
 
 func (p *kTraceServiceClient) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error) {
