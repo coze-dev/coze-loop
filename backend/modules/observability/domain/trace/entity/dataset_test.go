@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package entity
@@ -7,9 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDataset(t *testing.T) {
@@ -534,7 +534,7 @@ func TestContent_GetMultiPart(t *testing.T) {
 
 func TestGetContentInfo(t *testing.T) {
 	ctx := context.Background()
-	
+
 	type args struct {
 		ctx         context.Context
 		contentType ContentType

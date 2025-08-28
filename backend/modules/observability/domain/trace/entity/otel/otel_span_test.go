@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package otel
@@ -52,7 +52,7 @@ func TestResourceScopeSpan_JSONMarshalUnmarshal(t *testing.T) {
 				Resource: &Resource{
 					Attributes: []*KeyValue{
 						{
-							Key:   "service.name",
+							Key: "service.name",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
@@ -113,7 +113,7 @@ func TestResourceScopeSpan_JSONMarshalUnmarshal(t *testing.T) {
 					EndTimeUnixNano:   "2000000000",
 					Attributes: []*KeyValue{
 						{
-							Key:   "test.key",
+							Key: "test.key",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
@@ -181,12 +181,12 @@ func TestResourceScopeSpan_JSONMarshalUnmarshal(t *testing.T) {
 				Resource: &Resource{
 					Attributes: []*KeyValue{
 						{
-							Key:   "service.name",
+							Key: "service.name",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
 						{
-							Key:   "service.version",
+							Key: "service.version",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
@@ -197,7 +197,7 @@ func TestResourceScopeSpan_JSONMarshalUnmarshal(t *testing.T) {
 					Version: "1.0.0",
 					Attributes: []*KeyValue{
 						{
-							Key:   "scope.key",
+							Key: "scope.key",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
@@ -212,12 +212,12 @@ func TestResourceScopeSpan_JSONMarshalUnmarshal(t *testing.T) {
 					EndTimeUnixNano:   "4000000000",
 					Attributes: []*KeyValue{
 						{
-							Key:   "span.key",
+							Key: "span.key",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
 						{
-							Key:   "span.number",
+							Key: "span.number",
 							// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 							Value: &AnyValue{Value: nil},
 						},
@@ -228,7 +228,7 @@ func TestResourceScopeSpan_JSONMarshalUnmarshal(t *testing.T) {
 							TimeUnixNano: "5000000000",
 							Attributes: []*KeyValue{
 								{
-									Key:   "event.key",
+									Key: "event.key",
 									// After JSON marshal/unmarshal, the Value field becomes an empty AnyValue with nil interface
 									Value: &AnyValue{Value: nil},
 								},

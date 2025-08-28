@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package evaluationset
@@ -10,12 +10,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	dataset_domain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	eval_set_domain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
-	"github.com/bytedance/gg/gptr"
 	"github.com/samber/lo"
 )
 
@@ -356,7 +356,7 @@ func TestDatasetItemsDO2DTO(t *testing.T) {
 		items := createTestDatasetItems(2)
 		got := datasetItemsDO2DTO(items)
 		assert.Equal(t, 2, len(got))
-		
+
 		// Verify structure for non-empty results
 		for _, item := range got {
 			assert.NotNil(t, item)

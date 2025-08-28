@@ -1,10 +1,11 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0					TraceFieldJsonpath: "$.output",
 package trace
 
 import (
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	eval_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
@@ -12,7 +13,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,8 +90,8 @@ func TestExportRequestDTO2DO(t *testing.T) {
 							ContentType: gptr.Of(eval_common.ContentTypeText),
 							TextSchema:  gptr.Of("text schema"),
 						},
-					TraceFieldKey:      "trace_input",
-					TraceFieldJsonpath: "$.input",
+						TraceFieldKey:      "trace_input",
+						TraceFieldJsonpath: "$.input",
 					},
 				},
 			},
@@ -452,18 +452,18 @@ func TestConvertDatasetSchemaDTO2DO(t *testing.T) {
 			name: "schema with multiple fields",
 			schema: &dataset0.DatasetSchema{
 				FieldSchemas: []*dataset0.FieldSchema{
-											{
-							Key:         gptr.Of("input"),
-							Name:        gptr.Of("Input"),
-							Description: gptr.Of("Input field"),
-							ContentType: gptr.Of(eval_common.ContentTypeText),
-							TextSchema:  gptr.Of("text schema"),
-						},
-						{
-							Key:         gptr.Of("output"),
-							Name:        gptr.Of("Output"),
-							ContentType: gptr.Of(eval_common.ContentTypeImage),
-						},
+					{
+						Key:         gptr.Of("input"),
+						Name:        gptr.Of("Input"),
+						Description: gptr.Of("Input field"),
+						ContentType: gptr.Of(eval_common.ContentTypeText),
+						TextSchema:  gptr.Of("text schema"),
+					},
+					{
+						Key:         gptr.Of("output"),
+						Name:        gptr.Of("Output"),
+						ContentType: gptr.Of(eval_common.ContentTypeImage),
+					},
 				},
 			},
 			want: entity.DatasetSchema{
@@ -522,7 +522,7 @@ func TestConvertFieldMappingsDTO2DO(t *testing.T) {
 						ContentType: gptr.Of(eval_common.ContentTypeText),
 						TextSchema:  gptr.Of("text schema"),
 					},
-					TraceFieldKey: "trace_input",
+					TraceFieldKey:      "trace_input",
 					TraceFieldJsonpath: "$.input",
 				},
 			},

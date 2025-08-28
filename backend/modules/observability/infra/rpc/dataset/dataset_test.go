@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0			Type:       int64(dataset_domain.ItemErrorType_MismatchSchema),
 package dataset
 
@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
 	dataset_domain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset/mocks"
-	"github.com/bytedance/gg/gptr"
 )
 
 //go:generate mockgen -source=dataset.go -destination=mocks/mock_dataset.go
@@ -115,13 +115,13 @@ func TestDatasetProvider_ValidateDatasetItems(t *testing.T) {
 		ignoreCurrentCount *bool
 	}
 	tests := []struct {
-		name              string
-		fields            func(ctrl *gomock.Controller) fields
-		args              args
-		wantValidItems    int
-		wantErrorGroups   int
-		wantErr           bool
-		wantErrContains   string
+		name            string
+		fields          func(ctrl *gomock.Controller) fields
+		args            args
+		wantValidItems  int
+		wantErrorGroups int
+		wantErr         bool
+		wantErrContains string
 	}{
 		{
 			name: "validate dataset items successfully",
@@ -130,7 +130,7 @@ func TestDatasetProvider_ValidateDatasetItems(t *testing.T) {
 				mockClient.EXPECT().ValidateDatasetItems(gomock.Any(), gomock.Any()).
 					Return(&dataset.ValidateDatasetItemsResp{
 						ValidItemIndices: []int32{0, 1},
-						Errors:          []*dataset_domain.ItemErrorGroup{},
+						Errors:           []*dataset_domain.ItemErrorGroup{},
 					}, nil)
 				return fields{client: mockClient}
 			},
@@ -168,7 +168,7 @@ func TestDatasetProvider_ValidateDatasetItems(t *testing.T) {
 				mockClient.EXPECT().ValidateDatasetItems(gomock.Any(), gomock.Any()).
 					Return(&dataset.ValidateDatasetItemsResp{
 						ValidItemIndices: []int32{1},
-						Errors:          createTestItemErrorGroups(),
+						Errors:           createTestItemErrorGroups(),
 					}, nil)
 				return fields{client: mockClient}
 			},
@@ -196,10 +196,10 @@ func TestDatasetProvider_ValidateDatasetItems(t *testing.T) {
 				items:              createTestDatasetItems(1),
 				ignoreCurrentCount: gptr.Of(false),
 			},
-			wantValidItems:    0,
-			wantErrorGroups:   0,
-			wantErr:           true,
-			wantErrContains:   "RPC call failed",
+			wantValidItems:  0,
+			wantErrorGroups: 0,
+			wantErr:         true,
+			wantErrContains: "RPC call failed",
 		},
 		{
 			name: "validate with invalid indices",
@@ -265,7 +265,7 @@ func TestDatasetProvider_ValidateDatasetItems(t *testing.T) {
 
 func TestDatasetItemsDO2DTO(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		items []*entity.DatasetItem
 		want  []*dataset_domain.DatasetItem
 	}{
@@ -288,18 +288,18 @@ func TestDatasetItemsDO2DTO(t *testing.T) {
 					SpaceID:   gptr.Of(int64(100)),
 					DatasetID: gptr.Of(int64(1)),
 					ItemKey:   gptr.Of("item-0"),
-									Data: []*dataset_domain.FieldData{
-					{
-						Key:     gptr.Of("input"),
-						Name:    gptr.Of("Input"),
-						Content: gptr.Of(`{"ContentType":"Text","Text":"test input 0","Image":null,"MultiPart":null}`),
+					Data: []*dataset_domain.FieldData{
+						{
+							Key:     gptr.Of("input"),
+							Name:    gptr.Of("Input"),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test input 0","Image":null,"MultiPart":null}`),
+						},
+						{
+							Key:     gptr.Of("output"),
+							Name:    gptr.Of("Output"),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test output 0","Image":null,"MultiPart":null}`),
+						},
 					},
-					{
-						Key:     gptr.Of("output"),
-						Name:    gptr.Of("Output"),
-						Content: gptr.Of(`{"ContentType":"Text","Text":"test output 0","Image":null,"MultiPart":null}`),
-					},
-				},
 				},
 				{
 					ID:        gptr.Of(int64(2)),
@@ -307,16 +307,16 @@ func TestDatasetItemsDO2DTO(t *testing.T) {
 					DatasetID: gptr.Of(int64(1)),
 					ItemKey:   gptr.Of("item-1"),
 					Data: []*dataset_domain.FieldData{
-											{
-						Key:     gptr.Of("input"),
-						Name:    gptr.Of("Input"),
-						Content: gptr.Of(`{"ContentType":"Text","Text":"test input 1","Image":null,"MultiPart":null}`),
-					},
-					{
-						Key:     gptr.Of("output"),
-						Name:    gptr.Of("Output"),
-						Content: gptr.Of(`{"ContentType":"Text","Text":"test output 1","Image":null,"MultiPart":null}`),
-					},
+						{
+							Key:     gptr.Of("input"),
+							Name:    gptr.Of("Input"),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test input 1","Image":null,"MultiPart":null}`),
+						},
+						{
+							Key:     gptr.Of("output"),
+							Name:    gptr.Of("Output"),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test output 1","Image":null,"MultiPart":null}`),
+						},
 					},
 				},
 			},
@@ -483,11 +483,11 @@ func TestFieldDataDO2DTO(t *testing.T) {
 					},
 				},
 			},
-							want: &dataset_domain.FieldData{
-					Key:     gptr.Of("multipart-key"),
-					Name:    gptr.Of("MultiPart Content"),
-					Content: gptr.Of(`{"ContentType":"MultiPart","Text":"","Image":null,"MultiPart":[{"ContentType":"Text","Text":"part1","Image":null,"MultiPart":null},{"ContentType":"Image","Text":"","Image":{"Name":"","Url":"http://example.com/image.jpg"},"MultiPart":null}]}`),
-				},
+			want: &dataset_domain.FieldData{
+				Key:     gptr.Of("multipart-key"),
+				Name:    gptr.Of("MultiPart Content"),
+				Content: gptr.Of(`{"ContentType":"MultiPart","Text":"","Image":null,"MultiPart":[{"ContentType":"Text","Text":"part1","Image":null,"MultiPart":null},{"ContentType":"Image","Text":"","Image":{"Name":"","Url":"http://example.com/image.jpg"},"MultiPart":null}]}`),
+			},
 		},
 	}
 
