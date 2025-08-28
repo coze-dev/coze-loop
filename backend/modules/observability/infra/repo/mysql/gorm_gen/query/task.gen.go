@@ -27,16 +27,47 @@ func newObservabilityTask(db *gorm.DB, opts ...gen.DOOption) observabilityTask {
 
 	tableName := _observabilityTask.observabilityTaskDo.TableName()
 	_observabilityTask.ALL = field.NewAsterisk(tableName)
+	_observabilityTask.ID = field.NewInt64(tableName, "id")
+	_observabilityTask.WorkspaceID = field.NewInt64(tableName, "workspace_id")
+	_observabilityTask.Name = field.NewString(tableName, "name")
+	_observabilityTask.Description = field.NewString(tableName, "description")
+	_observabilityTask.TaskType = field.NewString(tableName, "task_type")
+	_observabilityTask.TaskStatus = field.NewString(tableName, "task_status")
+	_observabilityTask.TaskDetail = field.NewString(tableName, "task_detail")
+	_observabilityTask.SpanFilter = field.NewString(tableName, "span_filter")
+	_observabilityTask.EffectiveTime = field.NewString(tableName, "effective_time")
+	_observabilityTask.Sampler = field.NewString(tableName, "sampler")
+	_observabilityTask.TaskConfig = field.NewString(tableName, "task_config")
+	_observabilityTask.CreatedAt = field.NewTime(tableName, "created_at")
+	_observabilityTask.UpdatedAt = field.NewTime(tableName, "updated_at")
+	_observabilityTask.CreatedBy = field.NewString(tableName, "created_by")
+	_observabilityTask.UpdatedBy = field.NewString(tableName, "updated_by")
 
 	_observabilityTask.fillFieldMap()
 
 	return _observabilityTask
 }
 
+// observabilityTask 任务信息
 type observabilityTask struct {
 	observabilityTaskDo observabilityTaskDo
 
-	ALL field.Asterisk
+	ALL           field.Asterisk
+	ID            field.Int64  // Task ID
+	WorkspaceID   field.Int64  // 空间ID
+	Name          field.String // 任务名称
+	Description   field.String // 任务描述
+	TaskType      field.String // 任务类型
+	TaskStatus    field.String // 任务状态
+	TaskDetail    field.String // 任务运行状态详情
+	SpanFilter    field.String // span 过滤条件
+	EffectiveTime field.String // 生效时间
+	Sampler       field.String // 采样器
+	TaskConfig    field.String // 相关任务的配置信息
+	CreatedAt     field.Time   // 创建时间
+	UpdatedAt     field.Time   // 更新时间
+	CreatedBy     field.String // 创建人
+	UpdatedBy     field.String // 更新人
 
 	fieldMap map[string]field.Expr
 }
@@ -53,6 +84,21 @@ func (o observabilityTask) As(alias string) *observabilityTask {
 
 func (o *observabilityTask) updateTableName(table string) *observabilityTask {
 	o.ALL = field.NewAsterisk(table)
+	o.ID = field.NewInt64(table, "id")
+	o.WorkspaceID = field.NewInt64(table, "workspace_id")
+	o.Name = field.NewString(table, "name")
+	o.Description = field.NewString(table, "description")
+	o.TaskType = field.NewString(table, "task_type")
+	o.TaskStatus = field.NewString(table, "task_status")
+	o.TaskDetail = field.NewString(table, "task_detail")
+	o.SpanFilter = field.NewString(table, "span_filter")
+	o.EffectiveTime = field.NewString(table, "effective_time")
+	o.Sampler = field.NewString(table, "sampler")
+	o.TaskConfig = field.NewString(table, "task_config")
+	o.CreatedAt = field.NewTime(table, "created_at")
+	o.UpdatedAt = field.NewTime(table, "updated_at")
+	o.CreatedBy = field.NewString(table, "created_by")
+	o.UpdatedBy = field.NewString(table, "updated_by")
 
 	o.fillFieldMap()
 
@@ -81,7 +127,22 @@ func (o *observabilityTask) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (o *observabilityTask) fillFieldMap() {
-	o.fieldMap = make(map[string]field.Expr, 0)
+	o.fieldMap = make(map[string]field.Expr, 15)
+	o.fieldMap["id"] = o.ID
+	o.fieldMap["workspace_id"] = o.WorkspaceID
+	o.fieldMap["name"] = o.Name
+	o.fieldMap["description"] = o.Description
+	o.fieldMap["task_type"] = o.TaskType
+	o.fieldMap["task_status"] = o.TaskStatus
+	o.fieldMap["task_detail"] = o.TaskDetail
+	o.fieldMap["span_filter"] = o.SpanFilter
+	o.fieldMap["effective_time"] = o.EffectiveTime
+	o.fieldMap["sampler"] = o.Sampler
+	o.fieldMap["task_config"] = o.TaskConfig
+	o.fieldMap["created_at"] = o.CreatedAt
+	o.fieldMap["updated_at"] = o.UpdatedAt
+	o.fieldMap["created_by"] = o.CreatedBy
+	o.fieldMap["updated_by"] = o.UpdatedBy
 }
 
 func (o observabilityTask) clone(db *gorm.DB) observabilityTask {
