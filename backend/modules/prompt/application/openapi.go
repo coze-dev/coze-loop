@@ -5,17 +5,25 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
+	"github.com/coze-dev/cozeloop-go"
+	loopentity "github.com/coze-dev/cozeloop-go/entity"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"golang.org/x/exp/maps"
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
+	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
@@ -23,7 +31,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
 )
 
 func NewPromptOpenAPIApplication(
@@ -65,7 +76,7 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 	}()
 
 	// 限流检查
-	if !p.AllowBySpace(ctx, req.GetWorkspaceID()) {
+	if !p.promptHubAllowBySpace(ctx, req.GetWorkspaceID()) {
 		return r, errorx.NewByCode(prompterr.PromptHubQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 	}
 
@@ -210,7 +221,7 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 	return r, nil
 }
 
-func (p *PromptOpenAPIApplicationImpl) AllowBySpace(ctx context.Context, workspaceID int64) bool {
+func (p *PromptOpenAPIApplicationImpl) promptHubAllowBySpace(ctx context.Context, workspaceID int64) bool {
 	maxQPS, err := p.config.GetPromptHubMaxQPSBySpace(ctx, workspaceID)
 	if err != nil {
 		logs.CtxError(ctx, "get prompt hub max qps failed, err=%v, space_id=%d", err, workspaceID)
@@ -231,3 +242,348 @@ func (p *PromptOpenAPIApplicationImpl) AllowBySpace(ctx context.Context, workspa
 	}
 	return false
 }
+
+func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi.ExecuteRequest) (r *openapi.ExecuteResponse, err error) {
+	defer func() {
+		if err != nil {
+			logs.CtxError(ctx, "openapi execute prompt failed, err=%v", err)
+		}
+	}()
+	r = openapi.NewExecuteResponse()
+	if req.GetWorkspaceID() == 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	}
+	var span cozeloop.Span
+	ctx, span = p.startPromptExecutorSpan(ctx, ptaasStartPromptExecutorSpanParam{
+		workspaceID:      req.GetWorkspaceID(),
+		stream:           false,
+		reqPromptKey:     req.GetPromptIdentifier().GetPromptKey(),
+		reqPromptVersion: req.GetPromptIdentifier().GetVersion(),
+		reqPromptLabel:   req.GetPromptIdentifier().GetLabel(),
+		messages:         convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+		variableVals:     convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+	})
+	var promptDO *entity.Prompt
+	var reply *entity.Reply
+	defer func() {
+		p.finishPromptExecutorSpan(ctx, span, promptDO, reply, err)
+	}()
+
+	reply, err = p.doExecute(ctx, req)
+	if err != nil {
+		return r, err
+	}
+	// 构建返回结果
+	if reply != nil && reply.Item != nil {
+		r.Data = &openapi.ExecuteData{
+			Message:      convertor.OpenAPIMessageDO2DTO(reply.Item.Message),
+			FinishReason: &reply.Item.FinishReason,
+			Usage:        convertor.OpenAPITokenUsageDO2DTO(reply.Item.TokenUsage),
+		}
+	}
+
+	// 记录使用数据
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *openapi.ExecuteRequest) (reply *entity.Reply, err error) {
+	// 按prompt_key限流检查
+	if !p.ptaasAllowByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier().GetPromptKey()) {
+		return nil, errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
+
+	// 获取prompt并执行
+	promptDO, err := p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
+	if err != nil {
+		return nil, err
+	}
+
+	// 执行权限检查
+	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptDebug); err != nil {
+		return nil, err
+	}
+
+	// 执行prompt
+	reply, err = p.promptService.Execute(ctx, service.ExecuteParam{
+		Prompt:       promptDO,
+		Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+		VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+		SingleStep:   true,                   // PTaaS不支持非单步模式
+		Scenario:     entity.ScenarioDefault, // PTaaS场景
+	})
+	if err != nil {
+		return nil, err
+	}
+	return reply, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (err error) {
+	defer func() {
+		if err != nil {
+			logs.CtxError(ctx, "openapi execute streaming prompt failed, err=%v", err)
+		}
+	}()
+	if req.GetWorkspaceID() == 0 {
+		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
+		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	}
+	var span cozeloop.Span
+	ctx, span = p.startPromptExecutorSpan(ctx, ptaasStartPromptExecutorSpanParam{
+		workspaceID:      req.GetWorkspaceID(),
+		stream:           true,
+		reqPromptKey:     req.GetPromptIdentifier().GetPromptKey(),
+		reqPromptVersion: req.GetPromptIdentifier().GetVersion(),
+		reqPromptLabel:   req.GetPromptIdentifier().GetLabel(),
+		messages:         convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+		variableVals:     convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+	})
+	var promptDO *entity.Prompt
+	var aggregatedReply *entity.Reply
+	defer func() {
+		p.finishPromptExecutorSpan(ctx, span, promptDO, aggregatedReply, err)
+	}()
+	aggregatedReply, err = p.doExecuteStreaming(ctx, req, stream)
+	// 记录使用数据
+	return err
+}
+
+func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (aggregatedReply *entity.Reply, err error) {
+	// 按prompt_key限流检查
+	if !p.ptaasAllowByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier().GetPromptKey()) {
+		return nil, errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
+
+	// 获取prompt并执行
+	promptDO, err := p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
+	if err != nil {
+		return nil, err
+	}
+
+	// 执行权限检查
+	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptDebug); err != nil {
+		return nil, err
+	}
+
+	// 执行prompt流式调用
+	resultStream := make(chan *entity.Reply)
+	errChan := make(chan error)
+	go func() {
+		var executeErr error
+		defer func() {
+			e := recover()
+			if e != nil {
+				executeErr = errorx.New("panic occurred, reason=%v", e)
+			}
+			// 确保errChan和resultStream被关闭
+			close(resultStream)
+			if executeErr != nil {
+				errChan <- executeErr
+			}
+			close(errChan)
+		}()
+
+		aggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
+			ExecuteParam: service.ExecuteParam{
+				Prompt:       promptDO,
+				Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+				VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+				SingleStep:   true,                   // PTaaS不支持非单步模式
+				Scenario:     entity.ScenarioDefault, // PTaaS场景
+			},
+			ResultStream: resultStream,
+		})
+		if executeErr != nil {
+			return
+		}
+	}()
+	// send result
+	for reply := range resultStream {
+		if reply == nil || reply.Item == nil {
+			continue
+		}
+		chunk := &openapi.ExecuteStreamingResponse{
+			Data: &openapi.ExecuteStreamingData{
+				Message:      convertor.OpenAPIMessageDO2DTO(reply.Item.Message),
+				FinishReason: ptr.Of(reply.Item.FinishReason),
+				Usage:        convertor.OpenAPITokenUsageDO2DTO(reply.Item.TokenUsage),
+			},
+		}
+		err = stream.Send(ctx, chunk)
+		if err != nil {
+			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+				err = nil
+				logs.CtxWarn(ctx, "execute streaming canceled")
+			} else {
+				logs.CtxError(ctx, "send chunk failed, err=%v", err)
+			}
+			return nil, err
+		}
+	}
+	var ok bool
+	select { //nolint:staticcheck
+	case err, ok = <-errChan:
+		if !ok {
+			logs.CtxInfo(ctx, "execute streaming finished")
+		} else {
+			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+				err = nil
+				logs.CtxWarn(ctx, "execute streaming canceled")
+			} else {
+				logs.CtxError(ctx, "execute streaming failed, err=%v", err)
+			}
+		}
+		return aggregatedReply, err
+	}
+}
+
+// ptaasAllowByPromptKey 按prompt_key维度的限流检查
+func (p *PromptOpenAPIApplicationImpl) ptaasAllowByPromptKey(ctx context.Context, workspaceID int64, promptKey string) bool {
+	maxQPS, err := p.config.GetPTaaSMaxQPSByPromptKey(ctx, workspaceID, promptKey)
+	if err != nil {
+		logs.CtxError(ctx, "get ptaas max qps failed, err=%v, prompt_key=%s", err, promptKey)
+		return true
+	}
+	result, err := p.rateLimiter.AllowN(ctx, fmt.Sprintf("ptaas:qps:space_id:%d:prompt_key:%s", workspaceID, promptKey), 1,
+		limiter.WithLimit(&limiter.Limit{
+			Rate:   maxQPS,
+			Burst:  maxQPS,
+			Period: time.Second,
+		}))
+	if err != nil {
+		logs.CtxError(ctx, "allow rate limit failed, err=%v", err)
+		return true
+	}
+	if result == nil || result.Allowed {
+		return true
+	}
+	return false
+}
+
+// getPromptByPromptKey 根据prompt_key获取prompt
+func (p *PromptOpenAPIApplicationImpl) getPromptByPromptKey(ctx context.Context, spaceID int64, promptIdentifier *openapi.PromptQuery) (prompt *entity.Prompt, err error) {
+	if promptIdentifier == nil {
+		return nil, errors.New("prompt identifier is nil")
+	}
+	var span looptracer.Span
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptHub, tracespec.VPromptHubSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	if span != nil {
+		span.SetInput(ctx, json.Jsonify(map[string]any{
+			tracespec.PromptKey:     promptIdentifier.GetPromptKey(),
+			tracespec.PromptVersion: promptIdentifier.GetVersion(),
+			tracespec.PromptLabel:   promptIdentifier.GetLabel(),
+		}))
+		defer func() {
+			if prompt != nil {
+				span.SetPrompt(ctx, loopentity.Prompt{PromptKey: prompt.PromptKey, Version: prompt.GetVersion()})
+				span.SetOutput(ctx, json.Jsonify(trace.PromptToSpanPrompt(prompt)))
+			}
+			if err != nil {
+				span.SetStatusCode(ctx, int(traceutil.GetTraceStatusCode(err)))
+				span.SetError(ctx, errors.New(errorx.ErrorWithoutStack(err)))
+			}
+			span.Finish(ctx)
+		}()
+	}
+
+	// 根据prompt_key获取prompt_id
+	promptKeyIDMap, err := p.promptService.MGetPromptIDs(ctx, spaceID, []string{promptIdentifier.GetPromptKey()})
+	if err != nil {
+		return nil, err
+	}
+	promptID := promptKeyIDMap[promptIdentifier.GetPromptKey()]
+	// 解析具体的提交版本
+	queryParam := service.PromptQueryParam{
+		PromptID:  promptID,
+		PromptKey: promptIdentifier.GetPromptKey(),
+		Version:   promptIdentifier.GetVersion(),
+		Label:     promptIdentifier.GetLabel(),
+	}
+	promptKeyCommitVersionMap, err := p.promptService.MParseCommitVersion(ctx, spaceID, []service.PromptQueryParam{queryParam})
+	if err != nil {
+		return nil, err
+	}
+	commitVersion := promptKeyCommitVersionMap[queryParam]
+
+	// 根据prompt_id、version获取prompt DO
+	param := repo.GetPromptParam{
+		PromptID:      promptID,
+		WithCommit:    true,
+		CommitVersion: commitVersion,
+	}
+	promptDOs, err := p.promptManageRepo.MGetPrompt(ctx, []repo.GetPromptParam{param}, repo.WithPromptCacheEnable())
+	if err != nil {
+		if bizErr, ok := errorx.FromStatusError(err); ok && bizErr.Code() == prompterr.PromptVersionNotExistCode {
+			extra := bizErr.Extra()
+			extra["prompt_key"] = promptIdentifier.GetPromptKey()
+			bizErr.WithExtra(extra)
+		}
+	}
+
+	return promptDOs[param], nil
+}
+
+type ptaasStartPromptExecutorSpanParam struct {
+	workspaceID      int64
+	stream           bool
+	reqPromptKey     string
+	reqPromptVersion string
+	reqPromptLabel   string
+	messages         []*entity.Message
+	variableVals     []*entity.VariableVal
+}
+
+func (p *PromptOpenAPIApplicationImpl) startPromptExecutorSpan(ctx context.Context, param ptaasStartPromptExecutorSpanParam) (context.Context, cozeloop.Span) {
+	var span looptracer.Span
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptExecutor, consts.SpanTypePromptExecutor,
+		looptracer.WithSpanWorkspaceID(strconv.FormatInt(param.workspaceID, 10)))
+	if span != nil {
+		span.SetCallType(consts.SpanTagCallTypeEvaluation)
+		intput := map[string]any{
+			tracespec.PromptKey:           param.reqPromptKey,
+			tracespec.PromptVersion:       param.reqPromptVersion,
+			tracespec.PromptLabel:         param.reqPromptLabel,
+			consts.SpanTagPromptVariables: trace.VariableValsToSpanPromptVariables(param.variableVals),
+			consts.SpanTagMessages:        trace.MessagesToSpanMessages(param.messages),
+		}
+		span.SetInput(ctx, json.Jsonify(intput))
+		span.SetTags(ctx, map[string]any{
+			tracespec.Stream: param.stream,
+		})
+	}
+	return ctx, span
+}
+
+func (p *PromptOpenAPIApplicationImpl) finishPromptExecutorSpan(ctx context.Context, span cozeloop.Span, prompt *entity.Prompt, reply *entity.Reply, err error) {
+	if span == nil || prompt == nil {
+		return
+	}
+	var debugID int64
+	var replyItem *entity.ReplyItem
+	if reply != nil {
+		debugID = reply.DebugID
+		replyItem = reply.Item
+	}
+	var inputTokens, outputTokens int64
+	if replyItem != nil && replyItem.TokenUsage != nil {
+		inputTokens = replyItem.TokenUsage.InputTokens
+		outputTokens = replyItem.TokenUsage.OutputTokens
+	}
+	span.SetPrompt(ctx, loopentity.Prompt{PromptKey: prompt.PromptKey, Version: prompt.GetVersion()})
+	span.SetOutput(ctx, json.Jsonify(trace.ReplyItemToSpanOutput(replyItem)))
+	span.SetInputTokens(ctx, int(inputTokens))
+	span.SetOutputTokens(ctx, int(outputTokens))
+	span.SetTags(ctx, map[string]any{
+		consts.SpanTagDebugID: debugID,
+	})
+	if err != nil {
+		span.SetStatusCode(ctx, int(traceutil.GetTraceStatusCode(err)))
+		span.SetError(ctx, errors.New(errorx.ErrorWithoutStack(err)))
+	}
+	span.Finish(ctx)
+}
+

@@ -13,9 +13,8 @@ import (
 //go:generate mockgen -destination=mocks/config_provider.go -package=mocks . IConfigProvider
 type IConfigProvider interface {
 	GetPromptHubMaxQPSBySpace(ctx context.Context, spaceID int64) (maxQPS int, err error)
-
+	GetPTaaSMaxQPSByPromptKey(ctx context.Context, spaceID int64, promptKey string) (maxQPS int, err error)
 	GetPromptDefaultConfig(ctx context.Context) (config *prompt.PromptDetail, err error)
-
 	ListPresetLabels() (presetLabels []string, err error)
 	GetPromptLabelVersionCacheConfig(ctx context.Context) (enable bool, ttl time.Duration, err error)
 }
