@@ -255,6 +255,9 @@ func (t *TraceCkRepoImpl) InsertAnnotation(ctx context.Context, param *repo.Inse
 		Annotation: annotationPO,
 	})
 }
+func (t *TraceCkRepoImpl) UpsertAnnotation(ctx context.Context, param *repo.UpsertAnnotationParam) error {
+	return nil
+}
 
 type queryTableCfg struct {
 	SpanTables    []string

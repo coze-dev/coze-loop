@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -25,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
+	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -154,8 +157,16 @@ type ListAnnotationsResp struct {
 }
 
 type ChangeEvaluatorScoreRequest struct {
+	WorkspaceID       int64
+	EvaluatorRecordID int64
+	SpanID            string
+	TraceID           string
+	StartTime         int64
+	PlatformType      loop_span.PlatformType
+	Correction        *annotation.Correction
 }
 type ChangeEvaluatorScoreResp struct {
+	Annotation *annotation.Annotation
 }
 type ListAnnotationEvaluatorsRequest struct {
 }
@@ -196,6 +207,7 @@ func NewTraceServiceImpl(
 	annotationProducer mq.IAnnotationProducer,
 	metrics metrics.ITraceMetrics,
 	buildHelper TraceFilterProcessorBuilder,
+	evalServiceAdaptor rpc.IEvaluatorRPCAdapter,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
@@ -204,6 +216,7 @@ func NewTraceServiceImpl(
 		annotationProducer: annotationProducer,
 		buildHelper:        buildHelper,
 		metrics:            metrics,
+		evalServiceAdaptor: evalServiceAdaptor,
 	}, nil
 }
 
@@ -214,6 +227,7 @@ type TraceServiceImpl struct {
 	annotationProducer mq.IAnnotationProducer
 	metrics            metrics.ITraceMetrics
 	buildHelper        TraceFilterProcessorBuilder
+	evalServiceAdaptor rpc.IEvaluatorRPCAdapter
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -861,7 +875,86 @@ func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.Pl
 }
 
 func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error) {
-	return nil, nil
+	var resp *ChangeEvaluatorScoreResp
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return resp, err
+	}
+	span, err := r.getSpan(ctx,
+		tenants,
+		req.SpanID,
+		req.TraceID,
+		strconv.FormatInt(req.WorkspaceID, 10),
+		req.StartTime-time.Second.Milliseconds(),
+		req.StartTime+time.Second.Milliseconds(),
+	)
+	if err != nil {
+		return resp, err
+	} else if span == nil {
+		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.SpanID, req.TraceID)
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	var annotation *loop_span.Annotation
+	for _, anno := range span.Annotations {
+		meta := anno.GetAutoEvaluateMetadata()
+		if meta != nil && meta.EvaluatorRecordID == req.EvaluatorRecordID {
+			annotation = anno
+			break
+		}
+	}
+	if annotation == nil {
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation not found"))
+	}
+	updateBy := session.UserIDInCtxOrEmpty(ctx)
+	if updateBy == "" {
+		return resp, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	annotation.CorrectAutoEvaluateScore(req.Correction.GetScore(), req.Correction.GetExplain(), updateBy)
+	// 以评估数据为主数据，优先修改评估数据，异常则直接返回失败
+	if err = r.correctEvaluatorRecords(ctx, annotation); err != nil {
+		return resp, err
+	}
+	// 再同步修改观测数据
+	param := &repo.UpsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
+		IsSync:      true,
+	}
+	if err = r.traceRepo.UpsertAnnotation(ctx, param); err != nil {
+		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
+		// 如果同步修改失败，异步补偿
+		// todo 异步有问题，会重复
+		logs.CtxWarn(ctx, "Sync upsert annotation failed, try async upsert. span_id=[%v], recored_id=[%v], err:%v",
+			annotation.SpanID, recordID, err)
+		return resp, nil
+	}
+	resp.Annotation = annotation.ToFornaxAnnotation(ctx)
+	return resp, nil
+}
+
+func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, annotation *loop_span.Annotation) error {
+	if annotation == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation is nil"))
+	}
+	if annotation.GetAutoEvaluateMetadata() == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation auto evaluate metadata is nil"))
+	}
+	if len(annotation.Corrections) == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation corrections is empty"))
+	}
+	correction := annotation.Corrections[len(annotation.Corrections)-1]
+
+	if err := r.evalServiceAdaptor.UpdateEvaluatorRecord(ctx, &rpc.UpdateEvaluatorRecordParam{
+		WorkspaceID:       annotation.WorkspaceID,
+		EvaluatorRecordID: annotation.GetAutoEvaluateMetadata().EvaluatorRecordID,
+		Score:             correction.Value.FloatValue,
+		Reasoning:         correction.Reasoning,
+		UpdatedBy:         correction.UpdatedBy,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
 	return nil, nil

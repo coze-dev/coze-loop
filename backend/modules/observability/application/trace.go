@@ -753,7 +753,20 @@ func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.
 		return nil, err
 	}
 
-	return nil, nil
+	sResp, err := t.traceService.ChangeEvaluatorScore(ctx, &service.ChangeEvaluatorScoreRequest{
+		WorkspaceID:       req.WorkspaceID,
+		EvaluatorRecordID: req.EvaluatorRecordID,
+		SpanID:            req.SpanID,
+		StartTime:         req.StartTime,
+		Correction:        req.Correction,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.ChangeEvaluatorScoreResponse{
+		Annotation: sResp.Annotation,
+	}, nil
 }
 
 func (t *TraceApplication) validateChangeEvaluatorScoreReq(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) error {

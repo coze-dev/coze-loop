@@ -95,6 +95,8 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
+require github.com/apaxa-go/helper v0.0.0-20180607175117-61d31b1c31c3 // indirect
+
 require (
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/ai v0.8.0 // indirect
