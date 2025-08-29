@@ -345,6 +345,17 @@ func (e *EvaluatorServiceImpl) SubmitEvaluatorVersion(ctx context.Context, evalu
 	if err = evaluatorDO.ValidateBaseInfo(); err != nil {
 		return nil, err
 	}
+	
+	// 新增：获取evaluatorSourceService并执行验证
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
+	if ok {
+		// 只执行Validate，不调用PreHandle
+		err := evaluatorSourceService.Validate(ctx, evaluatorDO)
+		if err != nil {
+			return nil, err
+		}
+	}
+	
 	versionExist, err := e.evaluatorRepo.CheckVersionExist(ctx, evaluatorDO.ID, version)
 	if err != nil {
 		return nil, err
@@ -449,10 +460,17 @@ func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *
 	if !ok {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
+	// 1. 先执行PreHandle
 	err := evaluatorSourceService.PreHandle(ctx, evaluatorDO)
 	if err != nil {
 		return nil, err
 	}
+	// 2. 新增：执行Validate
+	err = evaluatorSourceService.Validate(ctx, evaluatorDO)
+	if err != nil {
+		return nil, err
+	}
+	// 3. 执行Debug
 	return evaluatorSourceService.Debug(ctx, evaluatorDO, inputData)
 }
 
