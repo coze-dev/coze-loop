@@ -67,6 +67,7 @@ func OpenAPIMessageDO2DTO(do *entity.Message) *openapi.Message {
 	return &openapi.Message{
 		Role:    ptr.Of(RoleDO2DTO(do.Role)),
 		Content: do.Content,
+		Parts:   OpenAPIBatchContentPartDO2DTO(do.Parts),
 	}
 }
 
@@ -148,5 +149,40 @@ func OpenAPIModelConfigDO2DTO(do *entity.ModelConfig) *openapi.LLMConfig {
 		PresencePenalty:  do.PresencePenalty,
 		FrequencyPenalty: do.FrequencyPenalty,
 		JSONMode:         do.JSONMode,
+	}
+}
+
+func OpenAPIBatchContentPartDO2DTO(dos []*entity.ContentPart) []*openapi.ContentPart {
+	if dos == nil {
+		return nil
+	}
+	parts := make([]*openapi.ContentPart, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		parts = append(parts, OpenAPIContentPartDO2DTO(do))
+	}
+	return parts
+}
+
+func OpenAPIContentPartDO2DTO(do *entity.ContentPart) *openapi.ContentPart {
+	if do == nil {
+		return nil
+	}
+	return &openapi.ContentPart{
+		Type: ptr.Of(OpenAPIContentTypeDO2DTO(do.Type)),
+		Text: do.Text,
+	}
+}
+
+func OpenAPIContentTypeDO2DTO(do entity.ContentType) openapi.ContentType {
+	switch do {
+	case entity.ContentTypeText:
+		return openapi.ContentTypeText
+	case entity.ContentTypeMultiPartVariable:
+		return openapi.ContentTypeMultiPartVariable
+	default:
+		return openapi.ContentTypeText
 	}
 }

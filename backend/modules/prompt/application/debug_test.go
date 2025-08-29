@@ -64,7 +64,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 				mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
 				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
-				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
 				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
 					for _, v := range mockContent {
 						param.ResultStream <- &entity.Reply{
@@ -125,7 +125,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 				mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
 				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
-				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
 				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
 					for _, v := range mockContent {
 						param.ResultStream <- &entity.Reply{
@@ -222,7 +222,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 				mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
 				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
-				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
 				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
 					panic("mock panic")
 				})

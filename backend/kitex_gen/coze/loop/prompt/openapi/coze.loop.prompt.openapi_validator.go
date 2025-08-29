@@ -88,6 +88,9 @@ func (p *ToolCallConfig) IsValid() error {
 func (p *Message) IsValid() error {
 	return nil
 }
+func (p *ContentPart) IsValid() error {
+	return nil
+}
 func (p *VariableDef) IsValid() error {
 	return nil
 }

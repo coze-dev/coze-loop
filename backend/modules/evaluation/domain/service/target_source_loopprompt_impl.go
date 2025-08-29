@@ -81,6 +81,7 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 			variable := &entity.VariableVal{
 				Key:                 gptr.Of(key),
 				Value:               content.Text,
+				Content:             content,
 				PlaceholderMessages: nil,
 			}
 			// placeholder
@@ -162,6 +163,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 		inputSchema = make([]*entity.ArgsSchema, 0)
 		for _, p := range prompt.PromptCommit.Detail.PromptTemplate.VariableDefs {
 			var jsonschema string
+			supportTypes := []entity.ContentType{entity.ContentTypeText}
 			switch gptr.Indirect(p.Type) {
 			case rpc.VariableTypeString:
 				jsonschema = consts.StringJsonSchema
@@ -183,12 +185,14 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 				jsonschema = consts.ArrayBooleanJsonSchema
 			case rpc.VariableTypeArrayObject:
 				jsonschema = consts.ArrayObjectJsonSchema
+			case rpc.VariableTypeMultiPart:
+				supportTypes = []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}
 			default:
 				jsonschema = consts.StringJsonSchema // 默认是string，例如placeholder，评测不严格规定placeholder的类型
 			}
 			inputSchema = append(inputSchema, &entity.ArgsSchema{
 				Key:                 p.Key,
-				SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
+				SupportContentTypes: supportTypes,
 				JsonSchema:          gptr.Of(jsonschema),
 			})
 		}
