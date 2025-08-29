@@ -8,8 +8,8 @@ import (
 	"errors"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -30,7 +30,7 @@ type ListTaskParam struct {
 	TaskFilters  *filter.TaskFilterFields
 	ReqLimit     int32
 	ReqOffset    int32
-	OrderBy      task.OrderType
+	OrderBy      common.OrderBy
 }
 
 //go:generate mockgen -destination=mocks/task.go -package=mocks . ITaskDao
@@ -138,11 +138,6 @@ func (v *TaskDaoImpl) ListTask(ctx context.Context, param ListTaskParam) ([]*mod
 
 	// 计算分页参数
 	limit, offset := calculatePagination(param.ReqLimit, param.ReqOffset)
-	if param.OrderBy == task.OrderType_Asc {
-		qd = qd.Order(q.CreatedAt.Asc())
-	} else {
-		qd = qd.Order(q.CreatedAt.Desc())
-	}
 	results, err := qd.Limit(limit).Offset(offset).Find()
 	if err != nil {
 		return nil, total, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)

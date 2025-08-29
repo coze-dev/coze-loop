@@ -99,6 +99,8 @@ var (
 	taskSet = wire.NewSet(
 		NewTaskApplication,
 		auth.NewAuthProvider,
+		obrepo.NewTaskRepoImpl,
+		mysqldao.NewTaskDaoImpl,
 		traceDomainSet,
 	)
 )
