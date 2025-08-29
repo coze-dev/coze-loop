@@ -5971,6 +5971,20 @@ func (p *ListTemplatesRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6024,6 +6038,20 @@ func (p *ListTemplatesRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListTemplatesRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *evaluator.LanguageType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LanguageType = _field
+	return offset, nil
+}
+
 func (p *ListTemplatesRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -6044,6 +6072,7 @@ func (p *ListTemplatesRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6054,6 +6083,7 @@ func (p *ListTemplatesRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6064,6 +6094,15 @@ func (p *ListTemplatesRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
 	offset += thrift.Binary.WriteI32(buf[offset:], int32(p.BuiltinTemplateType))
+	return offset
+}
+
+func (p *ListTemplatesRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLanguageType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LanguageType)
+	}
 	return offset
 }
 
@@ -6083,6 +6122,15 @@ func (p *ListTemplatesRequest) field1Length() int {
 	return l
 }
 
+func (p *ListTemplatesRequest) field2Length() int {
+	l := 0
+	if p.IsSetLanguageType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LanguageType)
+	}
+	return l
+}
+
 func (p *ListTemplatesRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6099,6 +6147,11 @@ func (p *ListTemplatesRequest) DeepCopy(s interface{}) error {
 	}
 
 	p.BuiltinTemplateType = src.BuiltinTemplateType
+
+	if src.LanguageType != nil {
+		tmp := *src.LanguageType
+		p.LanguageType = &tmp
+	}
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -6361,6 +6414,20 @@ func (p *GetTemplateInfoRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6433,6 +6500,20 @@ func (p *GetTemplateInfoRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetTemplateInfoRequest) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *evaluator.LanguageType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LanguageType = _field
+	return offset, nil
+}
+
 func (p *GetTemplateInfoRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -6454,6 +6535,7 @@ func (p *GetTemplateInfoRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6465,6 +6547,7 @@ func (p *GetTemplateInfoRequest) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6482,6 +6565,15 @@ func (p *GetTemplateInfoRequest) fastWriteField2(buf []byte, w thrift.NocopyWrit
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.BuiltinTemplateKey)
+	return offset
+}
+
+func (p *GetTemplateInfoRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLanguageType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LanguageType)
+	}
 	return offset
 }
 
@@ -6508,6 +6600,15 @@ func (p *GetTemplateInfoRequest) field2Length() int {
 	return l
 }
 
+func (p *GetTemplateInfoRequest) field3Length() int {
+	l := 0
+	if p.IsSetLanguageType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LanguageType)
+	}
+	return l
+}
+
 func (p *GetTemplateInfoRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6527,6 +6628,11 @@ func (p *GetTemplateInfoRequest) DeepCopy(s interface{}) error {
 
 	if src.BuiltinTemplateKey != "" {
 		p.BuiltinTemplateKey = kutils.StringDeepCopy(src.BuiltinTemplateKey)
+	}
+
+	if src.LanguageType != nil {
+		tmp := *src.LanguageType
+		p.LanguageType = &tmp
 	}
 
 	var _base *base.Base

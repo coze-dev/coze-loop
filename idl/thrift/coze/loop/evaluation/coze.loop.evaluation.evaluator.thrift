@@ -171,6 +171,7 @@ struct SubmitEvaluatorVersionResponse {
 
 struct ListTemplatesRequest {
     1: required evaluator.TemplateType builtin_template_type (api.query='builtin_template_type')
+    2: optional evaluator.LanguageType language_type (api.query='language_type') // code评估器默认python
 
     255: optional base.Base Base
 }
@@ -184,6 +185,7 @@ struct ListTemplatesResponse {
 struct GetTemplateInfoRequest {
     1: required evaluator.TemplateType builtin_template_type (api.query='builtin_template_type')
     2: required string builtin_template_key (api.query='builtin_template_key')
+    3: optional evaluator.LanguageType language_type (api.query='language_type') // code评估器默认python
 
     255: optional base.Base Base
 }
