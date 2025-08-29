@@ -1,8 +1,6 @@
 # Minimal Golang image to build and obtain backend binary
 FROM golang:1.24-alpine AS backend_builder
 
-ENV GOPROXY=https://goproxy.cn,direct
-
 # 1. Install git (for downloading go mod dependencies)
 RUN apk add --no-cache git
 
