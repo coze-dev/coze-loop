@@ -241,7 +241,7 @@ test_create_js() {
           ],
           \"code_evaluator\": {
             \"language_type\": \"js\",
-            "code_content": "function exec_evaluation(turn) {\\n    /** 检查turn中某字段是否等于目标值（仅处理Equals规则） */\\n    const TARGET_VALUE = \\\"Text\\\";\\n    \\n    try {\\n        // 直接访问目标字段\\n        const current = turn.turn.actual_output.text;\\n        \\n        const isEqual = current === TARGET_VALUE;\\n        const score = isEqual ? 1.0 : 0.0;\\n        const reason = `字段'turn.actual_output.text'的值为'${current}'，与目标值'${TARGET_VALUE}'${isEqual ? '相等' : '不相等'}`;\\n        \\n        return { score, reason };\\n    } catch (e) {\\n        if (e instanceof TypeError || e instanceof ReferenceError) {\\n            return { score: 0.0, reason: `字段路径不存在：${e.message}` };\\n        }\\n        return { score: 0.0, reason: `检查出错：${e.message}` };\\n    }\\n}",
+            \"code_content\": \"function exec_evaluation(turn) {\\\\n    const TARGET_VALUE = \\\\\\\"Text\\\\\\\";\\\\n    try {\\\\n        const current = turn.turn.actual_output.text;\\\\n        const isEqual = current === TARGET_VALUE;\\\\n        const score = isEqual ? 1.0 : 0.0;\\\\n        const reason = \\\\\\\"Field value: \\\\\\\" + current + \\\\\\\", target: \\\\\\\" + TARGET_VALUE + \\\\\\\", result: \\\\\\\" + (isEqual ? \\\\\\\"equal\\\\\\\" : \\\\\\\"not equal\\\\\\\");\\\\n        return { score, reason };\\\\n    } catch (e) {\\\\n        return { score: 0.0, reason: \\\\\\\"Error: \\\\\\\" + e.message };\\\\n    }\\\\n}\",
             \"code_template_key\": \"contains_checker\",
             \"code_template_name\": \"包含性检查器\"
           }
@@ -328,7 +328,7 @@ test_update_js() {
       ],
       \"code_evaluator\": {
         \"language_type\": \"js\",
-         "code_content": "function exec_evaluation(turn) {\\n    /** 检查turn中某字段是否等于目标值（仅处理Equals规则） */\\n    const TARGET_VALUE = \\\"Text\\\";\\n    \\n    try {\\n        // 直接访问目标字段\\n        const current = turn.turn.actual_output.text;\\n        \\n        const isEqual = current === TARGET_VALUE;\\n        const score = isEqual ? 1.0 : 0.0;\\n        const reason = `字段'turn.actual_output.text'的值为'${current}'，与目标值'${TARGET_VALUE}'${isEqual ? '相等' : '不相等'}`;\\n        \\n        return { score, reason };\\n    } catch (e) {\\n        if (e instanceof TypeError || e instanceof ReferenceError) {\\n            return { score: 0.0, reason: `字段路径不存在：${e.message}` };\\n        }\\n        return { score: 0.0, reason: `检查出错：${e.message}` };\\n    }\\n}",
+         \"code_content\": \"function exec_evaluation(turn) {\\\\n    const TARGET_VALUE = \\\\\\\"Text\\\\\\\";\\\\n    try {\\\\n        const current = turn.turn.actual_output.text;\\\\n        const isEqual = current === TARGET_VALUE;\\\\n        const score = isEqual ? 1.0 : 0.0;\\\\n        const reason = \\\\\\\"Field value: \\\\\\\" + current + \\\\\\\", target: \\\\\\\" + TARGET_VALUE + \\\\\\\", result: \\\\\\\" + (isEqual ? \\\\\\\"equal\\\\\\\" : \\\\\\\"not equal\\\\\\\");\\\\n        return { score, reason };\\\\n    } catch (e) {\\\\n        return { score: 0.0, reason: \\\\\\\"Error: \\\\\\\" + e.message };\\\\n    }\\\\n}\",
         \"code_template_key\": \"length_format_checker\",
         \"code_template_name\": \"长度格式检查器\"
       }
@@ -438,7 +438,7 @@ test_debug_js() {
       ],
       \"code_evaluator\": {
         \"language_type\": \"js\",
-         "code_content": "function exec_evaluation(turn) {\\n    /** 检查turn中某字段是否等于目标值（仅处理Equals规则） */\\n    const TARGET_VALUE = \\\"Text\\\";\\n    \\n    try {\\n        // 直接访问目标字段\\n        const current = turn.turn.actual_output.text;\\n        \\n        const isEqual = current === TARGET_VALUE;\\n        const score = isEqual ? 1.0 : 0.0;\\n        const reason = `字段'turn.actual_output.text'的值为'${current}'，与目标值'${TARGET_VALUE}'${isEqual ? '相等' : '不相等'}`;\\n        \\n        return { score, reason };\\n    } catch (e) {\\n        if (e instanceof TypeError || e instanceof ReferenceError) {\\n            return { score: 0.0, reason: `字段路径不存在：${e.message}` };\\n        }\\n        return { score: 0.0, reason: `检查出错：${e.message}` };\\n    }\\n}",
+         \"code_content\": \"function exec_evaluation(turn) {\\\\n    const TARGET_VALUE = \\\\\\\"Text\\\\\\\";\\\\n    try {\\\\n        const current = turn.turn.actual_output.text;\\\\n        const isEqual = current === TARGET_VALUE;\\\\n        const score = isEqual ? 1.0 : 0.0;\\\\n        const reason = \\\\\\\"Field value: \\\\\\\" + current + \\\\\\\", target: \\\\\\\" + TARGET_VALUE + \\\\\\\", result: \\\\\\\" + (isEqual ? \\\\\\\"equal\\\\\\\" : \\\\\\\"not equal\\\\\\\");\\\\n        return { score, reason };\\\\n    } catch (e) {\\\\n        return { score: 0.0, reason: \\\\\\\"Error: \\\\\\\" + e.message };\\\\n    }\\\\n}\",
         \"code_template_key\": \"debug_sentiment_checker\",
         \"code_template_name\": \"调试情感检查器\"
       }
