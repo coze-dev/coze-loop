@@ -204,12 +204,6 @@ func (c *EvaluatorSourceCodeServiceImpl) PreHandle(ctx context.Context, evaluato
 		return errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("invalid evaluator type or code evaluator version is nil"))
 	}
 
-	// 验证代码语法
-	err := c.Validate(ctx, evaluator)
-	if err != nil {
-		return errorx.NewByCode(errno.CodeValidationFailedCode, errorx.WithExtraMsg(fmt.Sprintf("code validation failed: %v", err)))
-	}
-
 	return nil
 }
 
