@@ -201,6 +201,7 @@ type ListAnnotationsResp struct {
 }
 
 type ChangeEvaluatorScoreRequest struct {
+	EvalSvc           rpc.IEvaluatorRPCAdapter
 	WorkspaceID       int64
 	EvaluatorRecordID int64
 	SpanID            string
@@ -213,6 +214,7 @@ type ChangeEvaluatorScoreResp struct {
 	Annotation *annotation.Annotation
 }
 type ListAnnotationEvaluatorsRequest struct {
+	EvalSvc     rpc.IEvaluatorRPCAdapter
 	WorkspaceID int64
 	Name        *string
 }
@@ -265,7 +267,6 @@ func NewTraceServiceImpl(
 	metrics metrics.ITraceMetrics,
 	buildHelper TraceFilterProcessorBuilder,
 	tenantProvider tenant.ITenantProvider,
-	evalServiceAdaptor rpc.IEvaluatorRPCAdapter,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
@@ -275,7 +276,6 @@ func NewTraceServiceImpl(
 		buildHelper:        buildHelper,
 		tenantProvider:     tenantProvider,
 		metrics:            metrics,
-		evalServiceAdaptor: evalServiceAdaptor,
 	}, nil
 }
 
@@ -287,7 +287,6 @@ type TraceServiceImpl struct {
 	metrics            metrics.ITraceMetrics
 	buildHelper        TraceFilterProcessorBuilder
 	tenantProvider     tenant.ITenantProvider
-	evalServiceAdaptor rpc.IEvaluatorRPCAdapter
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -1069,7 +1068,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	}
 	annotation.CorrectAutoEvaluateScore(req.Correction.GetScore(), req.Correction.GetExplain(), updateBy)
 	// 以评估数据为主数据，优先修改评估数据，异常则直接返回失败
-	if err = r.correctEvaluatorRecords(ctx, annotation); err != nil {
+	if err = r.correctEvaluatorRecords(ctx, req.EvalSvc, annotation); err != nil {
 		return resp, err
 	}
 	// 再同步修改观测数据
@@ -1091,7 +1090,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	return resp, nil
 }
 
-func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, annotation *loop_span.Annotation) error {
+func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, evalSvc rpc.IEvaluatorRPCAdapter, annotation *loop_span.Annotation) error {
 	if annotation == nil {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation is nil"))
 	}
@@ -1103,7 +1102,7 @@ func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, annotati
 	}
 	correction := annotation.Corrections[len(annotation.Corrections)-1]
 
-	if err := r.evalServiceAdaptor.UpdateEvaluatorRecord(ctx, &rpc.UpdateEvaluatorRecordParam{
+	if err := evalSvc.UpdateEvaluatorRecord(ctx, &rpc.UpdateEvaluatorRecordParam{
 		WorkspaceID:       annotation.WorkspaceID,
 		EvaluatorRecordID: annotation.GetAutoEvaluateMetadata().EvaluatorRecordID,
 		Score:             correction.Value.FloatValue,
@@ -1123,7 +1122,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 	var err error
 	if req.Name != nil {
 		// 有name直接模糊查询
-		evaluators, err = r.evalServiceAdaptor.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
+		evaluators, err = req.EvalSvc.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
 			WorkspaceID: req.WorkspaceID,
 			Name:        req.Name,
 		})
@@ -1156,7 +1155,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		for k := range evaluatorVersionIDS {
 			evaluatorVersionIDList = append(evaluatorVersionIDList, k)
 		}
-		evaluators, _, err = r.evalServiceAdaptor.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+		evaluators, _, err = req.EvalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
 			WorkspaceID:         req.WorkspaceID,
 			EvaluatorVersionIds: evaluatorVersionIDList,
 		})
