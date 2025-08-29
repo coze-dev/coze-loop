@@ -4,62 +4,14 @@ package task
 
 import (
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"strings"
 )
-
-type OrderType int64
-
-const (
-	OrderType_Unknown OrderType = 0
-	OrderType_Asc     OrderType = 1
-	OrderType_Desc    OrderType = 2
-)
-
-func (p OrderType) String() string {
-	switch p {
-	case OrderType_Unknown:
-		return "Unknown"
-	case OrderType_Asc:
-		return "Asc"
-	case OrderType_Desc:
-		return "Desc"
-	}
-	return "<UNSET>"
-}
-
-func OrderTypeFromString(s string) (OrderType, error) {
-	switch s {
-	case "Unknown":
-		return OrderType_Unknown, nil
-	case "Asc":
-		return OrderType_Asc, nil
-	case "Desc":
-		return OrderType_Desc, nil
-	}
-	return OrderType(0), fmt.Errorf("not a valid OrderType string")
-}
-
-func OrderTypePtr(v OrderType) *OrderType { return &v }
-func (p *OrderType) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = OrderType(result.Int64)
-	return
-}
-
-func (p *OrderType) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
 
 type CreateTaskRequest struct {
 	Task *task.Task `thrift:"task,1,required" frugal:"1,required,task.Task" form:"task,required" json:"task,required"`
@@ -1346,10 +1298,10 @@ type ListTasksRequest struct {
 	WorkspaceID int64                    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	TaskFilters *filter.TaskFilterFields `thrift:"task_filters,2,optional" frugal:"2,optional,filter.TaskFilterFields" form:"task_filters" json:"task_filters,omitempty"`
 	/* default 20 max 200 */
-	Limit   *int32     `thrift:"limit,101,optional" frugal:"101,optional,i32" form:"limit" json:"limit,omitempty"`
-	Offset  *int32     `thrift:"offset,102,optional" frugal:"102,optional,i32" form:"offset" json:"offset,omitempty"`
-	OrderBy *OrderType `thrift:"order_by,103,optional" frugal:"103,optional,OrderType" form:"order_by" json:"order_by,omitempty"`
-	Base    *base.Base `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
+	Limit   *int32          `thrift:"limit,101,optional" frugal:"101,optional,i32" form:"limit" json:"limit,omitempty"`
+	Offset  *int32          `thrift:"offset,102,optional" frugal:"102,optional,i32" form:"offset" json:"offset,omitempty"`
+	OrderBy *common.OrderBy `thrift:"order_by,103,optional" frugal:"103,optional,common.OrderBy" form:"order_by" json:"order_by,omitempty"`
+	Base    *base.Base      `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
 }
 
 func NewListTasksRequest() *ListTasksRequest {
@@ -1402,16 +1354,16 @@ func (p *ListTasksRequest) GetOffset() (v int32) {
 	return *p.Offset
 }
 
-var ListTasksRequest_OrderBy_DEFAULT OrderType
+var ListTasksRequest_OrderBy_DEFAULT *common.OrderBy
 
-func (p *ListTasksRequest) GetOrderBy() (v OrderType) {
+func (p *ListTasksRequest) GetOrderBy() (v *common.OrderBy) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetOrderBy() {
 		return ListTasksRequest_OrderBy_DEFAULT
 	}
-	return *p.OrderBy
+	return p.OrderBy
 }
 
 var ListTasksRequest_Base_DEFAULT *base.Base
@@ -1437,7 +1389,7 @@ func (p *ListTasksRequest) SetLimit(val *int32) {
 func (p *ListTasksRequest) SetOffset(val *int32) {
 	p.Offset = val
 }
-func (p *ListTasksRequest) SetOrderBy(val *OrderType) {
+func (p *ListTasksRequest) SetOrderBy(val *common.OrderBy) {
 	p.OrderBy = val
 }
 func (p *ListTasksRequest) SetBase(val *base.Base) {
@@ -1526,7 +1478,7 @@ func (p *ListTasksRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 103:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField103(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -1618,13 +1570,9 @@ func (p *ListTasksRequest) ReadField102(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *ListTasksRequest) ReadField103(iprot thrift.TProtocol) error {
-
-	var _field *OrderType
-	if v, err := iprot.ReadI32(); err != nil {
+	_field := common.NewOrderBy()
+	if err := _field.Read(iprot); err != nil {
 		return err
-	} else {
-		tmp := OrderType(v)
-		_field = &tmp
 	}
 	p.OrderBy = _field
 	return nil
@@ -1758,10 +1706,10 @@ WriteFieldEndError:
 }
 func (p *ListTasksRequest) writeField103(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOrderBy() {
-		if err = oprot.WriteFieldBegin("order_by", thrift.I32, 103); err != nil {
+		if err = oprot.WriteFieldBegin("order_by", thrift.STRUCT, 103); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.OrderBy)); err != nil {
+		if err := p.OrderBy.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -1866,14 +1814,9 @@ func (p *ListTasksRequest) Field102DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *ListTasksRequest) Field103DeepEqual(src *OrderType) bool {
+func (p *ListTasksRequest) Field103DeepEqual(src *common.OrderBy) bool {
 
-	if p.OrderBy == src {
-		return true
-	} else if p.OrderBy == nil || src == nil {
-		return false
-	}
-	if *p.OrderBy != *src {
+	if !p.OrderBy.DeepEqual(src) {
 		return false
 	}
 	return true

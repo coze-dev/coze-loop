@@ -12,12 +12,14 @@ import (
 	kutils "github.com/cloudwego/kitex/pkg/utils"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 )
 
 var (
 	_ = base.KitexUnusedProtection
+	_ = common.KitexUnusedProtection
 	_ = filter.KitexUnusedProtection
 	_ = task.KitexUnusedProtection
 )
@@ -1019,7 +1021,7 @@ func (p *ListTasksRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 103:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField103(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1126,15 +1128,11 @@ func (p *ListTasksRequest) FastReadField102(buf []byte) (int, error) {
 
 func (p *ListTasksRequest) FastReadField103(buf []byte) (int, error) {
 	offset := 0
-
-	var _field *OrderType
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	_field := common.NewOrderBy()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := OrderType(v)
-		_field = &tmp
 	}
 	p.OrderBy = _field
 	return offset, nil
@@ -1221,8 +1219,8 @@ func (p *ListTasksRequest) fastWriteField102(buf []byte, w thrift.NocopyWriter) 
 func (p *ListTasksRequest) fastWriteField103(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetOrderBy() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 103)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.OrderBy))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 103)
+		offset += p.OrderBy.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -1274,7 +1272,7 @@ func (p *ListTasksRequest) field103Length() int {
 	l := 0
 	if p.IsSetOrderBy() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += p.OrderBy.BLength()
 	}
 	return l
 }
@@ -1315,10 +1313,14 @@ func (p *ListTasksRequest) DeepCopy(s interface{}) error {
 		p.Offset = &tmp
 	}
 
+	var _orderBy *common.OrderBy
 	if src.OrderBy != nil {
-		tmp := *src.OrderBy
-		p.OrderBy = &tmp
+		_orderBy = &common.OrderBy{}
+		if err := _orderBy.DeepCopy(src.OrderBy); err != nil {
+			return err
+		}
 	}
+	p.OrderBy = _orderBy
 
 	var _base *base.Base
 	if src.Base != nil {

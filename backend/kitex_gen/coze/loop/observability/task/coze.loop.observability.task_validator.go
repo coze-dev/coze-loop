@@ -75,6 +75,11 @@ func (p *ListTasksRequest) IsValid() error {
 			return fmt.Errorf("field TaskFilters not valid, %w", err)
 		}
 	}
+	if p.OrderBy != nil {
+		if err := p.OrderBy.IsValid(); err != nil {
+			return fmt.Errorf("field OrderBy not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

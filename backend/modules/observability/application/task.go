@@ -8,14 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -26,82 +21,66 @@ type ITaskApplication interface {
 }
 
 func NewTaskApplication(
-	traceService service.ITraceService,
-	viewRepo repo.IViewRepo,
-	benefitService benefit.IBenefitService,
-	traceMetrics metrics.ITraceMetrics,
-	traceConfig config.ITraceConfig,
+	taskService service.ITaskService,
 	authService rpc.IAuthProvider,
 	evalService rpc.IEvaluatorRPCAdapter,
 	userService rpc.IUserProvider,
-	tagService rpc.ITagRPCAdapter,
-) (ITraceApplication, error) {
-	return &TraceApplication{
-		traceService: traceService,
-		viewRepo:     viewRepo,
-		traceConfig:  traceConfig,
-		metrics:      traceMetrics,
-		benefit:      benefitService,
-		authSvc:      authService,
-		evalSvc:      evalService,
-		userSvc:      userService,
-		tagSvc:       tagService,
+) (ITaskApplication, error) {
+	return &TaskApplication{
+		taskSvc: taskService,
+		authSvc: authService,
+		evalSvc: evalService,
+		userSvc: userService,
 	}, nil
 }
 
 type TaskApplication struct {
-	traceService service.ITraceService
-	viewRepo     repo.IViewRepo
-	traceConfig  config.ITraceConfig
-	metrics      metrics.ITraceMetrics
-	benefit      benefit.IBenefitService
-	authSvc      rpc.IAuthProvider
-	evalSvc      rpc.IEvaluatorRPCAdapter
-	userSvc      rpc.IUserProvider
-	tagSvc       rpc.ITagRPCAdapter
+	taskSvc service.ITaskService
+	authSvc rpc.IAuthProvider
+	evalSvc rpc.IEvaluatorRPCAdapter
+	userSvc rpc.IUserProvider
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
+	resp := task.NewCheckTaskNameResponse()
 	if req == nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetWorkspaceID() <= 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	sResp, err := t.taskSvc.CheckTaskName(ctx, &service.CheckTaskNameReq{
+		WorkspaceID: req.GetWorkspaceID(),
+		Name:        req.GetName(),
+	})
+	if err != nil {
+		return resp, err
 	}
+	resp.Pass = sResp.Pass
 
-	return &task.CheckTaskNameResponse{
-		BaseResp: nil,
-	}, nil
+	return resp, nil
 }
 func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRequest) (*task.CreateTaskResponse, error) {
+	resp := task.NewCreateTaskResponse()
 	if err := t.validateCreateTaskReq(ctx, req); err != nil {
-		return nil, err
+		return resp, err
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceTaskCreate,
 		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10)); err != nil {
-		return nil, err
+		return resp, err
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: req.GetTask()})
+	if err != nil {
+		return resp, err
 	}
-	//taskPO := tconv.CreateTaskDTO2PO(req, userID)
-	//
-	//id, err := t.taskRepo.CreateTask(ctx, taskPO)
-	//if err != nil {
-	//	return nil, err
-	//}
+	resp.TaskID = sResp.TaskID
 
-	return nil, nil
+	return resp, nil
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {
@@ -145,6 +124,7 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 	return nil
 }
 func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRequest) (*task.UpdateTaskResponse, error) {
+	resp := task.NewUpdateTaskResponse()
 	if req == nil {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetWorkspaceID() <= 0 {
@@ -156,50 +136,66 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
+		TaskID:        req.GetTaskID(),
+		WorkspaceID:   req.GetWorkspaceID(),
+		TaskStatus:    req.GetTaskStatus(),
+		Description:   req.GetDescription(),
+		EffectiveTime: req.GetEffectiveTime(),
+		SampleRate:    req.GetSampleRate(),
+	})
+	if err != nil {
+		return resp, err
 	}
 
-	return task.NewUpdateTaskResponse(), nil
+	return resp, nil
 }
 func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequest) (*task.ListTasksResponse, error) {
+	resp := task.NewListTasksResponse()
 	if req == nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetWorkspaceID() <= 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return nil, err
+		return resp, err
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	sResp, err := t.taskSvc.ListTasks(ctx, &service.ListTasksReq{
+		WorkspaceID: req.GetWorkspaceID(),
+		TaskFilters: req.GetTaskFilters(),
+		Limit:       req.GetLimit(),
+		Offset:      req.GetOffset(),
+		OrderBy:     req.GetOrderBy(),
+	})
+	if err != nil {
+		return resp, err
 	}
-
-	return &task.ListTasksResponse{
-		BaseResp: nil,
-	}, nil
+	resp.Tasks = sResp.Tasks
+	resp.Total = sResp.Total
+	return resp, nil
 }
 func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest) (*task.GetTaskResponse, error) {
+	resp := task.NewGetTaskResponse()
 	if req == nil {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetWorkspaceID() <= 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return nil, err
+		return resp, err
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	sResp, err := t.taskSvc.GetTask(ctx, &service.GetTaskReq{
+		TaskID:      req.GetTaskID(),
+		WorkspaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return resp, err
 	}
+	resp.Task = sResp.Task
 
-	return &task.GetTaskResponse{
-		BaseResp: nil,
-	}, nil
+	return resp, nil
 }

@@ -3,6 +3,7 @@ namespace go coze.loop.observability.task
 include "../../../base.thrift"
 include "./domain/filter.thrift"
 include "./domain/task.thrift"
+include "./domain/common.thrift"
 
 struct CreateTaskRequest {
     1: required task.Task task (api.body = "task"),
@@ -30,18 +31,14 @@ struct UpdateTaskRequest {
 struct UpdateTaskResponse {
     255: optional base.BaseResp BaseResp
 }
-enum OrderType {
-    Unknown = 0
-    Asc     = 1
-    Desc    = 2
-}
+
 struct ListTasksRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
     2: optional filter.TaskFilterFields task_filters (api.body = "task_filters"),
 
     101: optional i32 limit (api.body = "limit")   /* default 20 max 200 */
     102: optional i32 offset (api.body = "offset")
-    103: optional OrderType order_by (api.body = "order_by")
+    103: optional common.OrderBy order_by (api.body = "order_by")
     255: optional base.Base base,
 }
 
