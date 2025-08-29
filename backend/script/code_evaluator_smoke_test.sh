@@ -189,7 +189,7 @@ test_create_python() {
         \"evaluator_content\": {
           \"receive_chat_history\": false,
           \"code_evaluator\": {
-            \"language_type\": \"Python\",
+            \"language_type\": \"python\",
             \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
             \"code_template_key\": \"equals_checker\",
             \"code_template_name\": \"相等性检查器\"
@@ -240,7 +240,7 @@ test_create_js() {
             }
           ],
           \"code_evaluator\": {
-            \"language_type\": \"JS\",
+            \"language_type\": \"js\",
             \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
             \"code_template_key\": \"contains_checker\",
             \"code_template_name\": \"包含性检查器\"
@@ -285,7 +285,7 @@ test_update_python() {
         }
       ],
       \"code_evaluator\": {
-        \"language_type\": \"Python\",
+        \"language_type\": \"python\",
         \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
         \"code_template_key\": \"similarity_checker\",
         \"code_template_name\": \"相似度检查器\"
@@ -327,7 +327,7 @@ test_update_js() {
         }
       ],
       \"code_evaluator\": {
-        \"language_type\": \"JS\",
+        \"language_type\": \"js\",
         \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
         \"code_template_key\": \"length_format_checker\",
         \"code_template_name\": \"长度格式检查器\"
@@ -371,7 +371,7 @@ test_debug_python() {
         }
       ],
       \"code_evaluator\": {
-        \"language_type\": \"Python\",
+        \"language_type\": \"python\",
          \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
         \"code_template_key\": \"debug_length_checker\",
         \"code_template_name\": \"调试长度检查器\"
@@ -437,7 +437,7 @@ test_debug_js() {
         }
       ],
       \"code_evaluator\": {
-        \"language_type\": \"JS\",
+        \"language_type\": \"js\",
         \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
         \"code_template_key\": \"debug_sentiment_checker\",
         \"code_template_name\": \"调试情感检查器\"
@@ -487,7 +487,7 @@ test_error_syntax() {
       \"receive_chat_history\": false,
       \"input_schemas\": [],
       \"code_evaluator\": {
-        \"language_type\": \"Python\",
+        \"language_type\": \"python\",
         \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
         \"code_template_key\": \"syntax_error_test\",
         \"code_template_name\": \"语法错误测试\"
@@ -530,7 +530,7 @@ test_error_security() {
       \"receive_chat_history\": false,
       \"input_schemas\": [],
       \"code_evaluator\": {
-        \"language_type\": \"Python\",
+        \"language_type\": \"python\",
         \"code_content\": \"def exec_evaluation(turn_data):\\n    try:\\n        # 获取实际输出和参考输出\\n        actual_text = turn_data[\\\"turn\\\"][\\\"eval_target\\\"][\\\"actual_output\\\"][\\\"text\\\"]\\n        reference_text = turn_data[\\\"turn\\\"][\\\"eval_set\\\"][\\\"reference_output\\\"][\\\"text\\\"]\\n        \\n        # 比较文本相似性或相等性\\n        is_equal = actual_text.strip() == reference_text.strip()\\n        score = 1.0 if is_equal else 0.0\\n        \\n        if is_equal:\\n            status = \\\"匹配\\\"\\n        else:\\n            status = \\\"不匹配\\\"\\n        reason = f\\\"实际输出与参考输出{status}。实际输出: '{actual_text}', 参考输出: '{reference_text}'\\\"\\n        \\n        return EvalOutput(score=score, reason=reason, err_msg=\\\"\\\")\\n        \\n    except KeyError as e:\\n        return EvalOutput(score=0.0, reason=f\\\"字段路径未找到: {e}\\\", err_msg=str(e))\\n    except Exception as e:\\n        return EvalOutput(score=0.0, reason=f\\\"评估失败: {e}\\\", err_msg=str(e))\",
         \"code_template_key\": \"security_test\",
         \"code_template_name\": \"安全性测试\"
