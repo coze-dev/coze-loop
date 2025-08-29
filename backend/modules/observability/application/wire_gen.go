@@ -193,6 +193,9 @@ var (
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
+	taskSet = wire.NewSet(
+		NewTaskApplication, auth.NewAuthProvider, traceDomainSet,
+	)
 )
 
 func NewTraceProcessorBuilder(

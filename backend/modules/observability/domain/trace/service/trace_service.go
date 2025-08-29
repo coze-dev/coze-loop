@@ -12,10 +12,17 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -24,10 +31,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
+	"github.com/samber/lo"
 )
 
 type ListSpansReq struct {
@@ -191,6 +200,40 @@ type ListAnnotationsResp struct {
 	Annotations loop_span.AnnotationList
 }
 
+type ChangeEvaluatorScoreRequest struct {
+	EvalSvc           rpc.IEvaluatorRPCAdapter
+	WorkspaceID       int64
+	EvaluatorRecordID int64
+	SpanID            string
+	TraceID           string
+	StartTime         int64
+	PlatformType      loop_span.PlatformType
+	Correction        *annotation.Correction
+}
+type ChangeEvaluatorScoreResp struct {
+	Annotation *annotation.Annotation
+}
+type ListAnnotationEvaluatorsRequest struct {
+	EvalSvc     rpc.IEvaluatorRPCAdapter
+	WorkspaceID int64
+	Name        *string
+}
+type ListAnnotationEvaluatorsResp struct {
+	Evaluators []*annotation.AnnotationEvaluator
+}
+type ExtractSpanInfoRequest struct {
+	WorkspaceID   int64
+	TraceID       string
+	SpanIds       []string
+	StartTime     int64
+	EndTime       int64
+	PlatformType  loop_span.PlatformType
+	FieldMappings []*task.FieldMapping
+}
+type ExtractSpanInfoResp struct {
+	SpanInfos []*trace.SpanInfo
+}
+
 type IAnnotationEvent interface {
 	Send(ctx context.Context, msg *entity.AnnotationEvent) error
 }
@@ -211,6 +254,9 @@ type ITraceService interface {
 	UpdateManualAnnotation(ctx context.Context, req *UpdateManualAnnotationReq) error
 	DeleteManualAnnotation(ctx context.Context, req *DeleteManualAnnotationReq) error
 	IAnnotationEvent
+	ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error)
+	ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error)
+	ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error)
 }
 
 func NewTraceServiceImpl(
@@ -581,9 +627,9 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 	if err != nil {
 		return nil, err
 	}
-	span, err := r.getSpan(ctx,
+	spans, err := r.getSpan(ctx,
 		tenants,
-		req.Annotation.SpanID,
+		[]string{req.Annotation.SpanID},
 		req.Annotation.TraceID,
 		req.Annotation.WorkspaceID,
 		req.Annotation.StartTime.Add(-time.Second).UnixMilli(),
@@ -591,10 +637,11 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 	)
 	if err != nil {
 		return nil, err
-	} else if span == nil {
+	} else if len(spans) == 0 {
 		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.Annotation.SpanID, req.Annotation.TraceID)
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
+	span := spans[0]
 	annotation, err := span.BuildFeedback(
 		loop_span.AnnotationTypeManualFeedback,
 		req.Annotation.Key,
@@ -623,9 +670,9 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 	if err != nil {
 		return err
 	}
-	span, err := r.getSpan(ctx,
+	spans, err := r.getSpan(ctx,
 		tenants,
-		req.Annotation.SpanID,
+		[]string{req.Annotation.SpanID},
 		req.Annotation.TraceID,
 		req.Annotation.WorkspaceID,
 		req.Annotation.StartTime.Add(-time.Second).UnixMilli(),
@@ -633,10 +680,11 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 	)
 	if err != nil {
 		return err
-	} else if span == nil {
+	} else if len(spans) == 0 {
 		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.Annotation.SpanID, req.Annotation.TraceID)
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
+	span := spans[0]
 	annotation, err := span.BuildFeedback(
 		loop_span.AnnotationTypeManualFeedback,
 		req.Annotation.Key,
@@ -674,9 +722,9 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 	if err != nil {
 		return err
 	}
-	span, err := r.getSpan(ctx,
+	spans, err := r.getSpan(ctx,
 		tenants,
-		req.SpanID,
+		[]string{req.SpanID},
 		req.TraceID,
 		strconv.FormatInt(req.WorkspaceID, 10),
 		req.StartTime-time.Second.Milliseconds(),
@@ -684,10 +732,11 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 	)
 	if err != nil {
 		return err
-	} else if span == nil {
+	} else if len(spans) == 0 {
 		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.SpanID, req.TraceID)
 		return errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
+	span := spans[0]
 	annotation, err := span.BuildFeedback(
 		loop_span.AnnotationTypeManualFeedback,
 		req.AnnotationKey,
@@ -711,9 +760,9 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 	if err != nil {
 		return err
 	}
-	span, err := r.getSpan(ctx,
+	spans, err := r.getSpan(ctx,
 		cfg.Tenants,
-		req.SpanID,
+		[]string{req.SpanID},
 		req.TraceID,
 		strconv.FormatInt(req.WorkspaceID, 10),
 		time.Now().Add(-time.Duration(req.QueryDays)*24*time.Hour).UnixMilli(),
@@ -721,7 +770,7 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 	)
 	if err != nil {
 		return err
-	} else if span == nil {
+	} else if len(spans) == 0 {
 		return r.annotationProducer.SendAnnotation(ctx, &entity.AnnotationEvent{
 			Annotation: &loop_span.Annotation{
 				SpanID:         req.SpanID,
@@ -741,6 +790,7 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 			RetryTimes: 3,
 		})
 	}
+	span := spans[0]
 	annotation, err := span.BuildFeedback(
 		loop_span.AnnotationType(cfg.AnnotationType),
 		req.AnnotationKey,
@@ -774,9 +824,9 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 	if err != nil {
 		return err
 	}
-	span, err := r.getSpan(ctx,
+	spans, err := r.getSpan(ctx,
 		cfg.Tenants,
-		req.SpanID,
+		[]string{req.SpanID},
 		req.TraceID,
 		strconv.FormatInt(req.WorkspaceID, 10),
 		time.Now().Add(-time.Duration(req.QueryDays)*24*time.Hour).UnixMilli(),
@@ -784,7 +834,7 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 	)
 	if err != nil {
 		return err
-	} else if span == nil {
+	} else if len(spans) == 0 {
 		return r.annotationProducer.SendAnnotation(ctx, &entity.AnnotationEvent{
 			Annotation: &loop_span.Annotation{
 				SpanID:         req.SpanID,
@@ -803,6 +853,7 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 			RetryTimes: 3,
 		})
 	}
+	span := spans[0]
 	annotation, err := span.BuildFeedback(
 		loop_span.AnnotationType(cfg.AnnotationType),
 		req.AnnotationKey,
@@ -834,18 +885,19 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	if err != nil { // retry
 		return err
 	}
-	span, err := r.getSpan(ctx,
+	spans, err := r.getSpan(ctx,
 		cfg.Tenants,
-		event.Annotation.SpanID,
+		[]string{event.Annotation.SpanID},
 		event.Annotation.TraceID,
 		event.Annotation.WorkspaceID,
 		event.StartAt,
 		event.EndAt,
 	)
-	if err != nil || span == nil { // retry if not found yet
+	if err != nil || len(spans) == 0 { // retry if not found yet
 		shouldReSend = true
 		return nil
 	}
+	span := spans[0]
 	event.Annotation.StartTime = time.UnixMicro(span.StartTime)
 	if err := event.Annotation.GenID(); err != nil {
 		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
@@ -859,8 +911,8 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	})
 }
 
-func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId, traceId, workspaceId string, startAt, endAt int64) (*loop_span.Span, error) {
-	if spanId == "" || traceId == "" || workspaceId == "" {
+func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
+	if len(spanIds) == 0 || traceId == "" || workspaceId == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
@@ -870,7 +922,7 @@ func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId
 				{
 					FieldName: loop_span.SpanFieldSpanId,
 					FieldType: loop_span.FieldTypeString,
-					Values:    []string{spanId},
+					Values:    spanIds,
 					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 				},
 				{
@@ -898,7 +950,7 @@ func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId
 	} else if len(res.Spans) == 0 {
 		return nil, nil
 	}
-	return res.Spans[0], nil
+	return res.Spans, nil
 }
 
 func (r *TraceServiceImpl) getAnnotationCallerCfg(ctx context.Context, caller string) (*config.AnnotationConfig, error) {
@@ -976,6 +1028,222 @@ func (r *TraceServiceImpl) combineFilters(filters ...*loop_span.FilterFields) *l
 
 func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
 	return r.tenantProvider.GetTenantsByPlatformType(ctx, platform)
+}
+
+func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error) {
+	var resp *ChangeEvaluatorScoreResp
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return resp, err
+	}
+	spans, err := r.getSpan(ctx,
+		tenants,
+		[]string{req.SpanID},
+		req.TraceID,
+		strconv.FormatInt(req.WorkspaceID, 10),
+		req.StartTime-time.Second.Milliseconds(),
+		req.StartTime+time.Second.Milliseconds(),
+	)
+	if err != nil {
+		return resp, err
+	} else if len(spans) == 0 {
+		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.SpanID, req.TraceID)
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	span := spans[0]
+	var annotation *loop_span.Annotation
+	for _, anno := range span.Annotations {
+		meta := anno.GetAutoEvaluateMetadata()
+		if meta != nil && meta.EvaluatorRecordID == req.EvaluatorRecordID {
+			annotation = anno
+			break
+		}
+	}
+	if annotation == nil {
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation not found"))
+	}
+	updateBy := session.UserIDInCtxOrEmpty(ctx)
+	if updateBy == "" {
+		return resp, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	annotation.CorrectAutoEvaluateScore(req.Correction.GetScore(), req.Correction.GetExplain(), updateBy)
+	// 以评估数据为主数据，优先修改评估数据，异常则直接返回失败
+	if err = r.correctEvaluatorRecords(ctx, req.EvalSvc, annotation); err != nil {
+		return resp, err
+	}
+	// 再同步修改观测数据
+	param := &repo.UpsertAnnotationParam{
+		Tenant:      span.GetTenant(),
+		TTL:         span.GetTTL(ctx),
+		Annotations: []*loop_span.Annotation{annotation},
+		IsSync:      true,
+	}
+	if err = r.traceRepo.UpsertAnnotation(ctx, param); err != nil {
+		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
+		// 如果同步修改失败，异步补偿
+		// todo 异步有问题，会重复
+		logs.CtxWarn(ctx, "Sync upsert annotation failed, try async upsert. span_id=[%v], recored_id=[%v], err:%v",
+			annotation.SpanID, recordID, err)
+		return resp, nil
+	}
+	resp.Annotation = annotation.ToFornaxAnnotation(ctx)
+	return resp, nil
+}
+
+func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, evalSvc rpc.IEvaluatorRPCAdapter, annotation *loop_span.Annotation) error {
+	if annotation == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation is nil"))
+	}
+	if annotation.GetAutoEvaluateMetadata() == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation auto evaluate metadata is nil"))
+	}
+	if len(annotation.Corrections) == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation corrections is empty"))
+	}
+	correction := annotation.Corrections[len(annotation.Corrections)-1]
+
+	if err := evalSvc.UpdateEvaluatorRecord(ctx, &rpc.UpdateEvaluatorRecordParam{
+		WorkspaceID:       annotation.WorkspaceID,
+		EvaluatorRecordID: annotation.GetAutoEvaluateMetadata().EvaluatorRecordID,
+		Score:             correction.Value.FloatValue,
+		Reasoning:         correction.Reasoning,
+		UpdatedBy:         correction.UpdatedBy,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
+	resp := &ListAnnotationEvaluatorsResp{}
+	resp.Evaluators = make([]*annotation.AnnotationEvaluator, 0)
+	var (
+		evaluators = make([]*rpc.Evaluator, 0)
+	)
+	var err error
+	if req.Name != nil {
+		// 有name直接模糊查询
+		evaluators, err = req.EvalSvc.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
+			WorkspaceID: req.WorkspaceID,
+			Name:        req.Name,
+		})
+		if err != nil {
+			return resp, err
+		}
+	} else {
+		// 没有name先查task
+		//tasksResp, err := service.ListTasks(ctx, &taskservice.ListTasksRequest{
+		//	WorkspaceID: req.WorkspaceID,
+		//	Limit:       gptr.Of(int32(500)),
+		//	Offset:      gptr.Of(int32(0)),
+		//})
+		if err != nil {
+			return nil, err
+		}
+		evaluatorVersionIDS := make(map[int64]bool)
+		//for _, task := range tasksResp.Tasks {
+		//	for _, evaluator := range task.TaskConfig.AutoEvaluateConfigs {
+		//		evaluatorVersionIDS[evaluator.EvaluatorVersionID] = true
+		//		if len(evaluatorVersionIDS) >= 30 {
+		//			break
+		//		}
+		//	}
+		//	if len(evaluatorVersionIDS) >= 30 {
+		//		break
+		//	}
+		//}
+		evaluatorVersionIDList := make([]int64, 0)
+		for k := range evaluatorVersionIDS {
+			evaluatorVersionIDList = append(evaluatorVersionIDList, k)
+		}
+		evaluators, _, err = req.EvalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         req.WorkspaceID,
+			EvaluatorVersionIds: evaluatorVersionIDList,
+		})
+		if err != nil {
+			return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithMsgParam("evaluatorVersionIDs is invalid, BatchGetEvaluators err: %v", err.Error()))
+		}
+	}
+	for _, evaluator := range evaluators {
+		re := &annotation.AnnotationEvaluator{}
+		if evaluator.EvaluatorVersionID != 0 {
+			re.EvaluatorVersionID = evaluator.EvaluatorVersionID
+		}
+		if evaluator.EvaluatorName != "" {
+			re.EvaluatorName = evaluator.EvaluatorName
+		}
+		if evaluator.EvaluatorVersion != "" {
+			re.EvaluatorVersion = evaluator.EvaluatorVersion
+		}
+		resp.Evaluators = append(resp.Evaluators, re)
+	}
+	return resp, nil
+}
+func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error) {
+	resp := &ExtractSpanInfoResp{}
+	var spanInfos []*trace.SpanInfo
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return resp, err
+	}
+	spans, err := r.getSpan(ctx,
+		tenants,
+		req.SpanIds,
+		req.TraceID,
+		strconv.FormatInt(req.WorkspaceID, 10),
+		req.StartTime-time.Second.Milliseconds(),
+		req.StartTime+time.Second.Milliseconds(),
+	)
+	if err != nil {
+		return resp, err
+	} else if len(spans) == 0 {
+		logs.CtxWarn(ctx, "no span found for span_ids %v trace_id %s", req.SpanIds, req.TraceID)
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	logs.CtxInfo(ctx, "Get spans success, total conut:%v", len(spans))
+	for _, span := range spans {
+		var fieldList []*dataset.FieldData
+		for _, mapping := range req.FieldMappings {
+			value, err := buildExtractSpanInfo(ctx, span, mapping)
+			if err != nil {
+				// 非json但使用了jsonpath，也不报错，置空
+				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
+				return resp, err
+			}
+			// 前端传入的是Name，评测集需要的是key，需要做一下mapping
+			if mapping.FieldSchema.Name == nil {
+				logs.CtxInfo(ctx, "Evaluator field name is nil")
+				continue
+			}
+			content := buildContent(value)
+			fieldList = append(fieldList, &dataset.FieldData{
+				Key:     gptr.Of(mapping.GetFieldSchema().GetKey()),
+				Name:    gptr.Of(mapping.GetFieldSchema().GetName()),
+				Content: content,
+			})
+		}
+		spanInfos = append(spanInfos, &trace.SpanInfo{
+			SpanID:    span.SpanID,
+			FieldList: fieldList,
+		})
+	}
+	resp.SpanInfos = spanInfos
+	return resp, nil
+}
+func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMapping *task.FieldMapping) (string, error) {
+
+	return "", nil
+}
+
+func buildContent(value string) *dataset.Content {
+	var content *dataset.Content
+	err := json.Unmarshal([]byte(value), &content)
+	if err != nil {
+		content = &dataset.Content{
+			ContentType: gptr.Of(common.ContentTypeText),
+			Text:        gptr.Of(value),
+		}
+	}
+	return content
 }
 
 func processSpecificFilter(f *loop_span.FilterField) error {

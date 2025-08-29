@@ -1206,6 +1206,21 @@ func _results0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _tasks0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _checktasknameMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _extractspaninfoMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _exporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -1222,6 +1237,41 @@ func _dataset_itemsMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _validatedatasetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _changeevaluatorscoreMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listannotationevaluatorsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _tasksMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createtaskMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listtasksMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettaskMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updatetaskMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

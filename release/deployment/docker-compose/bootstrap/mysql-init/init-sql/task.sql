@@ -1,0 +1,20 @@
+CREATE TABLE `task` (
+                        `id` bigint unsigned NOT NULL COMMENT 'Task ID',
+                        `workspace_id` bigint unsigned NOT NULL COMMENT '空间ID',
+                        `name` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '任务名称',
+                        `description` varchar(2048) COLLATE utf8mb4_general_ci DEFAULT '' COMMENT '任务描述',
+                        `task_type` varchar(64) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '任务类型',
+                        `task_status` varchar(64) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '任务状态',
+                        `task_detail` json DEFAULT NULL COMMENT '任务运行状态详情',
+                        `span_filter` json DEFAULT NULL COMMENT 'span 过滤条件',
+                        `effective_time` json DEFAULT NULL COMMENT '生效时间',
+                        `sampler` json DEFAULT NULL COMMENT '采样器',
+                        `task_config` json DEFAULT NULL COMMENT '相关任务的配置信息',
+                        `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                        `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+                        `created_by` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '创建人',
+                        `updated_by` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '更新人',
+                        PRIMARY KEY (`id`),
+                        KEY `idx_space_id_status` (`workspace_id`,`task_status`),
+                        KEY `idx_space_id_type` (`workspace_id`,`task_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='任务信息'
