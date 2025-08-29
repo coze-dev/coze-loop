@@ -66,6 +66,8 @@ Code类型评估器冒烟测试脚本
     mock-parameterized     参数化mock输出测试
     mock-invalid-id        无效ID错误测试
     mock-invalid-version   无效版本错误测试
+    list-templates         ListTemplates接口测试
+    get-template-info      GetTemplateInfo接口测试
 
 环境变量:
     BASE_URL               API基础URL
@@ -627,6 +629,36 @@ test_mock_eval_target_output_invalid_version() {
     execute_curl "无效版本错误测试" "$curl_cmd" "400"
 }
 
+# ListTemplates 接口测试
+test_list_templates() {
+    local curl_cmd="curl -X POST \"${BASE_URL}/api/evaluation/v1/evaluators/list_template\" \
+  -H \"Content-Type: application/json\" \
+  -H \"Cookie: ${COOKIE}\" \
+  -H \"x-tt-env: ${ENV_VALUE}\" \
+  -H \"agw-js-conv: str\" \
+  -d '{
+    \"builtin_template_type\": 2
+  }'"
+    
+    execute_curl "ListTemplates接口测试" "$curl_cmd"
+}
+
+# GetTemplateInfo 接口测试
+test_get_template_info() {
+    local curl_cmd="curl -X POST \"${BASE_URL}/api/evaluation/v1/evaluators/get_template_info\" \
+  -H \"Content-Type: application/json\" \
+  -H \"Cookie: ${COOKIE}\" \
+  -H \"x-tt-env: ${ENV_VALUE}\" \
+  -H \"agw-js-conv: str\" \
+  -d '{
+    \"builtin_template_type\": 2,
+    \"builtin_template_key\": \"test_template\"
+  }'"
+    
+    # 这个测试预期会返回错误，但接口应该能正常响应
+    execute_curl "GetTemplateInfo接口测试" "$curl_cmd"
+}
+
 # 显示测试结果摘要
 show_summary() {
     echo ""
@@ -748,6 +780,10 @@ main() {
             test_mock_eval_target_output_invalid_id
             sleep 1
             test_mock_eval_target_output_invalid_version
+            sleep 1
+            test_list_templates
+            sleep 1
+            test_get_template_info
             ;;
         "create-python")
             test_create_python
@@ -784,6 +820,12 @@ main() {
             ;;
         "mock-invalid-version")
             test_mock_eval_target_output_invalid_version
+            ;;
+        "list-templates")
+            test_list_templates
+            ;;
+        "get-template-info")
+            test_get_template_info
             ;;
         *)
             log_error "未知的测试用例: $test_case"
