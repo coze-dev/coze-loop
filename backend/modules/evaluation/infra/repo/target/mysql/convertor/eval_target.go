@@ -58,6 +58,11 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
+	case entity.EvalTargetTypeVolcengineAgent:
+		meta, err = json.Marshal(do.VolcengineAgent)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if do.InputSchema != nil {
 		inputSchema, err = json.Marshal(do.InputSchema)
@@ -189,6 +194,11 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			meta := &entity.CozeWorkflow{}
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.CozeWorkflow = meta
+			}
+		case entity.EvalTargetTypeVolcengineAgent:
+			meta := &entity.VolcengineAgent{}
+			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
+				targetVersionDO.VolcengineAgent = meta
 			}
 		default:
 			// todo

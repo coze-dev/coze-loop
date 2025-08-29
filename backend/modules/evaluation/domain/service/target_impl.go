@@ -260,6 +260,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 		SourceTargetVersion: evalTargetDO.EvalTargetVersion.SourceTargetVersion,
 		Input:               inputData,
 		TargetType:          evalTargetDO.EvalTargetType,
+		EvalTarget:          evalTargetDO,
 	})
 	if err != nil {
 		return nil, err
@@ -332,8 +333,10 @@ func setSpanInputOutput(spanParam *targetSpanTagsParams, do *entity.EvalTarget, 
 				Type: tracespec.ModelMessagePartType(content.GetContentType()),
 			}
 		}
-		spanParam.InputToken = outputData.EvalTargetUsage.InputTokens
-		spanParam.OutputToken = outputData.EvalTargetUsage.OutputTokens
+		if outputData.EvalTargetUsage != nil {
+			spanParam.InputToken = outputData.EvalTargetUsage.InputTokens
+			spanParam.OutputToken = outputData.EvalTargetUsage.OutputTokens
+		}
 	}
 }
 

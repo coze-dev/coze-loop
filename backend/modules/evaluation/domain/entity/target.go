@@ -25,9 +25,10 @@ type EvalTargetVersion struct {
 
 	EvalTargetType EvalTargetType
 
-	CozeBot      *CozeBot
-	Prompt       *LoopPrompt
-	CozeWorkflow *CozeWorkflow
+	CozeBot         *CozeBot
+	Prompt          *LoopPrompt
+	CozeWorkflow    *CozeWorkflow
+	VolcengineAgent *VolcengineAgent
 
 	InputSchema      []*ArgsSchema
 	OutputSchema     []*ArgsSchema
@@ -47,6 +48,8 @@ const (
 	EvalTargetTypeLoopTrace EvalTargetType = 3
 	// CozeWorkflow
 	EvalTargetTypeCozeWorkflow EvalTargetType = 4
+	// 火山智能体
+	EvalTargetTypeVolcengineAgent EvalTargetType = 5
 )
 
 func (p EvalTargetType) String() string {
@@ -59,6 +62,8 @@ func (p EvalTargetType) String() string {
 		return "LoopTrace"
 	case EvalTargetTypeCozeWorkflow:
 		return "CozeWorkflow"
+	case EvalTargetTypeVolcengineAgent:
+		return "VolcengineAgent"
 	}
 	return "<UNSET>"
 }

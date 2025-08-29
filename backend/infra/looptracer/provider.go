@@ -6,7 +6,7 @@ package looptracer
 import (
 	"context"
 
-	cozeloop "github.com/coze-dev/cozeloop-go"
+	"github.com/coze-dev/cozeloop-go"
 )
 
 var tracer Tracer = &noopTracer{c: &cozeloop.NoopClient{}}
@@ -23,6 +23,8 @@ type Tracer interface {
 	Flush(ctx context.Context)
 	// Inject Inject the tracer into the context.
 	Inject(ctx context.Context) context.Context
+	// InjectW3CTraceContext Inject the trace context into W3C trace context specification
+	InjectW3CTraceContext(ctx context.Context) map[string]string
 }
 
 type Span interface {
