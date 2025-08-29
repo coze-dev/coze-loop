@@ -608,37 +608,111 @@ func (e *EvaluatorHandlerImpl) validateSubmitEvaluatorVersionRequest(ctx context
 
 // ListBuiltinTemplate 获取内置评估器模板列表
 func (e *EvaluatorHandlerImpl) ListTemplates(ctx context.Context, request *evaluatorservice.ListTemplatesRequest) (resp *evaluatorservice.ListTemplatesResponse, err error) {
-	builtinTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[strings.ToLower(request.GetBuiltinTemplateType().String())]
+	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
+	builtinTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
+	
+	// 如果是Code类型且指定了语言类型，需要进一步过滤
+	if templateType == "code" && request.GetLanguageType() != "" {
+		languageType := strings.ToLower(request.GetLanguageType())
+		filteredTemplates := make(map[string]*evaluatordto.EvaluatorContent)
+		
+		// 遍历所有Code模板，只保留匹配语言类型的模板
+		for key, template := range builtinTemplates {
+			if template.GetCodeEvaluator() != nil && 
+			   template.GetCodeEvaluator().GetLanguageType() != "" &&
+			   strings.ToLower(template.GetCodeEvaluator().GetLanguageType()) == languageType {
+				filteredTemplates[key] = template
+			}
+		}
+		builtinTemplates = filteredTemplates
+	}
+	
 	return &evaluatorservice.ListTemplatesResponse{
-		BuiltinTemplateKeys: buildTemplateKeys(builtinTemplates),
+		BuiltinTemplateKeys: buildTemplateKeys(builtinTemplates, request.GetBuiltinTemplateType()),
 	}, nil
 }
 
-func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent) []*evaluatordto.EvaluatorContent {
+func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent, templateType evaluatordto.TemplateType) []*evaluatordto.EvaluatorContent {
 	keys := make([]*evaluatordto.EvaluatorContent, 0, len(origins))
+	
 	for _, origin := range origins {
-		keys = append(keys, &evaluatordto.EvaluatorContent{
-			PromptEvaluator: &evaluatordto.PromptEvaluator{
-				PromptTemplateKey:  origin.GetPromptEvaluator().PromptTemplateKey,
-				PromptTemplateName: origin.GetPromptEvaluator().PromptTemplateName,
-			},
-		})
+		evaluatorContent := &evaluatordto.EvaluatorContent{}
+		
+		// 根据模板类型处理
+		switch templateType {
+		case evaluatordto.TemplateType_Prompt:
+			if origin.GetPromptEvaluator() != nil {
+				evaluatorContent.PromptEvaluator = &evaluatordto.PromptEvaluator{
+					PromptTemplateKey:  origin.GetPromptEvaluator().PromptTemplateKey,
+					PromptTemplateName: origin.GetPromptEvaluator().PromptTemplateName,
+				}
+			}
+		case evaluatordto.TemplateType_Code:
+			if origin.GetCodeEvaluator() != nil {
+				evaluatorContent.CodeEvaluator = &evaluatordto.CodeEvaluator{
+					LanguageType:     origin.GetCodeEvaluator().LanguageType,
+					CodeTemplateKey:  origin.GetCodeEvaluator().CodeTemplateKey,
+					CodeTemplateName: origin.GetCodeEvaluator().CodeTemplateName,
+				}
+			}
+		}
+		
+		keys = append(keys, evaluatorContent)
 	}
+	
+	// 排序逻辑适配两种类型
 	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].GetPromptEvaluator().GetPromptTemplateKey() < keys[j].GetPromptEvaluator().GetPromptTemplateKey()
+		keyI := getTemplateKey(keys[i])
+		keyJ := getTemplateKey(keys[j])
+		return keyI < keyJ
 	})
 	return keys
 }
 
+// 辅助函数：获取模板key用于排序
+func getTemplateKey(content *evaluatordto.EvaluatorContent) string {
+	if content.GetPromptEvaluator() != nil {
+		return content.GetPromptEvaluator().GetPromptTemplateKey()
+	}
+	if content.GetCodeEvaluator() != nil {
+		return content.GetCodeEvaluator().GetCodeTemplateKey()
+	}
+	return ""
+}
+
 // GetEvaluatorTemplate 按 key 单个查询内置评估器模板详情
 func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *evaluatorservice.GetTemplateInfoRequest) (resp *evaluatorservice.GetTemplateInfoResponse, err error) {
-	if template, ok := e.configer.GetEvaluatorTemplateConf(ctx)[strings.ToLower(request.GetBuiltinTemplateType().String())][request.GetBuiltinTemplateKey()]; !ok {
-		return nil, errorx.NewByCode(errno.TemplateNotFoundCode, errorx.WithExtraMsg("builtin template not found"))
+	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
+	templateKey := request.GetBuiltinTemplateKey()
+	
+	allTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
+	
+	var template *evaluatordto.EvaluatorContent
+	var ok bool
+	
+	if templateType == "code" && request.GetLanguageType() != "" {
+		// Code类型且指定了语言类型，需要检查模板的语言类型是否匹配
+		languageType := strings.ToLower(request.GetLanguageType())
+		if candidateTemplate, exists := allTemplates[templateKey]; exists {
+			if candidateTemplate.GetCodeEvaluator() != nil &&
+			   candidateTemplate.GetCodeEvaluator().GetLanguageType() != "" &&
+			   strings.ToLower(candidateTemplate.GetCodeEvaluator().GetLanguageType()) == languageType {
+				template = candidateTemplate
+				ok = true
+			}
+		}
 	} else {
-		return &evaluatorservice.GetTemplateInfoResponse{
-			EvaluatorContent: template,
-		}, nil
+		// Prompt类型或Code类型未指定语言
+		template, ok = allTemplates[templateKey]
 	}
+	
+	if !ok || template == nil {
+		return nil, errorx.NewByCode(errno.TemplateNotFoundCode, errorx.WithExtraMsg("builtin template not found"))
+	}
+	
+	return &evaluatorservice.GetTemplateInfoResponse{
+		EvaluatorContent: template,
+	}, nil
 }
 
 // RunEvaluator evaluator_version 运行
