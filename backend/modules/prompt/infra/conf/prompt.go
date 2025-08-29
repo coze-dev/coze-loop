@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
-
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -36,7 +35,6 @@ type promptLabelVersionCacheConfig struct {
 	Enable     bool `mapstructure:"enable"`
 	TTLSeconds int  `mapstructure:"ttl_seconds"`
 }
-
 
 func (c *PromptConfigProvider) GetPromptHubMaxQPSBySpace(ctx context.Context, spaceID int64) (maxQPS int, err error) {
 	const PromptHubRateLimitConfigKey = "prompt_hub_rate_limit_config"
@@ -75,4 +73,3 @@ func (c *PromptConfigProvider) GetPromptLabelVersionCacheConfig(ctx context.Cont
 	}
 	return config.Enable, time.Duration(config.TTLSeconds) * time.Second, nil
 }
-

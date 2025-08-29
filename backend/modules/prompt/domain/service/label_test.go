@@ -1,8 +1,14 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import (
 	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
@@ -10,8 +16,6 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo/mocks"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 )
 
 func TestPromptServiceImpl_CreateLabel(t *testing.T) {
