@@ -151,13 +151,13 @@ func (v *TaskDaoImpl) ListTask(ctx context.Context, param ListTaskParam) ([]*mod
 }
 
 // 处理任务过滤条件
-func applyTaskFilters(db *query.observabilityTaskDo, taskFilters *filter.TaskFilterFields) (*query.observabilityTaskDo, error) {
-	if taskFilters == nil {
-		return db, nil
-	}
-
-	return db, nil
-}
+//func applyTaskFilters(db *query.observabilityTaskDo, taskFilters *filter.TaskFilterFields) (*query.observabilityTaskDo, error) {
+//	if taskFilters == nil {
+//		return db, nil
+//	}
+//
+//	return db, nil
+//}
 
 // 计算分页参数
 func calculatePagination(reqLimit, reqOffset int32) (int, int) {
