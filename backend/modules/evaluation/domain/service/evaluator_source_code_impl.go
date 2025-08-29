@@ -139,7 +139,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 		return &entity.EvaluatorOutputData{
 			EvaluatorRunError: evaluatorRunError,
 			TimeConsumingMS:   time.Since(startTime).Milliseconds(),
-			Stdout:            func() string {
+			Stdout: func() string {
 				if result.Output != nil {
 					return result.Output.Stdout
 				}
@@ -221,12 +221,17 @@ func (c *EvaluatorSourceCodeServiceImpl) Validate(ctx context.Context, evaluator
 	}
 
 	codeVersion := evaluator.CodeEvaluatorVersion
-	
+
+	// 调用ValidateBaseInfo进行基础信息验证和language_type标准化
+	if err := codeVersion.ValidateBaseInfo(); err != nil {
+		return err
+	}
+
 	// 1. 先进行安全检查
 	if err := c.validateCodeSecurity(codeVersion); err != nil {
 		return err
 	}
-	
+
 	// 2. 再进行语法检查（现有逻辑）
 	switch codeVersion.LanguageType {
 	case entity.LanguageTypePython:
@@ -298,17 +303,17 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResult(result *entity.E
 		// 解码stdout和stderr中的Unicode字符
 		stdout := c.decodeUnicodeEscapes(result.Output.Stdout)
 		stderr := c.decodeUnicodeEscapes(result.Output.Stderr)
-		
+
 		processed.Stdout = stdout
 		processed.Stderr = stderr
 		processed.RetVal = result.Output.RetVal
-		
+
 		// 如果有stderr输出，认为执行失败
 		if stderr != "" {
 			processed.Success = false
 			processed.ErrorMsg = stderr
 		}
-		
+
 		// 将基本信息添加到Output中
 		processed.Output["stdout"] = stdout
 		processed.Output["stderr"] = stderr
@@ -341,7 +346,7 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 			for key, value := range parsedOutput {
 				processed.Output[key] = value
 			}
-			
+
 			// 检查解析结果中的valid字段
 			if validVal, ok := parsedOutput["valid"]; ok {
 				if valid, ok := validVal.(bool); ok && !valid {
@@ -721,18 +726,18 @@ func (c *EvaluatorSourceCodeServiceImpl) convertLanguageType(langType entity.Lan
 func (c *EvaluatorSourceCodeServiceImpl) validatePythonSpecificSecurity(code string) error {
 	// 检查Python特有的危险模式
 	dangerousPatterns := []string{
-		`__import__\s*\(\s*["']os["']`,      // 动态导入os模块
-		`getattr\s*\(.*,\s*["']__.*["']`,    // 访问私有属性
-		`setattr\s*\(.*,\s*["']__.*["']`,    // 设置私有属性
-		`hasattr\s*\(.*,\s*["']__.*["']`,    // 检查私有属性
+		`__import__\s*\(\s*["']os["']`,   // 动态导入os模块
+		`getattr\s*\(.*,\s*["']__.*["']`, // 访问私有属性
+		`setattr\s*\(.*,\s*["']__.*["']`, // 设置私有属性
+		`hasattr\s*\(.*,\s*["']__.*["']`, // 检查私有属性
 	}
-	
+
 	for _, pattern := range dangerousPatterns {
 		if matched, _ := regexp.MatchString(pattern, code); matched {
 			return fmt.Errorf("detected dangerous Python pattern")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -740,18 +745,18 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonSpecificSecurity(code str
 func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptSpecificSecurity(code string) error {
 	// 检查JavaScript特有的危险模式
 	dangerousPatterns := []string{
-		`document\..*`,                      // DOM操作
-		`window\..*`,                        // 窗口对象访问
-		`location\..*`,                      // 位置对象访问
-		`navigator\..*`,                     // 导航器对象访问
+		`document\..*`,  // DOM操作
+		`window\..*`,    // 窗口对象访问
+		`location\..*`,  // 位置对象访问
+		`navigator\..*`, // 导航器对象访问
 	}
-	
+
 	for _, pattern := range dangerousPatterns {
 		if matched, _ := regexp.MatchString(pattern, code); matched {
 			return fmt.Errorf("detected dangerous JavaScript pattern")
 		}
 	}
-	
+
 	return nil
 }
 
