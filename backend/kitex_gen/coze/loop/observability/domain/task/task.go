@@ -876,7 +876,7 @@ func (p *Task) Field100DeepEqual(src *common.BaseInfo) bool {
 // Rule
 type Rule struct {
 	// Span 过滤条件
-	SpanFilters *filter.FilterFields `thrift:"span_filters,1,optional" frugal:"1,optional,filter.FilterFields" form:"span_filters" json:"span_filters,omitempty" query:"span_filters"`
+	SpanFilters *filter.SpanFilterFields `thrift:"span_filters,1,optional" frugal:"1,optional,filter.SpanFilterFields" form:"span_filters" json:"span_filters,omitempty" query:"span_filters"`
 	// 采样配置
 	Sampler *Sampler `thrift:"sampler,2,optional" frugal:"2,optional,Sampler" form:"sampler" json:"sampler,omitempty" query:"sampler"`
 	// 生效时间窗口
@@ -890,9 +890,9 @@ func NewRule() *Rule {
 func (p *Rule) InitDefault() {
 }
 
-var Rule_SpanFilters_DEFAULT *filter.FilterFields
+var Rule_SpanFilters_DEFAULT *filter.SpanFilterFields
 
-func (p *Rule) GetSpanFilters() (v *filter.FilterFields) {
+func (p *Rule) GetSpanFilters() (v *filter.SpanFilterFields) {
 	if p == nil {
 		return
 	}
@@ -925,7 +925,7 @@ func (p *Rule) GetEffectiveTime() (v *EffectiveTime) {
 	}
 	return p.EffectiveTime
 }
-func (p *Rule) SetSpanFilters(val *filter.FilterFields) {
+func (p *Rule) SetSpanFilters(val *filter.SpanFilterFields) {
 	p.SpanFilters = val
 }
 func (p *Rule) SetSampler(val *Sampler) {
@@ -1025,7 +1025,7 @@ ReadStructEndError:
 }
 
 func (p *Rule) ReadField1(iprot thrift.TProtocol) error {
-	_field := filter.NewFilterFields()
+	_field := filter.NewSpanFilterFields()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -1166,7 +1166,7 @@ func (p *Rule) DeepEqual(ano *Rule) bool {
 	return true
 }
 
-func (p *Rule) Field1DeepEqual(src *filter.FilterFields) bool {
+func (p *Rule) Field1DeepEqual(src *filter.SpanFilterFields) bool {
 
 	if !p.SpanFilters.DeepEqual(src) {
 		return false

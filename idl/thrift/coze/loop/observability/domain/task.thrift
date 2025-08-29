@@ -36,7 +36,7 @@ struct Task {
 
 // Rule
 struct Rule {
-    1: optional filter.FilterFields  span_filters // Span 过滤条件
+    1: optional filter.SpanFilterFields  span_filters // Span 过滤条件
     2: optional Sampler sampler                   // 采样配置
     3: optional EffectiveTime effective_time      // 生效时间窗口
 }

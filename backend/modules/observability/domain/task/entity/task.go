@@ -3,7 +3,12 @@
 
 package entity
 
-import "time"
+import (
+	"time"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+)
 
 type ObservabilityTask struct {
 	ID            int64     // Task ID
@@ -21,4 +26,9 @@ type ObservabilityTask struct {
 	UpdatedAt     time.Time // 更新时间
 	CreatedBy     string    // 创建人
 	UpdatedBy     string    // 更新人
+}
+type SpanFilter struct {
+	Filters      loop_span.FilterFields `json:"filters,omitempty"`
+	PlatformType common.PlatformType    `json:"platform_type,omitempty"`
+	SpanListType common.SpanListType    `json:"span_list_type,omitempty"`
 }

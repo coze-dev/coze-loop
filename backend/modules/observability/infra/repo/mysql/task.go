@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
@@ -36,11 +36,10 @@ type ListTaskParam struct {
 //go:generate mockgen -destination=mocks/task.go -package=mocks . ITaskDao
 type ITaskDao interface {
 	GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*model.ObservabilityTask, error)
-	ListTasks(ctx context.Context, workspaceID int64, userID string) ([]*model.ObservabilityTask, error)
 	CreateTask(ctx context.Context, po *model.ObservabilityTask) (int64, error)
 	UpdateTask(ctx context.Context, po *model.ObservabilityTask) error
 	DeleteTask(ctx context.Context, id int64, workspaceID int64, userID string) error
-	ListTask(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error)
+	ListTasks(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error)
 }
 
 func NewTaskDaoImpl(db db.Provider) ITaskDao {
@@ -71,22 +70,6 @@ func (v *TaskDaoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64,
 		}
 	}
 	return TaskPo, nil
-}
-
-func (v *TaskDaoImpl) ListTasks(ctx context.Context, workspaceID int64, userID string) ([]*model.ObservabilityTask, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
-	qd := q.WithContext(ctx)
-	if workspaceID != 0 {
-		qd = qd.Where(q.WorkspaceID.Eq(workspaceID))
-	}
-	if userID != "" {
-		qd = qd.Where(q.CreatedBy.Eq(userID))
-	}
-	results, err := qd.Limit(100).Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return results, nil
 }
 
 func (v *TaskDaoImpl) CreateTask(ctx context.Context, po *model.ObservabilityTask) (int64, error) {
@@ -122,7 +105,7 @@ func (v *TaskDaoImpl) DeleteTask(ctx context.Context, id int64, workspaceID int6
 	return nil
 }
 
-func (v *TaskDaoImpl) ListTask(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error) {
+func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
 	var total int64
 	qd := q.WithContext(ctx)

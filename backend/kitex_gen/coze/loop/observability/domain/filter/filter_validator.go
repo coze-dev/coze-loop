@@ -46,3 +46,11 @@ func (p *TaskFilterField) IsValid() error {
 	}
 	return nil
 }
+func (p *SpanFilterFields) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	return nil
+}

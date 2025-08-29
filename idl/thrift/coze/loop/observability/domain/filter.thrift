@@ -1,5 +1,7 @@
 namespace go coze.loop.observability.domain.filter
 
+include "common.thrift"
+
 typedef string QueryType (ts.enum="true")
 const QueryType QueryType_Match = "match"
 const QueryType QueryType_Eq = "eq"
@@ -63,4 +65,9 @@ struct TaskFilterField {
     4: optional QueryType query_type
     5: optional QueryRelation query_and_or
     6: optional TaskFilterField sub_filter
+}
+struct SpanFilterFields {
+    1: optional FilterFields  filters // Span 过滤条件
+    2: optional common.PlatformType platform_type  // 平台类型，不填默认是fornax
+    3: optional common.SpanListType span_list_type // 查询的 span 标签页类型，不填默认是 root span
 }

@@ -718,7 +718,7 @@ SkipFieldError:
 
 func (p *Rule) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := filter.NewFilterFields()
+	_field := filter.NewSpanFilterFields()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -838,9 +838,9 @@ func (p *Rule) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _spanFilters *filter.FilterFields
+	var _spanFilters *filter.SpanFilterFields
 	if src.SpanFilters != nil {
-		_spanFilters = &filter.FilterFields{}
+		_spanFilters = &filter.SpanFilterFields{}
 		if err := _spanFilters.DeepCopy(src.SpanFilters); err != nil {
 			return err
 		}

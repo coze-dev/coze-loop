@@ -33,16 +33,16 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 	return convertor.TaskPO2DO(TaskPo), nil
 }
 
-func (v *TaskRepoImpl) ListTasks(ctx context.Context, workspaceID int64, userID string) ([]*entity.ObservabilityTask, error) {
-	results, err := v.TaskDao.ListTasks(ctx, workspaceID, userID)
+func (v *TaskRepoImpl) ListTasks(ctx context.Context, param mysql.ListTaskParam) ([]*entity.ObservabilityTask, int64, error) {
+	results, total, err := v.TaskDao.ListTasks(ctx, param)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	resp := make([]*entity.ObservabilityTask, len(results))
 	for i, result := range results {
 		resp[i] = convertor.TaskPO2DO(result)
 	}
-	return resp, nil
+	return resp, total, nil
 }
 
 func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error) {
