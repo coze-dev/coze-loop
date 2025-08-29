@@ -4109,6 +4109,20 @@ func (p *ContentPart) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4169,6 +4183,20 @@ func (p *ContentPart) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ContentPart) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Base64Data = _field
+	return offset, nil
+}
+
 func (p *ContentPart) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4179,6 +4207,7 @@ func (p *ContentPart) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -4190,6 +4219,7 @@ func (p *ContentPart) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4222,6 +4252,15 @@ func (p *ContentPart) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *ContentPart) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBase64Data() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Base64Data)
+	}
+	return offset
+}
+
 func (p *ContentPart) field1Length() int {
 	l := 0
 	if p.IsSetType() {
@@ -4245,6 +4284,15 @@ func (p *ContentPart) field3Length() int {
 	if p.IsSetImageURL() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.ImageURL)
+	}
+	return l
+}
+
+func (p *ContentPart) field4Length() int {
+	l := 0
+	if p.IsSetBase64Data() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Base64Data)
 	}
 	return l
 }
@@ -4274,6 +4322,14 @@ func (p *ContentPart) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ImageURL)
 		}
 		p.ImageURL = &tmp
+	}
+
+	if src.Base64Data != nil {
+		var tmp string
+		if *src.Base64Data != "" {
+			tmp = kutils.StringDeepCopy(*src.Base64Data)
+		}
+		p.Base64Data = &tmp
 	}
 
 	return nil

@@ -28,5 +28,6 @@ const (
 const (
 	SpanTagCallTypePromptPlayground = "PromptPlayground"
 	SpanTagCallTypePromptDebug      = "PromptDebug"
+	SpanTagCallTypePTaaS            = "PTaaS"
 	SpanTagCallTypeEvaluation       = "Evaluation"
 )

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/vincent-petithory/dataurl"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
 	runtimedto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/runtime"
@@ -132,7 +133,7 @@ func ContentPartDO2DTO(do *entity.ContentPart) *runtimedto.ChatMessagePart {
 	return &runtimedto.ChatMessagePart{
 		Type:     ptr.Of(ContentTypeDO2DTO(do.Type)),
 		Text:     do.Text,
-		ImageURL: ImageURLDO2DTO(do.ImageURL),
+		ImageURL: ImageURLDO2DTO(do.Type, do.ImageURL, do.Base64Data),
 	}
 }
 
@@ -142,17 +143,30 @@ func ContentTypeDO2DTO(do entity.ContentType) runtimedto.ChatMessagePartType {
 		return runtimedto.ChatMessagePartTypeText
 	case entity.ContentTypeImageURL:
 		return runtimedto.ChatMessagePartTypeImageURL
+	case entity.ContentTypeBase64Data:
+		return runtimedto.ChatMessagePartTypeImageURL // 目前base64都通过image_url传递
 	default:
 		return runtimedto.ChatMessagePartTypeText
 	}
 }
 
-func ImageURLDO2DTO(do *entity.ImageURL) *runtimedto.ChatMessageImageURL {
-	if do == nil {
+func ImageURLDO2DTO(contentType entity.ContentType, url *entity.ImageURL, base64Data *string) *runtimedto.ChatMessageImageURL {
+	switch contentType {
+	case entity.ContentTypeImageURL:
+		return &runtimedto.ChatMessageImageURL{
+			URL: ptr.Of(url.URL),
+		}
+	case entity.ContentTypeBase64Data:
+		dataURL, _ := dataurl.DecodeString(ptr.From(base64Data))
+		if dataURL == nil {
+			return nil
+		}
+		return &runtimedto.ChatMessageImageURL{
+			URL:      base64Data,
+			MimeType: ptr.Of(dataURL.Type),
+		}
+	default:
 		return nil
-	}
-	return &runtimedto.ChatMessageImageURL{
-		URL: ptr.Of(do.URL),
 	}
 }
 

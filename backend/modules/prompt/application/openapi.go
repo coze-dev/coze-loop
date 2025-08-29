@@ -10,11 +10,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 	"github.com/coze-dev/cozeloop-go"
 	loopentity "github.com/coze-dev/cozeloop-go/entity"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+	"github.com/vincent-petithory/dataurl"
 	"golang.org/x/exp/maps"
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
@@ -250,11 +252,9 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 		}
 	}()
 	r = openapi.NewExecuteResponse()
-	if req.GetWorkspaceID() == 0 {
-		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
-	}
-	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
-		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	err = validateExecuteRequest(req)
+	if err != nil {
+		return r, err
 	}
 	var span cozeloop.Span
 	ctx, span = p.startPromptExecutorSpan(ctx, ptaasStartPromptExecutorSpanParam{
@@ -326,11 +326,9 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 			logs.CtxError(ctx, "openapi execute streaming prompt failed, err=%v", err)
 		}
 	}()
-	if req.GetWorkspaceID() == 0 {
-		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
-	}
-	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
-		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	err = validateExecuteRequest(req)
+	if err != nil {
+		return err
 	}
 	var span cozeloop.Span
 	ctx, span = p.startPromptExecutorSpan(ctx, ptaasStartPromptExecutorSpanParam{
@@ -542,7 +540,7 @@ func (p *PromptOpenAPIApplicationImpl) startPromptExecutorSpan(ctx context.Conte
 	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptExecutor, consts.SpanTypePromptExecutor,
 		looptracer.WithSpanWorkspaceID(strconv.FormatInt(param.workspaceID, 10)))
 	if span != nil {
-		span.SetCallType(consts.SpanTagCallTypeEvaluation)
+		span.SetCallType(consts.SpanTagCallTypePTaaS)
 		intput := map[string]any{
 			tracespec.PromptKey:           param.reqPromptKey,
 			tracespec.PromptVersion:       param.reqPromptVersion,
@@ -587,3 +585,43 @@ func (p *PromptOpenAPIApplicationImpl) finishPromptExecutorSpan(ctx context.Cont
 	span.Finish(ctx)
 }
 
+func validateExecuteRequest(req *openapi.ExecuteRequest) error {
+	err := req.IsValid()
+	if err != nil {
+		return err
+	}
+	if req.GetWorkspaceID() == 0 {
+		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
+		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	}
+	validateParts := func(parts []*openapi.ContentPart) error {
+		for _, part := range parts {
+			switch part.GetType() {
+			case openapi.ContentTypeImageURL:
+				if !govalidator.IsURL(part.GetImageURL()) {
+					return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": fmt.Sprintf("%s不是有效的URL", part.GetImageURL())}))
+				}
+			case openapi.ContentTypeBase64Data:
+				if _, err = dataurl.DecodeString(part.GetBase64Data()); err != nil {
+					return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "存在无效的base64数据，数据格式应该符合data:[<mediatype>][;base64],<data>"}))
+				}
+			}
+		}
+		return nil
+	}
+	for _, message := range req.Messages {
+		err = validateParts(message.Parts)
+		if err != nil {
+			return err
+		}
+	}
+	for _, val := range req.VariableVals {
+		err = validateParts(val.MultiPartValues)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

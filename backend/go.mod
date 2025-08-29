@@ -97,7 +97,11 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+require (
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+	github.com/vincent-petithory/dataurl v1.0.0 // indirect
+)
 
 require (
 	cloud.google.com/go v0.116.0 // indirect

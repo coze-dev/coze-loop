@@ -178,9 +178,10 @@ func OpenAPIContentPartDO2DTO(do *entity.ContentPart) *openapi.ContentPart {
 		imageURL = ptr.Of(do.ImageURL.URL)
 	}
 	return &openapi.ContentPart{
-		Type:     ptr.Of(OpenAPIContentTypeDO2DTO(do.Type)),
-		Text:     do.Text,
-		ImageURL: imageURL,
+		Type:       ptr.Of(OpenAPIContentTypeDO2DTO(do.Type)),
+		Text:       do.Text,
+		ImageURL:   imageURL,
+		Base64Data: do.Base64Data,
 	}
 }
 
@@ -188,6 +189,10 @@ func OpenAPIContentTypeDO2DTO(do entity.ContentType) openapi.ContentType {
 	switch do {
 	case entity.ContentTypeText:
 		return openapi.ContentTypeText
+	case entity.ContentTypeImageURL:
+		return openapi.ContentTypeImageURL
+	case entity.ContentTypeBase64Data:
+		return openapi.ContentTypeBase64Data
 	case entity.ContentTypeMultiPartVariable:
 		return openapi.ContentTypeMultiPartVariable
 	default:
@@ -252,9 +257,10 @@ func OpenAPIContentPartDTO2DO(dto *openapi.ContentPart) *entity.ContentPart {
 		}
 	}
 	return &entity.ContentPart{
-		Type:     OpenAPIContentTypeDTO2DO(dto.GetType()),
-		Text:     dto.Text,
-		ImageURL: imageURL,
+		Type:       OpenAPIContentTypeDTO2DO(dto.GetType()),
+		Text:       dto.Text,
+		ImageURL:   imageURL,
+		Base64Data: dto.Base64Data,
 	}
 }
 
@@ -263,6 +269,10 @@ func OpenAPIContentTypeDTO2DO(dto openapi.ContentType) entity.ContentType {
 	switch dto {
 	case openapi.ContentTypeText:
 		return entity.ContentTypeText
+	case openapi.ContentTypeImageURL:
+		return entity.ContentTypeImageURL
+	case openapi.ContentTypeBase64Data:
+		return entity.ContentTypeBase64Data
 	case openapi.ContentTypeMultiPartVariable:
 		return entity.ContentTypeMultiPartVariable
 	default:

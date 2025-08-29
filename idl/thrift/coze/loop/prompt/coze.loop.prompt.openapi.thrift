@@ -122,11 +122,13 @@ struct ContentPart {
     1: optional ContentType type
     2: optional string text
     3: optional string image_url
+    4: optional string base64_data
 }
 
 typedef string ContentType (ts.enum="true")
 const ContentType ContentType_Text = "text"
 const ContentType ContentType_ImageURL = "image_url"
+const ContentType ContentType_Base64Data = "base64_data"
 const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct VariableDef {

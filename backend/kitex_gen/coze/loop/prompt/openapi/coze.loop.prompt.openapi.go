@@ -24,6 +24,8 @@ const (
 
 	ContentTypeImageURL = "image_url"
 
+	ContentTypeBase64Data = "base64_data"
+
 	ContentTypeMultiPartVariable = "multi_part_variable"
 
 	VariableTypeString = "string"
@@ -5591,9 +5593,10 @@ func (p *Message) Field6DeepEqual(src []*ToolCall) bool {
 }
 
 type ContentPart struct {
-	Type     *ContentType `thrift:"type,1,optional" frugal:"1,optional,string" form:"type" json:"type,omitempty" query:"type"`
-	Text     *string      `thrift:"text,2,optional" frugal:"2,optional,string" form:"text" json:"text,omitempty" query:"text"`
-	ImageURL *string      `thrift:"image_url,3,optional" frugal:"3,optional,string" form:"image_url" json:"image_url,omitempty" query:"image_url"`
+	Type       *ContentType `thrift:"type,1,optional" frugal:"1,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	Text       *string      `thrift:"text,2,optional" frugal:"2,optional,string" form:"text" json:"text,omitempty" query:"text"`
+	ImageURL   *string      `thrift:"image_url,3,optional" frugal:"3,optional,string" form:"image_url" json:"image_url,omitempty" query:"image_url"`
+	Base64Data *string      `thrift:"base64_data,4,optional" frugal:"4,optional,string" form:"base64_data" json:"base64_data,omitempty" query:"base64_data"`
 }
 
 func NewContentPart() *ContentPart {
@@ -5638,6 +5641,18 @@ func (p *ContentPart) GetImageURL() (v string) {
 	}
 	return *p.ImageURL
 }
+
+var ContentPart_Base64Data_DEFAULT string
+
+func (p *ContentPart) GetBase64Data() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase64Data() {
+		return ContentPart_Base64Data_DEFAULT
+	}
+	return *p.Base64Data
+}
 func (p *ContentPart) SetType(val *ContentType) {
 	p.Type = val
 }
@@ -5647,11 +5662,15 @@ func (p *ContentPart) SetText(val *string) {
 func (p *ContentPart) SetImageURL(val *string) {
 	p.ImageURL = val
 }
+func (p *ContentPart) SetBase64Data(val *string) {
+	p.Base64Data = val
+}
 
 var fieldIDToName_ContentPart = map[int16]string{
 	1: "type",
 	2: "text",
 	3: "image_url",
+	4: "base64_data",
 }
 
 func (p *ContentPart) IsSetType() bool {
@@ -5664,6 +5683,10 @@ func (p *ContentPart) IsSetText() bool {
 
 func (p *ContentPart) IsSetImageURL() bool {
 	return p.ImageURL != nil
+}
+
+func (p *ContentPart) IsSetBase64Data() bool {
+	return p.Base64Data != nil
 }
 
 func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
@@ -5703,6 +5726,14 @@ func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5770,6 +5801,17 @@ func (p *ContentPart) ReadField3(iprot thrift.TProtocol) error {
 	p.ImageURL = _field
 	return nil
 }
+func (p *ContentPart) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Base64Data = _field
+	return nil
+}
 
 func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5787,6 +5829,10 @@ func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -5861,6 +5907,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ContentPart) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase64Data() {
+		if err = oprot.WriteFieldBegin("base64_data", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Base64Data); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ContentPart) String() string {
 	if p == nil {
@@ -5883,6 +5947,9 @@ func (p *ContentPart) DeepEqual(ano *ContentPart) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.ImageURL) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Base64Data) {
 		return false
 	}
 	return true
@@ -5920,6 +5987,18 @@ func (p *ContentPart) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ImageURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ContentPart) Field4DeepEqual(src *string) bool {
+
+	if p.Base64Data == src {
+		return true
+	} else if p.Base64Data == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Base64Data, *src) != 0 {
 		return false
 	}
 	return true
