@@ -53,16 +53,16 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
-		idgen:                  idgen,
-		auth:                   auth,
-		auditClient:            auditClient,
-		configer:               configer,
-		evaluatorService:       evaluatorService,
-		evaluatorRecordService: evaluatorRecordService,
-		metrics:                metrics,
-		userInfoService:        userInfoService,
-		benefitService:         benefitService,
-		fileProvider:           fileProvider,
+		idgen:                   idgen,
+		auth:                    auth,
+		auditClient:             auditClient,
+		configer:                configer,
+		evaluatorService:        evaluatorService,
+		evaluatorRecordService:  evaluatorRecordService,
+		metrics:                 metrics,
+		userInfoService:         userInfoService,
+		benefitService:          benefitService,
+		fileProvider:            fileProvider,
 		evaluatorSourceServices: evaluatorSourceServices,
 	}
 	return handler
@@ -79,7 +79,7 @@ type EvaluatorHandlerImpl struct {
 	metrics                 metrics.EvaluatorExecMetrics
 	userInfoService         userinfo.UserInfoService
 	benefitService          benefit.IBenefitService
-	fileProvider           rpc.IFileProvider
+	fileProvider            rpc.IFileProvider
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService
 }
 
@@ -610,23 +610,33 @@ func (e *EvaluatorHandlerImpl) validateSubmitEvaluatorVersionRequest(ctx context
 func (e *EvaluatorHandlerImpl) ListTemplates(ctx context.Context, request *evaluatorservice.ListTemplatesRequest) (resp *evaluatorservice.ListTemplatesResponse, err error) {
 	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
 	builtinTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
-	
+
+	if builtinTemplates == nil {
+		return &evaluatorservice.ListTemplatesResponse{
+			BuiltinTemplateKeys: make([]*evaluatordto.EvaluatorContent, 0),
+		}, nil
+	}
+	if request.GetLanguageType() == "" {
+		return &evaluatorservice.ListTemplatesResponse{
+			BuiltinTemplateKeys: buildTemplateKeys(builtinTemplates, request.GetBuiltinTemplateType()),
+		}, nil
+	}
 	// 如果是Code类型且指定了语言类型，需要进一步过滤
 	if templateType == "code" && request.GetLanguageType() != "" {
 		languageType := strings.ToLower(request.GetLanguageType())
 		filteredTemplates := make(map[string]*evaluatordto.EvaluatorContent)
-		
+
 		// 遍历所有Code模板，只保留匹配语言类型的模板
 		for key, template := range builtinTemplates {
-			if template.GetCodeEvaluator() != nil && 
-			   template.GetCodeEvaluator().GetLanguageType() != "" &&
-			   strings.ToLower(template.GetCodeEvaluator().GetLanguageType()) == languageType {
+			if template.GetCodeEvaluator() != nil &&
+				template.GetCodeEvaluator().GetLanguageType() != "" &&
+				strings.ToLower(template.GetCodeEvaluator().GetLanguageType()) == languageType {
 				filteredTemplates[key] = template
 			}
 		}
 		builtinTemplates = filteredTemplates
 	}
-	
+
 	return &evaluatorservice.ListTemplatesResponse{
 		BuiltinTemplateKeys: buildTemplateKeys(builtinTemplates, request.GetBuiltinTemplateType()),
 	}, nil
@@ -634,10 +644,10 @@ func (e *EvaluatorHandlerImpl) ListTemplates(ctx context.Context, request *evalu
 
 func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent, templateType evaluatordto.TemplateType) []*evaluatordto.EvaluatorContent {
 	keys := make([]*evaluatordto.EvaluatorContent, 0, len(origins))
-	
+
 	for _, origin := range origins {
 		evaluatorContent := &evaluatordto.EvaluatorContent{}
-		
+
 		// 根据模板类型处理
 		switch templateType {
 		case evaluatordto.TemplateType_Prompt:
@@ -656,10 +666,10 @@ func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent, templa
 				}
 			}
 		}
-		
+
 		keys = append(keys, evaluatorContent)
 	}
-	
+
 	// 排序逻辑适配两种类型
 	sort.Slice(keys, func(i, j int) bool {
 		keyI := getTemplateKey(keys[i])
@@ -684,19 +694,19 @@ func getTemplateKey(content *evaluatordto.EvaluatorContent) string {
 func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *evaluatorservice.GetTemplateInfoRequest) (resp *evaluatorservice.GetTemplateInfoResponse, err error) {
 	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
 	templateKey := request.GetBuiltinTemplateKey()
-	
+
 	allTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
-	
+
 	var template *evaluatordto.EvaluatorContent
 	var ok bool
-	
+
 	if templateType == "code" && request.GetLanguageType() != "" {
 		// Code类型且指定了语言类型，需要检查模板的语言类型是否匹配
 		languageType := strings.ToLower(request.GetLanguageType())
 		if candidateTemplate, exists := allTemplates[templateKey]; exists {
 			if candidateTemplate.GetCodeEvaluator() != nil &&
-			   candidateTemplate.GetCodeEvaluator().GetLanguageType() != "" &&
-			   strings.ToLower(candidateTemplate.GetCodeEvaluator().GetLanguageType()) == languageType {
+				candidateTemplate.GetCodeEvaluator().GetLanguageType() != "" &&
+				strings.ToLower(candidateTemplate.GetCodeEvaluator().GetLanguageType()) == languageType {
 				template = candidateTemplate
 				ok = true
 			}
@@ -705,11 +715,11 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *eva
 		// Prompt类型或Code类型未指定语言
 		template, ok = allTemplates[templateKey]
 	}
-	
+
 	if !ok || template == nil {
 		return nil, errorx.NewByCode(errno.TemplateNotFoundCode, errorx.WithExtraMsg("builtin template not found"))
 	}
-	
+
 	return &evaluatorservice.GetTemplateInfoResponse{
 		EvaluatorContent: template,
 	}, nil
@@ -1074,7 +1084,6 @@ func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *e
 			ErrorMessage: gptr.Of(err.Error()),
 		}, nil
 	}
-
 
 	// 构造响应
 	response := &evaluatorservice.ValidateEvaluatorResponse{
