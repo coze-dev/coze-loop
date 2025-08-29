@@ -900,13 +900,13 @@ func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.Extra
 		return nil, err
 	}
 	sResp, err := t.traceService.ExtractSpanInfo(ctx, &service.ExtractSpanInfoRequest{
-		WorkspaceID:  req.WorkspaceID,
-		TraceID:      "",
-		SpanIds:      req.SpanIds,
-		StartTime:    req.GetStartTime(),
-		EndTime:      req.GetEndTime(),
-		PlatformType: loop_span.PlatformType(req.GetPlatformType()),
-		//FieldMappings: req.FieldMappings,
+		WorkspaceID:   req.WorkspaceID,
+		TraceID:       "",
+		SpanIds:       req.SpanIds,
+		StartTime:     req.GetStartTime(),
+		EndTime:       req.GetEndTime(),
+		PlatformType:  loop_span.PlatformType(req.GetPlatformType()),
+		FieldMappings: req.FieldMappings,
 	})
 	if err != nil {
 		return nil, err
