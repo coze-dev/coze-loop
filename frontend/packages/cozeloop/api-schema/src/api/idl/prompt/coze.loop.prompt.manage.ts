@@ -55,7 +55,7 @@ export const GetPrompt = /*#__PURE__*/createAPI<GetPromptRequest, GetPromptRespo
   "reqType": "GetPromptRequest",
   "reqMapping": {
     "path": ["prompt_id"],
-    "query": ["with_commit", "commit_version", "with_draft", "with_default_config"]
+    "query": ["workspace_id", "with_commit", "commit_version", "with_draft", "with_default_config"]
   },
   "resType": "GetPromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -67,7 +67,7 @@ export const ListPrompt = /*#__PURE__*/createAPI<ListPromptRequest, ListPromptRe
   "name": "ListPrompt",
   "reqType": "ListPromptRequest",
   "reqMapping": {
-    "body": ["workspace_id", "key_word", "created_bys", "page_num", "page_size", "order_by", "asc"]
+    "body": ["workspace_id", "key_word", "created_bys", "committed_only", "page_num", "page_size", "order_by", "asc"]
   },
   "resType": "ListPromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -167,6 +167,7 @@ export interface DeletePromptRequest {
 export interface DeletePromptResponse {}
 export interface GetPromptRequest {
   prompt_id?: string,
+  workspace_id?: string,
   with_commit?: boolean,
   commit_version?: string,
   with_draft?: boolean,
@@ -195,6 +196,7 @@ export interface ListPromptRequest {
   workspace_id?: string,
   key_word?: string,
   created_bys?: string[],
+  committed_only?: boolean,
   page_num?: number,
   page_size?: number,
   order_by?: ListPromptOrderBy,

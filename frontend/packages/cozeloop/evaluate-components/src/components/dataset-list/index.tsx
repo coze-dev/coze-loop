@@ -1,10 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useState } from 'react';
 
 import { isEmpty } from 'lodash-es';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import {
   TableColActions,
@@ -48,16 +45,14 @@ export const DatasetList = () => {
       size: 'large',
       className: 'w-[420px]',
       type: 'dialog',
-      title: I18n.t('delete_evaluation_set'),
+      title: '删除评测集',
       content: (
         <Typography.Text className="break-all">
-          {I18n.t('confirm_to_delete_evaluation_set', {
-            name: (
-              <Typography.Text className="!font-medium mx-[2px]">
-                {row.name}
-              </Typography.Text>
-            ),
-          })}
+          确定删除评测集
+          <Typography.Text className="!font-medium mx-[2px]">
+            {row.name}
+          </Typography.Text>
+          吗？此修改将不可逆。
         </Typography.Text>
       ),
       autoLoading: true,
@@ -69,8 +64,8 @@ export const DatasetList = () => {
         service.refresh();
       },
       showCancelButton: true,
-      cancelText: I18n.t('Cancel'),
-      okText: I18n.t('delete'),
+      cancelText: '取消',
+      okText: '删除',
     });
   };
 
@@ -82,7 +77,7 @@ export const DatasetList = () => {
   const allColumns: ColumnProps[] = [
     ...columns,
     {
-      title: I18n.t('operation'),
+      title: '操作',
       key: 'actions',
       width: 100,
       fixed: 'right',
@@ -90,11 +85,11 @@ export const DatasetList = () => {
         <TableColActions
           actions={[
             {
-              label: I18n.t('detail'),
+              label: '详情',
               onClick: () => handleDatasetBaseInfoEdit(record),
             },
             {
-              label: I18n.t('delete'),
+              label: '删除',
               type: 'danger',
               onClick: () => handleDelete(record),
               disabled: guards.data.readonly,
@@ -108,12 +103,12 @@ export const DatasetList = () => {
 
   return (
     <PrimaryPage
-      pageTitle={I18n.t('evaluation_set')}
+      pageTitle="评测集"
       filterSlot={
         <div className="flex justify-between">
           <ListFilter filter={filter} setFilter={onFilterChange} />
           <div className="flex gap-[8px]">
-            <Tooltip content={I18n.t('refresh')} theme="dark">
+            <Tooltip content="刷新" theme="dark">
               <Button
                 color="primary"
                 icon={<IconCozRefresh />}
@@ -134,7 +129,7 @@ export const DatasetList = () => {
                 navigate('evaluation/datasets/create');
               }}
             >
-              {I18n.t('new_evaluation_set')}
+              新建评测集
             </Button>
           </div>
         </div>
@@ -172,17 +167,15 @@ export const DatasetList = () => {
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusNone />}
-              title={I18n.t('failed_to_find_related_results')}
-              description={I18n.t(
-                'try_other_keywords_or_modify_filter_options',
-              )}
+              title="未能找到相关结果"
+              description={'请尝试其他关键词或修改筛选项'}
             />
           ) : (
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusAdd />}
-              title={I18n.t('no_evaluation_dataset')}
-              description={I18n.t('click_to_create_evaluation_set')}
+              title="暂无评测集"
+              description={'点击右上角新建评测集按钮进行创建'}
             />
           )
         }

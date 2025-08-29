@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from 'react';
 
 import {
@@ -16,6 +14,7 @@ import {
 import { getStoragePageSize } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
+  type KeywordSearch,
   type BatchGetExperimentResultResponse,
   type FieldType,
 } from '@cozeloop/api-schema/evaluation';
@@ -68,12 +67,15 @@ export function useExperimentDetailStore<
   filterFields = [],
   refreshKey,
   pageSizeStorageKey,
+  keywordSearch,
   experimentResultToRecordItems,
 }: {
   experimentIds: string[] | undefined;
   filterFields?: { key: keyof Filter; type: FieldType }[];
   refreshKey?: string | number;
   pageSizeStorageKey?: string;
+  /** 关键词搜索 */
+  keywordSearch?: KeywordSearch;
   experimentResultToRecordItems: (
     result: BatchGetExperimentResultResponse,
   ) => RecordItem[];
@@ -94,6 +96,7 @@ export function useExperimentDetailStore<
       logicFilter?: LogicFilter;
       // 排序331版本暂未支持，先注释掉
       // sort?: SemiTableSort;
+      keywordSearch?: KeywordSearch;
     }) => {
       const { current = 1, pageSize, ...rest } = params ?? {};
       const filters = filterToFilters<Filter>({ ...rest, filterFields });
@@ -101,9 +104,13 @@ export function useExperimentDetailStore<
         workspace_id: spaceID,
         page_number: current,
         page_size: pageSize,
-        filters: { [baseExperimentID]: { filters } },
+        filters: {
+          [baseExperimentID]: { filters, keyword_search: keywordSearch },
+        },
         baseline_experiment_id: baseExperimentID,
         experiment_ids: experimentIds ?? [],
+        // 开启模糊匹配搜索
+        use_accelerator: true,
       });
       const list = experimentResultToRecordItems(res);
       return {
@@ -127,9 +134,10 @@ export function useExperimentDetailStore<
         filter,
         logicFilter,
         sort,
+        keywordSearch,
       });
     },
-    { wait: 1000 },
+    { wait: 600 },
   );
 
   const onLogicFilterChange = (newLogicFilter: LogicFilter | undefined) => {
@@ -140,6 +148,7 @@ export function useExperimentDetailStore<
       filter,
       logicFilter: newLogicFilter,
       sort,
+      keywordSearch,
     });
   };
 
@@ -151,6 +160,7 @@ export function useExperimentDetailStore<
       filter,
       logicFilter,
       sort: sorter,
+      keywordSearch,
     });
   };
 
@@ -168,6 +178,7 @@ export function useExperimentDetailStore<
       filter,
       logicFilter,
       sort,
+      keywordSearch,
     });
   }, [experimentIds]);
 

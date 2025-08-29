@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import classNames from 'classnames';
@@ -192,7 +190,7 @@ export const ExprRender = <L, O, R>({
             {isEdit ? (
               <Tooltip
                 theme="dark"
-                content={I18n.t('logic_expr_delete_filter')}
+                content={I18n.t('fornax_components_logic_expr_delete_filter')}
               >
                 <IconButton
                   className={classNames(

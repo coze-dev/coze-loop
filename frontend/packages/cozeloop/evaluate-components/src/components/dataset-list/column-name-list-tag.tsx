@@ -1,17 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import cs from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type FieldSchema,
   type EvaluationSet,
 } from '@cozeloop/api-schema/evaluation';
-import {
-  Dropdown,
-  OverflowList,
-  Tag,
-  Typography,
-} from '@coze-arch/coze-design';
+import { Dropdown, OverflowList, Tag, Typography } from '@coze-arch/coze-design';
 
 import { getColumnType } from '../dataset-item/util';
 import { dataTypeMap } from '../dataset-item/type';
@@ -29,7 +21,7 @@ export const ColumnNameListTag = ({ set }: { set: EvaluationSet }) => {
                 borderBottom: '1px solid var(--semi-color-border)',
               }}
             >
-              <Typography.Text>{I18n.t('column')}</Typography.Text>
+              <Typography.Text>列</Typography.Text>
               <Typography.Text className="!font-medium">
                 {items.length}
               </Typography.Text>
@@ -57,7 +49,7 @@ export const ColumnNameListTag = ({ set }: { set: EvaluationSet }) => {
         <div className="max-w-[200px] min-w-[150px] overflow-hidden p-3 flex flex-col gap-2">
           <div className="flex items-center">
             <Typography.Text className="flex-1 !text-[13px]">
-              {I18n.t('data_type')}
+              数据类型
             </Typography.Text>
             <Typography.Text className="flex-1 !text-[13px] !font-bold">
               {dataTypeMap[getColumnType(item)]}
@@ -65,7 +57,7 @@ export const ColumnNameListTag = ({ set }: { set: EvaluationSet }) => {
           </div>
           <div className="flex items-center ">
             <Typography.Text className="flex-1 !text-[13px]">
-              {I18n.t('description')}
+              描述
             </Typography.Text>
             <Typography.Text
               className="flex-1 !text-[13px] !font-bold"

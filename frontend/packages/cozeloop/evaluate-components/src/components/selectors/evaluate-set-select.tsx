@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useCallback } from 'react';
 
 import { isArray } from 'lodash-es';
@@ -14,7 +12,6 @@ import {
   type SelectProps,
   Typography,
 } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 const EvaluationSetLabel = ({
   name,
@@ -121,7 +118,7 @@ export function EvaluateSetSelect(
 
   return (
     <BaseSearchSelect
-      placeholder={I18n.t('please_select', { field: I18n.t('evaluation_set') })}
+      placeholder={'请选择评测集'}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       filter
       remote
@@ -139,7 +136,7 @@ export function EvaluateSetSelect(
           >
             <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
             <div className="text-sm font-medium text-brand-9">
-              {I18n.t('new_evaluation_set')}
+              {'新建评测集'}
             </div>
           </div>
         ) : null

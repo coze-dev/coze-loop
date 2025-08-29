@@ -1,7 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { formatTimestampToString } from '@cozeloop/toolkit';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type ColumnItem, UserProfile } from '@cozeloop/components';
 import {
   type UserInfo,
@@ -29,8 +26,8 @@ export const DatasetColumnConfig: Record<
   ColumnProps<EvaluationSet>
 > = {
   name: {
-    title: I18n.t('name'),
-    displayName: I18n.t('name'),
+    title: '名称',
+    displayName: '名称',
     key: 'name',
     disabled: true,
     dataIndex: 'name',
@@ -44,30 +41,30 @@ export const DatasetColumnConfig: Record<
             size="small"
             className="!min-w-[70px] !h-[20px] !px-[4px] !font-normal"
           >
-            {I18n.t('changes_not_submitted')}
+            修改未提交
           </Tag>
         ) : null}
       </div>
     ),
   },
   description: {
-    title: I18n.t('description'),
-    displayName: I18n.t('description'),
+    title: '描述',
+    displayName: '描述',
     key: 'description',
     dataIndex: 'description',
     width: 170,
     render: text => <TextEllipsis>{text}</TextEllipsis>,
   },
   columns: {
-    title: I18n.t('column_name'),
-    displayName: I18n.t('column_name'),
+    title: '列名',
+    displayName: '列名',
     key: 'columns',
     width: 300,
     render: record => <ColumnNameListTag set={record} />,
   },
   item_count: {
-    title: <div className="text-right">{I18n.t('data_item')}</div>,
-    displayName: I18n.t('data_item'),
+    title: <div className="text-right">数据项</div>,
+    displayName: '数据项',
     key: 'item_count',
     dataIndex: 'item_count',
     width: 100,
@@ -78,16 +75,16 @@ export const DatasetColumnConfig: Record<
     ),
   },
   latest_version: {
-    title: I18n.t('latest_version'),
+    title: '最新版本',
     key: 'latest_version',
-    displayName: I18n.t('latest_version'),
+    displayName: '最新版本',
     dataIndex: 'latest_version',
     width: 100,
     render: text => (text ? <Tag color="primary">{text}</Tag> : '-'),
   },
   updated_by: {
-    title: I18n.t('updated_person'),
-    displayName: I18n.t('updated_person'),
+    title: '更新人',
+    displayName: '更新人',
     key: 'updated_by',
     dataIndex: 'base_info.updated_by',
     width: 180,
@@ -99,9 +96,9 @@ export const DatasetColumnConfig: Record<
       ),
   },
   update_at: {
-    title: I18n.t('update_time'),
+    title: '更新时间',
     key: 'updated_at',
-    displayName: I18n.t('update_time'),
+    displayName: '更新时间',
     width: 180,
     dataIndex: 'base_info.updated_at',
     sorter: true,
@@ -116,8 +113,8 @@ export const DatasetColumnConfig: Record<
       ),
   },
   created_by: {
-    title: I18n.t('creator'),
-    displayName: I18n.t('creator'),
+    title: '创建人',
+    displayName: '创建人',
 
     key: 'created_by',
     dataIndex: 'base_info.created_by',
@@ -130,8 +127,8 @@ export const DatasetColumnConfig: Record<
       ),
   },
   created_at: {
-    title: I18n.t('create_time'),
-    displayName: I18n.t('create_time'),
+    title: '创建时间',
+    displayName: '创建时间',
     key: 'created_at',
     width: 180,
     render: (record?: EvaluationSet) =>

@@ -25,6 +25,7 @@ export interface CreateExperimentRequest {
   item_concur_num?: number,
   evaluators_concur_num?: number,
   create_eval_target_param?: coze_loop_evaluation_eval_target.CreateEvalTargetParam,
+  target_runtime_param?: common.RuntimeParam,
   expt_type?: expt.ExptType,
   max_alive_time?: number,
   source_type?: expt.SourceType,
@@ -48,10 +49,14 @@ export interface SubmitExperimentRequest {
   item_concur_num?: number,
   evaluators_concur_num?: number,
   create_eval_target_param?: coze_loop_evaluation_eval_target.CreateEvalTargetParam,
+  target_runtime_param?: common.RuntimeParam,
   expt_type?: expt.ExptType,
   max_alive_time?: number,
   source_type?: expt.SourceType,
   source_id?: string,
+  ext?: {
+    [key: string | number]: string
+  },
   session?: common.Session,
 }
 export interface SubmitExperimentResponse {
@@ -100,6 +105,9 @@ export interface RunExperimentRequest {
   expt_id?: string,
   item_ids?: string[],
   expt_type?: expt.ExptType,
+  ext?: {
+    [key: string | number]: string
+  },
   session?: common.Session,
 }
 export interface RunExperimentResponse {
@@ -110,6 +118,9 @@ export interface RetryExperimentRequest {
   workspace_id?: string,
   expt_id?: string,
   item_ids?: string[],
+  ext?: {
+    [key: string | number]: string
+  },
 }
 export interface RetryExperimentResponse {
   run_id?: string
@@ -137,12 +148,16 @@ export interface BatchGetExperimentResultRequest {
   },
   page_number?: number,
   page_size?: number,
+  use_accelerator?: boolean,
 }
 export interface BatchGetExperimentResultResponse {
   /** 数据集表头信息 */
   column_eval_set_fields: expt.ColumnEvalSetField[],
   /** 评估器表头信息 */
   column_evaluators?: expt.ColumnEvaluator[],
+  expt_column_evaluators?: expt.ExptColumnEvaluator[],
+  /** 人工标注标签表头信息 */
+  expt_column_annotations?: expt.ExptColumnAnnotation[],
   /** item粒度实验结果详情 */
   item_results?: expt.ItemResult[],
   total?: number,
@@ -203,6 +218,87 @@ export interface ListExperimentStatsResponse {
   expt_stats_infos?: expt.ExptStatsInfo[],
   total?: number,
 }
+export enum UpsertExptTurnResultFilterType {
+  /** 标签状态 */
+  MANUAL = "manual",
+  /** 启用 */
+  AUTO = "auto",
+  /** 禁用 */
+  CHECK = "check",
+}
+/** 旧版本状态 */
+export interface UpsertExptTurnResultFilterRequest {
+  workspace_id?: number,
+  experiment_id?: number,
+  item_ids?: number[],
+  filter_type?: UpsertExptTurnResultFilterType,
+  retry_times?: number,
+}
+export interface UpsertExptTurnResultFilterResponse {}
+export interface AssociateAnnotationTagReq {
+  workspace_id: string,
+  expt_id: string,
+  tag_key_id?: string,
+  session?: common.Session,
+}
+export interface AssociateAnnotationTagResp {}
+export interface DeleteAnnotationTagReq {
+  workspace_id: string,
+  expt_id: string,
+  tag_key_id?: string,
+  session?: common.Session,
+}
+export interface DeleteAnnotationTagResp {}
+export interface CreateAnnotateRecordReq {
+  workspace_id: string,
+  expt_id: string,
+  annotate_record: expt.AnnotateRecord,
+  item_id: string,
+  turn_id: string,
+  session?: common.Session,
+}
+export interface CreateAnnotateRecordResp {
+  annotate_record_id: string
+}
+export interface UpdateAnnotateRecordReq {
+  workspace_id: string,
+  expt_id: string,
+  annotate_records: expt.AnnotateRecord,
+  annotate_record_id: string,
+  item_id: string,
+  turn_id: string,
+  session?: common.Session,
+}
+export interface UpdateAnnotateRecordResp {}
+export interface ExportExptResultRequest {
+  workspace_id: string,
+  expt_id: string,
+  export_type?: expt.ExptResultExportType,
+  session?: common.Session,
+}
+export interface ExportExptResultResponse {
+  export_id: string
+}
+export interface ListExptResultExportRecordRequest {
+  workspace_id: string,
+  expt_id: string,
+  page_number?: number,
+  page_size?: number,
+  session?: common.Session,
+}
+export interface ListExptResultExportRecordResponse {
+  expt_result_export_records: expt.ExptResultExportRecord[],
+  total?: number,
+}
+export interface GetExptResultExportRecordRequest {
+  workspace_id: string,
+  expt_id: string,
+  export_id: string,
+  session?: common.Session,
+}
+export interface GetExptResultExportRecordResponse {
+  expt_result_export_records?: expt.ExptResultExportRecord
+}
 export const CheckExperimentName = /*#__PURE__*/createAPI<CheckExperimentNameRequest, CheckExperimentNameResponse>({
   "url": "/api/evaluation/v1/experiments/check_name",
   "method": "POST",
@@ -222,7 +318,7 @@ export const SubmitExperiment = /*#__PURE__*/createAPI<SubmitExperimentRequest, 
   "name": "SubmitExperiment",
   "reqType": "SubmitExperimentRequest",
   "reqMapping": {
-    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "expt_type", "max_alive_time", "source_type", "source_id", "session"]
+    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "ext", "session"]
   },
   "resType": "SubmitExperimentResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
@@ -309,7 +405,7 @@ export const RetryExperiment = /*#__PURE__*/createAPI<RetryExperimentRequest, Re
   "name": "RetryExperiment",
   "reqType": "RetryExperimentRequest",
   "reqMapping": {
-    "body": ["retry_mode", "workspace_id", "item_ids"],
+    "body": ["retry_mode", "workspace_id", "item_ids", "ext"],
     "path": ["expt_id"]
   },
   "resType": "RetryExperimentResponse",
@@ -336,7 +432,7 @@ export const BatchGetExperimentResult = /*#__PURE__*/createAPI<BatchGetExperimen
   "name": "BatchGetExperimentResult",
   "reqType": "BatchGetExperimentResultRequest",
   "reqMapping": {
-    "query": ["workspace_id", "page_number", "page_size"],
+    "query": ["workspace_id", "page_number", "page_size", "use_accelerator"],
     "body": ["experiment_ids", "baseline_experiment_id", "filters"]
   },
   "resType": "BatchGetExperimentResultResponse",
@@ -353,6 +449,99 @@ export const BatchGetExperimentAggrResult = /*#__PURE__*/createAPI<BatchGetExper
     "body": ["experiment_ids"]
   },
   "resType": "BatchGetExperimentAggrResultResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+/** 人工标注 */
+export const AssociateAnnotationTag = /*#__PURE__*/createAPI<AssociateAnnotationTagReq, AssociateAnnotationTagResp>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/associate_tag",
+  "method": "POST",
+  "name": "AssociateAnnotationTag",
+  "reqType": "AssociateAnnotationTagReq",
+  "reqMapping": {
+    "body": ["workspace_id", "tag_key_id", "session"],
+    "path": ["expt_id"]
+  },
+  "resType": "AssociateAnnotationTagResp",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const DeleteAnnotationTag = /*#__PURE__*/createAPI<DeleteAnnotationTagReq, DeleteAnnotationTagResp>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/delete_tag",
+  "method": "DELETE",
+  "name": "DeleteAnnotationTag",
+  "reqType": "DeleteAnnotationTagReq",
+  "reqMapping": {
+    "body": ["workspace_id", "tag_key_id", "session"],
+    "path": ["expt_id"]
+  },
+  "resType": "DeleteAnnotationTagResp",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const CreateAnnotateRecord = /*#__PURE__*/createAPI<CreateAnnotateRecordReq, CreateAnnotateRecordResp>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/annotate_record/create",
+  "method": "POST",
+  "name": "CreateAnnotateRecord",
+  "reqType": "CreateAnnotateRecordReq",
+  "reqMapping": {
+    "body": ["workspace_id", "annotate_record", "item_id", "turn_id", "session"],
+    "path": ["expt_id"]
+  },
+  "resType": "CreateAnnotateRecordResp",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const UpdateAnnotateRecord = /*#__PURE__*/createAPI<UpdateAnnotateRecordReq, UpdateAnnotateRecordResp>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/annotate_record/update",
+  "method": "POST",
+  "name": "UpdateAnnotateRecord",
+  "reqType": "UpdateAnnotateRecordReq",
+  "reqMapping": {
+    "body": ["workspace_id", "annotate_records", "annotate_record_id", "item_id", "turn_id", "session"],
+    "path": ["expt_id"]
+  },
+  "resType": "UpdateAnnotateRecordResp",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+/** 报告下载 */
+export const ExportExptResult = /*#__PURE__*/createAPI<ExportExptResultRequest, ExportExptResultResponse>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/results/export",
+  "method": "POST",
+  "name": "ExportExptResult",
+  "reqType": "ExportExptResultRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "export_type", "session"],
+    "path": ["expt_id"]
+  },
+  "resType": "ExportExptResultResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const ListExptResultExportRecord = /*#__PURE__*/createAPI<ListExptResultExportRecordRequest, ListExptResultExportRecordResponse>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/export_records/list",
+  "method": "POST",
+  "name": "ListExptResultExportRecord",
+  "reqType": "ListExptResultExportRecordRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "page_number", "page_size", "session"],
+    "path": ["expt_id"]
+  },
+  "resType": "ListExptResultExportRecordResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const GetExptResultExportRecord = /*#__PURE__*/createAPI<GetExptResultExportRecordRequest, GetExptResultExportRecordResponse>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/export_records/:export_id",
+  "method": "POST",
+  "name": "GetExptResultExportRecord",
+  "reqType": "GetExptResultExportRecordRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "session"],
+    "path": ["expt_id", "export_id"]
+  },
+  "resType": "GetExptResultExportRecordResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
   "service": "evaluationExpt"
 });

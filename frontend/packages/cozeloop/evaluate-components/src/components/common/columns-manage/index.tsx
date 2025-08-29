@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnItem,
   ColumnSelector,
@@ -97,7 +94,7 @@ export function ColumnsManage({
   );
 
   return (
-    <Tooltip theme="dark" content={I18n.t('column_management')}>
+    <Tooltip theme="dark" content="列管理">
       <div>
         <ColumnSelector
           columns={options}

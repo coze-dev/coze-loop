@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useParams } from 'react-router-dom';
 import { useRef, useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { ModelConfigInfo, TemplateInfo } from '@cozeloop/evaluate-components';
 import { useDemoSpace, useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -129,7 +126,7 @@ function EvaluatorDetailPage() {
       return (
         <div className="flex-1 max-w-[800px] mx-auto">
           <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
-            {I18n.t('config_info')}
+            {'配置信息'}
           </div>
           <ModelConfigInfo
             data={
@@ -217,7 +214,7 @@ function EvaluatorDetailPage() {
         onCancel={() => setSubmitModalVisible(false)}
         onSuccess={(_, newEvaluator) => {
           setSubmitModalVisible(false);
-          Toast.success(I18n.t('version_submit_success'));
+          Toast.success('版本提交成功');
           service.mutate(() => newEvaluator);
           if (versionListVisible) {
             setVersionListRefreshFlag([]);

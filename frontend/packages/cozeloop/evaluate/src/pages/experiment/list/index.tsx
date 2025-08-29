@@ -1,7 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
@@ -30,9 +28,9 @@ import { Button, Spin } from '@coze-arch/coze-design';
 import TableForExperiment, {
   TableHeader,
 } from '@/components/table-for-experiment';
+import ExportTableModal from '@/components/experiment/experiment-export/export-table-modal';
 
 import styles from './index.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface Filter {
   name?: string;
@@ -58,6 +56,22 @@ const columnsOptions = {
 export default function ExperimentList() {
   const { spaceID } = useSpace();
   const navigateModule = useNavigateModule();
+
+  // 导出记录弹窗状态
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [selectedExperiment, setSelectedExperiment] = useState<Experiment>();
+
+  const stableColumnsOptions = useMemo(
+    () => ({
+      ...columnsOptions,
+      onOpenExportModal: experiment => {
+        setSelectedExperiment(experiment);
+        setExportModalVisible(true);
+      },
+    }),
+    [setSelectedExperiment, setExportModalVisible],
+  );
+
   const {
     service,
     columns,
@@ -76,8 +90,9 @@ export default function ExperimentList() {
     onLogicFilterChange,
   } = useExperimentListStore<Filter>({
     filterFields,
-    columnsOptions,
+    columnsOptions: stableColumnsOptions,
     pageSizeStorageKey: 'experiment_list_page_size',
+    source: 'expt_list',
   });
 
   const filters = (
@@ -119,7 +134,7 @@ export default function ExperimentList() {
           setSelectedExperiments([]);
         }}
       >
-        {I18n.t('batch_select')}
+        批量选择
       </Button>
       <Guard point={GuardPoint['eval.experiments.create']} realtime>
         <Button
@@ -131,7 +146,7 @@ export default function ExperimentList() {
             navigateModule('evaluation/experiments/create');
           }}
         >
-          {I18n.t('new_experiment')}
+          新建实验
         </Button>
       </Guard>
     </>
@@ -212,22 +227,32 @@ export default function ExperimentList() {
   );
 
   return (
-    <PrimaryPage
-      pageTitle={I18n.t('experiment')}
-      filterSlot={<TableHeader actions={actions} filters={filters} />}
-      className="h-full overflow-hidden"
-    >
-      {isDatabaseEmpty ? (
-        <Spin
-          spinning={service.loading}
-          wrapperClassName="!h-full"
-          childStyle={{ height: '100%' }}
-        >
-          <ExperimentListEmptyState hasFilterCondition={!isDatabaseEmpty} />
-        </Spin>
-      ) : (
-        table
-      )}
-    </PrimaryPage>
+    <>
+      <PrimaryPage
+        pageTitle="实验"
+        filterSlot={<TableHeader actions={actions} filters={filters} />}
+        className="h-full overflow-hidden"
+      >
+        {isDatabaseEmpty ? (
+          <Spin
+            spinning={service.loading}
+            wrapperClassName="!h-full"
+            childStyle={{ height: '100%' }}
+          >
+            <ExperimentListEmptyState hasFilterCondition={!isDatabaseEmpty} />
+          </Spin>
+        ) : (
+          table
+        )}
+      </PrimaryPage>
+
+      {/* 导出记录弹窗 */}
+      <ExportTableModal
+        visible={exportModalVisible}
+        setVisible={setExportModalVisible}
+        experiment={selectedExperiment}
+        source="expt_list"
+      />
+    </>
   );
 }

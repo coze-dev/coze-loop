@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useRef, useState } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -42,7 +39,7 @@ export const SubmitVersion = ({
         version: values?.version,
         desc: values?.desc,
       });
-      Toast.success(I18n.t('version_submit_success'));
+      Toast.success('提交成功');
       setVisible(false);
       onSubmit();
     } finally {
@@ -55,7 +52,7 @@ export const SubmitVersion = ({
       <Guard point={GuardPoint['eval.dataset.commit']}>
         <TooltipWhenDisabled
           theme="dark"
-          content={I18n.t('no_modification_to_submit')}
+          content="暂无修改可提交"
           disabled={!datasetDetail?.change_uncommitted}
         >
           <Button
@@ -66,7 +63,7 @@ export const SubmitVersion = ({
             }}
             disabled={!datasetDetail?.change_uncommitted}
           >
-            {I18n.t('submit_new_version')}
+            提交新版本
           </Button>
         </TooltipWhenDisabled>
       </Guard>
@@ -77,12 +74,12 @@ export const SubmitVersion = ({
         onOk={() => {
           formRef?.current?.submitForm();
         }}
-        title={I18n.t('submit_new_version')}
-        okText={I18n.t('submit')}
+        title="提交新版本"
+        okText="提交"
         okButtonProps={{
           loading,
         }}
-        cancelText={I18n.t('cancel')}
+        cancelText="取消"
       >
         <Form<CreateEvaluationSetVersionRequest>
           getFormApi={formApi => {
@@ -96,11 +93,8 @@ export const SubmitVersion = ({
             initValue={getNewVersion(datasetDetail?.latest_version || '')}
             label={
               <div className="inline-flex items-center gap-1">
-                {I18n.t('version')}
-                <Tooltip
-                  theme="dark"
-                  content={I18n.t('version_format_and_range')}
-                >
+                版本
+                <Tooltip theme="dark" content="版本格式为a.b.c，且每段为0-999">
                   <div className="h-[15px] cursor-pointer">
                     <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
                   </div>
@@ -111,9 +105,7 @@ export const SubmitVersion = ({
               {
                 validator: (_, value, callback) => {
                   if (!value) {
-                    callback(
-                      I18n.t('field_not_empty', { field: I18n.t('version') }),
-                    );
+                    callback('版本不能为空');
                     return false;
                   }
                   if (
@@ -121,7 +113,7 @@ export const SubmitVersion = ({
                       value,
                     )
                   ) {
-                    callback(I18n.t('eval_version_number_format'));
+                    callback('请输入正确的版本，格式为a.b.c，且每段为0-999');
                     return false;
                   }
                   if (
@@ -132,9 +124,7 @@ export const SubmitVersion = ({
                     ) <= 0
                   ) {
                     callback(
-                      I18n.t('eval_version_number_gt_current', {
-                        version: datasetDetail?.latest_version || '',
-                      }),
+                      `新版本必须大于当前版本：${datasetDetail?.latest_version}`,
                     );
                     return false;
                   }
@@ -143,11 +133,7 @@ export const SubmitVersion = ({
               },
             ]}
           />
-          <Form.TextArea
-            maxCount={200}
-            field="desc"
-            label={I18n.t('version_description')}
-          />
+          <Form.TextArea maxCount={200} field="desc" label="版本说明" />
         </Form>
       </Modal>
     </>

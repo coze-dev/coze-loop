@@ -1,0 +1,49 @@
+{
+  "name": "@cozeloop/adapter",
+  "version": "0.0.1",
+  "description": "CozeLoop adapter",
+  "license": "Apache-2.0",
+  "author": "wangziqiang.carl@bytedance.com",
+  "maintainers": [],
+  "exports": {
+    ".": [
+      "./src/index.ts"
+    ],
+    "./interfaces": [
+      "./src/interfaces/index.ts"
+    ]
+  },
+  "main": "src/index.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./src/index.ts"
+      ],
+      "interfaces": [
+        "./src/interfaces/index.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "exit 0",
+    "lint": "eslint ./ --cache",
+    "test": "vitest --run --passWithNoTests",
+    "test:cov": "npm run test -- --coverage"
+  },
+  "devDependencies": {
+    "@coze-arch/eslint-config": "workspace:*",
+    "@coze-arch/ts-config": "workspace:*",
+    "@coze-arch/vitest-config": "workspace:*",
+    "@cozeloop/api-schema": "workspace:*",
+    "@types/node": "^18",
+    "@types/react": "18.2.37",
+    "@types/react-dom": "18.2.15",
+    "@vitest/coverage-v8": "~3.0.5",
+    "react": "~18.2.0",
+    "vitest": "~3.0.5"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0"
+  }
+}
+

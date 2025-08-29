@@ -1,3 +1,7 @@
+import * as export_dataset from './domain/export_dataset';
+export { export_dataset };
+import * as annotation from './domain/annotation';
+export { annotation };
 import * as view from './domain/view';
 export { view };
 import * as filter from './domain/filter';
@@ -6,6 +10,8 @@ import * as common from './domain/common';
 export { common };
 import * as span from './domain/span';
 export { span };
+import * as dataset from './../data/domain/dataset';
+export { dataset };
 import * as base from './../../../base';
 export { base };
 import { createAPI } from './../../config';
@@ -44,6 +50,7 @@ export interface GetTraceRequest {
   /** ms */
   end_time: string,
   platform_type?: common.PlatformType,
+  span_ids?: string[],
 }
 export interface GetTraceResponse {
   spans: span.OutputSpan[],
@@ -119,6 +126,102 @@ export interface ListViewsRequest {
 export interface ListViewsResponse {
   views: view.View[]
 }
+export interface CreateManualAnnotationRequest {
+  annotation: annotation.Annotation,
+  platform_type?: common.PlatformType,
+}
+export interface CreateManualAnnotationResponse {
+  annotation_id?: string
+}
+export interface UpdateManualAnnotationRequest {
+  annotation_id: string,
+  annotation: annotation.Annotation,
+  platform_type?: common.PlatformType,
+}
+export interface UpdateManualAnnotationResponse {}
+export interface DeleteManualAnnotationRequest {
+  annotation_id: string,
+  workspace_id: string,
+  trace_id: string,
+  span_id: string,
+  start_time: string,
+  annotation_key: string,
+  platform_type?: common.PlatformType,
+}
+export interface DeleteManualAnnotationResponse {}
+export interface ListAnnotationsRequest {
+  workspace_id: string,
+  span_id: string,
+  trace_id: string,
+  start_time: string,
+  platform_type?: common.PlatformType,
+  desc_by_updated_at?: boolean,
+}
+export interface ListAnnotationsResponse {
+  annotations: annotation.Annotation[]
+}
+export interface ExportTracesToDatasetRequest {
+  workspace_id: string,
+  span_ids: SpanID[],
+  category: dataset.DatasetCategory,
+  config: DatasetConfig,
+  start_time: string,
+  end_time: string,
+  platform_type?: common.PlatformType,
+  /** 导入方式，不填默认为追加 */
+  export_type: export_dataset.ExportType,
+  field_mappings?: export_dataset.FieldMapping[],
+}
+export interface SpanID {
+  trace_id: string,
+  span_id: string,
+}
+export interface DatasetConfig {
+  /** 是否是新增数据集 */
+  is_new_dataset: boolean,
+  /** 数据集id，新增数据集时可为空 */
+  dataset_id?: string,
+  /** 数据集名称，选择已有数据集时可为空 */
+  dataset_name?: string,
+  /** 数据集列数据schema */
+  dataset_schema?: export_dataset.DatasetSchema,
+}
+export interface ExportTracesToDatasetResponse {
+  /** 成功导入的数量 */
+  success_count?: number,
+  /** 错误信息 */
+  errors?: dataset.ItemErrorGroup[],
+  /** 数据集id */
+  dataset_id?: string,
+  /** 数据集名称 */
+  dataset_name?: string,
+  /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
+  code?: number,
+  /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
+  msg?: string,
+}
+export interface PreviewExportTracesToDatasetRequest {
+  workspace_id: string,
+  span_ids: SpanID[],
+  category: dataset.DatasetCategory,
+  config: DatasetConfig,
+  start_time: string,
+  end_time: string,
+  platform_type?: common.PlatformType,
+  /** 导入方式，不填默认为追加 */
+  export_type: export_dataset.ExportType,
+  field_mappings?: export_dataset.FieldMapping[],
+}
+export interface PreviewExportTracesToDatasetResponse {
+  /** 预览数据 */
+  items?: export_dataset.Item[],
+  /** 概要错误信息 */
+  errors?: dataset.ItemErrorGroup[],
+  /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
+  code?: number,
+  /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
+  msg?: string,
+}
 export const ListSpans = /*#__PURE__*/createAPI<ListSpansRequest, ListSpansResponse>({
   "url": "/api/observability/v1/spans/list",
   "method": "POST",
@@ -137,7 +240,7 @@ export const GetTrace = /*#__PURE__*/createAPI<GetTraceRequest, GetTraceResponse
   "name": "GetTrace",
   "reqType": "GetTraceRequest",
   "reqMapping": {
-    "query": ["workspace_id", "start_time", "end_time", "platform_type"],
+    "query": ["workspace_id", "start_time", "end_time", "platform_type", "span_ids"],
     "path": ["trace_id"]
   },
   "resType": "GetTraceResponse",
@@ -153,18 +256,6 @@ export const BatchGetTracesAdvanceInfo = /*#__PURE__*/createAPI<BatchGetTracesAd
     "body": ["workspace_id", "traces", "platform_type"]
   },
   "resType": "BatchGetTracesAdvanceInfoResponse",
-  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
-  "service": "observabilityTrace"
-});
-export const IngestTraces = /*#__PURE__*/createAPI<IngestTracesRequest, IngestTracesResponse>({
-  "url": "/v1/loop/traces/ingest",
-  "method": "POST",
-  "name": "IngestTraces",
-  "reqType": "IngestTracesRequest",
-  "reqMapping": {
-    "body": ["spans"]
-  },
-  "resType": "IngestTracesResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });
@@ -227,6 +318,80 @@ export const ListViews = /*#__PURE__*/createAPI<ListViewsRequest, ListViewsRespo
     "body": ["enterprise_id", "workspace_id", "view_name"]
   },
   "resType": "ListViewsResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const CreateManualAnnotation = /*#__PURE__*/createAPI<CreateManualAnnotationRequest, CreateManualAnnotationResponse>({
+  "url": "/api/observability/v1/annotations",
+  "method": "POST",
+  "name": "CreateManualAnnotation",
+  "reqType": "CreateManualAnnotationRequest",
+  "reqMapping": {
+    "body": ["annotation", "platform_type"]
+  },
+  "resType": "CreateManualAnnotationResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const UpdateManualAnnotation = /*#__PURE__*/createAPI<UpdateManualAnnotationRequest, UpdateManualAnnotationResponse>({
+  "url": "/api/observability/v1/annotations/:annotation_id",
+  "method": "PUT",
+  "name": "UpdateManualAnnotation",
+  "reqType": "UpdateManualAnnotationRequest",
+  "reqMapping": {
+    "path": ["annotation_id"],
+    "body": ["annotation", "platform_type"]
+  },
+  "resType": "UpdateManualAnnotationResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const DeleteManualAnnotation = /*#__PURE__*/createAPI<DeleteManualAnnotationRequest, DeleteManualAnnotationResponse>({
+  "url": "/api/observability/v1/annotations/:annotation_id",
+  "method": "DELETE",
+  "name": "DeleteManualAnnotation",
+  "reqType": "DeleteManualAnnotationRequest",
+  "reqMapping": {
+    "path": ["annotation_id"],
+    "query": ["workspace_id", "trace_id", "span_id", "start_time", "annotation_key", "platform_type"]
+  },
+  "resType": "DeleteManualAnnotationResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListAnnotations = /*#__PURE__*/createAPI<ListAnnotationsRequest, ListAnnotationsResponse>({
+  "url": "/api/observability/v1/annotations/list",
+  "method": "POST",
+  "name": "ListAnnotations",
+  "reqType": "ListAnnotationsRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "span_id", "trace_id", "start_time", "platform_type", "desc_by_updated_at"]
+  },
+  "resType": "ListAnnotationsResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ExportTracesToDataset = /*#__PURE__*/createAPI<ExportTracesToDatasetRequest, ExportTracesToDatasetResponse>({
+  "url": "/api/observability/v1/traces/export_to_dataset",
+  "method": "POST",
+  "name": "ExportTracesToDataset",
+  "reqType": "ExportTracesToDatasetRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "span_ids", "category", "config", "start_time", "end_time", "platform_type", "export_type", "field_mappings"]
+  },
+  "resType": "ExportTracesToDatasetResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const PreviewExportTracesToDataset = /*#__PURE__*/createAPI<PreviewExportTracesToDatasetRequest, PreviewExportTracesToDatasetResponse>({
+  "url": "/api/observability/v1/traces/preview_export_to_dataset",
+  "method": "POST",
+  "name": "PreviewExportTracesToDataset",
+  "reqType": "PreviewExportTracesToDatasetRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "span_ids", "category", "config", "start_time", "end_time", "platform_type", "export_type", "field_mappings"]
+  },
+  "resType": "PreviewExportTracesToDatasetResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });

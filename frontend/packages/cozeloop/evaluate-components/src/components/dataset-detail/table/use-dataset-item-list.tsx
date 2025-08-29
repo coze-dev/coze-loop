@@ -1,12 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { usePagination, useUpdateEffect } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type Version,
   type ColumnItem,
@@ -61,7 +58,7 @@ export const useDatasetItemList = ({
         id: DRAFT_VERSION,
         isDraft: true,
         version: '0.0.0',
-        description: I18n.t('current_draft'),
+        description: '当前草稿',
       };
   const draftFieldSchemas =
     datasetDetail?.evaluation_set_version?.evaluation_set_schema

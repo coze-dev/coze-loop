@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import Papa, { type UnparseObject } from 'papaparse';
 
 export const downloadCSVTemplate = () => {
@@ -33,3 +31,20 @@ export function downloadCsv(csv: string, fileName: string) {
     console.error(err);
   }
 }
+export const downloadWithUrl = async (src: string, filename: string) => {
+  try {
+    const response = await fetch(src);
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      link.remove();
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};

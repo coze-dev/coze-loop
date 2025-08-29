@@ -34,6 +34,7 @@ export enum FileFormat {
   JSONL = 1,
   Parquet = 2,
   CSV = 3,
+  XLSX = 4,
   /** [100, 200) 压缩格 */
   ZIP = 100,
 }

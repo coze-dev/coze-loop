@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { DEFAULT_TEXT_STRING_SCHEMA } from '@cozeloop/evaluate-components';
+import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { IconCozArrowRight } from '@coze-arch/coze-design/icons';
 import { Tag } from '@coze-arch/coze-design';
 
@@ -14,6 +11,7 @@ import { ReadonlyMappingItem } from '@/components/mapping-item-field/readonly-ma
 
 import { OpenDetailButton } from './open-detail-button';
 
+// eslint-disable-next-line complexity
 export function EvaluateItemRender({
   evaluatorPro,
 }: {
@@ -21,7 +19,9 @@ export function EvaluateItemRender({
 }) {
   const { baseURL } = useBaseURL();
   const [open, setOpen] = useState(true);
-
+  const inputSchemas =
+    evaluatorPro?.evaluatorVersionDetail?.evaluator_content?.input_schemas ??
+    [];
   return (
     <div className="border border-solid coz-stroke-primary rounded-[6px]">
       <div
@@ -53,20 +53,33 @@ export function EvaluateItemRender({
 
       <div className={open ? 'p-4' : 'hidden'}>
         <div className="text-sm font-medium coz-fg-primary mb-2">
-          {I18n.t('field_mapping')}
+          {'字段映射'}
         </div>
         <div className="flex flex-col gap-3">
-          {Object.entries(evaluatorPro.evaluatorMapping || {}).map(([k, v]) => (
+          {inputSchemas.map(schema => (
+            <ReadonlyMappingItem
+              key={schema?.key}
+              keyTitle={'评估器'}
+              keySchema={{
+                name: schema?.key,
+                ...DEFAULT_TEXT_STRING_SCHEMA,
+                content_type: schema.support_content_types?.[0],
+                text_schema: schema.json_schema,
+              }}
+              optionSchema={evaluatorPro.evaluatorMapping?.[schema?.key ?? '']}
+            />
+          ))}
+          {/* {Object.entries(evaluatorPro.evaluatorMapping || {}).map(([k, v]) => (
             <ReadonlyMappingItem
               key={k}
-              keyTitle={I18n.t('evaluator')}
+              keyTitle={'评估器'}
               keySchema={{
                 name: k,
                 ...DEFAULT_TEXT_STRING_SCHEMA,
               }}
               optionSchema={v}
             />
-          ))}
+          ))} */}
         </div>
       </div>
     </div>

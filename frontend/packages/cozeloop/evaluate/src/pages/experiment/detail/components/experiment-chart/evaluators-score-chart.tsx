@@ -1,16 +1,13 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { get } from 'lodash-es';
 import { type ISpec, type Datum } from '@visactor/vchart/esm/typings';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
-  EvaluatorPreview,
   Chart,
   ChartCardItemRender,
   ExperimentScoreTypeSelect,
   type CustomTooltipProps,
+  TypographyText,
 } from '@cozeloop/evaluate-components';
 import {
   type AggregateData,
@@ -99,6 +96,7 @@ function getEvaluatorAggregateResultMap(
   return resultMap;
 }
 
+// eslint-disable-next-line complexity
 function ComplexTooltipContent(
   props: CustomTooltipProps & {
     experiment: Experiment | undefined;
@@ -119,11 +117,18 @@ function ComplexTooltipContent(
   return (
     <div className="text-xs flex flex-col gap-2 w-56">
       <div className="text-sm font-medium">
-        <EvaluatorPreview evaluator={evaluator} />
+        <TypographyText style={{ maxWidth: 160, marginRight: 4 }}>
+          {evaluator?.name ?? '-'}
+        </TypographyText>
+        {evaluator?.current_version?.version ? (
+          <Tag size="small" color="primary" className="shrink-0 font-normal">
+            {evaluator?.current_version?.version}
+          </Tag>
+        ) : null}
       </div>
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-[var(--semi-color-primary)]" />
-        <span className="text-muted-foreground">{I18n.t('score')}</span>
+        <span className="text-muted-foreground">得分</span>
         <span className="font-semibold ml-auto">{datum?.score}</span>
       </div>
     </div>
@@ -186,15 +191,15 @@ export default function EvaluatorsScoreChart({
     <ChartCardItemRender
       item={{
         id: '',
-        title: I18n.t('aggregation_score'),
+        title: '聚合得分',
         content:
           ready && evaluatorAggregateResult?.length === 0 ? (
             <div className="pt-10 pb-6">
               <EmptyState
                 size="full_screen"
                 icon={<IconCozIllusAdd />}
-                title={I18n.t('no_data')}
-                description={I18n.t('refresh_after_experiment')}
+                title="暂无数据"
+                description="实验完成后，再刷新重试"
               />
             </div>
           ) : (

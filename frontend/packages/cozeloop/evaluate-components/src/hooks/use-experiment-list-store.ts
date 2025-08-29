@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable max-lines-per-function */
 import { useEffect, useState } from 'react';
 
@@ -8,7 +6,11 @@ import {
   type PaginationResult,
 } from 'ahooks/lib/usePagination/types';
 import { useDebounceFn, usePagination } from 'ahooks';
-import { DEFAULT_PAGE_SIZE, getStoragePageSize } from '@cozeloop/components';
+import {
+  DEFAULT_PAGE_SIZE,
+  getStoragePageSize,
+  type TableColAction,
+} from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type ListExperimentsRequest,
@@ -105,6 +107,8 @@ export function useExperimentListStore<Filter extends { name?: string }>({
   defaultPageSize,
   pageSizeStorageKey,
   pullExperiments,
+  extraShrinkActions = [],
+  source,
 }: {
   /** 默认筛选值 */
   defaultFilter?: Filter;
@@ -117,6 +121,8 @@ export function useExperimentListStore<Filter extends { name?: string }>({
   pullExperiments?: (
     req: ListExperimentsRequest,
   ) => Promise<ListExperimentsResponse>;
+  extraShrinkActions?: TableColAction[];
+  source?: string;
 } = {}): ExperimentListStore<Filter> {
   const { spaceID } = useSpace();
   const [filter, setFilter] = useState<Filter | undefined>(defaultFilter);
@@ -183,6 +189,8 @@ export function useExperimentListStore<Filter extends { name?: string }>({
     ...columnsOptions,
     spaceID,
     onRefresh: service.refresh,
+    extraShrinkActions,
+    source,
   });
 
   const { run: onFilterDebounceChange } = useDebounceFn(

@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useMemo, useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace, useDataImportApi } from '@cozeloop/biz-hooks-adapter';
 import { JobStatus } from '@cozeloop/api-schema/data';
 import { Button, Loading, Modal } from '@coze-arch/coze-design';
@@ -58,11 +55,7 @@ export const useDatasetImportProgress = (onImportSuccess: () => void) => {
       width={420}
       title={
         <div className="flex items-center">
-          <span>
-            {isFinish
-              ? I18n.t('execution_result')
-              : I18n.t('execution_in_progress')}
-          </span>
+          <span>{isFinish ? '执行结果' : '执行中'}</span>
         </div>
       }
       footer={
@@ -73,7 +66,7 @@ export const useDatasetImportProgress = (onImportSuccess: () => void) => {
               onImportSuccess();
             }}
           >
-            {I18n.t('known')}
+            已知晓
           </Button>
         )
       }

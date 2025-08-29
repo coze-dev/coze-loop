@@ -1,10 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/naming-convention -- skip */
 export enum EnterpriseRoleType {
   super_admin = 'SuperAdmin',
   admin = 'Admin',
   member = 'Member',
+  guest = 'Guest',
 }
 
 export enum UserLevel {

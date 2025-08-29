@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { cloneDeep } from 'lodash-es';
 import { DEFAULT_TEXT_STRING_SCHEMA } from '@cozeloop/evaluate-components';
 import {
@@ -170,7 +168,7 @@ function experiment2evaluatorProList(experiment: Experiment) {
 
   const clonedEvaluators = cloneDeep(evaluators);
 
-  return clonedEvaluators?.map(evaluator => {
+  const result = clonedEvaluators?.map(evaluator => {
     // 如果evaluator被删除了，就不显示在evaluatorProList中
     const evaluatorDelete = Boolean(evaluator?.base_info?.deleted_at);
     if (evaluatorDelete) {
@@ -219,6 +217,8 @@ function experiment2evaluatorProList(experiment: Experiment) {
       evaluatorMapping,
     };
   });
+
+  return result;
 }
 
 export function evaluationSetToCreateExperimentValues(
@@ -231,6 +231,8 @@ export function evaluationSetToCreateExperimentValues(
     evaluatorProList: [{}],
     evaluationSet: evaluationSet.id,
     evaluationSetVersion: evaluationSetVersion.id,
+    evaluationSetVersionDetail: evaluationSetVersion as EvaluationSetVersion,
+    evaluationSetDetail: evaluationSet as EvaluationSet,
   };
   return values;
 }
@@ -248,12 +250,18 @@ export const defaultGetTargetVersionOption = (item: EvalTargetVersion) => ({
 
 const getTargetFieldMapping = (values: CreateExperimentValues) => {
   const { evalTargetMapping = {} } = values;
+  // 没有选择评测对象, 就是使用了评测集作为评测对象, 直接返回 undefined
+  if (!Object.keys(evalTargetMapping).length) {
+    return undefined;
+  }
+
   return {
     from_eval_set: Object.entries(evalTargetMapping).map(([k, v]) => ({
       // 字段名称
       field_name: k,
       // 字段来源
-      from_field_name: v.key,
+      from_field_name: v?.name || v.key,
+      // from_field_name: v.key,
     })),
   };
 };
@@ -276,12 +284,9 @@ export const getSubmitValues = (
     })),
   };
   const clonedValues = cloneDeep(newValues);
-
   const createEvalTargetParam = getEvaluatorSubmitValues(
     clonedValues.evaluatorProList || [],
   );
-
-  const targetFieldMapping = getTargetFieldMapping(values);
 
   // 请求中会 pick 需要的数据, 没必要置为 undefined
   const result = {
@@ -289,20 +294,29 @@ export const getSubmitValues = (
     ...createEvalTargetParam,
     eval_set_id: values?.evaluationSet,
     eval_set_version_id: values?.evaluationSetVersion,
-    create_eval_target_param: {
+  };
+
+  // 服务端参数对齐, 如果选择了评测对象, 则需要设置 create_eval_target_param, 否则不设置
+  if (values?.evalTargetType) {
+    result.create_eval_target_param = {
       eval_target_type: clonedValues?.evalTargetType as EvalTargetType,
       source_target_id: clonedValues?.evalTarget,
       source_target_version: values?.evalTargetVersion,
-    },
-    target_field_mapping: targetFieldMapping,
-  };
+    };
+  }
 
+  const targetFieldMapping = getTargetFieldMapping(values);
+
+  // 如果选择了评测对象, 则需要设置 target_field_mapping
+  if (targetFieldMapping) {
+    result.target_field_mapping = targetFieldMapping;
+  }
   return result;
 };
 
 // 默认校验内容
 const defaultValidFields = {
-  0: ['name', 'desc'],
+  0: ['name', 'desc', 'item_concur_num'],
   1: ['evaluationSet', 'evaluationSetVersion'],
   2: ['evalTargetType'],
   3: ['evaluatorProList'],

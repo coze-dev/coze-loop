@@ -180,6 +180,23 @@ export interface GetDatasetSchemaRequest {
 export interface GetDatasetSchemaResponse {
   fields?: dataset.FieldSchema[]
 }
+export interface ValidateDatasetItemsReq {
+  workspace_id?: string,
+  items?: dataset.DatasetItem[],
+  /** 添加到已有数据集时提供 */
+  dataset_id?: string,
+  /** 新建数据集并添加数据时提供 */
+  dataset_category?: dataset.DatasetCategory,
+  /** 新建数据集并添加数据时，必须提供；添加到已有数据集时，如非空，则覆盖已有 schema 用于校验 */
+  dataset_fields?: dataset.FieldSchema[],
+  /** 添加到已有数据集时，现有数据条数，做容量校验时不做考虑，仅考虑提供 items 数量是否超限 */
+  ignore_current_item_count?: boolean,
+}
+export interface ValidateDatasetItemsResp {
+  /** 合法的 item 索引，与 ValidateCreateDatasetItemsReq.items 中的索引对应 */
+  valid_item_indices?: number[],
+  errors?: dataset.ItemErrorGroup[],
+}
 export interface BatchCreateDatasetItemsRequest {
   workspace_id?: string,
   dataset_id: string,
@@ -502,8 +519,22 @@ export const UpdateDatasetSchema = /*#__PURE__*/createAPI<UpdateDatasetSchemaReq
 });
 /**
  * Dataset Item
- * 批量新增数据
+ * 校验数据
 */
+export const ValidateDatasetItems = /*#__PURE__*/createAPI<ValidateDatasetItemsReq, ValidateDatasetItemsResp>({
+  "url": "/api/data/v1/dataset_items/validate",
+  "method": "POST",
+  "name": "ValidateDatasetItems",
+  "reqType": "ValidateDatasetItemsReq",
+  "reqMapping": {
+    "body": ["workspace_id", "items", "dataset_category", "dataset_fields", "ignore_current_item_count"],
+    "path": ["dataset_id"]
+  },
+  "resType": "ValidateDatasetItemsResp",
+  "schemaRoot": "api://schemas/data_coze.loop.data.dataset",
+  "service": "dataDataset"
+});
+/** 批量新增数据 */
 export const BatchCreateDatasetItems = /*#__PURE__*/createAPI<BatchCreateDatasetItemsRequest, BatchCreateDatasetItemsResponse>({
   "url": "/api/data/v1/datasets/:dataset_id/items/batch_create",
   "method": "POST",

@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type ExptStatus } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
 
 import { ExperimentRunStatus } from '../previews/experiment-run-status';
 import { experimentRunStatusInfoList } from '../../../constants/experiment-status';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 type ValueType = (string | number)[];
 
@@ -44,8 +41,8 @@ export function ExperimentStatusSelect({
 } & SelectProps) {
   return (
     <Select
-      prefix={I18n.t('status')}
-      placeholder={I18n.t('please_select', { field: '' })}
+      prefix="状态"
+      placeholder="请选择"
       showClear={true}
       maxTagCount={2}
       optionList={statusOptions}

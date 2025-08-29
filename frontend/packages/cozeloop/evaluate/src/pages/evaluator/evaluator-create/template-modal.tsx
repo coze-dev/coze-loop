@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TemplateInfo } from '@cozeloop/evaluate-components';
 import {
   TemplateType,
@@ -96,7 +93,7 @@ export function TemplateModal({
       >
         <div className="coz-bg-primary w-60 flex flex-col">
           <div className="m-4 pl-2 h-10 flex items-center text-[20px] coz-fg-plus font-medium">
-            {I18n.t('select_template')}
+            {'选择模板'}
           </div>
           <div className="p-4 pt-0 overflow-y-auto styled-scrollbar pr-[10px]">
             {listService.loading ? (
@@ -109,7 +106,7 @@ export function TemplateModal({
             ) : (
               <>
                 <div className="p-2 text-sm leading-4 font-medium coz-fg-secondary mb-1">
-                  {I18n.t('preset_evaluator')}
+                  {'预置评估器'}
                 </div>
                 {listService.data?.builtin_template_keys?.map((t, idx) => (
                   <div
@@ -133,7 +130,7 @@ export function TemplateModal({
         </div>
         <div className="w-0 flex-1 flex flex-col">
           <div className="flex-shrink-0 mx-6 my-4 h-10 flex items-center justify-between text-[20px] coz-fg-plus font-medium">
-            {I18n.t('preview')}
+            {'预览'}
             <IconButton
               size="small"
               icon={<IconCozCrossFill className="!w-4 !h-4 coz-fg-secondary" />}
@@ -156,14 +153,14 @@ export function TemplateModal({
           </div>
           <div className="flex flex-row justify-end gap-2 px-6 pt-2 pb-6">
             <Button color="primary" onClick={onCancel}>
-              {I18n.t('Cancel')}
+              {'取消'}
             </Button>
             <Button
               color="brand"
               disabled={!currentData || disabled}
               onClick={() => currentData && onSelect(currentData)}
             >
-              {I18n.t('confirm')}
+              {'确认'}
             </Button>
           </div>
         </div>

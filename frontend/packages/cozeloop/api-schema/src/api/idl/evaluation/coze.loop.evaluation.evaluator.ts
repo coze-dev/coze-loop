@@ -471,30 +471,3 @@ export const UpdateEvaluatorRecord = /*#__PURE__*/createAPI<UpdateEvaluatorRecor
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 按id查询单个evaluator运行结果 */
-export const GetEvaluatorRecord = /*#__PURE__*/createAPI<GetEvaluatorRecordRequest, GetEvaluatorRecordResponse>({
-  "url": "/api/evaluation/v1/evaluator_records/:evaluator_record_id",
-  "method": "GET",
-  "name": "GetEvaluatorRecord",
-  "reqType": "GetEvaluatorRecordRequest",
-  "reqMapping": {
-    "query": ["workspace_id", "include_deleted"],
-    "path": ["evaluator_record_id"]
-  },
-  "resType": "GetEvaluatorRecordResponse",
-  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
-  "service": "evaluationEvaluator"
-});
-/** 按id批量查询evaluator运行结果 */
-export const BatchGetEvaluatorRecords = /*#__PURE__*/createAPI<BatchGetEvaluatorRecordsRequest, BatchGetEvaluatorRecordsResponse>({
-  "url": "/api/evaluation/v1/evaluator_records/get_batch",
-  "method": "POST",
-  "name": "BatchGetEvaluatorRecords",
-  "reqType": "BatchGetEvaluatorRecordsRequest",
-  "reqMapping": {
-    "body": ["workspace_id", "evaluator_record_ids", "include_deleted"]
-  },
-  "resType": "BatchGetEvaluatorRecordsResponse",
-  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
-  "service": "evaluationEvaluator"
-});

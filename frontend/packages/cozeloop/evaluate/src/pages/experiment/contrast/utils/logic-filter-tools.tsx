@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorPreview,
   uniqueExperimentsEvaluators,
@@ -26,7 +23,7 @@ export function getExperimentContrastLogicFields(
   });
   return [
     {
-      title: I18n.t('status'),
+      title: '状态',
       name: getLogicFieldName(FieldType.TurnRunState, 'turn_status'),
       type: 'options',
       // 禁用等于和不等于操作符

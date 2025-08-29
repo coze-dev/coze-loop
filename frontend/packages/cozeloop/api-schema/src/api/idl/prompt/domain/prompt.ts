@@ -43,6 +43,9 @@ export interface PromptDetail {
   tools?: Tool[],
   tool_call_config?: ToolCallConfig,
   model_config?: ModelConfig,
+  ext_infos?: {
+    [key: string | number]: string
+  },
 }
 export interface PromptTemplate {
   template_type?: TemplateType,
@@ -51,6 +54,7 @@ export interface PromptTemplate {
 }
 export enum TemplateType {
   Normal = "normal",
+  Jinja2 = "jinja2",
 }
 export interface Tool {
   type?: ToolType,
@@ -123,6 +127,7 @@ export interface VariableDef {
   key?: string,
   desc?: string,
   type?: VariableType,
+  type_tags?: string[],
 }
 export interface VariableVal {
   key?: string,
@@ -131,6 +136,15 @@ export interface VariableVal {
 }
 export enum VariableType {
   String = "string",
+  Boolean = "boolean",
+  Integer = "integer",
+  Float = "float",
+  Object = "object",
+  Array_String = "array<string>",
+  Array_Boolean = "array<boolean>",
+  Array_Integer = "array<integer>",
+  Array_Float = "array<float>",
+  Array_Object = "array<object>",
   Placeholder = "placeholder",
 }
 export interface TokenUsage {
@@ -197,4 +211,7 @@ export interface DebugLog {
 export enum Scenario {
   Default = "default",
   EvalTarget = "eval_target",
+}
+export interface OverridePromptParams {
+  model_config?: ModelConfig
 }

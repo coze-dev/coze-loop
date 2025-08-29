@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type EvalTarget,
   EvalTargetType,
@@ -87,7 +84,7 @@ export default function PromptEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={I18n.t('please_select', { field: I18n.t('prompt') })}
+      placeholder="请选择Prompt"
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

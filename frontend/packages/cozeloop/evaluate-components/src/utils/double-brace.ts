@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 const VARIABLE_MAX_LEN = 50;
 const regex = new RegExp(`{{([a-zA-Z]\\w{0,${VARIABLE_MAX_LEN - 1}})}}`, 'gm');
 

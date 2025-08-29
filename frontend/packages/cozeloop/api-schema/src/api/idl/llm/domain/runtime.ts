@@ -8,6 +8,11 @@ export interface ModelConfig {
   top_p?: number,
   stop?: string[],
   tool_choice?: ToolChoice,
+  /** support json */
+  response_format?: ResponseFormat,
+  top_k?: number,
+  presence_penalty?: number,
+  frequency_penalty?: number,
 }
 export interface Message {
   role: Role,
@@ -72,11 +77,19 @@ export interface BizParam {
   user_id?: string,
   /** 使用场景 */
   scenario?: common.Scenario,
-  /** 场景实体id, prompt场景需要传prompt key */
+  /** 场景实体id(非必填) */
   scenario_entity_id?: string,
   /** 场景实体version(非必填) */
   scenario_entity_version?: string,
+  /** 场景实体key(非必填), prompt场景需要传prompt key */
+  scenario_entity_key?: string,
 }
+export interface ResponseFormat {
+  type?: ResponseFormatType
+}
+export type ResponseFormatType = string;
+export const response_format_json_object = "json_object";
+export const response_format_text = "text";
 export enum ToolChoice {
   tool_choice_auto = "auto",
   tool_choice_required = "required",

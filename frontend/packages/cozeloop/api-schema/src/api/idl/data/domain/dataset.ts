@@ -122,6 +122,8 @@ export interface DatasetSpec {
   max_field_count?: number,
   /** 单条数据字数上限 */
   max_item_size?: string,
+  max_item_data_nested_depth?: number,
+  multi_modal_spec?: MultiModalSpec,
 }
 /** DatasetVersion 数据集版本元信息，不包含数据本身 */
 export interface DatasetVersion {
@@ -197,6 +199,18 @@ export interface FieldSchema {
   hidden?: boolean,
   /** 当前列的状态，创建/更新时可以不传 */
   status?: FieldStatus,
+  /** 默认的预置转换配置，目前在数据校验后执行 */
+  default_transformations?: FieldTransformationConfig[],
+}
+export enum FieldTransformationType {
+  /** 移除未在当前列的 jsonSchema 中定义的字段（包括 properties 和 patternProperties），仅在列类型为 struct 时有效 */
+  RemoveExtraFields = 1,
+}
+export interface FieldTransformationConfig {
+  /** 预置的转换类型 */
+  transType?: FieldTransformationType,
+  /** 当前转换配置在这一列上的数据及其嵌套的子结构上均生效 */
+  global?: boolean,
 }
 export interface MultiModalSpec {
   /** 文件数量上限 */
@@ -205,6 +219,8 @@ export interface MultiModalSpec {
   max_file_size?: string,
   /** 文件格式 */
   supported_formats?: string[],
+  /** 多模态节点总数上限 */
+  max_part_count?: number,
 }
 /** DatasetItem 数据内容 */
 export interface DatasetItem {
@@ -287,8 +303,24 @@ export enum ItemErrorType {
   MalformedFile = 5,
   /** 包含非法内容 */
   IllegalContent = 6,
+  /** 缺少必填字段 */
+  MissingRequiredField = 7,
+  /** 数据嵌套层数超限 */
+  ExceedMaxNestedDepth = 8,
+  /** 数据转换失败 */
+  TransformItemFailed = 9,
+  /** 图片数量超限 */
+  ExceedMaxImageCount = 10,
+  /** 图片大小超限 */
+  ExceedMaxImageSize = 11,
+  /** 图片获取失败（例如图片不存在/访问不在白名单内的内网链接） */
+  GetImageFailed = 12,
+  /** 文件扩展名不合法 */
+  IllegalExtension = 13,
   /** system erro */
   InternalError = 100,
+  /** 上传图片失败 */
+  UploadImageFailed = 103,
 }
 export interface ItemErrorDetail {
   message?: string,

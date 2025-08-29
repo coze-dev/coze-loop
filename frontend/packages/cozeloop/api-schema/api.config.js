@@ -17,6 +17,7 @@ const config = [
       evaluationEvaluator: './evaluation/coze.loop.evaluation.evaluator.thrift',
       evaluationExpt: './evaluation/coze.loop.evaluation.expt.thrift',
       dataDataset: './data/coze.loop.data.dataset.thrift',
+      dataTag: './data/coze.loop.data.tag.thrift',
       llmManage: './llm/coze.loop.llm.manage.thrift',
       foundationUpload: './foundation/coze.loop.foundation.file.thrift',
       foundationUser: './foundation/coze.loop.foundation.user.thrift',

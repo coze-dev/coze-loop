@@ -47,6 +47,7 @@ export interface BatchGetEvalTargetsBySourceResponse {
 }
 export interface ExecuteEvalTargetRequest {
   workspace_id: string,
+  eval_target_id: string,
   eval_target_version_id: string,
   input_data: eval_target.EvalTargetInputData,
   experiment_run_id?: string,
@@ -88,6 +89,14 @@ export interface ListSourceEvalTargetsResponse {
   eval_targets?: eval_target.EvalTarget[],
   next_page_token?: string,
   has_more?: boolean,
+}
+export interface BatchGetSourceEvalTargetsRequest {
+  workspace_id: string,
+  source_target_ids?: string[],
+  target_type?: eval_target.EvalTargetType,
+}
+export interface BatchGetSourceEvalTargetsResponse {
+  eval_targets?: eval_target.EvalTarget[]
 }
 export interface ListSourceEvalTargetVersionsRequest {
   workspace_id: string,
@@ -180,17 +189,27 @@ export const ListSourceEvalTargetVersions = /*#__PURE__*/createAPI<ListSourceEva
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });
+export const BatchGetSourceEvalTargets = /*#__PURE__*/createAPI<BatchGetSourceEvalTargetsRequest, BatchGetSourceEvalTargetsResponse>({
+  "url": "/api/evaluation/v1/eval_targets/batch_get_source",
+  "method": "POST",
+  "name": "BatchGetSourceEvalTargets",
+  "reqType": "BatchGetSourceEvalTargetsRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "source_target_ids", "target_type"]
+  },
+  "resType": "BatchGetSourceEvalTargetsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
 /** 执行 */
-export const ExecuteEvalTarget = /*#__PURE__*/createAPI<ExecuteEvalTargetRequest, ExecuteEvalTargetResponse, {
-  eval_target_id: string | number;
-}>({
+export const ExecuteEvalTarget = /*#__PURE__*/createAPI<ExecuteEvalTargetRequest, ExecuteEvalTargetResponse>({
   "url": "/api/evaluation/v1/eval_targets/:eval_target_id/versions/:eval_target_version_id/execute",
   "method": "POST",
   "name": "ExecuteEvalTarget",
   "reqType": "ExecuteEvalTargetRequest",
   "reqMapping": {
     "body": ["workspace_id", "input_data", "experiment_run_id"],
-    "path": ["eval_target_version_id", "eval_target_version_id"]
+    "path": ["eval_target_id", "eval_target_version_id"]
   },
   "resType": "ExecuteEvalTargetResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",

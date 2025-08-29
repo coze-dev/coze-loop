@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { isEmpty } from 'lodash-es';
 import { safeJsonParse } from '@cozeloop/toolkit';
 

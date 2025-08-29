@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import React, { useState } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorPreview,
   formateTime,
@@ -19,6 +16,8 @@ import {
   type Experiment,
 } from '@cozeloop/api-schema/evaluation';
 import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
+
+import { DynamicParams } from './dynamic-params';
 
 function DescriptionItem({
   label,
@@ -64,11 +63,12 @@ const ExperimentDescription = ({
     end_time,
     base_info,
     desc,
+    target_runtime_param,
   } = experiment ?? {};
 
   const header = (
     <div className="flex items-center gap-2 w-full">
-      <div className="text-sm font-semibold">{I18n.t('basic_info')}</div>
+      <div className="text-sm font-semibold">基础信息</div>
       <IconCozArrowDown
         className={classNames(
           'cursor-pointer text-xxl',
@@ -83,21 +83,22 @@ const ExperimentDescription = ({
     <>
       <div className="flex item-center gap-2 w-full">
         <DescriptionItem
-          label={I18n.t('evaluation_set')}
+          label="评测集"
           content={
             <EvaluationSetPreview evalSet={eval_set} enableLinkJump={true} />
           }
         />
         <DescriptionItem
-          label={I18n.t('evaluator_type')}
+          label="评测对象类型"
           content={
             <EvaluateTargetTypePreview type={eval_target?.eval_target_type} />
           }
         />
         <DescriptionItem
-          label={I18n.t('evaluation_object')}
+          label="评测对象"
           content={
             <EvalTargetPreview
+              evalSet={eval_set}
               evalTarget={eval_target}
               spaceID={spaceID}
               enableLinkJump={true}
@@ -109,7 +110,7 @@ const ExperimentDescription = ({
       <div className="flex item-center gap-2 w-full">
         <DescriptionItem
           contentClassName="pr-10"
-          label={I18n.t('evaluator')}
+          label="评估器"
           content={
             !evaluators?.length ? (
               '-'
@@ -129,24 +130,37 @@ const ExperimentDescription = ({
           }
         />
         <DescriptionItem
-          label={I18n.t('creator')}
+          label="创建人"
           content={<CozeUser user={base_info?.created_by} size="small" />}
         />
         <DescriptionItem
-          label={I18n.t('create_time')}
+          label="创建时间"
           content={formateTime(start_time) || '-'}
         />
       </div>
       <div className="flex item-center gap-2 w-full">
         <DescriptionItem
-          label={I18n.t('end_time')}
+          label="结束时间"
           content={formateTime(end_time) || '-'}
         />
         <DescriptionItem
-          label={I18n.t('description')}
+          label="描述"
           content={<TypographyText>{desc || '-'}</TypographyText>}
         />
-        <DescriptionItem />
+        {target_runtime_param?.json_value &&
+        target_runtime_param.json_value !== '{}' ? (
+          <DescriptionItem
+            label="参数注入"
+            content={
+              <DynamicParams
+                evalTarget={eval_target}
+                data={target_runtime_param}
+              />
+            }
+          />
+        ) : (
+          <DescriptionItem />
+        )}
       </div>
     </>
   );

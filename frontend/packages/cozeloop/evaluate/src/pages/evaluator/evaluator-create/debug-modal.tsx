@@ -1,14 +1,13 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useRef, useState } from 'react';
 
 import { useDebounceFn, useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint, useGuard } from '@cozeloop/guard';
 import {
   EvaluatorTestRunResult,
-  extractDoubleBraceFields,
+  parseMessagesVariables,
+  PromptVariableType,
+  type PromptVariable,
 } from '@cozeloop/evaluate-components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -35,11 +34,16 @@ import {
   Form,
   Modal,
   Tooltip,
+  FormInput,
+  withField,
 } from '@coze-arch/coze-design';
 
+import { MultiPartEdit } from './multi-part-editor';
 import { ConfigContent } from './config-content';
 
 import styles from './debug-modal.module.less';
+
+const FormMultiPartEdit = withField(MultiPartEdit);
 
 export function DebugModal({
   initValue,
@@ -53,7 +57,7 @@ export function DebugModal({
   const { spaceID } = useSpace();
   const evaluatorFormRef = useRef<Form<Evaluator>>(null);
   const inputFormRef = useRef<Form<EvaluatorInputData>>(null);
-  const [variables, setVariables] = useState<string[]>([]);
+  const [variables, setVariables] = useState<PromptVariable[]>([]);
 
   const guard = useGuard({
     point: GuardPoint['eval.evaluator_create.debug'],
@@ -69,14 +73,8 @@ export function DebugModal({
       const messageList =
         evaluator?.current_version?.evaluator_content?.prompt_evaluator
           ?.message_list;
-      const strSet = new Set<string>();
-      messageList?.forEach(message => {
-        const str = message?.content?.text;
-        if (str) {
-          extractDoubleBraceFields(str).forEach(item => strSet.add(item));
-        }
-      });
-      setVariables(Array.from(strSet));
+      const newVariables = parseMessagesVariables(messageList ?? []);
+      setVariables(newVariables);
     },
     { wait: 500 },
   );
@@ -93,10 +91,14 @@ export function DebugModal({
 
         Object.entries(inputData || {}).forEach(([key, value]) => {
           if (key && value) {
-            inputFields[key] = {
-              content_type: ContentType.Text,
-              text: value,
-            };
+            if (value?.content_type) {
+              inputFields[key] = value;
+            } else {
+              inputFields[key] = {
+                content_type: ContentType.Text,
+                text: value,
+              };
+            }
           }
         });
 
@@ -137,8 +139,8 @@ export function DebugModal({
       closeOnEsc={false}
       title={
         <div className="flex flex-row items-center text-xl font-medium coz-fg-plus">
-          {I18n.t('preview_and_debug')}
-          <Tooltip content={I18n.t('construct_data_to_preview')}>
+          {'预览与调试'}
+          <Tooltip content={'可通过构造测试数据，预览评估器的运行结果。'}>
             <div className="w-4 h-4 ml-1">
               <IconCozInfoCircle className="w-4 h-4 coz-fg-secondary" />
             </div>
@@ -154,7 +156,7 @@ export function DebugModal({
       <div className="h-full w-full overflow-hidden flex flex-row rounded-lg border border-solid coz-stroke-plus">
         <div className="w-1/2 flex flex-col border-0 border-r border-solid coz-stroke-plus">
           <div className="flex-shrink-0 h-9 px-4 coz-bg-secondary flex items-center text-sm coz-fg-plus font-semibold">
-            {I18n.t('config_info')}
+            {'配置信息'}
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-1 pb-6 styled-scrollbar pr-[10px]">
             <Form
@@ -169,7 +171,7 @@ export function DebugModal({
 
         <div className="w-1/2 flex flex-col">
           <div className="flex-shrink-0 h-9 px-4 coz-bg-secondary flex items-center text-sm coz-fg-plus font-semibold">
-            {I18n.t('construct_test_data')}
+            {'构造测试数据'}
           </div>
           {variables.length ? (
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -179,19 +181,28 @@ export function DebugModal({
                   className={styles['input-form']}
                   disabled={guard2.data.readonly}
                 >
-                  {variables.map(variable => (
-                    <Form.Input
-                      key={variable}
-                      label={
-                        <div className="text-xs coz-fg-plus font-bold ml-3">
-                          {variable}
-                        </div>
-                      }
-                      labelPosition="inset"
-                      field={variable}
-                      className="w-full"
-                    />
-                  ))}
+                  {variables.map(variable =>
+                    variable?.type === PromptVariableType.MultiPartVariable ? (
+                      <FormMultiPartEdit
+                        key={variable?.key}
+                        variable={variable}
+                        field={variable?.key}
+                        noLabel
+                      />
+                    ) : (
+                      <FormInput
+                        key={variable?.key}
+                        label={
+                          <div className="text-xs coz-fg-plus font-bold ml-3">
+                            {variable?.key}
+                          </div>
+                        }
+                        labelPosition="inset"
+                        field={variable?.key}
+                        className="w-full"
+                      />
+                    ),
+                  )}
                 </Form>
               </div>
               <div className="p-4 flex-shrink-0 flex-grow flex flex-col pt-0 pb-2">
@@ -204,7 +215,7 @@ export function DebugModal({
                 ) : (
                   <BenefitBaseBanner
                     className="mb-3 !rounded-[6px]"
-                    description={I18n.t('testrun_require_fee')}
+                    description="试运行将产生资源点消耗"
                   />
                 )}
 
@@ -220,7 +231,7 @@ export function DebugModal({
                       );
                     }}
                   >
-                    {I18n.t('clear')}
+                    {'清空'}
                   </Button>
 
                   <Guard
@@ -232,7 +243,7 @@ export function DebugModal({
                       loading={service.loading}
                       onClick={service.run}
                     >
-                      {I18n.t('run')}
+                      {'运行'}
                     </Button>
                   </Guard>
                 </div>
@@ -246,14 +257,14 @@ export function DebugModal({
                 ) : null}
               </div>
               <div className="self-center text-[var(--coz-fg-dim)] text-xs leading-4 mb-6">
-                {I18n.t('generated_by_ai_tip')}
+                {'内容由AI生成，无法确保真实准确，仅供参考。'}
               </div>
             </div>
           ) : (
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusEmpty />}
-              title={I18n.t('evaluator_lacks_input')}
+              title="评估器缺少输入"
             />
           )}
         </div>

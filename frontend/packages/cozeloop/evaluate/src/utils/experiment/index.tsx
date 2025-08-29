@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { get } from 'lodash-es';
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   DatasetItem,
   getFieldColumnConfig,
@@ -13,8 +10,7 @@ import {
   type Experiment,
   type FieldSchema,
 } from '@cozeloop/api-schema/evaluation';
-import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
-import { Tooltip, type ColumnProps } from '@coze-arch/coze-design';
+import { Tag, Tooltip, type ColumnProps } from '@coze-arch/coze-design';
 
 import { ActualOutputWithTrace } from '@/components/experiment';
 
@@ -85,15 +81,14 @@ export function getActualOutputColumn(params?: {
     experiment,
   } = params ?? {};
   const newColumn: ColumnProps = {
-    // title: 'actual_output',
     title: (
       <div className="flex items-center gap-1">
         <div>actual_output</div>
-        <Tooltip
-          theme="dark"
-          content={I18n.t('evaluation_object_actual_output')}
-        >
-          <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
+        <Tooltip theme="dark" content="评测对象的实际输出">
+          <Tag color="primary" className="text-[12px] font-semibold">
+            实际输出
+          </Tag>
+          {/* <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" /> */}
         </Tooltip>
       </div>
     ),

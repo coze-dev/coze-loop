@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
   useGlobalEvalConfig,
@@ -19,6 +16,7 @@ export default function ActualOutputWithTrace({
   endTime,
   enableTrace = true,
   displayFormat = false,
+  className,
 }: {
   content: DatasetCellContent | undefined;
   traceID: Int64 | undefined;
@@ -27,6 +25,7 @@ export default function ActualOutputWithTrace({
   expand?: boolean;
   enableTrace?: boolean;
   displayFormat?: boolean;
+  className?: string;
 }) {
   const { traceEvalTargetPlatformType } = useGlobalEvalConfig();
   return (
@@ -45,10 +44,11 @@ export default function ActualOutputWithTrace({
         expand={expand}
         content={content}
         displayFormat={displayFormat}
+        className={className}
       />
 
       {enableTrace && traceID ? (
-        <Tooltip theme="dark" content={I18n.t('view_actual_output_trace')}>
+        <Tooltip theme="dark" content="查看实际输出的trace">
           <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
             <TraceTrigger
               className="ml-1 invisible group-hover:visible"

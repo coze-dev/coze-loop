@@ -1,14 +1,11 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozLoose, IconCozTight } from '@coze-arch/coze-design/icons';
 import { Radio, Tooltip } from '@coze-arch/coze-design';
 
 export const useExpandButton = ({
-  shrinkTooltip = I18n.t('collapse'),
-  expandTooltip = I18n.t('expand'),
+  shrinkTooltip = '折叠',
+  expandTooltip = '展开',
 }: {
   shrinkTooltip?: string;
   expandTooltip?: string;

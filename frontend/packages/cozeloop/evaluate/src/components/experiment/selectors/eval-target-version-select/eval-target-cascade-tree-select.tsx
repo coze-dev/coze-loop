@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { Select } from '@coze-arch/coze-design';
@@ -56,7 +53,7 @@ export default function EvalTargetCascadeTreeSelect({
     <div className="flex items-center gap-1">
       <Select
         className="!w-24 shrink-0"
-        placeholder={I18n.t('evaluation_object_type')}
+        placeholder="评测对象类型"
         value={evalTargetType}
         showArrow={false}
         onChange={val => {
@@ -66,8 +63,8 @@ export default function EvalTargetCascadeTreeSelect({
           });
         }}
         optionList={[
-          { label: I18n.t('prompt'), value: EvalTargetType.CozeLoopPrompt },
-          { label: I18n.t('coze_agent'), value: EvalTargetType.CozeBot },
+          { label: 'Prompt', value: EvalTargetType.CozeLoopPrompt },
+          { label: 'Coze 智能体', value: EvalTargetType.CozeBot },
         ]}
       />
       <div className="grow">{evalTargetSelect}</div>

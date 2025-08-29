@@ -1,7 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { JumpIconButton } from '@cozeloop/components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
@@ -47,15 +44,15 @@ export default function EvaluatorColumnPreview({
     >
       <TypographyText>{name ?? '-'}</TypographyText>
       <Tag
-        size="small"
         color="primary"
+        size="small"
         {...tagProps}
         className={classNames('shrink-0', tagProps.className)}
       >
         {version}
       </Tag>
       {enableLinkJump ? (
-        <Tooltip theme="dark" content={I18n.t('view_detail')}>
+        <Tooltip theme="dark" content="查看详情">
           <div>
             <JumpIconButton
               className={defaultShowLinkJump ? '' : '!hidden group-hover:!flex'}

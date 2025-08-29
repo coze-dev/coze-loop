@@ -1,0 +1,37 @@
+/* stylelint-disable declaration-no-important */
+.collapse {
+  background-color: white;
+  border-radius: 6px;
+
+  :global {
+    .semi-collapse-header {
+      height: 36px !important;
+      margin: 0;
+      padding: 8px !important;
+
+      background: transparent !important;
+      border-radius: 0 !important;
+    }
+
+    .semi-collapse-content {
+      padding: 0 !important;
+      border-top: 1px solid var(--coz-stroke-primary) !important;
+    }
+
+    .coz-textarea {
+      padding: 7px 12px;
+      border: none !important;
+      border-radius: 0 !important;
+    }
+
+    .semi-collapse-item{
+      margin-bottom: 0 !important;
+      border: 1px solid rgba(var(--coze-stroke-6), var(--coze-stroke-6-alpha));
+      border-radius: 6px;
+
+      .semi-collapse-header:hover{
+        background: transparent !important;
+      }
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import * as tag from './../../data/domain/tag';
+export { tag };
 import * as eval_set from './eval_set';
 export { eval_set };
 import * as evaluator from './evaluator';
@@ -40,6 +42,7 @@ export interface Experiment {
   status_message?: string,
   start_time?: string,
   end_time?: string,
+  item_concur_num?: number,
   eval_set_version_id?: string,
   target_version_id?: string,
   evaluator_version_ids?: string[],
@@ -52,6 +55,7 @@ export interface Experiment {
   expt_stats?: ExptStatistics,
   target_field_mapping?: TargetFieldMapping,
   evaluator_field_mapping?: EvaluatorFieldMapping[],
+  target_runtime_param?: common.RuntimeParam,
   expt_type?: ExptType,
   max_alive_time?: number,
   source_type?: SourceType,
@@ -128,6 +132,10 @@ export interface ItemSystemInfo {
   log_id?: string,
   error?: RunError,
 }
+export interface ExptColumnEvaluator {
+  experiment_id: string,
+  column_evaluators?: ColumnEvaluator[],
+}
 export interface ColumnEvaluator {
   evaluator_version_id: string,
   evaluator_id: string,
@@ -140,8 +148,9 @@ export interface ColumnEvalSetField {
   key?: string,
   name?: string,
   description?: string,
-  /** 5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat */
   content_type?: common.ContentType,
+  /** 5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat */
+  text_schema?: string,
 }
 export interface ItemResult {
   item_id: string,
@@ -182,6 +191,24 @@ export interface TurnEvaluatorOutput {
     [key: string | number]: evaluator.EvaluatorRecord
   }
 }
+export interface TurnAnnotateResult {
+  /** tag_key_id -> annotate_record */
+  annotate_records: {
+    [key: string | number]: AnnotateRecord
+  }
+}
+export interface AnnotateRecord {
+  annotate_record_id?: string,
+  /** 标签ID */
+  tag_key_id?: string,
+  score?: string,
+  boolean_option?: string,
+  categorical_option?: string,
+  plain_text?: string,
+  tag_content_type?: tag.TagContentType,
+  /** 标签选项值ID */
+  tag_value_id?: string,
+}
 /** 实际行级payload */
 export interface ExperimentTurnPayload {
   turn_id: string,
@@ -193,9 +220,16 @@ export interface ExperimentTurnPayload {
   evaluator_output?: TurnEvaluatorOutput,
   /** 评测系统相关数据日志、error */
   system_info?: TurnSystemInfo,
+  /** 人工标注结果结果 */
+  annotate_result?: TurnAnnotateResult,
+}
+export interface KeywordSearch {
+  keyword?: string,
+  filter_fields?: FilterField[],
 }
 export interface ExperimentFilter {
-  filters?: Filters
+  filters?: Filters,
+  keyword_search?: KeywordSearch,
 }
 export interface Filters {
   filter_conditions?: FilterCondition[],
@@ -208,6 +242,7 @@ export enum FilterLogicOp {
 }
 export interface FilterField {
   field_type: FieldType,
+  /** 二级key放此字段里 */
   field_key?: string,
 }
 export enum FieldType {
@@ -228,6 +263,24 @@ export enum FieldType {
   ExptType = 30,
   SourceType = 31,
   SourceID = 32,
+  KeywordSearch = 41,
+  /** 使用二级key，column_key */
+  EvalSetColumn = 42,
+  /** 使用二级key, Annotation_key（具体参考人工标注设计） */
+  Annotation = 43,
+  /** 使用二级key，目前使用固定key：content */
+  ActualOutput = 44,
+  EvaluatorScoreCorrected = 45,
+  /** 使用二级key，evaluator_version_id */
+  Evaluator = 46,
+  ItemID = 47,
+  ItemRunState = 48,
+  /** 使用二级key, field_key为tag_key_id, value为score */
+  AnnotationScore = 49,
+  /** 使用二级key, field_key为tag_key_id, value为文本 */
+  AnnotationText = 50,
+  /** 使用二级key, field_key为tag_key_id, value为tag_value_id */
+  AnnotationCategorical = 51,
 }
 /** 字段过滤器 */
 export interface FilterCondition {
@@ -261,6 +314,14 @@ export enum FilterOperatorType {
   In = 7,
   /** 不包含 */
   NotIn = 8,
+  /** 全文搜索 */
+  Like = 9,
+  /** 全文搜索反选 */
+  NotLike = 10,
+  /** 为空 */
+  IsNull = 11,
+  /** 非空 */
+  IsNotNull = 12,
 }
 export enum ExptAggregateCalculateStatus {
   Unknown = 0,
@@ -274,6 +335,10 @@ export interface ExptAggregateResult {
     [key: string | number]: EvaluatorAggregateResult
   },
   status?: ExptAggregateCalculateStatus,
+  /** tag_key_id -> result */
+  annotation_results?: {
+    [key: string | number]: AnnotationAggregateResult
+  },
 }
 /** 评估器版本粒度聚合结果 */
 export interface EvaluatorAggregateResult {
@@ -281,6 +346,12 @@ export interface EvaluatorAggregateResult {
   aggregator_results?: AggregatorResult[],
   name?: string,
   version?: string,
+}
+/** 人工标注项粒度聚合结果 */
+export interface AnnotationAggregateResult {
+  tag_key_id: string,
+  aggregator_results?: AggregatorResult[],
+  name?: string,
 }
 /** 一种聚合器类型的聚合结果 */
 export interface AggregatorResult {
@@ -301,6 +372,8 @@ export enum DataType {
   Double = 0,
   /** 得分分布 */
   ScoreDistribution = 1,
+  /** 选项分布 */
+  OptionDistribution = 2,
 }
 export interface ScoreDistribution {
   score_distribution_items?: ScoreDistributionItem[]
@@ -314,9 +387,59 @@ export interface AggregateData {
   data_type: DataType,
   value?: number,
   score_distribution?: ScoreDistribution,
+  option_distribution?: OptionDistribution,
+}
+export interface OptionDistribution {
+  option_distribution_items?: OptionDistributionItem[]
+}
+export interface OptionDistributionItem {
+  /** 值为tag_value_id,或`其他` */
+  option: string,
+  count: string,
+  percentage: number,
 }
 export interface ExptStatsInfo {
   expt_id?: number,
   source_id?: string,
   expt_stats?: ExptStatistics,
+}
+export interface ExptColumnAnnotation {
+  experiment_id: string,
+  column_annotations?: ColumnAnnotation[],
+}
+/** 标签信息，沿用数据基座Tag定义 */
+export interface ColumnAnnotation {
+  tag_key_id?: string,
+  /** tag key name */
+  tag_key_name?: string,
+  /** 描述 */
+  description?: string,
+  status?: tag.TagStatus,
+  /** 标签选项值 */
+  tag_values?: tag.TagValue[],
+  /** 标签内容类型 */
+  content_type?: tag.TagContentType,
+  /** 标签内容限制 */
+  content_spec?: tag.TagContentSpec,
+}
+export enum ExptResultExportType {
+  CSV = "CSV",
+}
+export enum CSVExportStatus {
+  Unknown = "Unknown",
+  Running = "Running",
+  Success = "Success",
+  Failed = "Failed",
+}
+export interface ExptResultExportRecord {
+  export_id: string,
+  workspace_id: string,
+  expt_id: string,
+  csv_export_status: CSVExportStatus,
+  base_info?: common.BaseInfo,
+  start_time?: string,
+  end_time?: string,
+  URL?: string,
+  expired?: boolean,
+  error?: RunError,
 }

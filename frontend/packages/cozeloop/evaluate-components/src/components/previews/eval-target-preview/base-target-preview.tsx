@@ -1,7 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
 import { Tag, Tooltip } from '@coze-arch/coze-design';
 
@@ -43,7 +40,7 @@ export default function BaseTargetPreview({
         </Tag>
       ) : null}
       {enableLinkJump ? (
-        <Tooltip theme="dark" content={I18n.t('view_detail')}>
+        <Tooltip theme="dark" content="查看详情">
           <div>
             <JumpIconButton className="hidden group-hover:flex" />
           </div>

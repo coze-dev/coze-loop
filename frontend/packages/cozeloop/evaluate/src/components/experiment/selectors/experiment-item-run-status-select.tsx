@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { experimentItemRunStatusInfoList } from '@cozeloop/evaluate-components';
 import { type TurnRunState } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
 
 import ExperimentItemRunStatus from '../previews/experiment-item-run-status';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 const statusOptions = experimentItemRunStatusInfoList.map(item => ({
   label: item.name,
@@ -36,8 +33,8 @@ export default function ExperimentItemRunStatusSelect({
 } & SelectProps) {
   return (
     <Select
-      prefix={I18n.t('status')}
-      placeholder={I18n.t('please_select', { field: '' })}
+      prefix="状态"
+      placeholder="请选择"
       multiple={true}
       showClear={true}
       maxTagCount={2}

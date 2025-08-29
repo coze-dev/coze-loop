@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { RouteBackAction } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
@@ -11,7 +8,7 @@ import { DatasetCreateForm } from '../../components/dataset-create-form';
 export const CreateDatasetPage = () => {
   const navigate = useNavigateModule();
   useBreadcrumb({
-    text: I18n.t('new_evaluation_set'),
+    text: '新建评测集',
   });
 
   return (
@@ -24,7 +21,7 @@ export const CreateDatasetPage = () => {
               heading={6}
               className="!coz-fg-plus !font-medium !text-[18px] !leading-[20px]"
             >
-              {I18n.t('new_evaluation_set')}
+              新建评测集
             </Typography.Title>
           </div>
         }

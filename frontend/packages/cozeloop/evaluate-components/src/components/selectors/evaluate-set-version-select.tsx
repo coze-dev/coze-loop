@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useRequest } from 'ahooks';
 import { BaseSearchFormSelect } from '@cozeloop/components';
 import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -7,7 +5,6 @@ import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { type FormSelect, Typography } from '@coze-arch/coze-design';
 
 import NoVersionJumper from '../common/no-version-jumper';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export function EvaluateSetVersionSelect({
   evaluationSetId,
@@ -74,9 +71,7 @@ export function EvaluateSetVersionSelect({
 
   return (
     <BaseSearchFormSelect
-      placeholder={I18n.t('please_select', {
-        field: I18n.t('evaluation_set_version'),
-      })}
+      placeholder={'请选择评测集版本'}
       remote
       loading={service.loading}
       showRefreshBtn={true}

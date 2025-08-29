@@ -1,9 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import {
   type FieldData as DatasetCellFieldData,
   type Content as DatasetCellContent,
 } from '@cozeloop/api-schema/evaluation';
+import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 
 export { DatasetCellContent };
 
@@ -31,3 +30,26 @@ export enum DetailItemStepSwitch {
   Next = 1,
   Current = 0,
 }
+
+export const FORMAT_LIST = [
+  {
+    value: FieldDisplayFormat.PlainText,
+    label: 'PlainText',
+    chipColor: 'secondary',
+  },
+  {
+    value: FieldDisplayFormat.Code,
+    label: 'Code',
+    chipColor: 'secondary',
+  },
+  {
+    value: FieldDisplayFormat.JSON,
+    label: 'JSON',
+    chipColor: 'secondary',
+  },
+  {
+    value: FieldDisplayFormat.Markdown,
+    label: 'Markdown',
+    chipColor: 'secondary',
+  },
+];

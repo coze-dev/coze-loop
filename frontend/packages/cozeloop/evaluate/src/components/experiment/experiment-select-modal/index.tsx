@@ -1,10 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect } from 'react';
 
 import { uniq } from 'lodash-es';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   ColumnsManage,
   RefreshButton,
@@ -135,7 +132,7 @@ export default function ExperimentSelectModal({
             onChange={val => updateFilter('name', val)}
           />
           <EvaluateSetSelect
-            prefix={I18n.t('evaluation_set')}
+            prefix="评测集"
             value={filter?.eval_set}
             disabled={disabledFilterFields?.includes('eval_set')}
             multiple={true}
@@ -189,11 +186,11 @@ export default function ExperimentSelectModal({
   );
   return (
     <Modal
-      title={I18n.t('select_experiment')}
+      title="选择实验"
       visible={true}
       okButtonProps={{ disabled: selectedExperiments.length < 2 }}
-      okText={I18n.t('run_experiment_comparison')}
-      cancelText={I18n.t('Cancel')}
+      okText="发起实验对比"
+      cancelText="取消"
       onOk={() => {
         const experiments = mergeExperiments([
           ...(baseExperiment ? [baseExperiment] : []),
@@ -224,11 +221,11 @@ export default function ExperimentSelectModal({
           className="coz-fg-primary pl-4 rounded-[6px]  w-full h-[32px] flex items-center bg-[rgba(var(--coze-yellow-0), var(--coze-yellow-0-alpha))]"
         >
           <IconCozWarningCircleFill className="text-orange-500" />
-          <span>{I18n.t('only_experiments_compared_tip')}</span>
+          <span>仅评测集相同且已执行完成的实验可进行对比。</span>
         </Space>
 
         <div className="shrink-0 flex items-center gap-1">
-          <span className="font-medium">{I18n.t('selected')}:</span>
+          <span className="font-medium">已选:</span>
           <div className="flex items-center gap-1">
             {selectedExperiments.map(experiment => (
               <Tag

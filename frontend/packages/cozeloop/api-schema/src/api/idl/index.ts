@@ -6,6 +6,7 @@ export * as evaluationEvalTarget from './evaluation/coze.loop.evaluation.eval_ta
 export * as evaluationEvaluator from './evaluation/coze.loop.evaluation.evaluator';
 export * as evaluationExpt from './evaluation/coze.loop.evaluation.expt';
 export * as dataDataset from './data/coze.loop.data.dataset';
+export * as dataTag from './data/coze.loop.data.tag';
 export * as llmManage from './llm/coze.loop.llm.manage';
 export * as foundationUpload from './foundation/coze.loop.foundation.file';
 export * as foundationUser from './foundation/coze.loop.foundation.user';

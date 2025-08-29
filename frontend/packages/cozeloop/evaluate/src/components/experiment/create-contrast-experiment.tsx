@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useMemo, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { ExptStatus, type Experiment } from '@cozeloop/api-schema/evaluation';
 import { IconCozCompare } from '@coze-arch/coze-design/icons';
@@ -41,7 +38,7 @@ export default function CreateContrastExperiment({
           setVisible(true);
         }}
       >
-        {I18n.t('experiment_comparison')}
+        实验对比
       </Button>
 
       {visible ? (

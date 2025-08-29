@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { FormInput, FormTextArea } from '@coze-arch/coze-design';
 
@@ -24,8 +21,8 @@ export const BaseInfoForm = () => {
     <>
       <FormInput
         field="name"
-        label={I18n.t('name')}
-        placeholder={I18n.t('please_input', { field: I18n.t('name') })}
+        label="名称"
+        placeholder="请输入名称"
         required
         maxLength={50}
         trigger="blur"
@@ -40,9 +37,9 @@ export const BaseInfoForm = () => {
         )}
       />
       <FormTextArea
-        label={I18n.t('description')}
+        label="描述"
         field="desc"
-        placeholder={I18n.t('please_input', { field: I18n.t('description') })}
+        placeholder="请输入描述"
         maxCount={200}
         maxLength={200}
         rules={baseInfoValidators.desc}

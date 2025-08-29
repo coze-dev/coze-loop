@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { AggregatorType } from '@cozeloop/api-schema/evaluation';
 import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
 import { Button, Select } from '@coze-arch/coze-design';

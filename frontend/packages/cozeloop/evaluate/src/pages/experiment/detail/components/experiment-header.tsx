@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import {
@@ -18,6 +15,7 @@ import { isTraceTargetExpr } from '@/utils/experiment';
 import {
   CreateContrastExperiment,
   ExperimentInfoEditFormModal,
+  ExportMenu,
   RetryButton,
 } from '@/components/experiment';
 
@@ -72,20 +70,19 @@ export default function ExperimentHeader({
           enableOnClick={false}
         />
         <Tag color="primary" size="small" className="ml-2">
-          {I18n.t('total')} {totalCount || 0}（{I18n.t('success')}{' '}
-          {success_turn_cnt}
+          总条数 {totalCount || 0}（成功 {success_turn_cnt}
           <Divider
             layout="vertical"
             style={{ marginLeft: 8, marginRight: 8, height: 12 }}
           />
-          {I18n.t('failure')} {fail_turn_cnt}
+          失败 {fail_turn_cnt}
           <Divider
             layout="vertical"
             style={{ marginLeft: 8, marginRight: 8, height: 12 }}
           />
           {terminated_turn_cnt ? (
             <>
-              {I18n.t('abort')} {terminated_turn_cnt}
+              中止 {terminated_turn_cnt}
               <Divider
                 layout="vertical"
                 style={{ marginLeft: 8, marginRight: 8, height: 12 }}
@@ -94,19 +91,20 @@ export default function ExperimentHeader({
           ) : null}
           {processing_turn_cnt ? (
             <>
-              {I18n.t('execution_in_progress')} {processing_turn_cnt}
+              执行中 {processing_turn_cnt}
               <Divider
                 layout="vertical"
                 style={{ marginLeft: 8, marginRight: 8, height: 12 }}
               />
             </>
           ) : null}
-          {I18n.t('to_be_executed')} {pending_turn_cnt}）
+          待执行 {pending_turn_cnt}）
         </Tag>
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
         <RefreshButton onRefresh={onRefresh} />
+        <ExportMenu experiment={experiment} source="expt_detail" />
         <RetryButton
           spaceID={spaceID}
           status={status}

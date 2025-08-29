@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type CSSProperties } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
 import { IconButton, Tooltip, Typography } from '@coze-arch/coze-design';
 
@@ -25,6 +22,7 @@ interface TextWithCopyProps {
     | 'warning'
     | 'tertiary'
     | 'quaternary';
+  onlyIconCopy?: boolean;
 }
 
 export function TextWithCopy({
@@ -36,43 +34,56 @@ export function TextWithCopy({
   style,
   textClassName,
   textType = 'secondary',
+  onlyIconCopy,
 }: TextWithCopyProps) {
   return (
     <div
-      className={classNames('flex items-center justify-start gap-1', className)}
+      className={classNames(
+        'flex items-baseline justify-start gap-1',
+        className,
+      )}
       style={style}
     >
       <Typography.Text
-        className={classNames('max-w-full', textClassName)}
+        className={classNames(
+          'max-w-full',
+          {
+            'cursor-pointer': !onlyIconCopy,
+          },
+          textClassName,
+        )}
         type={textType}
         style={{ maxWidth }}
         ellipsis={{
           showTooltip: { opts: { theme: 'dark', content } },
         }}
-        onClick={e => {
-          content && handleCopy(content);
-          e?.stopPropagation();
-        }}
+        onClick={
+          onlyIconCopy
+            ? undefined
+            : e => {
+                content && handleCopy(content);
+                e?.stopPropagation();
+              }
+        }
       >
         {displayText || content || ''}
       </Typography.Text>
       {content ? (
-        <Tooltip
-          content={copyTooltipText || I18n.t('copy_content')}
-          theme="dark"
-        >
+        <Tooltip content={copyTooltipText || '复制内容'} theme="dark">
           <IconButton
             size="mini"
             color="secondary"
-            className="flex-shrink-0 !w-[20px] !h-[20px]"
+            className="flex-shrink-0"
+            style={{
+              width: 21,
+              height: 21,
+            }}
             icon={
               <IconCozCopy
-                className=""
                 onClick={e => {
                   content && handleCopy(content);
                   e?.stopPropagation();
                 }}
-                fontSize={14}
                 fill="var(--semi-color-text-2)"
               />
             }

@@ -1,7 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { RouteBackAction } from '@cozeloop/components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
@@ -24,15 +21,13 @@ export default function ExperimentContrastHeader({
   return (
     <header className="flex items-center h-[56px] px-5 gap-2  text-xs">
       <RouteBackAction defaultModuleRoute="evaluation/experiments" />
-      <div className="text-xl font-bold">
-        {I18n.t('compare_x_experiments', { num: experimentCount })}
-      </div>
+      <div className="text-xl font-bold">对比{experimentCount}个实验</div>
 
       <div className="flex items-center gap-3 ml-auto text-sm">
         <Select
-          prefix={I18n.t('benchmark')}
+          prefix="基准"
           arrowIcon={<IconCozSetting />}
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder="请选择"
           style={{ minWidth: 170 }}
           value={currentExperiments?.[0]?.id}
           renderSelectedItem={(item: { name?: React.ReactNode }) => (
@@ -61,7 +56,7 @@ export default function ExperimentContrastHeader({
             onExperimentIdsChange?.(
               newExperiments?.map(e => e.id ?? '').filter(Boolean),
             );
-            Toast.success(I18n.t('benchmark_experiment_switch_success'));
+            Toast.success('基准实验切换成功');
           }}
         />
         <AddContrastExperiment

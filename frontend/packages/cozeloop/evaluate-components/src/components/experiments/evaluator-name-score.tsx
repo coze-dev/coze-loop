@@ -1,17 +1,14 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useRef, useState } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { IconButtonContainer, JumpIconButton } from '@cozeloop/components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluatorResult,
-  type Evaluator,
   type UserInfo,
   type Experiment,
+  type ColumnEvaluator,
 } from '@cozeloop/api-schema/evaluation';
 import { IconCozPencil } from '@coze-arch/coze-design/icons';
 import { Divider, Popover, Tag, Toast, Tooltip } from '@coze-arch/coze-design';
@@ -65,14 +62,14 @@ export function EvaluatorResultPanel({
   return (
     <div className="w-80">
       <div className="font-bold mb-1 flex items-center">
-        {I18n.t('score')}
+        得分
         {correction ? (
           <Tag
             color="brand"
             size="small"
             className="ml-1 rounded-[3px] font-normal"
           >
-            {I18n.t('manual_calibration')}
+            人工校准
           </Tag>
         ) : null}
       </div>
@@ -88,7 +85,7 @@ export function EvaluatorResultPanel({
         <div>{score}</div>
       )}
       <div className="mt-3">
-        <div className="font-bold mb-1">{I18n.t('reason')}</div>
+        <div className="font-bold mb-1">原因</div>
         <div>{(correction ? correction?.explain : reasoning) || '-'}</div>
       </div>
     </div>
@@ -190,7 +187,7 @@ export function EvaluatorNameScoreTag({
       </div>
       <div className={classNames('flex items-center', hasAction ? 'ml-1' : '')}>
         {enableLinkJump ? (
-          <Tooltip theme="dark" content={I18n.t('view_evaluator_details')}>
+          <Tooltip theme="dark" content="查看评估器详情">
             <div className="flex items-center">
               <JumpIconButton
                 className={defaultShowAction ? '' : 'hidden group-hover:flex'}
@@ -204,7 +201,7 @@ export function EvaluatorNameScoreTag({
           </Tooltip>
         ) : null}
         {enableTrace && traceID ? (
-          <Tooltip theme="dark" content={I18n.t('view_evaluator_trace')}>
+          <Tooltip theme="dark" content="查看评估器 Trace">
             <div
               className="flex items-center"
               onClick={() => onReportEvaluatorTrace?.()}
@@ -228,12 +225,12 @@ export function EvaluatorNameScoreTag({
             customSubmitManualScore={customSubmitManualScore}
             onSuccess={() => {
               setVisible(false);
-              Toast.success(I18n.t('update_rating_success'));
+              Toast.success('更新评分成功');
               onSuccess?.();
             }}
           >
             <div className="flex items-center">
-              <Tooltip theme="dark" content={I18n.t('manual_calibration')}>
+              <Tooltip theme="dark" content="人工校准">
                 <div
                   className={
                     defaultShowAction ? 'h-5' : 'h-5 !hidden group-hover:!flex'
@@ -274,7 +271,7 @@ export function EvaluatorNameScore({
   onReportCalibration,
   onReportEvaluatorTrace,
 }: {
-  evaluator: Evaluator | undefined;
+  evaluator: ColumnEvaluator | undefined;
   experiment: Experiment | undefined;
   evaluatorResult: EvaluatorResult | undefined;
   updateUser?: UserInfo;
@@ -294,8 +291,13 @@ export function EvaluatorNameScore({
   onReportCalibration?: () => void;
   onReportEvaluatorTrace?: () => void;
 }) {
-  const { evaluator_id, name, current_version } = evaluator ?? {};
-  const { version, id: versionId } = current_version ?? {};
+  const {
+    evaluator_id,
+    name,
+    version,
+    evaluator_version_id: versionId,
+  } = evaluator ?? {};
+
   if (!enablePopover) {
     return (
       <EvaluatorNameScoreTag

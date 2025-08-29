@@ -1,10 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { forwardRef, useImperativeHandle, useState } from 'react';
 
+import { cloneDeep } from 'lodash-es';
 import cs from 'classnames';
 import { useUpdateEffect } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
 import {
@@ -62,7 +60,7 @@ export const DatasetColumnConfig = forwardRef(
 
     const addColumn = () => {
       if (fieldSchema?.length >= 50) {
-        Toast.error(I18n.t('max_support_columns', { num: 50 }));
+        Toast.error('最多支持50列');
         return;
       }
       fieldApi.setValue([...fieldSchema, DEFAULT_COLUMN_SCHEMA]);
@@ -81,11 +79,12 @@ export const DatasetColumnConfig = forwardRef(
           onChange={key => {
             setActiveKey(key as string[]);
           }}
+          clickHeaderToExpand={false}
           className={cs(styles.collapse, styles[size])}
           keepDOM
         >
           {fieldSchema?.map((item: ConvertFieldSchema, index) => (
-            <div id={`column-${index}`}>
+            <div id={`column-${index}`} key={index}>
               <ColumnRender
                 key={index}
                 size={size}
@@ -94,7 +93,7 @@ export const DatasetColumnConfig = forwardRef(
                 setActiveKey={setActiveKey}
                 onDelete={() => {
                   if (fieldSchema?.length === 1) {
-                    Toast.error(I18n.t('retain_one_data_column'));
+                    Toast.error('至少保留一个列');
                     return;
                   }
                   formApi.validate().catch(err => {
@@ -104,18 +103,19 @@ export const DatasetColumnConfig = forwardRef(
                 }}
                 onCopy={() => {
                   if (fieldSchema?.length >= 50) {
-                    Toast.error(I18n.t('max_support_columns', { num: 50 }));
+                    Toast.error('最多支持50列');
                     return;
                   }
                   //往index+1位置插入一个item
                   fieldApi.setValue([
                     ...fieldSchema.slice(0, index + 1),
                     {
+                      ...cloneDeep(item),
+                      key: undefined,
                       name: `${item.name || ''}_copy`.slice(0, 50),
                       type: item.type,
                       description: item.description,
                       content_type: item.content_type,
-                      default_display_format: item.default_display_format,
                     },
                     ...fieldSchema.slice(index + 1),
                   ]);
@@ -142,7 +142,7 @@ export const DatasetColumnConfig = forwardRef(
         </Collapse>
         {showAddButton ? (
           <TooltipWhenDisabled
-            content={I18n.t('max_support_columns', { num: 50 })}
+            content="最多支持50列"
             theme="dark"
             disabled={fieldSchema?.length >= 50}
           >
@@ -153,7 +153,7 @@ export const DatasetColumnConfig = forwardRef(
               disabled={fieldSchema?.length >= 50}
               onClick={addColumn}
             >
-              {I18n.t('add_column')}
+              添加列
             </Button>
           </TooltipWhenDisabled>
         ) : null}
