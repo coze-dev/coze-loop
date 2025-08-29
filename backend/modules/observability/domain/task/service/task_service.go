@@ -6,9 +6,9 @@ package service
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/Task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 )
 
 type CreateTaskReq struct {
