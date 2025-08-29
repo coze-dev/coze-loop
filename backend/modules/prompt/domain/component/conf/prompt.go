@@ -5,6 +5,7 @@ package conf
 
 import (
 	"context"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 )
@@ -14,4 +15,7 @@ type IConfigProvider interface {
 	GetPromptHubMaxQPSBySpace(ctx context.Context, spaceID int64) (maxQPS int, err error)
 
 	GetPromptDefaultConfig(ctx context.Context) (config *prompt.PromptDetail, err error)
+
+	ListPresetLabels() (presetLabels []string, err error)
+	GetPromptLabelVersionCacheConfig(ctx context.Context) (enable bool, ttl time.Duration, err error)
 }

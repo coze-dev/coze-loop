@@ -70,6 +70,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateLabel": kitex.NewMethodInfo(
+		createLabelHandler,
+		newPromptManageServiceCreateLabelArgs,
+		newPromptManageServiceCreateLabelResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListLabel": kitex.NewMethodInfo(
+		listLabelHandler,
+		newPromptManageServiceListLabelArgs,
+		newPromptManageServiceListLabelResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BatchGetLabel": kitex.NewMethodInfo(
+		batchGetLabelHandler,
+		newPromptManageServiceBatchGetLabelArgs,
+		newPromptManageServiceBatchGetLabelResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListCommit": kitex.NewMethodInfo(
 		listCommitHandler,
 		newPromptManageServiceListCommitArgs,
@@ -88,6 +109,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		revertDraftFromCommitHandler,
 		newPromptManageServiceRevertDraftFromCommitArgs,
 		newPromptManageServiceRevertDraftFromCommitResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateCommitLabels": kitex.NewMethodInfo(
+		updateCommitLabelsHandler,
+		newPromptManageServiceUpdateCommitLabelsArgs,
+		newPromptManageServiceUpdateCommitLabelsResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -276,6 +304,63 @@ func newPromptManageServiceSaveDraftResult() interface{} {
 	return manage.NewPromptManageServiceSaveDraftResult()
 }
 
+func createLabelHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*manage.PromptManageServiceCreateLabelArgs)
+	realResult := result.(*manage.PromptManageServiceCreateLabelResult)
+	success, err := handler.(manage.PromptManageService).CreateLabel(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptManageServiceCreateLabelArgs() interface{} {
+	return manage.NewPromptManageServiceCreateLabelArgs()
+}
+
+func newPromptManageServiceCreateLabelResult() interface{} {
+	return manage.NewPromptManageServiceCreateLabelResult()
+}
+
+func listLabelHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*manage.PromptManageServiceListLabelArgs)
+	realResult := result.(*manage.PromptManageServiceListLabelResult)
+	success, err := handler.(manage.PromptManageService).ListLabel(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptManageServiceListLabelArgs() interface{} {
+	return manage.NewPromptManageServiceListLabelArgs()
+}
+
+func newPromptManageServiceListLabelResult() interface{} {
+	return manage.NewPromptManageServiceListLabelResult()
+}
+
+func batchGetLabelHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*manage.PromptManageServiceBatchGetLabelArgs)
+	realResult := result.(*manage.PromptManageServiceBatchGetLabelResult)
+	success, err := handler.(manage.PromptManageService).BatchGetLabel(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptManageServiceBatchGetLabelArgs() interface{} {
+	return manage.NewPromptManageServiceBatchGetLabelArgs()
+}
+
+func newPromptManageServiceBatchGetLabelResult() interface{} {
+	return manage.NewPromptManageServiceBatchGetLabelResult()
+}
+
 func listCommitHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*manage.PromptManageServiceListCommitArgs)
 	realResult := result.(*manage.PromptManageServiceListCommitResult)
@@ -331,6 +416,25 @@ func newPromptManageServiceRevertDraftFromCommitArgs() interface{} {
 
 func newPromptManageServiceRevertDraftFromCommitResult() interface{} {
 	return manage.NewPromptManageServiceRevertDraftFromCommitResult()
+}
+
+func updateCommitLabelsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*manage.PromptManageServiceUpdateCommitLabelsArgs)
+	realResult := result.(*manage.PromptManageServiceUpdateCommitLabelsResult)
+	success, err := handler.(manage.PromptManageService).UpdateCommitLabels(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptManageServiceUpdateCommitLabelsArgs() interface{} {
+	return manage.NewPromptManageServiceUpdateCommitLabelsArgs()
+}
+
+func newPromptManageServiceUpdateCommitLabelsResult() interface{} {
+	return manage.NewPromptManageServiceUpdateCommitLabelsResult()
 }
 
 type kClient struct {
@@ -425,6 +529,36 @@ func (p *kClient) SaveDraft(ctx context.Context, request *manage.SaveDraftReques
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) CreateLabel(ctx context.Context, request *manage.CreateLabelRequest) (r *manage.CreateLabelResponse, err error) {
+	var _args manage.PromptManageServiceCreateLabelArgs
+	_args.Request = request
+	var _result manage.PromptManageServiceCreateLabelResult
+	if err = p.c.Call(ctx, "CreateLabel", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListLabel(ctx context.Context, request *manage.ListLabelRequest) (r *manage.ListLabelResponse, err error) {
+	var _args manage.PromptManageServiceListLabelArgs
+	_args.Request = request
+	var _result manage.PromptManageServiceListLabelResult
+	if err = p.c.Call(ctx, "ListLabel", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetLabel(ctx context.Context, request *manage.BatchGetLabelRequest) (r *manage.BatchGetLabelResponse, err error) {
+	var _args manage.PromptManageServiceBatchGetLabelArgs
+	_args.Request = request
+	var _result manage.PromptManageServiceBatchGetLabelResult
+	if err = p.c.Call(ctx, "BatchGetLabel", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) ListCommit(ctx context.Context, request *manage.ListCommitRequest) (r *manage.ListCommitResponse, err error) {
 	var _args manage.PromptManageServiceListCommitArgs
 	_args.Request = request
@@ -450,6 +584,16 @@ func (p *kClient) RevertDraftFromCommit(ctx context.Context, request *manage.Rev
 	_args.Request = request
 	var _result manage.PromptManageServiceRevertDraftFromCommitResult
 	if err = p.c.Call(ctx, "RevertDraftFromCommit", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateCommitLabels(ctx context.Context, request *manage.UpdateCommitLabelsRequest) (r *manage.UpdateCommitLabelsResponse, err error) {
+	var _args manage.PromptManageServiceUpdateCommitLabelsArgs
+	_args.Request = request
+	var _result manage.PromptManageServiceUpdateCommitLabelsResult
+	if err = p.c.Call(ctx, "UpdateCommitLabels", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

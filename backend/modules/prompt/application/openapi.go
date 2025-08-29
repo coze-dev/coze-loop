@@ -94,18 +94,27 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest, promptKeyIDMap map[string]int64) (*openapi.BatchGetPromptByPromptKeyResponse, error) {
 	// 准备查询参数
 	var mgetParams []repo.GetPromptParam
-	var pairs []service.PromptKeyVersionPair
+
+	// 构建统一的查询参数
+	var queryParams []service.PromptQueryParam
 	for _, q := range req.Queries {
 		if q == nil {
 			continue
 		}
-		pairs = append(pairs, service.PromptKeyVersionPair{
+		promptID, exists := promptKeyIDMap[q.GetPromptKey()]
+		if !exists {
+			continue // 如果找不到对应的 prompt ID，跳过该查询
+		}
+		queryParams = append(queryParams, service.PromptQueryParam{
+			PromptID:  promptID,
 			PromptKey: q.GetPromptKey(),
 			Version:   q.GetVersion(),
+			Label:     q.GetLabel(),
 		})
 	}
-	// 解析具体的提交版本
-	promptKeyCommitVersionMap, err := p.promptService.MParseCommitVersionByPromptKey(ctx, req.GetWorkspaceID(), pairs)
+
+	// 使用统一的方法解析版本信息
+	promptKeyCommitVersionMap, err := p.promptService.MParseCommitVersion(ctx, req.GetWorkspaceID(), queryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +122,24 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		if query == nil {
 			continue
 		}
+
+		// 构建查询参数以获取对应的版本
+		promptID, exists := promptKeyIDMap[query.GetPromptKey()]
+		if !exists {
+			continue // 如果找不到对应的 prompt ID，跳过该查询
+		}
+		queryParam := service.PromptQueryParam{
+			PromptID:  promptID,
+			PromptKey: query.GetPromptKey(),
+			Version:   query.GetVersion(),
+			Label:     query.GetLabel(),
+		}
+		commitVersion := promptKeyCommitVersionMap[queryParam]
+
 		mgetParams = append(mgetParams, repo.GetPromptParam{
 			PromptID:      promptKeyIDMap[query.GetPromptKey()],
 			WithCommit:    true,
-			CommitVersion: promptKeyCommitVersionMap[service.PromptKeyVersionPair{PromptKey: query.GetPromptKey(), Version: query.GetVersion()}],
+			CommitVersion: commitVersion,
 		})
 	}
 
@@ -154,7 +177,19 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 			continue
 		}
 		// 找到具体的版本
-		commitVersion := promptKeyCommitVersionMap[service.PromptKeyVersionPair{PromptKey: q.GetPromptKey(), Version: q.GetVersion()}]
+		promptID, exists := promptKeyIDMap[q.GetPromptKey()]
+		if !exists {
+			return nil, errorx.NewByCode(prompterr.ResourceNotFoundCode,
+				errorx.WithExtraMsg("prompt not exist"),
+				errorx.WithExtra(map[string]string{"prompt_key": q.GetPromptKey()}))
+		}
+		queryParam := service.PromptQueryParam{
+			PromptID:  promptID,
+			PromptKey: q.GetPromptKey(),
+			Version:   q.GetVersion(),
+			Label:     q.GetLabel(),
+		}
+		commitVersion := promptKeyCommitVersionMap[queryParam]
 		promptDTO := convertor.OpenAPIPromptDO2DTO(promptMap[service.PromptKeyVersionPair{PromptKey: q.GetPromptKey(), Version: commitVersion}])
 		if promptDTO == nil {
 			return nil, errorx.NewByCode(prompterr.PromptVersionNotExistCode,

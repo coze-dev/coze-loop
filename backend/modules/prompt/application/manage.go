@@ -30,6 +30,7 @@ import (
 
 func NewPromptManageApplication(
 	promptManageRepo repo.IManageRepo,
+	labelRepo repo.ILabelRepo,
 	promptService service.IPromptService,
 	authRPCProvider rpc.IAuthProvider,
 	userRPCProvider rpc.IUserProvider,
@@ -38,6 +39,7 @@ func NewPromptManageApplication(
 ) manage.PromptManageService {
 	return &PromptManageApplicationImpl{
 		manageRepo:       promptManageRepo,
+		labelRepo:        labelRepo,
 		promptService:    promptService,
 		authRPCProvider:  authRPCProvider,
 		userRPCProvider:  userRPCProvider,
@@ -48,6 +50,7 @@ func NewPromptManageApplication(
 
 type PromptManageApplicationImpl struct {
 	manageRepo       repo.IManageRepo
+	labelRepo        repo.ILabelRepo
 	promptService    service.IPromptService
 	authRPCProvider  rpc.IAuthProvider
 	userRPCProvider  rpc.IUserProvider
@@ -464,6 +467,18 @@ func (app *PromptManageApplicationImpl) CommitDraft(ctx context.Context, request
 		return r, err
 	}
 
+	// 验证label是否存在（如果有提供label）
+	var labelKeys []string
+	if len(request.GetLabelKeys()) > 0 {
+		// 使用labelService验证label是否存在
+		err = app.promptService.ValidateLabelsExist(ctx, promptDO.SpaceID, request.GetLabelKeys())
+		if err != nil {
+			return r, err
+		}
+
+		labelKeys = request.GetLabelKeys()
+	}
+
 	// commit
 	commitDraftParam := repo.CommitDraftParam{
 		PromptID: request.GetPromptID(),
@@ -472,6 +487,7 @@ func (app *PromptManageApplicationImpl) CommitDraft(ctx context.Context, request
 
 		CommitVersion:     request.GetCommitVersion(),
 		CommitDescription: request.GetCommitDescription(),
+		LabelKeys:         labelKeys,
 	}
 	return r, app.manageRepo.CommitDraft(ctx, commitDraftParam)
 }
@@ -543,6 +559,39 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 		return manage.NewListCommitResponse(), err
 	}
 	r.Users = convertor.BatchUserInfoDO2DTO(userDOs)
+
+	// 填充commit版本标签映射
+	if len(r.PromptCommitInfos) > 0 {
+		var commitVersions []string
+		for _, commitInfo := range r.PromptCommitInfos {
+			if commitInfo != nil && commitInfo.Version != nil {
+				commitVersions = append(commitVersions, commitInfo.GetVersion())
+			}
+		}
+
+		if len(commitVersions) > 0 {
+			// 查询这些版本的标签映射，使用labelService
+			commitLabelMapping, err := app.promptService.BatchGetCommitLabels(ctx, request.GetPromptID(), commitVersions)
+			if err != nil {
+				return r, err
+			}
+
+			// 构建版本到标签的映射
+			commitVersionLabelMapping := make(map[string][]*prompt.Label)
+			for version, labelKeys := range commitLabelMapping {
+				var labelDTOs []*prompt.Label
+				for _, labelKey := range labelKeys {
+					labelDTOs = append(labelDTOs, &prompt.Label{
+						Key: ptr.Of(labelKey),
+					})
+				}
+				commitVersionLabelMapping[version] = labelDTOs
+			}
+
+			r.CommitVersionLabelMapping = commitVersionLabelMapping
+		}
+	}
+
 	return r, nil
 }
 
@@ -601,4 +650,163 @@ func (app *PromptManageApplicationImpl) listPromptOrderBy(dtoEnum *manage.ListPr
 	default:
 		return mysql.ListPromptBasicOrderByID
 	}
+}
+
+// CreateLabel creates a new label in the workspace
+func (app *PromptManageApplicationImpl) CreateLabel(ctx context.Context, request *manage.CreateLabelRequest) (r *manage.CreateLabelResponse, err error) {
+	r = manage.NewCreateLabelResponse()
+
+	// 用户
+	userID, ok := session.UserIDInCtx(ctx)
+	if !ok || lo.IsEmpty(userID) {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
+	}
+
+	// 权限检查
+	err = app.authRPCProvider.CheckSpacePermission(ctx, request.GetWorkspaceID(), consts.ActionWorkspaceCreateLoopPrompt)
+	if err != nil {
+		return r, err
+	}
+
+	// 使用labelService创建Label，包含预置标签重复校验
+	labelDO := &entity.PromptLabel{
+		SpaceID:   request.GetWorkspaceID(),
+		LabelKey:  request.GetLabel().GetKey(),
+		CreatedBy: userID,
+		UpdatedBy: userID,
+	}
+	err = app.promptService.CreateLabel(ctx, labelDO)
+	if err != nil {
+		return r, err
+	}
+
+	return r, nil
+}
+
+// ListLabel lists labels in the workspace with pagination
+func (app *PromptManageApplicationImpl) ListLabel(ctx context.Context, request *manage.ListLabelRequest) (r *manage.ListLabelResponse, err error) {
+	r = manage.NewListLabelResponse()
+
+	// 权限检查
+	err = app.authRPCProvider.CheckSpacePermission(ctx, request.GetWorkspaceID(), consts.ActionWorkspaceListLoopPrompt)
+	if err != nil {
+		return r, err
+	}
+
+	// 当需要查询prompt版本映射时，验证参数
+	if request.GetWithPromptVersionMapping() {
+		if request.GetPromptID() <= 0 {
+			return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("PromptID must be provided when WithPromptVersionMapping is true"))
+		}
+	}
+
+	// 构建查询参数
+	param := service.ListLabelParam{
+		SpaceID:      request.GetWorkspaceID(),
+		LabelKeyLike: request.GetLabelKeyLike(),
+		PageSize:     int(request.GetPageSize()),
+	}
+
+	// 处理分页token
+	if request.GetPageToken() != "" {
+		pageToken, parseErr := strconv.ParseInt(request.GetPageToken(), 10, 64)
+		if parseErr != nil {
+			return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Invalid page token"))
+		}
+		param.PageToken = &pageToken
+	}
+
+	// 调用domain层服务查询Label列表
+	labels, nextPageToken, err := app.promptService.ListLabel(ctx, param)
+	if err != nil {
+		return r, err
+	}
+
+	// 转换结果
+	r.Labels = convertor.BatchLabelDO2DTO(labels)
+	if nextPageToken != nil {
+		r.NextPageToken = ptr.Of(strconv.FormatInt(*nextPageToken, 10))
+		r.HasMore = ptr.Of(true)
+	} else {
+		r.HasMore = ptr.Of(false)
+	}
+
+	// 当需要查询prompt版本映射时，查询每个label关联该prompt的版本
+	if request.GetWithPromptVersionMapping() && len(r.Labels) > 0 {
+		// 构建查询列表
+		queries := make([]service.PromptLabelQuery, 0, len(r.Labels))
+		for _, label := range r.Labels {
+			if label != nil && label.Key != nil {
+				queries = append(queries, service.PromptLabelQuery{
+					PromptID: request.GetPromptID(),
+					LabelKey: label.GetKey(),
+				})
+			}
+		}
+
+		// 调用服务层方法
+		promptVersionMapping, err := app.promptService.BatchGetLabelMappingPromptVersion(ctx, queries)
+		if err != nil {
+			return r, err
+		}
+
+		// 转换结果格式，从 map[PromptLabelQuery]string 转为 map[string]string
+		resultMapping := make(map[string]string)
+		for key, version := range promptVersionMapping {
+			resultMapping[key.LabelKey] = version
+		}
+		r.PromptVersionMapping = resultMapping
+	}
+
+	return r, nil
+}
+
+// BatchGetLabel retrieves labels by their keys
+func (app *PromptManageApplicationImpl) BatchGetLabel(ctx context.Context, request *manage.BatchGetLabelRequest) (r *manage.BatchGetLabelResponse, err error) {
+	r = manage.NewBatchGetLabelResponse()
+	// 权限检查
+	err = app.authRPCProvider.CheckSpacePermission(ctx, request.GetWorkspaceID(), consts.ActionWorkspaceListLoopPrompt)
+	if err != nil {
+		return r, err
+	}
+
+	labels, err := app.labelRepo.BatchGetLabel(ctx, request.GetWorkspaceID(), request.GetLabelKeys())
+	if err != nil {
+		return nil, err
+	}
+	r.Labels = convertor.BatchLabelDO2DTO(labels)
+	return r, nil
+}
+
+// UpdateCommitLabels updates labels for a specific commit version
+func (app *PromptManageApplicationImpl) UpdateCommitLabels(ctx context.Context, request *manage.UpdateCommitLabelsRequest) (r *manage.UpdateCommitLabelsResponse, err error) {
+	r = manage.NewUpdateCommitLabelsResponse()
+
+	// 用户
+	userID, ok := session.UserIDInCtx(ctx)
+	if !ok || lo.IsEmpty(userID) {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
+	}
+
+	// 权限检查
+	err = app.authRPCProvider.MCheckPromptPermission(ctx, request.GetWorkspaceID(), []int64{request.GetPromptID()}, consts.ActionLoopPromptEdit)
+	if err != nil {
+		return r, err
+	}
+
+	// 构建更新参数
+	param := service.UpdateCommitLabelsParam{
+		PromptID:      request.GetPromptID(),
+		CommitVersion: request.GetCommitVersion(),
+		LabelKeys:     request.GetLabelKeys(),
+		UpdatedBy:     userID,
+	}
+
+	// 更新commit的labels
+	err = app.promptService.UpdateCommitLabels(ctx, param)
+	if err != nil {
+		return r, err
+	}
+
+	return r, nil
 }

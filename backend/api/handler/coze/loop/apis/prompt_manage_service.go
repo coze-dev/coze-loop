@@ -74,3 +74,27 @@ func CommitDraft(ctx context.Context, c *app.RequestContext) {
 func RevertDraftFromCommit(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, promptManageSvc.RevertDraftFromCommit)
 }
+
+// CreateLabel .
+// @router /api/prompt/v1/labels [POST]
+func CreateLabel(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptManageSvc.CreateLabel)
+}
+
+// ListLabel .
+// @router /api/prompt/v1/labels/list [POST]
+func ListLabel(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptManageSvc.ListLabel)
+}
+
+// UpdateCommitLabels .
+// @router /api/prompt/v1/prompts/:prompt_id/commits/:commit_version/labels_update [POST]
+func UpdateCommitLabels(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptManageSvc.UpdateCommitLabels)
+}
+
+// BatchGetLabel .
+// @router /api/prompt/v1/labels/batch_get [POST]
+func BatchGetLabel(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptManageSvc.BatchGetLabel)
+}

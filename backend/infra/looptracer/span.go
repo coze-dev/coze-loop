@@ -18,6 +18,31 @@ type SpanImpl struct {
 	LoopSpan cozeloop.Span
 }
 
+func (s SpanImpl) SetServiceName(ctx context.Context, serviceName string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s SpanImpl) SetLogID(ctx context.Context, logID string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s SpanImpl) SetFinishTime(finishTime time.Time) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s SpanImpl) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s SpanImpl) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s SpanImpl) GetSpanID() string {
 	return s.LoopSpan.GetSpanID()
 }
@@ -131,6 +156,31 @@ func (s SpanImpl) SetCallType(callType string) {
 var _ Span = (*noopSpan)(nil)
 
 type noopSpan struct{}
+
+func (n noopSpan) SetServiceName(ctx context.Context, serviceName string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (n noopSpan) SetLogID(ctx context.Context, logID string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (n noopSpan) SetFinishTime(finishTime time.Time) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (n noopSpan) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (n noopSpan) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (n noopSpan) GetSpanID() string {
 	return ""

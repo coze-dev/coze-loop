@@ -51,3 +51,4 @@ release/deployment/helm-chart/umbrella/Chart.lock
 
 **/kitex_remote_config.json
 .coda/
+.cursor/

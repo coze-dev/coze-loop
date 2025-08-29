@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	prompt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	gomock "go.uber.org/mock/gomock"
@@ -69,4 +70,35 @@ func (m *MockIConfigProvider) GetPromptHubMaxQPSBySpace(ctx context.Context, spa
 func (mr *MockIConfigProviderMockRecorder) GetPromptHubMaxQPSBySpace(ctx, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPromptHubMaxQPSBySpace", reflect.TypeOf((*MockIConfigProvider)(nil).GetPromptHubMaxQPSBySpace), ctx, spaceID)
+}
+
+// GetPromptLabelVersionCacheConfig mocks base method.
+func (m *MockIConfigProvider) GetPromptLabelVersionCacheConfig(ctx context.Context) (bool, time.Duration, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPromptLabelVersionCacheConfig", ctx)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(time.Duration)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetPromptLabelVersionCacheConfig indicates an expected call of GetPromptLabelVersionCacheConfig.
+func (mr *MockIConfigProviderMockRecorder) GetPromptLabelVersionCacheConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPromptLabelVersionCacheConfig", reflect.TypeOf((*MockIConfigProvider)(nil).GetPromptLabelVersionCacheConfig), ctx)
+}
+
+// ListPresetLabels mocks base method.
+func (m *MockIConfigProvider) ListPresetLabels() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPresetLabels")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPresetLabels indicates an expected call of ListPresetLabels.
+func (mr *MockIConfigProviderMockRecorder) ListPresetLabels() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPresetLabels", reflect.TypeOf((*MockIConfigProvider)(nil).ListPresetLabels))
 }

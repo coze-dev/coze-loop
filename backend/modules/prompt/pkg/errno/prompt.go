@@ -72,6 +72,10 @@ const (
 	unsupportedTemplateTypeMessage           = "unsupported template type"
 	unsupportedTemplateTypeNoAffectStability = true
 
+	PromptLabelUnAssociatedCode              = 600501007
+	promptLabelUnAssociatedMessage           = "prompt label unassociated with commit version"
+	promptLabelUnAssociatedNoAffectStability = true
+
 	PromptHubQPSLimitCode              = 600502001
 	promptHubQPSLimitMessage           = "request is limited, cause prompt hub qps of current space reached the upper limit"
 	promptHubQPSLimitNoAffectStability = true
@@ -177,6 +181,12 @@ func init() {
 		UnsupportedTemplateTypeCode,
 		unsupportedTemplateTypeMessage,
 		code.WithAffectStability(!unsupportedTemplateTypeNoAffectStability),
+	)
+
+	code.Register(
+		PromptLabelUnAssociatedCode,
+		promptLabelUnAssociatedMessage,
+		code.WithAffectStability(!promptLabelUnAssociatedNoAffectStability),
 	)
 
 	code.Register(

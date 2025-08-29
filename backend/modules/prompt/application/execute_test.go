@@ -272,8 +272,9 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt // 捕获循环变量
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 去掉t.Parallel()以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)

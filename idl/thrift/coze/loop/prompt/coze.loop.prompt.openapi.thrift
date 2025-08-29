@@ -29,6 +29,7 @@ struct PromptResultData {
 struct PromptQuery {
     1: optional string prompt_key
     2: optional string version
+    3: optional string label
 }
 
 struct PromptResult {

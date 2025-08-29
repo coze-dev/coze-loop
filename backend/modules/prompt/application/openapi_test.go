@@ -34,6 +34,8 @@ import (
 )
 
 func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
+	t.Parallel()
+
 	type fields struct {
 		promptService    service.IPromptService
 		promptManageRepo repo.IManageRepo
@@ -62,9 +64,9 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 					"test_prompt1": 123,
 					"test_prompt2": 456,
 				}, nil)
-				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptKeyVersionPair]string{
-					{PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
-					{PromptKey: "test_prompt2", Version: "1.0.0"}: "1.0.0",
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+					{PromptID: 456, PromptKey: "test_prompt2", Version: "1.0.0"}: "1.0.0",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
@@ -256,12 +258,11 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
 					"test_prompt1": 123,
-					"test_prompt2": 456,
 				}, nil)
-				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptKeyVersionPair]string{
-					{PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
-					{PromptKey: "test_prompt1", Version: "2.0.0"}: "2.0.0",
-					{PromptKey: "test_prompt1", Version: ""}:      "2.0.0",
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "2.0.0"}: "2.0.0",
+					{PromptID: 123, PromptKey: "test_prompt1", Version: ""}:      "2.0.0",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
@@ -432,7 +433,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("2.0.0"),
 								PromptTemplate: &openapi.PromptTemplate{
-									TemplateType: ptr.Of(openapi.TemplateTypeNormal),
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
 									Messages: []*openapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
@@ -455,7 +456,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("2.0.0"),
 								PromptTemplate: &openapi.PromptTemplate{
-									TemplateType: ptr.Of(openapi.TemplateTypeNormal),
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
 									Messages: []*openapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
@@ -633,8 +634,8 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
 					"test_prompt1": 123,
 				}, nil)
-				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptKeyVersionPair]string{
-					{PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
@@ -681,8 +682,8 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
 					"test_prompt1": 123,
 				}, nil)
-				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptKeyVersionPair]string{
-					{PromptKey: "test_prompt1", Version: "non_existent_version"}: "non_existent_version",
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "non_existent_version"}: "non_existent_version",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
@@ -769,8 +770,8 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
 					"test_prompt1": 123,
 				}, nil)
-				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptKeyVersionPair]string{
-					{PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)

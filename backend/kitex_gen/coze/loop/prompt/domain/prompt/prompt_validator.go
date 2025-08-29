@@ -137,6 +137,9 @@ func (p *ToolCall) IsValid() error {
 func (p *FunctionCall) IsValid() error {
 	return nil
 }
+func (p *Label) IsValid() error {
+	return nil
+}
 func (p *VariableDef) IsValid() error {
 	return nil
 }

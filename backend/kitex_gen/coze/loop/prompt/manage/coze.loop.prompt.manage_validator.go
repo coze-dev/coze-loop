@@ -371,3 +371,115 @@ func (p *RevertDraftFromCommitResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreateLabelRequest) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if p.Label == nil {
+		return fmt.Errorf("field Label not_nil rule failed")
+	}
+	if err := p.Label.IsValid(); err != nil {
+		return fmt.Errorf("field Label not valid, %w", err)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateLabelResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListLabelRequest) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if p.PageSize == nil {
+		return fmt.Errorf("field PageSize not_nil rule failed")
+	}
+	if *p.PageSize <= int32(0) {
+		return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListLabelResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetLabelRequest) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetLabelResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateCommitLabelsRequest) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if p.PromptID == nil {
+		return fmt.Errorf("field PromptID not_nil rule failed")
+	}
+	if *p.PromptID <= int64(0) {
+		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.CommitVersion == nil {
+		return fmt.Errorf("field CommitVersion not_nil rule failed")
+	}
+	if len(*p.CommitVersion) < int(1) {
+		return fmt.Errorf("field CommitVersion min_len rule failed, current value: %d", len(*p.CommitVersion))
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateCommitLabelsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

@@ -17,35 +17,41 @@ import (
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:                 db,
-		PromptBasic:        newPromptBasic(db, opts...),
-		PromptCommit:       newPromptCommit(db, opts...),
-		PromptDebugContext: newPromptDebugContext(db, opts...),
-		PromptDebugLog:     newPromptDebugLog(db, opts...),
-		PromptUserDraft:    newPromptUserDraft(db, opts...),
+		db:                       db,
+		PromptBasic:              newPromptBasic(db, opts...),
+		PromptCommit:             newPromptCommit(db, opts...),
+		PromptCommitLabelMapping: newPromptCommitLabelMapping(db, opts...),
+		PromptDebugContext:       newPromptDebugContext(db, opts...),
+		PromptDebugLog:           newPromptDebugLog(db, opts...),
+		PromptLabel:              newPromptLabel(db, opts...),
+		PromptUserDraft:          newPromptUserDraft(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	PromptBasic        promptBasic
-	PromptCommit       promptCommit
-	PromptDebugContext promptDebugContext
-	PromptDebugLog     promptDebugLog
-	PromptUserDraft    promptUserDraft
+	PromptBasic              promptBasic
+	PromptCommit             promptCommit
+	PromptCommitLabelMapping promptCommitLabelMapping
+	PromptDebugContext       promptDebugContext
+	PromptDebugLog           promptDebugLog
+	PromptLabel              promptLabel
+	PromptUserDraft          promptUserDraft
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:                 db,
-		PromptBasic:        q.PromptBasic.clone(db),
-		PromptCommit:       q.PromptCommit.clone(db),
-		PromptDebugContext: q.PromptDebugContext.clone(db),
-		PromptDebugLog:     q.PromptDebugLog.clone(db),
-		PromptUserDraft:    q.PromptUserDraft.clone(db),
+		db:                       db,
+		PromptBasic:              q.PromptBasic.clone(db),
+		PromptCommit:             q.PromptCommit.clone(db),
+		PromptCommitLabelMapping: q.PromptCommitLabelMapping.clone(db),
+		PromptDebugContext:       q.PromptDebugContext.clone(db),
+		PromptDebugLog:           q.PromptDebugLog.clone(db),
+		PromptLabel:              q.PromptLabel.clone(db),
+		PromptUserDraft:          q.PromptUserDraft.clone(db),
 	}
 }
 
@@ -59,30 +65,36 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:                 db,
-		PromptBasic:        q.PromptBasic.replaceDB(db),
-		PromptCommit:       q.PromptCommit.replaceDB(db),
-		PromptDebugContext: q.PromptDebugContext.replaceDB(db),
-		PromptDebugLog:     q.PromptDebugLog.replaceDB(db),
-		PromptUserDraft:    q.PromptUserDraft.replaceDB(db),
+		db:                       db,
+		PromptBasic:              q.PromptBasic.replaceDB(db),
+		PromptCommit:             q.PromptCommit.replaceDB(db),
+		PromptCommitLabelMapping: q.PromptCommitLabelMapping.replaceDB(db),
+		PromptDebugContext:       q.PromptDebugContext.replaceDB(db),
+		PromptDebugLog:           q.PromptDebugLog.replaceDB(db),
+		PromptLabel:              q.PromptLabel.replaceDB(db),
+		PromptUserDraft:          q.PromptUserDraft.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	PromptBasic        *promptBasicDo
-	PromptCommit       *promptCommitDo
-	PromptDebugContext *promptDebugContextDo
-	PromptDebugLog     *promptDebugLogDo
-	PromptUserDraft    *promptUserDraftDo
+	PromptBasic              *promptBasicDo
+	PromptCommit             *promptCommitDo
+	PromptCommitLabelMapping *promptCommitLabelMappingDo
+	PromptDebugContext       *promptDebugContextDo
+	PromptDebugLog           *promptDebugLogDo
+	PromptLabel              *promptLabelDo
+	PromptUserDraft          *promptUserDraftDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		PromptBasic:        q.PromptBasic.WithContext(ctx),
-		PromptCommit:       q.PromptCommit.WithContext(ctx),
-		PromptDebugContext: q.PromptDebugContext.WithContext(ctx),
-		PromptDebugLog:     q.PromptDebugLog.WithContext(ctx),
-		PromptUserDraft:    q.PromptUserDraft.WithContext(ctx),
+		PromptBasic:              q.PromptBasic.WithContext(ctx),
+		PromptCommit:             q.PromptCommit.WithContext(ctx),
+		PromptCommitLabelMapping: q.PromptCommitLabelMapping.WithContext(ctx),
+		PromptDebugContext:       q.PromptDebugContext.WithContext(ctx),
+		PromptDebugLog:           q.PromptDebugLog.WithContext(ctx),
+		PromptLabel:              q.PromptLabel.WithContext(ctx),
+		PromptUserDraft:          q.PromptUserDraft.WithContext(ctx),
 	}
 }
 

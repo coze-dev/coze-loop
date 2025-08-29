@@ -30,7 +30,7 @@ type IPromptBasicDAO interface {
 
 	Delete(ctx context.Context, promptID int64, opts ...db.Option) (err error)
 
-	Get(ctx context.Context, promptID int64, lock bool, opts ...db.Option) (basicPO *model.PromptBasic, err error)
+	Get(ctx context.Context, promptID int64, opts ...db.Option) (basicPO *model.PromptBasic, err error)
 	MGet(ctx context.Context, promptIDs []int64, opts ...db.Option) (idPromptPOMap map[int64]*model.PromptBasic, err error)
 	MGetByPromptKey(ctx context.Context, spaceID int64, promptKeys []string, opts ...db.Option) (promptPOs []*model.PromptBasic, err error)
 	List(ctx context.Context, param ListPromptBasicParam, opts ...db.Option) (basicPOs []*model.PromptBasic, total int64, err error)
@@ -104,15 +104,12 @@ func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, opts ..
 	return nil
 }
 
-func (d *PromptBasicDAOImpl) Get(ctx context.Context, promptID int64, lock bool, opts ...db.Option) (basicPO *model.PromptBasic, err error) {
+func (d *PromptBasicDAOImpl) Get(ctx context.Context, promptID int64, opts ...db.Option) (basicPO *model.PromptBasic, err error) {
 	if promptID <= 0 {
 		return nil, errorx.New("promptID is invalid, promptID = %d", promptID)
 	}
 	if d.writeTracker.CheckWriteFlagByID(ctx, platestwrite.ResourceTypePromptBasic, promptID) {
 		opts = append(opts, db.WithMaster())
-	}
-	if lock {
-		opts = append(opts, db.WithSelectForUpdate())
 	}
 	q := query.Use(d.db.NewSession(ctx, opts...))
 	tx := q.WithContext(ctx).PromptBasic

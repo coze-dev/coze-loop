@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
+	servicemocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
@@ -1378,8 +1379,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 					},
 				}, nil)
 
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().BatchGetCommitLabels(gomock.Any(), int64(1), []string{"1.0.0", "1.1.0"}).Return(map[string][]string{}, nil)
+
 				return fields{
 					manageRepo:      mockManageRepo,
+					promptService:   mockPromptService,
 					authRPCProvider: mockAuth,
 					userRPCProvider: mockUser,
 				}
@@ -1410,6 +1415,7 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 						CommittedAt: ptr.Of(now.UnixMilli()),
 					},
 				},
+				CommitVersionLabelMapping: map[string][]*prompt.Label{},
 				Users: []*user.UserInfoDetail{
 					{
 						UserID:    ptr.Of("test_user"),
@@ -1464,8 +1470,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 					},
 				}, nil)
 
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().BatchGetCommitLabels(gomock.Any(), int64(1), []string{"1.0.0", "1.1.0"}).Return(map[string][]string{}, nil)
+
 				return fields{
 					manageRepo:      mockManageRepo,
+					promptService:   mockPromptService,
 					authRPCProvider: mockAuth,
 					userRPCProvider: mockUser,
 				}
@@ -1496,8 +1506,9 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 						CommittedAt: ptr.Of(now.UnixMilli()),
 					},
 				},
-				HasMore:       ptr.Of(true),
-				NextPageToken: ptr.Of("3"),
+				CommitVersionLabelMapping: map[string][]*prompt.Label{},
+				HasMore:                   ptr.Of(true),
+				NextPageToken:             ptr.Of("3"),
 				Users: []*user.UserInfoDetail{
 					{
 						UserID:    ptr.Of("test_user"),
@@ -1551,8 +1562,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 					},
 				}, nil)
 
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().BatchGetCommitLabels(gomock.Any(), int64(1), []string{"1.2.0", "1.3.0"}).Return(map[string][]string{}, nil)
+
 				return fields{
 					manageRepo:      mockManageRepo,
+					promptService:   mockPromptService,
 					authRPCProvider: mockAuth,
 					userRPCProvider: mockUser,
 				}
@@ -1583,6 +1598,7 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 						CommittedAt: ptr.Of(now.UnixMilli()),
 					},
 				},
+				CommitVersionLabelMapping: map[string][]*prompt.Label{},
 				Users: []*user.UserInfoDetail{
 					{
 						UserID:    ptr.Of("test_user"),
