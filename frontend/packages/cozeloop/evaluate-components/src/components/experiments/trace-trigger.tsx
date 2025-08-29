@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import classNames from 'classnames';
@@ -53,7 +51,7 @@ export function TraceTrigger({
           spaceID={spaceID}
           spaceName={space?.name ?? ''}
           searchType="trace_id"
-          platformType={platformType.toString()}
+          platformType={platformType?.toString()}
           id={traceID?.toString()}
           startTime={getTimeString(startTime)}
           endTime={getTimeString(endTime)}

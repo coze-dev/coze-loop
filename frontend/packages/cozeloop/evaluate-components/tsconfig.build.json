@@ -18,7 +18,13 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
+      "path": "../adapter/tsconfig.build.json"
+    },
+    {
       "path": "../api-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../arch/bot-api/tsconfig.build.json"
     },
     {
       "path": "../../arch/bot-md-box-adapter/tsconfig.build.json"
@@ -60,10 +66,13 @@
       "path": "../i18n/tsconfig.build.json"
     },
     {
-      "path": "../observation/trace-detail/tsconfig.build.json"
+      "path": "../observation/trace-detail-open/tsconfig.build.json"
     },
     {
       "path": "../prompt-components/tsconfig.build.json"
+    },
+    {
+      "path": "../stores/tsconfig.build.json"
     },
     {
       "path": "../tailwind-config/tsconfig.build.json"

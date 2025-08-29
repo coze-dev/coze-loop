@@ -1,10 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
 
 import { useEvalTargetDefinition } from '../../../stores/eval-target-store';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export interface EvalTargetCascadeSelectValue {
   type: EvalTargetType;
@@ -56,7 +53,7 @@ export function EvalTargetCascadeSelect({
   return (
     <div className="flex items-center gap-2 overflow-hidden">
       <Select
-        placeholder={I18n.t('evaluation_object_type')}
+        placeholder="评测对象类型"
         showArrow={false}
         {...typeSelectProps}
         optionList={evalTargetOptions}

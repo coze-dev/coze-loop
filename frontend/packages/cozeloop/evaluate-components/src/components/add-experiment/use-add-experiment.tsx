@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { type Version } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
@@ -37,7 +34,7 @@ export const useAddExperiment = ({
         }}
         disabled={!datasetDetail?.latest_version}
       >
-        {I18n.t('new_experiment')}
+        新建实验
       </Button>
     </Guard>
   );

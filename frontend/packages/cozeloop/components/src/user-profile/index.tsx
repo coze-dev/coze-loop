@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import cn from 'classnames';
 import { CozAvatar, Typography } from '@coze-arch/coze-design';
 
@@ -8,12 +6,14 @@ interface UserInfoProps {
   name?: string;
   className?: string;
   avatarClassName?: string;
+  userNameClassName?: string;
 }
 export const UserProfile = ({
   avatarUrl,
   name,
   className,
   avatarClassName,
+  userNameClassName,
 }: UserInfoProps) => (
   <div className={cn('flex items-center gap-[6px] w-full', className)}>
     <CozAvatar
@@ -23,7 +23,7 @@ export const UserProfile = ({
       {name}
     </CozAvatar>
     <Typography.Text
-      className="flex-1 overflow-hidden !text-[13px]"
+      className={cn('flex-1 overflow-hidden !text-[13px]', userNameClassName)}
       style={{
         fontSize: 'inherit',
         color: 'inherit',

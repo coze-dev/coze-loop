@@ -1,7 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import cls from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
 
@@ -17,8 +14,8 @@ export function EvaluatorSelectLocalData({
 }: SelectProps & { evaluators?: Evaluator[]; showVersion?: boolean }) {
   return (
     <Select
-      prefix={I18n.t('evaluator')}
-      placeholder={I18n.t('please_select', { field: I18n.t('evaluator') })}
+      prefix="评估器"
+      placeholder="请选择评估器"
       {...props}
       className={cls(styles['render-selected-item'], className)}
       // semi 导出类型就是 Record<string, any>

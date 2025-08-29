@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { isEqual } from 'lodash-es';
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   verifyContrastExperiment,
   ExperimentContrastChart,
@@ -28,7 +25,7 @@ export default function ExperimentContrast() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   useBreadcrumb({
-    text: I18n.t('compare_x_experiments', { num: experimentIds.length }),
+    text: `对比${experimentIds.length}个实验`,
   });
 
   const service = useRequest(
@@ -88,8 +85,8 @@ export default function ExperimentContrast() {
           tabPaneMotion={false}
           keepDOM={false}
           tabList={[
-            { tab: I18n.t('data_detail'), itemKey: 'detail' },
-            { tab: I18n.t('measure_stat'), itemKey: 'chart' },
+            { tab: '数据明细', itemKey: 'detail' },
+            { tab: '指标统计', itemKey: 'chart' },
           ]}
         />
       </div>

@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useBlocker } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { Modal } from '@coze-arch/coze-design';
 
 export const useLeaveGuard = () => {
@@ -17,11 +14,11 @@ export const useLeaveGuard = () => {
   useEffect(() => {
     if (blocker.state === 'blocked') {
       Modal.warning({
-        title: I18n.t('information_unsaved'),
-        content: I18n.t('leave_page_tip'),
-        cancelText: I18n.t('Cancel'),
+        title: '信息未保存',
+        content: '离开当前页面，信息将不被保存。',
+        cancelText: '取消',
         onCancel: blocker.reset,
-        okText: I18n.t('confirm'),
+        okText: '确认',
         onOk: blocker.proceed,
       });
     }

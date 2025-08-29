@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 /* eslint-disable max-params */
@@ -27,7 +25,7 @@ interface InputSliderProps {
   className?: string;
 }
 
-const formateDecimalPlacesString = (
+export const formateDecimalPlacesString = (
   value: string | number,
   prevValue?: number,
   decimalPlaces?: number,
@@ -73,6 +71,7 @@ function getDecimalPlaces(num) {
   }
   return 0; // 如果没有小数点，返回0
 }
+
 const formateDecimalPlacesNumber = (
   value: number,
   prevValue?: number,

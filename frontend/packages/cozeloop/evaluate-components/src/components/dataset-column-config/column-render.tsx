@@ -1,7 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
-import { I18n } from '@cozeloop/i18n-adapter';
+import cs from 'classnames';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import {
   IconCozArrowDown,
@@ -13,21 +11,26 @@ import {
   Button,
   Collapse,
   FormInput,
-  FormSelect,
   Popconfirm,
   Tooltip,
   Typography,
   useFieldApi,
+  withField,
 } from '@coze-arch/coze-design';
 
 import {
-  DISPLAY_TYPE_MAP,
-  DATA_TYPE_LIST,
-  type DataType,
-  DISPLAY_FORMAT_MAP,
+  DataType,
+  MUTIPART_DATA_TYPE_LIST_WITH_ARRAY,
 } from '../dataset-item/type';
 import { columnNameRuleValidator } from '../../utils/source-name-rule';
-
+import { useColumnAdvanceConfig } from './object-column-render/use-column-advance-config';
+import { RequiredField } from './object-column-render/required-field';
+import { ObjectStructRender } from './object-column-render/object-struct-render';
+import { AdditionalPropertyField } from './object-column-render/additional-property-field';
+import { MultipartRender } from './multipart-column-render';
+import { DataTypeSelect } from './field-type';
+const FormDataTypeSelect = withField(DataTypeSelect);
+const FormRequiredField = withField(RequiredField);
 interface ColumnRenderProps {
   fieldKey: string;
   index: number;
@@ -38,6 +41,7 @@ interface ColumnRenderProps {
   setActiveKey: (key: string[]) => void;
   disabledDataTypeSelect?: boolean;
 }
+const FormAdditionalPropertyField = withField(AdditionalPropertyField);
 
 export const ColumnRender = ({
   fieldKey,
@@ -47,22 +51,27 @@ export const ColumnRender = ({
   size = 'large',
   activeKey,
   setActiveKey,
-  disabledDataTypeSelect,
+  disabledDataTypeSelect = false,
 }: ColumnRenderProps) => {
   const typeField = useFieldApi(`${fieldKey}.${index}.type`);
   const keyField = useFieldApi(`${fieldKey}.${index}.key`);
   const nameField = useFieldApi(`${fieldKey}.${index}.name`);
-  const displayFormatField = useFieldApi(
-    `${fieldKey}.${index}.default_display_format`,
-  );
+  const columnField = useFieldApi(`${fieldKey}.${index}`);
   const allColumnField = useFieldApi(fieldKey);
   const type = typeField.getValue() as DataType;
   const isExist = keyField.getValue() !== undefined;
+  const disabelChangeDatasetType = disabledDataTypeSelect && isExist;
+  const { AdvanceConfigNode, showAdditional, inputType, isForm, isJSON } =
+    useColumnAdvanceConfig({
+      fieldKey: `${fieldKey}.${index}`,
+      disabelChangeDatasetType,
+    });
+  const isObject = [DataType.Object, DataType.ArrayObject].includes(type);
   const getHeader = () => (
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
         <Typography.Text className="text-[14px] !font-semibold">
-          {nameField.getValue() || I18n.t('column_index', { index: index + 1 })}
+          {nameField.getValue() || `列 ${index + 1}`}
         </Typography.Text>
         {activeKey.includes(`${index}`) ? (
           <IconCozArrowDown
@@ -78,11 +87,9 @@ export const ColumnRender = ({
           />
         )}
       </div>
-      <div
-        onClick={e => e.stopPropagation()}
-        className="group-hover:block hidden"
-      >
-        <Tooltip content={I18n.t('copy')} theme="dark" className="mr-[2px]">
+      <div onClick={e => e.stopPropagation()} className="flex  items-center">
+        {AdvanceConfigNode}
+        <Tooltip content="复制" theme="dark" className="mr-[2px]">
           <Button
             color="secondary"
             size="mini"
@@ -94,22 +101,20 @@ export const ColumnRender = ({
           <Popconfirm
             content={
               <Typography.Text className="break-all text-[12px] !coz-fg-secondary">
-                {I18n.t('confirm_delete_x_columns', {
-                  num: (
-                    <Typography.Text className="!font-medium">
-                      {nameField.getValue()}
-                    </Typography.Text>
-                  ),
-                })}
+                确认删除{' '}
+                <Typography.Text className="!font-medium">
+                  {nameField.getValue()}
+                </Typography.Text>{' '}
+                列，此操作不可逆
               </Typography.Text>
             }
-            title={I18n.t('delete_column')}
-            okText={I18n.t('delete')}
+            title="删除列"
+            okText="删除"
             zIndex={1062}
             okButtonProps={{
               color: 'red',
             }}
-            cancelText={I18n.t('Cancel')}
+            cancelText="取消"
             style={{ width: 280 }}
             onConfirm={() => {
               onDelete();
@@ -122,7 +127,7 @@ export const ColumnRender = ({
             ></Button>
           </Popconfirm>
         ) : (
-          <Tooltip content={I18n.t('delete')} theme="dark">
+          <Tooltip content="删除" theme="dark">
             <Button
               icon={<IconCozTrashCan className="w-[14px] h-[14px]" />}
               color="secondary"
@@ -143,22 +148,18 @@ export const ColumnRender = ({
       showArrow={false}
     >
       <div className="flex flex-col justify-stretch">
-        <div className="flex gap-[20px]">
+        <div className="flex gap-[12px]">
           <FormInput
             fieldClassName="flex-1"
-            label={I18n.t('column_name')}
-            placeholder={I18n.t('please_input', {
-              field: I18n.t('column_name'),
-            })}
+            label="名称"
+            placeholder="请输入列名称"
             maxLength={50}
             autoComplete=""
             field={`${fieldKey}.${index}.name`}
             rules={[
               {
                 required: true,
-                message: I18n.t('please_input', {
-                  field: I18n.t('column_name'),
-                }),
+                message: '请输入列名称',
               },
               {
                 validator: columnNameRuleValidator,
@@ -179,77 +180,80 @@ export const ColumnRender = ({
 
                   return !hasSameName;
                 },
-                message: I18n.t('field_exists', {
-                  field: I18n.t('column_name'),
-                }),
+                message: '列名称已存在',
               },
             ]}
           ></FormInput>
           <TooltipWhenDisabled
-            disabled={disabledDataTypeSelect && isExist}
-            content={I18n.t('cannot_modify_data_type_tip')}
+            disabled={disabelChangeDatasetType}
+            content="草稿版本存在存量数据项，不支持修改数据类型。"
             theme="dark"
             className="top-9"
           >
-            <FormSelect
-              label={I18n.t('data_type')}
+            <FormDataTypeSelect
+              label="数据类型"
               labelWidth={90}
-              zIndex={1070}
-              fieldClassName="w-[190px]"
-              disabled={disabledDataTypeSelect && isExist}
-              optionList={DATA_TYPE_LIST}
+              treeData={MUTIPART_DATA_TYPE_LIST_WITH_ARRAY}
+              fieldClassName={'w-[190px]'}
+              disabled={disabelChangeDatasetType || isJSON}
               onChange={newType => {
-                displayFormatField.setValue(
-                  DISPLAY_TYPE_MAP?.[newType as DataType]?.[0],
-                );
+                columnField.setValue({
+                  ...columnField.getValue(),
+                  children: [],
+                  schema: '',
+                  additionalProperties: false,
+                });
               }}
               field={`${fieldKey}.${index}.type`}
               className="w-full"
-              rules={[
-                {
-                  required: true,
-                  message: I18n.t('please_select', {
-                    field: I18n.t('data_type'),
-                  }),
-                },
-              ]}
-            ></FormSelect>
+              rules={[{ required: true, message: '请选择数据类型' }]}
+            ></FormDataTypeSelect>
           </TooltipWhenDisabled>
-          <div>
-            <FormSelect
-              label={I18n.t('view_format')}
-              zIndex={1070}
-              labelWidth={90}
-              disabled={DISPLAY_TYPE_MAP[type]?.length <= 1}
-              fieldClassName="w-[190px]"
-              field={`${fieldKey}.${index}.default_display_format`}
-              className={'w-full '}
-              optionList={DISPLAY_TYPE_MAP[type]?.map(item => ({
-                label: DISPLAY_FORMAT_MAP[item],
-                value: item,
-              }))}
-              rules={[
-                {
-                  required: true,
-                  message: I18n.t('please_select', {
-                    field: I18n.t('view_format'),
-                  }),
-                },
-              ]}
-            ></FormSelect>
-          </div>
+          <FormRequiredField
+            label={{
+              text: '必填',
+              required: true,
+            }}
+            fieldClassName={'w-[60px]'}
+            className="w-full"
+            disabled={disabledDataTypeSelect}
+            field={`${fieldKey}.${index}.isRequired`}
+          />
+          <FormAdditionalPropertyField
+            disabled={disabelChangeDatasetType}
+            label={{
+              text: '允许冗余字段',
+              required: true,
+            }}
+            fieldClassName={cs(
+              'w-[120px]',
+              isObject && isForm && showAdditional ? '' : 'hidden',
+            )}
+            className="w-full"
+            field={`${fieldKey}.${index}.additionalProperties`}
+          />
         </div>
         <div className="flex-grow-1">
           <FormInput
-            label={I18n.t('column_description')}
-            placeholder={I18n.t('please_input', {
-              field: I18n.t('column_description'),
-            })}
+            label="描述"
+            placeholder="请输入列描述"
             maxLength={200}
             field={`${fieldKey}.${index}.description`}
             autoComplete="off"
           ></FormInput>
         </div>
+        {isObject ? (
+          <ObjectStructRender
+            key={type}
+            inputType={inputType}
+            showAdditional={showAdditional}
+            fieldKey={`${fieldKey}.${index}`}
+            disabelChangeDatasetType={disabelChangeDatasetType}
+          />
+        ) : null}
+        {type === DataType.MultiPart ? (
+          <MultipartRender inputType={inputType} />
+        ) : null}
       </div>
     </Collapse.Panel>
   );
