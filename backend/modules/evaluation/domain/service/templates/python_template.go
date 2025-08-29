@@ -62,7 +62,7 @@ try:
 except Exception as e:
     print(f"{type(e).__name__}: {str(e)}", file=sys.stderr)
     sys.exit(1)
-result
+return_val(result)
 `
 
 // PythonSyntaxCheckTemplate Python语法检查模板

@@ -78,7 +78,7 @@ try {
 }
 
 // 输出最终结果
-result;
+return_val(result);
 `
 
 // JavaScriptSyntaxCheckTemplate JavaScript语法检查模板
