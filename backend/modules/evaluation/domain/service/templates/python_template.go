@@ -42,13 +42,6 @@ async def main(args):
     # Execute evaluation
     result = exec_evaluation(turn)
 
-    # Print results
-    print("Evaluation Results:")
-    print(f"Score: {result.score}")
-    print(f"Reason: {result.reason}")
-    if result.err_msg:
-        print(f"Error: {result.err_msg}")
-
     # Return result for sandbox - convert to dict for JSON serialization
     return {
         "score": result.score,
