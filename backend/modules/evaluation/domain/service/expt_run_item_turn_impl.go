@@ -284,69 +284,142 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		curFields := make(map[string]*entity.Content)
-
-		for _, fc := range ec.IngressConf.TargetAdapter.FieldConfs {
-			firstField, err := json.GetFirstJSONPathField(fc.FromField)
-			if err != nil {
-				return nil, err
-			}
-			if firstField == fc.FromField { // 没有下钻字段
-				curFields[fc.FieldName] = targetFields[fc.FromField]
-				continue
-			}
-			content, err := e.getContentByJsonPath(targetFields[firstField], fc.FromField)
-			if err != nil {
-				return nil, err
-			}
-			curFields[fc.FieldName] = content
-		}
-		for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {
-			firstField, err := json.GetFirstJSONPathField(fc.FromField)
-			if err != nil {
-				return nil, err
-			}
-			if firstField == fc.FromField { // 没有下钻字段
-				curFields[fc.FieldName] = turnFields[fc.FromField]
-				continue
-			}
-			content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
-			if err != nil {
-				return nil, err
-			}
-			curFields[fc.FieldName] = content
-		}
-
-		pool.Add(func() error {
-			var err error
-			defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
-
-			// 转换 InputFields
+		// 根据评估器类型分别处理字段填充
+		if ev.EvaluatorType == entity.EvaluatorTypeCode {
+			// Code评估器：分离字段数据源
+			fromEvalSetFields := make(map[string]*entity.Content)
+			fromEvalTargetFields := make(map[string]*entity.Content)
 			inputFields := make(map[string]*entity.Content)
-			for key, contentDO := range curFields {
-				inputFields[key] = contentDO
-			}
-			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
-				SpaceID:            spaceID,
-				Name:               "",
-				EvaluatorVersionID: ev.GetEvaluatorVersionID(),
-				InputData: &entity.EvaluatorInputData{
-					HistoryMessages: nil,
-					InputFields:     inputFields,
-				},
-				ExperimentID:    etec.Event.ExptID,
-				ExperimentRunID: etec.Event.ExptRunID,
-				ItemID:          item.ItemID,
-				TurnID:          turn.ID,
-				Ext:             etec.Ext,
-			})
-			if err != nil {
-				return err
+
+			// 处理来自评测对象的字段
+			for _, fc := range ec.IngressConf.TargetAdapter.FieldConfs {
+				firstField, err := json.GetFirstJSONPathField(fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				var content *entity.Content
+				if firstField == fc.FromField { // 没有下钻字段
+					content = targetFields[fc.FromField]
+				} else {
+					content, err = e.getContentByJsonPath(targetFields[firstField], fc.FromField)
+					if err != nil {
+						return nil, err
+					}
+				}
+				fromEvalTargetFields[fc.FieldName] = content
 			}
 
-			recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
-			return nil
-		})
+			// 处理来自评测集的字段
+			for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {
+				firstField, err := json.GetFirstJSONPathField(fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				var content *entity.Content
+				if firstField == fc.FromField { // 没有下钻字段
+					content = turnFields[fc.FromField]
+				} else {
+					content, err = e.getContentByJsonPath(turnFields[firstField], fc.FromField)
+					if err != nil {
+						return nil, err
+					}
+				}
+				fromEvalSetFields[fc.FieldName] = content
+			}
+
+			pool.Add(func() error {
+				var err error
+				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+
+				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+					SpaceID:            spaceID,
+					Name:               "",
+					EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+					InputData: &entity.EvaluatorInputData{
+						HistoryMessages:      nil,
+						InputFields:          inputFields,
+						FromEvalSetFields:    fromEvalSetFields,
+						FromEvalTargetFields: fromEvalTargetFields,
+					},
+					ExperimentID:    etec.Event.ExptID,
+					ExperimentRunID: etec.Event.ExptRunID,
+					ItemID:          item.ItemID,
+					TurnID:          turn.ID,
+					Ext:             etec.Ext,
+				})
+				if err != nil {
+					return err
+				}
+
+				recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+				return nil
+			})
+		} else {
+			// Prompt评估器：保持现有逻辑
+			curFields := make(map[string]*entity.Content)
+
+			for _, fc := range ec.IngressConf.TargetAdapter.FieldConfs {
+				firstField, err := json.GetFirstJSONPathField(fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				if firstField == fc.FromField { // 没有下钻字段
+					curFields[fc.FieldName] = targetFields[fc.FromField]
+					continue
+				}
+				content, err := e.getContentByJsonPath(targetFields[firstField], fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				curFields[fc.FieldName] = content
+			}
+			for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {
+				firstField, err := json.GetFirstJSONPathField(fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				if firstField == fc.FromField { // 没有下钻字段
+					curFields[fc.FieldName] = turnFields[fc.FromField]
+					continue
+				}
+				content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				curFields[fc.FieldName] = content
+			}
+
+			pool.Add(func() error {
+				var err error
+				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+
+				// 转换 InputFields
+				inputFields := make(map[string]*entity.Content)
+				for key, contentDO := range curFields {
+					inputFields[key] = contentDO
+				}
+				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+					SpaceID:            spaceID,
+					Name:               "",
+					EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+					InputData: &entity.EvaluatorInputData{
+						HistoryMessages: nil,
+						InputFields:     inputFields,
+					},
+					ExperimentID:    etec.Event.ExptID,
+					ExperimentRunID: etec.Event.ExptRunID,
+					ItemID:          item.ItemID,
+					TurnID:          turn.ID,
+					Ext:             etec.Ext,
+				})
+				if err != nil {
+					return err
+				}
+
+				recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+				return nil
+			})
+		}
 	}
 
 	err = pool.Exec(ctx)
