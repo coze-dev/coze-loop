@@ -5,10 +5,9 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bytedance/gg/gslice"
-
-	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"

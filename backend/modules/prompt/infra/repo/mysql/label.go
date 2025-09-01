@@ -202,7 +202,6 @@ func (d *CommitLabelMappingDAOImpl) BatchDelete(ctx context.Context, ids []int64
 	_, err := q.WithContext(ctx).PromptCommitLabelMapping.Where(
 		q.PromptCommitLabelMapping.ID.In(ids...),
 	).Delete(&model.PromptCommitLabelMapping{})
-
 	if err != nil {
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
