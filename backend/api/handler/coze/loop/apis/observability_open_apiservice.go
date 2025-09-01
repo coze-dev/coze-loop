@@ -58,15 +58,5 @@ func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
 // ListTracesOApi .
 // @router /v1/loop/traces/list [POST]
 func ListTracesOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi1.ListTracesOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi1.ListTracesOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListTracesOApi)
 }
