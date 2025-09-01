@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type CSSProperties } from 'react';
 
 import classNames from 'classnames';
@@ -40,7 +38,7 @@ export function LogicNot(props: LogicNotProps) {
         onClick();
       }}
     >
-      {I18n.t('logic_expr_not')}
+      {I18n.t('fornax_components_logic_expr_not')}
     </div>
   );
 }

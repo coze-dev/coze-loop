@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useRef } from 'react';
 
 import { useInfiniteScroll } from 'ahooks';

@@ -6,6 +6,7 @@ export enum ContentType {
   Image = "Image",
   Audio = "Audio",
   MultiPart = "MultiPart",
+  MultiPartVariable = "multi_part_variable",
 }
 export interface Content {
   content_type?: ContentType,
@@ -27,6 +28,8 @@ export interface Image {
   url?: string,
   uri?: string,
   thumb_url?: string,
+  /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
+  storage_provider?: dataset.StorageProvider,
 }
 export interface OrderBy {
   field?: string,
@@ -85,8 +88,13 @@ export interface ModelConfig {
   temperature?: number,
   max_tokens?: number,
   top_p?: number,
+  json_ext?: string,
 }
 export interface Session {
   user_id?: number,
   app_id?: number,
+}
+export interface RuntimeParam {
+  json_value?: string,
+  json_demo?: string,
 }

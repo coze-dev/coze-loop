@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import classNames from 'classnames';
@@ -13,6 +11,7 @@ export interface ChartCardItem {
   id: string;
   title?: React.ReactNode | undefined;
   content?: React.ReactNode;
+  fullContent?: React.ReactNode;
   tooltip?: React.ReactNode;
 }
 
@@ -38,18 +37,20 @@ export default function ChartCardItemRender({
           styles['chart-card-item-render'],
         )}
         header={
-          <div className="flex items-center gap-1 flex-wrap w-full font-medium">
-            <div className="font-medium">{item?.title}</div>
+          <div className="flex items-center gap-1 w-full font-medium">
+            <div className="flex-1 min-w-0 font-medium">{item?.title}</div>
             {item?.tooltip ? (
               <Tooltip theme="dark" content={item?.tooltip}>
-                <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
+                <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)] shrink-0" />
               </Tooltip>
             ) : null}
             <div className="shrink-0 flex items-center gap-1 flex-wrap ml-auto">
               {action}
               <IconButtonContainer
                 icon={<IconCozExpand />}
-                onClick={() => setExpand(true)}
+                onClick={() => {
+                  setExpand(true);
+                }}
               />
             </div>
           </div>
@@ -72,7 +73,9 @@ export default function ChartCardItemRender({
       {expand ? (
         <Modal
           visible={expand}
-          onCancel={() => setExpand(false)}
+          onCancel={() => {
+            setExpand(false);
+          }}
           maskClosable={true}
           width={916}
           height={418}
@@ -81,7 +84,7 @@ export default function ChartCardItemRender({
           bodyStyle={modalBodyStyle}
           title={
             <div className="flex items-center gap-2">
-              <div className="font-bold">{item?.title}</div>
+              <div className="font-bold max-w-[800px]">{item?.title}</div>
               {item?.tooltip ? (
                 <Popover content={<div className="p-2">{item?.tooltip}</div>}>
                   <IconCozInfoCircle className="text-xs font-normal text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
@@ -91,7 +94,9 @@ export default function ChartCardItemRender({
           }
           size="large"
         >
-          <div className="w-full h-full">{item?.content}</div>
+          <div className="w-full h-full">
+            {item?.fullContent || item?.content}
+          </div>
         </Modal>
       ) : null}
     </>

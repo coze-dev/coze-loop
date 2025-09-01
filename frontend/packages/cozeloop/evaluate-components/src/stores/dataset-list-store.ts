@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/zustand/devtools-config */
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { create } from 'zustand';

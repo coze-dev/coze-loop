@@ -1,7 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 export { ColumnSelector, type ColumnItem } from './columns-select';
-export { TooltipWhenDisabled } from './tooltip-with-disabled';
+export { TooltipWhenDisabled } from './tooltip-when-disabled';
+export { TooltipWithDisabled } from './tooltip-with-disabled';
 
 export { LoopTable } from './table';
 export {
@@ -16,6 +15,7 @@ export {
   PageNoAuth,
   PageNoContent,
   PageNotFound,
+  FullPage,
 } from './page-content';
 
 export { TableColActions, type TableColAction } from './table-col-actions';
@@ -23,7 +23,7 @@ export { LoopTabs } from './tabs';
 
 export { LargeTxtRender } from './large-txt-render';
 
-export { InputSlider } from './input-slider';
+export { InputSlider, formateDecimalPlacesString } from './input-slider';
 
 export { handleCopy, getBaseUrl } from './utils/basic';
 export { uploadFile } from './upload';
@@ -46,9 +46,16 @@ export { PrimaryPage } from './primary-page';
 
 export { ResizeSidesheet } from './resize-sidesheet';
 
-export { InfiniteScrollTable } from './infinite-scroll-table';
+export {
+  InfiniteScrollTable,
+  type InfiniteScrollTableRef,
+} from './infinite-scroll-table';
 
-export { TableHeader } from './table-header';
+export { TableHeader, type TableHeaderProps } from './table-header';
+// import  { TableHeaderProps } from './table-header';
+// export const a = {} as unknown as TableHeaderProps;
+
+export { TableWithoutPagination } from './table/table-without-pagniation';
 
 export {
   BaseSearchSelect,
@@ -63,16 +70,16 @@ export { EditIconButton } from './edit-icon-button';
 export { CollapseCard } from './collapse-card';
 
 export {
-  Expr,
-  ExprGroup,
-  LogicOperator,
-  LogicExprProps,
-  ExprRenderProps,
-  ExprGroupRenderProps,
-  LeftRenderProps,
-  OperatorRenderProps,
-  RightRenderProps,
-  OperatorOption,
+  type Expr,
+  type ExprGroup,
+  type LogicOperator,
+  type LogicExprProps,
+  type ExprRenderProps,
+  type ExprGroupRenderProps,
+  type LeftRenderProps,
+  type OperatorRenderProps,
+  type RightRenderProps,
+  type OperatorOption,
   LogicExpr,
 } from './logic-expr';
 
@@ -87,3 +94,5 @@ export {
 export { default as JumpIconButton } from './jump-button/jump-icon-button';
 
 export { default as RouteBackAction } from './route/route-back-action';
+
+export { BasicCard } from './basic-card';

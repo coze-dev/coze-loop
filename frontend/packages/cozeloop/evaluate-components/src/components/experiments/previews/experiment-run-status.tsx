@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type Experiment, ExptStatus } from '@cozeloop/api-schema/evaluation';
 import { Divider, Popover, Tag, type TagProps } from '@coze-arch/coze-design';
 
@@ -72,23 +69,21 @@ export function ExperimentRunStatus({
           position="top"
           content={
             <div className="px-2 py-1">
+              <div>总条数 {totalCount || 0}</div>
               <div>
-                {I18n.t('total')} {totalCount || 0}
-              </div>
-              <div>
-                {I18n.t('success')} {success_turn_cnt}
+                成功 {success_turn_cnt}
                 <Divider
                   layout="vertical"
                   style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                 />
-                {I18n.t('failure')} {fail_turn_cnt}
+                失败 {fail_turn_cnt}
                 <Divider
                   layout="vertical"
                   style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                 />
                 {terminated_turn_cnt ? (
                   <>
-                    {I18n.t('abort')} {terminated_turn_cnt}
+                    中止 {terminated_turn_cnt}
                     <Divider
                       layout="vertical"
                       style={{ marginLeft: 8, marginRight: 8, height: 12 }}
@@ -97,14 +92,14 @@ export function ExperimentRunStatus({
                 ) : null}
                 {processing_turn_cnt ? (
                   <>
-                    {I18n.t('execution_in_progress')} {processing_turn_cnt}
+                    执行中 {processing_turn_cnt}
                     <Divider
                       layout="vertical"
                       style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                     />
                   </>
                 ) : null}
-                {I18n.t('to_be_executed')} {pending_turn_cnt}
+                待执行 {pending_turn_cnt}
               </div>
             </div>
           }

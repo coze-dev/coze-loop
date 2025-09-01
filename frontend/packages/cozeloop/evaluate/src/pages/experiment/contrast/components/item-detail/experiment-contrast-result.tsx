@@ -1,33 +1,45 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
+import { useMemo, useState } from 'react';
+
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
   EvaluatorNameScore,
   useGlobalEvalConfig,
+  ChipSelect,
+  AnnotationNameScore,
 } from '@cozeloop/evaluate-components';
 import {
+  type AnnotateRecord,
+  type ColumnAnnotation,
+  type ColumnEvaluator,
+  type EvaluatorRecord,
   type Experiment,
   type ExperimentTurnPayload,
 } from '@cozeloop/api-schema/evaluation';
+import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { Divider, Tooltip } from '@coze-arch/coze-design';
 
 import { CellContentRender } from '@/utils/experiment';
+import { type ColumnInfo } from '@/types/experiment/experiment-contrast';
+import { FORMAT_LIST } from '@/types';
 import { ExperimentRunDataSummary } from '@/components/experiment';
+
+import { getColumnRecords } from '../../utils/tools';
 
 export default function ExperimentContrastResult({
   result,
   experiment,
   expand,
   spaceID,
+  columnInfos,
   onRefresh,
 }: {
   experiment: Experiment | undefined;
   result: ExperimentTurnPayload | undefined;
   expand?: boolean;
   spaceID?: Int64;
+  columnInfos?: ColumnInfo[];
   onRefresh?: () => void;
 }) {
   const { traceEvalTargetPlatformType } = useGlobalEvalConfig();
@@ -40,38 +52,57 @@ export default function ExperimentContrastResult({
       from: 'experiment_contrast_item_detail',
     });
   };
+  const [format, setFormat] = useState<FieldDisplayFormat>(
+    actualOutput?.format || FieldDisplayFormat.Markdown,
+  );
   const onReportEvaluatorTrace = () => {
     sendEvent(EVENT_NAMES.cozeloop_experiment_detailsdrawer_trace, {
       from: 'experiment_contrast_item_detail',
     });
   };
+
+  const items = useMemo(
+    () => getColumnRecords(columnInfos ?? [], result),
+    [columnInfos, result],
+  );
+
   return (
-    <div className="group flex flex-col gap-2 h-full">
+    <div className="group flex flex-col gap-2 h-full group">
       <div className="flex gap-2 flex-wrap">
-        {experiment?.evaluators?.map(item => {
-          const evaluatorRecord =
-            result?.evaluator_output?.evaluator_records?.[
-              item.current_version?.id ?? ''
-            ];
-          // 评估器聚合结果
-          const evaluatorResult =
-            evaluatorRecord?.evaluator_output_data?.evaluator_result;
-          return (
-            <EvaluatorNameScore
-              evaluator={item}
-              evaluatorResult={evaluatorResult}
-              experiment={experiment}
-              updateUser={evaluatorRecord?.base_info?.updated_by}
-              spaceID={spaceID}
-              traceID={evaluatorRecord?.trace_id}
-              evaluatorRecordID={evaluatorRecord?.id}
-              enablePopover={true}
-              showVersion={true}
-              onEditScoreSuccess={onRefresh}
-              onReportCalibration={onReportCalibration}
-              onReportEvaluatorTrace={onReportEvaluatorTrace}
-            />
-          );
+        {items.map(item => {
+          if (item.type === 'evaluator') {
+            const evaluatorRecord = (item.data as EvaluatorRecord) ?? {};
+            const evaluatorResult =
+              evaluatorRecord.evaluator_output_data?.evaluator_result;
+
+            return (
+              <EvaluatorNameScore
+                key={item.columnInfo.key}
+                evaluator={item.columnInfo.data as ColumnEvaluator}
+                evaluatorResult={evaluatorResult}
+                experiment={experiment}
+                updateUser={evaluatorRecord?.base_info?.updated_by}
+                spaceID={spaceID}
+                traceID={evaluatorRecord?.trace_id}
+                evaluatorRecordID={evaluatorRecord?.id}
+                enablePopover={true}
+                showVersion={true}
+                onEditScoreSuccess={onRefresh}
+                onReportCalibration={onReportCalibration}
+                onReportEvaluatorTrace={onReportEvaluatorTrace}
+              />
+            );
+          } else if (item.type === 'annotation') {
+            return (
+              <AnnotationNameScore
+                key={item.columnInfo.key}
+                annotation={item.columnInfo.data as ColumnAnnotation}
+                annotationResult={item.data as AnnotateRecord}
+                enablePopover={true}
+              />
+            );
+          }
+          return <>-</>;
         })}
       </div>
       <ExperimentRunDataSummary
@@ -80,14 +111,22 @@ export default function ExperimentContrastResult({
         tokenHidden={true}
       />
       <Divider />
-      <div className="flex items-center gap-1">
-        <div className="text-[var(--coz-fg-secondary)]">actual_output</div>
-        <Tooltip
-          theme="dark"
-          content={I18n.t('evaluation_object_actual_output')}
-        >
-          <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
-        </Tooltip>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 items-center">
+          <div className="text-[var(--coz-fg-secondary)]">actual_output</div>
+          <Tooltip theme="dark" content="评测对象的实际输出">
+            <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
+          </Tooltip>
+        </div>
+        <ChipSelect
+          chipRender="selectedItem"
+          className="invisible group-hover:visible"
+          value={format}
+          optionList={FORMAT_LIST}
+          onChange={value => {
+            setFormat(value as FieldDisplayFormat);
+          }}
+        ></ChipSelect>
       </div>
 
       <div className="group flex leading-5 w-full grow min-h-[20px] overflow-hidden">

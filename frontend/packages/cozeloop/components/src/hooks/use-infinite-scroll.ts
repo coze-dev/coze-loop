@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-lines-per-function */
 import { useMemo, useState } from 'react';

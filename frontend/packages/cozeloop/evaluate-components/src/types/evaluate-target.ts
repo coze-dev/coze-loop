@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type ComponentType } from 'react';
 
 import { type prompt } from '@cozeloop/api-schema/prompt';
@@ -14,7 +12,7 @@ import {
   type EvalTargetType,
   type FieldSchema,
 } from '@cozeloop/api-schema/evaluation';
-import { type SelectProps } from '@coze-arch/coze-design';
+import { type RuleItem, type SelectProps } from '@coze-arch/coze-design';
 
 import { type CozeTagColor } from '.';
 
@@ -34,7 +32,11 @@ export interface EvaluatorPro {
 
 export interface CreateExperimentValues extends SubmitExperimentRequest {
   // 评测对象版本详情
-  evalTargetVersionDetail?: EvalTargetVersion;
+  evalTargetVersionDetail?: EvalTargetVersion & {
+    inputs?: unknown;
+    outputs?: unknown;
+    end_type?: number;
+  };
 
   evaluationSet?: string;
   // 评测集详情
@@ -139,6 +141,11 @@ export type ExtraValidFields = {
 export interface EvalTargetDefinition {
   type: EvalTargetType;
   name: string;
+  /** 评测对象描述 */
+  description?: string;
+  disableListFilter?: boolean;
+  /** 评测对象来源 */
+  evalTargetSource?: string;
   /** 评测对象信息 */
   targetInfo?: EvalTargetInfo;
   /** 评测对象下拉框选择器 */
@@ -154,6 +161,8 @@ export interface EvalTargetDefinition {
     evalTarget: EvalTarget;
     /** spaceID */
     spaceID: Int64;
+    /** 评测集 */
+    evalSet?: EvaluationSet;
     /** 是否显示打开详情链接 */
     enableLinkJump?: boolean;
     /** 尺寸 */
@@ -162,6 +171,11 @@ export interface EvalTargetDefinition {
     jumpBtnClassName?: string;
     /** 是否显示图标, 目前 prompt 类型评测对象预览器在实验列表需要显示图标 */
     showIcon?: boolean;
+  }>;
+  /** View Submit 预览器中字段映射部分 */
+  viewSubmitFieldMappingPreview?: ComponentType<{
+    /** 渲染数据 */
+    createExperimentValues: CreateExperimentValues;
   }>;
   /**
    * 评测对象表单插槽内容
@@ -192,4 +206,31 @@ export interface EvalTargetDefinition {
   transformCreateValues?: (
     values: CreateExperimentValues,
   ) => CreateExperimentValues;
+  /**
+   * 获取评测对象的输出字段定义
+   */
+  transformEvaluatorEvalTargetSchemas?: (
+    evalTargetVersionDetail: CreateExperimentValues['evalTargetVersionDetail'],
+  ) => FieldSchema[];
+  evaluator?: {
+    getEvaluatorMappingFieldRules?: (k: FieldSchema) => RuleItem[];
+  };
+  /**
+   * 自定义复制实验初始化数据转换, 可能需要拉取额外的数据
+   */
+  transformCopyExperimentValues?: (
+    values: CreateExperimentValues,
+  ) => Promise<CreateExperimentValues>;
+  /**
+   * 获取初始化数据
+   */
+  getInitData?: (spaceID: string) => Promise<CreateExperimentValues>;
+}
+
+export interface IKeySchema {
+  name: string;
+  type: string;
+  required?: boolean;
+  schema?: IKeySchema[];
+  input?: unknown;
 }

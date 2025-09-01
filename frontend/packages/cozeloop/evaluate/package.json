@@ -8,16 +8,17 @@
   "main": "src/index.tsx",
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "dev": "storybook dev -p 6006",
     "lint": "eslint ./ --cache",
     "test": "vitest --run --passWithNoTests",
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
     "@coze-arch/coze-design": "0.0.6-alpha.346d77",
+    "@cozeloop/adapter": "workspace:*",
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
+    "@cozeloop/biz-config-adapter": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/evaluate-components": "workspace:*",
@@ -25,6 +26,7 @@
     "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/observation-component-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*",
+    "@cozeloop/tag-components": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
     "@cozeloop/toolkit": "workspace:*",
     "@visactor/vchart": "1.13.8",

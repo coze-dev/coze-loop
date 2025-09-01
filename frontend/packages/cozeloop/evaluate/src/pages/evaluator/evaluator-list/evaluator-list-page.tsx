@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +6,6 @@ import { useMemo, useState } from 'react';
 import { isEmpty } from 'lodash-es';
 import dayjs from 'dayjs';
 import { usePagination, useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuards } from '@cozeloop/guard';
 import {
   type ColumnItem,
@@ -84,14 +81,12 @@ function EvaluatorListPage() {
     Modal.info({
       size: 'large',
       className: 'w-[420px]',
-      title: 'copy_evaluator_config',
-      content: I18n.t('copy_and_create_evaluator', {
-        name: record.name,
-      }),
+      title: '复制评估器配置',
+      content: `复制${record.name}配置，并新建评估器`,
       onOk: () => navigate(`create/${record.evaluator_id}`),
       showCancelButton: true,
-      cancelText: I18n.t('Cancel'),
-      okText: I18n.t('confirm'),
+      cancelText: '取消',
+      okText: '确认',
     });
   };
 
@@ -110,8 +105,8 @@ function EvaluatorListPage() {
   const columns: ColumnItem[] = useMemo(() => {
     const newDefaultColumns: ColumnItem[] = [
       {
-        title: I18n.t('evaluator_name'),
-        value: I18n.t('evaluator_name'),
+        title: '评估器名称',
+        value: '评估器名称',
         dataIndex: 'name',
         key: 'name',
         width: 200,
@@ -131,7 +126,7 @@ function EvaluatorListPage() {
                 color="yellow"
                 className="ml-2 flex-shrink-0 !h-5 !px-2 !py-[2px] rounded-[3px] "
               >
-                {I18n.t('changes_not_submitted')}
+                {'修改未提交'}
               </Tag>
             ) : null}
           </div>
@@ -140,8 +135,8 @@ function EvaluatorListPage() {
         disabled: true,
       },
       {
-        title: I18n.t('latest_version'),
-        value: I18n.t('latest_version'),
+        title: '最新版本',
+        value: '最新版本',
         dataIndex: 'latest_version',
         key: 'latest_version',
         width: 100,
@@ -176,8 +171,8 @@ function EvaluatorListPage() {
       //     ),
       // },
       {
-        title: I18n.t('description'),
-        value: I18n.t('description'),
+        title: '描述',
+        value: '描述',
         dataIndex: 'description',
         key: 'description',
         width: 285,
@@ -192,8 +187,8 @@ function EvaluatorListPage() {
         checked: true,
       },
       {
-        title: I18n.t('updated_person'),
-        value: I18n.t('updated_person'),
+        title: '更新人',
+        value: '更新人',
         dataIndex: 'base_info.updated_by',
         key: 'updated_by',
         width: 170,
@@ -206,8 +201,8 @@ function EvaluatorListPage() {
         checked: true,
       },
       {
-        title: I18n.t('update_time'),
-        value: I18n.t('update_time'),
+        title: '更新时间',
+        value: '更新时间',
         dataIndex: 'base_info.updated_at',
         sorter: true,
         key: 'updated_at',
@@ -217,8 +212,8 @@ function EvaluatorListPage() {
         checked: true,
       },
       {
-        title: I18n.t('creator'),
-        value: I18n.t('creator'),
+        title: '创建人',
+        value: '创建人',
         dataIndex: 'base_info.created_by',
         key: 'created_by',
         width: 170,
@@ -231,8 +226,8 @@ function EvaluatorListPage() {
         checked: true,
       },
       {
-        title: I18n.t('create_time'),
-        value: I18n.t('create_time'),
+        title: '创建时间',
+        value: '创建时间',
         dataIndex: 'base_info.created_at',
         key: 'created_at',
         sorter: true,
@@ -242,8 +237,8 @@ function EvaluatorListPage() {
         checked: true,
       },
       {
-        title: I18n.t('operation'),
-        value: I18n.t('operation'),
+        title: '操作',
+        value: '操作',
         key: 'action',
         width: 142,
         fixed: 'right',
@@ -251,17 +246,17 @@ function EvaluatorListPage() {
           <TableColActions
             actions={[
               {
-                label: I18n.t('detail'),
+                label: '详情',
                 onClick: () => navigate(`${record.evaluator_id}`),
               },
               {
-                label: I18n.t('copy'),
+                label: '复制',
                 disabled:
                   guards.data[GuardPoint['eval.evaluators.copy']].readonly,
                 onClick: () => handleCopy(record),
               },
               {
-                label: I18n.t('delete'),
+                label: '删除',
                 type: 'danger',
                 disabled:
                   guards.data[GuardPoint['eval.evaluators.delete']].readonly,
@@ -269,14 +264,12 @@ function EvaluatorListPage() {
                   Modal.error({
                     size: 'large',
                     className: 'w-[420px]',
-                    title: I18n.t('confirm_delete_evaluator', {
-                      name: record.name,
-                    }),
-                    content: I18n.t('caution_of_operation'),
+                    title: `确定删除评估器：${record.name}？`,
+                    content: '此操作不可逆，请慎重操作',
                     onOk: () => deleteService.runAsync(record),
                     showCancelButton: true,
-                    cancelText: I18n.t('Cancel'),
-                    okText: I18n.t('delete'),
+                    cancelText: '取消',
+                    okText: '删除',
                   }),
               },
             ]}
@@ -300,7 +293,7 @@ function EvaluatorListPage() {
 
   return (
     <PrimaryPage
-      pageTitle={I18n.t('evaluator')}
+      pageTitle="评估器"
       filterSlot={
         <div className="flex flex-row justify-between">
           <EvaluatorListFilter
@@ -308,7 +301,7 @@ function EvaluatorListPage() {
             onFilter={setFilterParams}
           />
           <div className="flex flex-row items-center gap-[8px]">
-            <Tooltip content={I18n.t('refresh')} theme="dark">
+            <Tooltip content="刷新" theme="dark">
               <Button
                 color="primary"
                 icon={<IconCozRefresh />}
@@ -330,7 +323,7 @@ function EvaluatorListPage() {
               icon={<IconCozPlus />}
               onClick={() => navigate('create')}
             >
-              {I18n.t('new_evaluator')}
+              {'新建评估器'}
             </Button>
           </div>
         </div>
@@ -381,17 +374,15 @@ function EvaluatorListPage() {
               <EmptyState
                 size="full_screen"
                 icon={<IconCozIllusEmpty />}
-                title={I18n.t('failed_to_find_related_results')}
-                description={I18n.t(
-                  'try_other_keywords_or_modify_filter_options',
-                )}
+                title="未能找到相关结果"
+                description={'请尝试其他关键词或修改筛选项'}
               />
             ) : (
               <EmptyState
                 size="full_screen"
                 icon={<IconCozIllusAdd />}
-                title={I18n.t('no_evaluator')}
-                description={I18n.t('click_to_create')}
+                title="暂无评估器"
+                description={'点击右上角创建按钮进行创建'}
               />
             )
           }
