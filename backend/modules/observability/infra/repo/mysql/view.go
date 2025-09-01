@@ -37,7 +37,7 @@ type ViewDaoImpl struct {
 }
 
 func (v *ViewDaoImpl) GetView(ctx context.Context, id int64, workspaceID *int64, userID *string) (*model.ObservabilityView, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityView
+	q := genquery.Use(v.dbMgr.NewSession(ctx, db.WithMaster())).ObservabilityView
 	qd := q.WithContext(ctx).Where(q.ID.Eq(id))
 	if workspaceID != nil {
 		qd = qd.Where(q.WorkspaceID.Eq(*workspaceID))
@@ -57,7 +57,7 @@ func (v *ViewDaoImpl) GetView(ctx context.Context, id int64, workspaceID *int64,
 }
 
 func (v *ViewDaoImpl) ListViews(ctx context.Context, workspaceID int64, userID string) ([]*model.ObservabilityView, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityView
+	q := genquery.Use(v.dbMgr.NewSession(ctx, db.WithMaster())).ObservabilityView
 	qd := q.WithContext(ctx)
 	if workspaceID != 0 {
 		qd = qd.Where(q.WorkspaceID.Eq(workspaceID))
