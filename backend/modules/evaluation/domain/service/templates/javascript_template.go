@@ -34,9 +34,9 @@ class EvalOutput {
 let args = {};
 
 // 测试数据 (动态替换)
-const turn = {{TURN_DATA}};
+const turn = {{.TURN_DATA}};
 
-{{EXEC_EVALUATION_FUNCTION}}
+{{.EXEC_EVALUATION_FUNCTION}}
 
 /**
  * 主函数 - 异步执行评估
@@ -53,9 +53,6 @@ async function main(args) {
     const result = exec_evaluation(turn);
 
     // 打印结果 (与 Python 版本相同的输出格式)
-    console.log("Evaluation Results:");
-    console.log("Score: " + result.score);
-    console.log("Reason: " + result.reason);
     if (result.err_msg) {
         console.log("Error: " + result.err_msg);
     }
@@ -69,16 +66,22 @@ async function main(args) {
 }
 
 // 执行主函数并处理结果 (与 Python 版本的 suffix 逻辑相同)
-let result = null;
-try {
-    result = await main(new Args(args));
-} catch (error) {
-    console.error(error.constructor.name + ": " + error.message);
-    Deno.exit(1);
-}
-
-// 输出最终结果
-return_val(result);
+(async function() {
+    let result = null;
+    try {
+        result = await main(new Args(args));
+    } catch (error) {
+        console.error(error.constructor.name + ": " + error.message);
+        if (typeof Deno !== 'undefined') {
+            Deno.exit(1);
+        } else {
+            process.exit(1);
+        }
+    }
+    
+    // 输出最终结果
+    return_val(result);
+})();
 `
 
 // JavaScriptSyntaxCheckTemplate JavaScript语法检查模板
@@ -91,11 +94,11 @@ try {
     new Function(userCode);
     
     // 语法正确，输出JSON结果
-    result = {"valid": true, "error": null};
+    const result = {"valid": true, "error": null};
     return_val(JSON.stringify(result));
 } catch (error) {
     // 捕获语法错误，输出JSON结果
-    result = {"valid": false, "error": "语法错误: " + error.message};
+    const result = {"valid": false, "error": "语法错误: " + error.message};
     return_val(JSON.stringify(result));
 }
 `
