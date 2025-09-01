@@ -14,6 +14,7 @@ require (
 	github.com/alitto/pond/v2 v2.3.4
 	github.com/apache/rocketmq-client-go/v2 v2.1.2
 	github.com/apache/thrift v0.19.0
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/baidubce/bce-qianfan-sdk/go/qianfan v0.0.15
 	github.com/bytedance/gg v1.0.0
@@ -78,6 +79,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/valyala/fasttemplate v1.2.2
+	github.com/vincent-petithory/dataurl v1.0.0
 	github.com/volcengine/volcengine-go-sdk v1.1.4
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/proto/otlp v1.7.1
@@ -97,11 +99,7 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require (
-	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
-	github.com/vincent-petithory/dataurl v1.0.0 // indirect
-)
+require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 
 require (
 	cloud.google.com/go v0.116.0 // indirect

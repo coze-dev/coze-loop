@@ -53,7 +53,7 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range val.MultiPartValues {
-			if part == nil || part.ImageURL == nil {
+			if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
 				continue
 			}
 			fileKeys = append(fileKeys, part.ImageURL.URI)
@@ -83,7 +83,7 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range val.MultiPartValues {
-			if part == nil || part.ImageURL == nil {
+			if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
 				continue
 			}
 			part.ImageURL.URL = urlMap[part.ImageURL.URI]

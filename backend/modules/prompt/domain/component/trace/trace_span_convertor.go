@@ -29,7 +29,7 @@ func VariableValToSpanPromptVariable(variable *entity.VariableVal) *tracespec.Pr
 		return nil
 	}
 	var val any
-	var valueType = tracespec.PromptArgumentValueTypeText
+	valueType := tracespec.PromptArgumentValueTypeText
 	val = ptr.From(variable.Value)
 	if val == "" && len(variable.PlaceholderMessages) > 0 {
 		val = MessagesToSpanMessages(variable.PlaceholderMessages)

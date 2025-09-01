@@ -131,6 +131,7 @@ func (mr *MockIPromptServiceMockRecorder) FormatPrompt(ctx, prompt, messages, va
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatPrompt", reflect.TypeOf((*MockIPromptService)(nil).FormatPrompt), ctx, prompt, messages, variableVals)
 }
 
+<<<<<<< HEAD
 // ListLabel mocks base method.
 func (m *MockIPromptService) ListLabel(ctx context.Context, param service.ListLabelParam) ([]*entity.PromptLabel, *int64, error) {
 	m.ctrl.T.Helper()
@@ -150,6 +151,11 @@ func (mr *MockIPromptServiceMockRecorder) ListLabel(ctx, param any) *gomock.Call
 // MCompleteMultiModalFileURL mocks base method.
 func (m *MockIPromptService) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error {
 	m.ctrl.T.Helper()
+=======
+// MCompleteMultiModalFileURL mocks base method.
+func (m *MockIPromptService) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error {
+	m.ctrl.T.Helper()
+>>>>>>> origin/main
 	ret := m.ctrl.Call(m, "MCompleteMultiModalFileURL", ctx, messages, variableVals)
 	ret0, _ := ret[0].(error)
 	return ret0

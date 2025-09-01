@@ -6,11 +6,10 @@ package entity
 import (
 	"errors"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/json"
-
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
