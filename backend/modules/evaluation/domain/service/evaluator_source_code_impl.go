@@ -430,6 +430,59 @@ func (c *EvaluatorSourceCodeServiceImpl) processSyntaxValidationExecutionResult(
 	return processed, nil
 }
 
+// convertPythonDictToJSON 将 Python 字典格式转换为标准 JSON 格式
+func (c *EvaluatorSourceCodeServiceImpl) convertPythonDictToJSON(pythonDict string) (string, error) {
+	result := make([]rune, 0, len(pythonDict))
+	runes := []rune(pythonDict)
+	inString := false
+	stringDelimiter := '\000'
+	
+	for i := 0; i < len(runes); i++ {
+		char := runes[i]
+		
+		if !inString {
+			// 在字符串外部
+			if char == '\'' || char == '"' {
+				// 开始字符串，记录分隔符并统一使用双引号
+				result = append(result, '"')
+				inString = true
+				stringDelimiter = char
+			} else {
+				result = append(result, char)
+			}
+		} else {
+			// 在字符串内部
+			if char == '\\' && i+1 < len(runes) {
+				// 处理转义字符
+				nextChar := runes[i+1]
+				if nextChar == '\'' || nextChar == '"' || nextChar == '\\' || nextChar == 'n' || nextChar == 't' || nextChar == 'r' {
+					result = append(result, '\\')
+					result = append(result, nextChar)
+					i++ // 跳过下一个字符
+				} else {
+					result = append(result, char)
+				}
+			} else if char == stringDelimiter {
+				// 字符串结束
+				result = append(result, '"')
+				inString = false
+				stringDelimiter = '\000'
+			} else if char == '"' && stringDelimiter == '\'' {
+				// 在单引号字符串内部遇到双引号，需要转义
+				result = append(result, '\\')
+				result = append(result, '"')
+			} else if char == '\'' && stringDelimiter == '"' {
+				// 在双引号字符串内部遇到单引号，直接保留
+				result = append(result, '\'')
+			} else {
+				result = append(result, char)
+			}
+		}
+	}
+	
+	return string(result), nil
+}
+
 // parseEvaluationRetVal 解析评估结果RetVal字段中的JSON数据（评估结果链路：提取 score、reason、err_msg）
 func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationRetVal(retVal string) (score *float64, reason string, errMsg string, err error) {
 	if strings.TrimSpace(retVal) == "" {
@@ -437,8 +490,18 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationRetVal(retVal string) (s
 	}
 
 	var result map[string]interface{}
+	
+	// 首先尝试标准 JSON 解析
 	if err := json.Unmarshal([]byte(retVal), &result); err != nil {
-		return nil, "", "", fmt.Errorf("failed to parse RetVal JSON: %v", err)
+		// 如果 JSON 解析失败，尝试 Python 字典格式
+		jsonStr, convertErr := c.convertPythonDictToJSON(retVal)
+		if convertErr != nil {
+			return nil, "", "", fmt.Errorf("failed to parse RetVal: %v", err)
+		}
+		
+		if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse converted RetVal JSON: %v", err)
+		}
 	}
 
 	// 解析score字段
