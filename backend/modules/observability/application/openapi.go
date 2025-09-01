@@ -672,7 +672,7 @@ func (o *OpenAPIApplication) validateListTracesOApiReq(ctx context.Context, req 
 	v := utils.DateValidator{
 		Start:        req.GetStartTime(),
 		End:          req.GetEndTime(),
-		EarliestDays: o.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+		EarliestDays: 365,
 	}
 	newStartTime, newEndTime, err := v.CorrectDate()
 	logs.CtxInfo(ctx, "newStartTime: %d, newEndTime: %d", newStartTime, newEndTime)
