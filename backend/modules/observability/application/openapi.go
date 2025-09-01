@@ -675,7 +675,6 @@ func (o *OpenAPIApplication) validateListTracesOApiReq(ctx context.Context, req 
 		EarliestDays: 365,
 	}
 	newStartTime, newEndTime, err := v.CorrectDate()
-	logs.CtxInfo(ctx, "newStartTime: %d, newEndTime: %d", newStartTime, newEndTime)
 	if err != nil {
 		return err
 	}
