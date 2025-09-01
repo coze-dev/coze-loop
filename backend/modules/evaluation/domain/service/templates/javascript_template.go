@@ -52,7 +52,7 @@ function main() {
     }
     
     // 输出最终结果
-    return_val(result);
+    return_val(JSON.stringify(result));
 })();
 `
 
