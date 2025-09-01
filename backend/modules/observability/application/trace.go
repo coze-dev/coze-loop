@@ -827,3 +827,113 @@ func (t *TraceApplication) PreviewExportTracesToDataset(ctx context.Context, req
 	// 转换响应
 	return tconv.PreviewResponseDO2DTO(serviceResp), nil
 }
+func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) (*trace.ChangeEvaluatorScoreResponse, error) {
+	if err := t.validateChangeEvaluatorScoreReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskCreate,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+
+	sResp, err := t.traceService.ChangeEvaluatorScore(ctx, &service.ChangeEvaluatorScoreRequest{
+		EvalSvc:           t.evalSvc,
+		WorkspaceID:       req.WorkspaceID,
+		EvaluatorRecordID: req.EvaluatorRecordID,
+		SpanID:            req.SpanID,
+		StartTime:         req.StartTime,
+		Correction:        req.Correction,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.ChangeEvaluatorScoreResponse{
+		Annotation: sResp.Annotation,
+	}, nil
+}
+
+func (t *TraceApplication) validateChangeEvaluatorScoreReq(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.GetEvaluatorRecordID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid evaluator_record_id"))
+	} else if req.GetStartTime() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid start_time"))
+	} else if req.GetCorrection() == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid correction"))
+	}
+	return nil
+}
+func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest) (*trace.ListAnnotationEvaluatorsResponse, error) {
+	var resp *trace.ListAnnotationEvaluatorsResponse
+	if req == nil {
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskList,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	sResp, err := t.traceService.ListAnnotationEvaluators(ctx, &service.ListAnnotationEvaluatorsRequest{
+		EvalSvc:     t.evalSvc,
+		WorkspaceID: req.WorkspaceID,
+		Name:        req.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp.Evaluators = sResp.Evaluators
+	return resp, nil
+}
+func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (*trace.ExtractSpanInfoResponse, error) {
+	var resp *trace.ExtractSpanInfoResponse
+	if err := t.validateExtractSpanInfoReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	sResp, err := t.traceService.ExtractSpanInfo(ctx, &service.ExtractSpanInfoRequest{
+		WorkspaceID:   req.WorkspaceID,
+		TraceID:       "",
+		SpanIds:       req.SpanIds,
+		StartTime:     req.GetStartTime(),
+		EndTime:       req.GetEndTime(),
+		PlatformType:  loop_span.PlatformType(req.GetPlatformType()),
+		FieldMappings: req.FieldMappings,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp.SpanInfos = sResp.SpanInfos
+	return resp, nil
+}
+func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *trace.ExtractSpanInfoRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if len(req.SpanIds) > MaxSpanLength {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("span_ids length exceeds the limit"))
+	}
+	v := utils.DateValidator{
+		Start: req.GetStartTime(),
+		End:   req.GetEndTime(),
+	}
+
+	if newStartTime, newEndTime, err := v.CorrectDate(); err != nil {
+		return err
+	} else {
+		req.SetStartTime(lo.ToPtr(newStartTime - time.Minute.Milliseconds()))
+		req.SetEndTime(lo.ToPtr(newEndTime + time.Minute.Milliseconds()))
+	}
+	return nil
+}

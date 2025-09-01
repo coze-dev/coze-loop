@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -94,6 +95,14 @@ var (
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
 		auth.NewAuthProvider,
+		traceDomainSet,
+	)
+	taskSet = wire.NewSet(
+		taskSvc.NewTaskServiceImpl,
+		NewTaskApplication,
+		auth.NewAuthProvider,
+		obrepo.NewTaskRepoImpl,
+		mysqldao.NewTaskDaoImpl,
 		traceDomainSet,
 	)
 )
@@ -207,5 +216,17 @@ func InitTraceIngestionApplication(
 	ckDb ck.Provider,
 	mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
+	return nil, nil
+}
+
+func InitTaskApplication(
+	db db.Provider,
+	idgen idgen.IIDGenerator,
+	authClient authservice.Client,
+	userClient userservice.Client,
+	evalService evaluatorservice.Client,
+	evalSetService evaluationsetservice.Client,
+	datasetService datasetservice.Client) (ITaskApplication, error) {
+	wire.Build(taskSet)
 	return nil, nil
 }
