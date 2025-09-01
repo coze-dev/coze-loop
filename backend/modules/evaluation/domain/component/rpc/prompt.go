@@ -83,6 +83,7 @@ const (
 	VariableTypeArrayObject  = "array<object>"
 
 	VariableTypePlaceholder = "placeholder"
+	VariableTypeMultiPart   = "multi_part"
 )
 
 type CommitInfo struct {
