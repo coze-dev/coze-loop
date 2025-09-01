@@ -347,6 +347,39 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResult(result *entity.E
 	return processed, nil
 }
 
+// ValidationResult 验证结果结构体
+type ValidationResult struct {
+	Valid    bool
+	ErrorMsg string
+}
+
+// parseValidationResult 解析验证结果中的 valid 和 error 字段
+// 这是一个通用方法，用于处理 ret_val 或 stdout 中的验证结果
+func (c *EvaluatorSourceCodeServiceImpl) parseValidationResult(data map[string]interface{}) *ValidationResult {
+	result := &ValidationResult{
+		Valid:    true, // 默认为有效
+		ErrorMsg: "",
+	}
+
+	// 检查 valid 字段
+	if validVal, ok := data["valid"]; ok {
+		if valid, ok := validVal.(bool); ok {
+			result.Valid = valid
+		}
+	}
+
+	// 如果无效，获取错误信息
+	if !result.Valid {
+		if errorVal, ok := data["error"]; ok {
+			if errorMsg, ok := errorVal.(string); ok {
+				result.ErrorMsg = errorMsg
+			}
+		}
+	}
+
+	return result
+}
+
 // processExecutionResultWithStdoutParsing 处理执行结果并解析stdout中的JSON（专用于语法验证）
 func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing(result *entity.ExecutionResult) (*entity.ProcessedExecutionResult, error) {
 	// 先进行基本处理
@@ -358,23 +391,15 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 	// 优先解析ret_val中的JSON内容
 	if processed.RetVal != "" {
 		if retValData, parseErr := c.parseRetValJSON(processed.RetVal); parseErr == nil {
-			// 检查ret_val中的valid字段来判断校验结果
-			if validVal, ok := retValData["valid"]; ok {
-				if valid, ok := validVal.(bool); ok {
-					if !valid {
-						processed.Success = false
-						// 从ret_val的error字段获取错误信息
-						if errorVal, ok := retValData["error"]; ok {
-							if errorMsg, ok := errorVal.(string); ok {
-								processed.ErrorMsg = errorMsg
-							}
-						}
-					} else {
-						processed.Success = true
-						processed.ErrorMsg = ""
-					}
-				}
+			// 使用通用方法解析验证结果
+			validationResult := c.parseValidationResult(retValData)
+			processed.Success = validationResult.Valid
+			if !validationResult.Valid {
+				processed.ErrorMsg = validationResult.ErrorMsg
+			} else {
+				processed.ErrorMsg = ""
 			}
+
 			// 将ret_val解析的内容合并到Output中
 			for key, value := range retValData {
 				processed.Output[key] = value
@@ -386,29 +411,25 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 	if processed.RetVal == "" {
 		if stdout, ok := processed.Output["stdout"].(string); ok && stdout != "" {
 			if parsedOutput, parseErr := c.parseStdoutJSON(stdout); parseErr == nil {
-			// 将解析的JSON内容合并到Output中
-			for key, value := range parsedOutput {
-				processed.Output[key] = value
-			}
-
-			// 检查解析结果中的valid字段
-			if validVal, ok := parsedOutput["valid"]; ok {
-				if valid, ok := validVal.(bool); ok && !valid {
-					processed.Success = false
-					if errorVal, ok := parsedOutput["error"]; ok {
-						if errorMsg, ok := errorVal.(string); ok {
-							processed.ErrorMsg = errorMsg
-						}
-					}
+				// 将解析的JSON内容合并到Output中
+				for key, value := range parsedOutput {
+					processed.Output[key] = value
 				}
-			}
+
+				// 使用通用方法解析验证结果
+				validationResult := c.parseValidationResult(parsedOutput)
+				if !validationResult.Valid {
+					processed.Success = false
+					processed.ErrorMsg = validationResult.ErrorMsg
+				}
 			}
 		}
 	}
 
 	return processed, nil
-	return processed, nil
 }
+
+
 
 // parseRetVal 解析RetVal字段中的JSON数据
 func (c *EvaluatorSourceCodeServiceImpl) parseRetVal(retVal string) (score *float64, reason string, errMsg string, err error) {
@@ -548,17 +569,14 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context,
 		return fmt.Errorf("python syntax error: %s", processed.ErrorMsg)
 	}
 
-	// 检查输出中是否包含语法错误信息
+	// 使用通用方法检查输出中的验证结果
 	if processed.Output != nil {
-		if validVal, ok := processed.Output["valid"]; ok {
-			if valid, ok := validVal.(bool); ok && !valid {
-				if errorVal, ok := processed.Output["error"]; ok {
-					if errorMsg, ok := errorVal.(string); ok {
-						return fmt.Errorf("python syntax error: %s", errorMsg)
-					}
-				}
-				return fmt.Errorf("python syntax validation failed")
+		validationResult := c.parseValidationResult(processed.Output)
+		if !validationResult.Valid {
+			if validationResult.ErrorMsg != "" {
+				return fmt.Errorf("python syntax error: %s", validationResult.ErrorMsg)
 			}
+			return fmt.Errorf("python syntax validation failed")
 		}
 	}
 
@@ -603,17 +621,14 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Cont
 		return fmt.Errorf("javascript syntax error: %s", processed.ErrorMsg)
 	}
 
-	// 检查输出中的语法错误信息 (与Python保持一致的逻辑)
+	// 使用通用方法检查输出中的验证结果 (与Python保持一致的逻辑)
 	if processed.Output != nil {
-		if validVal, ok := processed.Output["valid"]; ok {
-			if valid, ok := validVal.(bool); ok && !valid {
-				if errorVal, ok := processed.Output["error"]; ok {
-					if errorMsg, ok := errorVal.(string); ok {
-						return fmt.Errorf("javascript syntax error: %s", errorMsg)
-					}
-				}
-				return fmt.Errorf("javascript syntax validation failed")
+		validationResult := c.parseValidationResult(processed.Output)
+		if !validationResult.Valid {
+			if validationResult.ErrorMsg != "" {
+				return fmt.Errorf("javascript syntax error: %s", validationResult.ErrorMsg)
 			}
+			return fmt.Errorf("javascript syntax validation failed")
 		}
 	}
 
