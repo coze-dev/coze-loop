@@ -1,20 +1,21 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useMemo, type FC } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { IconCozEmpty } from '@coze-arch/coze-design/icons';
 import {
   EmptyState,
   Loading,
+  type SelectProps,
   withField,
   type CommonFieldProps,
 } from '@coze-arch/coze-design';
 
 import { type OptionGroup } from '../../../components/mapping-item-field/types';
 import { MappingItemField } from '../../../components/mapping-item-field';
-import { getTypeText } from '../../../components/column-item-map';
+import {
+  getSchemaTypeText,
+  getTypeText,
+} from '../../../components/column-item-map';
 
 import emptyStyles from './empty-state.module.less';
 
@@ -23,12 +24,19 @@ export interface EvaluateTargetMappingProps {
   keySchemas?: FieldSchema[];
   prefixField: string;
   evaluationSetSchemas?: FieldSchema[];
+  selectProps?: SelectProps;
 }
 
 const EvaluateTargetMappingField: FC<
   CommonFieldProps & EvaluateTargetMappingProps
 > = withField((props: EvaluateTargetMappingProps) => {
-  const { loading, keySchemas, prefixField, evaluationSetSchemas } = props;
+  const {
+    loading,
+    keySchemas,
+    prefixField,
+    evaluationSetSchemas,
+    selectProps,
+  } = props;
 
   const optionGroups = useMemo(
     () =>
@@ -52,7 +60,7 @@ const EvaluateTargetMappingField: FC<
         <Loading
           className="!w-full"
           size="large"
-          label={I18n.t('loading_field_mapping')}
+          label={'正在加载字段映射'}
           loading={true}
         ></Loading>
       </div>
@@ -65,7 +73,7 @@ const EvaluateTargetMappingField: FC<
         <EmptyState
           size="default"
           icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
-          title={I18n.t('no_data')}
+          title="暂无数据"
           className={emptyStyles['empty-state']}
         />
       </div>
@@ -79,21 +87,18 @@ const EvaluateTargetMappingField: FC<
           noLabel
           field={`${prefixField}.${k.name}`}
           fieldClassName="!pt-0"
-          keyTitle={I18n.t('evaluation_object')}
+          keyTitle="评测对象"
           keySchema={k}
           optionGroups={optionGroups}
+          selectProps={selectProps}
           rules={[
             {
               validator: (_rule, v) => {
                 if (!v) {
-                  return new Error(
-                    I18n.t('please_select', {
-                      field: I18n.t('evaluation_object'),
-                    }),
-                  );
+                  return new Error('请选择');
                 }
-                if (getTypeText(v) !== getTypeText(k)) {
-                  return new Error(I18n.t('selected_fields_inconsistent'));
+                if (getTypeText(v) !== getSchemaTypeText(k)) {
+                  return new Error('所选字段数据类型不一致，请重新选择');
                 }
                 return true;
               },

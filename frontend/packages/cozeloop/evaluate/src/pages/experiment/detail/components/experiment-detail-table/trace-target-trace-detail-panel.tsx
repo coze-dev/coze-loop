@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { TraceDetailPanel } from '@cozeloop/observation-component-adapter';
 import { useGlobalEvalConfig } from '@cozeloop/evaluate-components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';

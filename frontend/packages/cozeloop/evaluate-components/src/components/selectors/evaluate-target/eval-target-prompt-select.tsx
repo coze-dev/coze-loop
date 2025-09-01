@@ -1,11 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import classNames from 'classnames';
 import { useDebounceFn, useRequest } from 'ahooks';
 import { BaseSearchSelect } from '@cozeloop/components';
-import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
@@ -14,7 +12,6 @@ import { type SelectProps } from '@coze-arch/coze-design';
 import { useGlobalEvalConfig } from '@/stores/eval-global-config';
 
 import { getPromptEvalTargetOption } from './utils';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 /**
  * 评测对象选择器, 公共, 开源逻辑
@@ -27,6 +24,7 @@ const PromptEvalTargetSelect = ({
   const { spaceID } = useSpace();
   const [createPromptVisible, setCreatePromptVisible] = useState(false);
   const { PromptCreate } = useGlobalEvalConfig();
+  const { getPromptDetailURL } = useResourcePageJump();
 
   const service = useRequest(async (text?: string) => {
     const res = await StoneEvaluationApi.ListSourceEvalTargets({
@@ -44,13 +42,11 @@ const PromptEvalTargetSelect = ({
     wait: 500,
   });
 
-  const { baseURL } = useBaseURL();
-
   return (
     <>
       <BaseSearchSelect
         className={classNames(props.className)}
-        emptyContent={I18n.t('no_data')}
+        emptyContent="暂无数据"
         loading={service.loading}
         onSearch={handleSearch.run}
         showRefreshBtn={true}
@@ -65,7 +61,7 @@ const PromptEvalTargetSelect = ({
             >
               <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
               <div className="text-sm font-medium text-brand-9">
-                {I18n.t('new_prompt')}
+                {'新建 Prompt'}
               </div>
             </div>
           ) : null
@@ -73,12 +69,12 @@ const PromptEvalTargetSelect = ({
         optionList={service.data}
         {...props}
       />
-      {showCreateBtn ? (
+      {showCreateBtn && PromptCreate ? (
         <PromptCreate
           visible={createPromptVisible}
           onCancel={() => setCreatePromptVisible(false)}
           onOk={res => {
-            window.open(`${baseURL}/pe/prompts/${res.id}`);
+            window.open(getPromptDetailURL(`${res.id}`));
             setCreatePromptVisible(false);
             service.run();
           }}

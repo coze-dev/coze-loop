@@ -8,7 +8,6 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "dev": "storybook dev -p 6006",
     "lint": "eslint ./ --cache",
     "test": "vitest --run --passWithNoTests",
     "test:cov": "npm run test -- --coverage"

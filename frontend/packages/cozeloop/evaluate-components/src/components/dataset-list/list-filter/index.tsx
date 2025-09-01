@@ -1,7 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useDebounceFn } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { UserSelect } from '@cozeloop/biz-components-adapter';
 import { type ListEvaluationSetsRequest } from '@cozeloop/api-schema/evaluation';
@@ -42,7 +39,7 @@ export const ListFilter = ({ filter, setFilter }: ListFilterProps) => {
           field="name"
           fieldClassName="!mr-0 !pr-0"
           className="!w-full"
-          placeholder={I18n.t('search_name')}
+          placeholder="搜索名称"
           prefix={<IconCozMagnifier />}
           convert={value => value?.slice(0, 100)}
           showClear

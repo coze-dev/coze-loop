@@ -1,19 +1,22 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useRef, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
+import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { GuardPoint, useGuards, GuardActionType } from '@cozeloop/guard';
 import {
   TableColActions,
   IDRender,
   type TableColAction,
 } from '@cozeloop/components';
-import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
+import {
+  useCurrentEnterpriseId,
+  useNavigateModule,
+} from '@cozeloop/biz-hooks-adapter';
 import { ExptStatus } from '@cozeloop/api-schema/evaluation';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { Tooltip, type ColumnProps } from '@coze-arch/coze-design';
+
+import { useGlobalEvalConfig } from '@/stores/eval-global-config';
 
 import { dealColumnsFromStorage } from '../../components/common';
 import {
@@ -21,7 +24,13 @@ import {
   handleDelete,
   handleRetry,
   handleCopy,
+  handleExport,
+  handleExportRecord,
 } from './utils';
+
+// 导出通知相关组件和工具函数
+export { default as ExportNotificationTitle } from './export-notification-title';
+export { default as ExportNotificationContent } from './export-notification-content';
 
 function isExperimentFail(status: ExptStatus | undefined) {
   return [
@@ -50,7 +59,14 @@ export interface UseExperimentListColumnsProps {
   columnManageStorageKey?: string;
   onRefresh?: () => void;
   onDetailClick?: (e: Experiment) => void;
+  extraShrinkActions?: TableColAction[];
+  /** 自定义导出记录弹窗处理函数 */
+  onOpenExportModal?: (experiment: Experiment) => void;
+  /** 导出来源 */
+  source?: string;
 }
+
+const PERSONAL_ENTERPRISE_ID = 'personal';
 
 /** 实验列表列配置 */
 export function useExperimentListColumns({
@@ -61,8 +77,11 @@ export function useExperimentListColumns({
   columnManageStorageKey,
   detailJumpSourcePath,
   actionVisibleControl,
+  extraShrinkActions = [],
   onRefresh,
   onDetailClick,
+  onOpenExportModal,
+  source,
 }: UseExperimentListColumnsProps) {
   const guards = useGuards({
     points: [
@@ -77,6 +96,9 @@ export function useExperimentListColumns({
   const [columns, setColumns] = useState<ColumnProps[]>([]);
   const [defaultColumns, setDefaultColumns] = useState<ColumnProps[]>([]);
 
+  const currentEnterpriseId = useCurrentEnterpriseId();
+  const isPersonalEnterprise = currentEnterpriseId === PERSONAL_ENTERPRISE_ID;
+
   const copyGuardType = guards.data[GuardPoint['eval.experiments.copy']].type;
   const retryGuardType = guards.data[GuardPoint['eval.experiments.retry']].type;
   const deleteGuardType =
@@ -84,6 +106,8 @@ export function useExperimentListColumns({
 
   const guardsRef = useRef(guards);
   guardsRef.current = guards;
+
+  const { TableExportActionButton } = useGlobalEvalConfig();
 
   const handleRetryOnCLick = (record: Experiment) => {
     const action = () => {
@@ -131,7 +155,7 @@ export function useExperimentListColumns({
 
   useEffect(() => {
     const actionsColumn: ColumnProps<Experiment> = {
-      title: I18n.t('operation'),
+      title: '操作',
       disableColumnManage: true,
       dataIndex: 'action',
       key: 'action',
@@ -145,8 +169,8 @@ export function useExperimentListColumns({
         const actions: TableColAction[] = [
           {
             label: (
-              <Tooltip content={I18n.t('re_evaluate_failed_only')} theme="dark">
-                {I18n.t('retry')}
+              <Tooltip content="仅针对执行失败的部分重新评测" theme="dark">
+                重试
               </Tooltip>
             ),
             hide: hideRun,
@@ -155,19 +179,16 @@ export function useExperimentListColumns({
           },
           {
             label: (
-              <Tooltip content={I18n.t('view_detail')} theme="dark">
-                {I18n.t('detail')}
+              <Tooltip content="查看详情" theme="dark">
+                详情
               </Tooltip>
             ),
             onClick: () => handleDetailOnClick(record),
           },
           {
             label: (
-              <Tooltip
-                content={I18n.t('copy_and_create_experiment')}
-                theme="dark"
-              >
-                {I18n.t('copy')}
+              <Tooltip content="复制实验配置并新建实验" theme="dark">
+                复制
               </Tooltip>
             ),
             hide: actionVisibleControl?.copy === false,
@@ -175,10 +196,60 @@ export function useExperimentListColumns({
             onClick: () => handleCopyOnClick(record),
           },
         ];
+        const isFinalStatus =
+          record.status === ExptStatus.Success ||
+          record.status === ExptStatus.Failed;
+
+        const exportActionCol = TableExportActionButton
+          ? {
+              // 自定义情况
+              label: (
+                <TableExportActionButton
+                  onClick={() => {
+                    handleExport({
+                      record,
+                      spaceID,
+                      onOpenExportModal,
+                      source,
+                    });
+                  }}
+                  disabled={!isFinalStatus}
+                />
+              ),
+              disabled: !isFinalStatus,
+            }
+          : {
+              // 默认
+              label: '导出',
+              onClick: () => {
+                handleExport({
+                  record,
+                  spaceID,
+                  onOpenExportModal,
+                  source,
+                });
+              },
+              disabled: !isFinalStatus,
+              disabledTooltip: !isFinalStatus
+                ? '仅支持导出终态(成功或失败)的实验'
+                : undefined,
+            };
+
         // 收起来的操作
         const shrinkActions: TableColAction[] = [
+          ...extraShrinkActions,
+          exportActionCol,
           {
-            label: I18n.t('delete'),
+            label: '导出记录',
+            onClick: () => {
+              sendEvent(EVENT_NAMES.cozeloop_experiment_export_record_click, {
+                from: source,
+              });
+              handleExportRecord({ record, onOpenExportModal });
+            },
+          },
+          {
+            label: '删除',
             type: 'danger',
             hide: actionVisibleControl?.delete === false,
             disabled: deleteGuardType === GuardActionType.READONLY,
@@ -190,6 +261,7 @@ export function useExperimentListColumns({
           <TableColActions
             actions={[...actions, ...shrinkActions]}
             maxCount={maxCount}
+            textClassName="w-full"
           />
         );
       },
@@ -223,6 +295,10 @@ export function useExperimentListColumns({
     retryGuardType,
     deleteGuardType,
     actionVisibleControl,
+    isPersonalEnterprise,
+    onOpenExportModal,
+    handleExport,
+    TableExportActionButton,
   ]);
 
   return {

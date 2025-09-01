@@ -1,5 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
+/* eslint-disable complexity */
 import classNames from 'classnames';
 import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 import { Typography } from '@coze-arch/coze-design';
@@ -7,6 +6,7 @@ import { Typography } from '@coze-arch/coze-design';
 import { LoopTag } from '../tag';
 import { getColumnType } from './util';
 import {
+  ContentType,
   DataType,
   dataTypeMap,
   displayFormatType,
@@ -19,10 +19,10 @@ import { EmptyDatasetItem } from './empty';
 import { AudioDatasetItem } from './audio';
 
 const ItemContenRenderMap = {
-  text: TextDatasetItem,
-  image: ImageDatasetItem,
-  audio: AudioDatasetItem,
-  multipart: MultipartDatasetItem,
+  [ContentType.Text]: TextDatasetItem,
+  [ContentType.Image]: ImageDatasetItem,
+  [ContentType.Audio]: AudioDatasetItem,
+  [ContentType.MultiPart]: MultipartDatasetItem,
 };
 
 export const DatasetItem = (props: DatasetItemProps) => {
@@ -34,9 +34,12 @@ export const DatasetItem = (props: DatasetItemProps) => {
     isEdit,
     showEmpty,
   } = props;
+
   const Component =
-    ItemContenRenderMap[fieldContent?.content_type || 'text'] ||
+    ItemContenRenderMap[fieldSchema?.content_type || ContentType.Text] ||
     TextDatasetItem;
+  const isEmpty =
+    fieldContent?.multi_part === undefined && fieldContent?.text === undefined;
   return (
     <div className={classNames('flex flex-col gap-2', className)}>
       {showColumnKey ? (
@@ -59,7 +62,7 @@ export const DatasetItem = (props: DatasetItemProps) => {
           </LoopTag>
         </div>
       ) : null}
-      {showEmpty && fieldContent?.text === undefined && !isEdit ? (
+      {showEmpty && isEmpty && !isEdit ? (
         <EmptyDatasetItem />
       ) : (
         <Component {...props} />

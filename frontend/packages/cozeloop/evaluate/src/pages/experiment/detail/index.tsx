@@ -1,16 +1,17 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useParams } from 'react-router-dom';
 import { useCallback, useState } from 'react';
 
+import classNames from 'classnames';
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { LoopTabs } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { Layout, Spin } from '@coze-arch/coze-design';
 
-import { batchGetExperiment } from '@/request/experiment';
+import {
+  batchGetExperiment,
+  batchGetExperimentResult,
+} from '@/request/experiment';
 import { ExperimentContextProvider } from '@/hooks/use-experiment';
 
 import ExperimentHeader from './components/experiment-header';
@@ -24,20 +25,40 @@ export default function () {
   const [activeKey, setActiveKey] = useState('detail');
   const [refreshKey, setRefreshKey] = useState('');
 
-  const {
-    data: experiment,
-    loading,
-    refresh,
-  } = useRequest(
+  const base = useRequest(
     async () => {
       if (!experimentID) {
         return;
       }
-      const res = await batchGetExperiment({
-        workspace_id: spaceID,
-        expt_ids: [experimentID],
-      });
-      return res.experiments?.[0];
+
+      const [exp, expResult] = await Promise.all([
+        batchGetExperiment({
+          workspace_id: spaceID,
+          expt_ids: [experimentID],
+        }),
+        batchGetExperimentResult({
+          workspace_id: spaceID,
+          baseline_experiment_id: experimentID,
+          experiment_ids: [experimentID],
+          page_number: 1,
+          page_size: 1,
+          use_accelerator: true,
+        }),
+      ]);
+
+      return {
+        experiment: exp.experiments?.[0],
+
+        columnEvaluators:
+          (expResult.expt_column_evaluators || []).filter(
+            item => item.experiment_id === experimentID,
+          )[0]?.column_evaluators ?? [],
+
+        columnAnnotations:
+          (expResult.expt_column_annotations ?? []).filter(
+            item => item.experiment_id === experimentID,
+          )[0]?.column_annotations ?? [],
+      };
     },
     {
       refreshDeps: [experimentID, refreshKey],
@@ -45,7 +66,7 @@ export default function () {
   );
 
   useBreadcrumb({
-    text: experiment?.name || '',
+    text: base.data?.experiment?.name || '',
   });
 
   const onRefresh = useCallback(() => {
@@ -54,16 +75,19 @@ export default function () {
 
   return (
     <Layout className="h-full overflow-hidden flex flex-col">
-      <ExperimentContextProvider experiment={experiment}>
+      <ExperimentContextProvider experiment={base.data?.experiment}>
         <ExperimentHeader
-          experiment={experiment}
+          experiment={base.data?.experiment}
           spaceID={spaceID}
-          onRefreshExperiment={refresh}
+          onRefreshExperiment={base.refresh}
           onRefresh={onRefresh}
         />
-        <Spin spinning={loading}>
+        <Spin spinning={base.loading}>
           <div className="px-6 pt-3 pb-6 flex items-center text-sm">
-            <ExperimentDescription experiment={experiment} spaceID={spaceID} />
+            <ExperimentDescription
+              experiment={base.data?.experiment}
+              spaceID={spaceID}
+            />
           </div>
         </Spin>
         <LoopTabs
@@ -73,29 +97,34 @@ export default function () {
           tabPaneMotion={false}
           keepDOM={false}
           tabList={[
-            { tab: I18n.t('data_detail'), itemKey: 'detail' },
-            { tab: I18n.t('measure_stat'), itemKey: 'chart' },
+            { tab: '数据明细', itemKey: 'detail' },
+            { tab: '指标统计', itemKey: 'chart' },
           ]}
         />
         <div className="grow overflow-hidden">
-          {activeKey === 'detail' && (
-            <div className="h-full overflow-hidden px-6 pt-4 pb-4">
-              <ExperimentTable
-                spaceID={spaceID}
-                experimentID={experimentID}
-                refreshKey={refreshKey}
-                experiment={experiment}
-                onRefreshPage={onRefresh}
-              />
-            </div>
-          )}
+          <div
+            className={classNames(
+              'h-full overflow-hidden px-6 pt-4 pb-4',
+              activeKey === 'detail' ? '' : 'hidden',
+            )}
+          >
+            <ExperimentTable
+              spaceID={spaceID}
+              experimentID={experimentID}
+              refreshKey={refreshKey}
+              experiment={base.data?.experiment}
+              onRefreshPage={onRefresh}
+            />
+          </div>
           {activeKey === 'chart' && (
             <div className="h-full overflow-auto styled-scrollbar pl-6 pr-[18px] py-4">
               <ExperimentChart
                 spaceID={spaceID}
-                experiment={experiment}
+                experiment={base.data?.experiment}
+                columnEvaluators={base.data?.columnEvaluators}
+                columnAnnotations={base.data?.columnAnnotations}
                 experimentID={experimentID}
-                loading={loading}
+                loading={base.loading}
               />
             </div>
           )}

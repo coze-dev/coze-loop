@@ -80,6 +80,8 @@ export interface FieldSchema {
   default_display_format?: dataset.FieldDisplayFormat,
   /** 当前列的状态 */
   status?: dataset.FieldStatus,
+  /** 是否必填 */
+  isRequired?: boolean,
   /**
    * [20,50) 内容格式限制相关
    * 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification
@@ -89,6 +91,8 @@ export interface FieldSchema {
   multi_model_spec?: dataset.MultiModalSpec,
   /** 用户是否不可见 */
   hidden?: boolean,
+  /** 默认的预置转换配置，目前在数据校验后执行 */
+  default_transformations?: dataset.FieldTransformationConfig[],
 }
 export interface EvaluationSetItem {
   /**

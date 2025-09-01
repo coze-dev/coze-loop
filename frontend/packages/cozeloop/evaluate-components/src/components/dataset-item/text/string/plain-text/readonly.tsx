@@ -1,19 +1,20 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import cn from 'classnames';
 import { Typography } from '@coze-arch/coze-design';
 
+import styles from '../index.module.less';
 import { type DatasetItemProps } from '../../../type';
 export const PlainTextDatasetItemReadOnly = ({
   fieldContent,
   expand,
   className,
+  displayFormat,
 }: DatasetItemProps) =>
   expand ? (
     <Typography.Text
       style={{ color: 'inherit' }}
       className={cn(
-        '!text-[13px] max-h-[292px] overflow-y-auto break-all',
+        'block !text-[13px] max-h-[292px] overflow-y-auto break-all',
+        displayFormat && styles.border,
         className,
       )}
     >
