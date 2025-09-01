@@ -194,10 +194,8 @@ type ExecutionWorkloadInfo struct {
 
 // ProcessedExecutionResult 处理后的代码执行结果
 type ProcessedExecutionResult struct {
-	Output   map[string]interface{} `json:"output"`
-	Stdout   string                 `json:"stdout"`
-	Stderr   string                 `json:"stderr"`
-	RetVal   string                 `json:"ret_val"`
-	Success  bool                   `json:"success"`
-	ErrorMsg string                 `json:"error_msg"`
+	Output   map[string]interface{} `json:"output"`   // 解析后的输出数据
+	Success  bool                   `json:"success"`  // 执行是否成功
+	ErrorMsg string                 `json:"error_msg"` // 错误信息
+	RetVal   string                 `json:"ret_val"`  // 原始返回值（用于解析）
 }
