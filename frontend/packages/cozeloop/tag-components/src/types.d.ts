@@ -1,0 +1,23 @@
+/// <reference types='@coze-arch/bot-typings' />
+
+interface Window {
+  optimizeEditorMap?: Record<string, any>;
+}
+
+declare module '*.svg' {
+  export const ReactComponent: React.FunctionComponent<
+    React.SVGProps<SVGSVGElement>
+  >;
+
+  /**
+   * The default export type depends on the svgDefaultExport config,
+   * it can be a string or a ReactComponent
+   * */
+  const content: any;
+  export default content;
+}
+declare type Int64 = string | number;
+/**
+ * defined in rsbuild config for `@monaco-editor/react` loader
+ */
+declare const MONACO_UNPKG: string;

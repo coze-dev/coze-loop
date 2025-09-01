@@ -1,9 +1,12 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import React from 'react';
 
 import classNames from 'classnames';
-import { IconCozCheckMarkFill } from '@coze-arch/coze-design/icons';
+import { TooltipWithDisabled } from '@cozeloop/components';
+import {
+  IconCozCheckMarkFill,
+  IconCozQuestionMarkCircle,
+} from '@coze-arch/coze-design/icons';
+import { Tag } from '@coze-arch/coze-design';
 
 import { type StepConfig } from '../../constants/steps';
 
@@ -49,6 +52,17 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
           <div className={isCurrent ? 'text-brand-9' : 'coz-fg-secondary'}>
             {item.title}
           </div>
+          {item.optional ? (
+            <TooltipWithDisabled
+              content={item.tooltip}
+              disabled={!item.tooltip}
+              theme="dark"
+            >
+              <Tag color="grey" suffixIcon={<IconCozQuestionMarkCircle />}>
+                可选
+              </Tag>
+            </TooltipWithDisabled>
+          ) : null}
         </div>
       );
     })}

@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { Button, List } from '@coze-arch/coze-design';
 
 import VersionItem from './version-item';
@@ -33,7 +30,7 @@ export default function VersionList({
           color="primary"
           onClick={() => onLoadMore?.()}
         >
-          {I18n.t('load_more')}
+          显示更多
         </Button>
       </div>
     );

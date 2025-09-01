@@ -1,7 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
-import { useEvalTargetDefinition } from '@cozeloop/evaluate-components';
+import {
+  type EvalTargetDefinition,
+  useEvalTargetDefinition,
+} from '@cozeloop/evaluate-components';
 import { type EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { type Form, FormSelect, useFormState } from '@coze-arch/coze-design';
 
@@ -17,6 +17,28 @@ export interface EvaluateTargetFormProps {
   >;
 }
 
+const getOptionList = (option: EvalTargetDefinition) => {
+  const { name, type, description } = option;
+  if (!description) {
+    return {
+      label: name,
+      value: type,
+    };
+  }
+
+  return {
+    label: (
+      <div className="flex">
+        <div className="mr-1.5 option-text self-center">{name}</div>
+        <div className="text-[13px] font-normal text-[var(--coz-fg-secondary)]">
+          {description}
+        </div>
+      </div>
+    ),
+    value: type,
+  };
+};
+
 export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
   const { formRef, createExperimentValues, setCreateExperimentValues } = props;
   const formState = useFormState();
@@ -30,10 +52,7 @@ export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
 
   const evalTargetTypeOptions = pluginEvaluatorList
     .filter(e => e.selector)
-    .map(eva => ({
-      label: eva.name,
-      value: eva.type,
-    }));
+    .map(eva => getOptionList(eva));
 
   const currentEvaluator = getEvalTargetDefinition?.(
     formValues.evalTargetType as string,
@@ -48,6 +67,10 @@ export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
       evalTargetVersion: undefined,
       evalTargetMapping: undefined,
     });
+    setCreateExperimentValues(prev => ({
+      ...prev,
+      evalTargetType: v,
+    }));
   };
 
   const targetType = formValues.evalTargetType;
@@ -68,9 +91,10 @@ export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
       <FormSelect
         className="w-full"
         field="evalTargetType"
-        label={I18n.t('type')}
+        label="类型"
+        placeholder="请选择类型"
         optionList={evalTargetTypeOptions}
-        placeholder={I18n.t('please_select', { field: I18n.t('type') })}
+        showClear={true}
         rules={evaluateTargetValidators.evalTargetType}
         onChange={v => handleEvalTargetTypeChange(v as EvalTargetType)}
       />

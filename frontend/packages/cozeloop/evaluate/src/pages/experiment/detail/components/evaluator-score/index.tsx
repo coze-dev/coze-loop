@@ -1,10 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import classNames from 'classnames';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
   EvaluatorManualScore,
@@ -73,7 +70,7 @@ export default function EvaluatorScore({
                 onVisibleChange: setPanelVisible,
                 onSuccess: () => {
                   setPanelVisible(false);
-                  Toast.success(I18n.t('update_rating_success'));
+                  Toast.success('更新评分成功');
                   onRefresh?.();
                 },
               }}
@@ -105,12 +102,12 @@ export default function EvaluatorScore({
             onVisibleChange={setVisible}
             onSuccess={() => {
               setVisible(false);
-              Toast.success(I18n.t('update_rating_success'));
+              Toast.success('更新评分成功');
               onRefresh?.();
             }}
           >
             <div onClick={() => setVisible(true)}>
-              <Tooltip theme="dark" content={I18n.t('manual_calibration')}>
+              <Tooltip theme="dark" content="人工校准">
                 <div className="h-5">
                   <IconButtonContainer
                     icon={<IconCozPencil />}
@@ -122,7 +119,7 @@ export default function EvaluatorScore({
           </EvaluatorManualScore>
         ) : null}
         {traceID ? (
-          <Tooltip theme="dark" content={I18n.t('view_evaluator_trace')}>
+          <Tooltip theme="dark" content="查看评估器 Trace">
             <div className="h-5" onClick={report}>
               <TraceTrigger
                 traceID={traceID}

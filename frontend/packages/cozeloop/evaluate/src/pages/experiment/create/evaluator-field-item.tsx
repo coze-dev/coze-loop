@@ -1,28 +1,24 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useMemo, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorVersionDetail,
   EvaluatorSelect,
   EvaluatorVersionSelect,
-  DEFAULT_TEXT_STRING_SCHEMA,
 } from '@cozeloop/evaluate-components';
 import { useSpace, useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import {
   IconCozArrowRight,
-  IconCozPlusFill,
   IconCozTrashCan,
   IconCozInfoCircle,
 } from '@coze-arch/coze-design/icons';
 import {
   Button,
+  type RuleItem,
   Tag,
   Tooltip,
   useFieldApi,
@@ -47,26 +43,20 @@ interface EvaluatorFieldItemProps {
     remove: () => void;
   };
   index: number;
-  disableDelete?: boolean;
   evaluationSetSchemas?: FieldSchema[];
   evaluateTargetSchemas?: FieldSchema[];
   selectedVersionIds?: string[];
-  disableAdd?: boolean;
-  isLast?: boolean;
-  onAdd?: () => void;
+  getEvaluatorMappingFieldRules?: (k: FieldSchema) => RuleItem[];
 }
 
 export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
   const {
     arrayField,
     index,
-    disableDelete,
     evaluationSetSchemas,
     evaluateTargetSchemas,
     selectedVersionIds,
-    disableAdd,
-    isLast,
-    onAdd,
+    getEvaluatorMappingFieldRules,
   } = props;
 
   const { spaceID } = useSpace();
@@ -107,12 +97,26 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
   );
 
   const keySchemas = useMemo(() => {
+    // const variables = parseMessagesVariables(
+    //   evaluatorPro?.evaluatorVersionDetail?.evaluator_content?.prompt_evaluator
+    //     ?.message_list ?? [],
+    // );
+    // const newKeySchemas = variables.map(variable => ({
+    //   name: variable.name,
+    //   ...DEFAULT_TEXT_STRING_SCHEMA,
+    //   content_type:
+    //     variable.type === PromptVariableType.String
+    //       ? ContentType.Text
+    //       : ContentType.MultiPart,
+    // }));
+    // return newKeySchemas;
     const inputSchemas =
       evaluatorPro?.evaluatorVersionDetail?.evaluator_content?.input_schemas;
     if (inputSchemas) {
       return inputSchemas.map(item => ({
         name: item.key,
-        ...DEFAULT_TEXT_STRING_SCHEMA,
+        content_type: item.support_content_types?.[0],
+        text_schema: item.json_schema,
       }));
     }
   }, [evaluatorPro?.evaluatorVersionDetail]);
@@ -153,13 +157,12 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
             ) : null}
           </div>
           <div className="flex flex-row items-center gap-1 invisible group-hover:visible">
-            <Tooltip content={I18n.t('delete')} theme="dark">
+            <Tooltip content={'删除'} theme="dark">
               <Button
                 color="secondary"
                 size="small"
                 className="!h-6"
                 icon={<IconCozTrashCan className="h-4 w-4" />}
-                disabled={disableDelete}
                 onClick={e => {
                   e.stopPropagation();
                   arrayField.remove();
@@ -175,19 +178,10 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                 className="w-full"
                 field={`${arrayField.field}.evaluator`}
                 fieldStyle={{ paddingBottom: 16 }}
-                label={I18n.t('name')}
-                placeholder={I18n.t('please_select', {
-                  field: I18n.t('evaluator'),
-                })}
+                label="名称"
+                placeholder="请选择评估器"
                 onChangeWithObject
-                rules={[
-                  {
-                    required: true,
-                    message: I18n.t('please_select', {
-                      field: I18n.t('evaluator'),
-                    }),
-                  },
-                ]}
+                rules={[{ required: true, message: '请选择评估器' }]}
                 onChange={v => {
                   evaluatorProApi.setValue({
                     evaluator: v,
@@ -204,7 +198,7 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                   onChangeWithObject
                   variableRequired={true}
                   label={{
-                    text: I18n.t('version'),
+                    text: '版本',
                     className: 'justify-between pr-0',
                     extra: (
                       <>
@@ -219,17 +213,8 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                       </>
                     ),
                   }}
-                  placeholder={I18n.t('please_select', {
-                    field: I18n.t('version_number'),
-                  })}
-                  rules={[
-                    {
-                      required: true,
-                      message: I18n.t('please_select', {
-                        field: I18n.t('version_number'),
-                      }),
-                    },
-                  ]}
+                  placeholder="请选择版本号"
+                  rules={[{ required: true, message: '请选择版本号' }]}
                   evaluatorId={evaluatorPro?.evaluator?.evaluator_id}
                   disabledVersionIds={selectedVersionIds}
                 />
@@ -246,10 +231,12 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
             prefixField={`${arrayField.field}.evaluatorMapping`}
             label={
               <div className="inline-flex flex-row items-center">
-                {I18n.t('field_mapping')}
+                {'字段映射'}
                 <Tooltip
                   theme="dark"
-                  content={I18n.t('evaluation_set_field_mapping_tip')}
+                  content={
+                    '评测集字段、评测对象实际输出到评估器字段的映射，用于评估器准确获取输入进行评估。'
+                  }
                 >
                   <IconCozInfoCircle className="ml-1 w-4 h-4 coz-fg-secondary" />
                 </Tooltip>
@@ -259,16 +246,13 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
             keySchemas={keySchemas}
             evaluationSetSchemas={evaluationSetSchemas}
             evaluateTargetSchemas={evaluateTargetSchemas}
+            getEvaluatorMappingFieldRules={getEvaluatorMappingFieldRules}
             rules={[
               {
                 required: true,
                 validator: (_, value) => {
                   if (versionDetailService.loading && !value) {
-                    return new Error(
-                      I18n.t('please_configure', {
-                        field: I18n.t('field_mapping'),
-                      }),
-                    );
+                    return new Error('请配置字段映射');
                   }
                   return true;
                 },
@@ -277,21 +261,6 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
           />
         </div>
       </div>
-
-      {isLast ? (
-        <Button
-          block
-          icon={<IconCozPlusFill />}
-          color="primary"
-          onClick={() => {
-            onAdd?.();
-            setOpen(false);
-          }}
-          disabled={disableAdd}
-        >
-          {I18n.t('add_evaluator')}
-        </Button>
-      ) : null}
     </>
   );
 }

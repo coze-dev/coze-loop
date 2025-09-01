@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import {
   type EvalTarget,
@@ -93,7 +90,7 @@ export default function CozeBotEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={I18n.t('please_select', { field: I18n.t('coze_bot') })}
+      placeholder="请选择CozeBot"
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

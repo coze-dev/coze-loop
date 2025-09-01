@@ -1,10 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
 import { type EvaluatorContent } from '@cozeloop/api-schema/evaluation';
 
-import { extractDoubleBraceFields } from '../../utils/double-brace';
+import { parseMessagesVariables } from '@/utils/parse-prompt-variable';
+
 import { PromptVariablesList } from './prompt-variables-list';
 import { PromptMessage } from './prompt-message';
 import { OutputInfo } from './output-info';
@@ -17,16 +16,9 @@ export function TemplateInfo({
   notTemplate?: boolean;
 }) {
   const variables = useMemo(() => {
-    if (data?.prompt_evaluator?.message_list) {
-      const strSet = new Set<string>();
-      data.prompt_evaluator.message_list.forEach(message => {
-        const str = message?.content?.text;
-        if (str) {
-          extractDoubleBraceFields(str).forEach(item => strSet.add(item));
-        }
-      });
-      return Array.from(strSet);
-    }
+    const messages = data?.prompt_evaluator?.message_list ?? [];
+    const newVariables = parseMessagesVariables(messages);
+    return newVariables;
   }, [data]);
 
   return (

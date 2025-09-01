@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useRef, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { ResizeSidesheet } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -39,8 +36,8 @@ export const DatasetAddItemsPanel = ({
   const [loading, setLoading] = useState(false);
   const defaultEvaSetItem = getDefaultEvaSetItem(datasetDetail, spaceID);
   const { ExpandNode, expand } = useExpandButton({
-    shrinkTooltip: I18n.t('collapse_all_data_items'),
-    expandTooltip: I18n.t('expand_all_data_items'),
+    shrinkTooltip: '折叠全部数据项',
+    expandTooltip: '展开全部数据项',
   });
   const formApiRef = useRef<FormApi>();
 
@@ -57,7 +54,7 @@ export const DatasetAddItemsPanel = ({
       const successCount = Object.keys(res?.added_items || {}).length;
       if (res?.errors?.length && res?.errors?.length > 0) {
         Modal.info({
-          title: I18n.t('execution_result'),
+          title: '执行结果',
           width: 420,
           content: (
             <div className="mt-[20px]">
@@ -73,10 +70,10 @@ export const DatasetAddItemsPanel = ({
           onOk: () => {
             onOK();
           },
-          okText: I18n.t('known'),
+          okText: '已知晓',
         });
       } else {
-        Toast.success(I18n.t('add_x_data_item_success', { num: successCount }));
+        Toast.success(`成功添加${successCount}条数据`);
         onOK();
       }
     } catch (error) {
@@ -104,22 +101,25 @@ export const DatasetAddItemsPanel = ({
                 color="hgltplus"
                 loading={loading}
                 onClick={() => {
+                  // formApiRef.current?.validate().finally(data => {
+                  //   console.log('data', data);
+                  // });
                   formApiRef.current?.submitForm();
                 }}
                 disabled={loading}
               >
-                {I18n.t('add_data')}
+                添加
               </Button>
             </Guard>
             <Button color="primary" onClick={onCancel}>
-              {I18n.t('Cancel')}
+              取消
             </Button>
           </div>
         }
         visible={true}
         title={
           <div className="flex items-center justify-between gap-2">
-            {I18n.t('add_data')}
+            添加数据
             {ExpandNode}
           </div>
         }
@@ -160,7 +160,7 @@ export const DatasetAddItemsPanel = ({
                       <Anchor.Link
                         key={index}
                         href={`#${DATASET_ADD_ITEM_PREFIX}-${index}`}
-                        title={I18n.t('data_item_index', { index: index + 1 })}
+                        title={`数据项${index + 1}`}
                       />
                     ))}
                   </LoopAnchor>

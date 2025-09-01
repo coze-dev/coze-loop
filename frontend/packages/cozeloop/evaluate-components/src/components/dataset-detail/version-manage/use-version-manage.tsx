@@ -1,9 +1,6 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useMemo, useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { type Version, VersionSwitchPanel } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -69,9 +66,9 @@ export const useVersionManage = ({
     () => ({
       id: 'draft',
       version: '0.0.0',
-      description: I18n.t('current_draft'),
+      description: '当前草稿',
       submitTime: datasetDetail?.base_info?.updated_at,
-      draftSubmitText: I18n.t('update_time'),
+      draftSubmitText: '更新时间',
       isDraft: true,
     }),
     [datasetDetail?.base_info?.updated_at],
@@ -112,7 +109,7 @@ export const useVersionManage = ({
         sendEvent(EVENT_NAMES.cozeloop_dataset_version);
       }}
     >
-      {I18n.t('version_record')}
+      版本记录
     </Button>
   );
 

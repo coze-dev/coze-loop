@@ -1,14 +1,25 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
+/* eslint-disable max-params */
+import React from 'react';
+
+import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { UserProfile } from '@cozeloop/components';
 import {
   ExptRetryMode,
   type UserInfo,
   type Experiment,
+  type ExportExptResultRequest,
+  type ExptResultExportType,
+  type GetExptResultExportRecordRequest,
+  CSVExportStatus,
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
-import { Modal, type ColumnProps } from '@coze-arch/coze-design';
+import {
+  Modal,
+  Notification,
+  Select,
+  Tag,
+  type ColumnProps,
+} from '@coze-arch/coze-design';
 
 import { formateTime } from '../../utils';
 import { TypographyText } from '../../components/text-ellipsis';
@@ -17,6 +28,8 @@ import { EvalTargetPreview } from '../../components/previews/eval-target-preview
 import { EvaluationSetPreview } from '../../components/previews/eval-set-preview';
 import { ExperimentRunStatus } from '../../components/experiments/previews/experiment-run-status';
 import LoopTableSortIcon from '../../components/dataset-list/sort-icon';
+import ExportNotificationTitle from './export-notification-title';
+import ExportNotificationContent from './export-notification-content';
 import ExperimentEvaluatorAggregatorScore from './experiment-evaluator-aggregator-score';
 
 /** 实验列表列配置 */
@@ -31,7 +44,7 @@ export function getExperimentColumns({
 }) {
   const columns: ColumnProps<Experiment>[] = [
     {
-      title: I18n.t('experiment_name'),
+      title: '实验名称',
       disableColumnManage: true,
       dataIndex: 'name',
       key: 'name',
@@ -39,7 +52,7 @@ export function getExperimentColumns({
       render: text => <TypographyText>{text}</TypographyText>,
     },
     {
-      title: I18n.t('evaluation_object_type'),
+      title: '评测对象类型',
       dataIndex: 'type',
       key: 'type',
       width: 120,
@@ -52,24 +65,43 @@ export function getExperimentColumns({
       },
     },
     {
-      title: I18n.t('evaluation_object'),
+      title: '评测对象',
       dataIndex: 'eval_target',
       key: 'eval_target',
-      width: 215,
-      render(val) {
+      width: 240,
+      render(val, record) {
+        if (!val) {
+          return (
+            <EvaluationSetPreview
+              evalSet={record.eval_set}
+              enableLinkJump={true}
+              jumpBtnClassName={'show-in-table-row-hover'}
+            />
+          );
+        }
         return (
-          <EvalTargetPreview
-            spaceID={spaceID}
-            evalTarget={val}
-            enableLinkJump={true}
-            showIcon={true}
-            jumpBtnClassName={'show-in-table-row-hover'}
-          />
+          <div className="flex items-center">
+            <div className="min-w-0">
+              <EvalTargetPreview
+                spaceID={spaceID}
+                evalTarget={val}
+                enableLinkJump={true}
+                showIcon={true}
+                jumpBtnClassName={'show-in-table-row-hover'}
+              />
+            </div>
+            {record.target_runtime_param?.json_value &&
+            record.target_runtime_param?.json_value !== '{}' ? (
+              <Tag color="grey" className="shrink-0 hide-in-table-row-hover">
+                动态参数
+              </Tag>
+            ) : null}
+          </div>
         );
       },
     },
     {
-      title: I18n.t('associated_evaluation_set'),
+      title: '关联评测集',
       dataIndex: 'eval_set',
       key: 'eval_set',
       width: 215,
@@ -82,7 +114,7 @@ export function getExperimentColumns({
       ),
     },
     {
-      title: I18n.t('status'),
+      title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -98,7 +130,7 @@ export function getExperimentColumns({
       ),
     },
     {
-      title: I18n.t('score'),
+      title: '得分',
       dataIndex: 'score',
       key: 'score',
       width: 330,
@@ -113,14 +145,14 @@ export function getExperimentColumns({
       ),
     },
     {
-      title: I18n.t('description'),
+      title: '描述',
       dataIndex: 'desc',
       key: 'desc',
       width: 160,
       render: val => <TypographyText>{val || '-'}</TypographyText>,
     },
     {
-      title: I18n.t('creator'),
+      title: '创建人',
       dataIndex: 'base_info.created_by',
       key: 'create_by',
       width: 160,
@@ -132,7 +164,7 @@ export function getExperimentColumns({
         ),
     },
     {
-      title: I18n.t('create_time'),
+      title: '创建时间',
       dataIndex: 'start_time',
       key: 'start_time',
       width: 180,
@@ -141,7 +173,7 @@ export function getExperimentColumns({
       render: val => formateTime(val),
     },
     {
-      title: I18n.t('end_time'),
+      title: '结束时间',
       dataIndex: 'end_time',
       key: 'end_time',
       width: 180,
@@ -161,12 +193,15 @@ export function handleDelete({
   onRefresh?: () => void;
 }) {
   Modal.confirm({
-    title: I18n.t('delete_experiment'),
-    content: I18n.t('confirm_to_delete_x', {
-      name: <span className="font-medium px-[2px]">{record.name}</span>,
-    }),
-    okText: I18n.t('delete'),
-    cancelText: I18n.t('Cancel'),
+    title: '删除实验',
+    content: (
+      <>
+        确定要删除<span className="font-medium px-[2px]">{record.name}</span>
+        吗？此修改将不可逆。
+      </>
+    ),
+    okText: '删除',
+    cancelText: '取消',
     okButtonColor: 'red',
     width: 420,
     autoLoading: true,
@@ -181,6 +216,7 @@ export function handleDelete({
     },
   });
 }
+
 export function handleRetry({
   record,
   spaceID,
@@ -191,10 +227,10 @@ export function handleRetry({
   onRefresh?: () => void;
 }) {
   Modal.confirm({
-    title: I18n.t('retry_experiment'),
-    content: I18n.t('only_re_evaluate_failed_part'),
-    okText: I18n.t('confirm'),
-    cancelText: I18n.t('Cancel'),
+    title: '重试实验',
+    content: '仅针对执行失败的部分重新评测。',
+    okText: '确认',
+    cancelText: '取消',
     width: 420,
     autoLoading: true,
     async onOk() {
@@ -216,13 +252,287 @@ export function handleCopy({
   onOk: () => void;
 }) {
   Modal.confirm({
-    title: I18n.t('copy_experiment_config'),
-    content: I18n.t('copy_and_run_experiment', {
-      name: <span className="font-medium px-[2px]">{record.name}</span>,
-    }),
-    okText: I18n.t('confirm'),
-    cancelText: I18n.t('Cancel'),
+    title: '复制实验配置',
+    content: (
+      <>
+        复制<span className="font-medium px-[2px]">{record.name}</span>
+        配置，直接或修改配置后发起实验。
+      </>
+    ),
+    okText: '确认',
+    cancelText: '取消',
     width: 420,
     onOk,
   });
+}
+
+const downloadFile = (url: string) => {
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+/** 导出状态存储 */
+const exportStorageKey = 'expt_export_status';
+export const getExportStatus = () =>
+  window.localStorage.getItem(exportStorageKey);
+export const setExportStatus = (exptId: string) =>
+  window.localStorage.setItem(exportStorageKey, exptId);
+
+export const clearExportStatus = () =>
+  window.localStorage.removeItem(exportStorageKey);
+
+/** 实验表格导出相关函数&组件 */
+// 简化的通知创建函数，使用共享组件
+function createExportNotification(options: {
+  status: CSVExportStatus;
+  taskId?: string;
+  id?: string;
+  onClose?: () => void;
+  downloadUrl?: string;
+  onViewExportRecord?: () => void;
+  source?: string;
+}) {
+  const {
+    status,
+    taskId,
+    id,
+    onClose,
+    downloadUrl,
+    onViewExportRecord,
+    source,
+  } = options;
+
+  const handleDownloadFile = (url: string) => {
+    // 下载文件埋点
+    sendEvent(EVENT_NAMES.cozeloop_experiment_export_download, {
+      from: `${source}_notification`,
+    });
+    downloadFile(url);
+  };
+
+  return Notification.open({
+    title: React.createElement(ExportNotificationTitle, { status, taskId }),
+    content: React.createElement(ExportNotificationContent, {
+      status,
+      downloadUrl,
+      onViewExportRecord,
+      onDownloadFile: handleDownloadFile,
+    }),
+    duration: 0,
+    id,
+    onClose,
+  });
+}
+
+const pollingExportStatus = async (
+  params: GetExptResultExportRecordRequest,
+  prevId: string,
+  timer?: NodeJS.Timeout,
+  onOpenExportModal?: (experiment: Experiment) => void,
+  taskId?: string,
+  experiment?: Experiment,
+  source?: string,
+) => {
+  const result = await StoneEvaluationApi.GetExptResultExportRecord({
+    workspace_id: params.workspace_id,
+    expt_id: params.expt_id,
+    export_id: params.export_id,
+  });
+
+  const exportRecord = result?.expt_result_export_records;
+
+  const status = exportRecord?.csv_export_status;
+
+  const exportError = exportRecord?.error;
+
+  const onViewExportRecord =
+    onOpenExportModal && experiment
+      ? () => onOpenExportModal(experiment)
+      : undefined;
+
+  if (exportError) {
+    createExportNotification({
+      status: CSVExportStatus.Failed,
+      taskId,
+      id: prevId,
+      onViewExportRecord,
+      source,
+    });
+    clearExportStatus();
+    return;
+  }
+
+  // 1. 导出成功
+  if (status === CSVExportStatus.Success) {
+    createExportNotification({
+      status: CSVExportStatus.Success,
+      taskId,
+      id: prevId,
+      downloadUrl: exportRecord?.URL,
+      onViewExportRecord,
+      source,
+    });
+    clearExportStatus();
+    return;
+  } else if (status === CSVExportStatus.Running) {
+    // 2. 导出中
+    createExportNotification({
+      status: CSVExportStatus.Running,
+      taskId,
+      id: prevId,
+      onClose: () => {
+        clearTimeout(timer);
+      },
+      onViewExportRecord,
+      source,
+    });
+    // 2s 轮询
+    timer = setTimeout(() => {
+      pollingExportStatus(
+        params,
+        prevId,
+        timer,
+        onOpenExportModal,
+        taskId,
+        experiment,
+        source,
+      );
+    }, 2000);
+  } else if (status === CSVExportStatus.Failed) {
+    // 3. 导出失败
+    createExportNotification({
+      status: CSVExportStatus.Failed,
+      taskId,
+      id: prevId,
+      onViewExportRecord,
+      source,
+    });
+    clearExportStatus();
+  }
+};
+
+export const fetchExportStatus = async (
+  params: ExportExptResultRequest,
+  onOpenExportModal?: (experiment: Experiment) => void,
+  experiment?: Experiment,
+  source?: string,
+) => {
+  // 1. 创建导出任务
+  const taskId = Date.now().toString();
+
+  // 使用新的通知创建函数显示初始状态
+  const initId = createExportNotification({
+    status: CSVExportStatus.Running,
+    taskId,
+    onViewExportRecord:
+      onOpenExportModal && experiment
+        ? () => onOpenExportModal(experiment)
+        : undefined,
+    source,
+  });
+
+  // 2. 触发导出
+  const res = await StoneEvaluationApi.ExportExptResult({
+    workspace_id: params.workspace_id,
+    expt_id: params.expt_id,
+    export_type: params.export_type,
+  });
+
+  let timer: NodeJS.Timeout | undefined;
+
+  pollingExportStatus(
+    {
+      workspace_id: params.workspace_id,
+      expt_id: params.expt_id,
+      export_id: res.export_id.toString(),
+    },
+    initId,
+    timer,
+    onOpenExportModal,
+    taskId,
+    experiment,
+    source,
+  );
+};
+
+export function handleExport({
+  record,
+  spaceID,
+  onOpenExportModal,
+  source,
+}: {
+  record: Experiment;
+  spaceID: Int64;
+  onOpenExportModal?: (experiment: Experiment) => void;
+  source?: string;
+}) {
+  let selectedFormat = 'csv'; // 默认选择CSV格式
+
+  Modal.confirm({
+    title: '导出实验明细',
+    content: (
+      <div className="pt-4">
+        <div className="mb-2">
+          <label className="text-sm font-medium">
+            导出格式 <span className="text-red-500">*</span>
+          </label>
+        </div>
+        <Select
+          placeholder="请选择"
+          defaultValue="csv"
+          style={{ width: '100%' }}
+          onChange={value => {
+            selectedFormat = value as string;
+          }}
+        >
+          <Select.Option value="csv">CSV</Select.Option>
+          {/* <Select.Option value="zip">Zip</Select.Option> */}
+        </Select>
+      </div>
+    ),
+    okText: '导出',
+    cancelText: '取消',
+    width: 420,
+    autoLoading: true,
+    onOk() {
+      if (!selectedFormat) {
+        throw new Error('请选择导出格式');
+      }
+
+      sendEvent(EVENT_NAMES.cozeloop_experiment_export_click, {
+        from: source,
+        type: selectedFormat,
+      });
+
+      // 这里调用导出函数 - 参考 export-menu.tsx 的实现
+      fetchExportStatus(
+        {
+          workspace_id: spaceID.toString(),
+          expt_id: record.id ?? '',
+          export_type: selectedFormat as ExptResultExportType,
+        },
+        onOpenExportModal,
+        record, // 传入完整的 experiment 对象
+        source,
+      );
+    },
+  });
+}
+
+export function handleExportRecord({
+  record,
+  onOpenExportModal,
+}: {
+  record: Experiment;
+  onOpenExportModal?: (experiment: Experiment) => void;
+}) {
+  // 如果提供了自定义的打开弹窗函数，打开弹窗
+  if (onOpenExportModal) {
+    onOpenExportModal(record);
+    return;
+  }
 }

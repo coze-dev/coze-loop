@@ -1,9 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
+/* eslint-disable complexity */
 /* eslint-disable max-len */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, type RefObject } from 'react';
+import { type RefObject } from 'react';
 
 import { useRequest } from 'ahooks';
 import {
@@ -25,7 +25,6 @@ import { getEvaluationSetVersion } from '@/request/evaluation-set';
 
 import { evaluateSetValidators } from '../validators/evaluate-set';
 import { EvaluateSetColList } from '../../evaluate-set-col-list';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export interface EvaluateSetFormProps {
   formRef: RefObject<Form<CreateExperimentValues>>;
@@ -51,6 +50,8 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
 
   const { values: formValues } = formState;
 
+  const formApi = formRef.current?.formApi;
+
   const formSetVersionId = formValues?.evaluationSetVersion;
 
   const formSetId = formValues?.evaluationSet;
@@ -63,58 +64,60 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
         workspace_id: spaceID,
         ...params,
       });
-      // 新版本的 field_schemas
-      const newFieldSchemas =
-        evaluationSetVersionDetail.version?.evaluation_set_schema
-          ?.field_schemas;
-
-      const mappingData =
-        formRef.current?.formApi?.getValue('evalTargetMapping');
-      // 挨个清空 evalTargetMapping 中的 key
-      if (mappingData) {
-        const mappingKeys = Object.entries(mappingData) || [];
-        mappingKeys.forEach(([key, value]) => {
-          // 如果当前字段, 在评测集中存在, 就替换, 不存在就清空
-          const findItem = newFieldSchemas?.find(
-            item => item.name === value?.key,
-          );
-          if (findItem) {
-            formRef.current?.formApi?.setValue(
-              `evalTargetMapping.${key}` as any,
-              findItem,
-            );
-          } else {
-            formRef.current?.formApi?.setValue(
-              `evalTargetMapping.${key}` as any,
-              undefined,
-            );
-          }
-        });
+      const mappingData = formApi?.getValue('evalTargetMapping');
+      try {
+        // 挨个清空 evalTargetMapping 中的 key
+        if (mappingData) {
+          const mappingKeys = Object.entries(mappingData) || [];
+          mappingKeys.forEach(([key, value]) => {
+            formApi?.setValue(`evalTargetMapping.${key}` as any, undefined);
+          });
+        }
+        const evaluatorList = formApi?.getValue('evaluatorProList');
+        if (evaluatorList?.length) {
+          evaluatorList.forEach((item, idx) => {
+            const evaluatorMapping = item?.evaluatorMapping;
+            // 计算每一项 evaluator 的新 evaluatorMapping
+            if (evaluatorMapping && Object.keys(evaluatorMapping).length) {
+              const newEvaluatorMapping: any = {};
+              Object.entries(evaluatorMapping).forEach(([key, value]) => {
+                if (!value?.name || !value?.schemaSourceType) {
+                  return;
+                }
+                // 去除评测集的字段映射
+                if (value?.schemaSourceType === 'set') {
+                  newEvaluatorMapping[key] = undefined;
+                  // 保留评测对象的字段映射
+                } else {
+                  newEvaluatorMapping[key] = value;
+                }
+              });
+              formApi?.setValue(
+                `evaluatorProList.${idx}.evaluatorMapping` as any,
+                newEvaluatorMapping,
+              );
+            }
+          });
+        }
+      } catch (e) {
+        console.error('清空 evalTargetMapping 中的 key 失败', e);
       }
-      setCreateExperimentValues(prev => ({
-        ...prev,
-        // 用于渲染的数据, 不在表单上面, 与表单数据有隔离
-        evaluationSetVersionDetail:
-          evaluationSetVersionDetail.version as EvaluationSetVersion,
-        evaluationSetDetail:
-          evaluationSetVersionDetail.evaluation_set as EvaluationSet,
-      }));
+      setCreateExperimentValues(prev => {
+        const payload = {
+          ...prev,
+          // 用于渲染的数据, 不在表单上面, 与表单数据有隔离
+          evaluationSetVersionDetail:
+            evaluationSetVersionDetail.version as EvaluationSetVersion,
+          evaluationSetDetail:
+            evaluationSetVersionDetail.evaluation_set as EvaluationSet,
+        };
+        return payload;
+      });
     },
     {
       manual: true,
     },
   );
-
-  useEffect(() => {
-    if (formSetVersionId && formSetId) {
-      setNextStepLoading(true);
-      versionDetailService.runAsync({
-        version_id: formSetVersionId,
-        evaluation_set_id: formSetId,
-      });
-      setNextStepLoading(false);
-    }
-  }, [formSetId, formSetVersionId]);
 
   const renderColumns = (fieldSchemas?: FieldSchema[]) => {
     if (versionDetailService.loading) {
@@ -130,7 +133,18 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
   };
 
   const handleOnEvaluateSetSelectChange = (v: any) => {
-    formRef.current?.formApi?.setValue('evaluationSetVersion', undefined);
+    formApi?.setValue('evaluationSetVersion', undefined);
+  };
+
+  const handleOnEvaluateSetVersionSelectChange = async (v: any) => {
+    if (v && formSetId) {
+      setNextStepLoading(true);
+      await versionDetailService.runAsync({
+        version_id: v,
+        evaluation_set_id: formSetId,
+      });
+      setNextStepLoading(false);
+    }
   };
 
   return (
@@ -140,10 +154,8 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
           <FormEvaluateSetSelect
             className="w-full"
             field="evaluationSet"
-            label={I18n.t('evaluation_set')}
-            placeholder={I18n.t('please_select', {
-              field: I18n.t('evaluation_set'),
-            })}
+            label="评测集"
+            placeholder={'请选择评测集'}
             rules={evaluateSetValidators.evaluationSet}
             onChange={handleOnEvaluateSetSelectChange}
             onChangeWithObject={false}
@@ -156,7 +168,7 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
               className="w-full"
               field="evaluationSetVersion"
               label={{
-                text: I18n.t('version'),
+                text: '版本',
                 className: 'justify-between pr-0',
                 extra: (
                   <>
@@ -169,25 +181,24 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
                   </>
                 ),
               }}
-              placeholder={I18n.t('please_select', {
-                field: I18n.t('version_number'),
-              })}
+              placeholder={'请选择版本号'}
               rules={evaluateSetValidators.evaluationSetVersion}
+              onChange={handleOnEvaluateSetVersionSelectChange}
             />
           </div>
         </div>
       </div>
-      <Form.Slot label={I18n.t('description')}>
+      <Form.Slot label="描述">
         <div className="text-sm coz-fg-primary font-normal">
           {versionDetail?.description || '-'}
         </div>
       </Form.Slot>
-      <Form.Slot label={I18n.t('column_name')}>
+      <Form.Slot label="列名">
         {formSetVersionId && formSetId
           ? renderColumns(versionDetail?.evaluation_set_schema?.field_schemas)
           : null}
       </Form.Slot>
-      <Form.Slot label={I18n.t('data_total_count')}>
+      <Form.Slot label="数据总量">
         <div className="text-sm coz-fg-primary font-normal">
           {versionDetail?.item_count ?? '-'}
         </div>

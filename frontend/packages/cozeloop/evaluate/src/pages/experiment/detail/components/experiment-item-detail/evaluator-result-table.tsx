@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { LoopTable } from '@cozeloop/components';
 import {
@@ -40,7 +37,7 @@ export default function EvaluatorResultTable({
     );
     const newColumns: ColumnProps<ColumnEvaluator>[] = [
       {
-        title: I18n.t('evaluator'),
+        title: '评估器',
         dataIndex: 'name',
         key: 'name',
         width: 100,
@@ -51,7 +48,7 @@ export default function EvaluatorResultTable({
         },
       },
       {
-        title: I18n.t('status'),
+        title: '状态',
         dataIndex: 'status',
         key: 'status',
         width: hasEvaluatorError ? 200 : 73,
@@ -81,7 +78,7 @@ export default function EvaluatorResultTable({
         },
       },
       {
-        title: I18n.t('score'),
+        title: '得分',
         dataIndex: 'score',
         key: 'score',
         width: 100,
@@ -101,7 +98,7 @@ export default function EvaluatorResultTable({
         },
       },
       {
-        title: I18n.t('score_reason'),
+        title: '得分理由',
         dataIndex: 'reasoning',
         key: 'reasoning',
         align: 'left',

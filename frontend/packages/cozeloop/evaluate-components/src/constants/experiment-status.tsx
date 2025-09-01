@@ -1,7 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
-import { ExptStatus, TurnRunState } from '@cozeloop/api-schema/evaluation';
+import {
+  ExptStatus,
+  TurnRunState,
+  ItemRunState,
+} from '@cozeloop/api-schema/evaluation';
 import {
   IconCozCheckMarkCircleFill,
   IconCozClockFill,
@@ -25,14 +26,14 @@ export interface ExperimentRunStatusInfo {
 /** 实验运行状态信息列表 */
 export const experimentRunStatusInfoList: ExperimentRunStatusInfo[] = [
   {
-    name: I18n.t('success'),
+    name: '成功',
     status: ExptStatus.Success,
     color: 'green',
     tagColor: 'green',
     icon: <IconCozCheckMarkCircleFill />,
   },
   {
-    name: I18n.t('failure'),
+    name: '失败',
     status: ExptStatus.Failed,
     color: 'red',
     tagColor: 'red',
@@ -46,14 +47,14 @@ export const experimentRunStatusInfoList: ExperimentRunStatusInfo[] = [
   //   icon: <IconCozCrossCircleFill />,
   // },
   {
-    name: I18n.t('in_progress'),
+    name: '进行中',
     status: ExptStatus.Processing,
     color: 'blue',
     tagColor: 'blue',
     icon: <IconCozLoading />,
   },
   {
-    name: I18n.t('in_progress'),
+    name: '进行中',
     status: ExptStatus.Draining,
     color: 'blue',
     tagColor: 'blue',
@@ -61,14 +62,14 @@ export const experimentRunStatusInfoList: ExperimentRunStatusInfo[] = [
     icon: <IconCozLoading />,
   },
   {
-    name: I18n.t('abort'),
+    name: '中止',
     status: ExptStatus.Terminated,
     color: 'orange',
     tagColor: 'yellow',
     icon: <IconCozWarningCircleFill />,
   },
   {
-    name: I18n.t('to_be_executed'),
+    name: '待执行',
     status: ExptStatus.Pending,
     color: 'grey',
     tagColor: 'primary',
@@ -87,36 +88,83 @@ export interface ExperimentItemRunStatusInfo {
 /** 实验单条数据记录运行状态信息列表 */
 export const experimentItemRunStatusInfoList: ExperimentItemRunStatusInfo[] = [
   {
-    name: I18n.t('success'),
+    name: '成功',
     status: TurnRunState.Success,
     color: 'green',
     tagColor: 'green',
     icon: <IconCozCheckMarkCircleFill />,
   },
   {
-    name: I18n.t('failure'),
+    name: '失败',
     status: TurnRunState.Fail,
     color: 'red',
     tagColor: 'red',
     icon: <IconCozCrossCircleFill />,
   },
   {
-    name: I18n.t('in_progress'),
+    name: '进行中',
     status: TurnRunState.Processing,
     color: 'blue',
     tagColor: 'blue',
     icon: <IconCozLoading />,
   },
   {
-    name: I18n.t('to_be_executed'),
+    name: '待执行',
     status: TurnRunState.Queueing,
     color: 'grey',
     tagColor: 'primary',
     icon: <IconCozClockFill />,
   },
   {
-    name: I18n.t('abort'),
+    name: '中止',
     status: TurnRunState.Terminal,
+    color: 'orange',
+    tagColor: 'yellow',
+    icon: <IconCozWarningCircleFill />,
+  },
+];
+
+/** 实验对话组运行状态信息 */
+export interface ExprGroupItemRunStatusInfo {
+  name: string;
+  status: ItemRunState;
+  color: string;
+  tagColor: CozeTagColor;
+  icon?: React.ReactNode;
+}
+/** 实验对话组运行状态信息列表 */
+export const exprGroupItemRunStatusInfoList: ExprGroupItemRunStatusInfo[] = [
+  {
+    name: '成功',
+    status: ItemRunState.Success,
+    color: 'green',
+    tagColor: 'green',
+    icon: <IconCozCheckMarkCircleFill />,
+  },
+  {
+    name: '失败',
+    status: ItemRunState.Fail,
+    color: 'red',
+    tagColor: 'red',
+    icon: <IconCozCrossCircleFill />,
+  },
+  {
+    name: '进行中',
+    status: ItemRunState.Processing,
+    color: 'blue',
+    tagColor: 'blue',
+    icon: <IconCozLoading />,
+  },
+  {
+    name: '待执行',
+    status: ItemRunState.Queueing,
+    color: 'grey',
+    tagColor: 'primary',
+    icon: <IconCozClockFill />,
+  },
+  {
+    name: '中止',
+    status: ItemRunState.Terminal,
     color: 'orange',
     tagColor: 'yellow',
     icon: <IconCozWarningCircleFill />,
