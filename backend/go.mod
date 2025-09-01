@@ -38,7 +38,7 @@ require (
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
 	github.com/coze-dev/cozeloop-go v0.1.7
-	github.com/coze-dev/cozeloop-go/spec v0.1.3
+	github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250901062520-61d3699b1e83
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0
