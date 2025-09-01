@@ -1,5 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0			expectedResult: nil,
+// SPDX-License-Identifier: Apache-2.0
 package service
 
 import (
@@ -133,18 +133,18 @@ func TestPromptServiceImpl_ListLabel(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name                 string
-		param                ListLabelParam
-		presetLabels         []string
-		configErr            error
-		userLabels           []*entity.PromptLabel
-		userNextToken        *int64
-		repoErr              error
-		checkUserLabels      []*entity.PromptLabel
-		checkUserErr         error
-		expectedLabels       []*entity.PromptLabel
-		expectedNextToken    *int64
-		expectedError        string
+		name              string
+		param             ListLabelParam
+		presetLabels      []string
+		configErr         error
+		userLabels        []*entity.PromptLabel
+		userNextToken     *int64
+		repoErr           error
+		checkUserLabels   []*entity.PromptLabel
+		checkUserErr      error
+		expectedLabels    []*entity.PromptLabel
+		expectedNextToken *int64
+		expectedError     string
 	}{
 		{
 			name: "first page - preset labels enough to fill page",
@@ -382,7 +382,7 @@ func TestPromptServiceImpl_ListLabel(t *testing.T) {
 				PageToken:    nil,
 			},
 			presetLabels:      nil,
-			configErr:        assert.AnError,
+			configErr:         assert.AnError,
 			expectedLabels:    nil,
 			expectedNextToken: nil,
 			expectedError:     "assert.AnError general error for testing",
@@ -419,7 +419,6 @@ func TestPromptServiceImpl_ListLabel(t *testing.T) {
 			expectedNextToken: nil,
 			expectedError:     "assert.AnError general error for testing",
 		},
-
 	}
 
 	for _, tc := range tests {
@@ -449,7 +448,7 @@ func TestPromptServiceImpl_ListLabel(t *testing.T) {
 			if tc.configErr == nil {
 				// Setup mocks based on the test scenario
 				switch {
-								case tc.param.PageToken == nil:
+				case tc.param.PageToken == nil:
 					// First page scenario
 					// For filtered preset labels, need to calculate actual filtered count
 					filteredCount := len(tc.presetLabels)
@@ -462,7 +461,7 @@ func TestPromptServiceImpl_ListLabel(t *testing.T) {
 							}
 						}
 					}
-					
+
 					if filteredCount < tc.param.PageSize {
 						// Need to fill with user labels
 						mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
@@ -553,36 +552,36 @@ func TestPromptServiceImpl_getFilteredPresetLabels(t *testing.T) {
 		expectedError  string
 	}{
 		{
-			name:         "no filter - return all",
-			labelKeyLike: "",
-			presetLabels: []string{"preset1", "preset2", "preset3"},
-			configErr:    nil,
+			name:           "no filter - return all",
+			labelKeyLike:   "",
+			presetLabels:   []string{"preset1", "preset2", "preset3"},
+			configErr:      nil,
 			expectedResult: []string{"preset1", "preset2", "preset3"},
-			expectedError: "",
+			expectedError:  "",
 		},
 		{
-			name:         "with filter - partial match",
-			labelKeyLike: "test",
-			presetLabels: []string{"test_preset", "other_preset", "preset_test", "another"},
-			configErr:    nil,
+			name:           "with filter - partial match",
+			labelKeyLike:   "test",
+			presetLabels:   []string{"test_preset", "other_preset", "preset_test", "another"},
+			configErr:      nil,
 			expectedResult: []string{"test_preset", "preset_test"},
-			expectedError: "",
+			expectedError:  "",
 		},
 		{
-			name:         "with filter - no match",
-			labelKeyLike: "nonexistent",
-			presetLabels: []string{"preset1", "preset2", "preset3"},
-			configErr:    nil,
+			name:           "with filter - no match",
+			labelKeyLike:   "nonexistent",
+			presetLabels:   []string{"preset1", "preset2", "preset3"},
+			configErr:      nil,
 			expectedResult: nil,
-			expectedError: "",
+			expectedError:  "",
 		},
 		{
-			name:         "empty preset labels",
-			labelKeyLike: "",
-			presetLabels: []string{},
-			configErr:    nil,
+			name:           "empty preset labels",
+			labelKeyLike:   "",
+			presetLabels:   []string{},
+			configErr:      nil,
 			expectedResult: []string{},
-			expectedError: "",
+			expectedError:  "",
 		},
 		{
 			name:           "config provider error",
