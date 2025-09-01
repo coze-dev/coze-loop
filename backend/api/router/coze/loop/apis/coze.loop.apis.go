@@ -359,6 +359,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			{
 				_traces0 := _loop.Group("/traces", _traces0Mw(handler)...)
 				_traces0.POST("/ingest", append(_ingesttracesMw(handler), apis.IngestTraces)...)
+				_traces0.POST("/list", append(_listtracesoapiMw(handler), apis.ListTracesOApi)...)
 				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
 			}
 		}
