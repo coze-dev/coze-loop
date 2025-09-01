@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -77,12 +78,14 @@ func NewTaskServiceImpl(
 	tenantProvider tenant.ITenantProvider,
 	evalServiceAdaptor rpc.IEvaluatorRPCAdapter,
 	userProvider rpc.IUserProvider,
+	idGenerator idgen.IIDGenerator,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:           tRepo,
 		tenantProvider:     tenantProvider,
 		evalServiceAdaptor: evalServiceAdaptor,
 		userProvider:       userProvider,
+		idGenerator:        idGenerator,
 	}, nil
 }
 
@@ -91,6 +94,7 @@ type TaskServiceImpl struct {
 	tenantProvider     tenant.ITenantProvider
 	evalServiceAdaptor rpc.IEvaluatorRPCAdapter
 	userProvider       rpc.IUserProvider
+	idGenerator        idgen.IIDGenerator
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
@@ -98,7 +102,11 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
-	taskPO := tconv.CreateTaskDTO2PO(ctx, req.Task, userID)
+	genID, err := t.idGenerator.GenID(ctx)
+	if err != nil {
+		return resp, err
+	}
+	taskPO := tconv.CreateTaskDTO2PO(ctx, genID, req.Task, userID)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
