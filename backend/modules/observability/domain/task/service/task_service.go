@@ -42,7 +42,7 @@ type ListTasksReq struct {
 	TaskFilters *filter.TaskFilterFields
 	Limit       int32
 	Offset      int32
-	OrderBy     common.OrderBy
+	OrderBy     *common.OrderBy
 }
 type ListTasksResp struct {
 	Tasks []*task.Task
@@ -158,7 +158,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		TaskFilters:  req.TaskFilters,
 		ReqLimit:     req.Limit,
 		ReqOffset:    req.Offset,
-		OrderBy:      req.OrderBy,
+		OrderBy:      *req.OrderBy,
 	})
 	if len(taskPOs) == 0 {
 		logs.CtxInfo(ctx, "GetTasks tasks is nil")
