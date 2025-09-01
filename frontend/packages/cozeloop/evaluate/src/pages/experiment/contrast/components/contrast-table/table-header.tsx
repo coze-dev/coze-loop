@@ -1,28 +1,28 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useMemo, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   LogicEditor,
-  EvaluatorPreview,
   type LogicFilter,
   ColumnsManage,
   RefreshButton,
-  uniqueExperimentsEvaluators,
 } from '@cozeloop/evaluate-components';
-import { type Experiment } from '@cozeloop/api-schema/evaluation';
+import {
+  type ColumnEvaluator,
+  type Experiment,
+} from '@cozeloop/api-schema/evaluation';
 import { type ColumnProps } from '@coze-arch/coze-design';
 
+import { type ColumnInfo } from '@/types/experiment/experiment-contrast';
 import { TableHeader } from '@/components/table-for-experiment';
+import { AnnotationInfo, EvaluatorInfo } from '@/components/info-tag';
 import TableCellExpand from '@/components/common/table-cell-expand';
 
-import { type ExperimentContrastItem } from '../../utils/tools';
 import { getExperimentContrastLogicFields } from '../../utils/logic-filter-tools';
 
 // eslint-disable-next-line @coze-arch/max-line-per-function
 export default function ExperimentContrastTableHeader({
   experiments = [],
+  columnInfosMap,
   columnManageStorageKey,
   columns,
   logicFilter,
@@ -36,6 +36,7 @@ export default function ExperimentContrastTableHeader({
   onRefresh,
 }: {
   experiments: Experiment[] | undefined;
+  columnInfosMap?: Record<string, ColumnInfo[]>;
   columnManageStorageKey: string;
   columns: ColumnProps[];
   logicFilter: LogicFilter | undefined;
@@ -83,6 +84,7 @@ export default function ExperimentContrastTableHeader({
           newHiddenEvalutorMap[column.key ?? ''] = column.hidden;
         }
       });
+
       setHiddenFieldMap(newHiddenEvalutorMap);
       // 存储列管理数据到本地
       localStorage.setItem(
@@ -98,20 +100,39 @@ export default function ExperimentContrastTableHeader({
 
   useEffect(() => {
     const newColumns = columns.filter(column => column.canManage);
-    const evaluators = uniqueExperimentsEvaluators(experiments);
-    const evaluatorColumns: ColumnProps<ExperimentContrastItem>[] =
-      evaluators.map(evaluator => ({
-        title: <EvaluatorPreview evaluator={evaluator} />,
-        displayName: `${evaluator?.name} v${evaluator?.current_version?.version}`,
-        // title: `${evaluator?.name} v${evaluator?.current_version?.version}`,
-        dataIndex: `${evaluator?.current_version?.id ?? ''}`,
-        key: `${evaluator?.current_version?.id ?? ''}`,
-        // 标记为评估器列
+
+    // 去重
+    const columnInfos: ColumnInfo[] = Object.values(
+      columnInfosMap || {},
+    ).reduce((prev, cur) => {
+      prev.push(...cur);
+      return prev;
+    }, []);
+
+    const columnInfoMap: Record<string, ColumnInfo> = {};
+    columnInfos.forEach(item => {
+      if (columnInfoMap[item.key]) {
+        return;
+      }
+      columnInfoMap[item.key] = item;
+    });
+
+    const fieldColumns = Object.values(columnInfoMap)
+      .sort(a => (a.type === 'evaluator' ? -1 : 1))
+      .map(item => ({
+        title:
+          item.type === 'evaluator' ? (
+            <EvaluatorInfo evaluator={item.data as ColumnEvaluator} />
+          ) : (
+            <AnnotationInfo annotation={item.data} />
+          ),
+        dataIndex: item.key,
+        key: item.key,
         isFieldColumn: true,
-        hidden: hiddenFieldMap[evaluator?.current_version?.id ?? ''] ?? false,
+        hidden: hiddenFieldMap[item.key] ?? false,
       }));
 
-    newColumns.push(...evaluatorColumns);
+    newColumns.push(...fieldColumns);
 
     newColumns.push(
       ...[
@@ -130,7 +151,7 @@ export default function ExperimentContrastTableHeader({
         //   hidden: hiddenFieldMap.token ?? false,
         // },
         {
-          title: I18n.t('status'),
+          title: '状态',
           dataIndex: 'status',
           key: 'status',
           isFieldColumn: true,
@@ -145,7 +166,7 @@ export default function ExperimentContrastTableHeader({
         hidden: false,
       })),
     );
-  }, [columns, experiments, hiddenFieldMap]);
+  }, [columns, columnInfosMap, hiddenFieldMap]);
 
   const filters = (
     <>

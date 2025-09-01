@@ -1,10 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useMemo, useState } from 'react';
 
 import classNames from 'classnames';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { TableWithPagination } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -130,6 +127,7 @@ export function DatasetRelatedExperiment({
     filterFields,
     columnsOptions,
     pullExperiments,
+    source: sourceName,
   });
 
   const experiments = service.data?.list;
@@ -164,10 +162,10 @@ export function DatasetRelatedExperiment({
 
   const chartHeader = (
     <div className="flex items-center gap-1 w-full h-8">
-      <div className="text-sm font-semibold">{I18n.t('overview')}</div>
+      <div className="text-sm font-semibold">总览</div>
       <Tooltip
         theme="dark"
-        content={I18n.t('aggregate_statistics_score_on_metrics')}
+        content="在实验列表中，聚合统计各实验在指标上的得分。"
       >
         <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
       </Tooltip>
@@ -185,7 +183,7 @@ export function DatasetRelatedExperiment({
               updateChartConfig('chartType', e.target.value);
             }}
           >
-            <Tooltip content={I18n.t('line_chart')} theme="dark">
+            <Tooltip content="折线图" theme="dark">
               <Radio
                 value="line"
                 addonClassName="flex items-center"
@@ -194,7 +192,7 @@ export function DatasetRelatedExperiment({
                 <IconCozLineChart className="text-xxl" />
               </Radio>
             </Tooltip>
-            <Tooltip content={I18n.t('bar_chart')} theme="dark">
+            <Tooltip content="柱状图" theme="dark">
               <Radio
                 value="bar"
                 addonClassName="flex items-center"
@@ -205,10 +203,8 @@ export function DatasetRelatedExperiment({
             </Tooltip>
           </Radio.Group>
           <Select
-            prefix={I18n.t('indicator')}
-            placeholder={I18n.t('please_select', {
-              field: I18n.t('indicator'),
-            })}
+            prefix="指标"
+            placeholder="请选择"
             style={{ minWidth: 200 }}
             multiple={true}
             maxTagCount={1}
@@ -274,7 +270,7 @@ export function DatasetRelatedExperiment({
                   setSelectedExperiments([]);
                 }}
               >
-                {I18n.t('batch_select')}
+                批量选择
               </Button>
             )}
           </>
@@ -310,9 +306,7 @@ export function DatasetRelatedExperiment({
           </div>
         ) : null}
       </div>
-      <div className="text-sm font-semibold mt-5 mb-3">
-        {I18n.t('experiment_list')}
-      </div>
+      <div className="text-sm font-semibold mt-5 mb-3">实验列表</div>
       <TableWithPagination<Experiment>
         service={service}
         heightFull={false}

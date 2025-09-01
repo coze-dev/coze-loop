@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const transformValueToArray = (
   value: any,

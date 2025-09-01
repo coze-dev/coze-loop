@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozLoose, IconCozTight } from '@coze-arch/coze-design/icons';
 import { Radio, Tooltip } from '@coze-arch/coze-design';
 
@@ -21,7 +18,7 @@ export default function TableCellExpand({
       value={expand ? 'expand' : 'shrink'}
       onChange={e => onChange?.(e.target.value === 'expand' ? true : false)}
     >
-      <Tooltip content={I18n.t('compact_view')} theme="dark">
+      <Tooltip content="紧凑视图" theme="dark">
         <Radio
           value="shrink"
           addonClassName="flex items-center"
@@ -30,7 +27,7 @@ export default function TableCellExpand({
           <IconCozTight className="text-xxl" />
         </Radio>
       </Tooltip>
-      <Tooltip content={I18n.t('loose_view')} theme="dark">
+      <Tooltip content="宽松视图" theme="dark">
         <Radio
           value="expand"
           addonClassName="flex items-center"

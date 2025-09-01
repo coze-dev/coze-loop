@@ -1,0 +1,185 @@
+@node-height: 32px;
+@vertical-padding: 4px;
+@arrow-size: 20px;
+@space-size: 20px;
+
+.tree {
+  :global {
+    .tree-container {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .tree-node {
+      position: relative;
+    }
+
+    .tree-node-content {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      min-height: @node-height + @vertical-padding;
+    }
+
+    .tree-lines {
+      position: relative;
+      display: flex;
+      align-self: stretch;
+    }
+
+    .tree-line-vertical {
+      position: relative;
+      align-self: stretch;
+      width: @space-size;
+      min-height: 100%;
+    }
+
+    .tree-expand-line.expanded::before {
+      content: '';
+
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 10px;
+
+      width: 1px;
+
+      background-color: #d0d0d0;
+      // background-color: #f008;
+    }
+
+    .tree-line-vertical.visible::before {
+      content: '';
+
+      position: absolute;
+      top: -50%;
+      bottom: 0;
+      left: 10px;
+
+      width: 1px;
+
+      background-color: #d0d0d0;
+    }
+
+    .tree-line-horizontal {
+      position: relative;
+      align-self: stretch;
+      width: @space-size;
+      min-height: 100%;
+    }
+
+    .tree-line-horizontal::before {
+      content: '';
+
+      position: absolute;
+      // top: -50%;
+      // height: calc(50% + 16px);
+      top: 0;
+      left: 10px;
+
+      width: 1px;
+      height: 100%;
+
+      background-color: #d0d0d0;
+    }
+
+    .tree-line-horizontal.last::before {
+      content: '';
+
+      position: absolute;
+      // top: -50%;
+      // height: calc(50% + 16px);
+      top: 0;
+      left: 10px;
+
+      width: 1px;
+      // height: 16px;
+      height: (@node-height / 2) + @vertical-padding;
+
+      background-color: #d0d0d0;
+    }
+
+    .tree-line-horizontal::after {
+      content: '';
+
+      position: absolute;
+      top: (@node-height / 2) + @vertical-padding;
+      left: 10px;
+
+      width: 10px;
+      height: 1px;
+
+      background-color: #d0d0d0;
+    }
+
+    .tree-line-connector {
+      align-self: stretch;
+      width: 0;
+    }
+
+    .tree-expand-button {
+      cursor: pointer;
+      user-select: none;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      box-sizing: content-box;
+      width: @arrow-size;
+      height: @node-height;
+      padding-top: @vertical-padding;
+    }
+
+    .tree-arrow {
+      transform: rotate(-90deg);
+      font-size: 14px;
+      color: #666;
+      transition: transform 0.2s ease;
+    }
+
+    .tree-arrow.expanded {
+      transform: rotate(0deg);
+    }
+
+    .tree-arrow-placeholder {
+      width: 10px;
+      height: 10px;
+    }
+
+    .tree-label {
+      flex: 1;
+
+      // padding-top: 4px;
+
+      // padding: @vertical-padding @vertical-padding;
+
+      line-height: 1.4;
+      color: #333;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: normal;
+    }
+
+    .tree-children {
+      position: relative;
+    }
+
+    /* 为第一级子节点添加特殊处理 */
+    .tree-node:first-child .tree-line-vertical.visible::before {
+      top: 0;
+    }
+
+    .tree-node:first-child .tree-line-horizontal::before {
+      top: 0;
+      height: 100%;
+    }
+
+    .tree-node:first-child .tree-line-horizontal.last::before {
+      top: 0;
+      height: (@node-height / 2) + @vertical-padding;
+    }
+  }
+}

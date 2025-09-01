@@ -1,18 +1,17 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { Tooltip } from '@coze-arch/coze-design';
 
-interface Props {
+export function OpenDetailText({
+  className,
+  text,
+  url,
+}: {
   url: string;
   className?: string;
   text?: string;
-}
-
-export function OpenDetailText({ className, text, url }: Props) {
+}) {
   return (
-    <Tooltip theme="dark" content={I18n.t('view_detail')}>
+    <Tooltip theme="dark" content="查看详情">
       <div
         className={classNames(
           'flex-shrink-0 text-sm text-brand-9 font-normal cursor-pointer !p-[2px] ',
@@ -23,7 +22,7 @@ export function OpenDetailText({ className, text, url }: Props) {
           window.open(url);
         }}
       >
-        {text || I18n.t('view_detail')}
+        {text || '查看详情'}
       </div>
     </Tooltip>
   );

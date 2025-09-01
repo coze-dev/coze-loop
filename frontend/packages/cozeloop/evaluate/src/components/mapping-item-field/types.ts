@@ -1,13 +1,21 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
-import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
-
 export type SchemaSourceType = 'set' | 'target';
 
-export type OptionSchema = FieldSchema & {
+export interface ExpandedProperty {
+  key: string;
+  name?: string;
+  label: string;
+  type: string;
+  description?: string;
+  schemaSourceType?: SchemaSourceType;
+}
+
+export interface OptionSchema {
+  name?: string;
+  description?: string;
   schemaSourceType: SchemaSourceType;
-};
+  expandedProperties?: ExpandedProperty[];
+  fieldType?: string;
+}
 
 export interface OptionGroup {
   schemaSourceType: SchemaSourceType;
@@ -15,6 +23,6 @@ export interface OptionGroup {
 }
 
 export const schemaSourceTypeMap = {
-  set: I18n.t('evaluation_set'),
-  target: I18n.t('evaluation_object'),
+  set: '评测集',
+  target: '评测对象',
 };

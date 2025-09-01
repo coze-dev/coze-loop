@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet, IDRender } from '@cozeloop/components';
 import {
   type Experiment,
@@ -8,6 +5,7 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { Spin } from '@coze-arch/coze-design';
 
+import { type ColumnInfo } from '@/types/experiment/experiment-contrast';
 import { DetailItemStepSwitch } from '@/types';
 import { type ExperimentDetailActiveItemStore } from '@/hooks/use-experiment-detail-active-item';
 
@@ -16,6 +14,7 @@ import ContrastItemDetailTable from './contrast-item-detail-table';
 
 export default function ExperimentContrastItemDetail({
   experiments = [],
+  columnInfosMap,
   datasetFieldSchemas = [],
   spaceID,
   activeItemStore,
@@ -23,6 +22,7 @@ export default function ExperimentContrastItemDetail({
   onStepChange,
 }: {
   experiments: Experiment[];
+  columnInfosMap?: Record<string, ColumnInfo[]>;
   datasetFieldSchemas: FieldSchema[];
   spaceID: Int64;
   activeItemStore: ExperimentDetailActiveItemStore<ExperimentContrastItem>;
@@ -39,12 +39,11 @@ export default function ExperimentContrastItemDetail({
       closable={false}
       title={
         <div className="flex items-center gap-2">
-          {I18n.t('compare_experiment_detail')}{' '}
-          <IDRender id={experimentContrastItem?.groupID ?? ''} />
+          对比实验详情 <IDRender id={experimentContrastItem?.groupID ?? ''} />
         </div>
       }
       dragOptions={{
-        defaultWidth: 880,
+        defaultWidth: 1200,
         minWidth: 448,
         maxWidth: 1382,
       }}
@@ -55,10 +54,12 @@ export default function ExperimentContrastItemDetail({
         <Spin
           spinning={activeItemStore.loading}
           wrapperClassName="!h-full overflow-hidden"
-          childStyle={{ height: '100%' }}
+          childStyle={{ height: '100%', overflow: 'auto' }}
         >
           <ContrastItemDetailTable
+            containerClassName={'!overflow-auto !h-auto'}
             experiments={experiments}
+            columnInfosMap={columnInfosMap}
             datasetFieldSchemas={datasetFieldSchemas}
             datasetRow={experimentContrastItem?.datasetRow}
             experimentsDatasetRow={

@@ -1,8 +1,5 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useMemo, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TypographyText,
   getExperimentNameWithIndex,
@@ -21,6 +18,7 @@ import {
 import { Dropdown, type ColumnProps } from '@coze-arch/coze-design';
 
 import { getDatasetColumns } from '@/utils/experiment';
+import { type ColumnInfo } from '@/types/experiment/experiment-contrast';
 import { type DatasetRow } from '@/types';
 import { ExperimentItemDetailTable } from '@/components/experiment';
 
@@ -55,10 +53,12 @@ function getExperimentContrastDetailColumns({
   experiments,
   spaceID,
   onRefresh,
+  columnInfosMap,
 }: {
   experiments: Experiment[];
   spaceID: Int64;
   onRefresh?: () => void;
+  columnInfosMap?: Record<string, ColumnInfo[]>;
 }) {
   const columns = (experiments ?? []).map((experiment, index) => {
     const column: ColumnProps<ExperimentContrastItem> = {
@@ -79,6 +79,7 @@ function getExperimentContrastDetailColumns({
             expand={true}
             result={result}
             experiment={experiment}
+            columnInfos={columnInfosMap?.[experiment.id]}
             spaceID={spaceID}
             onRefresh={onRefresh}
           />
@@ -98,6 +99,8 @@ export default function ContrastItemDetailTable({
   experimentContrastItem,
   spaceID,
   onRefresh,
+  containerClassName,
+  columnInfosMap,
 }: {
   experiments: Experiment[];
   datasetFieldSchemas: FieldSchema[];
@@ -106,6 +109,8 @@ export default function ContrastItemDetailTable({
   experimentContrastItem: ExperimentContrastItem;
   spaceID: Int64;
   onRefresh?: () => void;
+  containerClassName?: string;
+  columnInfosMap?: Record<string, ColumnInfo[]>;
 }) {
   const [showDataset, setShowDataset] = useState(false);
   const [columns, setColumns] = useState<ColumnProps[]>([]);
@@ -131,18 +136,21 @@ export default function ContrastItemDetailTable({
       }
       const newColumns = getExperimentContrastDetailColumns({
         experiments,
+        columnInfosMap,
         spaceID,
         onRefresh,
       });
       return newColumns;
     });
-  }, [experiments, spaceID, experimentContrastItem]);
+  }, [experiments, columnInfosMap, spaceID, experimentContrastItem]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div
+      className={`h-full flex flex-col overflow-hidden ${containerClassName ?? ''}`}
+    >
       <div className="flex items-center shrink-0 bg-[var(--coz-mg-secondary)] py-3 px-5 text-sm font-medium">
         <TypographyText>{selectedExperimentText}</TypographyText>
-        <span className="shrink-0 ml-1">- {I18n.t('evaluation_set')}</span>
+        <span className="shrink-0 ml-1">- 评测集</span>
         {showDataset ? (
           <Dropdown
             position="bottomLeft"
@@ -162,7 +170,7 @@ export default function ContrastItemDetailTable({
           onClick={() => setShowDataset(!showDataset)}
         >
           <span className="text-xs font-normal">
-            {showDataset ? I18n.t('collapse') : I18n.t('expand')}
+            {showDataset ? '收起' : '展开'}
           </span>
           {showDataset ? <IconCozArrowDown /> : <IconCozArrowRight />}
         </div>

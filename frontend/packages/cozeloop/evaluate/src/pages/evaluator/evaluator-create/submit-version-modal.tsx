@@ -1,13 +1,10 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 import { useEffect, useRef } from 'react';
 
 import { nanoid } from 'nanoid';
 import { merge } from 'lodash-es';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
@@ -35,7 +32,6 @@ export function SubmitVersionModal({
   onSuccess?: (evaluatorID?: Int64, newEvaluator?: Evaluator) => void;
 }) {
   const { spaceID } = useSpace();
-
   const formRef = useRef<Form>(null);
   const isAppend = type === 'append';
 
@@ -101,40 +97,36 @@ export function SubmitVersionModal({
 
   return (
     <Modal
-      title={
-        isAppend ? I18n.t('submit_new_version') : I18n.t('create_evaluator')
-      }
+      title={isAppend ? '提交新版本' : '创建评估器'}
       visible={visible}
-      cancelText={I18n.t('Cancel')}
+      cancelText={'取消'}
       onCancel={onCancel}
-      okText={isAppend ? I18n.t('submit') : I18n.t('confirm')}
+      okText={isAppend ? '提交' : '确定'}
       onOk={handleOK}
       width={600}
     >
       <Form ref={formRef}>
         <FormInput
           label={{
-            text: I18n.t('version'),
+            text: '版本',
             required: true,
             extra: (
-              <Tooltip content={I18n.t('version_number_format')}>
+              <Tooltip content={'版本号格式为a.b.c，且每段为0-9999'}>
                 <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
               </Tooltip>
             ),
           }}
           field="current_version.version"
-          placeholder={I18n.t('please_input', { field: I18n.t('version') })}
+          placeholder={'请输入版本号'}
           rules={[
             {
               validator: (_rule, value) => {
                 if (!value) {
-                  return new Error(
-                    I18n.t('please_input', { field: I18n.t('version') }),
-                  );
+                  return new Error('请输入版本号');
                 }
                 const reg = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
                 if (!reg.test(value)) {
-                  return new Error(I18n.t('version_number_format'));
+                  return new Error('版本号格式为a.b.c，且每段为0-9999');
                 }
                 if (type === 'append') {
                   const latestVersion = evaluator?.latest_version;
@@ -143,9 +135,7 @@ export function SubmitVersionModal({
                     compareVersions(value, latestVersion) <= 0
                   ) {
                     return new Error(
-                      I18n.t('version_number_gt_current', {
-                        version: latestVersion,
-                      }),
+                      `版本号必须大于当前版本号：${latestVersion}`,
                     );
                   }
                 }
@@ -156,11 +146,9 @@ export function SubmitVersionModal({
           ]}
         />
         <FormTextArea
-          label={I18n.t('version_description')}
+          label="版本说明"
           field="current_version.description"
-          placeholder={I18n.t('please_input', {
-            field: I18n.t('version_description'),
-          })}
+          placeholder={'请输入版本说明'}
           maxCount={200}
           maxLength={200}
         />
