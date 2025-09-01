@@ -92,10 +92,10 @@ try {
     
     // 语法正确，输出JSON结果
     const result = {"valid": true, "error": null};
-    console.log(JSON.stringify(result));
+    return_val(result);
 } catch (error) {
     // 捕获语法错误，输出JSON结果
     const result = {"valid": false, "error": "语法错误: " + error.message};
-    console.log(JSON.stringify(result));
+    return_val(result);
 }
 `
