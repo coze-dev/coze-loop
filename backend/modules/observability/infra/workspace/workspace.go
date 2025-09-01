@@ -22,3 +22,7 @@ func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans 
 	}
 	return spans[0].WorkspaceID
 }
+
+func (t *WorkspaceProviderImpl) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) int64 {
+	return requestWorkspaceID
+}

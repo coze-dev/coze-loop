@@ -23,6 +23,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	traced "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/trace"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -150,6 +152,9 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 	spansMap := make(map[string][]*span.InputSpan)
 	for i := range spans {
 		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]})
+		if workspaceID == "" {
+			continue
+		}
 		if spansMap[workspaceID] == nil {
 			spansMap[workspaceID] = make([]*span.InputSpan, 0)
 		}
@@ -450,6 +455,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	if err := o.validateSearchOApiTraceReq(ctx, req); err != nil {
 		return nil, err
 	}
+	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
 	if err := o.auth.CheckQueryPermission(ctx,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
 		return nil, err
@@ -532,6 +538,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	if err := o.validateListSpansOApi(ctx, req); err != nil {
 		return nil, err
 	}
+	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
 	if err := o.auth.CheckQueryPermission(ctx,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
 		return nil, err
@@ -620,6 +627,80 @@ func (o *OpenAPIApplication) buildListSpansOApiReq(ctx context.Context, req *ope
 	}
 	ret.Tenants = tenants
 	return ret, nil
+}
+
+func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest) (*openapi.ListTracesOApiResponse, error) {
+	if err := o.validateListTracesOApiReq(ctx, req); err != nil {
+		return nil, err
+	}
+	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
+	if err := o.auth.CheckQueryPermission(ctx,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "ListTracesOApi request: %+v", req)
+	sReq := o.buildListTracesOApiReq(req)
+	sResp, err := o.traceService.GetTracesAdvanceInfo(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+	traces := make([]*traced.Trace, 0)
+	for _, info := range sResp.Infos {
+		traces = append(traces, tconv.AdvanceInfoDO2TraceDTO(info))
+	}
+	return &openapi.ListTracesOApiResponse{
+		Data: &openapi.ListTracesData{
+			Traces: traces,
+		},
+	}, nil
+}
+
+func (o *OpenAPIApplication) validateListTracesOApiReq(ctx context.Context, req *openapi.ListTracesOApiRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if len(req.GetTraceIds()) < 1 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid traces"))
+	}
+	for _, id := range req.TraceIds {
+		if id == "" {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+		}
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: o.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return err
+	}
+	req.SetStartTime(newStartTime)
+	req.SetEndTime(newEndTime)
+	return nil
+}
+
+func (o *OpenAPIApplication) buildListTracesOApiReq(req *openapi.ListTracesOApiRequest) *service.GetTracesAdvanceInfoReq {
+	ret := &service.GetTracesAdvanceInfoReq{
+		WorkspaceID: req.GetWorkspaceID(),
+		Traces:      make([]*service.TraceQueryParam, len(req.GetTraceIds())),
+	}
+	for i, id := range req.GetTraceIds() {
+		ret.Traces[i] = &service.TraceQueryParam{
+			TraceID:   id,
+			StartTime: req.GetStartTime(),
+			EndTime:   req.GetEndTime(),
+		}
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	ret.PlatformType = platformType
+	return ret
 }
 
 func (o *OpenAPIApplication) Send(ctx context.Context, event *entity.AnnotationEvent) error {

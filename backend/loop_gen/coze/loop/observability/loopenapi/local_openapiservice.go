@@ -106,6 +106,27 @@ func (l *LocalOpenAPIService) ListSpansOApi(ctx context.Context, req *openapi.Li
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalOpenAPIService) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (*openapi.ListTracesOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceListTracesOApiArgs)
+		result := out.(*openapi.OpenAPIServiceListTracesOApiResult)
+		resp, err := l.impl.ListTracesOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceListTracesOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceListTracesOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListTracesOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalOpenAPIService) CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (*openapi.CreateAnnotationResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.OpenAPIServiceCreateAnnotationArgs)
