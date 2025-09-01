@@ -28,7 +28,7 @@ func (p *PromptFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) (
 		{
 			FieldName: loop_span.SpanFieldCallType,
 			FieldType: loop_span.FieldTypeString,
-			Values:    []string{"PromptPlayground", "PromptDebug"},
+			Values:    []string{"PromptPlayground", "PromptDebug", "PTaaS"},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}, false, nil
