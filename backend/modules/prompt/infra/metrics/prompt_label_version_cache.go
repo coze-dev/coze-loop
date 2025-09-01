@@ -25,7 +25,6 @@ func promptLabelVersionCacheMtrTags() []string {
 	}
 }
 
-
 var (
 	promptLabelVersionCacheMetrics         *PromptLabelVersionCacheMetrics
 	promptLabelVersionCacheMetricsInitOnce sync.Once
@@ -45,17 +44,14 @@ func NewPromptLabelVersionCacheMetrics(meter metrics.Meter) *PromptLabelVersionC
 	return promptLabelVersionCacheMetrics
 }
 
-
 type PromptLabelVersionCacheMetrics struct {
 	metric metrics.Metric
 }
-
 
 type PromptLabelVersionCacheMetricsParam struct {
 	HitNum  int
 	MissNum int
 }
-
 
 func (p *PromptLabelVersionCacheMetrics) MEmit(ctx context.Context, param PromptLabelVersionCacheMetricsParam) {
 	if p == nil || p.metric == nil {
@@ -82,4 +78,3 @@ func (p *PromptLabelVersionCacheMetrics) MEmit(ctx context.Context, param Prompt
 		}, metrics.Counter(int64(param.MissNum), metrics.WithSuffix(getSuffix+throughputSuffix)))
 	}
 }
-

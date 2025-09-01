@@ -472,11 +472,11 @@ func TestLabelRepoImpl_BatchGetLabel(t *testing.T) {
 
 func TestLabelRepoImpl_UpdateCommitLabels(t *testing.T) {
 	type fields struct {
-		db                             db.Provider
-		idgen                          idgen.IIDGenerator
-		commitLabelMappingDAO          mysql.ICommitLabelMappingDAO
-		promptBasicDAO                 mysql.IPromptBasicDAO
-		promptLabelVersionDAO          redis.IPromptLabelVersionDAO
+		db                    db.Provider
+		idgen                 idgen.IIDGenerator
+		commitLabelMappingDAO mysql.ICommitLabelMappingDAO
+		promptBasicDAO        mysql.IPromptBasicDAO
+		promptLabelVersionDAO redis.IPromptLabelVersionDAO
 	}
 	type args struct {
 		ctx   context.Context
@@ -544,11 +544,11 @@ func TestLabelRepoImpl_UpdateCommitLabels(t *testing.T) {
 				mockCacheDAO.EXPECT().MDel(gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
-					db:                     mockDB,
-					idgen:                  mockIDGen,
-					commitLabelMappingDAO:  mockCommitLabelMappingDAO,
-					promptBasicDAO:         mockPromptBasicDAO,
-					promptLabelVersionDAO:  mockCacheDAO,
+					db:                    mockDB,
+					idgen:                 mockIDGen,
+					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					promptBasicDAO:        mockPromptBasicDAO,
+					promptLabelVersionDAO: mockCacheDAO,
 				}
 			},
 			args: args{
@@ -597,11 +597,11 @@ func TestLabelRepoImpl_UpdateCommitLabels(t *testing.T) {
 				mockCacheDAO.EXPECT().MDel(gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
-					db:                     mockDB,
-					idgen:                  mockIDGen,
-					commitLabelMappingDAO:  mockCommitLabelMappingDAO,
-					promptBasicDAO:         mockPromptBasicDAO,
-					promptLabelVersionDAO:  mockCacheDAO,
+					db:                    mockDB,
+					idgen:                 mockIDGen,
+					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					promptBasicDAO:        mockPromptBasicDAO,
+					promptLabelVersionDAO: mockCacheDAO,
 				}
 			},
 			args: args{
@@ -651,11 +651,11 @@ func TestLabelRepoImpl_UpdateCommitLabels(t *testing.T) {
 				mockCacheDAO.EXPECT().MDel(gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
-					db:                     mockDB,
-					idgen:                  mockIDGen,
-					commitLabelMappingDAO:  mockCommitLabelMappingDAO,
-					promptBasicDAO:         mockPromptBasicDAO,
-					promptLabelVersionDAO:  mockCacheDAO,
+					db:                    mockDB,
+					idgen:                 mockIDGen,
+					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					promptBasicDAO:        mockPromptBasicDAO,
+					promptLabelVersionDAO: mockCacheDAO,
 				}
 			},
 			args: args{
@@ -680,11 +680,11 @@ func TestLabelRepoImpl_UpdateCommitLabels(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			r := &LabelRepoImpl{
-				db:                     ttFields.db,
-				idgen:                  ttFields.idgen,
-				commitLabelMappingDAO:  ttFields.commitLabelMappingDAO,
-				promptBasicDAO:         ttFields.promptBasicDAO,
-				promptLabelVersionDAO:  ttFields.promptLabelVersionDAO,
+				db:                    ttFields.db,
+				idgen:                 ttFields.idgen,
+				commitLabelMappingDAO: ttFields.commitLabelMappingDAO,
+				promptBasicDAO:        ttFields.promptBasicDAO,
+				promptLabelVersionDAO: ttFields.promptLabelVersionDAO,
 			}
 
 			err := r.UpdateCommitLabels(tt.args.ctx, tt.args.param)
@@ -831,7 +831,7 @@ func TestLabelRepoImpl_BatchGetPromptVersionByLabel(t *testing.T) {
 				mockCommitLabelMappingDAO.EXPECT().MGetPromptVersionByLabelQuery(gomock.Any(), gomock.Any()).Return(nil, errorx.New("dao error"))
 
 				return fields{
-					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					commitLabelMappingDAO:          mockCommitLabelMappingDAO,
 					promptLabelVersionCacheMetrics: (*metricsinfra.PromptLabelVersionCacheMetrics)(nil),
 				}
 			},
@@ -865,7 +865,7 @@ func TestLabelRepoImpl_BatchGetPromptVersionByLabel(t *testing.T) {
 				mockCommitLabelMappingDAO.EXPECT().MGetPromptVersionByLabelQuery(gomock.Any(), gomock.Any()).Return(mappingPOs, nil)
 
 				return fields{
-					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					commitLabelMappingDAO:          mockCommitLabelMappingDAO,
 					promptLabelVersionCacheMetrics: (*metricsinfra.PromptLabelVersionCacheMetrics)(nil),
 				}
 			},
@@ -894,7 +894,7 @@ func TestLabelRepoImpl_BatchGetPromptVersionByLabel(t *testing.T) {
 				mockCacheDAO.EXPECT().MGet(gomock.Any(), gomock.Any()).Return(cacheResult, nil)
 
 				return fields{
-					promptLabelVersionDAO: mockCacheDAO,
+					promptLabelVersionDAO:          mockCacheDAO,
 					promptLabelVersionCacheMetrics: (*metricsinfra.PromptLabelVersionCacheMetrics)(nil),
 				}
 			},
@@ -935,8 +935,8 @@ func TestLabelRepoImpl_BatchGetPromptVersionByLabel(t *testing.T) {
 				mockCommitLabelMappingDAO.EXPECT().MGetPromptVersionByLabelQuery(gomock.Any(), gomock.Any()).Return(mappingPOs, nil)
 
 				return fields{
-					commitLabelMappingDAO: mockCommitLabelMappingDAO,
-					promptLabelVersionDAO: mockCacheDAO,
+					commitLabelMappingDAO:          mockCommitLabelMappingDAO,
+					promptLabelVersionDAO:          mockCacheDAO,
 					promptLabelVersionCacheMetrics: (*metricsinfra.PromptLabelVersionCacheMetrics)(nil),
 				}
 			},

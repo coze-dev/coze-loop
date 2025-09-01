@@ -2386,7 +2386,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 		{
 			name: "invalid user id",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				return fields{commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl),}
+				return fields{commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl)}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -2400,7 +2400,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 		{
 			name: "invalid commit version",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				return fields{commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl),}
+				return fields{commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl)}
 			},
 			args: args{
 				ctx: context.Background(),
