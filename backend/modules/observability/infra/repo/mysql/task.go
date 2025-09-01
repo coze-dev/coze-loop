@@ -6,15 +6,19 @@ package mysql
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"gorm.io/gen/field"
 	"gorm.io/gorm"
 )
 
@@ -106,19 +110,22 @@ func (v *TaskDaoImpl) DeleteTask(ctx context.Context, id int64, workspaceID int6
 }
 
 func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
+	q := genquery.Use(v.dbMgr.NewSession(ctx))
+	qd := q.WithContext(ctx).ObservabilityTask
 	var total int64
-	qd := q.WithContext(ctx)
 	if len(param.WorkspaceIDs) != 0 {
-		qd = qd.Where(q.WorkspaceID.In(param.WorkspaceIDs...))
+		qd = qd.Where(q.ObservabilityTask.WorkspaceID.In(param.WorkspaceIDs...))
 	}
 	// 应用过滤条件
-	//var err error
-	//qd, err = applyTaskFilters(qd, param.TaskFilters)
-	//if err != nil {
-	//	return nil, 0, err
-	//}
-
+	qdf, err := v.applyTaskFilters(q, param.TaskFilters)
+	if err != nil {
+		return nil, 0, err
+	}
+	if qdf != nil {
+		qd = qd.Where(qdf)
+	}
+	// order by
+	qd = qd.Order(v.order(q, param.OrderBy.String(), *param.OrderBy.IsAsc))
 	// 计算分页参数
 	limit, offset := calculatePagination(param.ReqLimit, param.ReqOffset)
 	results, err := qd.Limit(limit).Offset(offset).Find()
@@ -129,13 +136,119 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 }
 
 // 处理任务过滤条件
-//func applyTaskFilters(db *query.observabilityTaskDo, taskFilters *filter.TaskFilterFields) (*query.observabilityTaskDo, error) {
-//	if taskFilters == nil {
-//		return db, nil
-//	}
-//
-//	return db, nil
-//}
+func (v *TaskDaoImpl) applyTaskFilters(q *query.Query, taskFilters *filter.TaskFilterFields) (field.Expr, error) {
+	var filterExpr field.Expr
+	if taskFilters == nil {
+		return nil, nil
+	}
+	for _, f := range taskFilters.FilterFields {
+		if f.FieldName == nil || f.QueryType == nil {
+			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("field name or query type is nil"))
+		}
+
+		switch *f.FieldName {
+		case filter.TaskFieldNameTaskName:
+			switch *f.QueryType {
+			case filter.QueryTypeEq:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg(("no value provided for query")))
+				}
+				filterExpr = q.ObservabilityTask.Name.Eq(f.Values[0])
+			case filter.QueryTypeMatch:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for query"))
+				}
+				filterExpr = q.ObservabilityTask.Name.Like(fmt.Sprintf("%%%s%%", f.Values[0]))
+			default:
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task name"))
+			}
+		case filter.TaskFieldNameTaskType:
+			switch *f.QueryType {
+			case filter.QueryTypeIn:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for in query"))
+				}
+				filterExpr = q.ObservabilityTask.TaskType.In(f.Values...)
+			case filter.QueryTypeNotIn:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for not in query"))
+				}
+				filterExpr = q.ObservabilityTask.TaskType.NotIn(f.Values...)
+			default:
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task type"))
+			}
+		case filter.TaskFieldNameTaskStatus:
+			switch *f.QueryType {
+			case filter.QueryTypeIn:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for in query"))
+				}
+				filterExpr = q.ObservabilityTask.TaskStatus.In(f.Values...)
+			case filter.QueryTypeNotIn:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for not in query"))
+				}
+				filterExpr = q.ObservabilityTask.TaskStatus.NotIn(f.Values...)
+			default:
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task status"))
+			}
+		case filter.TaskFieldNameCreatedBy:
+			switch *f.QueryType {
+			case filter.QueryTypeIn:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for in query"))
+				}
+				filterExpr = q.ObservabilityTask.CreatedBy.In(f.Values...)
+			case filter.QueryTypeNotIn:
+				if len(f.Values) == 0 {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for not in query"))
+				}
+				filterExpr = q.ObservabilityTask.CreatedBy.NotIn(f.Values...)
+			default:
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for created_by"))
+			}
+		case filter.TaskFieldNameSampleRate:
+			if len(f.Values) == 0 {
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for sample rate"))
+			}
+			//sampleRate, err := strconv.ParseFloat(f.Values[0], 64)
+			//if err != nil {
+			//	return nil,  errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid sample rate: %v", err.Error()))
+			//}
+			switch *f.QueryType {
+			case filter.QueryTypeGte:
+				//filterExpr = q.ObservabilityTask.Sampler.Gte(sampleRate)
+				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') >= ?", sampleRate)
+			case filter.QueryTypeLte:
+				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') <= ?", sampleRate)
+			case filter.QueryTypeEq:
+				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') = ?", sampleRate)
+			case filter.QueryTypeNotEq:
+				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') !=?", sampleRate)
+			default:
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for sample rate"))
+			}
+		case "task_id":
+			if len(f.Values) == 0 {
+				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task id"))
+			}
+			var taskIDs []int64
+			for _, value := range f.Values {
+				taskID, err := strconv.ParseInt(value, 10, 64)
+				if err != nil {
+					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid task id: %v", err.Error()))
+				}
+				taskIDs = append(taskIDs, taskID)
+			}
+
+			filterExpr = q.ObservabilityTask.ID.In(taskIDs...)
+		default:
+			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
+		}
+	}
+
+	return filterExpr, nil
+}
 
 // 计算分页参数
 func calculatePagination(reqLimit, reqOffset int32) (int, int) {
@@ -150,4 +263,18 @@ func calculatePagination(reqLimit, reqOffset int32) (int, int) {
 	}
 
 	return limit, offset
+}
+
+func (d *TaskDaoImpl) order(q *query.Query, orderBy string, asc bool) field.Expr {
+	var orderExpr field.OrderExpr
+	switch orderBy {
+	case "created_at":
+		orderExpr = q.ObservabilityTask.CreatedAt
+	default:
+		orderExpr = q.ObservabilityTask.CreatedAt
+	}
+	if asc {
+		return orderExpr.Asc()
+	}
+	return orderExpr.Desc()
 }
