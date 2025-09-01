@@ -21,9 +21,9 @@ class EvalOutput {
 }
 
 // 测试数据 (动态替换)
-const turn = {{.TURN_DATA}};
+const turn = {{TURN_DATA}};
 
-{{.EXEC_EVALUATION_FUNCTION}}
+{{EXEC_EVALUATION_FUNCTION}}
 
 /**
  * 主函数 - 执行评估并返回EvalOutput
