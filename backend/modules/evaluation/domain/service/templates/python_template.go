@@ -95,5 +95,5 @@ else:
     result = {"valid": True, "error": None}
 
 # 输出结果
-print(json.dumps(result))
+return_val(result)
 `
