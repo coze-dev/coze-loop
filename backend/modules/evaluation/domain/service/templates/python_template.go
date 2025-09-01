@@ -62,7 +62,7 @@ try:
 except Exception as e:
     print(f"{type(e).__name__}: {str(e)}", file=sys.stderr)
     sys.exit(1)
-return_val(result)
+return_val(json.dumps(result))
 `
 
 // PythonSyntaxCheckTemplate Python语法检查模板
@@ -95,5 +95,5 @@ else:
     result = {"valid": True, "error": None}
 
 # 输出结果
-return_val(result)
+return_val(json.dumps(result))
 `
