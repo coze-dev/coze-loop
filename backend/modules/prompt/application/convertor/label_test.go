@@ -22,7 +22,7 @@ type batchLabelDO2DTOTestCase struct {
 
 func mockBatchLabelDO2DTOCases() []batchLabelDO2DTOTestCase {
 	now := time.Now()
-	
+
 	return []batchLabelDO2DTOTestCase{
 		{
 			name:     "nil_input",
