@@ -814,6 +814,516 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 			wantErr: errorx.NewByCode(prompterr.PromptVersionNotExistCode,
 				errorx.WithExtra(map[string]string{"prompt_id": "123", "prompt_key": "test_prompt1"})),
 		},
+		{
+			name: "success: query with label",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
+					"test_prompt1": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Label: "stable"}: "2.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{
+						PromptID:      123,
+						WithCommit:    true,
+						CommitVersion: "2.0.0",
+					}: {
+						ID:        123,
+						SpaceID:   123456,
+						PromptKey: "test_prompt1",
+						PromptBasic: &entity.PromptBasic{
+							DisplayName:   "Test Prompt 1",
+							Description:   "Test PromptDescription 1",
+							LatestVersion: "2.0.0",
+							CreatedBy:     "test_user",
+							UpdatedBy:     "test_user",
+							CreatedAt:     startTime,
+							UpdatedAt:     startTime,
+						},
+						PromptCommit: &entity.PromptCommit{
+							CommitInfo: &entity.CommitInfo{
+								Version:     "2.0.0",
+								BaseVersion: "",
+								Description: "Stable version",
+								CommittedBy: "test_user",
+								CommittedAt: startTime,
+							},
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeNormal,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+								},
+								ModelConfig: &entity.ModelConfig{
+									ModelID:     123,
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPromptHubEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.BatchGetPromptByPromptKeyRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					Queries: []*openapi.PromptQuery{
+						{
+							PromptKey: ptr.Of("test_prompt1"),
+							Label:     ptr.Of("stable"),
+						},
+					},
+				},
+			},
+			wantR: &openapi.BatchGetPromptByPromptKeyResponse{
+				Data: &openapi.PromptResultData{
+					Items: []*openapi.PromptResult_{
+						{
+							Query: &openapi.PromptQuery{
+								PromptKey: ptr.Of("test_prompt1"),
+								Label:     ptr.Of("stable"),
+							},
+							Prompt: &openapi.Prompt{
+								WorkspaceID: ptr.Of(int64(123456)),
+								PromptKey:   ptr.Of("test_prompt1"),
+								Version:     ptr.Of("2.0.0"),
+								PromptTemplate: &openapi.PromptTemplate{
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+									Messages: []*openapi.Message{
+										{
+											Role:    ptr.Of(prompt.RoleSystem),
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+									VariableDefs: make([]*openapi.VariableDef, 0),
+								},
+								LlmConfig: &openapi.LLMConfig{
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "success: mixed version and label queries",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
+					"test_prompt1": 123,
+					"test_prompt2": 456,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+					{PromptID: 456, PromptKey: "test_prompt2", Label: "beta"}:     "1.5.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{
+						PromptID:      123,
+						WithCommit:    true,
+						CommitVersion: "1.0.0",
+					}: {
+						ID:        123,
+						SpaceID:   123456,
+						PromptKey: "test_prompt1",
+						PromptBasic: &entity.PromptBasic{
+							DisplayName:   "Test Prompt 1",
+							Description:   "Test PromptDescription 1",
+							LatestVersion: "1.0.0",
+							CreatedBy:     "test_user",
+							UpdatedBy:     "test_user",
+							CreatedAt:     startTime,
+							UpdatedAt:     startTime,
+						},
+						PromptCommit: &entity.PromptCommit{
+							CommitInfo: &entity.CommitInfo{
+								Version:     "1.0.0",
+								BaseVersion: "",
+								Description: "Initial version",
+								CommittedBy: "test_user",
+								CommittedAt: startTime,
+							},
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeNormal,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+								},
+								ModelConfig: &entity.ModelConfig{
+									ModelID:     123,
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+					},
+					{
+						PromptID:      456,
+						WithCommit:    true,
+						CommitVersion: "1.5.0",
+					}: {
+						ID:        456,
+						SpaceID:   123456,
+						PromptKey: "test_prompt2",
+						PromptBasic: &entity.PromptBasic{
+							DisplayName:   "Test Prompt 2",
+							Description:   "Test PromptDescription 2",
+							LatestVersion: "1.5.0",
+							CreatedBy:     "test_user",
+							UpdatedBy:     "test_user",
+							CreatedAt:     startTime,
+							UpdatedAt:     startTime,
+						},
+						PromptCommit: &entity.PromptCommit{
+							CommitInfo: &entity.CommitInfo{
+								Version:     "1.5.0",
+								BaseVersion: "",
+								Description: "Beta version",
+								CommittedBy: "test_user",
+								CommittedAt: startTime,
+							},
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeNormal,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+								},
+								ModelConfig: &entity.ModelConfig{
+									ModelID:     123,
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPromptHubEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.BatchGetPromptByPromptKeyRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					Queries: []*openapi.PromptQuery{
+						{
+							PromptKey: ptr.Of("test_prompt1"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						{
+							PromptKey: ptr.Of("test_prompt2"),
+							Label:     ptr.Of("beta"),
+						},
+					},
+				},
+			},
+			wantR: &openapi.BatchGetPromptByPromptKeyResponse{
+				Data: &openapi.PromptResultData{
+					Items: []*openapi.PromptResult_{
+						{
+							Query: &openapi.PromptQuery{
+								PromptKey: ptr.Of("test_prompt1"),
+								Version:   ptr.Of("1.0.0"),
+							},
+							Prompt: &openapi.Prompt{
+								WorkspaceID: ptr.Of(int64(123456)),
+								PromptKey:   ptr.Of("test_prompt1"),
+								Version:     ptr.Of("1.0.0"),
+								PromptTemplate: &openapi.PromptTemplate{
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+									Messages: []*openapi.Message{
+										{
+											Role:    ptr.Of(prompt.RoleSystem),
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+									VariableDefs: make([]*openapi.VariableDef, 0),
+								},
+								LlmConfig: &openapi.LLMConfig{
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+						{
+							Query: &openapi.PromptQuery{
+								PromptKey: ptr.Of("test_prompt2"),
+								Label:     ptr.Of("beta"),
+							},
+							Prompt: &openapi.Prompt{
+								WorkspaceID: ptr.Of(int64(123456)),
+								PromptKey:   ptr.Of("test_prompt2"),
+								Version:     ptr.Of("1.5.0"),
+								PromptTemplate: &openapi.PromptTemplate{
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+									Messages: []*openapi.Message{
+										{
+											Role:    ptr.Of(prompt.RoleSystem),
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+									VariableDefs: make([]*openapi.VariableDef, 0),
+								},
+								LlmConfig: &openapi.LLMConfig{
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "error: label not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
+					"test_prompt1": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("label not found: non_existent_label"))
+
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				return fields{
+					promptService: mockPromptService,
+					config:        mockConfig,
+					auth:          mockAuth,
+					rateLimiter:   mockRateLimiter,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.BatchGetPromptByPromptKeyRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					Queries: []*openapi.PromptQuery{
+						{
+							PromptKey: ptr.Of("test_prompt1"),
+							Label:     ptr.Of("non_existent_label"),
+						},
+					},
+				},
+			},
+			wantR:   nil,
+			wantErr: errors.New("label not found: non_existent_label"),
+		},
+		{
+			name: "error: prompt key not found in result construction",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
+					"test_prompt1": 123,
+					// test_prompt2 不存在，但在查询构建阶段会被跳过，在结果构建阶段会报错
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{
+						PromptID:      123,
+						WithCommit:    true,
+						CommitVersion: "1.0.0",
+					}: {
+						ID:        123,
+						SpaceID:   123456,
+						PromptKey: "test_prompt1",
+						PromptBasic: &entity.PromptBasic{
+							DisplayName:   "Test Prompt 1",
+							Description:   "Test PromptDescription 1",
+							LatestVersion: "1.0.0",
+							CreatedBy:     "test_user",
+							UpdatedBy:     "test_user",
+							CreatedAt:     startTime,
+							UpdatedAt:     startTime,
+						},
+						PromptCommit: &entity.PromptCommit{
+							CommitInfo: &entity.CommitInfo{
+								Version:     "1.0.0",
+								BaseVersion: "",
+								Description: "Initial version",
+								CommittedBy: "test_user",
+								CommittedAt: startTime,
+							},
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeNormal,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+								},
+								ModelConfig: &entity.ModelConfig{
+									ModelID:     123,
+									Temperature: ptr.Of(0.7),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.BatchGetPromptByPromptKeyRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					Queries: []*openapi.PromptQuery{
+						{
+							PromptKey: ptr.Of("test_prompt1"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						{
+							PromptKey: ptr.Of("test_prompt2"), // 不存在的prompt key
+							Version:   ptr.Of("1.0.0"),
+						},
+					},
+				},
+			},
+			wantR:   nil,
+			wantErr: errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("prompt not exist")),
+		},
+		{
+			name: "error: prompt version not exist in result construction",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[string]int64{
+					"test_prompt1": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{}, nil)
+
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.BatchGetPromptByPromptKeyRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					Queries: []*openapi.PromptQuery{
+						{
+							PromptKey: ptr.Of("test_prompt1"),
+							Version:   ptr.Of("1.0.0"),
+						},
+					},
+				},
+			},
+			wantR:   nil,
+			wantErr: errorx.NewByCode(prompterr.PromptVersionNotExistCode, errorx.WithExtraMsg("prompt version not exist")),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
