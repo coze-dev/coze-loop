@@ -177,8 +177,6 @@ services:
     restart: always
     networks:
       - coze-loop-network
-    ports:
-      - "${COZE_LOOP_OSS_PORT}:9000"
     volumes:
       - minio_data:/minio_data # 挂载宿主机以持久化
       - minio_config:/root/.minio # 挂载宿主机以持久化
