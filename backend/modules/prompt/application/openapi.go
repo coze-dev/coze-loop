@@ -272,7 +272,7 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 		p.finishPromptExecutorSpan(ctx, span, promptDO, reply, err)
 	}()
 
-	reply, err = p.doExecute(ctx, req)
+	promptDO, reply, err = p.doExecute(ctx, req)
 	if err != nil {
 		return r, err
 	}
@@ -289,21 +289,21 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 	return r, nil
 }
 
-func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *openapi.ExecuteRequest) (reply *entity.Reply, err error) {
+func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *openapi.ExecuteRequest) (promptDO *entity.Prompt, reply *entity.Reply, err error) {
 	// 按prompt_key限流检查
 	if !p.ptaasAllowByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier().GetPromptKey()) {
-		return nil, errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		return promptDO, nil, errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 	}
 
 	// 获取prompt并执行
-	promptDO, err := p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
+	promptDO, err = p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
 	if err != nil {
-		return nil, err
+		return promptDO, nil, err
 	}
 
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptDebug); err != nil {
-		return nil, err
+		return promptDO, nil, err
 	}
 
 	// 执行prompt
@@ -315,9 +315,9 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 		Scenario:     entity.ScenarioDefault, // PTaaS场景
 	})
 	if err != nil {
-		return nil, err
+		return promptDO, nil, err
 	}
-	return reply, nil
+	return promptDO, reply, nil
 }
 
 func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (err error) {
@@ -345,26 +345,26 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 	defer func() {
 		p.finishPromptExecutorSpan(ctx, span, promptDO, aggregatedReply, err)
 	}()
-	aggregatedReply, err = p.doExecuteStreaming(ctx, req, stream)
+	promptDO, aggregatedReply, err = p.doExecuteStreaming(ctx, req, stream)
 	// 记录使用数据
 	return err
 }
 
-func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (aggregatedReply *entity.Reply, err error) {
+func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (promptDO *entity.Prompt, aggregatedReply *entity.Reply, err error) {
 	// 按prompt_key限流检查
 	if !p.ptaasAllowByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier().GetPromptKey()) {
-		return nil, errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		return promptDO, nil, errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 	}
 
 	// 获取prompt并执行
-	promptDO, err := p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
+	promptDO, err = p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
 	if err != nil {
-		return nil, err
+		return promptDO, nil, err
 	}
 
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptDebug); err != nil {
-		return nil, err
+		return promptDO, nil, err
 	}
 
 	// 执行prompt流式调用
@@ -419,7 +419,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			} else {
 				logs.CtxError(ctx, "send chunk failed, err=%v", err)
 			}
-			return nil, err
+			return promptDO, nil, err
 		}
 	}
 	var ok bool
@@ -435,7 +435,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 				logs.CtxError(ctx, "execute streaming failed, err=%v", err)
 			}
 		}
-		return aggregatedReply, err
+		return promptDO, aggregatedReply, err
 	}
 }
 
