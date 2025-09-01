@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"io"
 	"strconv"
 	"strings"
@@ -464,10 +465,20 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	if err != nil {
 		return nil, err
 	}
+	inTokens, outTokens, err := sResp.Spans.Stat(ctx)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
 	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
 			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+				Tokens: &trace.TokenCost{
+					Input:  inTokens,
+					Output: outTokens,
+				},
+			},
 		},
 	}, nil
 }
