@@ -406,6 +406,9 @@ test_debug_python() {
 
 # 调试JavaScript评估器
 test_debug_js() {
+    # 读取JavaScript文件内容并进行JSON转义
+    local js_content=$(cat "backend/script/js/debug_evaluator.js" | jq -R -s .)
+    
     local curl_cmd="curl -X POST \"${BASE_URL}/api/evaluation/v1/evaluators/debug\" \
   -H \"Content-Type: application/json\" \
   -H \"Cookie: ${COOKIE}\" \
@@ -438,7 +441,7 @@ test_debug_js() {
       ],
       \"code_evaluator\": {
         \"language_type\": \"js\",
-         \"code_content\": \"function exec_evaluation(turn) {\\\\n    const TARGET_VALUE = \\\\\\\"Text\\\\\\\";\\\\n    try {\\\\n        const current = turn.turn.actual_output.text;\\\\n        const isEqual = current === TARGET_VALUE;\\\\n        const score = isEqual ? 1.0 : 0.0;\\\\n        const reason = \\\\\\\"Field value: \\\\\\\" + current + \\\\\\\", target: \\\\\\\" + TARGET_VALUE + \\\\\\\", result: \\\\\\\" + (isEqual ? \\\\\\\"equal\\\\\\\" : \\\\\\\"not equal\\\\\\\");\\\\n        return { score, reason };\\\\n    } catch (e) {\\\\n        return { score: 0.0, reason: \\\\\\\"Error: \\\\\\\" + e.message };\\\\n    }\\\\n}\",
+        \"code_content\": '${js_content}',
         \"code_template_key\": \"debug_sentiment_checker\",
         \"code_template_name\": \"调试情感检查器\"
       }
