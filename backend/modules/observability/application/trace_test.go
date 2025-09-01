@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmock "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -24,6 +22,7 @@ import (
 	confmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -1666,26 +1665,26 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 					traceConfig: mockConfig,
 				}
 			}, args: args{
-				ctx: context.Background(),
-				req: &trace.PreviewExportTracesToDatasetRequest{
-					WorkspaceID: 123,
-					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
-					EndTime:     time.Now().UnixMilli(),
-					SpanIds: []*trace.SpanID{
-						{TraceID: "trace1", SpanID: "span1"},
-					},
-					FieldMappings: []*dataset0.FieldMapping{
-						{
-							FieldSchema: &dataset0.FieldSchema{
-								Key:  ptr.Of("input"),
-								Name: ptr.Of("Input"),
-							},
-							TraceFieldKey:      "input",
-							TraceFieldJsonpath: "$.input",
+			ctx: context.Background(),
+			req: &trace.PreviewExportTracesToDatasetRequest{
+				WorkspaceID: 123,
+				StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+				EndTime:     time.Now().UnixMilli(),
+				SpanIds: []*trace.SpanID{
+					{TraceID: "trace1", SpanID: "span1"},
+				},
+				FieldMappings: []*dataset0.FieldMapping{
+					{
+						FieldSchema: &dataset0.FieldSchema{
+							Key:  ptr.Of("input"),
+							Name: ptr.Of("Input"),
 						},
+						TraceFieldKey:      "input",
+						TraceFieldJsonpath: "$.input",
 					},
 				},
 			},
+		},
 			want:    nil,
 			wantErr: true,
 		},
