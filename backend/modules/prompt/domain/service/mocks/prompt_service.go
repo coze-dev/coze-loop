@@ -148,17 +148,17 @@ func (mr *MockIPromptServiceMockRecorder) ListLabel(ctx, param any) *gomock.Call
 }
 
 // MCompleteMultiModalFileURL mocks base method.
-func (m *MockIPromptService) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message) error {
+func (m *MockIPromptService) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MCompleteMultiModalFileURL", ctx, messages)
+	ret := m.ctrl.Call(m, "MCompleteMultiModalFileURL", ctx, messages, variableVals)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MCompleteMultiModalFileURL indicates an expected call of MCompleteMultiModalFileURL.
-func (mr *MockIPromptServiceMockRecorder) MCompleteMultiModalFileURL(ctx, messages any) *gomock.Call {
+func (mr *MockIPromptServiceMockRecorder) MCompleteMultiModalFileURL(ctx, messages, variableVals any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCompleteMultiModalFileURL", reflect.TypeOf((*MockIPromptService)(nil).MCompleteMultiModalFileURL), ctx, messages)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCompleteMultiModalFileURL", reflect.TypeOf((*MockIPromptService)(nil).MCompleteMultiModalFileURL), ctx, messages, variableVals)
 }
 
 // MGetPromptIDs mocks base method.

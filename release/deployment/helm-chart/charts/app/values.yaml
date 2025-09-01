@@ -7,7 +7,7 @@ image:
   registry: "docker.io"
   repository: "cozedev"
   image: "coze-loop"
-  tag: "1.0.0"
+  tag: "1.1.0"
   pullPolicy: Always
   pullSecrets: "coze-loop-image-secret"
 

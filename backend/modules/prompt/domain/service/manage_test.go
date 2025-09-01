@@ -35,8 +35,9 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 		file             rpc.IFileProvider
 	}
 	type args struct {
-		ctx      context.Context
-		messages []*entity.Message
+		ctx          context.Context
+		messages     []*entity.Message
+		variableVals []*entity.VariableVal
 	}
 	uri2URLMap := map[string]string{
 		"test-image-1": "https://example.com/image1.jpg",
@@ -156,6 +157,121 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "variableVals with nil MultiPartValues",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:      context.Background(),
+				messages: nil,
+				variableVals: []*entity.VariableVal{
+					{
+						Key:             "multivar1",
+						MultiPartValues: nil,
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "variableVals with empty MultiPartValues",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:      context.Background(),
+				messages: nil,
+				variableVals: []*entity.VariableVal{
+					{
+						Key:             "multivar1",
+						MultiPartValues: []*entity.ContentPart{},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "variableVals with nil values",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:          context.Background(),
+				messages:     nil,
+				variableVals: []*entity.VariableVal{nil},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "variableVals with parts containing nil ImageURL",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:      context.Background(),
+				messages: nil,
+				variableVals: []*entity.VariableVal{
+					{
+						Key: "multivar1",
+						MultiPartValues: []*entity.ContentPart{
+							{
+								Type:     entity.ContentTypeImageURL,
+								ImageURL: nil,
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "variableVals with parts containing nil parts",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:      context.Background(),
+				messages: nil,
+				variableVals: []*entity.VariableVal{
+					{
+						Key: "multivar1",
+						MultiPartValues: []*entity.ContentPart{
+							nil,
+							{
+								Type: entity.ContentTypeText,
+								Text: ptr.Of("some text"),
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "empty variableVals",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:          context.Background(),
+				messages:     nil,
+				variableVals: []*entity.VariableVal{},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "nil variableVals",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx:          context.Background(),
+				messages:     nil,
+				variableVals: nil,
+			},
+			wantErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -178,7 +294,7 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 			var originMessages []*entity.Message
 			err := mem.DeepCopy(tt.args.messages, &originMessages)
 			assert.Nil(t, err)
-			err = p.MCompleteMultiModalFileURL(tt.args.ctx, tt.args.messages)
+			err = p.MCompleteMultiModalFileURL(tt.args.ctx, tt.args.messages, nil)
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			for _, message := range tt.args.messages {
 				if message == nil || len(message.Parts) == 0 {

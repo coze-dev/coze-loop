@@ -18,7 +18,7 @@ type IPromptService interface {
 	FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error)
 	ExecuteStreaming(ctx context.Context, param ExecuteStreamingParam) (*entity.Reply, error)
 	Execute(ctx context.Context, param ExecuteParam) (*entity.Reply, error)
-	MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message) error
+	MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error
 	// MGetPromptIDs 根据prompt key获取prompt id
 	MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (PromptKeyIDMap map[string]int64, err error)
 	// MParseCommitVersion 统一解析提交版本，支持version和label两种方式

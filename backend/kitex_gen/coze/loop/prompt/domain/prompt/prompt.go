@@ -33,6 +33,8 @@ const (
 
 	ContentTypeImageURL = "image_url"
 
+	ContentTypeMultiPartVariable = "multi_part_variable"
+
 	VariableTypeString = "string"
 
 	VariableTypeBoolean = "boolean"
@@ -54,6 +56,8 @@ const (
 	VariableTypeArrayObject = "array<object>"
 
 	VariableTypePlaceholder = "placeholder"
+
+	VariableTypeMultiPart = "multi_part"
 
 	ScenarioDefault = "default"
 
@@ -7647,9 +7651,10 @@ func (p *VariableDef) Field4DeepEqual(src []string) bool {
 }
 
 type VariableVal struct {
-	Key                 *string    `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
-	Value               *string    `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
-	PlaceholderMessages []*Message `thrift:"placeholder_messages,3,optional" frugal:"3,optional,list<Message>" form:"placeholder_messages" json:"placeholder_messages,omitempty" query:"placeholder_messages"`
+	Key                 *string        `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
+	Value               *string        `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
+	PlaceholderMessages []*Message     `thrift:"placeholder_messages,3,optional" frugal:"3,optional,list<Message>" form:"placeholder_messages" json:"placeholder_messages,omitempty" query:"placeholder_messages"`
+	MultiPartValues     []*ContentPart `thrift:"multi_part_values,4,optional" frugal:"4,optional,list<ContentPart>" form:"multi_part_values" json:"multi_part_values,omitempty" query:"multi_part_values"`
 }
 
 func NewVariableVal() *VariableVal {
@@ -7694,6 +7699,18 @@ func (p *VariableVal) GetPlaceholderMessages() (v []*Message) {
 	}
 	return p.PlaceholderMessages
 }
+
+var VariableVal_MultiPartValues_DEFAULT []*ContentPart
+
+func (p *VariableVal) GetMultiPartValues() (v []*ContentPart) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMultiPartValues() {
+		return VariableVal_MultiPartValues_DEFAULT
+	}
+	return p.MultiPartValues
+}
 func (p *VariableVal) SetKey(val *string) {
 	p.Key = val
 }
@@ -7703,11 +7720,15 @@ func (p *VariableVal) SetValue(val *string) {
 func (p *VariableVal) SetPlaceholderMessages(val []*Message) {
 	p.PlaceholderMessages = val
 }
+func (p *VariableVal) SetMultiPartValues(val []*ContentPart) {
+	p.MultiPartValues = val
+}
 
 var fieldIDToName_VariableVal = map[int16]string{
 	1: "key",
 	2: "value",
 	3: "placeholder_messages",
+	4: "multi_part_values",
 }
 
 func (p *VariableVal) IsSetKey() bool {
@@ -7720,6 +7741,10 @@ func (p *VariableVal) IsSetValue() bool {
 
 func (p *VariableVal) IsSetPlaceholderMessages() bool {
 	return p.PlaceholderMessages != nil
+}
+
+func (p *VariableVal) IsSetMultiPartValues() bool {
+	return p.MultiPartValues != nil
 }
 
 func (p *VariableVal) Read(iprot thrift.TProtocol) (err error) {
@@ -7759,6 +7784,14 @@ func (p *VariableVal) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7838,6 +7871,29 @@ func (p *VariableVal) ReadField3(iprot thrift.TProtocol) error {
 	p.PlaceholderMessages = _field
 	return nil
 }
+func (p *VariableVal) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ContentPart, 0, size)
+	values := make([]ContentPart, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.MultiPartValues = _field
+	return nil
+}
 
 func (p *VariableVal) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7855,6 +7911,10 @@ func (p *VariableVal) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -7937,6 +7997,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *VariableVal) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMultiPartValues() {
+		if err = oprot.WriteFieldBegin("multi_part_values", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MultiPartValues)); err != nil {
+			return err
+		}
+		for _, v := range p.MultiPartValues {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *VariableVal) String() string {
 	if p == nil {
@@ -7959,6 +8045,9 @@ func (p *VariableVal) DeepEqual(ano *VariableVal) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.PlaceholderMessages) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MultiPartValues) {
 		return false
 	}
 	return true
@@ -7994,6 +8083,19 @@ func (p *VariableVal) Field3DeepEqual(src []*Message) bool {
 		return false
 	}
 	for i, v := range p.PlaceholderMessages {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *VariableVal) Field4DeepEqual(src []*ContentPart) bool {
+
+	if len(p.MultiPartValues) != len(src) {
+		return false
+	}
+	for i, v := range p.MultiPartValues {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

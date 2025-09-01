@@ -74,8 +74,9 @@ type ContentPart struct {
 type ContentType string
 
 const (
-	ContentTypeText     ContentType = "text"
-	ContentTypeImageURL ContentType = "image_url"
+	ContentTypeText              ContentType = "text"
+	ContentTypeImageURL          ContentType = "image_url"
+	ContentTypeMultiPartVariable ContentType = "multi_part_variable"
 )
 
 type ImageURL struct {
@@ -104,12 +105,14 @@ const (
 	VariableTypeArrayInteger VariableType = "array<integer>"
 	VariableTypeArrayFloat   VariableType = "array<float>"
 	VariableTypeArrayObject  VariableType = "array<object>"
+	VariableTypeMultiPart    VariableType = "multi_part"
 )
 
 type VariableVal struct {
-	Key                 string     `json:"key"`
-	Value               *string    `json:"value,omitempty"`
-	PlaceholderMessages []*Message `json:"placeholder_messages,omitempty"`
+	Key                 string         `json:"key"`
+	Value               *string        `json:"value,omitempty"`
+	PlaceholderMessages []*Message     `json:"placeholder_messages,omitempty"`
+	MultiPartValues     []*ContentPart `json:"multi_part_values,omitempty"`
 }
 
 type Tool struct {
@@ -217,6 +220,7 @@ func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*Va
 					part.Text = ptr.Of(formattedStr)
 				}
 			}
+			message.Parts = formatMultiPart(message.Parts, defMap, valMap)
 			formattedMessages = append(formattedMessages, message)
 		}
 	}
@@ -231,6 +235,34 @@ func (pt *PromptTemplate) getTemplateMessages(messages []*Message) []*Message {
 	messagesToFormat = append(messagesToFormat, pt.Messages...)
 	messagesToFormat = append(messagesToFormat, messages...)
 	return messagesToFormat
+}
+
+func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMap map[string]*VariableVal) []*ContentPart {
+	var formatedParts []*ContentPart
+	for _, part := range parts {
+		if part.Type == ContentTypeMultiPartVariable && ptr.From(part.Text) != "" {
+			multiPartVariableKey := ptr.From(part.Text)
+			if vardef, ok := defMap[multiPartVariableKey]; ok {
+				if value, ok := valMap[multiPartVariableKey]; ok {
+					if vardef != nil && value != nil && vardef.Type == VariableTypeMultiPart {
+						formatedParts = append(formatedParts, value.MultiPartValues...)
+					}
+				}
+			}
+		} else {
+			formatedParts = append(formatedParts, part)
+		}
+	}
+	var filtered []*ContentPart
+	for _, pt := range formatedParts {
+		if pt == nil {
+			continue
+		}
+		if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
+			filtered = append(filtered, pt)
+		}
+	}
+	return filtered
 }
 
 func formatText(templateType TemplateType, templateStr string, defMap map[string]*VariableDef, valMap map[string]*VariableVal) (string, error) {
