@@ -125,7 +125,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 			}
 		} else if result.Output.RetVal != "" {
 			// 如果Stderr为空，尝试从RetVal中的err_msg字段解析
-			if _, _, errMsg, parseErr := c.parseRetVal(result.Output.RetVal); parseErr == nil && errMsg != "" {
+			if _, _, errMsg, parseErr := c.parseEvaluationRetVal(result.Output.RetVal); parseErr == nil && errMsg != "" {
 				evaluatorRunError = &entity.EvaluatorRunError{
 					Code:    int32(errno.CodeExecutionFailedCode),
 					Message: errMsg,
@@ -149,7 +149,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 	}
 
 	// 解析执行结果
-	evaluatorResult, err := c.parseExecutionResult(result)
+	evaluatorResult, err := c.parseEvaluationExecutionResult(result)
 	if err != nil {
 		return &entity.EvaluatorOutputData{
 			EvaluatorRunError: &entity.EvaluatorRunError{
@@ -256,8 +256,8 @@ func (c *EvaluatorSourceCodeServiceImpl) decodeUnicodeEscapes(s string) string {
 	return result.String()
 }
 
-// parseStdoutJSON 解析stdout中的JSON内容（仅用于validatePythonCode）
-func (c *EvaluatorSourceCodeServiceImpl) parseStdoutJSON(stdout string) (map[string]interface{}, error) {
+// parseSyntaxValidationStdoutJSON 解析语法校验stdout中的JSON内容（语法校验链路）
+func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationStdoutJSON(stdout string) (map[string]interface{}, error) {
 	// 清理stdout，移除换行符和额外的空白字符
 	stdout = strings.TrimSpace(stdout)
 	if stdout == "" {
@@ -280,8 +280,8 @@ func (c *EvaluatorSourceCodeServiceImpl) parseStdoutJSON(stdout string) (map[str
 	return result, nil
 }
 
-// parseRetValJSON 解析ret_val中的JSON数据
-func (c *EvaluatorSourceCodeServiceImpl) parseRetValJSON(retVal string) (map[string]interface{}, error) {
+// parseSyntaxValidationRetValJSON 解析语法校验ret_val中的JSON数据（语法校验链路）
+func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationRetValJSON(retVal string) (map[string]interface{}, error) {
 	// 清理retVal，移除换行符和额外的空白字符
 	retVal = strings.TrimSpace(retVal)
 	if retVal == "" {
@@ -304,7 +304,6 @@ func (c *EvaluatorSourceCodeServiceImpl) parseRetValJSON(retVal string) (map[str
 	return result, nil
 }
 
-// processExecutionResult 处理执行结果，解码Unicode并提取有用信息
 // processExecutionResult 处理执行结果，解码Unicode并提取有用信息
 func (c *EvaluatorSourceCodeServiceImpl) processExecutionResult(result *entity.ExecutionResult) (*entity.ProcessedExecutionResult, error) {
 	if result == nil {
@@ -353,9 +352,9 @@ type ValidationResult struct {
 	ErrorMsg string
 }
 
-// parseValidationResult 解析验证结果中的 valid 和 error 字段
-// 这是一个通用方法，用于处理 ret_val 或 stdout 中的验证结果
-func (c *EvaluatorSourceCodeServiceImpl) parseValidationResult(data map[string]interface{}) *ValidationResult {
+// parseSyntaxValidationResult 解析语法校验结果中的 valid 和 error 字段（语法校验链路）
+// 这是一个通用方法，用于处理 ret_val 或 stdout 中的语法验证结果
+func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationResult(data map[string]interface{}) *ValidationResult {
 	result := &ValidationResult{
 		Valid:    true, // 默认为有效
 		ErrorMsg: "",
@@ -380,9 +379,9 @@ func (c *EvaluatorSourceCodeServiceImpl) parseValidationResult(data map[string]i
 	return result
 }
 
-// processExecutionResultWithStdoutParsing 处理执行结果并解析stdout中的JSON（专用于语法验证）
-// 作为统一的验证入口，负责所有的 valid 字段解析和验证
-func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing(result *entity.ExecutionResult) (*entity.ProcessedExecutionResult, error) {
+// processSyntaxValidationExecutionResult 处理语法校验执行结果（语法校验链路：解析 valid 和 error）
+// 作为统一的语法验证入口，负责所有的 valid 字段解析和验证
+func (c *EvaluatorSourceCodeServiceImpl) processSyntaxValidationExecutionResult(result *entity.ExecutionResult) (*entity.ProcessedExecutionResult, error) {
 	// 先进行基本处理
 	processed, err := c.processExecutionResult(result)
 	if err != nil {
@@ -391,9 +390,9 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 
 	// 优先解析ret_val中的JSON内容
 	if processed.RetVal != "" {
-		if retValData, parseErr := c.parseRetValJSON(processed.RetVal); parseErr == nil {
+		if retValData, parseErr := c.parseSyntaxValidationRetValJSON(processed.RetVal); parseErr == nil {
 			// 使用通用方法解析验证结果
-			validationResult := c.parseValidationResult(retValData)
+			validationResult := c.parseSyntaxValidationResult(retValData)
 			processed.Success = validationResult.Valid
 			if !validationResult.Valid {
 				processed.ErrorMsg = validationResult.ErrorMsg
@@ -411,14 +410,14 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 
 	// 如果ret_val解析失败或为空，尝试解析stdout中的JSON内容作为备用
 	if stdout, ok := processed.Output["stdout"].(string); ok && stdout != "" {
-		if parsedOutput, parseErr := c.parseStdoutJSON(stdout); parseErr == nil {
+		if parsedOutput, parseErr := c.parseSyntaxValidationStdoutJSON(stdout); parseErr == nil {
 			// 将解析的JSON内容合并到Output中
 			for key, value := range parsedOutput {
 				processed.Output[key] = value
 			}
 
 			// 使用通用方法解析验证结果
-			validationResult := c.parseValidationResult(parsedOutput)
+			validationResult := c.parseSyntaxValidationResult(parsedOutput)
 			processed.Success = validationResult.Valid
 			if !validationResult.Valid {
 				processed.ErrorMsg = validationResult.ErrorMsg
@@ -431,10 +430,8 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 	return processed, nil
 }
 
-
-
-// parseRetVal 解析RetVal字段中的JSON数据
-func (c *EvaluatorSourceCodeServiceImpl) parseRetVal(retVal string) (score *float64, reason string, errMsg string, err error) {
+// parseEvaluationRetVal 解析评估结果RetVal字段中的JSON数据（评估结果链路：提取 score、reason、err_msg）
+func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationRetVal(retVal string) (score *float64, reason string, errMsg string, err error) {
 	if strings.TrimSpace(retVal) == "" {
 		return nil, "", "", nil
 	}
@@ -476,8 +473,8 @@ func (c *EvaluatorSourceCodeServiceImpl) parseRetVal(retVal string) (score *floa
 	return score, reason, errMsg, nil
 }
 
-// parseExecutionResult 解析代码执行结果
-func (c *EvaluatorSourceCodeServiceImpl) parseExecutionResult(result *entity.ExecutionResult) (*entity.EvaluatorResult, error) {
+// parseEvaluationExecutionResult 解析评估器执行结果（评估结果链路：解析 score 和 reason）
+func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationExecutionResult(result *entity.ExecutionResult) (*entity.EvaluatorResult, error) {
 	// 先处理原始执行结果
 	processed, err := c.processExecutionResult(result)
 	if err != nil {
@@ -492,7 +489,7 @@ func (c *EvaluatorSourceCodeServiceImpl) parseExecutionResult(result *entity.Exe
 
 	// 优先从RetVal字段解析score和reason
 	if result.Output != nil && result.Output.RetVal != "" {
-		if score, reason, _, parseErr := c.parseRetVal(result.Output.RetVal); parseErr == nil {
+		if score, reason, _, parseErr := c.parseEvaluationRetVal(result.Output.RetVal); parseErr == nil {
 			if score != nil {
 				evaluatorResult.Score = score
 			}
@@ -561,12 +558,10 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context,
 	}
 
 	// 处理执行结果并解析stdout中的JSON
-	processed, err := c.processExecutionResultWithStdoutParsing(result)
+	processed, err := c.processSyntaxValidationExecutionResult(result)
 	if err != nil {
 		return fmt.Errorf("failed to process syntax validation result: %w", err)
-	}
-
-	// 直接使用 processExecutionResultWithStdoutParsing 的验证结果
+	}	// 直接使用 processSyntaxValidationExecutionResult 的验证结果
 	// 该方法已经完成了所有的 valid 字段解析和验证
 	if !processed.Success {
 		return fmt.Errorf("python syntax error: %s", processed.ErrorMsg)
@@ -603,12 +598,12 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Cont
 	}
 
 	// 使用统一的结果处理方法 (与Python保持一致)
-	processed, err := c.processExecutionResultWithStdoutParsing(result)
+	processed, err := c.processSyntaxValidationExecutionResult(result)
 	if err != nil {
 		return fmt.Errorf("failed to process syntax validation result: %w", err)
 	}
 
-	// 直接使用 processExecutionResultWithStdoutParsing 的验证结果
+	// 直接使用 processSyntaxValidationExecutionResult 的验证结果
 	// 该方法已经完成了所有的 valid 字段解析和验证
 	if !processed.Success {
 		return fmt.Errorf("javascript syntax error: %s", processed.ErrorMsg)
