@@ -280,6 +280,31 @@ func (c *EvaluatorSourceCodeServiceImpl) parseStdoutJSON(stdout string) (map[str
 	return result, nil
 }
 
+// parseRetValJSON 解析ret_val中的JSON数据
+func (c *EvaluatorSourceCodeServiceImpl) parseRetValJSON(retVal string) (map[string]interface{}, error) {
+	// 清理retVal，移除换行符和额外的空白字符
+	retVal = strings.TrimSpace(retVal)
+	if retVal == "" {
+		return nil, fmt.Errorf("empty ret_val")
+	}
+
+	// 尝试解析JSON
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(retVal), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse ret_val JSON: %v", err)
+	}
+
+	// 解码错误信息中的Unicode转义字符
+	if errorVal, ok := result["error"]; ok {
+		if errorStr, ok := errorVal.(string); ok {
+			result["error"] = c.decodeUnicodeEscapes(errorStr)
+		}
+	}
+
+	return result, nil
+}
+
+// processExecutionResult 处理执行结果，解码Unicode并提取有用信息
 // processExecutionResult 处理执行结果，解码Unicode并提取有用信息
 func (c *EvaluatorSourceCodeServiceImpl) processExecutionResult(result *entity.ExecutionResult) (*entity.ProcessedExecutionResult, error) {
 	if result == nil {
@@ -297,9 +322,6 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResult(result *entity.E
 		// 解码stdout和stderr中的Unicode字符
 		stdout := c.decodeUnicodeEscapes(result.Output.Stdout)
 		stderr := c.decodeUnicodeEscapes(result.Output.Stderr)
-
-		processed.Stdout = stdout
-		processed.Stderr = stderr
 		processed.RetVal = result.Output.RetVal
 
 		// 如果有stderr输出，认为执行失败
@@ -333,9 +355,37 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 		return nil, err
 	}
 
-	// 如果有stdout输出，尝试解析其中的JSON内容
-	if processed.Stdout != "" {
-		if parsedOutput, parseErr := c.parseStdoutJSON(processed.Stdout); parseErr == nil {
+	// 优先解析ret_val中的JSON内容
+	if processed.RetVal != "" {
+		if retValData, parseErr := c.parseRetValJSON(processed.RetVal); parseErr == nil {
+			// 检查ret_val中的valid字段来判断校验结果
+			if validVal, ok := retValData["valid"]; ok {
+				if valid, ok := validVal.(bool); ok {
+					if !valid {
+						processed.Success = false
+						// 从ret_val的error字段获取错误信息
+						if errorVal, ok := retValData["error"]; ok {
+							if errorMsg, ok := errorVal.(string); ok {
+								processed.ErrorMsg = errorMsg
+							}
+						}
+					} else {
+						processed.Success = true
+						processed.ErrorMsg = ""
+					}
+				}
+			}
+			// 将ret_val解析的内容合并到Output中
+			for key, value := range retValData {
+				processed.Output[key] = value
+			}
+		}
+	}
+
+	// 如果ret_val解析失败或为空，尝试解析stdout中的JSON内容作为备用
+	if processed.RetVal == "" {
+		if stdout, ok := processed.Output["stdout"].(string); ok && stdout != "" {
+			if parsedOutput, parseErr := c.parseStdoutJSON(stdout); parseErr == nil {
 			// 将解析的JSON内容合并到Output中
 			for key, value := range parsedOutput {
 				processed.Output[key] = value
@@ -352,10 +402,11 @@ func (c *EvaluatorSourceCodeServiceImpl) processExecutionResultWithStdoutParsing
 					}
 				}
 			}
+			}
 		}
-		// 如果解析失败，不影响原有逻辑，继续使用原始stdout
 	}
 
+	return processed, nil
 	return processed, nil
 }
 
@@ -453,7 +504,9 @@ func (c *EvaluatorSourceCodeServiceImpl) parseExecutionResult(result *entity.Exe
 	}
 
 	// 最后的备用方案：使用标准输出作为推理过程
-	evaluatorResult.Reasoning = processed.Stdout
+	if stdout, ok := processed.Output["stdout"].(string); ok {
+		evaluatorResult.Reasoning = stdout
+	}
 	return evaluatorResult, nil
 }
 
