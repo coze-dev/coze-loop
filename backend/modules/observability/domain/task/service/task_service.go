@@ -98,7 +98,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
-	taskPO := tconv.CreateTaskDTO2PO(ctx, req, userID)
+	taskPO := tconv.CreateTaskDTO2PO(ctx, req.Task, userID)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err

@@ -16,7 +16,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	entity_common "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -230,21 +229,21 @@ func CheckTaskStatus(ctx context.Context, taskStatus task.TaskStatus, currentTas
 	return validTaskStatus, nil
 }
 
-func CreateTaskDTO2PO(ctx context.Context, req *service.CreateTaskReq, userID string) *entity.ObservabilityTask {
-	if req == nil {
+func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.ObservabilityTask {
+	if taskDO == nil {
 		return nil
 	}
 	return &entity.ObservabilityTask{
-		WorkspaceID:   req.Task.GetWorkspaceID(),
-		Name:          req.Task.GetName(),
-		Description:   ptr.Of(req.Task.GetDescription()),
-		TaskType:      req.Task.GetTaskType(),
+		WorkspaceID:   taskDO.GetWorkspaceID(),
+		Name:          taskDO.GetName(),
+		Description:   ptr.Of(taskDO.GetDescription()),
+		TaskType:      taskDO.GetTaskType(),
 		TaskStatus:    task.TaskStatusUnstarted,
-		TaskDetail:    ptr.Of(ToJSONString(ctx, req.Task.GetTaskDetail())),
-		SpanFilter:    SpanFilterDTO2PO(ctx, req.Task.GetRule().GetSpanFilters(), req.Task.GetWorkspaceID()),
-		EffectiveTime: ptr.Of(ToJSONString(ctx, req.Task.GetRule().GetEffectiveTime())),
-		Sampler:       ptr.Of(ToJSONString(ctx, req.Task.GetRule().GetSampler())),
-		TaskConfig:    TaskConfigDTO2PO(ctx, req.Task.GetTaskConfig()),
+		TaskDetail:    ptr.Of(ToJSONString(ctx, taskDO.GetTaskDetail())),
+		SpanFilter:    SpanFilterDTO2PO(ctx, taskDO.GetRule().GetSpanFilters(), taskDO.GetWorkspaceID()),
+		EffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetEffectiveTime())),
+		Sampler:       ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetSampler())),
+		TaskConfig:    TaskConfigDTO2PO(ctx, taskDO.GetTaskConfig()),
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 		CreatedBy:     userID,
