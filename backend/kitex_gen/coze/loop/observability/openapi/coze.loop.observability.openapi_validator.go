@@ -134,6 +134,11 @@ func (p *SearchTraceOApiResponse) IsValid() error {
 	return nil
 }
 func (p *SearchTraceOApiData) IsValid() error {
+	if p.TracesAdvanceInfo != nil {
+		if err := p.TracesAdvanceInfo.IsValid(); err != nil {
+			return fmt.Errorf("field TracesAdvanceInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ListSpansOApiRequest) IsValid() error {
