@@ -1275,3 +1275,13 @@ func _updatetaskMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _annotationMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _traceMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

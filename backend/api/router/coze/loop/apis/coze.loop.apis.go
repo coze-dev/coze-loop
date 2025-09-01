@@ -267,8 +267,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations := _v14.Group("/annotations", _annotationsMw(handler)...)
 				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
 				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
-				_annotations.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
-				_annotations.GET("/lis_annotation_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
 				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)
 				_tasks := _v14.Group("/tasks", _tasksMw(handler)...)
@@ -281,6 +279,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_views.DELETE("/:view_id", append(_deleteviewMw(handler), apis.DeleteView)...)
 				_views.PUT("/:view_id", append(_updateviewMw(handler), apis.UpdateView)...)
 				{
+					_annotation := _v14.Group("/annotation", _annotationMw(handler)...)
+					_annotation.GET("/list_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
+				}
+				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
 				}
@@ -289,10 +291,14 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_tasks0.GET("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
 				}
 				{
+					_trace := _v14.Group("/trace", _traceMw(handler)...)
+					_trace.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
+				}
+				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
+					_traces.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
-					_traces.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
