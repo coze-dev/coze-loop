@@ -74,11 +74,11 @@ const (
 
 	RequestNotValidCode              = 601505007
 	requestNotValidMessage           = "request not valid"
-	requestNotValidNoAffectStability = false
+	requestNotValidNoAffectStability = true
 
 	RequestNotCompatibleWithModelAbilityCode              = 601505008
 	requestNotCompatibleWithModelAbilityMessage           = "request is not compatible with model ability"
-	requestNotCompatibleWithModelAbilityNoAffectStability = false
+	requestNotCompatibleWithModelAbilityNoAffectStability = true
 
 	CallModelFailedCode              = 601505009
 	callModelFailedMessage           = "call model failed"
@@ -95,6 +95,34 @@ const (
 	CallModelTimeoutCode              = 601505012
 	callModelTimeoutMessage           = "call model timeout"
 	callModelTimeoutNoAffectStability = true
+
+	CozeModelNotExistCode              = 601505101 // Coze模型不存在
+	cozeModelNotExistMessage           = "coze model not exist"
+	cozeModelNotExistNoAffectStability = true
+
+	InterfaceNotAvailableInHouseCode              = 601505102 // 当前接口不支持Coze罗盘内场
+	interfaceNotAvailableInHouseMessage           = "the interface is not available in house"
+	interfaceNotAvailableInHouseNoAffectStability = true
+
+	GetCozeModelListFailedCode              = 601505103 // 请求Coze模型列表接口失败
+	getCozeModelListFailedMessage           = "get coze model list failed"
+	getCozeModelListFailedNoAffectStability = true
+
+	GetCozeModelFailedCode              = 601505104 // 请求Coze模型详情接口失败
+	getCozeModelFailedMessage           = "get coze model failed"
+	getCozeModelFailedNoAffectStability = true
+
+	GetCozeModelListParamFailedCode              = 601505105 // 请求Coze模型列表参数接口失败
+	getCozeModelListParamFailedMessage           = "get coze model list param failed"
+	getCozeModelListParamFailedNoAffectStability = true
+
+	GetCozeModelUsageFailedCode              = 601505106 // 请求Coze模型用量接口失败
+	getCozeModelUsageFailedMessage           = "get coze model usage failed"
+	getCozeModelUsageFailedNoAffectStability = true
+
+	GetLLMGatewayModelConfigFailedCode              = 601505107 // 获取LLM Gateway模型配置失败
+	getLLMGatewayModelConfigFailedMessage           = "get llm gateway model config failed"
+	getLLMGatewayModelConfigFailedNoAffectStability = true
 )
 
 func init() {
@@ -229,6 +257,48 @@ func init() {
 		CallModelTimeoutCode,
 		callModelTimeoutMessage,
 		code.WithAffectStability(!callModelTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		CozeModelNotExistCode,
+		cozeModelNotExistMessage,
+		code.WithAffectStability(!cozeModelNotExistNoAffectStability),
+	)
+
+	code.Register(
+		InterfaceNotAvailableInHouseCode,
+		interfaceNotAvailableInHouseMessage,
+		code.WithAffectStability(!interfaceNotAvailableInHouseNoAffectStability),
+	)
+
+	code.Register(
+		GetCozeModelListFailedCode,
+		getCozeModelListFailedMessage,
+		code.WithAffectStability(!getCozeModelListFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetCozeModelFailedCode,
+		getCozeModelFailedMessage,
+		code.WithAffectStability(!getCozeModelFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetCozeModelListParamFailedCode,
+		getCozeModelListParamFailedMessage,
+		code.WithAffectStability(!getCozeModelListParamFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetCozeModelUsageFailedCode,
+		getCozeModelUsageFailedMessage,
+		code.WithAffectStability(!getCozeModelUsageFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetLLMGatewayModelConfigFailedCode,
+		getLLMGatewayModelConfigFailedMessage,
+		code.WithAffectStability(!getLLMGatewayModelConfigFailedNoAffectStability),
 	)
 
 }

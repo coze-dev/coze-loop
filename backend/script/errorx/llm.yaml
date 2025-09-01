@@ -27,11 +27,11 @@ error_code:
   - name: RequestNotValid
     code: 5007
     message: request not valid
-    no_affect_stability: false
+    no_affect_stability: true
   - name: RequestNotCompatibleWithModelAbility
     code: 5008
     message: request is not compatible with model ability
-    no_affect_stability: false
+    no_affect_stability: true
   - name: CallModelFailed
     code: 5009
     message: call model failed
@@ -47,4 +47,41 @@ error_code:
   - name: CallModelTimeout
     code: 5012
     message: call model timeout
+    no_affect_stability: true
+
+  # coze 模型相关错误
+  - name: CozeModelNotExist
+    code: 5101
+    message: coze model not exist
+    description: Coze模型不存在
+    no_affect_stability: true
+  - name: InterfaceNotAvailableInHouse
+    code: 5102
+    message: the interface is not available in house
+    description: 当前接口不支持Coze罗盘内场
+    no_affect_stability: true
+  - name: GetCozeModelListFailed
+    code: 5103
+    message: get coze model list failed
+    description: 请求Coze模型列表接口失败
+    no_affect_stability: true
+  - name: GetCozeModelFailed
+    code: 5104
+    message: get coze model failed
+    description: 请求Coze模型详情接口失败
+    no_affect_stability: true
+  - name: GetCozeModelListParamFailed
+    code: 5105
+    message: get coze model list param failed
+    description: 请求Coze模型列表参数接口失败
+    no_affect_stability: true
+  - name: GetCozeModelUsageFailed
+    code: 5106
+    message: get coze model usage failed
+    description: 请求Coze模型用量接口失败
+    no_affect_stability: true
+  - name: GetLLMGatewayModelConfigFailed
+    code: 5107
+    message: get llm gateway model config failed
+    description: 获取LLM Gateway模型配置失败
     no_affect_stability: true
