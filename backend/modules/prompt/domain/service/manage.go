@@ -35,35 +35,6 @@ func (p *PromptServiceImpl) MGetPromptIDs(ctx context.Context, spaceID int64, pr
 	return promptKeyIDMap, nil
 }
 
-func (p *PromptServiceImpl) MParseCommitVersionByPromptKey(ctx context.Context, spaceID int64, pairs []PromptKeyVersionPair) (promptKeyCommitVersionMap map[PromptKeyVersionPair]string, err error) {
-	promptKeyCommitVersionMap = make(map[PromptKeyVersionPair]string)
-	var emptyVersionPromptKeys []string
-	for _, pair := range pairs {
-		if pair.Version == "" {
-			emptyVersionPromptKeys = append(emptyVersionPromptKeys, pair.PromptKey)
-		}
-		// 不管原始版本号是否为空，都先用原始版本号占位
-		promptKeyCommitVersionMap[pair] = pair.Version
-	}
-	if len(emptyVersionPromptKeys) == 0 {
-		return promptKeyCommitVersionMap, nil
-	}
-	basics, err := p.manageRepo.MGetPromptBasicByPromptKey(ctx, spaceID, emptyVersionPromptKeys, repo.WithPromptBasicCacheEnable())
-	if err != nil {
-		return nil, err
-	}
-	for _, basic := range basics {
-		if basic != nil && basic.PromptBasic != nil {
-			lastestCommitVersion := basic.PromptBasic.LatestVersion
-			if lastestCommitVersion == "" {
-				return nil, errorx.NewByCode(prompterr.PromptUncommittedCode, errorx.WithExtraMsg(fmt.Sprintf("prompt key: %s", basic.PromptKey)), errorx.WithExtra(map[string]string{"prompt_key": basic.PromptKey}))
-			}
-			promptKeyCommitVersionMap[PromptKeyVersionPair{PromptKey: basic.PromptKey}] = lastestCommitVersion
-		}
-	}
-	return promptKeyCommitVersionMap, nil
-}
-
 func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error {
 	var fileKeys []string
 	for _, message := range messages {
