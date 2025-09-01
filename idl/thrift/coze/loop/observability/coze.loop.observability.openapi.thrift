@@ -5,6 +5,7 @@ include "./domain/annotation.thrift"
 include "./domain/span.thrift"
 include "./domain/common.thrift"
 include "./domain/filter.thrift"
+include "coze.loop.observability.trace.thrift"
 
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
@@ -86,6 +87,7 @@ struct SearchTraceOApiResponse {
 
 struct SearchTraceOApiData {
     1: required list<span.OutputSpan> spans
+    2: optional coze.loop.observability.trace.TraceAdvanceInfo traces_advance_info
 }
 
 struct ListSpansOApiRequest {
