@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 )
 
 var (
@@ -24,6 +25,7 @@ var (
 	_ = common.KitexUnusedProtection
 	_ = filter.KitexUnusedProtection
 	_ = span.KitexUnusedProtection
+	_ = trace.KitexUnusedProtection
 )
 
 // unused protection
@@ -2923,6 +2925,20 @@ func (p *SearchTraceOApiData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2972,6 +2988,18 @@ func (p *SearchTraceOApiData) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SearchTraceOApiData) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+	_field := trace.NewTraceAdvanceInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TracesAdvanceInfo = _field
+	return offset, nil
+}
+
 func (p *SearchTraceOApiData) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2980,6 +3008,7 @@ func (p *SearchTraceOApiData) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2989,6 +3018,7 @@ func (p *SearchTraceOApiData) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3008,6 +3038,15 @@ func (p *SearchTraceOApiData) fastWriteField1(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
+func (p *SearchTraceOApiData) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTracesAdvanceInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.TracesAdvanceInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *SearchTraceOApiData) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -3015,6 +3054,15 @@ func (p *SearchTraceOApiData) field1Length() int {
 	for _, v := range p.Spans {
 		_ = v
 		l += v.BLength()
+	}
+	return l
+}
+
+func (p *SearchTraceOApiData) field2Length() int {
+	l := 0
+	if p.IsSetTracesAdvanceInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TracesAdvanceInfo.BLength()
 	}
 	return l
 }
@@ -3039,6 +3087,15 @@ func (p *SearchTraceOApiData) DeepCopy(s interface{}) error {
 			p.Spans = append(p.Spans, _elem)
 		}
 	}
+
+	var _tracesAdvanceInfo *trace.TraceAdvanceInfo
+	if src.TracesAdvanceInfo != nil {
+		_tracesAdvanceInfo = &trace.TraceAdvanceInfo{}
+		if err := _tracesAdvanceInfo.DeepCopy(src.TracesAdvanceInfo); err != nil {
+			return err
+		}
+	}
+	p.TracesAdvanceInfo = _tracesAdvanceInfo
 
 	return nil
 }

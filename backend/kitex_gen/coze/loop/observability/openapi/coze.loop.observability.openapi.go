@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"strings"
 )
 
@@ -3913,7 +3914,8 @@ func (p *SearchTraceOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type SearchTraceOApiData struct {
-	Spans []*span.OutputSpan `thrift:"spans,1,required" frugal:"1,required,list<span.OutputSpan>" form:"spans,required" json:"spans,required" query:"spans,required"`
+	Spans             []*span.OutputSpan      `thrift:"spans,1,required" frugal:"1,required,list<span.OutputSpan>" form:"spans,required" json:"spans,required" query:"spans,required"`
+	TracesAdvanceInfo *trace.TraceAdvanceInfo `thrift:"traces_advance_info,2,optional" frugal:"2,optional,trace.TraceAdvanceInfo" form:"traces_advance_info" json:"traces_advance_info,omitempty" query:"traces_advance_info"`
 }
 
 func NewSearchTraceOApiData() *SearchTraceOApiData {
@@ -3929,12 +3931,32 @@ func (p *SearchTraceOApiData) GetSpans() (v []*span.OutputSpan) {
 	}
 	return
 }
+
+var SearchTraceOApiData_TracesAdvanceInfo_DEFAULT *trace.TraceAdvanceInfo
+
+func (p *SearchTraceOApiData) GetTracesAdvanceInfo() (v *trace.TraceAdvanceInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTracesAdvanceInfo() {
+		return SearchTraceOApiData_TracesAdvanceInfo_DEFAULT
+	}
+	return p.TracesAdvanceInfo
+}
 func (p *SearchTraceOApiData) SetSpans(val []*span.OutputSpan) {
 	p.Spans = val
+}
+func (p *SearchTraceOApiData) SetTracesAdvanceInfo(val *trace.TraceAdvanceInfo) {
+	p.TracesAdvanceInfo = val
 }
 
 var fieldIDToName_SearchTraceOApiData = map[int16]string{
 	1: "spans",
+	2: "traces_advance_info",
+}
+
+func (p *SearchTraceOApiData) IsSetTracesAdvanceInfo() bool {
+	return p.TracesAdvanceInfo != nil
 }
 
 func (p *SearchTraceOApiData) Read(iprot thrift.TProtocol) (err error) {
@@ -3962,6 +3984,14 @@ func (p *SearchTraceOApiData) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetSpans = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -4023,6 +4053,14 @@ func (p *SearchTraceOApiData) ReadField1(iprot thrift.TProtocol) error {
 	p.Spans = _field
 	return nil
 }
+func (p *SearchTraceOApiData) ReadField2(iprot thrift.TProtocol) error {
+	_field := trace.NewTraceAdvanceInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TracesAdvanceInfo = _field
+	return nil
+}
 
 func (p *SearchTraceOApiData) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4032,6 +4070,10 @@ func (p *SearchTraceOApiData) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -4076,6 +4118,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *SearchTraceOApiData) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTracesAdvanceInfo() {
+		if err = oprot.WriteFieldBegin("traces_advance_info", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TracesAdvanceInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *SearchTraceOApiData) String() string {
 	if p == nil {
@@ -4094,6 +4154,9 @@ func (p *SearchTraceOApiData) DeepEqual(ano *SearchTraceOApiData) bool {
 	if !p.Field1DeepEqual(ano.Spans) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.TracesAdvanceInfo) {
+		return false
+	}
 	return true
 }
 
@@ -4107,6 +4170,13 @@ func (p *SearchTraceOApiData) Field1DeepEqual(src []*span.OutputSpan) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *SearchTraceOApiData) Field2DeepEqual(src *trace.TraceAdvanceInfo) bool {
+
+	if !p.TracesAdvanceInfo.DeepEqual(src) {
+		return false
 	}
 	return true
 }
