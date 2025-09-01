@@ -949,7 +949,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				}, nil)
 				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[service.PromptQueryParam]string{
 					{PromptID: 123, PromptKey: "test_prompt1", Version: "1.0.0"}: "1.0.0",
-					{PromptID: 456, PromptKey: "test_prompt2", Label: "beta"}:     "1.5.0",
+					{PromptID: 456, PromptKey: "test_prompt2", Label: "beta"}:    "1.5.0",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
