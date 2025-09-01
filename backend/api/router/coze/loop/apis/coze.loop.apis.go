@@ -267,7 +267,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations := _v14.Group("/annotations", _annotationsMw(handler)...)
 				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
 				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
-				_annotations.POST("/change_eEvaluator_sScore", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
+				_annotations.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
 				_annotations.GET("/lis_annotation_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
 				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)

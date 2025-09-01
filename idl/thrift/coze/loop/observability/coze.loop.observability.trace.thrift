@@ -360,7 +360,7 @@ service TraceService {
     ListAnnotationsResponse ListAnnotations(1: ListAnnotationsRequest req) (api.post = '/api/observability/v1/annotations/list')
     ExportTracesToDatasetResponse ExportTracesToDataset(1: ExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/export_to_dataset')
     PreviewExportTracesToDatasetResponse PreviewExportTracesToDataset(1: PreviewExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/preview_export_to_dataset')
-    ChangeEvaluatorScoreResponse ChangeEvaluatorScore(1: ChangeEvaluatorScoreRequest req) (api.post = '/api/observability/v1/annotations/change_eEvaluator_sScore')
-    ListAnnotationEvaluatorsResponse ListAnnotationEvaluators(1: ListAnnotationEvaluatorsRequest req) (api.get = '/api/observability/v1/annotations/lis_annotation_evaluators')
-    ExtractSpanInfoResponse ExtractSpanInfo(1: ExtractSpanInfoRequest req) (api.post = '/api/observability/v1/traces/extract_span_info')
+    ChangeEvaluatorScoreResponse ChangeEvaluatorScore(1: ChangeEvaluatorScoreRequest req) (api.post = '/api/observability/v1/traces/change_eval_score')
+    ListAnnotationEvaluatorsResponse ListAnnotationEvaluators(1: ListAnnotationEvaluatorsRequest req) (api.get = '/api/observability/v1/annotation/list_evaluators')
+    ExtractSpanInfoResponse ExtractSpanInfo(1: ExtractSpanInfoRequest req) (api.post = '/api/observability/v1/trace/extract_span_info')
 }
