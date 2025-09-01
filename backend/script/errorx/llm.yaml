@@ -49,39 +49,38 @@ error_code:
     message: call model timeout
     no_affect_stability: true
 
-  # coze 模型相关错误
-  - name: CozeModelNotExist
+  - name: ModelNotExist
     code: 5101
-    message: coze model not exist
-    description: Coze模型不存在
+    message: model not exist
+    description: 模型不存在
     no_affect_stability: true
   - name: InterfaceNotAvailableInHouse
     code: 5102
-    message: the interface is not available in house
-    description: 当前接口不支持Coze罗盘内场
+    message: the interface is not available
+    description: 当前接口无法使用
     no_affect_stability: true
-  - name: GetCozeModelListFailed
+  - name: GetModelListFailed
     code: 5103
-    message: get coze model list failed
-    description: 请求Coze模型列表接口失败
+    message: get model list failed
+    description: 请求模型列表接口失败
     no_affect_stability: true
-  - name: GetCozeModelFailed
+  - name: GetModelFailed
     code: 5104
-    message: get coze model failed
-    description: 请求Coze模型详情接口失败
+    message: get model failed
+    description: 请求模型详情接口失败
     no_affect_stability: true
-  - name: GetCozeModelListParamFailed
+  - name: GetModelListParamFailed
     code: 5105
-    message: get coze model list param failed
-    description: 请求Coze模型列表参数接口失败
+    message: get model list param failed
+    description: 请求模型列表参数接口失败
     no_affect_stability: true
-  - name: GetCozeModelUsageFailed
+  - name: GetModelUsageFailed
     code: 5106
-    message: get coze model usage failed
-    description: 请求Coze模型用量接口失败
+    message: get model usage failed
+    description: 请求模型用量接口失败
     no_affect_stability: true
-  - name: GetLLMGatewayModelConfigFailed
+  - name: GetModelConfigFailed
     code: 5107
-    message: get llm gateway model config failed
-    description: 获取LLM Gateway模型配置失败
+    message: get model config failed
+    description: 获取模型配置失败
     no_affect_stability: true
