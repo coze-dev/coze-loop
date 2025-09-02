@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
+	servicemocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
@@ -1378,8 +1379,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 					},
 				}, nil)
 
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().BatchGetCommitLabels(gomock.Any(), int64(1), []string{"1.0.0", "1.1.0"}).Return(map[string][]string{}, nil)
+
 				return fields{
 					manageRepo:      mockManageRepo,
+					promptService:   mockPromptService,
 					authRPCProvider: mockAuth,
 					userRPCProvider: mockUser,
 				}
@@ -1410,6 +1415,7 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 						CommittedAt: ptr.Of(now.UnixMilli()),
 					},
 				},
+				CommitVersionLabelMapping: map[string][]*prompt.Label{},
 				Users: []*user.UserInfoDetail{
 					{
 						UserID:    ptr.Of("test_user"),
@@ -1464,8 +1470,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 					},
 				}, nil)
 
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().BatchGetCommitLabels(gomock.Any(), int64(1), []string{"1.0.0", "1.1.0"}).Return(map[string][]string{}, nil)
+
 				return fields{
 					manageRepo:      mockManageRepo,
+					promptService:   mockPromptService,
 					authRPCProvider: mockAuth,
 					userRPCProvider: mockUser,
 				}
@@ -1496,8 +1506,9 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 						CommittedAt: ptr.Of(now.UnixMilli()),
 					},
 				},
-				HasMore:       ptr.Of(true),
-				NextPageToken: ptr.Of("3"),
+				CommitVersionLabelMapping: map[string][]*prompt.Label{},
+				HasMore:                   ptr.Of(true),
+				NextPageToken:             ptr.Of("3"),
 				Users: []*user.UserInfoDetail{
 					{
 						UserID:    ptr.Of("test_user"),
@@ -1551,8 +1562,12 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 					},
 				}, nil)
 
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().BatchGetCommitLabels(gomock.Any(), int64(1), []string{"1.2.0", "1.3.0"}).Return(map[string][]string{}, nil)
+
 				return fields{
 					manageRepo:      mockManageRepo,
+					promptService:   mockPromptService,
 					authRPCProvider: mockAuth,
 					userRPCProvider: mockUser,
 				}
@@ -1583,6 +1598,7 @@ func TestPromptManageApplicationImpl_ListCommit(t *testing.T) {
 						CommittedAt: ptr.Of(now.UnixMilli()),
 					},
 				},
+				CommitVersionLabelMapping: map[string][]*prompt.Label{},
 				Users: []*user.UserInfoDetail{
 					{
 						UserID:    ptr.Of("test_user"),
@@ -2276,6 +2292,483 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 			}
 
 			got, err := app.ListPrompt(tt.args.ctx, tt.args.request)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPromptManageApplicationImpl_CreateLabel(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		manageRepo       repo.IManageRepo
+		labelRepo        repo.ILabelRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
+	}
+	type args struct {
+		ctx     context.Context
+		request *manage.CreateLabelRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *manage.CreateLabelResponse
+		wantErr      error
+	}{
+		{
+			name: "成功创建标签",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceCreateLoopPrompt).Return(nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().CreateLabel(gomock.Any(), gomock.Any()).Return(nil)
+
+				return fields{
+					authRPCProvider: mockAuth,
+					promptService:   mockPromptService,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.CreateLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					Label: &prompt.Label{
+						Key: ptr.Of("test-label"),
+					},
+				},
+			},
+			want:    manage.NewCreateLabelResponse(),
+			wantErr: nil,
+		},
+		{
+			name: "用户未找到",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.CreateLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					Label: &prompt.Label{
+						Key: ptr.Of("test-label"),
+					},
+				},
+			},
+			want:    manage.NewCreateLabelResponse(),
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found")),
+		},
+		{
+			name: "权限检查失败",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceCreateLoopPrompt).Return(errorx.New("permission denied"))
+
+				return fields{
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.CreateLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					Label: &prompt.Label{
+						Key: ptr.Of("test-label"),
+					},
+				},
+			},
+			want:    manage.NewCreateLabelResponse(),
+			wantErr: errorx.New("permission denied"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ttFields := tt.fieldsGetter(ctrl)
+
+			app := &PromptManageApplicationImpl{
+				manageRepo:       ttFields.manageRepo,
+				labelRepo:        ttFields.labelRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
+			}
+
+			got, err := app.CreateLabel(tt.args.ctx, tt.args.request)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPromptManageApplicationImpl_ListLabel(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		manageRepo       repo.IManageRepo
+		labelRepo        repo.ILabelRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
+	}
+	type args struct {
+		ctx     context.Context
+		request *manage.ListLabelRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *manage.ListLabelResponse
+		wantErr      error
+	}{
+		{
+			name: "成功列出标签",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ListLabel(gomock.Any(), gomock.Any()).Return([]*entity.PromptLabel{
+					{
+						ID:       1,
+						SpaceID:  100,
+						LabelKey: "test-label",
+					},
+				}, ptr.Of(int64(2)), nil)
+
+				return fields{
+					authRPCProvider: mockAuth,
+					promptService:   mockPromptService,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.ListLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want: &manage.ListLabelResponse{
+				Labels: []*prompt.Label{
+					{
+						Key: ptr.Of("test-label"),
+					},
+				},
+				NextPageToken: ptr.Of("2"),
+				HasMore:       ptr.Of(true),
+			},
+			wantErr: nil,
+		},
+		{
+			name: "权限检查失败",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(errorx.New("permission denied"))
+
+				return fields{
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.ListLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want:    manage.NewListLabelResponse(),
+			wantErr: errorx.New("permission denied"),
+		},
+		{
+			name: "需要版本映射但未提供PromptID",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				return fields{
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.ListLabelRequest{
+					WorkspaceID:              ptr.Of(int64(100)),
+					PageSize:                 ptr.Of(int32(10)),
+					WithPromptVersionMapping: ptr.Of(true),
+				},
+			},
+			want:    manage.NewListLabelResponse(),
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("PromptID must be provided when WithPromptVersionMapping is true")),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ttFields := tt.fieldsGetter(ctrl)
+
+			app := &PromptManageApplicationImpl{
+				manageRepo:       ttFields.manageRepo,
+				labelRepo:        ttFields.labelRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
+			}
+
+			got, err := app.ListLabel(tt.args.ctx, tt.args.request)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPromptManageApplicationImpl_BatchGetLabel(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		manageRepo       repo.IManageRepo
+		labelRepo        repo.ILabelRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
+	}
+	type args struct {
+		ctx     context.Context
+		request *manage.BatchGetLabelRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *manage.BatchGetLabelResponse
+		wantErr      error
+	}{
+		{
+			name: "成功批量获取标签",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+
+				mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+				mockLabelRepo.EXPECT().BatchGetLabel(gomock.Any(), int64(100), []string{"label1", "label2"}).Return([]*entity.PromptLabel{
+					{
+						ID:       1,
+						SpaceID:  100,
+						LabelKey: "label1",
+					},
+					{
+						ID:       2,
+						SpaceID:  100,
+						LabelKey: "label2",
+					},
+				}, nil)
+
+				return fields{
+					authRPCProvider: mockAuth,
+					labelRepo:       mockLabelRepo,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.BatchGetLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					LabelKeys:   []string{"label1", "label2"},
+				},
+			},
+			want: &manage.BatchGetLabelResponse{
+				Labels: []*prompt.Label{
+					{
+						Key: ptr.Of("label1"),
+					},
+					{
+						Key: ptr.Of("label2"),
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "权限检查失败",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(errorx.New("permission denied"))
+
+				return fields{
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.BatchGetLabelRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					LabelKeys:   []string{"label1", "label2"},
+				},
+			},
+			want:    manage.NewBatchGetLabelResponse(),
+			wantErr: errorx.New("permission denied"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ttFields := tt.fieldsGetter(ctrl)
+
+			app := &PromptManageApplicationImpl{
+				manageRepo:       ttFields.manageRepo,
+				labelRepo:        ttFields.labelRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
+			}
+
+			got, err := app.BatchGetLabel(tt.args.ctx, tt.args.request)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPromptManageApplicationImpl_UpdateCommitLabels(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		manageRepo       repo.IManageRepo
+		labelRepo        repo.ILabelRepo
+		promptService    service.IPromptService
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
+	}
+	type args struct {
+		ctx     context.Context
+		request *manage.UpdateCommitLabelsRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *manage.UpdateCommitLabelsResponse
+		wantErr      error
+	}{
+		{
+			name: "成功更新提交标签",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1}, consts.ActionLoopPromptEdit).Return(nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().UpdateCommitLabels(gomock.Any(), gomock.Any()).Return(nil)
+
+				return fields{
+					authRPCProvider: mockAuth,
+					promptService:   mockPromptService,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.UpdateCommitLabelsRequest{
+					WorkspaceID:   ptr.Of(int64(100)),
+					PromptID:      ptr.Of(int64(1)),
+					CommitVersion: ptr.Of("1.0.0"),
+					LabelKeys:     []string{"label1", "label2"},
+				},
+			},
+			want:    manage.NewUpdateCommitLabelsResponse(),
+			wantErr: nil,
+		},
+		{
+			name: "用户未找到",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &manage.UpdateCommitLabelsRequest{
+					WorkspaceID:   ptr.Of(int64(100)),
+					PromptID:      ptr.Of(int64(1)),
+					CommitVersion: ptr.Of("1.0.0"),
+					LabelKeys:     []string{"label1", "label2"},
+				},
+			},
+			want:    manage.NewUpdateCommitLabelsResponse(),
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found")),
+		},
+		{
+			name: "权限检查失败",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1}, consts.ActionLoopPromptEdit).Return(errorx.New("permission denied"))
+
+				return fields{
+					authRPCProvider: mockAuth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				request: &manage.UpdateCommitLabelsRequest{
+					WorkspaceID:   ptr.Of(int64(100)),
+					PromptID:      ptr.Of(int64(1)),
+					CommitVersion: ptr.Of("1.0.0"),
+					LabelKeys:     []string{"label1", "label2"},
+				},
+			},
+			want:    manage.NewUpdateCommitLabelsResponse(),
+			wantErr: errorx.New("permission denied"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ttFields := tt.fieldsGetter(ctrl)
+
+			app := &PromptManageApplicationImpl{
+				manageRepo:       ttFields.manageRepo,
+				labelRepo:        ttFields.labelRepo,
+				promptService:    ttFields.promptService,
+				authRPCProvider:  ttFields.authRPCProvider,
+				userRPCProvider:  ttFields.userRPCProvider,
+				auditRPCProvider: ttFields.auditRPCProvider,
+				configProvider:   ttFields.configProvider,
+			}
+
+			got, err := app.UpdateCommitLabels(tt.args.ctx, tt.args.request)
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if err == nil {
 				assert.Equal(t, tt.want, got)

@@ -125,6 +125,7 @@ struct ContentPart {
 typedef string ContentType (ts.enum="true")
 const ContentType ContentType_Text = "text"
 const ContentType ContentType_ImageURL = "image_url"
+const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct ImageURL {
     1: optional string uri
@@ -143,6 +144,10 @@ struct FunctionCall {
     2: optional string arguments
 }
 
+struct Label {
+    1: optional string key
+}
+
 struct VariableDef {
     1: optional string key
     2: optional string desc
@@ -154,6 +159,7 @@ struct VariableVal {
     1: optional string key
     2: optional string value
     3: optional list<Message> placeholder_messages
+    4: optional list<ContentPart> multi_part_values
 }
 
 typedef string VariableType (ts.enum="true")
@@ -168,6 +174,7 @@ const VariableType VariableType_Array_Integer = "array<integer>"
 const VariableType VariableType_Array_Float = "array<float>"
 const VariableType VariableType_Array_Object = "array<object>"
 const VariableType VariableType_Placeholder = "placeholder"
+const VariableType VariableType_MultiPart = "multi_part"
 
 struct TokenUsage {
     1: optional i64 input_tokens (api.js_conv="true", go.tag='json:"input_tokens"')

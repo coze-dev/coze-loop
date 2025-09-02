@@ -53,7 +53,10 @@ func generateForPrompt(db *gorm.DB) {
 	g.UseDB(db)
 
 	var models []any
-	for _, table := range []string{"prompt_basic", "prompt_user_draft", "prompt_debug_log", "prompt_debug_context"} {
+	for _, table := range []string{
+		"prompt_basic", "prompt_user_draft", "prompt_debug_log", "prompt_debug_context",
+		"prompt_label", "prompt_commit_label_mapping",
+	} {
 		models = append(models, g.GenerateModel(table,
 			// 添加软删除字段
 			gen.FieldType("deleted_at", "soft_delete.DeletedAt"),
@@ -71,6 +74,7 @@ func generateForPrompt(db *gorm.DB) {
 				return tag.Set("charset=utf8mb4")
 			})))
 	}
+
 	g.ApplyBasic(models...)
 	g.Execute()
 }

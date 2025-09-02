@@ -152,6 +152,21 @@ var _ Span = (*noopSpan)(nil)
 
 type noopSpan struct{}
 
+func (n noopSpan) SetServiceName(ctx context.Context, serviceName string) {
+}
+
+func (n noopSpan) SetLogID(ctx context.Context, logID string) {
+}
+
+func (n noopSpan) SetFinishTime(finishTime time.Time) {
+}
+
+func (n noopSpan) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+}
+
+func (n noopSpan) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {
+}
+
 func (n noopSpan) GetSpanID() string {
 	return ""
 }
@@ -236,19 +251,4 @@ func (n noopSpan) ToHeader() (map[string]string, error) {
 }
 
 func (n noopSpan) SetCallType(callType string) {
-}
-
-func (n noopSpan) SetServiceName(ctx context.Context, serviceName string) {
-}
-
-func (n noopSpan) SetLogID(ctx context.Context, logID string) {
-}
-
-func (n noopSpan) SetFinishTime(finishTime time.Time) {
-}
-
-func (n noopSpan) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
-}
-
-func (n noopSpan) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {
 }

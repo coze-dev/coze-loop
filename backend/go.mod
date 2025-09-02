@@ -2,7 +2,7 @@ module github.com/coze-dev/coze-loop/backend
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.24.4
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
@@ -37,7 +37,7 @@ require (
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
 	github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83
-	github.com/coze-dev/cozeloop-go/spec v0.1.3
+	github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250829072213-3812ddbfb735
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0
