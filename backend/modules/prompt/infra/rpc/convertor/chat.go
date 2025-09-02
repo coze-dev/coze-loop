@@ -237,6 +237,8 @@ func ScenarioDO2DTO(do entity.Scenario) common.Scenario {
 	switch do {
 	case entity.ScenarioPromptDebug:
 		return common.ScenarioPromptDebug
+	case entity.ScenarioPTaaS:
+		return common.ScenarioPromptAsAService
 	case entity.ScenarioEvalTarget:
 		return common.ScenarioEvalTarget
 	default:
