@@ -96,33 +96,33 @@ const (
 	callModelTimeoutMessage           = "call model timeout"
 	callModelTimeoutNoAffectStability = true
 
-	CozeModelNotExistCode              = 601505101 // Coze模型不存在
-	cozeModelNotExistMessage           = "coze model not exist"
-	cozeModelNotExistNoAffectStability = true
+	ModelNotExistCode              = 601505101 // 模型不存在
+	modelNotExistMessage           = "model not exist"
+	modelNotExistNoAffectStability = true
 
-	InterfaceNotAvailableInHouseCode              = 601505102 // 当前接口不支持Coze罗盘内场
-	interfaceNotAvailableInHouseMessage           = "the interface is not available in house"
+	InterfaceNotAvailableInHouseCode              = 601505102 // 当前接口无法使用
+	interfaceNotAvailableInHouseMessage           = "the interface is not available"
 	interfaceNotAvailableInHouseNoAffectStability = true
 
-	GetCozeModelListFailedCode              = 601505103 // 请求Coze模型列表接口失败
-	getCozeModelListFailedMessage           = "get coze model list failed"
-	getCozeModelListFailedNoAffectStability = true
+	GetModelListFailedCode              = 601505103 // 请求模型列表接口失败
+	getModelListFailedMessage           = "get model list failed"
+	getModelListFailedNoAffectStability = true
 
-	GetCozeModelFailedCode              = 601505104 // 请求Coze模型详情接口失败
-	getCozeModelFailedMessage           = "get coze model failed"
-	getCozeModelFailedNoAffectStability = true
+	GetModelFailedCode              = 601505104 // 请求模型详情接口失败
+	getModelFailedMessage           = "get model failed"
+	getModelFailedNoAffectStability = true
 
-	GetCozeModelListParamFailedCode              = 601505105 // 请求Coze模型列表参数接口失败
-	getCozeModelListParamFailedMessage           = "get coze model list param failed"
-	getCozeModelListParamFailedNoAffectStability = true
+	GetModelListParamFailedCode              = 601505105 // 请求模型列表参数接口失败
+	getModelListParamFailedMessage           = "get model list param failed"
+	getModelListParamFailedNoAffectStability = true
 
-	GetCozeModelUsageFailedCode              = 601505106 // 请求Coze模型用量接口失败
-	getCozeModelUsageFailedMessage           = "get coze model usage failed"
-	getCozeModelUsageFailedNoAffectStability = true
+	GetModelUsageFailedCode              = 601505106 // 请求模型用量接口失败
+	getModelUsageFailedMessage           = "get model usage failed"
+	getModelUsageFailedNoAffectStability = true
 
-	GetLLMGatewayModelConfigFailedCode              = 601505107 // 获取LLM Gateway模型配置失败
-	getLLMGatewayModelConfigFailedMessage           = "get llm gateway model config failed"
-	getLLMGatewayModelConfigFailedNoAffectStability = true
+	GetModelConfigFailedCode              = 601505107 // 获取模型配置失败
+	getModelConfigFailedMessage           = "get model config failed"
+	getModelConfigFailedNoAffectStability = true
 )
 
 func init() {
@@ -260,9 +260,9 @@ func init() {
 	)
 
 	code.Register(
-		CozeModelNotExistCode,
-		cozeModelNotExistMessage,
-		code.WithAffectStability(!cozeModelNotExistNoAffectStability),
+		ModelNotExistCode,
+		modelNotExistMessage,
+		code.WithAffectStability(!modelNotExistNoAffectStability),
 	)
 
 	code.Register(
@@ -272,33 +272,33 @@ func init() {
 	)
 
 	code.Register(
-		GetCozeModelListFailedCode,
-		getCozeModelListFailedMessage,
-		code.WithAffectStability(!getCozeModelListFailedNoAffectStability),
+		GetModelListFailedCode,
+		getModelListFailedMessage,
+		code.WithAffectStability(!getModelListFailedNoAffectStability),
 	)
 
 	code.Register(
-		GetCozeModelFailedCode,
-		getCozeModelFailedMessage,
-		code.WithAffectStability(!getCozeModelFailedNoAffectStability),
+		GetModelFailedCode,
+		getModelFailedMessage,
+		code.WithAffectStability(!getModelFailedNoAffectStability),
 	)
 
 	code.Register(
-		GetCozeModelListParamFailedCode,
-		getCozeModelListParamFailedMessage,
-		code.WithAffectStability(!getCozeModelListParamFailedNoAffectStability),
+		GetModelListParamFailedCode,
+		getModelListParamFailedMessage,
+		code.WithAffectStability(!getModelListParamFailedNoAffectStability),
 	)
 
 	code.Register(
-		GetCozeModelUsageFailedCode,
-		getCozeModelUsageFailedMessage,
-		code.WithAffectStability(!getCozeModelUsageFailedNoAffectStability),
+		GetModelUsageFailedCode,
+		getModelUsageFailedMessage,
+		code.WithAffectStability(!getModelUsageFailedNoAffectStability),
 	)
 
 	code.Register(
-		GetLLMGatewayModelConfigFailedCode,
-		getLLMGatewayModelConfigFailedMessage,
-		code.WithAffectStability(!getLLMGatewayModelConfigFailedNoAffectStability),
+		GetModelConfigFailedCode,
+		getModelConfigFailedMessage,
+		code.WithAffectStability(!getModelConfigFailedNoAffectStability),
 	)
 
 }
