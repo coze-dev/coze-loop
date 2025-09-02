@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -25,8 +26,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
+	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"github.com/samber/lo"
 )
 
 func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
@@ -38,6 +39,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 		metrics               metrics.ITraceMetrics
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
+		buildHelper           TraceFilterProcessorBuilder
 	}
 	type args struct {
 		ctx context.Context
@@ -60,7 +62,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
-
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
 
@@ -102,6 +105,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -138,7 +142,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
-
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				adaptor := NewDatasetServiceAdaptor()
 
 				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"}, nil)
@@ -154,6 +159,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -188,6 +194,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 				metrics:               fields.metrics,
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
+				buildHelper:           fields.buildHelper,
 			}
 
 			got, err := r.ExportTracesToDataset(tt.args.ctx, tt.args.req)
@@ -440,6 +447,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 		metrics               metrics.ITraceMetrics
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
+		buildHelper           TraceFilterProcessorBuilder
 	}
 	type args struct {
 		ctx context.Context
@@ -462,6 +470,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -499,6 +509,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -551,6 +562,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -589,6 +602,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -642,6 +656,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -680,6 +696,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -732,6 +749,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 
@@ -745,6 +764,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -772,6 +792,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 
@@ -786,6 +808,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -814,6 +837,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -840,6 +865,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -881,6 +907,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -900,6 +928,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -950,6 +979,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				metrics:               fields.metrics,
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
+				buildHelper:           fields.buildHelper,
 			}
 
 			got, err := r.PreviewExportTracesToDataset(tt.args.ctx, tt.args.req)
@@ -972,6 +1002,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 		metrics               metrics.ITraceMetrics
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
+		buildHelper           TraceFilterProcessorBuilder
 	}
 	type args struct {
 		ctx context.Context
@@ -994,6 +1025,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 
@@ -1012,6 +1045,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1052,6 +1086,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1097,6 +1133,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1144,6 +1181,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1172,6 +1211,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1212,6 +1252,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_Evaluation, datasetProviderMock)
@@ -1261,6 +1303,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1308,6 +1351,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1356,6 +1401,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1403,6 +1449,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1452,6 +1500,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1499,6 +1548,8 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1548,6 +1599,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1600,6 +1652,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				metrics:               fields.metrics,
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
+				buildHelper:           fields.buildHelper,
 			}
 
 			got, err := r.ExportTracesToDataset(tt.args.ctx, tt.args.req)
@@ -1622,6 +1675,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 		metrics               metrics.ITraceMetrics
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
+		buildHelper           TraceFilterProcessorBuilder
 	}
 	type args struct {
 		ctx context.Context
@@ -1644,6 +1698,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1680,6 +1736,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					metrics:               metricsMock,
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
 				}
 			},
 			args: args{
@@ -1738,6 +1795,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 				metrics:               fields.metrics,
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
+				buildHelper:           fields.buildHelper,
 			}
 
 			got, err := r.PreviewExportTracesToDataset(tt.args.ctx, tt.args.req)
