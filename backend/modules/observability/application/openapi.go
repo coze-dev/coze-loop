@@ -155,6 +155,7 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 		if workspaceID == "" {
 			continue
 		}
+		spans[i].WorkspaceID = workspaceID
 		if spansMap[workspaceID] == nil {
 			spansMap[workspaceID] = make([]*span.InputSpan, 0)
 		}
