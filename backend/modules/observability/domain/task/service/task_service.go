@@ -154,7 +154,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 	return nil
 }
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
-	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
+	taskPOs, total, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
 		TaskFilters:  req.TaskFilters,
 		ReqLimit:     req.Limit,
@@ -178,13 +178,10 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	tasks, err := tconv.TaskPOs2DOs(ctx, taskPOs, userInfoMap)
-	if err != nil {
-		logs.CtxError(ctx, "TaskPOs2DOs err:%v", err)
-		return resp, err
-	}
-	resp.Tasks = tasks
-	return resp, nil
+	return &ListTasksResp{
+		Tasks: tconv.TaskPOs2DOs(ctx, taskPOs, userInfoMap),
+		Total: ptr.Of(total),
+	}, nil
 }
 func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *GetTaskResp, err error) {
 	userID := session.UserIDInCtxOrEmpty(ctx)

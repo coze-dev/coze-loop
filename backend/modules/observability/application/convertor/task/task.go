@@ -25,16 +25,16 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func TaskPOs2DOs(ctx context.Context, taskPOs []*entity.ObservabilityTask, userInfos map[string]*entity_common.UserInfo) ([]*task.Task, error) {
+func TaskPOs2DOs(ctx context.Context, taskPOs []*entity.ObservabilityTask, userInfos map[string]*entity_common.UserInfo) []*task.Task {
 	var taskList []*task.Task
 	if len(taskPOs) == 0 {
-		return taskList, nil
+		return taskList
 	}
 	for _, v := range taskPOs {
 		taskDO := TaskPO2DTO(ctx, v, userInfos)
 		taskList = append(taskList, taskDO)
 	}
-	return taskList, nil
+	return taskList
 }
 func TaskPO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[string]*entity_common.UserInfo) *task.Task {
 	if v == nil {
