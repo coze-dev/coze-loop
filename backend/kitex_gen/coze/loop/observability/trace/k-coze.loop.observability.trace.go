@@ -10922,6 +10922,20 @@ func (p *ChangeEvaluatorScoreRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -11048,6 +11062,20 @@ func (p *ChangeEvaluatorScoreRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ChangeEvaluatorScoreRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *common.PlatformType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PlatformType = _field
+	return offset, nil
+}
+
 func (p *ChangeEvaluatorScoreRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -11072,6 +11100,7 @@ func (p *ChangeEvaluatorScoreRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -11086,6 +11115,7 @@ func (p *ChangeEvaluatorScoreRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -11124,6 +11154,15 @@ func (p *ChangeEvaluatorScoreRequest) fastWriteField5(buf []byte, w thrift.Nocop
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
 	offset += p.Correction.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *ChangeEvaluatorScoreRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPlatformType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
+	}
 	return offset
 }
 
@@ -11171,6 +11210,15 @@ func (p *ChangeEvaluatorScoreRequest) field5Length() int {
 	return l
 }
 
+func (p *ChangeEvaluatorScoreRequest) field6Length() int {
+	l := 0
+	if p.IsSetPlatformType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PlatformType)
+	}
+	return l
+}
+
 func (p *ChangeEvaluatorScoreRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -11204,6 +11252,11 @@ func (p *ChangeEvaluatorScoreRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Correction = _correction
+
+	if src.PlatformType != nil {
+		tmp := *src.PlatformType
+		p.PlatformType = &tmp
+	}
 
 	var _base *base.Base
 	if src.Base != nil {

@@ -14571,6 +14571,7 @@ type ChangeEvaluatorScoreRequest struct {
 	SpanID            string                 `thrift:"span_id,3,required" frugal:"3,required,string" form:"span_id,required" json:"span_id,required"`
 	StartTime         int64                  `thrift:"start_time,4,required" frugal:"4,required,i64" json:"start_time" form:"start_time,required" `
 	Correction        *annotation.Correction `thrift:"correction,5,required" frugal:"5,required,annotation.Correction" form:"correction,required" json:"correction,required"`
+	PlatformType      *common.PlatformType   `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	Base              *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -14621,6 +14622,18 @@ func (p *ChangeEvaluatorScoreRequest) GetCorrection() (v *annotation.Correction)
 	return p.Correction
 }
 
+var ChangeEvaluatorScoreRequest_PlatformType_DEFAULT common.PlatformType
+
+func (p *ChangeEvaluatorScoreRequest) GetPlatformType() (v common.PlatformType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPlatformType() {
+		return ChangeEvaluatorScoreRequest_PlatformType_DEFAULT
+	}
+	return *p.PlatformType
+}
+
 var ChangeEvaluatorScoreRequest_Base_DEFAULT *base.Base
 
 func (p *ChangeEvaluatorScoreRequest) GetBase() (v *base.Base) {
@@ -14647,6 +14660,9 @@ func (p *ChangeEvaluatorScoreRequest) SetStartTime(val int64) {
 func (p *ChangeEvaluatorScoreRequest) SetCorrection(val *annotation.Correction) {
 	p.Correction = val
 }
+func (p *ChangeEvaluatorScoreRequest) SetPlatformType(val *common.PlatformType) {
+	p.PlatformType = val
+}
 func (p *ChangeEvaluatorScoreRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -14657,11 +14673,16 @@ var fieldIDToName_ChangeEvaluatorScoreRequest = map[int16]string{
 	3:   "span_id",
 	4:   "start_time",
 	5:   "correction",
+	6:   "platform_type",
 	255: "Base",
 }
 
 func (p *ChangeEvaluatorScoreRequest) IsSetCorrection() bool {
 	return p.Correction != nil
+}
+
+func (p *ChangeEvaluatorScoreRequest) IsSetPlatformType() bool {
+	return p.PlatformType != nil
 }
 
 func (p *ChangeEvaluatorScoreRequest) IsSetBase() bool {
@@ -14733,6 +14754,14 @@ func (p *ChangeEvaluatorScoreRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetCorrection = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -14851,6 +14880,17 @@ func (p *ChangeEvaluatorScoreRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.Correction = _field
 	return nil
 }
+func (p *ChangeEvaluatorScoreRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *common.PlatformType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PlatformType = _field
+	return nil
+}
 func (p *ChangeEvaluatorScoreRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -14884,6 +14924,10 @@ func (p *ChangeEvaluatorScoreRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -14988,6 +15032,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ChangeEvaluatorScoreRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPlatformType() {
+		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PlatformType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ChangeEvaluatorScoreRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -15036,6 +15098,9 @@ func (p *ChangeEvaluatorScoreRequest) DeepEqual(ano *ChangeEvaluatorScoreRequest
 	if !p.Field5DeepEqual(ano.Correction) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.PlatformType) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -15073,6 +15138,18 @@ func (p *ChangeEvaluatorScoreRequest) Field4DeepEqual(src int64) bool {
 func (p *ChangeEvaluatorScoreRequest) Field5DeepEqual(src *annotation.Correction) bool {
 
 	if !p.Correction.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ChangeEvaluatorScoreRequest) Field6DeepEqual(src *common.PlatformType) bool {
+
+	if p.PlatformType == src {
+		return true
+	} else if p.PlatformType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PlatformType, *src) != 0 {
 		return false
 	}
 	return true

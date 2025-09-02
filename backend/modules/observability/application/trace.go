@@ -844,6 +844,7 @@ func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.
 		SpanID:            req.SpanID,
 		StartTime:         req.StartTime,
 		Correction:        req.Correction,
+		PlatformType:      loop_span.PlatformType(req.GetPlatformType()),
 	})
 	if err != nil {
 		return nil, err

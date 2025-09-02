@@ -296,6 +296,7 @@ struct ChangeEvaluatorScoreRequest {
     3: required string span_id (api.body="span_id", vt.min_size="1")
     4: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
     5: required annotation.Correction correction (api.body="correction")
+    6: optional common.PlatformType platform_type (api.body="platform_type")
 
     255: optional base.Base Base
 }
