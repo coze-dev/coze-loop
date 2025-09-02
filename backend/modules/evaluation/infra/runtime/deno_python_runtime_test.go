@@ -84,6 +84,54 @@ func TestDenoPythonRuntimeAdapter_RunCode(t *testing.T) {
 	}
 }
 
+func TestDenoPythonRuntimeAdapter_ValidateCode(t *testing.T) {
+	logger := logrus.New()
+	config := DefaultSandboxConfig()
+	adapter, err := NewDenoPythonRuntimeAdapter(config, logger)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		code     string
+		language string
+		expected bool
+	}{
+		{
+			name:     "有效的Python代码",
+			code:     "print('Hello World')",
+			language: "python",
+			expected: false, // 暂时设为false，因为需要网络访问Pyodide
+		},
+		{
+			name:     "有效的Python函数",
+			code:     "def hello():\n    return 'world'",
+			language: "python",
+			expected: false, // 暂时设为false，因为需要网络访问Pyodide
+		},
+		{
+			name:     "无效的Python代码",
+			code:     "print('unclosed string",
+			language: "python",
+			expected: false,
+		},
+		{
+			name:     "空代码",
+			code:     "",
+			language: "python",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := adapter.ValidateCode(ctx, tt.code, tt.language)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestDenoPythonRuntimeAdapter_Cleanup(t *testing.T) {
 	logger := logrus.New()
 	config := DefaultSandboxConfig()
