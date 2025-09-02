@@ -912,32 +912,34 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 }
 
 func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
-	if len(spanIds) == 0 || traceId == "" || workspaceId == "" {
+	if len(spanIds) == 0 || workspaceId == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	var filterFields []*loop_span.FilterField
+	filterFields = append(filterFields, &loop_span.FilterField{
+		FieldName: loop_span.SpanFieldSpanId,
+		FieldType: loop_span.FieldTypeString,
+		Values:    spanIds,
+		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+	})
+	filterFields = append(filterFields, &loop_span.FilterField{
+		FieldName: loop_span.SpanFieldSpaceId,
+		FieldType: loop_span.FieldTypeString,
+		Values:    []string{workspaceId},
+		QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+	})
+	if traceId != "" {
+		filterFields = append(filterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldTraceId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{traceId},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
 	}
 	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		Tenants: tenants,
 		Filters: &loop_span.FilterFields{
-			FilterFields: []*loop_span.FilterField{
-				{
-					FieldName: loop_span.SpanFieldSpanId,
-					FieldType: loop_span.FieldTypeString,
-					Values:    spanIds,
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
-				{
-					FieldName: loop_span.SpanFieldSpaceId,
-					FieldType: loop_span.FieldTypeString,
-					Values:    []string{workspaceId},
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
-				{
-					FieldName: loop_span.SpanFieldTraceId,
-					FieldType: loop_span.FieldTypeString,
-					Values:    []string{traceId},
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
-			},
+			FilterFields: filterFields,
 		},
 		StartAt:            startAt,
 		EndAt:              endAt,
