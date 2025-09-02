@@ -23,6 +23,8 @@ type IConfiger interface {
 	GetEvaluatorToolMapping(ctx context.Context) (etf map[string]string)            // prompt_template_key -> tool_key
 	GetEvaluatorPromptSuffix(ctx context.Context) (suffix map[string]string)        // suffix_key -> suffix
 	GetEvaluatorPromptSuffixMapping(ctx context.Context) (suffix map[string]string) // model_id -> suffix_key
+	// 新增方法：专门为Code类型模板提供配置
+	GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]*evaluatordto.EvaluatorContent)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -108,4 +110,29 @@ func (c *configer) GetEvaluatorPromptSuffixMapping(ctx context.Context) (suffix 
 
 func DefaultEvaluatorPromptMapping() map[string]string {
 	return make(map[string]string)
+}
+
+func (c *configer) GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]*evaluatordto.EvaluatorContent) {
+	// 获取原始配置
+	allTemplates := c.GetEvaluatorTemplateConf(ctx)
+	codeTemplates := allTemplates["code"]
+	
+	if codeTemplates == nil {
+		return make(map[string]*evaluatordto.EvaluatorContent)
+	}
+	
+	// 转换为新的数据结构：template_key + "_" + language_type 作为key
+	result := make(map[string]*evaluatordto.EvaluatorContent)
+	for _, template := range codeTemplates {
+		if template.GetCodeEvaluator() != nil {
+			templateKey := template.GetCodeEvaluator().GetCodeTemplateKey()
+			languageType := template.GetCodeEvaluator().GetLanguageType()
+			if templateKey != "" && languageType != "" {
+				combinedKey := templateKey + "_" + languageType
+				result[combinedKey] = template
+			}
+		}
+	}
+	
+	return result
 }
