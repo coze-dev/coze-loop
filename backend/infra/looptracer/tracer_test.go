@@ -60,6 +60,13 @@ func TestStartSpanOptions(t *testing.T) {
 				assert.Equal(t, "test-workspace", opts.WorkspaceID)
 			},
 		},
+		{
+			name:   "WithChildOf选项",
+			option: WithChildOf(mocks.NewMockSpan(nil)),
+			checkResult: func(t *testing.T, opts *StartSpanOptions) {
+				assert.True(t, opts.ChildOf != nil)
+			},
+		},
 	}
 
 	for _, tt := range tests {
