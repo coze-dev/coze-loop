@@ -14567,10 +14567,10 @@ func (p *PreviewExportTracesToDatasetResponse) Field257DeepEqual(src *string) bo
 
 type ChangeEvaluatorScoreRequest struct {
 	WorkspaceID       int64                  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	EvaluatorRecordID int64                  `thrift:"evaluator_record_id,2,required" frugal:"2,required,i64" json:"evaluator_record_id,string,required" query:"evaluator_record_id,required"`
-	SpanID            string                 `thrift:"span_id,3,required" frugal:"3,required,string" json:"span_id,required" query:"span_id,required"`
-	StartTime         int64                  `thrift:"start_time,4,required" frugal:"4,required,i64" json:"start_time" query:"start_time,required" `
-	Correction        *annotation.Correction `thrift:"correction,5,required" frugal:"5,required,annotation.Correction" json:"correction,required" query:"correction,required"`
+	EvaluatorRecordID int64                  `thrift:"evaluator_record_id,2,required" frugal:"2,required,i64" form:"evaluator_record_id,required" json:"evaluator_record_id,string,required"`
+	SpanID            string                 `thrift:"span_id,3,required" frugal:"3,required,string" form:"span_id,required" json:"span_id,required"`
+	StartTime         int64                  `thrift:"start_time,4,required" frugal:"4,required,i64" json:"start_time" form:"start_time,required" `
+	Correction        *annotation.Correction `thrift:"correction,5,required" frugal:"5,required,annotation.Correction" form:"correction,required" json:"correction,required"`
 	Base              *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -15335,7 +15335,7 @@ func (p *ChangeEvaluatorScoreResponse) Field255DeepEqual(src *base.BaseResp) boo
 
 type ListAnnotationEvaluatorsRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	Name        *string    `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty" query:"name"`
+	Name        *string    `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty"`
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"-" json:"-" query:"-"`
 }
 
@@ -15922,10 +15922,10 @@ func (p *ListAnnotationEvaluatorsResponse) Field255DeepEqual(src *base.BaseResp)
 
 type ExtractSpanInfoRequest struct {
 	WorkspaceID   int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	TraceID       string               `thrift:"trace_id,2,required" frugal:"2,required,string" json:"trace_id,required" query:"trace_id,required"`
-	SpanIds       []string             `thrift:"span_ids,3,required" frugal:"3,required,list<string>" json:"span_ids,required" query:"span_ids,required"`
-	StartTime     *int64               `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" query:"start_time" `
-	EndTime       *int64               `thrift:"end_time,5,optional" frugal:"5,optional,i64" json:"end_time" query:"end_time" `
+	TraceID       string               `thrift:"trace_id,2,required" frugal:"2,required,string" form:"trace_id,required" json:"trace_id,required"`
+	SpanIds       []string             `thrift:"span_ids,3,required" frugal:"3,required,list<string>" form:"span_ids,required" json:"span_ids,required"`
+	StartTime     *int64               `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" form:"start_time" `
+	EndTime       *int64               `thrift:"end_time,5,optional" frugal:"5,optional,i64" json:"end_time" form:"end_time" `
 	PlatformType  *common.PlatformType `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	FieldMappings []*task.FieldMapping `thrift:"field_mappings,7,optional" frugal:"7,optional,list<task.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
 	Base          *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"-" json:"-" query:"-"`

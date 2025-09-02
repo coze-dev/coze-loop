@@ -292,10 +292,10 @@ struct PreviewExportTracesToDatasetResponse {
 
 struct ChangeEvaluatorScoreRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: required i64 evaluator_record_id (api.js_conv='true', api.query="evaluator_record_id", vt.gt="0")
-    3: required string span_id (api.query="span_id", vt.min_size="1")
-    4: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.query="start_time", vt.gt="0")
-    5: required annotation.Correction correction (api.query="correction")
+    2: required i64 evaluator_record_id (api.js_conv='true', api.body="evaluator_record_id", vt.gt="0")
+    3: required string span_id (api.body="span_id", vt.min_size="1")
+    4: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
+    5: required annotation.Correction correction (api.body="correction")
 
     255: optional base.Base Base
 }
@@ -310,7 +310,7 @@ struct ChangeEvaluatorScoreResponse {
 
 struct ListAnnotationEvaluatorsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: optional string name (api.query = "name")
+    2: optional string name (api.body = "name")
 
     255: optional base.Base Base (api.none="true")
 }
@@ -323,10 +323,10 @@ struct ListAnnotationEvaluatorsResponse {
 
 struct ExtractSpanInfoRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: required string trace_id (api.query = "trace_id" vt.min_size = "1")
-    3: required list<string> span_ids (api.query="span_ids", vt.min_size="1", vt.max_size="500")
-    4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.query="start_time", vt.gt="0")
-    5: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.query="end_time", vt.gt="0")
+    2: required string trace_id (api.body = "trace_id" vt.min_size = "1")
+    3: required list<string> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
+    4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
+    5: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time", vt.gt="0")
     6: optional common.PlatformType platform_type (api.body="platform_type")
     7: optional list<task.FieldMapping> field_mappings (vt.min_size="1", vt.max_size="100")
 
