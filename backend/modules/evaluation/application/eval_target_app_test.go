@@ -132,10 +132,29 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 					EvalTargetType: &validEvalTargetType,
 				},
 			},
-			mockSetup:   func() {},
-			wantResp:    nil,
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
+			mockSetup: func() {
+				// Mock auth
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				// Mock service call
+				mockEvalTargetService.EXPECT().CreateEvalTarget(
+					gomock.Any(),
+					validSpaceID,
+					validSourceTargetID,
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(), // options
+				).Return(int64(1), int64(2), nil)
+			},
+			wantResp: &eval_target.CreateEvalTargetResponse{
+				ID:        gptr.Of(int64(1)),
+				VersionID: gptr.Of(int64(2)),
+			},
+			wantErr: false,
 		},
 		{
 			name: "error - missing eval target type",
