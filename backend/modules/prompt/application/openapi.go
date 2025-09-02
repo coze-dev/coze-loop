@@ -302,7 +302,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 	}
 
 	// 执行权限检查
-	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptDebug); err != nil {
+	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
 	}
 
@@ -363,7 +363,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	}
 
 	// 执行权限检查
-	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptDebug); err != nil {
+	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
 	}
 
