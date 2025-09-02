@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
@@ -35,6 +36,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -1091,4 +1093,116 @@ func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *e
 	}
 
 	return response, nil
+}
+
+// BatchDebugEvaluator 批量调试评估器
+func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request *evaluatorservice.BatchDebugEvaluatorRequest) (resp *evaluatorservice.BatchDebugEvaluatorResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+
+	// 权益检查
+	req := &benefit.CheckEvaluatorBenefitParams{
+		ConnectorUID: userID,
+		SpaceID:      request.GetWorkspaceID(),
+	}
+	result, err := e.benefitService.CheckEvaluatorBenefit(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "BatchDebugEvaluator CheckEvaluatorBenefit result: %v,", json.Jsonify(result))
+
+	if result != nil && result.DenyReason != nil {
+		return nil, errorx.NewByCode(errno.EvaluatorBenefitDenyCode)
+	}
+
+	// 批量URI转换处理
+	for _, inputData := range request.InputData {
+		if inputData != nil {
+			err = e.transformURIsToURLs(ctx, inputData.InputFields)
+			if err != nil {
+				logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+				return nil, err
+			}
+		}
+	}
+
+	// 构建评估器对象
+	dto := &evaluatordto.Evaluator{
+		WorkspaceID:   gptr.Of(request.WorkspaceID),
+		EvaluatorType: gptr.Of(request.EvaluatorType),
+		CurrentVersion: &evaluatordto.EvaluatorVersion{
+			EvaluatorContent: request.EvaluatorContent,
+		},
+	}
+	evaluatorDO := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+
+	// 并发调试处理
+	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData)
+}
+
+// batchDebugWithConcurrency 使用并发池进行批量调试
+func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
+	
+	// 创建并发池，并发度为10
+	pool, err := goroutine.NewPool(10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create goroutine pool: %w", err)
+	}
+
+	// 初始化结果数组
+	results := make([]*evaluatordto.EvaluatorOutputData, len(inputDataList))
+	var mutex sync.Mutex
+
+	// 为每个输入数据创建调试任务
+	for i, inputData := range inputDataList {
+		index := i
+		currentInputData := inputData
+
+		pool.Add(func() error {
+			// 转换输入数据
+			inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(currentInputData)
+			
+			// 调用单个评估器调试逻辑
+			outputDataDO, debugErr := e.evaluatorService.DebugEvaluator(ctx, evaluatorDO, inputDataDO)
+			
+			// 保护结果收集过程
+			mutex.Lock()
+			defer mutex.Unlock()
+			
+			if debugErr != nil {
+				// 单个失败时，创建包含错误信息的输出数据
+				results[index] = &evaluatordto.EvaluatorOutputData{
+					EvaluatorRunError: &evaluatordto.EvaluatorRunError{
+						Code:    gptr.Of(int32(500)),
+						Message: gptr.Of(debugErr.Error()),
+					},
+				}
+			} else {
+				// 成功时转换输出数据
+				results[index] = evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO)
+			}
+			
+			return nil // 总是返回nil，确保单个失败不影响其他任务
+		})
+	}
+
+	// 执行所有任务，使用ExecAll确保单个失败不影响其他任务
+	err = pool.ExecAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute batch debug tasks: %w", err)
+	}
+
+	return &evaluatorservice.BatchDebugEvaluatorResponse{
+		EvaluatorOutputData: results,
+	}, nil
 }
