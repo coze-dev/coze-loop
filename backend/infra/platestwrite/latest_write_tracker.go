@@ -124,9 +124,11 @@ const (
 	ResourceTypeVersion ResourceType = "version"
 	ResourceTypeItem    ResourceType = "item"
 
-	ResourceTypePromptBasic  ResourceType = "prompt_basic"
-	ResourceTypePromptDraft  ResourceType = "prompt_draft"
-	ResourceTypePromptCommit ResourceType = "prompt_commit"
+	ResourceTypePromptBasic              ResourceType = "prompt_basic"
+	ResourceTypePromptDraft              ResourceType = "prompt_draft"
+	ResourceTypePromptCommit             ResourceType = "prompt_commit"
+	ResourceTypePromptLabel              ResourceType = "prompt_label"
+	ResourceTypePromptCommitLabelMapping ResourceType = "prompt_commit_label_mapping"
 
 	ResourceTypeExperiment    ResourceType = "experiment"
 	ResourceTypeEvalSet       ResourceType = "eval_set"

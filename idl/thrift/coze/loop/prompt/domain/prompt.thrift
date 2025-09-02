@@ -144,6 +144,10 @@ struct FunctionCall {
     2: optional string arguments
 }
 
+struct Label {
+    1: optional string key
+}
+
 struct VariableDef {
     1: optional string key
     2: optional string desc

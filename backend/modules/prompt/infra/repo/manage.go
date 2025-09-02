@@ -34,9 +34,10 @@ type ManageRepoImpl struct {
 	db    db.Provider
 	idgen idgen.IIDGenerator
 
-	promptBasicDAO  mysql.IPromptBasicDAO
-	promptCommitDAO mysql.IPromptCommitDAO
-	promptDraftDAO  mysql.IPromptUserDraftDAO
+	promptBasicDAO        mysql.IPromptBasicDAO
+	promptCommitDAO       mysql.IPromptCommitDAO
+	promptDraftDAO        mysql.IPromptUserDraftDAO
+	commitLabelMappingDAO mysql.ICommitLabelMappingDAO
 
 	promptBasicCacheDAO redis.IPromptBasicDAO
 	promptCacheDAO      redis.IPromptDAO
@@ -51,18 +52,20 @@ func NewManageRepo(
 	promptBasicDao mysql.IPromptBasicDAO,
 	promptCommitDao mysql.IPromptCommitDAO,
 	promptDraftDao mysql.IPromptUserDraftDAO,
+	commitLabelMappingDAO mysql.ICommitLabelMappingDAO,
 	promptBasicCacheDAO redis.IPromptBasicDAO,
 	promptCacheDAO redis.IPromptDAO,
 ) repo.IManageRepo {
 	return &ManageRepoImpl{
-		db:                  db,
-		idgen:               idgen,
-		promptBasicDAO:      promptBasicDao,
-		promptCommitDAO:     promptCommitDao,
-		promptDraftDAO:      promptDraftDao,
-		promptBasicCacheDAO: promptBasicCacheDAO,
-		promptCacheDAO:      promptCacheDAO,
-		promptCacheMetrics:  metricsinfra.NewPromptCacheMetrics(meter),
+		db:                    db,
+		idgen:                 idgen,
+		promptBasicDAO:        promptBasicDao,
+		promptCommitDAO:       promptCommitDao,
+		promptDraftDAO:        promptDraftDao,
+		commitLabelMappingDAO: commitLabelMappingDAO,
+		promptBasicCacheDAO:   promptBasicCacheDAO,
+		promptCacheDAO:        promptCacheDAO,
+		promptCacheMetrics:    metricsinfra.NewPromptCacheMetrics(meter),
 	}
 }
 
@@ -111,7 +114,7 @@ func (d *ManageRepoImpl) DeletePrompt(ctx context.Context, promptID int64) (err 
 	if promptID <= 0 {
 		return errorx.New("promptID is invalid, promptID = %d", promptID)
 	}
-	promptBasicPO, err := d.promptBasicDAO.Get(ctx, promptID, false)
+	promptBasicPO, err := d.promptBasicDAO.Get(ctx, promptID)
 	if err != nil {
 		return err
 	}
@@ -144,7 +147,7 @@ func (d *ManageRepoImpl) GetPrompt(ctx context.Context, param repo.GetPromptPara
 		opt := db.WithTransaction(tx)
 
 		var basicPO *model.PromptBasic
-		basicPO, err = d.promptBasicDAO.Get(ctx, param.PromptID, false, opt)
+		basicPO, err = d.promptBasicDAO.Get(ctx, param.PromptID, opt)
 		if err != nil {
 			return err
 		}
@@ -442,7 +445,7 @@ func (d *ManageRepoImpl) UpdatePrompt(ctx context.Context, param repo.UpdateProm
 		return errorx.New("param(PromptID or PromptName) is invalid, param = %s", json.Jsonify(param))
 	}
 
-	basicPO, err := d.promptBasicDAO.Get(ctx, param.PromptID, false)
+	basicPO, err := d.promptBasicDAO.Get(ctx, param.PromptID)
 	if err != nil {
 		return err
 	}
@@ -477,7 +480,7 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 		opt := db.WithTransaction(tx)
 
 		var basicPO *model.PromptBasic
-		basicPO, err = d.promptBasicDAO.Get(ctx, promptDO.ID, true, opt)
+		basicPO, err = d.promptBasicDAO.Get(ctx, promptDO.ID, opt, db.WithSelectForUpdate())
 		if err != nil {
 			return err
 		}
@@ -583,7 +586,7 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 		opt := db.WithTransaction(tx)
 
 		var basicPO *model.PromptBasic
-		basicPO, err = d.promptBasicDAO.Get(ctx, param.PromptID, true, opt)
+		basicPO, err = d.promptBasicDAO.Get(ctx, param.PromptID, opt, db.WithSelectForUpdate())
 		if err != nil {
 			return err
 		}
@@ -632,6 +635,67 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 		}, opt)
 		if err != nil {
 			return err
+		}
+
+		// 提交版本绑定label
+		// 根据prompt_id和label_keys查询现有的标签映射
+		labelExistMappings, err := d.commitLabelMappingDAO.ListByPromptIDAndLabelKeys(ctx, param.PromptID, param.LabelKeys, opt)
+		if err != nil {
+			return err
+		}
+
+		existingLabelMappings := make(map[string]*model.PromptCommitLabelMapping)
+		for _, mapping := range labelExistMappings {
+			existingLabelMappings[mapping.LabelKey] = mapping
+		}
+
+		// 2. 需要创建的映射
+		var toCreate []*model.PromptCommitLabelMapping
+		ids, err := d.idgen.GenMultiIDs(ctx, len(param.LabelKeys))
+		if err != nil {
+			return err
+		}
+		for i, labelKey := range param.LabelKeys {
+			if _, exists := existingLabelMappings[labelKey]; !exists {
+				mappingPO := &model.PromptCommitLabelMapping{
+					ID:            ids[i],
+					SpaceID:       spaceID,
+					PromptID:      param.PromptID,
+					LabelKey:      labelKey,
+					PromptVersion: param.CommitVersion,
+					CreatedBy:     param.UserID,
+					UpdatedBy:     param.UserID,
+				}
+				toCreate = append(toCreate, mappingPO)
+			}
+		}
+
+		// 3. 需要更新的映射
+		newLabelKeys := make(map[string]bool)
+		for _, labelKey := range param.LabelKeys {
+			newLabelKeys[labelKey] = true
+		}
+		var toUpdate []*model.PromptCommitLabelMapping
+		for labelKey, mapping := range existingLabelMappings {
+			if newLabelKeys[labelKey] {
+				// 需要更新的映射
+				mapping.PromptVersion = param.CommitVersion
+				mapping.UpdatedBy = param.UserID
+				toUpdate = append(toUpdate, mapping)
+			}
+		}
+		if len(toCreate) > 0 {
+			err = d.commitLabelMappingDAO.BatchCreate(ctx, toCreate, opt)
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(toUpdate) > 0 {
+			err = d.commitLabelMappingDAO.BatchUpdate(ctx, toUpdate, opt)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
