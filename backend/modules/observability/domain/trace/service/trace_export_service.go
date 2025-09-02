@@ -5,7 +5,6 @@ package service
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -262,12 +261,6 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 		Tenants: tenant,
 		Filters: &loop_span.FilterFields{
 			FilterFields: []*loop_span.FilterField{
-				{
-					FieldName: "space_id",
-					FieldType: loop_span.FieldTypeString,
-					Values:    []string{strconv.FormatInt(workspaceID, 10)},
-					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-				},
 				{
 					FieldName: "trace_id",
 					FieldType: loop_span.FieldTypeString,
