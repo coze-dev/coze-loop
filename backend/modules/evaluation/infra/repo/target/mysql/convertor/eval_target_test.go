@@ -256,10 +256,10 @@ func TestEvalTargetVersionPO2DO(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name             string
-		targetVersionPO  *model.TargetVersion
-		targetType       entity.EvalTargetType
-		checkResult      func(t *testing.T, do *entity.EvalTargetVersion)
+		name            string
+		targetVersionPO *model.TargetVersion
+		targetType      entity.EvalTargetType
+		checkResult     func(t *testing.T, do *entity.EvalTargetVersion)
 	}{
 		{
 			name:            "nil输入",

@@ -71,10 +71,10 @@ func TestEvalTargetDTO2DO(t *testing.T) {
 				EvalTargetType: gptr.Of(dto.EvalTargetType_CozeLoopPrompt),
 			},
 			expected: &do.EvalTarget{
-				ID:             1,
-				SpaceID:        2,
-				SourceTargetID: "test",
-				EvalTargetType: do.EvalTargetType(dto.EvalTargetType_CozeLoopPrompt),
+				ID:                1,
+				SpaceID:           2,
+				SourceTargetID:    "test",
+				EvalTargetType:    do.EvalTargetType(dto.EvalTargetType_CozeLoopPrompt),
 				EvalTargetVersion: nil,
 			},
 		},
@@ -183,7 +183,7 @@ func TestEvalTargetListDO2DTO(t *testing.T) {
 			t.Parallel()
 			result := EvalTargetListDO2DTO(tt.targetDOList)
 			assert.Len(t, result, tt.expectedCount)
-			
+
 			// 验证每个元素都正确转换
 			for i, targetDO := range tt.targetDOList {
 				expectedDTO := EvalTargetDO2DTO(targetDO)
@@ -244,9 +244,9 @@ func TestEvalTargetVersionDO2DTO(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name             string
-		targetVersionDO  *do.EvalTargetVersion
-		expected         *dto.EvalTargetVersion
+		name            string
+		targetVersionDO *do.EvalTargetVersion
+		expected        *dto.EvalTargetVersion
 	}{
 		{
 			name:            "nil输入",

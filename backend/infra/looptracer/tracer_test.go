@@ -18,7 +18,7 @@ func TestNewTracer(t *testing.T) {
 		t.Parallel()
 		tracer := NewTracer(nil)
 		assert.NotNil(t, tracer)
-		
+
 		tracerImpl, ok := tracer.(*TracerImpl)
 		assert.True(t, ok)
 		assert.Nil(t, tracerImpl.Client)
@@ -59,10 +59,10 @@ func TestStartSpanOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			
+
 			opts := &StartSpanOptions{}
 			tt.option(opts)
-			
+
 			if tt.checkResult != nil {
 				tt.checkResult(t, opts)
 			}
