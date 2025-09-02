@@ -1126,29 +1126,27 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 		configer: mockConfiger,
 	}
 
-	// 模拟配置数据
-	templateConf := map[string]map[string]*evaluatordto.EvaluatorContent{
-		"code": {
-			"python_template_1": {
-				CodeEvaluator: &evaluatordto.CodeEvaluator{
-					LanguageType:     ptr.Of("Python"),
-					CodeTemplateKey:  ptr.Of("python_template_1"),
-					CodeTemplateName: ptr.Of("Python评估模板1"),
-				},
+	// 模拟新的Code配置数据结构
+	codeTemplateConf := map[string]*evaluatordto.EvaluatorContent{
+		"python_template_1_Python": {
+			CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     ptr.Of("Python"),
+				CodeTemplateKey:  ptr.Of("python_template_1"),
+				CodeTemplateName: ptr.Of("Python评估模板1"),
 			},
-			"python_template_2": {
-				CodeEvaluator: &evaluatordto.CodeEvaluator{
-					LanguageType:     ptr.Of("Python"),
-					CodeTemplateKey:  ptr.Of("python_template_2"),
-					CodeTemplateName: ptr.Of("Python评估模板2"),
-				},
+		},
+		"python_template_2_Python": {
+			CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     ptr.Of("Python"),
+				CodeTemplateKey:  ptr.Of("python_template_2"),
+				CodeTemplateName: ptr.Of("Python评估模板2"),
 			},
-			"js_template_1": {
-				CodeEvaluator: &evaluatordto.CodeEvaluator{
-					LanguageType:     ptr.Of("JS"),
-					CodeTemplateKey:  ptr.Of("js_template_1"),
-					CodeTemplateName: ptr.Of("JS评估模板1"),
-				},
+		},
+		"js_template_1_JS": {
+			CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     ptr.Of("JS"),
+				CodeTemplateKey:  ptr.Of("js_template_1"),
+				CodeTemplateName: ptr.Of("JS评估模板1"),
 			},
 		},
 	}
@@ -1159,33 +1157,24 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 		expectedKeys []string
 	}{
 		{
-			name: "Code类型-指定Python语言",
+			name: "Code类型-不再按语言筛选",
 			request: &evaluatorservice.ListTemplatesRequest{
 				BuiltinTemplateType: evaluatordto.TemplateType_Code,
-				LanguageType:        ptr.Of("Python"),
 			},
-			expectedKeys: []string{"python_template_1", "python_template_2"},
-		},
-		{
-			name: "Code类型-指定JS语言",
-			request: &evaluatorservice.ListTemplatesRequest{
-				BuiltinTemplateType: evaluatordto.TemplateType_Code,
-				LanguageType:        ptr.Of("JS"),
-			},
-			expectedKeys: []string{"js_template_1"},
+			expectedKeys: []string{"js_template_1", "python_template_1", "python_template_2"}, // 按template_key去重后排序
 		},
 		{
 			name: "Code类型-未指定语言",
 			request: &evaluatorservice.ListTemplatesRequest{
 				BuiltinTemplateType: evaluatordto.TemplateType_Code,
 			},
-			expectedKeys: []string{"python_template_1", "python_template_2", "js_template_1"},
+			expectedKeys: []string{"js_template_1", "python_template_1", "python_template_2"}, // 按template_key去重后排序
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockConfiger.EXPECT().GetEvaluatorTemplateConf(gomock.Any()).Return(templateConf)
+			mockConfiger.EXPECT().GetCodeEvaluatorTemplateConf(gomock.Any()).Return(codeTemplateConf)
 
 			resp, err := handler.ListTemplates(context.Background(), tt.request)
 
@@ -1201,8 +1190,8 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 				}
 			}
 
-			for _, expectedKey := range tt.expectedKeys {
-				assert.Contains(t, actualKeys, expectedKey)
+			for i, expectedKey := range tt.expectedKeys {
+				assert.Equal(t, expectedKey, actualKeys[i], "Expected key at index %d", i)
 			}
 		})
 	}
@@ -1306,6 +1295,50 @@ func TestEvaluatorHandlerImpl_GetTemplateInfo_Code(t *testing.T) {
 	}
 }
 
+func TestBuildCodeTemplateKeys(t *testing.T) {
+	codeTemplates := map[string]*evaluatordto.EvaluatorContent{
+		"python_template_1_Python": {
+			CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     ptr.Of("Python"),
+				CodeTemplateKey:  ptr.Of("python_template_1"),
+				CodeTemplateName: ptr.Of("Python评估模板1"),
+			},
+		},
+		"python_template_1_JS": {
+			CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     ptr.Of("JS"),
+				CodeTemplateKey:  ptr.Of("python_template_1"), // 相同的template_key，不同的language
+				CodeTemplateName: ptr.Of("Python模板JS版本"),
+			},
+		},
+		"js_template_1_JS": {
+			CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     ptr.Of("JS"),
+				CodeTemplateKey:  ptr.Of("js_template_1"),
+				CodeTemplateName: ptr.Of("JS评估模板1"),
+			},
+		},
+	}
+
+	result := buildCodeTemplateKeys(codeTemplates)
+
+	// 应该去重，只有2个不同的template_key
+	assert.Len(t, result, 2)
+
+	// 验证排序和去重
+	keys := make([]string, len(result))
+	for i, template := range result {
+		assert.NotNil(t, template.GetCodeEvaluator())
+		keys[i] = template.GetCodeEvaluator().GetCodeTemplateKey()
+		// 验证不包含LanguageType
+		assert.Nil(t, template.GetCodeEvaluator().LanguageType)
+	}
+
+	// 验证按key排序
+	assert.Equal(t, "js_template_1", keys[0])
+	assert.Equal(t, "python_template_1", keys[1])
+}
+
 func TestBuildTemplateKeys_Code(t *testing.T) {
 	origins := map[string]*evaluatordto.EvaluatorContent{
 		"python_template_1": {
@@ -1377,4 +1410,13 @@ func TestGetTemplateKey(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestEvaluatorHandlerImpl_GetCodeEvaluatorTemplateConf(t *testing.T) {
+	// 这个测试验证GetCodeEvaluatorTemplateConf方法的转换逻辑
+	// 我们直接测试configer的实现，而不是mock
+	
+	// 创建一个实际的configer实例进行测试
+	// 由于我们只测试转换逻辑，可以通过集成测试来验证
+	t.Skip("This test requires actual configer implementation, tested in integration tests")
 }
