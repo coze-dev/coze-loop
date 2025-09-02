@@ -2179,7 +2179,7 @@ func (p *ListTasksResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type GetTaskRequest struct {
 	TaskID      int64      `thrift:"task_id,1,required" frugal:"1,required,i64" json:"task_id,string,required" path:"task_id,required"`
-	WorkspaceID int64      `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	WorkspaceID int64      `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id" query:"workspace_id,required" `
 	Base        *base.Base `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
 }
 
