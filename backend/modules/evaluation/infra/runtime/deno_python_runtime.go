@@ -12,6 +12,8 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/infra/pyodide"
+	sandboxEntity "code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/entity"
 )
 
 // DenoPythonRuntimeAdapter 基于Deno+Pyodide的Python运行时适配器
@@ -49,35 +51,92 @@ func (adapter *DenoPythonRuntimeAdapter) RunCode(ctx context.Context, code strin
 		timeout = adapter.config.TimeoutLimit
 	}
 	
-	_, cancel := context.WithTimeout(ctx, timeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// 模拟Python代码执行（实际实现时需要集成真正的Deno+Pyodide运行时）
-	result := &entity.ExecutionResult{
-		Output: &entity.ExecutionOutput{
-			Stdout: "Python代码执行成功",
-			Stderr: "",
-			RetVal: `{"score": 1.0, "reason": "代码执行完成"}`,
-		},
-		WorkloadInfo: &entity.ExecutionWorkloadInfo{
-			ID:     fmt.Sprintf("python_%d", time.Now().UnixNano()),
-			Status: "success",
-		},
+	// 创建sandbox实例
+	pyodideRuntime, err := pyodide.NewDenoPyodideRuntime(adapter.convertConfig(), adapter.logger)
+	if err != nil {
+		return nil, fmt.Errorf("创建Pyodide运行时失败: %w", err)
+	}
+	defer pyodideRuntime.Cleanup()
+
+	// 构建执行请求
+	req := &sandboxEntity.ExecutionRequest{
+		Code:     code,
+		Language: language,
+		Config:   adapter.convertConfig(),
 	}
 
-	adapter.logger.WithFields(logrus.Fields{
-		"language":    language,
-		"timeout_ms":  timeoutMS,
-		"code_length": len(code),
-	}).Info("Python代码执行完成")
+	// 执行代码
+	result, err := pyodideRuntime.RunCode(timeoutCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("代码执行失败: %w", err)
+	}
 
-	return result, nil
+	// 转换结果格式
+	return adapter.convertResult(result), nil
+}
+
+// ValidateCode 验证Python代码语法（不执行）
+func (adapter *DenoPythonRuntimeAdapter) ValidateCode(ctx context.Context, code string, language string) bool {
+	if code == "" {
+		return false
+	}
+
+	// 创建sandbox实例
+	pyodideRuntime, err := pyodide.NewDenoPyodideRuntime(adapter.convertConfig(), adapter.logger)
+	if err != nil {
+		adapter.logger.WithError(err).Error("创建Pyodide运行时失败")
+		return false
+	}
+	defer pyodideRuntime.Cleanup()
+
+	// 验证代码
+	return pyodideRuntime.ValidateCode(ctx, code, language)
 }
 
 // Cleanup 清理资源
 func (adapter *DenoPythonRuntimeAdapter) Cleanup() error {
 	// 暂时无需清理
 	return nil
+}
+
+// convertConfig 转换配置格式
+func (adapter *DenoPythonRuntimeAdapter) convertConfig() *sandboxEntity.SandboxConfig {
+	return &sandboxEntity.SandboxConfig{
+		MemoryLimit:    adapter.config.MemoryLimit,
+		TimeoutLimit:   adapter.config.TimeoutLimit,
+		MaxOutputSize:  adapter.config.MaxOutputSize,
+		NetworkEnabled: adapter.config.NetworkEnabled,
+	}
+}
+
+// convertResult 转换结果格式
+func (adapter *DenoPythonRuntimeAdapter) convertResult(sandboxResult *sandboxEntity.ExecutionResult) *entity.ExecutionResult {
+	var retVal string
+	if sandboxResult.Output != nil {
+		retVal = fmt.Sprintf(`{"score": %f, "reason": "%s"}`, sandboxResult.Output.Score, sandboxResult.Output.Reason)
+	} else {
+		retVal = `{"score": 0.0, "reason": "执行失败"}`
+	}
+
+	status := "error"
+	if sandboxResult.Success {
+		status = "success"
+	}
+
+	return &entity.ExecutionResult{
+		Output: &entity.ExecutionOutput{
+			Stdout: sandboxResult.Stdout,
+			Stderr: sandboxResult.Stderr,
+			RetVal: retVal,
+		},
+		WorkloadInfo: &entity.ExecutionWorkloadInfo{
+			ID:     fmt.Sprintf("python_%d", time.Now().UnixNano()),
+			Status: status,
+		},
+	}
 }
 
 // 确保DenoPythonRuntimeAdapter实现IRuntime接口
