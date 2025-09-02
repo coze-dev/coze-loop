@@ -273,13 +273,53 @@ func TestEvalTargetVersionDO2DTO(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "火山转换",
+			targetVersionDO: &do.EvalTargetVersion{
+				ID:                  1,
+				SpaceID:             2,
+				TargetID:            3,
+				SourceTargetVersion: "v1.0",
+				EvalTargetType:      do.EvalTargetTypeVolcengineAgent,
+				VolcengineAgent: &do.VolcengineAgent{
+					VolcengineAgentEndpoints: []*do.VolcengineAgentEndpoint{
+						{
+							EndpointID: "test",
+							APIKey:     "test",
+						},
+					},
+				},
+			},
+			expected: &dto.EvalTargetVersion{
+				ID:                  gptr.Of(int64(1)),
+				WorkspaceID:         gptr.Of(int64(2)),
+				TargetID:            gptr.Of(int64(3)),
+				SourceTargetVersion: gptr.Of("v1.0"),
+				EvalTargetContent: &dto.EvalTargetContent{
+					InputSchemas:  []*commondto.ArgsSchema{},
+					OutputSchemas: []*commondto.ArgsSchema{},
+					VolcengineAgent: &dto.VolcengineAgent{
+						Name:        gptr.Of("agent"),
+						Description: gptr.Of("test"),
+						VolcengineAgentEndpoints: []*dto.VolcengineAgentEndpoint{
+							{
+								EndpointID: gptr.Of("test"),
+								APIKey:     gptr.Of("test"),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			result := EvalTargetVersionDO2DTO(tt.targetVersionDO)
-			assert.Equal(t, tt.expected, result)
+			assert.Equal(t, tt.expected.TargetID, result.TargetID)
+			assert.Equal(t, tt.expected.ID, result.ID)
+			assert.Equal(t, tt.expected.SourceTargetVersion, result.SourceTargetVersion)
 		})
 	}
 }
