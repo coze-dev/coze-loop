@@ -54,7 +54,7 @@ ignore:
   - "**/errno/**"
   - "**/main.go"
   - "**/repo/mysql/**"
-  - "**/repo/redis/"
+  - "**/repo/redis/**"
 
 parsers:
   gcov:
