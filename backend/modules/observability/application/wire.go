@@ -223,7 +223,6 @@ func InitTraceIngestionApplication(
 func InitTaskApplication(
 	db db.Provider,
 	idgen idgen.IIDGenerator,
-	configFactory conf.IConfigLoaderFactory,
 	userClient userservice.Client,
 	authClient authservice.Client,
 	evalService evaluatorservice.Client) (ITaskApplication, error) {

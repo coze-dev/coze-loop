@@ -178,7 +178,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
 	iUserProvider := user.NewUserRPCProvider(userClient)

@@ -205,7 +205,6 @@ type ChangeEvaluatorScoreRequest struct {
 	WorkspaceID       int64
 	EvaluatorRecordID int64
 	SpanID            string
-	TraceID           string
 	StartTime         int64
 	PlatformType      loop_span.PlatformType
 	Correction        *annotation.Correction
@@ -1041,7 +1040,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	spans, err := r.getSpan(ctx,
 		tenants,
 		[]string{req.SpanID},
-		req.TraceID,
+		"",
 		strconv.FormatInt(req.WorkspaceID, 10),
 		req.StartTime-time.Second.Milliseconds(),
 		req.StartTime+time.Second.Milliseconds(),
@@ -1049,7 +1048,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	if err != nil {
 		return resp, err
 	} else if len(spans) == 0 {
-		logs.CtxWarn(ctx, "no span found for span_id %s trace_id %s", req.SpanID, req.TraceID)
+		logs.CtxWarn(ctx, "no span found for span_id %s", req.SpanID)
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	span := spans[0]
