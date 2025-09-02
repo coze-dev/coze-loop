@@ -1,5 +1,8 @@
 namespace go coze.loop.data.domain.dataset
 
+include "datasetsimilarity.thrift"
+include "tag.thrift"
+
 enum StorageProvider {
     TOS = 1
     VETOS = 2
@@ -58,6 +61,7 @@ enum FieldDisplayFormat {
     JSON = 3
     YAML = 4
     Code = 5
+    SingleOption = 6
 }
 
 enum SnapshotStatus {
@@ -175,6 +179,9 @@ struct FieldSchema {
     21: optional MultiModalSpec multi_model_spec                       // 多模态规格限制
     50: optional bool hidden                                         // 用户是否不可见
     51: optional FieldStatus status                                  // 当前列的状态，创建/更新时可以不传
+    52: optional SimilaritySearchConfig similaritySearchConfig                          // 是否开启相似度索引
+    53: optional QualityScoreConfig qualityScoreConfig                                  // 质量分配置
+    54: optional TagFieldConfig tagFieldConfig                                          // 标签字段配置
 
     55: optional list<FieldTransformationConfig> default_transformations                 // 默认的预置转换配置，目前在数据校验后执行
 }
@@ -182,9 +189,26 @@ struct FieldSchema {
 enum FieldTransformationType {
     RemoveExtraFields = 1 // 移除未在当前列的 jsonSchema 中定义的字段（包括 properties 和 patternProperties），仅在列类型为 struct 时有效
 }
+
 struct FieldTransformationConfig {
     1: optional FieldTransformationType transType // 预置的转换类型
     2: optional bool global                       // 当前转换配置在这一列上的数据及其嵌套的子结构上均生效
+}
+
+struct TagFieldConfig {
+    1: optional tag.TagInfo tagInfo    // tag配置
+}
+
+// 质量分配置
+struct QualityScoreConfig {
+    1: optional bool enabled // 列是否为质量分
+}
+
+// 相似度算法的配置
+struct SimilaritySearchConfig {
+    1: optional bool enabled                                                // 是否开启相似度索引
+    2: optional datasetsimilarity.SimilarityAlgorithm similarityAlgorithm // 配置了哪个相似度算法
+    3: optional datasetsimilarity.EmbeddingModel embeddingType            // 所使用的相似度模型
 }
 
 struct MultiModalSpec {
