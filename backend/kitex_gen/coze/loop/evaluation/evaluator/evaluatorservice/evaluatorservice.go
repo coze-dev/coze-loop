@@ -132,6 +132,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BatchDebugEvaluator": kitex.NewMethodInfo(
+		batchDebugEvaluatorHandler,
+		newEvaluatorServiceBatchDebugEvaluatorArgs,
+		newEvaluatorServiceBatchDebugEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdateEvaluatorRecord": kitex.NewMethodInfo(
 		updateEvaluatorRecordHandler,
 		newEvaluatorServiceUpdateEvaluatorRecordArgs,
@@ -516,6 +523,25 @@ func newEvaluatorServiceDebugEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceDebugEvaluatorResult()
 }
 
+func batchDebugEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceBatchDebugEvaluatorArgs)
+	realResult := result.(*evaluator.EvaluatorServiceBatchDebugEvaluatorResult)
+	success, err := handler.(evaluator.EvaluatorService).BatchDebugEvaluator(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceBatchDebugEvaluatorArgs() interface{} {
+	return evaluator.NewEvaluatorServiceBatchDebugEvaluatorArgs()
+}
+
+func newEvaluatorServiceBatchDebugEvaluatorResult() interface{} {
+	return evaluator.NewEvaluatorServiceBatchDebugEvaluatorResult()
+}
+
 func updateEvaluatorRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*evaluator.EvaluatorServiceUpdateEvaluatorRecordArgs)
 	realResult := result.(*evaluator.EvaluatorServiceUpdateEvaluatorRecordResult)
@@ -769,6 +795,16 @@ func (p *kClient) DebugEvaluator(ctx context.Context, req *evaluator.DebugEvalua
 	_args.Req = req
 	var _result evaluator.EvaluatorServiceDebugEvaluatorResult
 	if err = p.c.Call(ctx, "DebugEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest) (r *evaluator.BatchDebugEvaluatorResponse, err error) {
+	var _args evaluator.EvaluatorServiceBatchDebugEvaluatorArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceBatchDebugEvaluatorResult
+	if err = p.c.Call(ctx, "BatchDebugEvaluator", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -13,7 +13,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
-	"github.com/coze-dev/coze-loop/backend/infra/http"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -55,11 +54,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
+	"github.com/sirupsen/logrus"
 )
 
 // Injectors from wire.go:
@@ -86,8 +86,9 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmcli)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	iClient := http.NewHTTPClient()
-	iRuntimeFactory := runtime.NewRuntimeFactory(iClient)
+	logger := NewLogger()
+	sandboxConfig := NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
 	runtimeManager := runtime.NewRuntimeManager(iRuntimeFactory)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
 	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, runtimeManager, codeBuilderFactory)
@@ -165,8 +166,9 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmClient)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	iClient := http.NewHTTPClient()
-	iRuntimeFactory := runtime.NewRuntimeFactory(iClient)
+	logger := NewLogger()
+	sandboxConfig := NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
 	runtimeManager := runtime.NewRuntimeManager(iRuntimeFactory)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
 	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, runtimeManager, codeBuilderFactory)
@@ -232,7 +234,9 @@ var (
 		flagSet,
 	)
 
-	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, http.NewHTTPClient, runtime.NewRuntimeFactory, runtime.NewRuntimeManager, wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)), service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher)
+	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, runtime.NewRuntimeFactory, runtime.NewRuntimeManager, NewSandboxConfig,
+		NewLogger, wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)), service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher,
+	)
 
 	evaluatorSet = wire.NewSet(
 		NewEvaluatorHandlerImpl, foundation.NewAuthRPCProvider, foundation.NewFileRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl, idem.NewIdempotentService, redis2.NewIdemDAO, producer.NewExptEventPublisher, evaluatorDomainService,
@@ -260,6 +264,18 @@ func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter) map[entity.EvalTarg
 
 func NewLock(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "evaluation")
+}
+
+// NewSandboxConfig 创建默认沙箱配置
+func NewSandboxConfig() *runtime.SandboxConfig {
+	return runtime.DefaultSandboxConfig()
+}
+
+// NewLogger 创建默认日志记录器
+func NewLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+	return logger
 }
 
 func NewEvaluatorSourceServices(

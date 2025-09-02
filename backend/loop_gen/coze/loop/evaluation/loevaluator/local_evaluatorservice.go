@@ -387,6 +387,27 @@ func (l *LocalEvaluatorService) DebugEvaluator(ctx context.Context, req *evaluat
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluatorService) BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.BatchDebugEvaluatorResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceBatchDebugEvaluatorArgs)
+		result := out.(*evaluator.EvaluatorServiceBatchDebugEvaluatorResult)
+		resp, err := l.impl.BatchDebugEvaluator(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceBatchDebugEvaluatorArgs{Req: req}
+	result := &evaluator.EvaluatorServiceBatchDebugEvaluatorResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchDebugEvaluator")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // UpdateEvaluatorRecord
 // 评估器执行结果
 func (l *LocalEvaluatorService) UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (*evaluator.UpdateEvaluatorRecordResponse, error) {

@@ -8161,9 +8161,10 @@ func (p *SubmitEvaluatorVersionResponse) Field255DeepEqual(src *base.BaseResp) b
 }
 
 type ListTemplatesRequest struct {
-	BuiltinTemplateType evaluator.TemplateType  `thrift:"builtin_template_type,1,required" frugal:"1,required,TemplateType" json:"builtin_template_type,required" query:"builtin_template_type,required"`
-	LanguageType        *evaluator.LanguageType `thrift:"language_type,2,optional" frugal:"2,optional,string" json:"language_type,omitempty" query:"language_type"`
-	Base                *base.Base              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	BuiltinTemplateType evaluator.TemplateType `thrift:"builtin_template_type,1,required" frugal:"1,required,TemplateType" json:"builtin_template_type,required" query:"builtin_template_type,required"`
+	// code评估器默认python
+	LanguageType *evaluator.LanguageType `thrift:"language_type,2,optional" frugal:"2,optional,string" json:"language_type,omitempty" query:"language_type"`
+	Base         *base.Base              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListTemplatesRequest() *ListTemplatesRequest {
@@ -8749,10 +8750,11 @@ func (p *ListTemplatesResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type GetTemplateInfoRequest struct {
-	BuiltinTemplateType evaluator.TemplateType  `thrift:"builtin_template_type,1,required" frugal:"1,required,TemplateType" json:"builtin_template_type,required" query:"builtin_template_type,required"`
-	BuiltinTemplateKey  string                  `thrift:"builtin_template_key,2,required" frugal:"2,required,string" json:"builtin_template_key,required" query:"builtin_template_key,required"`
-	LanguageType        *evaluator.LanguageType `thrift:"language_type,3,optional" frugal:"3,optional,string" json:"language_type,omitempty" query:"language_type"`
-	Base                *base.Base              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	BuiltinTemplateType evaluator.TemplateType `thrift:"builtin_template_type,1,required" frugal:"1,required,TemplateType" json:"builtin_template_type,required" query:"builtin_template_type,required"`
+	BuiltinTemplateKey  string                 `thrift:"builtin_template_key,2,required" frugal:"2,required,string" json:"builtin_template_key,required" query:"builtin_template_key,required"`
+	// code评估器默认python
+	LanguageType *evaluator.LanguageType `thrift:"language_type,3,optional" frugal:"3,optional,string" json:"language_type,omitempty" query:"language_type"`
+	Base         *base.Base              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetTemplateInfoRequest() *GetTemplateInfoRequest {
@@ -11120,6 +11122,757 @@ func (p *DebugEvaluatorResponse) Field1DeepEqual(src *evaluator.EvaluatorOutputD
 	return true
 }
 func (p *DebugEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchDebugEvaluatorRequest struct {
+	// 空间 id
+	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	// 待调试评估器内容
+	EvaluatorContent *evaluator.EvaluatorContent `thrift:"evaluator_content,2,required" frugal:"2,required,evaluator.EvaluatorContent" form:"evaluator_content,required" json:"evaluator_content,required"`
+	// 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
+	InputData     []*evaluator.EvaluatorInputData `thrift:"input_data,3,required" frugal:"3,required,list<evaluator.EvaluatorInputData>" form:"input_data,required" json:"input_data,required"`
+	EvaluatorType evaluator.EvaluatorType         `thrift:"evaluator_type,4,required" frugal:"4,required,EvaluatorType" json:"evaluator_type" form:"evaluator_type,required" `
+	Base          *base.Base                      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewBatchDebugEvaluatorRequest() *BatchDebugEvaluatorRequest {
+	return &BatchDebugEvaluatorRequest{}
+}
+
+func (p *BatchDebugEvaluatorRequest) InitDefault() {
+}
+
+func (p *BatchDebugEvaluatorRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+var BatchDebugEvaluatorRequest_EvaluatorContent_DEFAULT *evaluator.EvaluatorContent
+
+func (p *BatchDebugEvaluatorRequest) GetEvaluatorContent() (v *evaluator.EvaluatorContent) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorContent() {
+		return BatchDebugEvaluatorRequest_EvaluatorContent_DEFAULT
+	}
+	return p.EvaluatorContent
+}
+
+func (p *BatchDebugEvaluatorRequest) GetInputData() (v []*evaluator.EvaluatorInputData) {
+	if p != nil {
+		return p.InputData
+	}
+	return
+}
+
+func (p *BatchDebugEvaluatorRequest) GetEvaluatorType() (v evaluator.EvaluatorType) {
+	if p != nil {
+		return p.EvaluatorType
+	}
+	return
+}
+
+var BatchDebugEvaluatorRequest_Base_DEFAULT *base.Base
+
+func (p *BatchDebugEvaluatorRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return BatchDebugEvaluatorRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *BatchDebugEvaluatorRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *BatchDebugEvaluatorRequest) SetEvaluatorContent(val *evaluator.EvaluatorContent) {
+	p.EvaluatorContent = val
+}
+func (p *BatchDebugEvaluatorRequest) SetInputData(val []*evaluator.EvaluatorInputData) {
+	p.InputData = val
+}
+func (p *BatchDebugEvaluatorRequest) SetEvaluatorType(val evaluator.EvaluatorType) {
+	p.EvaluatorType = val
+}
+func (p *BatchDebugEvaluatorRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_BatchDebugEvaluatorRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "evaluator_content",
+	3:   "input_data",
+	4:   "evaluator_type",
+	255: "Base",
+}
+
+func (p *BatchDebugEvaluatorRequest) IsSetEvaluatorContent() bool {
+	return p.EvaluatorContent != nil
+}
+
+func (p *BatchDebugEvaluatorRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *BatchDebugEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetEvaluatorContent bool = false
+	var issetInputData bool = false
+	var issetEvaluatorType bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEvaluatorContent = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetInputData = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEvaluatorType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvaluatorContent {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetInputData {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvaluatorType {
+		fieldId = 4
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchDebugEvaluatorRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchDebugEvaluatorRequest[fieldId]))
+}
+
+func (p *BatchDebugEvaluatorRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *BatchDebugEvaluatorRequest) ReadField2(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorContent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorContent = _field
+	return nil
+}
+func (p *BatchDebugEvaluatorRequest) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*evaluator.EvaluatorInputData, 0, size)
+	values := make([]evaluator.EvaluatorInputData, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.InputData = _field
+	return nil
+}
+func (p *BatchDebugEvaluatorRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field evaluator.EvaluatorType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = evaluator.EvaluatorType(v)
+	}
+	p.EvaluatorType = _field
+	return nil
+}
+func (p *BatchDebugEvaluatorRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *BatchDebugEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchDebugEvaluatorRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchDebugEvaluatorRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchDebugEvaluatorRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("evaluator_content", thrift.STRUCT, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.EvaluatorContent.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BatchDebugEvaluatorRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("input_data", thrift.LIST, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.InputData)); err != nil {
+		return err
+	}
+	for _, v := range p.InputData {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *BatchDebugEvaluatorRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("evaluator_type", thrift.I32, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(int32(p.EvaluatorType)); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *BatchDebugEvaluatorRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchDebugEvaluatorRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchDebugEvaluatorRequest(%+v)", *p)
+
+}
+
+func (p *BatchDebugEvaluatorRequest) DeepEqual(ano *BatchDebugEvaluatorRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluatorContent) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.InputData) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorType) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchDebugEvaluatorRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *BatchDebugEvaluatorRequest) Field2DeepEqual(src *evaluator.EvaluatorContent) bool {
+
+	if !p.EvaluatorContent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *BatchDebugEvaluatorRequest) Field3DeepEqual(src []*evaluator.EvaluatorInputData) bool {
+
+	if len(p.InputData) != len(src) {
+		return false
+	}
+	for i, v := range p.InputData {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchDebugEvaluatorRequest) Field4DeepEqual(src evaluator.EvaluatorType) bool {
+
+	if p.EvaluatorType != src {
+		return false
+	}
+	return true
+}
+func (p *BatchDebugEvaluatorRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchDebugEvaluatorResponse struct {
+	// 输出数据
+	EvaluatorOutputData []*evaluator.EvaluatorOutputData `thrift:"evaluator_output_data,1,optional" frugal:"1,optional,list<evaluator.EvaluatorOutputData>" form:"evaluator_output_data" json:"evaluator_output_data,omitempty"`
+	BaseResp            *base.BaseResp                   `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewBatchDebugEvaluatorResponse() *BatchDebugEvaluatorResponse {
+	return &BatchDebugEvaluatorResponse{}
+}
+
+func (p *BatchDebugEvaluatorResponse) InitDefault() {
+}
+
+var BatchDebugEvaluatorResponse_EvaluatorOutputData_DEFAULT []*evaluator.EvaluatorOutputData
+
+func (p *BatchDebugEvaluatorResponse) GetEvaluatorOutputData() (v []*evaluator.EvaluatorOutputData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorOutputData() {
+		return BatchDebugEvaluatorResponse_EvaluatorOutputData_DEFAULT
+	}
+	return p.EvaluatorOutputData
+}
+
+var BatchDebugEvaluatorResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *BatchDebugEvaluatorResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return BatchDebugEvaluatorResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *BatchDebugEvaluatorResponse) SetEvaluatorOutputData(val []*evaluator.EvaluatorOutputData) {
+	p.EvaluatorOutputData = val
+}
+func (p *BatchDebugEvaluatorResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_BatchDebugEvaluatorResponse = map[int16]string{
+	1:   "evaluator_output_data",
+	255: "BaseResp",
+}
+
+func (p *BatchDebugEvaluatorResponse) IsSetEvaluatorOutputData() bool {
+	return p.EvaluatorOutputData != nil
+}
+
+func (p *BatchDebugEvaluatorResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *BatchDebugEvaluatorResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchDebugEvaluatorResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchDebugEvaluatorResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*evaluator.EvaluatorOutputData, 0, size)
+	values := make([]evaluator.EvaluatorOutputData, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorOutputData = _field
+	return nil
+}
+func (p *BatchDebugEvaluatorResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *BatchDebugEvaluatorResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchDebugEvaluatorResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchDebugEvaluatorResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorOutputData() {
+		if err = oprot.WriteFieldBegin("evaluator_output_data", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.EvaluatorOutputData)); err != nil {
+			return err
+		}
+		for _, v := range p.EvaluatorOutputData {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchDebugEvaluatorResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchDebugEvaluatorResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchDebugEvaluatorResponse(%+v)", *p)
+
+}
+
+func (p *BatchDebugEvaluatorResponse) DeepEqual(ano *BatchDebugEvaluatorResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvaluatorOutputData) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchDebugEvaluatorResponse) Field1DeepEqual(src []*evaluator.EvaluatorOutputData) bool {
+
+	if len(p.EvaluatorOutputData) != len(src) {
+		return false
+	}
+	for i, v := range p.EvaluatorOutputData {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchDebugEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -16427,6 +17180,8 @@ type EvaluatorService interface {
 	RunEvaluator(ctx context.Context, req *RunEvaluatorRequest) (r *RunEvaluatorResponse, err error)
 
 	DebugEvaluator(ctx context.Context, req *DebugEvaluatorRequest) (r *DebugEvaluatorResponse, err error)
+
+	BatchDebugEvaluator(ctx context.Context, req *BatchDebugEvaluatorRequest) (r *BatchDebugEvaluatorResponse, err error)
 	// 评估器执行结果
 	UpdateEvaluatorRecord(ctx context.Context, req *UpdateEvaluatorRecordRequest) (r *UpdateEvaluatorRecordResponse, err error)
 
@@ -16616,6 +17371,15 @@ func (p *EvaluatorServiceClient) DebugEvaluator(ctx context.Context, req *DebugE
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluatorServiceClient) BatchDebugEvaluator(ctx context.Context, req *BatchDebugEvaluatorRequest) (r *BatchDebugEvaluatorResponse, err error) {
+	var _args EvaluatorServiceBatchDebugEvaluatorArgs
+	_args.Req = req
+	var _result EvaluatorServiceBatchDebugEvaluatorResult
+	if err = p.Client_().Call(ctx, "BatchDebugEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *EvaluatorServiceClient) UpdateEvaluatorRecord(ctx context.Context, req *UpdateEvaluatorRecordRequest) (r *UpdateEvaluatorRecordResponse, err error) {
 	var _args EvaluatorServiceUpdateEvaluatorRecordArgs
 	_args.Req = req
@@ -16690,6 +17454,7 @@ func NewEvaluatorServiceProcessor(handler EvaluatorService) *EvaluatorServicePro
 	self.AddToProcessorMap("GetDefaultPromptEvaluatorTools", &evaluatorServiceProcessorGetDefaultPromptEvaluatorTools{handler: handler})
 	self.AddToProcessorMap("RunEvaluator", &evaluatorServiceProcessorRunEvaluator{handler: handler})
 	self.AddToProcessorMap("DebugEvaluator", &evaluatorServiceProcessorDebugEvaluator{handler: handler})
+	self.AddToProcessorMap("BatchDebugEvaluator", &evaluatorServiceProcessorBatchDebugEvaluator{handler: handler})
 	self.AddToProcessorMap("UpdateEvaluatorRecord", &evaluatorServiceProcessorUpdateEvaluatorRecord{handler: handler})
 	self.AddToProcessorMap("GetEvaluatorRecord", &evaluatorServiceProcessorGetEvaluatorRecord{handler: handler})
 	self.AddToProcessorMap("BatchGetEvaluatorRecords", &evaluatorServiceProcessorBatchGetEvaluatorRecords{handler: handler})
@@ -17513,6 +18278,54 @@ func (p *evaluatorServiceProcessorDebugEvaluator) Process(ctx context.Context, s
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("DebugEvaluator", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluatorServiceProcessorBatchDebugEvaluator struct {
+	handler EvaluatorService
+}
+
+func (p *evaluatorServiceProcessorBatchDebugEvaluator) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluatorServiceBatchDebugEvaluatorArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("BatchDebugEvaluator", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluatorServiceBatchDebugEvaluatorResult{}
+	var retval *BatchDebugEvaluatorResponse
+	if retval, err2 = p.handler.BatchDebugEvaluator(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchDebugEvaluator: "+err2.Error())
+		oprot.WriteMessageBegin("BatchDebugEvaluator", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("BatchDebugEvaluator", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -23563,6 +24376,350 @@ func (p *EvaluatorServiceDebugEvaluatorResult) DeepEqual(ano *EvaluatorServiceDe
 }
 
 func (p *EvaluatorServiceDebugEvaluatorResult) Field0DeepEqual(src *DebugEvaluatorResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluatorServiceBatchDebugEvaluatorArgs struct {
+	Req *BatchDebugEvaluatorRequest `thrift:"req,1" frugal:"1,default,BatchDebugEvaluatorRequest"`
+}
+
+func NewEvaluatorServiceBatchDebugEvaluatorArgs() *EvaluatorServiceBatchDebugEvaluatorArgs {
+	return &EvaluatorServiceBatchDebugEvaluatorArgs{}
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) InitDefault() {
+}
+
+var EvaluatorServiceBatchDebugEvaluatorArgs_Req_DEFAULT *BatchDebugEvaluatorRequest
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) GetReq() (v *BatchDebugEvaluatorRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluatorServiceBatchDebugEvaluatorArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) SetReq(val *BatchDebugEvaluatorRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluatorServiceBatchDebugEvaluatorArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorServiceBatchDebugEvaluatorArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchDebugEvaluatorRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchDebugEvaluator_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorServiceBatchDebugEvaluatorArgs(%+v)", *p)
+
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) DeepEqual(ano *EvaluatorServiceBatchDebugEvaluatorArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorArgs) Field1DeepEqual(src *BatchDebugEvaluatorRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluatorServiceBatchDebugEvaluatorResult struct {
+	Success *BatchDebugEvaluatorResponse `thrift:"success,0,optional" frugal:"0,optional,BatchDebugEvaluatorResponse"`
+}
+
+func NewEvaluatorServiceBatchDebugEvaluatorResult() *EvaluatorServiceBatchDebugEvaluatorResult {
+	return &EvaluatorServiceBatchDebugEvaluatorResult{}
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) InitDefault() {
+}
+
+var EvaluatorServiceBatchDebugEvaluatorResult_Success_DEFAULT *BatchDebugEvaluatorResponse
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) GetSuccess() (v *BatchDebugEvaluatorResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluatorServiceBatchDebugEvaluatorResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchDebugEvaluatorResponse)
+}
+
+var fieldIDToName_EvaluatorServiceBatchDebugEvaluatorResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorServiceBatchDebugEvaluatorResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchDebugEvaluatorResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchDebugEvaluator_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorServiceBatchDebugEvaluatorResult(%+v)", *p)
+
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) DeepEqual(ano *EvaluatorServiceBatchDebugEvaluatorResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorServiceBatchDebugEvaluatorResult) Field0DeepEqual(src *BatchDebugEvaluatorResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
