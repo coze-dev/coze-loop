@@ -162,15 +162,5 @@ func ValidateEvaluator(ctx context.Context, c *app.RequestContext) {
 // BatchDebugEvaluator .
 // @router /api/evaluation/v1/evaluators/batch_debug [POST]
 func BatchDebugEvaluator(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.BatchDebugEvaluatorRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.BatchDebugEvaluatorResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.BatchDebugEvaluator)
 }
