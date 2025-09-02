@@ -624,7 +624,7 @@ func (e *EvaluatorHandlerImpl) ListTemplates(ctx context.Context, request *evalu
 		
 		// 仅返回template_key构建的list结果，不进行language_type筛选
 		return &evaluatorservice.ListTemplatesResponse{
-			BuiltinTemplateKeys: buildCodeTemplateKeys(codeTemplates),
+			BuiltinTemplateKeys: buildCodeTemplateKeysFromNewStructure(codeTemplates),
 		}, nil
 	}
 	
@@ -690,6 +690,48 @@ func getTemplateKey(content *evaluatordto.EvaluatorContent) string {
 	return ""
 }
 
+func buildCodeTemplateKeysFromNewStructure(codeTemplates map[string]map[string]*evaluatordto.EvaluatorContent) []*evaluatordto.EvaluatorContent {
+	// 用于去重的map，key为template_key
+	templateKeyMap := make(map[string]*evaluatordto.EvaluatorContent)
+	
+	// 遍历所有模板，按template_key去重
+	for templateKey, languageMap := range codeTemplates {
+		if templateKey != "" {
+			// 如果已存在相同template_key，保留第一个
+			if _, exists := templateKeyMap[templateKey]; !exists {
+				// 取第一个语言类型的模板作为代表
+				for _, template := range languageMap {
+					if template.GetCodeEvaluator() != nil {
+						templateKeyMap[templateKey] = &evaluatordto.EvaluatorContent{
+							CodeEvaluator: &evaluatordto.CodeEvaluator{
+								CodeTemplateKey:  template.GetCodeEvaluator().CodeTemplateKey,
+								CodeTemplateName: template.GetCodeEvaluator().CodeTemplateName,
+								// 不包含LanguageType，因为只返回template_key
+							},
+						}
+						break // 只取第一个
+					}
+				}
+			}
+		}
+	}
+	
+	// 转换为slice并排序
+	keys := make([]*evaluatordto.EvaluatorContent, 0, len(templateKeyMap))
+	for _, template := range templateKeyMap {
+		keys = append(keys, template)
+	}
+	
+	// 按template_key排序
+	sort.Slice(keys, func(i, j int) bool {
+		keyI := keys[i].GetCodeEvaluator().GetCodeTemplateKey()
+		keyJ := keys[j].GetCodeEvaluator().GetCodeTemplateKey()
+		return keyI < keyJ
+	})
+	
+	return keys
+}
+
 func buildCodeTemplateKeys(codeTemplates map[string]*evaluatordto.EvaluatorContent) []*evaluatordto.EvaluatorContent {
 	// 用于去重的map，key为template_key
 	templateKeyMap := make(map[string]*evaluatordto.EvaluatorContent)
@@ -735,24 +777,28 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *eva
 	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
 	templateKey := request.GetBuiltinTemplateKey()
 
-	allTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
-
 	var template *evaluatordto.EvaluatorContent
 	var ok bool
 
-	if templateType == "code" && request.GetLanguageType() != "" {
-		// Code类型且指定了语言类型，需要检查模板的语言类型是否匹配
-		languageType := strings.ToLower(request.GetLanguageType())
-		if candidateTemplate, exists := allTemplates[templateKey]; exists {
-			if candidateTemplate.GetCodeEvaluator() != nil &&
-				candidateTemplate.GetCodeEvaluator().GetLanguageType() != "" &&
-				strings.ToLower(candidateTemplate.GetCodeEvaluator().GetLanguageType()) == languageType {
-				template = candidateTemplate
-				ok = true
+	if templateType == "code" {
+		// Code类型使用新的配置方法
+		codeTemplates := e.configer.GetCodeEvaluatorTemplateConf(ctx)
+		if languageMap, exists := codeTemplates[templateKey]; exists {
+			if request.GetLanguageType() != "" {
+				// 指定了语言类型，查找对应的模板
+				template, ok = languageMap[request.GetLanguageType()]
+			} else {
+				// 未指定语言类型，返回第一个可用的模板
+				for _, t := range languageMap {
+					template = t
+					ok = true
+					break
+				}
 			}
 		}
 	} else {
-		// Prompt类型或Code类型未指定语言
+		// 其他类型使用原有逻辑
+		allTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
 		template, ok = allTemplates[templateKey]
 	}
 
