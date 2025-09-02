@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -177,6 +178,23 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client) (ITaskApplication, error) {
+	iTaskDao := mysql.NewTaskDaoImpl(db2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
+	iUserProvider := user.NewUserRPCProvider(userClient)
+	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2)
+	if err != nil {
+		return nil, err
+	}
+	iAuthProvider := auth.NewAuthProvider(authClient)
+	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
+	iTaskApplication, err := NewTaskApplication(iTaskService, iAuthProvider, iEvaluatorRPCAdapter, iUserProvider)
+	if err != nil {
+		return nil, err
+	}
+	return iTaskApplication, nil
+}
+
 // wire.go:
 
 var (
@@ -194,7 +212,7 @@ var (
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		NewTaskApplication, auth.NewAuthProvider, traceDomainSet,
+		NewTaskApplication, service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider,
 	)
 )
 

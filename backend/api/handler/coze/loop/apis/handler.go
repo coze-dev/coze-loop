@@ -203,11 +203,13 @@ func NewObservabilityHandler(
 	traceApp obapp.ITraceApplication,
 	ingestApp obapp.ITraceIngestionApplication,
 	openAPIApp obapp.IObservabilityOpenAPIApplication,
+	taskApp obapp.ITaskApplication,
 ) *ObservabilityHandler {
 	h := &ObservabilityHandler{
 		ITraceApplication:                traceApp,
 		ITraceIngestionApplication:       ingestApp,
 		IObservabilityOpenAPIApplication: openAPIApp,
+		ITaskApplication:                 taskApp,
 	}
 	bindLocalCallClient(trace.TraceService(h), &observabilityClient, lotrace.NewLocalTraceService)
 	bindLocalCallClient(traceopenapi.OpenAPIService(h), &observabilityOpenAPIClient, looptraceopenapi.NewLocalOpenAPIService)

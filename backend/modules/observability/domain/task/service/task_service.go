@@ -15,7 +15,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -75,26 +74,20 @@ type ITaskService interface {
 
 func NewTaskServiceImpl(
 	tRepo repo.ITaskRepo,
-	tenantProvider tenant.ITenantProvider,
-	evalServiceAdaptor rpc.IEvaluatorRPCAdapter,
 	userProvider rpc.IUserProvider,
 	idGenerator idgen.IIDGenerator,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
-		TaskRepo:           tRepo,
-		tenantProvider:     tenantProvider,
-		evalServiceAdaptor: evalServiceAdaptor,
-		userProvider:       userProvider,
-		idGenerator:        idGenerator,
+		TaskRepo:     tRepo,
+		userProvider: userProvider,
+		idGenerator:  idGenerator,
 	}, nil
 }
 
 type TaskServiceImpl struct {
-	TaskRepo           repo.ITaskRepo
-	tenantProvider     tenant.ITenantProvider
-	evalServiceAdaptor rpc.IEvaluatorRPCAdapter
-	userProvider       rpc.IUserProvider
-	idGenerator        idgen.IIDGenerator
+	TaskRepo     repo.ITaskRepo
+	userProvider rpc.IUserProvider
+	idGenerator  idgen.IIDGenerator
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {

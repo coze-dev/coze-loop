@@ -98,12 +98,13 @@ var (
 		traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		taskSvc.NewTaskServiceImpl,
 		NewTaskApplication,
-		auth.NewAuthProvider,
+		taskSvc.NewTaskServiceImpl,
 		obrepo.NewTaskRepoImpl,
 		mysqldao.NewTaskDaoImpl,
-		traceDomainSet,
+		auth.NewAuthProvider,
+		user.NewUserRPCProvider,
+		evaluator.NewEvaluatorRPCProvider,
 	)
 )
 
@@ -222,11 +223,10 @@ func InitTraceIngestionApplication(
 func InitTaskApplication(
 	db db.Provider,
 	idgen idgen.IIDGenerator,
-	authClient authservice.Client,
+	configFactory conf.IConfigLoaderFactory,
 	userClient userservice.Client,
-	evalService evaluatorservice.Client,
-	evalSetService evaluationsetservice.Client,
-	datasetService datasetservice.Client) (ITaskApplication, error) {
+	authClient authservice.Client,
+	evalService evaluatorservice.Client) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
 }
