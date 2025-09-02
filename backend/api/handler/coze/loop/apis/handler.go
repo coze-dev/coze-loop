@@ -13,6 +13,8 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotask"
 
 	"github.com/coze-dev/coze-loop/backend/infra/i18n"
 	cachemw "github.com/coze-dev/coze-loop/backend/infra/middleware/ctxcache"
@@ -194,6 +196,7 @@ type ObservabilityHandler struct {
 	obapp.ITraceApplication
 	obapp.ITraceIngestionApplication
 	obapp.IObservabilityOpenAPIApplication
+	obapp.ITaskApplication
 }
 
 func NewObservabilityHandler(
@@ -208,6 +211,7 @@ func NewObservabilityHandler(
 	}
 	bindLocalCallClient(trace.TraceService(h), &observabilityClient, lotrace.NewLocalTraceService)
 	bindLocalCallClient(traceopenapi.OpenAPIService(h), &observabilityOpenAPIClient, looptraceopenapi.NewLocalOpenAPIService)
+	bindLocalCallClient(task.TaskService(h), &observabilityTaskClient, lotask.NewLocalTaskService)
 	return h
 }
 
