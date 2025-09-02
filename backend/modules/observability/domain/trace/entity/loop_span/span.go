@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -655,4 +656,116 @@ var SystemTagKeys = map[string]bool{
 	"language":     true,
 	"runtime":      true,
 	"cut_off":      true,
+}
+
+func SizeofSpans(spans SpanList) int {
+	count := 0
+	for _, span := range spans {
+		count += int(unsafe.Sizeof(span.StartTime))
+		count += SizeOfString(span.SpanID)
+		count += SizeOfString(span.ParentID)
+		count += SizeOfString(span.TraceID)
+		count += SizeOfString(span.LogID)
+		count += int(unsafe.Sizeof(span.DurationMicros))
+		count += SizeOfString(span.CallType)
+		count += SizeOfString(span.PSM)
+		count += SizeOfString(span.TraceID)
+		count += SizeOfString(span.WorkspaceID)
+		count += SizeOfString(span.SpanName)
+		count += SizeOfString(span.SpanType)
+		count += SizeOfString(span.Method)
+		count += int(unsafe.Sizeof(span.StatusCode))
+		count += SizeOfString(span.Input)
+		count += SizeOfString(span.Output)
+		count += SizeOfString(span.ObjectStorage)
+
+		for k, v := range span.SystemTagsString {
+			count += SizeOfString(k)
+			count += SizeOfString(v)
+		}
+		for k, v := range span.SystemTagsLong {
+			count += SizeOfString(k)
+			count += int(unsafe.Sizeof(v))
+		}
+		for k, v := range span.SystemTagsDouble {
+			count += SizeOfString(k)
+			count += int(unsafe.Sizeof(v))
+		}
+		for k, v := range span.TagsString {
+			count += SizeOfString(k)
+			count += SizeOfString(v)
+		}
+		for k, v := range span.TagsLong {
+			count += SizeOfString(k)
+			count += int(unsafe.Sizeof(v))
+		}
+		for k, v := range span.TagsDouble {
+			count += SizeOfString(k)
+			count += int(unsafe.Sizeof(v))
+		}
+		for k, v := range span.TagsByte {
+			count += SizeOfString(k)
+			count += SizeOfString(v)
+		}
+		for k, v := range span.TagsBool {
+			count += SizeOfString(k)
+			count += int(unsafe.Sizeof(v))
+		}
+		if span.AttrTos != nil {
+			count += SizeOfString(span.AttrTos.InputDataURL)
+			count += SizeOfString(span.AttrTos.OutputDataURL)
+			for k, v := range span.AttrTos.MultimodalData {
+				count += SizeOfString(k)
+				count += SizeOfString(v)
+			}
+		}
+		count += int(unsafe.Sizeof(span.LogicDeleteTime))
+		for _, a := range span.Annotations {
+			if a == nil {
+				continue
+			}
+			count += SizeOfString(a.ID)
+			count += SizeOfString(a.SpanID)
+			count += SizeOfString(a.TraceID)
+			count += SizeOfString(a.WorkspaceID)
+			count += SizeOfString(a.Key)
+			count += SizeOfString(a.Reasoning)
+			count += SizeOfString(a.CreatedBy)
+			count += SizeOfString(a.UpdatedBy)
+			count += SizeOfString(string(a.AnnotationType))
+			count += SizeOfString(string(a.Status))
+			count += int(unsafe.Sizeof(a.StartTime))
+			count += int(unsafe.Sizeof(a.CreatedAt))
+			count += int(unsafe.Sizeof(a.UpdatedAt))
+			count += int(unsafe.Sizeof(a.IsDeleted))
+			count += SizeOfString(string(a.Value.ValueType))
+			count += int(unsafe.Sizeof(a.Value.LongValue))
+			count += SizeOfString(a.Value.StringValue)
+			count += int(unsafe.Sizeof(a.Value.FloatValue))
+			count += int(unsafe.Sizeof(a.Value.BoolValue))
+			for _, index := range a.AnnotationIndex {
+				count += SizeOfString(index)
+			}
+			for _, correction := range a.Corrections {
+				count += SizeOfString(correction.Reasoning)
+				count += SizeOfString(string(correction.Type))
+				count += int(unsafe.Sizeof(correction.UpdateAt))
+				count += SizeOfString(correction.UpdatedBy)
+				count += SizeOfString(string(correction.Value.ValueType))
+				count += int(unsafe.Sizeof(correction.Value.LongValue))
+				count += SizeOfString(correction.Value.StringValue)
+				count += int(unsafe.Sizeof(correction.Value.FloatValue))
+				count += int(unsafe.Sizeof(correction.Value.BoolValue))
+			}
+			if a.Metadata != nil {
+				count += int(unsafe.Sizeof(a.Metadata))
+			}
+		}
+	}
+
+	return count
+}
+
+func SizeOfString(s string) int {
+	return len(s)
 }
