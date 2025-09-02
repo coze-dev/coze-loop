@@ -4,8 +4,6 @@
 package convertor
 
 import (
-	"time"
-
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 )
@@ -16,36 +14,36 @@ func TaskDO2PO(task *entity.ObservabilityTask) *model.ObservabilityTask {
 		WorkspaceID:   task.WorkspaceID,
 		Name:          task.Name,
 		Description:   task.Description,
-		TaskType:      "",
-		TaskStatus:    "",
-		TaskDetail:    nil,
-		SpanFilter:    nil,
-		EffectiveTime: nil,
-		Sampler:       nil,
-		TaskConfig:    nil,
-		CreatedAt:     time.Time{},
-		UpdatedAt:     time.Time{},
-		CreatedBy:     "",
-		UpdatedBy:     "",
+		TaskType:      task.TaskType,
+		TaskStatus:    task.TaskStatus,
+		TaskDetail:    task.TaskDetail,
+		SpanFilter:    task.SpanFilter,
+		EffectiveTime: task.EffectiveTime,
+		Sampler:       task.Sampler,
+		TaskConfig:    task.TaskConfig,
+		CreatedAt:     task.CreatedAt,
+		UpdatedAt:     task.UpdatedAt,
+		CreatedBy:     task.CreatedBy,
+		UpdatedBy:     task.UpdatedBy,
 	}
 }
 
 func TaskPO2DO(task *model.ObservabilityTask) *entity.ObservabilityTask {
 	return &entity.ObservabilityTask{
-		ID:            0,
-		WorkspaceID:   0,
-		Name:          "",
-		Description:   nil,
-		TaskType:      "",
-		TaskStatus:    "",
-		TaskDetail:    nil,
-		SpanFilter:    nil,
-		EffectiveTime: nil,
-		Sampler:       nil,
-		TaskConfig:    nil,
-		CreatedAt:     time.Time{},
-		UpdatedAt:     time.Time{},
-		CreatedBy:     "",
-		UpdatedBy:     "",
+		ID:            task.ID,
+		WorkspaceID:   task.WorkspaceID,
+		Name:          task.Name,
+		Description:   task.Description,
+		TaskType:      task.TaskType,
+		TaskStatus:    task.TaskStatus,
+		TaskDetail:    task.TaskDetail,
+		SpanFilter:    task.SpanFilter,
+		EffectiveTime: task.EffectiveTime,
+		Sampler:       task.Sampler,
+		TaskConfig:    task.TaskConfig,
+		CreatedAt:     task.CreatedAt,
+		UpdatedAt:     task.UpdatedAt,
+		CreatedBy:     task.CreatedBy,
+		UpdatedBy:     task.UpdatedBy,
 	}
 }

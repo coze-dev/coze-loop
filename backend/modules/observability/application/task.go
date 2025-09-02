@@ -141,7 +141,7 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 		WorkspaceID:   req.GetWorkspaceID(),
 		TaskStatus:    req.TaskStatus,
 		Description:   req.Description,
-		EffectiveTime: req.GetEffectiveTime(),
+		EffectiveTime: req.EffectiveTime,
 		SampleRate:    req.SampleRate,
 	})
 	if err != nil {

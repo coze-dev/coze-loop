@@ -95,11 +95,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
-	genID, err := t.idGenerator.GenID(ctx)
-	if err != nil {
-		return resp, err
-	}
-	taskPO := tconv.CreateTaskDTO2PO(ctx, genID, req.Task, userID)
+	taskPO := tconv.CreateTaskDTO2PO(ctx, req.Task, userID)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
@@ -219,7 +215,7 @@ func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameR
 		ReqOffset: 0,
 	})
 	if err != nil {
-		logs.CtxError(ctx, "GetTasks err:%v", err)
+		logs.CtxError(ctx, "ListTasks err:%v", err)
 		return nil, err
 	}
 	if len(taskPOs) > 0 {

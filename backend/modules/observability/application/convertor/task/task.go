@@ -229,12 +229,11 @@ func CheckTaskStatus(ctx context.Context, taskStatus task.TaskStatus, currentTas
 	return validTaskStatus, nil
 }
 
-func CreateTaskDTO2PO(ctx context.Context, genID int64, taskDO *task.Task, userID string) *entity.ObservabilityTask {
+func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.ObservabilityTask {
 	if taskDO == nil {
 		return nil
 	}
 	return &entity.ObservabilityTask{
-		ID:            genID,
 		WorkspaceID:   taskDO.GetWorkspaceID(),
 		Name:          taskDO.GetName(),
 		Description:   ptr.Of(taskDO.GetDescription()),
