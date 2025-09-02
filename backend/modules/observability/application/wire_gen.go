@@ -86,7 +86,10 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider)
+	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
+	iTaskDao := mysql.NewTaskDaoImpl(db2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +101,6 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	iViewDao := mysql.NewViewDaoImpl(db2)
 	iViewRepo := repo.NewViewRepoImpl(iViewDao, idgen2)
 	iAuthProvider := auth.NewAuthProvider(authClient)
-	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iUserProvider := user.NewUserRPCProvider(userClient)
 	iTagRPCAdapter := tag.NewTagRPCProvider(tagService)
 	iTraceApplication, err := NewTraceApplication(iTraceService, iTraceExportService, iViewRepo, benefit2, iTenantProvider, iTraceMetrics, iTraceConfig, iAuthProvider, iEvaluatorRPCAdapter, iUserProvider, iTagRPCAdapter)
@@ -108,7 +110,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	return iTraceApplication, nil
 }
 
-func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter) (IObservabilityOpenAPIApplication, error) {
+func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter, evalService evaluatorservice.Client, db2 db.Provider, idgen2 idgen.IIDGenerator) (IObservabilityOpenAPIApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -138,7 +140,10 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider)
+	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
+	iTaskDao := mysql.NewTaskDaoImpl(db2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -198,11 +203,11 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, userClient 
 // wire.go:
 
 var (
-	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, NewDatasetServiceAdapter,
+	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, NewDatasetServiceAdapter, evaluator.NewEvaluatorRPCProvider,
 	)
 	traceSet = wire.NewSet(
-		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, evaluator.NewEvaluatorRPCProvider, traceDomainSet,
+		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
 		NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,

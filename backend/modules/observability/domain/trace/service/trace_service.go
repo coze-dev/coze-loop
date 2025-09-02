@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	taskRepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bytedance/gg/gptr"
@@ -201,7 +204,6 @@ type ListAnnotationsResp struct {
 }
 
 type ChangeEvaluatorScoreRequest struct {
-	EvalSvc           rpc.IEvaluatorRPCAdapter
 	WorkspaceID       int64
 	EvaluatorRecordID int64
 	SpanID            string
@@ -213,7 +215,6 @@ type ChangeEvaluatorScoreResp struct {
 	Annotation *annotation.Annotation
 }
 type ListAnnotationEvaluatorsRequest struct {
-	EvalSvc     rpc.IEvaluatorRPCAdapter
 	WorkspaceID int64
 	Name        *string
 }
@@ -266,6 +267,8 @@ func NewTraceServiceImpl(
 	metrics metrics.ITraceMetrics,
 	buildHelper TraceFilterProcessorBuilder,
 	tenantProvider tenant.ITenantProvider,
+	evalSvc rpc.IEvaluatorRPCAdapter,
+	taskRepo taskRepo.ITaskRepo,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
@@ -275,6 +278,8 @@ func NewTraceServiceImpl(
 		buildHelper:        buildHelper,
 		tenantProvider:     tenantProvider,
 		metrics:            metrics,
+		evalSvc:            evalSvc,
+		taskRepo:           taskRepo,
 	}, nil
 }
 
@@ -286,6 +291,8 @@ type TraceServiceImpl struct {
 	metrics            metrics.ITraceMetrics
 	buildHelper        TraceFilterProcessorBuilder
 	tenantProvider     tenant.ITenantProvider
+	evalSvc            rpc.IEvaluatorRPCAdapter
+	taskRepo           taskRepo.ITaskRepo
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -1069,7 +1076,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	}
 	annotation.CorrectAutoEvaluateScore(req.Correction.GetScore(), req.Correction.GetExplain(), updateBy)
 	// 以评估数据为主数据，优先修改评估数据，异常则直接返回失败
-	if err = r.correctEvaluatorRecords(ctx, req.EvalSvc, annotation); err != nil {
+	if err = r.correctEvaluatorRecords(ctx, r.evalSvc, annotation); err != nil {
 		return resp, err
 	}
 	// 再同步修改观测数据
@@ -1087,8 +1094,9 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 			annotation.SpanID, recordID, err)
 		return resp, nil
 	}
-	resp.Annotation = annotation.ToFornaxAnnotation(ctx)
-	return resp, nil
+	return &ChangeEvaluatorScoreResp{
+		Annotation: annotation.ToFornaxAnnotation(ctx),
+	}, nil
 }
 
 func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, evalSvc rpc.IEvaluatorRPCAdapter, annotation *loop_span.Annotation) error {
@@ -1123,7 +1131,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 	var err error
 	if req.Name != nil {
 		// 有name直接模糊查询
-		evaluators, err = req.EvalSvc.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
+		evaluators, err = r.evalSvc.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
 			WorkspaceID: req.WorkspaceID,
 			Name:        req.Name,
 		})
@@ -1132,31 +1140,37 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		}
 	} else {
 		// 没有name先查task
-		//tasksResp, err := service.ListTasks(ctx, &taskservice.ListTasksRequest{
-		//	WorkspaceID: req.WorkspaceID,
-		//	Limit:       gptr.Of(int32(500)),
-		//	Offset:      gptr.Of(int32(0)),
-		//})
+		taskPOs, _, err := r.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+			WorkspaceIDs: []int64{req.WorkspaceID},
+			ReqLimit:     int32(500),
+			ReqOffset:    int32(0),
+		})
 		if err != nil {
 			return nil, err
 		}
+		if len(taskPOs) == 0 {
+			logs.CtxInfo(ctx, "GetTasks tasks is nil")
+			return resp, nil
+		}
+
 		evaluatorVersionIDS := make(map[int64]bool)
-		//for _, task := range tasksResp.Tasks {
-		//	for _, evaluator := range task.TaskConfig.AutoEvaluateConfigs {
-		//		evaluatorVersionIDS[evaluator.EvaluatorVersionID] = true
-		//		if len(evaluatorVersionIDS) >= 30 {
-		//			break
-		//		}
-		//	}
-		//	if len(evaluatorVersionIDS) >= 30 {
-		//		break
-		//	}
-		//}
+		for _, taskPO := range taskPOs {
+			taskDO := tconv.TaskPO2DTO(ctx, taskPO, nil)
+			for _, evaluator := range taskDO.TaskConfig.AutoEvaluateConfigs {
+				evaluatorVersionIDS[evaluator.EvaluatorVersionID] = true
+				if len(evaluatorVersionIDS) >= 30 {
+					break
+				}
+			}
+			if len(evaluatorVersionIDS) >= 30 {
+				break
+			}
+		}
 		evaluatorVersionIDList := make([]int64, 0)
 		for k := range evaluatorVersionIDS {
 			evaluatorVersionIDList = append(evaluatorVersionIDList, k)
 		}
-		evaluators, _, err = req.EvalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+		evaluators, _, err = r.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
 			WorkspaceID:         req.WorkspaceID,
 			EvaluatorVersionIds: evaluatorVersionIDList,
 		})
@@ -1227,8 +1241,9 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 			FieldList: fieldList,
 		})
 	}
-	resp.SpanInfos = spanInfos
-	return resp, nil
+	return &ExtractSpanInfoResp{
+		SpanInfos: spanInfos,
+	}, nil
 }
 func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMapping *task.FieldMapping) (string, error) {
 

@@ -838,7 +838,6 @@ func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.
 	}
 
 	sResp, err := t.traceService.ChangeEvaluatorScore(ctx, &service.ChangeEvaluatorScoreRequest{
-		EvalSvc:           t.evalSvc,
 		WorkspaceID:       req.WorkspaceID,
 		EvaluatorRecordID: req.EvaluatorRecordID,
 		SpanID:            req.SpanID,
@@ -882,7 +881,6 @@ func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *tr
 		return nil, err
 	}
 	sResp, err := t.traceService.ListAnnotationEvaluators(ctx, &service.ListAnnotationEvaluatorsRequest{
-		EvalSvc:     t.evalSvc,
 		WorkspaceID: req.WorkspaceID,
 		Name:        req.Name,
 	})

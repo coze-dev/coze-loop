@@ -58,6 +58,9 @@ var (
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
+		taskSvc.NewTaskServiceImpl,
+		obrepo.NewTaskRepoImpl,
+		mysqldao.NewTaskDaoImpl,
 		obrepo.NewTraceCKRepoImpl,
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
@@ -71,6 +74,7 @@ var (
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
 		NewDatasetServiceAdapter,
+		evaluator.NewEvaluatorRPCProvider,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
@@ -79,7 +83,6 @@ var (
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
-		evaluator.NewEvaluatorRPCProvider,
 		traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
@@ -207,6 +210,9 @@ func InitOpenAPIApplication(
 	limiterFactory limiter.IRateLimiterFactory,
 	authClient authservice.Client,
 	meter metrics.Meter,
+	evalService evaluatorservice.Client,
+	db db.Provider,
+	idgen idgen.IIDGenerator,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
 	return nil, nil
