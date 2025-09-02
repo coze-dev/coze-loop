@@ -130,7 +130,7 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 	} else if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.authSvc.CheckViewPermission(ctx,
+	if err := t.authSvc.CheckTaskPermission(ctx,
 		rpc.AuthActionTraceTaskEdit,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
