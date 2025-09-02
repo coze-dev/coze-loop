@@ -435,7 +435,7 @@ func (r *TraceExportServiceImpl) buildDatasetItems(ctx context.Context, spans []
 func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64,
 	dataset *entity.Dataset,
 ) *entity.DatasetItem {
-	item := entity.NewDatasetItem(workspaceID, dataset.ID, span.SpanID)
+	item := entity.NewDatasetItem(workspaceID, dataset.ID, span)
 	for _, mapping := range fieldMappings {
 		value, err := span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
 		if err != nil {
