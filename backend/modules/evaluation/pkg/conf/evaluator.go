@@ -32,13 +32,8 @@ func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
 	if err != nil {
 		return nil
 	}
-	codeLoader, err := configFactory.NewConfigLoader("code_evaluator_config.json")
-	if err != nil {
-		return nil
-	}
 	return &evaluatorConfiger{
-		loader:     loader,
-		codeLoader: codeLoader,
+		loader: loader,
 	}
 }
 func (c *evaluatorConfiger) GetEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
@@ -111,8 +106,8 @@ func DefaultEvaluatorPromptMapping() map[string]string {
 	return make(map[string]string)
 }
 func (c *evaluatorConfiger) GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
-	// 直接从根级别读取配置，因为JSON文件的根就是我们需要的结构
-	if c.codeLoader.UnmarshalKey(ctx, "", &etf) == nil && len(etf) > 0 {
+	const key = "code_evaluator_template_conf"
+	if c.loader.UnmarshalKey(ctx, key, &etf) == nil && len(etf) > 0 {
 		return etf
 	}
 	return DefaultCodeEvaluatorTemplateConf()
@@ -123,6 +118,5 @@ func DefaultCodeEvaluatorTemplateConf() map[string]map[string]*evaluatordto.Eval
 }
 
 type evaluatorConfiger struct {
-	loader     conf.IConfigLoader
-	codeLoader conf.IConfigLoader
+	loader conf.IConfigLoader
 }
