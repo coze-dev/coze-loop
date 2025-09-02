@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -91,6 +92,7 @@ func NewTraceExportServiceImpl(
 	metrics metrics.ITraceMetrics,
 	tenantProvider tenant.ITenantProvider,
 	datasetServiceProvider *DatasetServiceAdaptor,
+	buildHelper TraceFilterProcessorBuilder,
 ) (ITraceExportService, error) {
 	return &TraceExportServiceImpl{
 		traceRepo:             tRepo,
@@ -100,6 +102,7 @@ func NewTraceExportServiceImpl(
 		tenantProvider:        tenantProvider,
 		metrics:               metrics,
 		DatasetServiceAdaptor: datasetServiceProvider,
+		buildHelper:           buildHelper,
 	}, nil
 }
 
@@ -111,6 +114,7 @@ type TraceExportServiceImpl struct {
 	metrics               metrics.ITraceMetrics
 	tenantProvider        tenant.ITenantProvider
 	DatasetServiceAdaptor *DatasetServiceAdaptor
+	buildHelper           TraceFilterProcessorBuilder
 }
 
 func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req *ExportTracesToDatasetRequest) (
@@ -285,9 +289,35 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 	if err != nil {
 		return nil, err
 	}
+	spans := result.Spans
 
-	// todo tyf 解密
-	return result.Spans, nil
+	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    workspaceID,
+		PlatformType:   platformType,
+		QueryStartTime: startTime,
+		QueryEndTime:   endTime,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, errno.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		spans, err = p.Transform(ctx, spans)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// sort by sids
+	spanMap := lo.SliceToMap(spans, func(s *loop_span.Span) (string, *loop_span.Span) {
+		return s.SpanID, s
+	})
+	sortedSpans := make(loop_span.SpanList, 0, len(sids))
+	for _, sid := range sids {
+		if span, ok := spanMap[sid.SpanID]; ok {
+			sortedSpans = append(sortedSpans, span)
+		}
+	}
+	return sortedSpans, nil
 }
 
 func (r *TraceExportServiceImpl) clearDataset(ctx context.Context, datasetID int64, req *ExportTracesToDatasetRequest) error {
