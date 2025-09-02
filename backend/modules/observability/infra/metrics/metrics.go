@@ -38,8 +38,10 @@ const (
 func traceQueryTagNames() []string {
 	return []string{
 		tagSpaceID,
+		tagPlatformType,
 		tagSpanType,
 		tagIsErr,
+		tagErrCode,
 	}
 }
 
