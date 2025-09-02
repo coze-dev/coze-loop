@@ -100,13 +100,12 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		return resp, err
 	}
 	taskPO := tconv.CreateTaskDTO2PO(ctx, genID, req.Task, userID)
-	_, err = t.TaskRepo.CreateTask(ctx, taskPO)
+	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
 	}
-	resp.TaskID = &genID
 	//todo[xun]:历史回溯数据发mq
-	return resp, nil
+	return &CreateTaskResp{TaskID: &id}, nil
 }
 func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (err error) {
 	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
@@ -201,8 +200,7 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	resp.Task = tconv.TaskPO2DTO(ctx, taskPO, userInfoMap)
-	return resp, nil
+	return &GetTaskResp{Task: tconv.TaskPO2DTO(ctx, taskPO, userInfoMap)}, nil
 }
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
 	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
