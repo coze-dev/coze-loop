@@ -1351,83 +1351,56 @@ func TestBuildCodeTemplateKeys(t *testing.T) {
 	assert.Equal(t, "python_template_1", keys[1])
 }
 
-func TestBuildTemplateKeys_Code(t *testing.T) {
+func TestBuildTemplateKeys_PromptOnly(t *testing.T) {
+	// 测试buildTemplateKeys函数现在只处理Prompt类型
 	origins := map[string]*evaluatordto.EvaluatorContent{
-		"python_template_1": {
+		"prompt_template_1": {
+			PromptEvaluator: &evaluatordto.PromptEvaluator{
+				PromptTemplateKey:  ptr.Of("prompt_template_1"),
+				PromptTemplateName: ptr.Of("Prompt评估模板1"),
+			},
+		},
+		"prompt_template_2": {
+			PromptEvaluator: &evaluatordto.PromptEvaluator{
+				PromptTemplateKey:  ptr.Of("prompt_template_2"),
+				PromptTemplateName: ptr.Of("Prompt评估模板2"),
+			},
+		},
+		"code_template_1": {
 			CodeEvaluator: &evaluatordto.CodeEvaluator{
 				LanguageType:     ptr.Of("Python"),
-				CodeTemplateKey:  ptr.Of("python_template_1"),
-				CodeTemplateName: ptr.Of("Python评估模板1"),
-			},
-		},
-		"js_template_1": {
-			CodeEvaluator: &evaluatordto.CodeEvaluator{
-				LanguageType:     ptr.Of("JS"),
-				CodeTemplateKey:  ptr.Of("js_template_1"),
-				CodeTemplateName: ptr.Of("JS评估模板1"),
+				CodeTemplateKey:  ptr.Of("code_template_1"),
+				CodeTemplateName: ptr.Of("Code评估模板1"),
 			},
 		},
 	}
 
-	result := buildTemplateKeys(origins, evaluatordto.TemplateType_Code)
+	// 测试Prompt类型
+	promptResult := buildTemplateKeys(origins, evaluatordto.TemplateType_Prompt)
+	assert.Len(t, promptResult, 2) // 只应该返回2个Prompt模板
 
-	assert.Len(t, result, 2)
+	// 验证返回的都是Prompt类型
+	for _, template := range promptResult {
+		assert.NotNil(t, template.GetPromptEvaluator())
+		assert.Nil(t, template.GetCodeEvaluator())
+	}
 
 	// 验证排序
-	keys := make([]string, len(result))
-	for i, template := range result {
-		assert.NotNil(t, template.GetCodeEvaluator())
-		keys[i] = template.GetCodeEvaluator().GetCodeTemplateKey()
+	keys := make([]string, len(promptResult))
+	for i, template := range promptResult {
+		keys[i] = template.GetPromptEvaluator().GetPromptTemplateKey()
 	}
+	assert.Equal(t, "prompt_template_1", keys[0])
+	assert.Equal(t, "prompt_template_2", keys[1])
 
-	// 验证按key排序
-	assert.Equal(t, "js_template_1", keys[0])
-	assert.Equal(t, "python_template_1", keys[1])
+	// 测试Code类型 - 现在应该返回空结果
+	codeResult := buildTemplateKeys(origins, evaluatordto.TemplateType_Code)
+	assert.Len(t, codeResult, 0) // Code类型现在不应该被处理
 }
-
-func TestGetTemplateKey(t *testing.T) {
-	tests := []struct {
-		name     string
-		content  *evaluatordto.EvaluatorContent
-		expected string
-	}{
-		{
-			name: "Prompt评估器",
-			content: &evaluatordto.EvaluatorContent{
-				PromptEvaluator: &evaluatordto.PromptEvaluator{
-					PromptTemplateKey: ptr.Of("prompt_key"),
-				},
-			},
-			expected: "prompt_key",
-		},
-		{
-			name: "Code评估器",
-			content: &evaluatordto.EvaluatorContent{
-				CodeEvaluator: &evaluatordto.CodeEvaluator{
-					CodeTemplateKey: ptr.Of("code_key"),
-				},
-			},
-			expected: "code_key",
-		},
-		{
-			name:     "空内容",
-			content:  &evaluatordto.EvaluatorContent{},
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := getTemplateKey(tt.content)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestEvaluatorHandlerImpl_GetCodeEvaluatorTemplateConf(t *testing.T) {
 	// 这个测试验证GetCodeEvaluatorTemplateConf方法的转换逻辑
 	// 我们直接测试configer的实现，而不是mock
-	
+
 	// 创建一个实际的configer实例进行测试
 	// 由于我们只测试转换逻辑，可以通过集成测试来验证
 	t.Skip("This test requires actual configer implementation, tested in integration tests")

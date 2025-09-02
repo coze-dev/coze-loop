@@ -642,52 +642,31 @@ func (e *EvaluatorHandlerImpl) ListTemplates(ctx context.Context, request *evalu
 	}, nil
 }
 
+// buildTemplateKeys 构建Prompt类型的模板键列表
+// 注意：此函数只处理Prompt类型的Evaluator，Code类型请使用buildCodeTemplateKeys函数
 func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent, templateType evaluatordto.TemplateType) []*evaluatordto.EvaluatorContent {
 	keys := make([]*evaluatordto.EvaluatorContent, 0, len(origins))
 
 	for _, origin := range origins {
 		evaluatorContent := &evaluatordto.EvaluatorContent{}
 
-		// 根据模板类型处理
-		switch templateType {
-		case evaluatordto.TemplateType_Prompt:
-			if origin.GetPromptEvaluator() != nil {
-				evaluatorContent.PromptEvaluator = &evaluatordto.PromptEvaluator{
-					PromptTemplateKey:  origin.GetPromptEvaluator().PromptTemplateKey,
-					PromptTemplateName: origin.GetPromptEvaluator().PromptTemplateName,
-				}
+		// 只处理Prompt类型的模板
+		if templateType == evaluatordto.TemplateType_Prompt && origin.GetPromptEvaluator() != nil {
+			evaluatorContent.PromptEvaluator = &evaluatordto.PromptEvaluator{
+				PromptTemplateKey:  origin.GetPromptEvaluator().PromptTemplateKey,
+				PromptTemplateName: origin.GetPromptEvaluator().PromptTemplateName,
 			}
-		case evaluatordto.TemplateType_Code:
-			if origin.GetCodeEvaluator() != nil {
-				evaluatorContent.CodeEvaluator = &evaluatordto.CodeEvaluator{
-					LanguageType:     origin.GetCodeEvaluator().LanguageType,
-					CodeTemplateKey:  origin.GetCodeEvaluator().CodeTemplateKey,
-					CodeTemplateName: origin.GetCodeEvaluator().CodeTemplateName,
-				}
-			}
+			keys = append(keys, evaluatorContent)
 		}
-
-		keys = append(keys, evaluatorContent)
 	}
 
-	// 排序逻辑适配两种类型
+	// 按PromptTemplateKey排序
 	sort.Slice(keys, func(i, j int) bool {
-		keyI := getTemplateKey(keys[i])
-		keyJ := getTemplateKey(keys[j])
+		keyI := keys[i].GetPromptEvaluator().GetPromptTemplateKey()
+		keyJ := keys[j].GetPromptEvaluator().GetPromptTemplateKey()
 		return keyI < keyJ
 	})
 	return keys
-}
-
-// 辅助函数：获取模板key用于排序
-func getTemplateKey(content *evaluatordto.EvaluatorContent) string {
-	if content.GetPromptEvaluator() != nil {
-		return content.GetPromptEvaluator().GetPromptTemplateKey()
-	}
-	if content.GetCodeEvaluator() != nil {
-		return content.GetCodeEvaluator().GetCodeTemplateKey()
-	}
-	return ""
 }
 
 func buildCodeTemplateKeys(codeTemplates map[string]map[string]*evaluatordto.EvaluatorContent) []*evaluatordto.EvaluatorContent {
