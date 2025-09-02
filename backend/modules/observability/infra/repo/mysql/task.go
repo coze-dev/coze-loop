@@ -125,7 +125,7 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 		qd = qd.Where(qdf)
 	}
 	// order by
-	qd = qd.Order(v.order(q, param.OrderBy.String(), *param.OrderBy.IsAsc))
+	qd = qd.Order(v.order(q, param.OrderBy.GetField(), param.OrderBy.GetIsAsc()))
 	// 计算分页参数
 	limit, offset := calculatePagination(param.ReqLimit, param.ReqOffset)
 	results, err := qd.Limit(limit).Offset(offset).Find()
