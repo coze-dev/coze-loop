@@ -557,17 +557,6 @@ func (s SpanList) FilterModelSpans() SpanList {
 				Values:     []string{"model"},
 				QueryType:  ptr.Of(QueryTypeEnumEq),
 				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
-				SubFilter: &FilterFields{
-					QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
-					FilterFields: []*FilterField{
-						{
-							FieldName: SpanFieldModelProvider,
-							FieldType: FieldTypeString,
-							Values:    []string{"LLMGateway", "llm_gateway"},
-							QueryType: ptr.Of(QueryTypeEnumNotIn),
-						},
-					},
-				},
 			},
 		},
 	}
