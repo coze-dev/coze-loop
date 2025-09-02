@@ -32,6 +32,7 @@ type StartSpanOptions struct {
 	StartTime     time.Time
 	StartNewTrace bool
 	WorkspaceID   string
+	ChildOf       cozeloop.SpanContext
 }
 
 type StartSpanOption = func(o *StartSpanOptions)
@@ -60,6 +61,13 @@ func WithSpanWorkspaceID(workspaceID string) StartSpanOption {
 	}
 }
 
+// WithChildOf Set the parent span of the span.
+func WithChildOf(childOf cozeloop.SpanContext) StartSpanOption {
+	return func(ops *StartSpanOptions) {
+		ops.ChildOf = childOf
+	}
+}
+
 func (t *TracerImpl) StartSpan(ctx context.Context, name, spanType string, opts ...StartSpanOption) (context.Context, Span) {
 	options := &StartSpanOptions{}
 	for _, opt := range opts {
@@ -75,6 +83,9 @@ func (t *TracerImpl) StartSpan(ctx context.Context, name, spanType string, opts 
 	}
 	if options.WorkspaceID != "" {
 		cozeLoopOpts = append(cozeLoopOpts, cozeloop.WithSpanWorkspaceID(options.WorkspaceID))
+	}
+	if options.ChildOf != nil {
+		cozeLoopOpts = append(cozeLoopOpts, cozeloop.WithChildOf(options.ChildOf))
 	}
 	ctx, span := t.Client.StartSpan(ctx, name, spanType, cozeLoopOpts...)
 	return ctx, SpanImpl{
