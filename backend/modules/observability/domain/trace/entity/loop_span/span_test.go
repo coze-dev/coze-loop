@@ -238,7 +238,7 @@ func TestSpan_ExtractByJsonpath(t *testing.T) {
 
 	result, err = span.ExtractByJsonpath(ctx, "Output", "score")
 	assert.NoError(t, err)
-	assert.Equal(t, "0.9500000000000001", result)
+	assert.Equal(t, result, "0.95")
 
 	result, err = span.ExtractByJsonpath(ctx, "Output", "details.message")
 	assert.NoError(t, err)
