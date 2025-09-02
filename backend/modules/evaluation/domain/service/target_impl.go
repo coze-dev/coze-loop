@@ -177,7 +177,6 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 			if spanParam.Error != nil {
 				span.SetError(ctx, spanParam.Error)
 			}
-			span.SetCallType("EvalTarget")
 			tags := make(map[string]interface{})
 			tags["eval_target_type"] = spanParam.TargetType
 			tags["eval_target_id"] = spanParam.TargetID
@@ -240,6 +239,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 	if err != nil {
 		logs.CtxWarn(ctx, "start span failed, err=%v", err)
 	}
+	span.SetCallType("EvalTarget")
 
 	// inject flow trace
 	ctx = looptracer.GetTracer().Inject(ctx)
