@@ -100,11 +100,11 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		return resp, err
 	}
 	taskPO := tconv.CreateTaskDTO2PO(ctx, genID, req.Task, userID)
-	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
+	_, err = t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
 	}
-	resp.TaskID = &id
+	resp.TaskID = &genID
 	//todo[xun]:历史回溯数据发mq
 	return resp, nil
 }
