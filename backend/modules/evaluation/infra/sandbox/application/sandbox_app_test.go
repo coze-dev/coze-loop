@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

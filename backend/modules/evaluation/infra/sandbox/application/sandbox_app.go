@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/entity"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/service"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/infra/deno"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/infra/pyodide"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/pkg/errors"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/infra/deno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/infra/pyodide"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 

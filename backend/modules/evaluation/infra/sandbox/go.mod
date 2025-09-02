@@ -1,4 +1,4 @@
-module code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox
+module github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox
 
 go 1.24.1
 
