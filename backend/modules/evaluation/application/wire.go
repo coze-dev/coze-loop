@@ -10,13 +10,13 @@ import (
 	"context"
 
 	"github.com/google/wire"
+	"github.com/sirupsen/logrus"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
-	"github.com/coze-dev/coze-loop/backend/infra/http"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -129,9 +129,10 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
-		http.NewHTTPClient,
 		runtime.NewRuntimeFactory,
 		runtime.NewRuntimeManager,
+		NewSandboxConfig,
+		NewLogger,
 
 		wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)),
 		service.NewCodeBuilderFactory,
@@ -283,6 +284,18 @@ func InitEvalTargetApplication(ctx context.Context,
 		evalTargetSet,
 	)
 	return nil
+}
+
+// NewSandboxConfig 创建默认沙箱配置
+func NewSandboxConfig() *runtime.SandboxConfig {
+	return runtime.DefaultSandboxConfig()
+}
+
+// NewLogger 创建默认日志记录器
+func NewLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+	return logger
 }
 
 func NewEvaluatorSourceServices(
