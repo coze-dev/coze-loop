@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/application"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/application"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/utils"
 	"github.com/sirupsen/logrus"

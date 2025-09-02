@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/pkg/errors"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/pkg/errors"
 )
 
 // CodeValidator 代码验证器

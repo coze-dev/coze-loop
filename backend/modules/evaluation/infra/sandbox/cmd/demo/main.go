@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/application"
-	sandboxHttp "code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/infra/http"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/application"
+	sandboxHttp "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/infra/http"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/sirupsen/logrus"

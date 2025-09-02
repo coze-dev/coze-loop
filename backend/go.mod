@@ -6,6 +6,8 @@ toolchain go1.24.6
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
+replace github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox => ./modules/evaluation/infra/sandbox
+
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.34.0
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -102,8 +104,8 @@ require (
 require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 
 require (
-	code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox v0.0.0-00010101000000-000000000000
 	github.com/brianvoe/gofakeit/v6 v6.28.0
+	github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -267,5 +269,3 @@ require (
 	gorm.io/rawsql v1.0.3-0.20250401110442-7e49778bc820
 	stathat.com/c/consistent v1.0.0 // indirect
 )
-
-replace code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox => ./modules/evaluation/infra/sandbox

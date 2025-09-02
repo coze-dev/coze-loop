@@ -1,7 +1,7 @@
 package service
 
 import (
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
 	"context"
 )
 

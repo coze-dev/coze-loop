@@ -13,9 +13,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/entity"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/pkg/errors"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/pkg/utils"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/pkg/errors"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/pkg/utils"
 )
 
 // DenoPyodideRuntime 基于Deno的Pyodide运行时实现

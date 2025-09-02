@@ -12,8 +12,8 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/infra/deno"
-	sandboxEntity "code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/infra/deno"
+	sandboxEntity "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
 )
 
 // DenoJavaScriptRuntimeAdapter 基于Deno的JavaScript运行时适配器

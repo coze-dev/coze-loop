@@ -1,7 +1,7 @@
 package http
 
 import (
-	"code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/sandbox/application"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/application"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/sirupsen/logrus"
 )
