@@ -1304,26 +1304,30 @@ func TestEvaluatorHandlerImpl_GetTemplateInfo_Code(t *testing.T) {
 }
 
 func TestBuildCodeTemplateKeys(t *testing.T) {
-	codeTemplates := map[string]*evaluatordto.EvaluatorContent{
-		"python_template_1_Python": {
-			CodeEvaluator: &evaluatordto.CodeEvaluator{
-				LanguageType:     ptr.Of("Python"),
-				CodeTemplateKey:  ptr.Of("python_template_1"),
-				CodeTemplateName: ptr.Of("Python评估模板1"),
+	codeTemplates := map[string]map[string]*evaluatordto.EvaluatorContent{
+		"python_template_1": {
+			"Python": {
+				CodeEvaluator: &evaluatordto.CodeEvaluator{
+					LanguageType:     ptr.Of("Python"),
+					CodeTemplateKey:  ptr.Of("python_template_1"),
+					CodeTemplateName: ptr.Of("Python评估模板1"),
+				},
+			},
+			"JS": {
+				CodeEvaluator: &evaluatordto.CodeEvaluator{
+					LanguageType:     ptr.Of("JS"),
+					CodeTemplateKey:  ptr.Of("python_template_1"), // 相同的template_key，不同的language
+					CodeTemplateName: ptr.Of("Python模板JS版本"),
+				},
 			},
 		},
-		"python_template_1_JS": {
-			CodeEvaluator: &evaluatordto.CodeEvaluator{
-				LanguageType:     ptr.Of("JS"),
-				CodeTemplateKey:  ptr.Of("python_template_1"), // 相同的template_key，不同的language
-				CodeTemplateName: ptr.Of("Python模板JS版本"),
-			},
-		},
-		"js_template_1_JS": {
-			CodeEvaluator: &evaluatordto.CodeEvaluator{
-				LanguageType:     ptr.Of("JS"),
-				CodeTemplateKey:  ptr.Of("js_template_1"),
-				CodeTemplateName: ptr.Of("JS评估模板1"),
+		"js_template_1": {
+			"JS": {
+				CodeEvaluator: &evaluatordto.CodeEvaluator{
+					LanguageType:     ptr.Of("JS"),
+					CodeTemplateKey:  ptr.Of("js_template_1"),
+					CodeTemplateName: ptr.Of("JS评估模板1"),
+				},
 			},
 		},
 	}
