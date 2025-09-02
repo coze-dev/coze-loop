@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
-
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )

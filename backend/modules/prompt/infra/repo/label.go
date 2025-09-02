@@ -227,7 +227,6 @@ func (r *LabelRepoImpl) UpdateCommitLabels(ctx context.Context, param repo.Updat
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}

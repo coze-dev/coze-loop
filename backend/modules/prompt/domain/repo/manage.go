@@ -12,18 +12,13 @@ import (
 //go:generate mockgen -destination=mocks/manage_repo.go -package=mocks . IManageRepo
 type IManageRepo interface {
 	CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (promptID int64, err error)
-
 	DeletePrompt(ctx context.Context, promptID int64) (err error)
-
 	GetPrompt(ctx context.Context, param GetPromptParam) (promptDO *entity.Prompt, err error)
 	MGetPrompt(ctx context.Context, queries []GetPromptParam, opts ...GetPromptOptionFunc) (promptDOMap map[GetPromptParam]*entity.Prompt, err error)
 	MGetPromptBasicByPromptKey(ctx context.Context, spaceID int64, promptKeys []string, opts ...GetPromptBasicOptionFunc) (promptDOs []*entity.Prompt, err error)
 	ListPrompt(ctx context.Context, param ListPromptParam) (result *ListPromptResult, err error)
-
 	UpdatePrompt(ctx context.Context, param UpdatePromptParam) (err error)
-
 	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (draftInfo *entity.DraftInfo, err error)
-
 	CommitDraft(ctx context.Context, param CommitDraftParam) (err error)
 	ListCommitInfo(ctx context.Context, param ListCommitInfoParam) (result *ListCommitResult, err error)
 }
@@ -72,7 +67,7 @@ type CommitDraftParam struct {
 
 	CommitVersion     string
 	CommitDescription string
-	LabelKeys []string
+	LabelKeys         []string
 }
 
 type ListCommitInfoParam struct {

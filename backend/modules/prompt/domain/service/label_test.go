@@ -1,8 +1,15 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import (
 	"context"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
@@ -10,8 +17,6 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo/mocks"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 )
 
 func TestPromptServiceImpl_CreateLabel(t *testing.T) {
@@ -120,6 +125,1277 @@ func TestPromptServiceImpl_CreateLabel(t *testing.T) {
 				assert.Contains(t, err.Error(), tc.expectedError)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_ListLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		param             ListLabelParam
+		presetLabels      []string
+		configErr         error
+		userLabels        []*entity.PromptLabel
+		userNextToken     *int64
+		repoErr           error
+		checkUserLabels   []*entity.PromptLabel
+		checkUserErr      error
+		expectedLabels    []*entity.PromptLabel
+		expectedNextToken *int64
+		expectedError     string
+	}{
+		{
+			name: "first page - preset labels enough to fill page",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    nil,
+			},
+			presetLabels: []string{"preset1", "preset2", "preset3"},
+			configErr:    nil,
+			checkUserLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			checkUserErr: nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(-3); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "first page - preset labels exactly fill page, has user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    nil,
+			},
+			presetLabels: []string{"preset1", "preset2"},
+			configErr:    nil,
+			checkUserLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			checkUserErr: nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(100); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "first page - preset labels exactly fill page, no user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    nil,
+			},
+			presetLabels:    []string{"preset1", "preset2"},
+			configErr:       nil,
+			checkUserLabels: []*entity.PromptLabel{},
+			checkUserErr:    nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "first page - preset labels not enough, fill with user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     3,
+				PageToken:    nil,
+			},
+			presetLabels: []string{"preset1"},
+			configErr:    nil,
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "first page - only preset labels, no user labels needed",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     3,
+				PageToken:    nil,
+			},
+			presetLabels: []string{"preset1", "preset2"},
+			configErr:    nil,
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			userNextToken: nil,
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "preset label page - middle page",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    func() *int64 { token := int64(-3); return &token }(),
+			},
+			presetLabels: []string{"preset1", "preset2", "preset3", "preset4", "preset5"},
+			configErr:    nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -3, LabelKey: "preset3", SpaceID: 1},
+				{ID: -4, LabelKey: "preset4", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(-5); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "preset label page - last page, page full, has user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     1,
+				PageToken:    func() *int64 { token := int64(-4); return &token }(),
+			},
+			presetLabels: []string{"preset1", "preset2", "preset3", "preset4"},
+			configErr:    nil,
+			checkUserLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			checkUserErr: nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -4, LabelKey: "preset4", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(100); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "preset label page - last page, page not full, fill with user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     3,
+				PageToken:    func() *int64 { token := int64(-4); return &token }(),
+			},
+			presetLabels: []string{"preset1", "preset2", "preset3", "preset4"},
+			configErr:    nil,
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -4, LabelKey: "preset4", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "preset label page - index out of range",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    func() *int64 { token := int64(-10); return &token }(),
+			},
+			presetLabels:      []string{"preset1", "preset2"},
+			configErr:         nil,
+			expectedLabels:    []*entity.PromptLabel{},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "user label page",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    func() *int64 { token := int64(100); return &token }(),
+			},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "with label key filter",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "test",
+				PageSize:     3,
+				PageToken:    nil,
+			},
+			presetLabels: []string{"test_preset", "other_preset", "preset_test"},
+			configErr:    nil,
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "test_user", SpaceID: 1},
+			},
+			userNextToken: nil,
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "test_preset", SpaceID: 1},
+				{ID: -2, LabelKey: "preset_test", SpaceID: 1},
+				{ID: 100, LabelKey: "test_user", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "config provider error",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    nil,
+			},
+			presetLabels:      nil,
+			configErr:         assert.AnError,
+			expectedLabels:    nil,
+			expectedNextToken: nil,
+			expectedError:     "assert.AnError general error for testing",
+		},
+		{
+			name: "user label repo error",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    func() *int64 { token := int64(100); return &token }(),
+			},
+			userLabels:        nil,
+			userNextToken:     nil,
+			repoErr:           assert.AnError,
+			expectedLabels:    nil,
+			expectedNextToken: nil,
+			expectedError:     "assert.AnError general error for testing",
+		},
+		{
+			name: "fill with user labels error",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     3,
+				PageToken:    nil,
+			},
+			presetLabels:      []string{"preset1"},
+			configErr:         nil,
+			userLabels:        nil,
+			userNextToken:     nil,
+			repoErr:           assert.AnError,
+			expectedLabels:    nil,
+			expectedNextToken: nil,
+			expectedError:     "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			ctx := context.Background()
+
+			// Setup config provider mock for getting preset labels
+			// ListLabel always calls getFilteredPresetLabels which calls configProvider.ListPresetLabels
+			mockConfigProvider.EXPECT().ListPresetLabels().Return(tc.presetLabels, tc.configErr).Times(1)
+
+			if tc.configErr == nil {
+				// Setup mocks based on the test scenario
+				switch {
+				case tc.param.PageToken == nil:
+					// First page scenario
+					// For filtered preset labels, need to calculate actual filtered count
+					filteredCount := len(tc.presetLabels)
+					if tc.param.LabelKeyLike != "" {
+						// Calculate filtered count
+						filteredCount = 0
+						for _, preset := range tc.presetLabels {
+							if strings.Contains(preset, tc.param.LabelKeyLike) {
+								filteredCount++
+							}
+						}
+					}
+
+					if filteredCount < tc.param.PageSize {
+						// Need to fill with user labels
+						mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+							SpaceID:      tc.param.SpaceID,
+							LabelKeyLike: tc.param.LabelKeyLike,
+							PageSize:     tc.param.PageSize - filteredCount,
+							PageToken:    nil,
+						}).Return(tc.userLabels, tc.userNextToken, tc.repoErr).Times(1)
+					} else if filteredCount == tc.param.PageSize {
+						// Check if user labels exist
+						if tc.checkUserLabels != nil || tc.checkUserErr != nil {
+							mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+								SpaceID:      tc.param.SpaceID,
+								LabelKeyLike: tc.param.LabelKeyLike,
+								PageSize:     1,
+								PageToken:    nil,
+							}).Return(tc.checkUserLabels, nil, tc.checkUserErr).Times(1)
+						}
+					}
+
+				case *tc.param.PageToken < 0:
+					// Preset label page scenario
+					startIndex := int(-*tc.param.PageToken - 1)
+					endIndex := startIndex + tc.param.PageSize
+					if endIndex > len(tc.presetLabels) {
+						endIndex = len(tc.presetLabels)
+					}
+					resultCount := endIndex - startIndex
+
+					if startIndex < len(tc.presetLabels) {
+						if endIndex >= len(tc.presetLabels) && resultCount < tc.param.PageSize {
+							// Need to fill with user labels
+							mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+								SpaceID:      tc.param.SpaceID,
+								LabelKeyLike: tc.param.LabelKeyLike,
+								PageSize:     tc.param.PageSize - resultCount,
+								PageToken:    nil,
+							}).Return(tc.userLabels, tc.userNextToken, tc.repoErr).Times(1)
+						} else if endIndex >= len(tc.presetLabels) && resultCount == tc.param.PageSize {
+							// Check if user labels exist
+							if tc.checkUserLabels != nil || tc.checkUserErr != nil {
+								mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+									SpaceID:      tc.param.SpaceID,
+									LabelKeyLike: tc.param.LabelKeyLike,
+									PageSize:     1,
+									PageToken:    nil,
+								}).Return(tc.checkUserLabels, nil, tc.checkUserErr).Times(1)
+							}
+						}
+					}
+
+				default:
+					// User label page scenario
+					mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+						SpaceID:      tc.param.SpaceID,
+						LabelKeyLike: tc.param.LabelKeyLike,
+						PageSize:     tc.param.PageSize,
+						PageToken:    tc.param.PageToken,
+					}).Return(tc.userLabels, tc.userNextToken, tc.repoErr).Times(1)
+				}
+			}
+
+			labels, nextToken, err := service.ListLabel(ctx, tc.param)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, labels)
+				assert.Nil(t, nextToken)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedLabels, labels)
+				assert.Equal(t, tc.expectedNextToken, nextToken)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_getFilteredPresetLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		labelKeyLike   string
+		presetLabels   []string
+		configErr      error
+		expectedResult []string
+		expectedError  string
+	}{
+		{
+			name:           "no filter - return all",
+			labelKeyLike:   "",
+			presetLabels:   []string{"preset1", "preset2", "preset3"},
+			configErr:      nil,
+			expectedResult: []string{"preset1", "preset2", "preset3"},
+			expectedError:  "",
+		},
+		{
+			name:           "with filter - partial match",
+			labelKeyLike:   "test",
+			presetLabels:   []string{"test_preset", "other_preset", "preset_test", "another"},
+			configErr:      nil,
+			expectedResult: []string{"test_preset", "preset_test"},
+			expectedError:  "",
+		},
+		{
+			name:           "with filter - no match",
+			labelKeyLike:   "nonexistent",
+			presetLabels:   []string{"preset1", "preset2", "preset3"},
+			configErr:      nil,
+			expectedResult: nil,
+			expectedError:  "",
+		},
+		{
+			name:           "empty preset labels",
+			labelKeyLike:   "",
+			presetLabels:   []string{},
+			configErr:      nil,
+			expectedResult: []string{},
+			expectedError:  "",
+		},
+		{
+			name:           "config provider error",
+			labelKeyLike:   "",
+			presetLabels:   nil,
+			configErr:      assert.AnError,
+			expectedResult: nil,
+			expectedError:  "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			mockConfigProvider.EXPECT().ListPresetLabels().Return(tc.presetLabels, tc.configErr).Times(1)
+
+			result, err := service.getFilteredPresetLabels(tc.labelKeyLike)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedResult, result)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_convertPresetLabelsToEntities(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		presetLabels   []string
+		spaceID        int64
+		start          int
+		end            int
+		expectedResult []*entity.PromptLabel
+	}{
+		{
+			name:         "normal conversion",
+			presetLabels: []string{"preset1", "preset2", "preset3"},
+			spaceID:      1,
+			start:        0,
+			end:          2,
+			expectedResult: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+		},
+		{
+			name:         "start from middle",
+			presetLabels: []string{"preset1", "preset2", "preset3", "preset4"},
+			spaceID:      2,
+			start:        1,
+			end:          3,
+			expectedResult: []*entity.PromptLabel{
+				{ID: -2, LabelKey: "preset2", SpaceID: 2},
+				{ID: -3, LabelKey: "preset3", SpaceID: 2},
+			},
+		},
+		{
+			name:           "start >= end",
+			presetLabels:   []string{"preset1", "preset2", "preset3"},
+			spaceID:        1,
+			start:          2,
+			end:            2,
+			expectedResult: nil,
+		},
+		{
+			name:           "start >= len(presetLabels)",
+			presetLabels:   []string{"preset1", "preset2"},
+			spaceID:        1,
+			start:          3,
+			end:            5,
+			expectedResult: nil,
+		},
+		{
+			name:         "end > len(presetLabels)",
+			presetLabels: []string{"preset1", "preset2"},
+			spaceID:      1,
+			start:        0,
+			end:          5,
+			expectedResult: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+		},
+		{
+			name:           "empty preset labels",
+			presetLabels:   []string{},
+			spaceID:        1,
+			start:          0,
+			end:            2,
+			expectedResult: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			service := &PromptServiceImpl{}
+
+			result := service.convertPresetLabelsToEntities(tc.presetLabels, tc.spaceID, tc.start, tc.end)
+
+			assert.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestPromptServiceImpl_fillWithUserLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		param             ListLabelParam
+		currentLabels     []*entity.PromptLabel
+		userLabels        []*entity.PromptLabel
+		userNextToken     *int64
+		repoErr           error
+		expectedLabels    []*entity.PromptLabel
+		expectedNextToken *int64
+		expectedError     string
+	}{
+		{
+			name: "page already full",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+			},
+			currentLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "fill with user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     3,
+			},
+			currentLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+			},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "partial fill with user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "test",
+				PageSize:     4,
+			},
+			currentLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+			},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			userNextToken: nil,
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "repository error",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     3,
+			},
+			currentLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+			},
+			userLabels:        nil,
+			userNextToken:     nil,
+			repoErr:           assert.AnError,
+			expectedLabels:    nil,
+			expectedNextToken: nil,
+			expectedError:     "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			ctx := context.Background()
+
+			userLabelNeeded := tc.param.PageSize - len(tc.currentLabels)
+			if userLabelNeeded > 0 {
+				mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+					SpaceID:      tc.param.SpaceID,
+					LabelKeyLike: tc.param.LabelKeyLike,
+					PageSize:     userLabelNeeded,
+					PageToken:    nil,
+				}).Return(tc.userLabels, tc.userNextToken, tc.repoErr).Times(1)
+			}
+
+			labels, nextToken, err := service.fillWithUserLabels(ctx, tc.param, tc.currentLabels)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, labels)
+				assert.Nil(t, nextToken)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedLabels, labels)
+				assert.Equal(t, tc.expectedNextToken, nextToken)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_checkUserLabelsExist(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		param          ListLabelParam
+		userLabels     []*entity.PromptLabel
+		repoErr        error
+		expectedResult *int64
+		expectedError  string
+	}{
+		{
+			name: "user labels exist",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+			},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			repoErr:        nil,
+			expectedResult: func() *int64 { id := int64(100); return &id }(),
+			expectedError:  "",
+		},
+		{
+			name: "no user labels",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "test",
+			},
+			userLabels:     []*entity.PromptLabel{},
+			repoErr:        nil,
+			expectedResult: nil,
+			expectedError:  "",
+		},
+		{
+			name: "repository error",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+			},
+			userLabels:     nil,
+			repoErr:        assert.AnError,
+			expectedResult: nil,
+			expectedError:  "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			ctx := context.Background()
+
+			mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+				SpaceID:      tc.param.SpaceID,
+				LabelKeyLike: tc.param.LabelKeyLike,
+				PageSize:     1,
+				PageToken:    nil,
+			}).Return(tc.userLabels, nil, tc.repoErr).Times(1)
+
+			result, err := service.checkUserLabelsExist(ctx, tc.param)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedResult, result)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_handleFirstPage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                 string
+		param                ListLabelParam
+		filteredPresetLabels []string
+		userLabels           []*entity.PromptLabel
+		userNextToken        *int64
+		fillErr              error
+		checkUserLabels      []*entity.PromptLabel
+		checkErr             error
+		expectedLabels       []*entity.PromptLabel
+		expectedNextToken    *int64
+		expectedError        string
+	}{
+		{
+			name: "preset labels more than page size",
+			param: ListLabelParam{
+				SpaceID:  1,
+				PageSize: 2,
+			},
+			filteredPresetLabels: []string{"preset1", "preset2", "preset3"},
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(-3); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "preset labels equal page size, has user labels",
+			param: ListLabelParam{
+				SpaceID:  1,
+				PageSize: 2,
+			},
+			filteredPresetLabels: []string{"preset1", "preset2"},
+			checkUserLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			checkErr: nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(100); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "preset labels equal page size, no user labels",
+			param: ListLabelParam{
+				SpaceID:  1,
+				PageSize: 2,
+			},
+			filteredPresetLabels: []string{"preset1", "preset2"},
+			checkUserLabels:      []*entity.PromptLabel{},
+			checkErr:             nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: -2, LabelKey: "preset2", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "preset labels less than page size, fill with user labels",
+			param: ListLabelParam{
+				SpaceID:  1,
+				PageSize: 3,
+			},
+			filteredPresetLabels: []string{"preset1"},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			fillErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -1, LabelKey: "preset1", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "no preset labels, fill with user labels",
+			param: ListLabelParam{
+				SpaceID:  1,
+				PageSize: 2,
+			},
+			filteredPresetLabels: []string{},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: nil,
+			fillErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "fill with user labels error",
+			param: ListLabelParam{
+				SpaceID:  1,
+				PageSize: 3,
+			},
+			filteredPresetLabels: []string{"preset1"},
+			userLabels:           nil,
+			userNextToken:        nil,
+			fillErr:              assert.AnError,
+			expectedLabels:       []*entity.PromptLabel{},
+			expectedNextToken:    nil,
+			expectedError:        "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			ctx := context.Background()
+
+			presetCount := len(tc.filteredPresetLabels)
+			if presetCount >= tc.param.PageSize {
+				if presetCount == tc.param.PageSize {
+					// Need to check user labels exist
+					mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+						SpaceID:      tc.param.SpaceID,
+						LabelKeyLike: tc.param.LabelKeyLike,
+						PageSize:     1,
+						PageToken:    nil,
+					}).Return(tc.checkUserLabels, nil, tc.checkErr).Times(1)
+				}
+			} else {
+				// Need to fill with user labels
+				userLabelNeeded := tc.param.PageSize - presetCount
+				mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+					SpaceID:      tc.param.SpaceID,
+					LabelKeyLike: tc.param.LabelKeyLike,
+					PageSize:     userLabelNeeded,
+					PageToken:    nil,
+				}).Return(tc.userLabels, tc.userNextToken, tc.fillErr).Times(1)
+			}
+
+			labels, nextToken, err := service.handleFirstPage(ctx, tc.param, tc.filteredPresetLabels)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, labels)
+				assert.Nil(t, nextToken)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedLabels, labels)
+				assert.Equal(t, tc.expectedNextToken, nextToken)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_handlePresetLabelPage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                 string
+		param                ListLabelParam
+		filteredPresetLabels []string
+		userLabels           []*entity.PromptLabel
+		userNextToken        *int64
+		fillErr              error
+		checkUserLabels      []*entity.PromptLabel
+		checkErr             error
+		expectedLabels       []*entity.PromptLabel
+		expectedNextToken    *int64
+		expectedError        string
+	}{
+		{
+			name: "middle page with more preset labels",
+			param: ListLabelParam{
+				SpaceID:   1,
+				PageSize:  2,
+				PageToken: func() *int64 { token := int64(-3); return &token }(),
+			},
+			filteredPresetLabels: []string{"preset1", "preset2", "preset3", "preset4", "preset5"},
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -3, LabelKey: "preset3", SpaceID: 1},
+				{ID: -4, LabelKey: "preset4", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(-5); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "last preset page, page full, has user labels",
+			param: ListLabelParam{
+				SpaceID:   1,
+				PageSize:  1,
+				PageToken: func() *int64 { token := int64(-4); return &token }(),
+			},
+			filteredPresetLabels: []string{"preset1", "preset2", "preset3", "preset4"},
+			checkUserLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+			},
+			checkErr: nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -4, LabelKey: "preset4", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(100); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "last preset page, page not full, fill with user labels",
+			param: ListLabelParam{
+				SpaceID:   1,
+				PageSize:  3,
+				PageToken: func() *int64 { token := int64(-4); return &token }(),
+			},
+			filteredPresetLabels: []string{"preset1", "preset2", "preset3", "preset4"},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			fillErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: -4, LabelKey: "preset4", SpaceID: 1},
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "page token out of range",
+			param: ListLabelParam{
+				SpaceID:   1,
+				PageSize:  2,
+				PageToken: func() *int64 { token := int64(-10); return &token }(),
+			},
+			filteredPresetLabels: []string{"preset1", "preset2"},
+			expectedLabels:       []*entity.PromptLabel{},
+			expectedNextToken:    nil,
+			expectedError:        "",
+		},
+		{
+			name: "fill with user labels error",
+			param: ListLabelParam{
+				SpaceID:   1,
+				PageSize:  3,
+				PageToken: func() *int64 { token := int64(-2); return &token }(),
+			},
+			filteredPresetLabels: []string{"preset1", "preset2"},
+			userLabels:           nil,
+			userNextToken:        nil,
+			fillErr:              assert.AnError,
+			expectedLabels:       []*entity.PromptLabel{},
+			expectedNextToken:    nil,
+			expectedError:        "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			ctx := context.Background()
+
+			startIndex := int(-*tc.param.PageToken - 1)
+			presetCount := len(tc.filteredPresetLabels)
+			endIndex := startIndex + tc.param.PageSize
+			if endIndex > presetCount {
+				endIndex = presetCount
+			}
+
+			if startIndex < presetCount {
+				resultCount := endIndex - startIndex
+				if endIndex >= presetCount && resultCount < tc.param.PageSize {
+					// Need to fill with user labels
+					userLabelNeeded := tc.param.PageSize - resultCount
+					mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+						SpaceID:      tc.param.SpaceID,
+						LabelKeyLike: tc.param.LabelKeyLike,
+						PageSize:     userLabelNeeded,
+						PageToken:    nil,
+					}).Return(tc.userLabels, tc.userNextToken, tc.fillErr).Times(1)
+				} else if endIndex >= presetCount && resultCount == tc.param.PageSize {
+					// Check if user labels exist
+					mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+						SpaceID:      tc.param.SpaceID,
+						LabelKeyLike: tc.param.LabelKeyLike,
+						PageSize:     1,
+						PageToken:    nil,
+					}).Return(tc.checkUserLabels, nil, tc.checkErr).Times(1)
+				}
+			}
+
+			labels, nextToken, err := service.handlePresetLabelPage(ctx, tc.param, tc.filteredPresetLabels)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, labels)
+				assert.Nil(t, nextToken)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedLabels, labels)
+				assert.Equal(t, tc.expectedNextToken, nextToken)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_handleUserLabelPage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		param             ListLabelParam
+		userLabels        []*entity.PromptLabel
+		userNextToken     *int64
+		repoErr           error
+		expectedLabels    []*entity.PromptLabel
+		expectedNextToken *int64
+		expectedError     string
+	}{
+		{
+			name: "successful user label page",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    func() *int64 { token := int64(100); return &token }(),
+			},
+			userLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			userNextToken: func() *int64 { token := int64(102); return &token }(),
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: 100, LabelKey: "user1", SpaceID: 1},
+				{ID: 101, LabelKey: "user2", SpaceID: 1},
+			},
+			expectedNextToken: func() *int64 { token := int64(102); return &token }(),
+			expectedError:     "",
+		},
+		{
+			name: "user label page with filter",
+			param: ListLabelParam{
+				SpaceID:      2,
+				LabelKeyLike: "test",
+				PageSize:     3,
+				PageToken:    func() *int64 { token := int64(200); return &token }(),
+			},
+			userLabels: []*entity.PromptLabel{
+				{ID: 200, LabelKey: "test_user", SpaceID: 2},
+			},
+			userNextToken: nil,
+			repoErr:       nil,
+			expectedLabels: []*entity.PromptLabel{
+				{ID: 200, LabelKey: "test_user", SpaceID: 2},
+			},
+			expectedNextToken: nil,
+			expectedError:     "",
+		},
+		{
+			name: "repository error",
+			param: ListLabelParam{
+				SpaceID:      1,
+				LabelKeyLike: "",
+				PageSize:     2,
+				PageToken:    func() *int64 { token := int64(100); return &token }(),
+			},
+			userLabels:        nil,
+			userNextToken:     nil,
+			repoErr:           assert.AnError,
+			expectedLabels:    nil,
+			expectedNextToken: nil,
+			expectedError:     "assert.AnError general error for testing",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLabelRepo := repomocks.NewMockILabelRepo(ctrl)
+			mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+			mockConfigProvider := mocks.NewMockIConfigProvider(ctrl)
+
+			service := &PromptServiceImpl{
+				labelRepo:      mockLabelRepo,
+				manageRepo:     mockManageRepo,
+				configProvider: mockConfigProvider,
+			}
+
+			ctx := context.Background()
+
+			mockLabelRepo.EXPECT().ListLabel(ctx, repo.ListLabelParam{
+				SpaceID:      tc.param.SpaceID,
+				LabelKeyLike: tc.param.LabelKeyLike,
+				PageSize:     tc.param.PageSize,
+				PageToken:    tc.param.PageToken,
+			}).Return(tc.userLabels, tc.userNextToken, tc.repoErr).Times(1)
+
+			labels, nextToken, err := service.handleUserLabelPage(ctx, tc.param)
+
+			if tc.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+				assert.Nil(t, labels)
+				assert.Nil(t, nextToken)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedLabels, labels)
+				assert.Equal(t, tc.expectedNextToken, nextToken)
 			}
 		})
 	}
