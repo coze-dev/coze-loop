@@ -57,7 +57,7 @@ struct PromptEvaluator {
 struct CodeEvaluator {
     1: optional LanguageType language_type
     2: optional string code_content
-    3: optional string code_template_key
+    3: optional string code_template_key // code类型评估器模板中code_template_key + language_type是唯一键
     4: optional string code_template_name
 }
 

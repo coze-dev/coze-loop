@@ -171,7 +171,6 @@ struct SubmitEvaluatorVersionResponse {
 
 struct ListTemplatesRequest {
     1: required evaluator.TemplateType builtin_template_type (api.query='builtin_template_type')
-    2: optional evaluator.LanguageType language_type (api.query='language_type') // code评估器默认python
 
     255: optional base.Base Base
 }

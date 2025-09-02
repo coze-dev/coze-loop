@@ -8162,9 +8162,7 @@ func (p *SubmitEvaluatorVersionResponse) Field255DeepEqual(src *base.BaseResp) b
 
 type ListTemplatesRequest struct {
 	BuiltinTemplateType evaluator.TemplateType `thrift:"builtin_template_type,1,required" frugal:"1,required,TemplateType" json:"builtin_template_type,required" query:"builtin_template_type,required"`
-	// code评估器默认python
-	LanguageType *evaluator.LanguageType `thrift:"language_type,2,optional" frugal:"2,optional,string" json:"language_type,omitempty" query:"language_type"`
-	Base         *base.Base              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Base                *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListTemplatesRequest() *ListTemplatesRequest {
@@ -8181,18 +8179,6 @@ func (p *ListTemplatesRequest) GetBuiltinTemplateType() (v evaluator.TemplateTyp
 	return
 }
 
-var ListTemplatesRequest_LanguageType_DEFAULT evaluator.LanguageType
-
-func (p *ListTemplatesRequest) GetLanguageType() (v evaluator.LanguageType) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetLanguageType() {
-		return ListTemplatesRequest_LanguageType_DEFAULT
-	}
-	return *p.LanguageType
-}
-
 var ListTemplatesRequest_Base_DEFAULT *base.Base
 
 func (p *ListTemplatesRequest) GetBase() (v *base.Base) {
@@ -8207,21 +8193,13 @@ func (p *ListTemplatesRequest) GetBase() (v *base.Base) {
 func (p *ListTemplatesRequest) SetBuiltinTemplateType(val evaluator.TemplateType) {
 	p.BuiltinTemplateType = val
 }
-func (p *ListTemplatesRequest) SetLanguageType(val *evaluator.LanguageType) {
-	p.LanguageType = val
-}
 func (p *ListTemplatesRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
 var fieldIDToName_ListTemplatesRequest = map[int16]string{
 	1:   "builtin_template_type",
-	2:   "language_type",
 	255: "Base",
-}
-
-func (p *ListTemplatesRequest) IsSetLanguageType() bool {
-	return p.LanguageType != nil
 }
 
 func (p *ListTemplatesRequest) IsSetBase() bool {
@@ -8253,14 +8231,6 @@ func (p *ListTemplatesRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetBuiltinTemplateType = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -8318,17 +8288,6 @@ func (p *ListTemplatesRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.BuiltinTemplateType = _field
 	return nil
 }
-func (p *ListTemplatesRequest) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field *evaluator.LanguageType
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.LanguageType = _field
-	return nil
-}
 func (p *ListTemplatesRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -8346,10 +8305,6 @@ func (p *ListTemplatesRequest) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8390,24 +8345,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListTemplatesRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetLanguageType() {
-		if err = oprot.WriteFieldBegin("language_type", thrift.STRING, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.LanguageType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
 func (p *ListTemplatesRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -8444,9 +8381,6 @@ func (p *ListTemplatesRequest) DeepEqual(ano *ListTemplatesRequest) bool {
 	if !p.Field1DeepEqual(ano.BuiltinTemplateType) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.LanguageType) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -8456,18 +8390,6 @@ func (p *ListTemplatesRequest) DeepEqual(ano *ListTemplatesRequest) bool {
 func (p *ListTemplatesRequest) Field1DeepEqual(src evaluator.TemplateType) bool {
 
 	if p.BuiltinTemplateType != src {
-		return false
-	}
-	return true
-}
-func (p *ListTemplatesRequest) Field2DeepEqual(src *evaluator.LanguageType) bool {
-
-	if p.LanguageType == src {
-		return true
-	} else if p.LanguageType == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.LanguageType, *src) != 0 {
 		return false
 	}
 	return true
