@@ -14567,7 +14567,7 @@ func (p *PreviewExportTracesToDatasetResponse) Field257DeepEqual(src *string) bo
 
 type ChangeEvaluatorScoreRequest struct {
 	WorkspaceID       int64                  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	EvaluatorRecordID int64                  `thrift:"evaluator_record_id,2,required" frugal:"2,required,i64" json:"evaluator_record_id,required" query:"evaluator_record_id,required"`
+	EvaluatorRecordID int64                  `thrift:"evaluator_record_id,2,required" frugal:"2,required,i64" json:"evaluator_record_id,string,required" query:"evaluator_record_id,required"`
 	SpanID            string                 `thrift:"span_id,3,required" frugal:"3,required,string" json:"span_id,required" query:"span_id,required"`
 	StartTime         int64                  `thrift:"start_time,4,required" frugal:"4,required,i64" json:"start_time" query:"start_time,required" `
 	Correction        *annotation.Correction `thrift:"correction,5,required" frugal:"5,required,annotation.Correction" json:"correction,required" query:"correction,required"`
