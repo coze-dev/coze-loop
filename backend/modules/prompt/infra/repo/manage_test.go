@@ -3420,14 +3420,11 @@ func TestNewManageRepo(t *testing.T) {
 		mockPromptBasicCacheDAO,
 		mockPromptCacheDAO,
 	)
-
 	// 验证返回的实例
 	assert.NotNil(t, repo)
-	
 	// 类型断言以访问内部字段
 	manageRepo, ok := repo.(*ManageRepoImpl)
 	assert.True(t, ok)
-	
 	// 验证所有字段都正确设置
 	assert.Equal(t, mockDB, manageRepo.db)
 	assert.Equal(t, mockIDGen, manageRepo.idgen)
