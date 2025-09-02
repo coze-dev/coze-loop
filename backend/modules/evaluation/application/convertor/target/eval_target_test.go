@@ -317,6 +317,10 @@ func TestEvalTargetVersionDO2DTO(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			result := EvalTargetVersionDO2DTO(tt.targetVersionDO)
+			if result == nil {
+				assert.Equal(t, tt.expected, result)
+				return
+			}
 			assert.Equal(t, tt.expected.TargetID, result.TargetID)
 			assert.Equal(t, tt.expected.ID, result.ID)
 			assert.Equal(t, tt.expected.SourceTargetVersion, result.SourceTargetVersion)
