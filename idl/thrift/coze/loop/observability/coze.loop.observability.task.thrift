@@ -51,7 +51,7 @@ struct ListTasksResponse {
 
 struct GetTaskRequest {
     1: required i64 task_id (api.path = "task_id" api.js_conv="true"),
-    2: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query="workspace_id", vt.gt="0")
 
     255: optional base.Base base,
 }

@@ -139,10 +139,10 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
 		TaskID:        req.GetTaskID(),
 		WorkspaceID:   req.GetWorkspaceID(),
-		TaskStatus:    req.GetTaskStatus(),
-		Description:   req.GetDescription(),
+		TaskStatus:    req.TaskStatus,
+		Description:   req.Description,
 		EffectiveTime: req.GetEffectiveTime(),
-		SampleRate:    req.GetSampleRate(),
+		SampleRate:    req.SampleRate,
 	})
 	if err != nil {
 		return resp, err

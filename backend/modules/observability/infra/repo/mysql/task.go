@@ -34,7 +34,7 @@ type ListTaskParam struct {
 	TaskFilters  *filter.TaskFilterFields
 	ReqLimit     int32
 	ReqOffset    int32
-	OrderBy      common.OrderBy
+	OrderBy      *common.OrderBy
 }
 
 //go:generate mockgen -destination=mocks/task.go -package=mocks . ITaskDao

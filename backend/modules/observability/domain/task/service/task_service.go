@@ -32,10 +32,10 @@ type CreateTaskResp struct {
 type UpdateTaskReq struct {
 	TaskID        int64
 	WorkspaceID   int64
-	TaskStatus    task.TaskStatus
-	Description   string
+	TaskStatus    *task.TaskStatus
+	Description   *string
 	EffectiveTime *task.EffectiveTime
-	SampleRate    float64
+	SampleRate    *float64
 }
 type ListTasksReq struct {
 	WorkspaceID int64
@@ -121,8 +121,8 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 	if userID == "" {
 		return errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
-	if req.Description != "" {
-		taskPO.Description = &req.Description
+	if req.Description != nil {
+		taskPO.Description = req.Description
 	}
 	if req.EffectiveTime != nil {
 		validEffectiveTime, err := tconv.CheckEffectiveTime(ctx, req.EffectiveTime, taskPO.TaskStatus, taskPO.EffectiveTime)
@@ -131,11 +131,11 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		}
 		taskPO.EffectiveTime = ptr.Of(tconv.ToJSONString(ctx, validEffectiveTime))
 	}
-	if req.SampleRate != 0 {
+	if req.SampleRate != nil {
 		taskPO.Sampler = ptr.Of(tconv.ToJSONString(ctx, req.SampleRate))
 	}
-	if req.TaskStatus != "" {
-		validTaskStatus, err := tconv.CheckTaskStatus(ctx, req.TaskStatus, taskPO.TaskStatus)
+	if req.TaskStatus != nil {
+		validTaskStatus, err := tconv.CheckTaskStatus(ctx, *req.TaskStatus, taskPO.TaskStatus)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 			if validTaskStatus == task.TaskStatusDisabled {
 				//todo[xun]:禁用操作处理
 			}
-			taskPO.TaskStatus = req.TaskStatus
+			taskPO.TaskStatus = *req.TaskStatus
 		}
 	}
 	taskPO.UpdatedBy = userID
@@ -159,7 +159,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		TaskFilters:  req.TaskFilters,
 		ReqLimit:     req.Limit,
 		ReqOffset:    req.Offset,
-		OrderBy:      *req.OrderBy,
+		OrderBy:      req.OrderBy,
 	})
 	if len(taskPOs) == 0 {
 		logs.CtxInfo(ctx, "GetTasks tasks is nil")
