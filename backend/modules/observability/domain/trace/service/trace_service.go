@@ -20,7 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
@@ -228,7 +227,7 @@ type ExtractSpanInfoRequest struct {
 	StartTime     int64
 	EndTime       int64
 	PlatformType  loop_span.PlatformType
-	FieldMappings []*task.FieldMapping
+	FieldMappings []*entity.FieldMapping
 }
 type ExtractSpanInfoResp struct {
 	SpanInfos []*trace.SpanInfo
@@ -1230,14 +1229,14 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 				return resp, err
 			}
 			// 前端传入的是Name，评测集需要的是key，需要做一下mapping
-			if mapping.FieldSchema.Name == nil {
+			if mapping.FieldSchema.Name == "" {
 				logs.CtxInfo(ctx, "Evaluator field name is nil")
 				continue
 			}
 			content := buildContent(value)
 			fieldList = append(fieldList, &dataset.FieldData{
-				Key:     gptr.Of(mapping.GetFieldSchema().GetKey()),
-				Name:    gptr.Of(mapping.GetFieldSchema().GetName()),
+				Key:     mapping.FieldSchema.Key,
+				Name:    gptr.Of(mapping.FieldSchema.Name),
 				Content: content,
 			})
 		}
@@ -1250,9 +1249,22 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 		SpanInfos: spanInfos,
 	}, nil
 }
-func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMapping *task.FieldMapping) (string, error) {
-
-	return "", nil
+func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMapping *entity.FieldMapping) (string, error) {
+	value, err := span.ExtractByJsonpath(ctx, fieldMapping.TraceFieldKey, fieldMapping.TraceFieldJsonpath)
+	if err != nil {
+		// 非json但使用了jsonpath，也不报错，置空
+		logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
+	}
+	content, errCode := entity.GetContentInfo(ctx, fieldMapping.FieldSchema.ContentType, value)
+	if errCode == entity.DatasetErrorType_MismatchSchema {
+		logs.CtxInfo(ctx, "invalid multi part")
+		return "", errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid multi part"))
+	}
+	valueJSON, err := json.Marshal(content)
+	if err != nil {
+		return "", err
+	}
+	return string(valueJSON), nil
 }
 
 func buildContent(value string) *dataset.Content {
