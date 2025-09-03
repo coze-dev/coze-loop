@@ -485,6 +485,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				}
 
 				testItem := &entity.DatasetItem{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   0,
@@ -540,6 +541,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 			},
 			want: &PreviewExportTracesToDatasetResponse{
 				Items: []*entity.DatasetItem{{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   0,
@@ -577,6 +579,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				}
 
 				testItem := &entity.DatasetItem{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   100,
@@ -634,6 +637,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 			},
 			want: &PreviewExportTracesToDatasetResponse{
 				Items: []*entity.DatasetItem{{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   100,
@@ -671,6 +675,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				}
 
 				testItem := &entity.DatasetItem{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   100,
@@ -728,6 +733,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 			},
 			want: &PreviewExportTracesToDatasetResponse{
 				Items: []*entity.DatasetItem{{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   100,
@@ -1712,6 +1718,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					Output:      `{"answer": "test output"}`,
 				}
 				successItem := &entity.DatasetItem{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   0,
@@ -1767,6 +1774,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 			},
 			want: &PreviewExportTracesToDatasetResponse{
 				Items: []*entity.DatasetItem{{
+					TraceID:     "trace-123",
 					SpanID:      "span-456",
 					WorkspaceID: 123,
 					DatasetID:   0,
