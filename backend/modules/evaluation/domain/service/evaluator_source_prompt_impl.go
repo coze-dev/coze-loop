@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	json2 "encoding/json"
-	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -342,46 +341,81 @@ type outputMsgFormat struct {
 	Reason string       `json:"reason"`
 }
 
-// 优化后的正则表达式，支持 score 为 number 或 string 类型
-var jsonRe = regexp.MustCompile(`\{(?s:.*?"score"\s*:\s*(?:"([\d.]+)"|([\d.]+)).*?"reason"\s*:\s*"((?:[^"\\]|\\.)*)".*?)}`)
+// 优化后的正则表达式，支持 score 和 reason 任意顺序，score 为 number 或 string 类型
+var jsonRe = regexp.MustCompile(`\{(?s:[^{}]*(?:"score"\s*:\s*(?:"[\d.]+"|\d+(?:\.\d+)?)[^{}]*"reason"\s*:\s*"(?:[^"\\]|\\.)*"|"reason"\s*:\s*"(?:[^"\\]|\\.)*"[^{}]*"score"\s*:\s*(?:"[\d.]+"|\d+(?:\.\d+)?))[^{}]*)}`)
 
 func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
 	content := gptr.Indirect(replyItem.Content)
-	var outputMsg outputMsgFormat
-	b := []byte(content)
 
-	// 尝试直接解析整个 content
-	if err := sonic.Unmarshal(b, &outputMsg); err == nil {
-		if outputMsg.Reason != "" {
-			score, err := outputMsg.Score.Float64()
-			if err != nil {
-				err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-				return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
-			}
-			output.EvaluatorResult.Score = &score
-			output.EvaluatorResult.Reasoning = outputMsg.Reason
+	// 按优先级顺序执行解析策略
+	strategies := []func(string, *entity.EvaluatorOutputData) (bool, error){
+		parseDirectJSON,           // 策略1：直接解析完整JSON
+		parseRepairedJSON,         // 策略2：修复后解析完整JSON
+		parseRegexExtractedJSON,   // 策略3：正则提取JSON片段并解析
+		parseScoreWithRegex,       // 策略4：正则提取score，使用完整内容作为reason
+	}
+
+	for _, strategy := range strategies {
+		success, err := strategy(content, output)
+		if err != nil {
+			return err
+		}
+		if success {
 			return nil
 		}
 	}
 
-	// 新增：尝试使用jsonrepair修复整个content
+	// 兜底策略：当所有其他解析策略都失败时，score设置为0，使用评估器的完整输出作为reason
+	parseFallbackStrategy(content, output)
+	return nil
+}
+
+// parseDirectJSON 策略1：直接解析完整JSON内容
+func parseDirectJSON(content string, output *entity.EvaluatorOutputData) (bool, error) {
+	var outputMsg outputMsgFormat
+	b := []byte(content)
+
+	if err := sonic.Unmarshal(b, &outputMsg); err == nil {
+		if outputMsg.Reason != "" {
+			score, err := outputMsg.Score.Float64()
+			if err != nil {
+				return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+			}
+			output.EvaluatorResult.Score = &score
+			output.EvaluatorResult.Reasoning = outputMsg.Reason
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// parseRepairedJSON 策略2：使用jsonrepair修复后解析完整JSON内容
+func parseRepairedJSON(content string, output *entity.EvaluatorOutputData) (bool, error) {
+	var outputMsg outputMsgFormat
+	
 	repairedContent, repairErr := jsonrepair.JSONRepair(content)
 	if repairErr == nil {
 		if err := sonic.Unmarshal([]byte(repairedContent), &outputMsg); err == nil {
 			if outputMsg.Reason != "" {
 				score, err := outputMsg.Score.Float64()
 				if err != nil {
-					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+					return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 				}
 				output.EvaluatorResult.Score = &score
 				output.EvaluatorResult.Reasoning = outputMsg.Reason
-				return nil
+				return true, nil
 			}
 		}
 	}
+	return false, nil
+}
 
-	// 保留原有逻辑：使用正则表达式查找 JSON 片段
+// parseRegexExtractedJSON 策略3：使用正则表达式提取JSON片段并解析
+func parseRegexExtractedJSON(content string, output *entity.EvaluatorOutputData) (bool, error) {
+	var outputMsg outputMsgFormat
+	b := []byte(content)
+
+	// 使用正则表达式查找JSON片段
 	all := jsonRe.FindAll(b, -1)
 	for _, bb := range all {
 		// 首先尝试直接解析原始片段
@@ -389,12 +423,11 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 			if outputMsg.Reason != "" {
 				score, err := outputMsg.Score.Float64()
 				if err != nil {
-					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+					return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 				}
 				output.EvaluatorResult.Score = &score
 				output.EvaluatorResult.Reasoning = outputMsg.Reason
-				return nil
+				return true, nil
 			}
 		}
 
@@ -405,20 +438,40 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 				if outputMsg.Reason != "" {
 					score, err := outputMsg.Score.Float64()
 					if err != nil {
-						err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-						return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+						return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 					}
 					output.EvaluatorResult.Score = &score
 					output.EvaluatorResult.Reasoning = outputMsg.Reason
-					return nil
+					return true, nil
 				}
 			}
 		}
 	}
+	return false, nil
+}
 
-	// 若都没有找到合法的解析结果，返回错误
-	err := fmt.Errorf("[parseContentOutput] parse failed, content does not contain both score and reason: %s", content)
-	return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+// parseScoreWithRegex 策略4：通过正则解析score字段，使用完整输出作为reason
+func parseScoreWithRegex(content string, output *entity.EvaluatorOutputData) (bool, error) {
+	scoreRegex := regexp.MustCompile(`(?i)score[^0-9]*([0-9]+(?:\.[0-9]+)?)`)
+	scoreMatches := scoreRegex.FindStringSubmatch(content)
+	if len(scoreMatches) > 1 {
+		scoreStr := scoreMatches[1]
+		score, err := strconv.ParseFloat(scoreStr, 64)
+		if err == nil {
+			output.EvaluatorResult.Score = &score
+			output.EvaluatorResult.Reasoning = content // 使用完整输出作为reason
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// parseFallbackStrategy 策略5：兜底策略，当所有其他解析策略都失败时使用
+func parseFallbackStrategy(content string, output *entity.EvaluatorOutputData) {
+	// score设置为0，使用评估器的完整输出作为reason
+	score := 0.0
+	output.EvaluatorResult.Score = &score
+	output.EvaluatorResult.Reasoning = content
 }
 
 func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
