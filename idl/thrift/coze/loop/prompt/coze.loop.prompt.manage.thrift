@@ -25,11 +25,19 @@ service PromptManageService {
     UpdatePromptResponse UpdatePrompt(1: UpdatePromptRequest request) (api.put = '/api/prompt/v1/prompts/:prompt_id')
     SaveDraftResponse SaveDraft(1: SaveDraftRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/save')
 
+// --------------- Label管理 --------------- //
+
+    // Label管理
+    CreateLabelResponse CreateLabel(1:CreateLabelRequest request) (api.post = '/api/prompt/v1/labels')
+    ListLabelResponse ListLabel(1:ListLabelRequest request) (api.post = '/api/prompt/v1/labels/list')
+    BatchGetLabelResponse BatchGetLabel(1:BatchGetLabelRequest request) (api.post = '/api/prompt/v1/labels/batch_get')
+
 // --------------- Prompt版本管理 --------------- //
 
     ListCommitResponse ListCommit(1: ListCommitRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/commits/list')
     CommitDraftResponse CommitDraft(1: CommitDraftRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/commit')
     RevertDraftFromCommitResponse RevertDraftFromCommit(1: RevertDraftFromCommitRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/revert_from_commit')
+    UpdateCommitLabelsResponse UpdateCommitLabels(1:UpdateCommitLabelsRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/commits/:commit_version/labels_update')
 
 }
 
@@ -179,6 +187,7 @@ struct CommitDraftRequest {
 
     11: optional string commit_version (vt.not_nil="true", vt.min_size="1")
     12: optional string commit_description
+    13: optional list<string> label_keys
 
     255: optional base.Base Base
 }
@@ -198,6 +207,7 @@ struct ListCommitRequest {
 }
 struct ListCommitResponse {
     1: optional list<prompt.CommitInfo> prompt_commit_infos
+    2: optional map<string, list<prompt.Label>> commit_version_label_mapping
 
     11: optional list<user.UserInfoDetail> users
 
@@ -214,5 +224,67 @@ struct RevertDraftFromCommitRequest {
     255: optional base.Base Base
 }
 struct RevertDraftFromCommitResponse {
+    255: optional base.BaseResp  BaseResp
+}
+
+// --------------- Label管理相关结构体 --------------- //
+
+struct CreateLabelRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional prompt.Label label (vt.not_nil="true")
+
+    255: optional base.Base Base
+}
+
+struct CreateLabelResponse {
+    255: optional base.BaseResp  BaseResp
+}
+
+struct ListLabelRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional string label_key_like // 模糊匹配label key
+
+    21: optional bool with_prompt_version_mapping
+    22: optional i64 prompt_id (api.js_conv='true', go.tag='json:"prompt_id"')
+
+    127: optional i32 page_size (vt.not_nil="true", vt.gt="0")
+    128: optional string page_token
+
+    255: optional base.Base Base
+}
+
+struct ListLabelResponse {
+    1: optional list<prompt.Label> labels
+    2: optional map<string, string> prompt_version_mapping
+
+    127: optional bool has_more
+    128: optional string next_page_token
+
+    255: optional base.BaseResp  BaseResp
+}
+
+struct BatchGetLabelRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional list<string> label_keys
+
+    255: optional base.Base Base
+}
+
+struct BatchGetLabelResponse {
+    1: optional list<prompt.Label> labels
+
+    255: optional base.BaseResp  BaseResp
+}
+
+struct UpdateCommitLabelsRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    3: optional string commit_version (api.path='commit_version', vt.not_nil="true", vt.min_size="1")
+    4: optional list<string> label_keys
+
+    255: optional base.Base Base
+}
+
+struct UpdateCommitLabelsResponse {
     255: optional base.BaseResp  BaseResp
 }

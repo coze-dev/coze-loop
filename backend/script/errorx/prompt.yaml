@@ -24,6 +24,10 @@ error_code:
     code: 1006
     message: unsupported template type
     no_affect_stability: true
+  - name: PromptLabelUnAssociated
+    code: 1007
+    message: prompt label unassociated with commit version
+    no_affect_stability: true
   # 2xxx
   - name: PromptHubQPSLimit
     code: 2001

@@ -199,6 +199,72 @@ func (l *LocalPromptManageService) SaveDraft(ctx context.Context, request *manag
 	return result.GetSuccess(), nil
 }
 
+// CreateLabel
+// --------------- Label管理 --------------- //
+// Label管理
+func (l *LocalPromptManageService) CreateLabel(ctx context.Context, request *manage.CreateLabelRequest, callOptions ...callopt.Option) (*manage.CreateLabelResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*manage.PromptManageServiceCreateLabelArgs)
+		result := out.(*manage.PromptManageServiceCreateLabelResult)
+		resp, err := l.impl.CreateLabel(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &manage.PromptManageServiceCreateLabelArgs{Request: request}
+	result := &manage.PromptManageServiceCreateLabelResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateLabel")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptManageService) ListLabel(ctx context.Context, request *manage.ListLabelRequest, callOptions ...callopt.Option) (*manage.ListLabelResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*manage.PromptManageServiceListLabelArgs)
+		result := out.(*manage.PromptManageServiceListLabelResult)
+		resp, err := l.impl.ListLabel(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &manage.PromptManageServiceListLabelArgs{Request: request}
+	result := &manage.PromptManageServiceListLabelResult{}
+	ctx = l.injectRPCInfo(ctx, "ListLabel")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptManageService) BatchGetLabel(ctx context.Context, request *manage.BatchGetLabelRequest, callOptions ...callopt.Option) (*manage.BatchGetLabelResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*manage.PromptManageServiceBatchGetLabelArgs)
+		result := out.(*manage.PromptManageServiceBatchGetLabelResult)
+		resp, err := l.impl.BatchGetLabel(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &manage.PromptManageServiceBatchGetLabelArgs{Request: request}
+	result := &manage.PromptManageServiceBatchGetLabelResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetLabel")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListCommit
 // --------------- Prompt版本管理 --------------- //
 func (l *LocalPromptManageService) ListCommit(ctx context.Context, request *manage.ListCommitRequest, callOptions ...callopt.Option) (*manage.ListCommitResponse, error) {
@@ -258,6 +324,27 @@ func (l *LocalPromptManageService) RevertDraftFromCommit(ctx context.Context, re
 	arg := &manage.PromptManageServiceRevertDraftFromCommitArgs{Request: request}
 	result := &manage.PromptManageServiceRevertDraftFromCommitResult{}
 	ctx = l.injectRPCInfo(ctx, "RevertDraftFromCommit")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptManageService) UpdateCommitLabels(ctx context.Context, request *manage.UpdateCommitLabelsRequest, callOptions ...callopt.Option) (*manage.UpdateCommitLabelsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*manage.PromptManageServiceUpdateCommitLabelsArgs)
+		result := out.(*manage.PromptManageServiceUpdateCommitLabelsResult)
+		resp, err := l.impl.UpdateCommitLabels(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &manage.PromptManageServiceUpdateCommitLabelsArgs{Request: request}
+	result := &manage.PromptManageServiceUpdateCommitLabelsResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateCommitLabels")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

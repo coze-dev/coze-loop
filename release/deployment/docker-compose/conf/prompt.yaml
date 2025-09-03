@@ -2,3 +2,14 @@ prompt_hub_rate_limit_config:
   default_max_qps: 500
   space_max_qps:
     123456: 1000
+
+# 预置标签配置
+preset_labels:
+  - production
+  - beta
+  - test
+
+# Prompt版本标签缓存配置
+prompt_label_version_cache:
+  enable: true
+  ttl_seconds: 60

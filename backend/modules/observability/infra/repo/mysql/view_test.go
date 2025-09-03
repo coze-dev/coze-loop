@@ -42,7 +42,7 @@ func TestViewRepoImpl_ListViews(t *testing.T) {
 				mock.ExpectQuery("^SELECT").WillReturnRows(viewRows)
 				gormDb, _ := gorm.Open(mysql.New(mysql.Config{Conn: d, SkipInitializeWithVersion: true}), &gorm.Config{})
 				mockdb := dbmock.NewMockProvider(ctrl)
-				mockdb.EXPECT().NewSession(gomock.Any()).Return(gormDb)
+				mockdb.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDb)
 				return fields{
 					dbMgr: mockdb,
 				}
@@ -91,7 +91,7 @@ func TestViewRepoImpl_GetView(t *testing.T) {
 				mock.ExpectQuery("^SELECT").WillReturnRows(viewRows)
 				gormDb, _ := gorm.Open(mysql.New(mysql.Config{Conn: d, SkipInitializeWithVersion: true}), &gorm.Config{})
 				mockdb := dbmock.NewMockProvider(ctrl)
-				mockdb.EXPECT().NewSession(gomock.Any()).Return(gormDb)
+				mockdb.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDb)
 				return fields{
 					dbMgr: mockdb,
 				}

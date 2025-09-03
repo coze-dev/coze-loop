@@ -1226,6 +1226,36 @@ func _validatedatasetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _labelsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _commit_versionMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updatecommitlabelsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _batchgetlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _listtracesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil

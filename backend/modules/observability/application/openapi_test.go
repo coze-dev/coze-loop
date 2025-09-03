@@ -29,6 +29,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
+	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -52,6 +54,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx context.Context
@@ -84,6 +87,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil).AnyTimes()
 				return fields{
@@ -94,6 +98,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -120,6 +125,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -128,6 +134,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -145,7 +152,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -163,6 +170,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx context.Context
@@ -190,6 +198,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -198,6 +207,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -223,6 +233,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -231,6 +242,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -251,7 +263,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			got, err := o.CreateAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -269,6 +281,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx context.Context
@@ -296,6 +309,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -304,6 +318,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -322,7 +337,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			got, err := o.DeleteAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -340,6 +355,7 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx   context.Context
@@ -363,6 +379,7 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -371,6 +388,7 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -385,7 +403,7 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			err = o.Send(tt.args.ctx, tt.args.event)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -402,6 +420,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx context.Context
@@ -434,6 +453,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -442,6 +462,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -479,6 +500,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -487,6 +509,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -524,6 +547,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -532,6 +556,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -565,6 +590,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -573,6 +599,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -601,6 +628,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -609,6 +637,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -629,6 +658,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -637,6 +667,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -662,6 +693,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -670,6 +702,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -695,6 +728,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -703,6 +737,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -728,6 +763,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -736,6 +772,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -761,6 +798,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -769,6 +807,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -795,6 +834,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -803,6 +843,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -829,6 +870,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -837,6 +879,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -869,6 +912,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -877,6 +921,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -909,6 +954,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -917,6 +963,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -951,6 +998,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -959,6 +1007,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -979,7 +1028,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			got, err := o.OtelIngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1125,6 +1174,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx context.Context
@@ -1155,6 +1205,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
@@ -1165,6 +1216,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					workspace:    workspacemocks.NewMockIWorkSpaceProvider(ctrl),
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1196,6 +1248,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1204,6 +1257,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1224,6 +1278,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1232,6 +1287,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1258,6 +1314,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1266,6 +1323,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1291,6 +1349,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 				return fields{
@@ -1301,6 +1360,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					workspace:    workspacemocks.NewMockIWorkSpaceProvider(ctrl),
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1328,6 +1388,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
@@ -1338,6 +1399,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					workspace:    workspacemocks.NewMockIWorkSpaceProvider(ctrl),
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1357,7 +1419,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			got, err := o.ListSpansOApi(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1381,6 +1443,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 		workspace    workspace.IWorkSpaceProvider
 		rateLimiter  limiter.IRateLimiterFactory
 		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
 		ctx context.Context
@@ -1409,6 +1472,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
@@ -1419,6 +1483,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspacemocks.NewMockIWorkSpaceProvider(ctrl),
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1454,6 +1519,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
@@ -1464,6 +1530,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspacemocks.NewMockIWorkSpaceProvider(ctrl),
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1494,6 +1561,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1502,6 +1570,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1522,6 +1591,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1530,6 +1600,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1555,6 +1626,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1563,6 +1635,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1590,6 +1663,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -1598,6 +1672,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspaceMock,
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1627,6 +1702,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
@@ -1637,6 +1713,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					workspace:    workspacemocks.NewMockIWorkSpaceProvider(ctrl),
 					rateLimiter:  rateLimiterMock,
 					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
 				}
 			},
 			args: args{
@@ -1658,7 +1735,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig)
+			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
 			assert.NoError(t, err)
 			got, err := o.SearchTraceOApi(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)

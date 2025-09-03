@@ -109,6 +109,7 @@ type VariableVal struct {
 	Key                 *string    `json:"key,omitempty"`
 	Value               *string    `json:"value,omitempty"`
 	PlaceholderMessages []*Message `json:"placeholderMessages,omitempty"`
+	Content             *Content   `json:"content,omitempty"`
 }
 
 // ArgsSchema 参数模式结构体
