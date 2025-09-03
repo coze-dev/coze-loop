@@ -9,8 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"io"
 	"strconv"
 	"strings"
@@ -25,6 +23,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	traced "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/trace"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -492,9 +492,9 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	if sResp != nil {
 		spansSize = loop_span.SizeofSpans(sResp.Spans)
+		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	}
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
@@ -587,8 +587,8 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		errCode = obErrorx.CommonInternalErrorCode
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
 	if sResp != nil {
+		logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
 		spansSize = loop_span.SizeofSpans(sResp.Spans)
 	}
 	return &openapi.ListSpansOApiResponse{
