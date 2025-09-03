@@ -14,7 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	entity_common "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -253,7 +253,7 @@ func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *en
 func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields, workspaceID int64) *string {
 	var filtersDO *loop_span.FilterFields
 	if filters.GetFilters() != nil {
-		filtersDO = tconv.FilterFieldsDTO2DO(filters.GetFilters())
+		filtersDO = convertor.FilterFieldsDTO2DO(filters.GetFilters())
 	}
 	filterDO := entity.SpanFilter{
 		PlatformType: filters.GetPlatformType(),

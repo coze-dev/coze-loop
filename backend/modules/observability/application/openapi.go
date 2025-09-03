@@ -16,6 +16,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 
@@ -597,7 +598,7 @@ func (o *OpenAPIApplication) buildListSpansOApiReq(ctx context.Context, req *ope
 		ret.SpanListType = loop_span.SpanListTypeRootSpan
 	}
 	if req.Filters != nil {
-		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		ret.Filters = convertor.FilterFieldsDTO2DO(req.Filters)
 		if err := ret.Filters.Validate(); err != nil {
 			return nil, err
 		}

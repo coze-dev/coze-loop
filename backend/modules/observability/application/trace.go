@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 
 	"github.com/samber/lo"
@@ -171,7 +172,7 @@ func (t *TraceApplication) buildListSpansSvcReq(req *trace.ListSpansRequest) (*s
 		ret.SpanListType = loop_span.SpanListTypeRootSpan
 	}
 	if req.Filters != nil {
-		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		ret.Filters = convertor.FilterFieldsDTO2DO(req.Filters)
 		if err := ret.Filters.Validate(); err != nil {
 			return nil, err
 		}
