@@ -19,6 +19,7 @@ import (
 	tag2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/service"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/entity"
@@ -65,7 +66,6 @@ var (
 		service2.NewTagServiceImpl,
 		tag.NewTagRepoImpl,
 		dataset_config.NewConfiger,
-		foundation.NewAuthRPCProvider,
 		userinfo.NewUserInfoServiceImpl,
 		foundation.NewUserRPCProvider,
 		lock.NewRedisLocker,
@@ -101,7 +101,7 @@ func InitTagApplication(idgen idgen.IIDGenerator,
 	cmdable redis.Cmdable,
 	configLoader conf.IConfigLoader,
 	userClient userservice.Client,
-	authClient authservice.Client) (tag2.TagService, error) {
+	authAdapter rpc.IAuthProvider) (tag2.TagService, error) {
 	wire.Build(tagSet)
 	return nil, nil
 }

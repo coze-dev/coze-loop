@@ -124,11 +124,11 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			if len(cond.GetValue()) == 0 {
 				continue
 			}
-			ty, err := strconv.ParseInt(cond.GetValue(), 10, 64)
+			ids, err := parseIntList(cond.GetValue())
 			if err != nil {
-				return nil, errorx.Wrapf(err, "string to int64 assert fail, str: %v", cond.GetValue())
+				return nil, err
 			}
-			ff.TargetType = intersectIgnoreNull(ff.TargetType, []int64{ty})
+			ff.TargetType = intersectIgnoreNull(ff.TargetType, ids)
 		case domain_expt.FieldType_SourceTarget:
 			if cond.GetSourceTarget() == nil || len(cond.GetSourceTarget().GetSourceTargetIds()) == 0 {
 				continue
@@ -398,8 +398,12 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			}
 
 			switch fieldType {
-			case domain_expt.FieldType_Annotation:
+			case domain_expt.FieldType_AnnotationScore:
 				result.MapCond.AnnotationFloatFilters = append(result.MapCond.AnnotationFloatFilters, fieldFilter)
+			case domain_expt.FieldType_AnnotationText:
+				result.MapCond.AnnotationStringFilters = append(result.MapCond.AnnotationStringFilters, fieldFilter)
+			case domain_expt.FieldType_AnnotationCategorical:
+				result.MapCond.AnnotationStringFilters = append(result.MapCond.AnnotationStringFilters, fieldFilter)
 			case domain_expt.FieldType_EvalSetColumn:
 				// 评测集列字段，统一作为item_snapshot的string_map条件
 				result.ItemSnapshotCond.StringMapFilters = append(result.ItemSnapshotCond.StringMapFilters, fieldFilter)

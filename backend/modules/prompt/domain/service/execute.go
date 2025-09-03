@@ -55,7 +55,7 @@ type ExecuteStreamingParam struct {
 func (p *PromptServiceImpl) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error) {
 	if parentSpan := looptracer.GetTracer().GetSpanFromContext(ctx); parentSpan != nil {
 		var span looptracer.Span
-		ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptTemplate, tracespec.VPromptTemplateSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
+		ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptTemplate, tracespec.VPromptTemplateSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
 		if span != nil {
 			span.SetPrompt(ctx, loopentity.Prompt{PromptKey: prompt.PromptKey, Version: prompt.GetVersion()})
 			span.SetInput(ctx, json.Jsonify(tracespec.PromptInput{
@@ -309,7 +309,7 @@ func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.P
 	for _, toolCall := range result.Message.ToolCalls {
 		if toolCall != nil && toolCall.FunctionCall != nil {
 			var span looptracer.Span
-			ctx, span = looptracer.GetTracer().StartSpan(ctx, toolCall.FunctionCall.Name, tracespec.VToolSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+			ctx, span = looptracer.GetTracer().StartSpan(ctx, toolCall.FunctionCall.Name, tracespec.VToolSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
 			if span != nil {
 				span.SetPrompt(ctx, loopentity.Prompt{PromptKey: promptKey, Version: version})
 				span.SetInput(ctx, toolCall.FunctionCall.Arguments)
@@ -352,7 +352,7 @@ func (p *PromptServiceImpl) startSequenceSpan(ctx context.Context, prompt *entit
 		return ctx, nil
 	}
 	var span looptracer.Span
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNameSequence, consts.SpanTypeSequence, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNameSequence, consts.SpanTypeSequence, looptracer.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
 	if span != nil {
 		var templateMessages []*entity.Message
 		promptDetail := prompt.GetPromptDetail()

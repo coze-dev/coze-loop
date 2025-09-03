@@ -199,14 +199,15 @@ func (dao *exptItemResultDAOImpl) ListItemResultsByExptID(ctx context.Context, e
 	}
 
 	query := q.WithContext(ctx).
-		Where(conds...).
-		Order(q.ID.Asc())
+		Where(conds...)
 	total, err := query.Count()
 	if err != nil {
 		return nil, 0, errorx.Wrapf(err, "ListItemResultsByExptID fail, exptID=%d, spaceID=%d, page=%v, desc=%v", exptID, spaceID, page, desc)
 	}
 	if desc {
-		query = query.Order(q.ID.Desc())
+		query = query.Order(q.ItemIdx.Desc())
+	} else {
+		query = query.Order(q.ItemIdx.Asc())
 	}
 	if page.Limit() > 0 {
 		query = query.Limit(page.Limit())

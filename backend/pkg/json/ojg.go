@@ -14,7 +14,8 @@ import (
 // 如果找到多个匹配项，则返回数组
 // 如果找到单个匹配项，则返回该项
 // 如果未找到匹配项，则返回 nil
-func GetByJSONPath(data, jsonpath string) (interface{}, error) {
+// recursive 是否对data进行递归解析，递归解析会将data中的所有字符串都解析为json对象
+func GetByJSONPath(data, jsonpath string, recursive bool) (interface{}, error) {
 	if jsonpath == "" {
 		return data, nil
 	}
@@ -23,6 +24,11 @@ func GetByJSONPath(data, jsonpath string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if recursive {
+		obj = recursiveUnmarshal(obj)
+	}
+
 	parser, err := jp.ParseString(jsonpath)
 	if err != nil {
 		return nil, err
@@ -38,7 +44,19 @@ func GetByJSONPath(data, jsonpath string) (interface{}, error) {
 
 // GetStringByJSONPath 通过 JSONPath 从 JSON 字符串中获取数据，并将结果转换为字符串
 func GetStringByJSONPath(data, jsonpath string) (string, error) {
-	result, err := GetByJSONPath(data, jsonpath)
+	result, err := GetByJSONPath(data, jsonpath, false)
+	if err != nil {
+		return "", err
+	}
+	if result == nil {
+		return "", nil
+	}
+	return ConvertToString(result)
+}
+
+// GetStringByJSONPath 通过 JSONPath 从 JSON 字符串中获取数据，并将结果转换为字符串。会递归解析data中的所有字符串
+func GetStringByJSONPathRecursively(data, jsonpath string) (string, error) {
+	result, err := GetByJSONPath(data, jsonpath, true)
 	if err != nil {
 		return "", err
 	}
@@ -228,4 +246,27 @@ func RemoveFirstJSONPathLevel(jsonpath string) (string, error) {
 		path = path[1:]
 	}
 	return path, nil
+}
+
+func recursiveUnmarshal(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		for k, v2 := range val {
+			val[k] = recursiveUnmarshal(v2)
+		}
+		return val
+	case []any:
+		for i, v2 := range val {
+			val[i] = recursiveUnmarshal(v2)
+		}
+		return val
+	case string:
+		parsed, err := oj.ParseString(val)
+		if err == nil {
+			return recursiveUnmarshal(parsed)
+		}
+		return val
+	default:
+		return val
+	}
 }

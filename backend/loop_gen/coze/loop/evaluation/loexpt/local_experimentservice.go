@@ -412,6 +412,157 @@ func (l *LocalExperimentService) UpsertExptTurnResultFilter(ctx context.Context,
 	return result.GetSuccess(), nil
 }
 
+// AssociateAnnotationTag
+// 人工标注
+func (l *LocalExperimentService) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq, callOptions ...callopt.Option) (*expt.AssociateAnnotationTagResp, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceAssociateAnnotationTagArgs)
+		result := out.(*expt.ExperimentServiceAssociateAnnotationTagResult)
+		resp, err := l.impl.AssociateAnnotationTag(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceAssociateAnnotationTagArgs{Req: req}
+	result := &expt.ExperimentServiceAssociateAnnotationTagResult{}
+	ctx = l.injectRPCInfo(ctx, "AssociateAnnotationTag")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq, callOptions ...callopt.Option) (*expt.DeleteAnnotationTagResp, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceDeleteAnnotationTagArgs)
+		result := out.(*expt.ExperimentServiceDeleteAnnotationTagResult)
+		resp, err := l.impl.DeleteAnnotationTag(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceDeleteAnnotationTagArgs{Req: req}
+	result := &expt.ExperimentServiceDeleteAnnotationTagResult{}
+	ctx = l.injectRPCInfo(ctx, "DeleteAnnotationTag")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.CreateAnnotateRecordResp, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceCreateAnnotateRecordArgs)
+		result := out.(*expt.ExperimentServiceCreateAnnotateRecordResult)
+		resp, err := l.impl.CreateAnnotateRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceCreateAnnotateRecordArgs{Req: req}
+	result := &expt.ExperimentServiceCreateAnnotateRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateAnnotateRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.UpdateAnnotateRecordResp, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceUpdateAnnotateRecordArgs)
+		result := out.(*expt.ExperimentServiceUpdateAnnotateRecordResult)
+		resp, err := l.impl.UpdateAnnotateRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceUpdateAnnotateRecordArgs{Req: req}
+	result := &expt.ExperimentServiceUpdateAnnotateRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateAnnotateRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// ExportExptResult_
+// 报告下载
+func (l *LocalExperimentService) ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest, callOptions ...callopt.Option) (*expt.ExportExptResultResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceExportExptResultArgs)
+		result := out.(*expt.ExperimentServiceExportExptResultResult)
+		resp, err := l.impl.ExportExptResult_(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceExportExptResultArgs{Req: req}
+	result := &expt.ExperimentServiceExportExptResultResult{}
+	ctx = l.injectRPCInfo(ctx, "ExportExptResult_")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest, callOptions ...callopt.Option) (*expt.ListExptResultExportRecordResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceListExptResultExportRecordArgs)
+		result := out.(*expt.ExperimentServiceListExptResultExportRecordResult)
+		resp, err := l.impl.ListExptResultExportRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceListExptResultExportRecordArgs{Req: req}
+	result := &expt.ExperimentServiceListExptResultExportRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "ListExptResultExportRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (*expt.GetExptResultExportRecordResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceGetExptResultExportRecordArgs)
+		result := out.(*expt.ExperimentServiceGetExptResultExportRecordResult)
+		resp, err := l.impl.GetExptResultExportRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceGetExptResultExportRecordArgs{Req: req}
+	result := &expt.ExperimentServiceGetExptResultExportRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "GetExptResultExportRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

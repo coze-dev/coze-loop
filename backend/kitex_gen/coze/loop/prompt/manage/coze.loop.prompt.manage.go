@@ -2054,6 +2054,7 @@ func (p *DeletePromptResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type GetPromptRequest struct {
 	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID       *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
 	WithCommit        *bool      `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
 	CommitVersion     *string    `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
 	WithDraft         *bool      `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
@@ -2078,6 +2079,18 @@ func (p *GetPromptRequest) GetPromptID() (v int64) {
 		return GetPromptRequest_PromptID_DEFAULT
 	}
 	return *p.PromptID
+}
+
+var GetPromptRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetPromptRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetPromptRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var GetPromptRequest_WithCommit_DEFAULT bool
@@ -2142,6 +2155,9 @@ func (p *GetPromptRequest) GetBase() (v *base.Base) {
 func (p *GetPromptRequest) SetPromptID(val *int64) {
 	p.PromptID = val
 }
+func (p *GetPromptRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *GetPromptRequest) SetWithCommit(val *bool) {
 	p.WithCommit = val
 }
@@ -2160,6 +2176,7 @@ func (p *GetPromptRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_GetPromptRequest = map[int16]string{
 	1:   "prompt_id",
+	2:   "workspace_id",
 	11:  "with_commit",
 	12:  "commit_version",
 	21:  "with_draft",
@@ -2169,6 +2186,10 @@ var fieldIDToName_GetPromptRequest = map[int16]string{
 
 func (p *GetPromptRequest) IsSetPromptID() bool {
 	return p.PromptID != nil
+}
+
+func (p *GetPromptRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *GetPromptRequest) IsSetWithCommit() bool {
@@ -2212,6 +2233,14 @@ func (p *GetPromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2297,6 +2326,17 @@ func (p *GetPromptRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.PromptID = _field
 	return nil
 }
+func (p *GetPromptRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *GetPromptRequest) ReadField11(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -2360,6 +2400,10 @@ func (p *GetPromptRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
 			goto WriteFieldError
@@ -2415,6 +2459,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetPromptRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetPromptRequest) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWithCommit() {
@@ -2524,6 +2586,9 @@ func (p *GetPromptRequest) DeepEqual(ano *GetPromptRequest) bool {
 	if !p.Field1DeepEqual(ano.PromptID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.WithCommit) {
 		return false
 	}
@@ -2550,6 +2615,18 @@ func (p *GetPromptRequest) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.PromptID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetPromptRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
 		return false
 	}
 	return true
@@ -6438,6 +6515,7 @@ type CommitDraftRequest struct {
 	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
 	CommitVersion     *string    `thrift:"commit_version,11,optional" frugal:"11,optional,string" form:"commit_version" json:"commit_version,omitempty" query:"commit_version"`
 	CommitDescription *string    `thrift:"commit_description,12,optional" frugal:"12,optional,string" form:"commit_description" json:"commit_description,omitempty" query:"commit_description"`
+	LabelKeys         []string   `thrift:"label_keys,13,optional" frugal:"13,optional,list<string>" form:"label_keys" json:"label_keys,omitempty" query:"label_keys"`
 	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -6484,6 +6562,18 @@ func (p *CommitDraftRequest) GetCommitDescription() (v string) {
 	return *p.CommitDescription
 }
 
+var CommitDraftRequest_LabelKeys_DEFAULT []string
+
+func (p *CommitDraftRequest) GetLabelKeys() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabelKeys() {
+		return CommitDraftRequest_LabelKeys_DEFAULT
+	}
+	return p.LabelKeys
+}
+
 var CommitDraftRequest_Base_DEFAULT *base.Base
 
 func (p *CommitDraftRequest) GetBase() (v *base.Base) {
@@ -6504,6 +6594,9 @@ func (p *CommitDraftRequest) SetCommitVersion(val *string) {
 func (p *CommitDraftRequest) SetCommitDescription(val *string) {
 	p.CommitDescription = val
 }
+func (p *CommitDraftRequest) SetLabelKeys(val []string) {
+	p.LabelKeys = val
+}
 func (p *CommitDraftRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -6512,6 +6605,7 @@ var fieldIDToName_CommitDraftRequest = map[int16]string{
 	1:   "prompt_id",
 	11:  "commit_version",
 	12:  "commit_description",
+	13:  "label_keys",
 	255: "Base",
 }
 
@@ -6525,6 +6619,10 @@ func (p *CommitDraftRequest) IsSetCommitVersion() bool {
 
 func (p *CommitDraftRequest) IsSetCommitDescription() bool {
 	return p.CommitDescription != nil
+}
+
+func (p *CommitDraftRequest) IsSetLabelKeys() bool {
+	return p.LabelKeys != nil
 }
 
 func (p *CommitDraftRequest) IsSetBase() bool {
@@ -6568,6 +6666,14 @@ func (p *CommitDraftRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6643,6 +6749,29 @@ func (p *CommitDraftRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.CommitDescription = _field
 	return nil
 }
+func (p *CommitDraftRequest) ReadField13(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.LabelKeys = _field
+	return nil
+}
 func (p *CommitDraftRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -6668,6 +6797,10 @@ func (p *CommitDraftRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6746,6 +6879,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *CommitDraftRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabelKeys() {
+		if err = oprot.WriteFieldBegin("label_keys", thrift.LIST, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.LabelKeys)); err != nil {
+			return err
+		}
+		for _, v := range p.LabelKeys {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 func (p *CommitDraftRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -6788,6 +6947,9 @@ func (p *CommitDraftRequest) DeepEqual(ano *CommitDraftRequest) bool {
 	if !p.Field12DeepEqual(ano.CommitDescription) {
 		return false
 	}
+	if !p.Field13DeepEqual(ano.LabelKeys) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -6827,6 +6989,19 @@ func (p *CommitDraftRequest) Field12DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.CommitDescription, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *CommitDraftRequest) Field13DeepEqual(src []string) bool {
+
+	if len(p.LabelKeys) != len(src) {
+		return false
+	}
+	for i, v := range p.LabelKeys {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
@@ -7494,11 +7669,12 @@ func (p *ListCommitRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type ListCommitResponse struct {
-	PromptCommitInfos []*prompt.CommitInfo   `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
-	Users             []*user.UserInfoDetail `thrift:"users,11,optional" frugal:"11,optional,list<user.UserInfoDetail>" form:"users" json:"users,omitempty" query:"users"`
-	HasMore           *bool                  `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
-	NextPageToken     *string                `thrift:"next_page_token,128,optional" frugal:"128,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
-	BaseResp          *base.BaseResp         `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	PromptCommitInfos         []*prompt.CommitInfo       `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
+	CommitVersionLabelMapping map[string][]*prompt.Label `thrift:"commit_version_label_mapping,2,optional" frugal:"2,optional,map<string:list<prompt.Label>>" form:"commit_version_label_mapping" json:"commit_version_label_mapping,omitempty" query:"commit_version_label_mapping"`
+	Users                     []*user.UserInfoDetail     `thrift:"users,11,optional" frugal:"11,optional,list<user.UserInfoDetail>" form:"users" json:"users,omitempty" query:"users"`
+	HasMore                   *bool                      `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
+	NextPageToken             *string                    `thrift:"next_page_token,128,optional" frugal:"128,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
+	BaseResp                  *base.BaseResp             `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewListCommitResponse() *ListCommitResponse {
@@ -7518,6 +7694,18 @@ func (p *ListCommitResponse) GetPromptCommitInfos() (v []*prompt.CommitInfo) {
 		return ListCommitResponse_PromptCommitInfos_DEFAULT
 	}
 	return p.PromptCommitInfos
+}
+
+var ListCommitResponse_CommitVersionLabelMapping_DEFAULT map[string][]*prompt.Label
+
+func (p *ListCommitResponse) GetCommitVersionLabelMapping() (v map[string][]*prompt.Label) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCommitVersionLabelMapping() {
+		return ListCommitResponse_CommitVersionLabelMapping_DEFAULT
+	}
+	return p.CommitVersionLabelMapping
 }
 
 var ListCommitResponse_Users_DEFAULT []*user.UserInfoDetail
@@ -7570,6 +7758,9 @@ func (p *ListCommitResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *ListCommitResponse) SetPromptCommitInfos(val []*prompt.CommitInfo) {
 	p.PromptCommitInfos = val
 }
+func (p *ListCommitResponse) SetCommitVersionLabelMapping(val map[string][]*prompt.Label) {
+	p.CommitVersionLabelMapping = val
+}
 func (p *ListCommitResponse) SetUsers(val []*user.UserInfoDetail) {
 	p.Users = val
 }
@@ -7585,6 +7776,7 @@ func (p *ListCommitResponse) SetBaseResp(val *base.BaseResp) {
 
 var fieldIDToName_ListCommitResponse = map[int16]string{
 	1:   "prompt_commit_infos",
+	2:   "commit_version_label_mapping",
 	11:  "users",
 	127: "has_more",
 	128: "next_page_token",
@@ -7593,6 +7785,10 @@ var fieldIDToName_ListCommitResponse = map[int16]string{
 
 func (p *ListCommitResponse) IsSetPromptCommitInfos() bool {
 	return p.PromptCommitInfos != nil
+}
+
+func (p *ListCommitResponse) IsSetCommitVersionLabelMapping() bool {
+	return p.CommitVersionLabelMapping != nil
 }
 
 func (p *ListCommitResponse) IsSetUsers() bool {
@@ -7632,6 +7828,14 @@ func (p *ListCommitResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7721,6 +7925,47 @@ func (p *ListCommitResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.PromptCommitInfos = _field
 	return nil
 }
+func (p *ListCommitResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string][]*prompt.Label, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
+			return err
+		}
+		_val := make([]*prompt.Label, 0, size)
+		values := make([]prompt.Label, size)
+		for i := 0; i < size; i++ {
+			_elem := &values[i]
+			_elem.InitDefault()
+
+			if err := _elem.Read(iprot); err != nil {
+				return err
+			}
+
+			_val = append(_val, _elem)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.CommitVersionLabelMapping = _field
+	return nil
+}
 func (p *ListCommitResponse) ReadField11(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -7785,6 +8030,10 @@ func (p *ListCommitResponse) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
 			goto WriteFieldError
@@ -7844,6 +8093,43 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListCommitResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommitVersionLabelMapping() {
+		if err = oprot.WriteFieldBegin("commit_version_label_mapping", thrift.MAP, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.CommitVersionLabelMapping)); err != nil {
+			return err
+		}
+		for k, v := range p.CommitVersionLabelMapping {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteListBegin(thrift.STRUCT, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := v.Write(oprot); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ListCommitResponse) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetUsers() {
@@ -7943,6 +8229,9 @@ func (p *ListCommitResponse) DeepEqual(ano *ListCommitResponse) bool {
 	if !p.Field1DeepEqual(ano.PromptCommitInfos) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.CommitVersionLabelMapping) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.Users) {
 		return false
 	}
@@ -7967,6 +8256,25 @@ func (p *ListCommitResponse) Field1DeepEqual(src []*prompt.CommitInfo) bool {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
+		}
+	}
+	return true
+}
+func (p *ListCommitResponse) Field2DeepEqual(src map[string][]*prompt.Label) bool {
+
+	if len(p.CommitVersionLabelMapping) != len(src) {
+		return false
+	}
+	for k, v := range p.CommitVersionLabelMapping {
+		_src := src[k]
+		if len(v) != len(_src) {
+			return false
+		}
+		for i, v := range v {
+			_src1 := _src[i]
+			if !v.DeepEqual(_src1) {
+				return false
+			}
 		}
 	}
 	return true
@@ -8516,6 +8824,2961 @@ func (p *RevertDraftFromCommitResponse) Field255DeepEqual(src *base.BaseResp) bo
 	return true
 }
 
+// --------------- Label管理相关结构体 --------------- //
+type CreateLabelRequest struct {
+	WorkspaceID *int64        `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	Label       *prompt.Label `thrift:"label,2,optional" frugal:"2,optional,prompt.Label" form:"label" json:"label,omitempty" query:"label"`
+	Base        *base.Base    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewCreateLabelRequest() *CreateLabelRequest {
+	return &CreateLabelRequest{}
+}
+
+func (p *CreateLabelRequest) InitDefault() {
+}
+
+var CreateLabelRequest_WorkspaceID_DEFAULT int64
+
+func (p *CreateLabelRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return CreateLabelRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var CreateLabelRequest_Label_DEFAULT *prompt.Label
+
+func (p *CreateLabelRequest) GetLabel() (v *prompt.Label) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabel() {
+		return CreateLabelRequest_Label_DEFAULT
+	}
+	return p.Label
+}
+
+var CreateLabelRequest_Base_DEFAULT *base.Base
+
+func (p *CreateLabelRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return CreateLabelRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *CreateLabelRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *CreateLabelRequest) SetLabel(val *prompt.Label) {
+	p.Label = val
+}
+func (p *CreateLabelRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_CreateLabelRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "label",
+	255: "Base",
+}
+
+func (p *CreateLabelRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *CreateLabelRequest) IsSetLabel() bool {
+	return p.Label != nil
+}
+
+func (p *CreateLabelRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *CreateLabelRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateLabelRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CreateLabelRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *CreateLabelRequest) ReadField2(iprot thrift.TProtocol) error {
+	_field := prompt.NewLabel()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Label = _field
+	return nil
+}
+func (p *CreateLabelRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *CreateLabelRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CreateLabelRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CreateLabelRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CreateLabelRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabel() {
+		if err = oprot.WriteFieldBegin("label", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Label.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CreateLabelRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *CreateLabelRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateLabelRequest(%+v)", *p)
+
+}
+
+func (p *CreateLabelRequest) DeepEqual(ano *CreateLabelRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Label) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *CreateLabelRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateLabelRequest) Field2DeepEqual(src *prompt.Label) bool {
+
+	if !p.Label.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateLabelRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type CreateLabelResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewCreateLabelResponse() *CreateLabelResponse {
+	return &CreateLabelResponse{}
+}
+
+func (p *CreateLabelResponse) InitDefault() {
+}
+
+var CreateLabelResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *CreateLabelResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return CreateLabelResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *CreateLabelResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_CreateLabelResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *CreateLabelResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *CreateLabelResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateLabelResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CreateLabelResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *CreateLabelResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CreateLabelResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CreateLabelResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *CreateLabelResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateLabelResponse(%+v)", *p)
+
+}
+
+func (p *CreateLabelResponse) DeepEqual(ano *CreateLabelResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *CreateLabelResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListLabelRequest struct {
+	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	// 模糊匹配label key
+	LabelKeyLike             *string    `thrift:"label_key_like,2,optional" frugal:"2,optional,string" form:"label_key_like" json:"label_key_like,omitempty" query:"label_key_like"`
+	WithPromptVersionMapping *bool      `thrift:"with_prompt_version_mapping,21,optional" frugal:"21,optional,bool" form:"with_prompt_version_mapping" json:"with_prompt_version_mapping,omitempty" query:"with_prompt_version_mapping"`
+	PromptID                 *int64     `thrift:"prompt_id,22,optional" frugal:"22,optional,i64" json:"prompt_id" form:"prompt_id" query:"prompt_id"`
+	PageSize                 *int32     `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
+	PageToken                *string    `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
+	Base                     *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListLabelRequest() *ListLabelRequest {
+	return &ListLabelRequest{}
+}
+
+func (p *ListLabelRequest) InitDefault() {
+}
+
+var ListLabelRequest_WorkspaceID_DEFAULT int64
+
+func (p *ListLabelRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return ListLabelRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var ListLabelRequest_LabelKeyLike_DEFAULT string
+
+func (p *ListLabelRequest) GetLabelKeyLike() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabelKeyLike() {
+		return ListLabelRequest_LabelKeyLike_DEFAULT
+	}
+	return *p.LabelKeyLike
+}
+
+var ListLabelRequest_WithPromptVersionMapping_DEFAULT bool
+
+func (p *ListLabelRequest) GetWithPromptVersionMapping() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWithPromptVersionMapping() {
+		return ListLabelRequest_WithPromptVersionMapping_DEFAULT
+	}
+	return *p.WithPromptVersionMapping
+}
+
+var ListLabelRequest_PromptID_DEFAULT int64
+
+func (p *ListLabelRequest) GetPromptID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptID() {
+		return ListLabelRequest_PromptID_DEFAULT
+	}
+	return *p.PromptID
+}
+
+var ListLabelRequest_PageSize_DEFAULT int32
+
+func (p *ListLabelRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListLabelRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListLabelRequest_PageToken_DEFAULT string
+
+func (p *ListLabelRequest) GetPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageToken() {
+		return ListLabelRequest_PageToken_DEFAULT
+	}
+	return *p.PageToken
+}
+
+var ListLabelRequest_Base_DEFAULT *base.Base
+
+func (p *ListLabelRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListLabelRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListLabelRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *ListLabelRequest) SetLabelKeyLike(val *string) {
+	p.LabelKeyLike = val
+}
+func (p *ListLabelRequest) SetWithPromptVersionMapping(val *bool) {
+	p.WithPromptVersionMapping = val
+}
+func (p *ListLabelRequest) SetPromptID(val *int64) {
+	p.PromptID = val
+}
+func (p *ListLabelRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListLabelRequest) SetPageToken(val *string) {
+	p.PageToken = val
+}
+func (p *ListLabelRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListLabelRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "label_key_like",
+	21:  "with_prompt_version_mapping",
+	22:  "prompt_id",
+	127: "page_size",
+	128: "page_token",
+	255: "Base",
+}
+
+func (p *ListLabelRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *ListLabelRequest) IsSetLabelKeyLike() bool {
+	return p.LabelKeyLike != nil
+}
+
+func (p *ListLabelRequest) IsSetWithPromptVersionMapping() bool {
+	return p.WithPromptVersionMapping != nil
+}
+
+func (p *ListLabelRequest) IsSetPromptID() bool {
+	return p.PromptID != nil
+}
+
+func (p *ListLabelRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListLabelRequest) IsSetPageToken() bool {
+	return p.PageToken != nil
+}
+
+func (p *ListLabelRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListLabelRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 127:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField127(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 128:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField128(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListLabelRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListLabelRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListLabelRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LabelKeyLike = _field
+	return nil
+}
+func (p *ListLabelRequest) ReadField21(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WithPromptVersionMapping = _field
+	return nil
+}
+func (p *ListLabelRequest) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PromptID = _field
+	return nil
+}
+func (p *ListLabelRequest) ReadField127(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListLabelRequest) ReadField128(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageToken = _field
+	return nil
+}
+func (p *ListLabelRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListLabelRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListLabelRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField127(oprot); err != nil {
+			fieldId = 127
+			goto WriteFieldError
+		}
+		if err = p.writeField128(oprot); err != nil {
+			fieldId = 128
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListLabelRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListLabelRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabelKeyLike() {
+		if err = oprot.WriteFieldBegin("label_key_like", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LabelKeyLike); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListLabelRequest) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWithPromptVersionMapping() {
+		if err = oprot.WriteFieldBegin("with_prompt_version_mapping", thrift.BOOL, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WithPromptVersionMapping); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
+func (p *ListLabelRequest) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptID() {
+		if err = oprot.WriteFieldBegin("prompt_id", thrift.I64, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.PromptID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+func (p *ListLabelRequest) writeField127(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 127); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 127 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 127 end error: ", p), err)
+}
+func (p *ListLabelRequest) writeField128(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageToken() {
+		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 128); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 128 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 128 end error: ", p), err)
+}
+func (p *ListLabelRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListLabelRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListLabelRequest(%+v)", *p)
+
+}
+
+func (p *ListLabelRequest) DeepEqual(ano *ListLabelRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.LabelKeyLike) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.WithPromptVersionMapping) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.PromptID) {
+		return false
+	}
+	if !p.Field127DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field128DeepEqual(ano.PageToken) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListLabelRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *ListLabelRequest) Field2DeepEqual(src *string) bool {
+
+	if p.LabelKeyLike == src {
+		return true
+	} else if p.LabelKeyLike == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LabelKeyLike, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListLabelRequest) Field21DeepEqual(src *bool) bool {
+
+	if p.WithPromptVersionMapping == src {
+		return true
+	} else if p.WithPromptVersionMapping == nil || src == nil {
+		return false
+	}
+	if *p.WithPromptVersionMapping != *src {
+		return false
+	}
+	return true
+}
+func (p *ListLabelRequest) Field22DeepEqual(src *int64) bool {
+
+	if p.PromptID == src {
+		return true
+	} else if p.PromptID == nil || src == nil {
+		return false
+	}
+	if *p.PromptID != *src {
+		return false
+	}
+	return true
+}
+func (p *ListLabelRequest) Field127DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListLabelRequest) Field128DeepEqual(src *string) bool {
+
+	if p.PageToken == src {
+		return true
+	} else if p.PageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListLabelRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListLabelResponse struct {
+	Labels               []*prompt.Label   `thrift:"labels,1,optional" frugal:"1,optional,list<prompt.Label>" form:"labels" json:"labels,omitempty" query:"labels"`
+	PromptVersionMapping map[string]string `thrift:"prompt_version_mapping,2,optional" frugal:"2,optional,map<string:string>" form:"prompt_version_mapping" json:"prompt_version_mapping,omitempty" query:"prompt_version_mapping"`
+	HasMore              *bool             `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
+	NextPageToken        *string           `thrift:"next_page_token,128,optional" frugal:"128,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
+	BaseResp             *base.BaseResp    `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewListLabelResponse() *ListLabelResponse {
+	return &ListLabelResponse{}
+}
+
+func (p *ListLabelResponse) InitDefault() {
+}
+
+var ListLabelResponse_Labels_DEFAULT []*prompt.Label
+
+func (p *ListLabelResponse) GetLabels() (v []*prompt.Label) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabels() {
+		return ListLabelResponse_Labels_DEFAULT
+	}
+	return p.Labels
+}
+
+var ListLabelResponse_PromptVersionMapping_DEFAULT map[string]string
+
+func (p *ListLabelResponse) GetPromptVersionMapping() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptVersionMapping() {
+		return ListLabelResponse_PromptVersionMapping_DEFAULT
+	}
+	return p.PromptVersionMapping
+}
+
+var ListLabelResponse_HasMore_DEFAULT bool
+
+func (p *ListLabelResponse) GetHasMore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetHasMore() {
+		return ListLabelResponse_HasMore_DEFAULT
+	}
+	return *p.HasMore
+}
+
+var ListLabelResponse_NextPageToken_DEFAULT string
+
+func (p *ListLabelResponse) GetNextPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNextPageToken() {
+		return ListLabelResponse_NextPageToken_DEFAULT
+	}
+	return *p.NextPageToken
+}
+
+var ListLabelResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListLabelResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListLabelResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListLabelResponse) SetLabels(val []*prompt.Label) {
+	p.Labels = val
+}
+func (p *ListLabelResponse) SetPromptVersionMapping(val map[string]string) {
+	p.PromptVersionMapping = val
+}
+func (p *ListLabelResponse) SetHasMore(val *bool) {
+	p.HasMore = val
+}
+func (p *ListLabelResponse) SetNextPageToken(val *string) {
+	p.NextPageToken = val
+}
+func (p *ListLabelResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListLabelResponse = map[int16]string{
+	1:   "labels",
+	2:   "prompt_version_mapping",
+	127: "has_more",
+	128: "next_page_token",
+	255: "BaseResp",
+}
+
+func (p *ListLabelResponse) IsSetLabels() bool {
+	return p.Labels != nil
+}
+
+func (p *ListLabelResponse) IsSetPromptVersionMapping() bool {
+	return p.PromptVersionMapping != nil
+}
+
+func (p *ListLabelResponse) IsSetHasMore() bool {
+	return p.HasMore != nil
+}
+
+func (p *ListLabelResponse) IsSetNextPageToken() bool {
+	return p.NextPageToken != nil
+}
+
+func (p *ListLabelResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListLabelResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 127:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField127(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 128:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField128(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListLabelResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListLabelResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*prompt.Label, 0, size)
+	values := make([]prompt.Label, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Labels = _field
+	return nil
+}
+func (p *ListLabelResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.PromptVersionMapping = _field
+	return nil
+}
+func (p *ListLabelResponse) ReadField127(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.HasMore = _field
+	return nil
+}
+func (p *ListLabelResponse) ReadField128(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NextPageToken = _field
+	return nil
+}
+func (p *ListLabelResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListLabelResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListLabelResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField127(oprot); err != nil {
+			fieldId = 127
+			goto WriteFieldError
+		}
+		if err = p.writeField128(oprot); err != nil {
+			fieldId = 128
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListLabelResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabels() {
+		if err = oprot.WriteFieldBegin("labels", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Labels)); err != nil {
+			return err
+		}
+		for _, v := range p.Labels {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListLabelResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptVersionMapping() {
+		if err = oprot.WriteFieldBegin("prompt_version_mapping", thrift.MAP, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.PromptVersionMapping)); err != nil {
+			return err
+		}
+		for k, v := range p.PromptVersionMapping {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListLabelResponse) writeField127(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHasMore() {
+		if err = oprot.WriteFieldBegin("has_more", thrift.BOOL, 127); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.HasMore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 127 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 127 end error: ", p), err)
+}
+func (p *ListLabelResponse) writeField128(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNextPageToken() {
+		if err = oprot.WriteFieldBegin("next_page_token", thrift.STRING, 128); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.NextPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 128 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 128 end error: ", p), err)
+}
+func (p *ListLabelResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListLabelResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListLabelResponse(%+v)", *p)
+
+}
+
+func (p *ListLabelResponse) DeepEqual(ano *ListLabelResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Labels) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.PromptVersionMapping) {
+		return false
+	}
+	if !p.Field127DeepEqual(ano.HasMore) {
+		return false
+	}
+	if !p.Field128DeepEqual(ano.NextPageToken) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListLabelResponse) Field1DeepEqual(src []*prompt.Label) bool {
+
+	if len(p.Labels) != len(src) {
+		return false
+	}
+	for i, v := range p.Labels {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListLabelResponse) Field2DeepEqual(src map[string]string) bool {
+
+	if len(p.PromptVersionMapping) != len(src) {
+		return false
+	}
+	for k, v := range p.PromptVersionMapping {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListLabelResponse) Field127DeepEqual(src *bool) bool {
+
+	if p.HasMore == src {
+		return true
+	} else if p.HasMore == nil || src == nil {
+		return false
+	}
+	if *p.HasMore != *src {
+		return false
+	}
+	return true
+}
+func (p *ListLabelResponse) Field128DeepEqual(src *string) bool {
+
+	if p.NextPageToken == src {
+		return true
+	} else if p.NextPageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.NextPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListLabelResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchGetLabelRequest struct {
+	WorkspaceID *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	LabelKeys   []string   `thrift:"label_keys,2,optional" frugal:"2,optional,list<string>" form:"label_keys" json:"label_keys,omitempty" query:"label_keys"`
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewBatchGetLabelRequest() *BatchGetLabelRequest {
+	return &BatchGetLabelRequest{}
+}
+
+func (p *BatchGetLabelRequest) InitDefault() {
+}
+
+var BatchGetLabelRequest_WorkspaceID_DEFAULT int64
+
+func (p *BatchGetLabelRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return BatchGetLabelRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var BatchGetLabelRequest_LabelKeys_DEFAULT []string
+
+func (p *BatchGetLabelRequest) GetLabelKeys() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabelKeys() {
+		return BatchGetLabelRequest_LabelKeys_DEFAULT
+	}
+	return p.LabelKeys
+}
+
+var BatchGetLabelRequest_Base_DEFAULT *base.Base
+
+func (p *BatchGetLabelRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return BatchGetLabelRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *BatchGetLabelRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *BatchGetLabelRequest) SetLabelKeys(val []string) {
+	p.LabelKeys = val
+}
+func (p *BatchGetLabelRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_BatchGetLabelRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "label_keys",
+	255: "Base",
+}
+
+func (p *BatchGetLabelRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *BatchGetLabelRequest) IsSetLabelKeys() bool {
+	return p.LabelKeys != nil
+}
+
+func (p *BatchGetLabelRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *BatchGetLabelRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchGetLabelRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchGetLabelRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *BatchGetLabelRequest) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.LabelKeys = _field
+	return nil
+}
+func (p *BatchGetLabelRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *BatchGetLabelRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetLabelRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchGetLabelRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchGetLabelRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabelKeys() {
+		if err = oprot.WriteFieldBegin("label_keys", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.LabelKeys)); err != nil {
+			return err
+		}
+		for _, v := range p.LabelKeys {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BatchGetLabelRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchGetLabelRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchGetLabelRequest(%+v)", *p)
+
+}
+
+func (p *BatchGetLabelRequest) DeepEqual(ano *BatchGetLabelRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.LabelKeys) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchGetLabelRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchGetLabelRequest) Field2DeepEqual(src []string) bool {
+
+	if len(p.LabelKeys) != len(src) {
+		return false
+	}
+	for i, v := range p.LabelKeys {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetLabelRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchGetLabelResponse struct {
+	Labels   []*prompt.Label `thrift:"labels,1,optional" frugal:"1,optional,list<prompt.Label>" form:"labels" json:"labels,omitempty" query:"labels"`
+	BaseResp *base.BaseResp  `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewBatchGetLabelResponse() *BatchGetLabelResponse {
+	return &BatchGetLabelResponse{}
+}
+
+func (p *BatchGetLabelResponse) InitDefault() {
+}
+
+var BatchGetLabelResponse_Labels_DEFAULT []*prompt.Label
+
+func (p *BatchGetLabelResponse) GetLabels() (v []*prompt.Label) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabels() {
+		return BatchGetLabelResponse_Labels_DEFAULT
+	}
+	return p.Labels
+}
+
+var BatchGetLabelResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *BatchGetLabelResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return BatchGetLabelResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *BatchGetLabelResponse) SetLabels(val []*prompt.Label) {
+	p.Labels = val
+}
+func (p *BatchGetLabelResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_BatchGetLabelResponse = map[int16]string{
+	1:   "labels",
+	255: "BaseResp",
+}
+
+func (p *BatchGetLabelResponse) IsSetLabels() bool {
+	return p.Labels != nil
+}
+
+func (p *BatchGetLabelResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *BatchGetLabelResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchGetLabelResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchGetLabelResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*prompt.Label, 0, size)
+	values := make([]prompt.Label, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Labels = _field
+	return nil
+}
+func (p *BatchGetLabelResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *BatchGetLabelResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetLabelResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchGetLabelResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabels() {
+		if err = oprot.WriteFieldBegin("labels", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Labels)); err != nil {
+			return err
+		}
+		for _, v := range p.Labels {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchGetLabelResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchGetLabelResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchGetLabelResponse(%+v)", *p)
+
+}
+
+func (p *BatchGetLabelResponse) DeepEqual(ano *BatchGetLabelResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Labels) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchGetLabelResponse) Field1DeepEqual(src []*prompt.Label) bool {
+
+	if len(p.Labels) != len(src) {
+		return false
+	}
+	for i, v := range p.Labels {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetLabelResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type UpdateCommitLabelsRequest struct {
+	WorkspaceID   *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	PromptID      *int64     `thrift:"prompt_id,2,optional" frugal:"2,optional,i64" json:"prompt_id" path:"prompt_id" `
+	CommitVersion *string    `thrift:"commit_version,3,optional" frugal:"3,optional,string" json:"commit_version,omitempty" path:"commit_version"`
+	LabelKeys     []string   `thrift:"label_keys,4,optional" frugal:"4,optional,list<string>" form:"label_keys" json:"label_keys,omitempty" query:"label_keys"`
+	Base          *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewUpdateCommitLabelsRequest() *UpdateCommitLabelsRequest {
+	return &UpdateCommitLabelsRequest{}
+}
+
+func (p *UpdateCommitLabelsRequest) InitDefault() {
+}
+
+var UpdateCommitLabelsRequest_WorkspaceID_DEFAULT int64
+
+func (p *UpdateCommitLabelsRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return UpdateCommitLabelsRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var UpdateCommitLabelsRequest_PromptID_DEFAULT int64
+
+func (p *UpdateCommitLabelsRequest) GetPromptID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptID() {
+		return UpdateCommitLabelsRequest_PromptID_DEFAULT
+	}
+	return *p.PromptID
+}
+
+var UpdateCommitLabelsRequest_CommitVersion_DEFAULT string
+
+func (p *UpdateCommitLabelsRequest) GetCommitVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCommitVersion() {
+		return UpdateCommitLabelsRequest_CommitVersion_DEFAULT
+	}
+	return *p.CommitVersion
+}
+
+var UpdateCommitLabelsRequest_LabelKeys_DEFAULT []string
+
+func (p *UpdateCommitLabelsRequest) GetLabelKeys() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabelKeys() {
+		return UpdateCommitLabelsRequest_LabelKeys_DEFAULT
+	}
+	return p.LabelKeys
+}
+
+var UpdateCommitLabelsRequest_Base_DEFAULT *base.Base
+
+func (p *UpdateCommitLabelsRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return UpdateCommitLabelsRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *UpdateCommitLabelsRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *UpdateCommitLabelsRequest) SetPromptID(val *int64) {
+	p.PromptID = val
+}
+func (p *UpdateCommitLabelsRequest) SetCommitVersion(val *string) {
+	p.CommitVersion = val
+}
+func (p *UpdateCommitLabelsRequest) SetLabelKeys(val []string) {
+	p.LabelKeys = val
+}
+func (p *UpdateCommitLabelsRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_UpdateCommitLabelsRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "prompt_id",
+	3:   "commit_version",
+	4:   "label_keys",
+	255: "Base",
+}
+
+func (p *UpdateCommitLabelsRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *UpdateCommitLabelsRequest) IsSetPromptID() bool {
+	return p.PromptID != nil
+}
+
+func (p *UpdateCommitLabelsRequest) IsSetCommitVersion() bool {
+	return p.CommitVersion != nil
+}
+
+func (p *UpdateCommitLabelsRequest) IsSetLabelKeys() bool {
+	return p.LabelKeys != nil
+}
+
+func (p *UpdateCommitLabelsRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *UpdateCommitLabelsRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UpdateCommitLabelsRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *UpdateCommitLabelsRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *UpdateCommitLabelsRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PromptID = _field
+	return nil
+}
+func (p *UpdateCommitLabelsRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommitVersion = _field
+	return nil
+}
+func (p *UpdateCommitLabelsRequest) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.LabelKeys = _field
+	return nil
+}
+func (p *UpdateCommitLabelsRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *UpdateCommitLabelsRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateCommitLabelsRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UpdateCommitLabelsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *UpdateCommitLabelsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptID() {
+		if err = oprot.WriteFieldBegin("prompt_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.PromptID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *UpdateCommitLabelsRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommitVersion() {
+		if err = oprot.WriteFieldBegin("commit_version", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CommitVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *UpdateCommitLabelsRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabelKeys() {
+		if err = oprot.WriteFieldBegin("label_keys", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.LabelKeys)); err != nil {
+			return err
+		}
+		for _, v := range p.LabelKeys {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *UpdateCommitLabelsRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *UpdateCommitLabelsRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateCommitLabelsRequest(%+v)", *p)
+
+}
+
+func (p *UpdateCommitLabelsRequest) DeepEqual(ano *UpdateCommitLabelsRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.PromptID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.CommitVersion) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.LabelKeys) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *UpdateCommitLabelsRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateCommitLabelsRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.PromptID == src {
+		return true
+	} else if p.PromptID == nil || src == nil {
+		return false
+	}
+	if *p.PromptID != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateCommitLabelsRequest) Field3DeepEqual(src *string) bool {
+
+	if p.CommitVersion == src {
+		return true
+	} else if p.CommitVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CommitVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdateCommitLabelsRequest) Field4DeepEqual(src []string) bool {
+
+	if len(p.LabelKeys) != len(src) {
+		return false
+	}
+	for i, v := range p.LabelKeys {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *UpdateCommitLabelsRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type UpdateCommitLabelsResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewUpdateCommitLabelsResponse() *UpdateCommitLabelsResponse {
+	return &UpdateCommitLabelsResponse{}
+}
+
+func (p *UpdateCommitLabelsResponse) InitDefault() {
+}
+
+var UpdateCommitLabelsResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *UpdateCommitLabelsResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return UpdateCommitLabelsResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *UpdateCommitLabelsResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_UpdateCommitLabelsResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *UpdateCommitLabelsResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *UpdateCommitLabelsResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UpdateCommitLabelsResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *UpdateCommitLabelsResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *UpdateCommitLabelsResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateCommitLabelsResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UpdateCommitLabelsResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *UpdateCommitLabelsResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateCommitLabelsResponse(%+v)", *p)
+
+}
+
+func (p *UpdateCommitLabelsResponse) DeepEqual(ano *UpdateCommitLabelsResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *UpdateCommitLabelsResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type PromptManageService interface {
 	// --------------- Prompt管理 --------------- //
 	// 增
@@ -8534,12 +11797,21 @@ type PromptManageService interface {
 	UpdatePrompt(ctx context.Context, request *UpdatePromptRequest) (r *UpdatePromptResponse, err error)
 
 	SaveDraft(ctx context.Context, request *SaveDraftRequest) (r *SaveDraftResponse, err error)
+	// --------------- Label管理 --------------- //
+	// Label管理
+	CreateLabel(ctx context.Context, request *CreateLabelRequest) (r *CreateLabelResponse, err error)
+
+	ListLabel(ctx context.Context, request *ListLabelRequest) (r *ListLabelResponse, err error)
+
+	BatchGetLabel(ctx context.Context, request *BatchGetLabelRequest) (r *BatchGetLabelResponse, err error)
 	// --------------- Prompt版本管理 --------------- //
 	ListCommit(ctx context.Context, request *ListCommitRequest) (r *ListCommitResponse, err error)
 
 	CommitDraft(ctx context.Context, request *CommitDraftRequest) (r *CommitDraftResponse, err error)
 
 	RevertDraftFromCommit(ctx context.Context, request *RevertDraftFromCommitRequest) (r *RevertDraftFromCommitResponse, err error)
+
+	UpdateCommitLabels(ctx context.Context, request *UpdateCommitLabelsRequest) (r *UpdateCommitLabelsResponse, err error)
 }
 
 type PromptManageServiceClient struct {
@@ -8640,6 +11912,33 @@ func (p *PromptManageServiceClient) SaveDraft(ctx context.Context, request *Save
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *PromptManageServiceClient) CreateLabel(ctx context.Context, request *CreateLabelRequest) (r *CreateLabelResponse, err error) {
+	var _args PromptManageServiceCreateLabelArgs
+	_args.Request = request
+	var _result PromptManageServiceCreateLabelResult
+	if err = p.Client_().Call(ctx, "CreateLabel", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *PromptManageServiceClient) ListLabel(ctx context.Context, request *ListLabelRequest) (r *ListLabelResponse, err error) {
+	var _args PromptManageServiceListLabelArgs
+	_args.Request = request
+	var _result PromptManageServiceListLabelResult
+	if err = p.Client_().Call(ctx, "ListLabel", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *PromptManageServiceClient) BatchGetLabel(ctx context.Context, request *BatchGetLabelRequest) (r *BatchGetLabelResponse, err error) {
+	var _args PromptManageServiceBatchGetLabelArgs
+	_args.Request = request
+	var _result PromptManageServiceBatchGetLabelResult
+	if err = p.Client_().Call(ctx, "BatchGetLabel", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *PromptManageServiceClient) ListCommit(ctx context.Context, request *ListCommitRequest) (r *ListCommitResponse, err error) {
 	var _args PromptManageServiceListCommitArgs
 	_args.Request = request
@@ -8663,6 +11962,15 @@ func (p *PromptManageServiceClient) RevertDraftFromCommit(ctx context.Context, r
 	_args.Request = request
 	var _result PromptManageServiceRevertDraftFromCommitResult
 	if err = p.Client_().Call(ctx, "RevertDraftFromCommit", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *PromptManageServiceClient) UpdateCommitLabels(ctx context.Context, request *UpdateCommitLabelsRequest) (r *UpdateCommitLabelsResponse, err error) {
+	var _args PromptManageServiceUpdateCommitLabelsArgs
+	_args.Request = request
+	var _result PromptManageServiceUpdateCommitLabelsResult
+	if err = p.Client_().Call(ctx, "UpdateCommitLabels", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -8696,9 +12004,13 @@ func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageS
 	self.AddToProcessorMap("ListPrompt", &promptManageServiceProcessorListPrompt{handler: handler})
 	self.AddToProcessorMap("UpdatePrompt", &promptManageServiceProcessorUpdatePrompt{handler: handler})
 	self.AddToProcessorMap("SaveDraft", &promptManageServiceProcessorSaveDraft{handler: handler})
+	self.AddToProcessorMap("CreateLabel", &promptManageServiceProcessorCreateLabel{handler: handler})
+	self.AddToProcessorMap("ListLabel", &promptManageServiceProcessorListLabel{handler: handler})
+	self.AddToProcessorMap("BatchGetLabel", &promptManageServiceProcessorBatchGetLabel{handler: handler})
 	self.AddToProcessorMap("ListCommit", &promptManageServiceProcessorListCommit{handler: handler})
 	self.AddToProcessorMap("CommitDraft", &promptManageServiceProcessorCommitDraft{handler: handler})
 	self.AddToProcessorMap("RevertDraftFromCommit", &promptManageServiceProcessorRevertDraftFromCommit{handler: handler})
+	self.AddToProcessorMap("UpdateCommitLabels", &promptManageServiceProcessorUpdateCommitLabels{handler: handler})
 	return self
 }
 func (p *PromptManageServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -9103,6 +12415,150 @@ func (p *promptManageServiceProcessorSaveDraft) Process(ctx context.Context, seq
 	return true, err
 }
 
+type promptManageServiceProcessorCreateLabel struct {
+	handler PromptManageService
+}
+
+func (p *promptManageServiceProcessorCreateLabel) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PromptManageServiceCreateLabelArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("CreateLabel", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := PromptManageServiceCreateLabelResult{}
+	var retval *CreateLabelResponse
+	if retval, err2 = p.handler.CreateLabel(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateLabel: "+err2.Error())
+		oprot.WriteMessageBegin("CreateLabel", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("CreateLabel", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type promptManageServiceProcessorListLabel struct {
+	handler PromptManageService
+}
+
+func (p *promptManageServiceProcessorListLabel) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PromptManageServiceListLabelArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListLabel", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := PromptManageServiceListLabelResult{}
+	var retval *ListLabelResponse
+	if retval, err2 = p.handler.ListLabel(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListLabel: "+err2.Error())
+		oprot.WriteMessageBegin("ListLabel", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListLabel", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type promptManageServiceProcessorBatchGetLabel struct {
+	handler PromptManageService
+}
+
+func (p *promptManageServiceProcessorBatchGetLabel) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PromptManageServiceBatchGetLabelArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("BatchGetLabel", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := PromptManageServiceBatchGetLabelResult{}
+	var retval *BatchGetLabelResponse
+	if retval, err2 = p.handler.BatchGetLabel(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchGetLabel: "+err2.Error())
+		oprot.WriteMessageBegin("BatchGetLabel", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("BatchGetLabel", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
 type promptManageServiceProcessorListCommit struct {
 	handler PromptManageService
 }
@@ -9230,6 +12686,54 @@ func (p *promptManageServiceProcessorRevertDraftFromCommit) Process(ctx context.
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("RevertDraftFromCommit", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type promptManageServiceProcessorUpdateCommitLabels struct {
+	handler PromptManageService
+}
+
+func (p *promptManageServiceProcessorUpdateCommitLabels) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PromptManageServiceUpdateCommitLabelsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("UpdateCommitLabels", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := PromptManageServiceUpdateCommitLabelsResult{}
+	var retval *UpdateCommitLabelsResponse
+	if retval, err2 = p.handler.UpdateCommitLabels(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing UpdateCommitLabels: "+err2.Error())
+		oprot.WriteMessageBegin("UpdateCommitLabels", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("UpdateCommitLabels", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -11999,6 +15503,1038 @@ func (p *PromptManageServiceSaveDraftResult) Field0DeepEqual(src *SaveDraftRespo
 	return true
 }
 
+type PromptManageServiceCreateLabelArgs struct {
+	Request *CreateLabelRequest `thrift:"request,1" frugal:"1,default,CreateLabelRequest"`
+}
+
+func NewPromptManageServiceCreateLabelArgs() *PromptManageServiceCreateLabelArgs {
+	return &PromptManageServiceCreateLabelArgs{}
+}
+
+func (p *PromptManageServiceCreateLabelArgs) InitDefault() {
+}
+
+var PromptManageServiceCreateLabelArgs_Request_DEFAULT *CreateLabelRequest
+
+func (p *PromptManageServiceCreateLabelArgs) GetRequest() (v *CreateLabelRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return PromptManageServiceCreateLabelArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *PromptManageServiceCreateLabelArgs) SetRequest(val *CreateLabelRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_PromptManageServiceCreateLabelArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *PromptManageServiceCreateLabelArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *PromptManageServiceCreateLabelArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceCreateLabelArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceCreateLabelArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewCreateLabelRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *PromptManageServiceCreateLabelArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CreateLabel_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceCreateLabelArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *PromptManageServiceCreateLabelArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceCreateLabelArgs(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceCreateLabelArgs) DeepEqual(ano *PromptManageServiceCreateLabelArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceCreateLabelArgs) Field1DeepEqual(src *CreateLabelRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceCreateLabelResult struct {
+	Success *CreateLabelResponse `thrift:"success,0,optional" frugal:"0,optional,CreateLabelResponse"`
+}
+
+func NewPromptManageServiceCreateLabelResult() *PromptManageServiceCreateLabelResult {
+	return &PromptManageServiceCreateLabelResult{}
+}
+
+func (p *PromptManageServiceCreateLabelResult) InitDefault() {
+}
+
+var PromptManageServiceCreateLabelResult_Success_DEFAULT *CreateLabelResponse
+
+func (p *PromptManageServiceCreateLabelResult) GetSuccess() (v *CreateLabelResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return PromptManageServiceCreateLabelResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PromptManageServiceCreateLabelResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateLabelResponse)
+}
+
+var fieldIDToName_PromptManageServiceCreateLabelResult = map[int16]string{
+	0: "success",
+}
+
+func (p *PromptManageServiceCreateLabelResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PromptManageServiceCreateLabelResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceCreateLabelResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceCreateLabelResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCreateLabelResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *PromptManageServiceCreateLabelResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CreateLabel_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceCreateLabelResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *PromptManageServiceCreateLabelResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceCreateLabelResult(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceCreateLabelResult) DeepEqual(ano *PromptManageServiceCreateLabelResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceCreateLabelResult) Field0DeepEqual(src *CreateLabelResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceListLabelArgs struct {
+	Request *ListLabelRequest `thrift:"request,1" frugal:"1,default,ListLabelRequest"`
+}
+
+func NewPromptManageServiceListLabelArgs() *PromptManageServiceListLabelArgs {
+	return &PromptManageServiceListLabelArgs{}
+}
+
+func (p *PromptManageServiceListLabelArgs) InitDefault() {
+}
+
+var PromptManageServiceListLabelArgs_Request_DEFAULT *ListLabelRequest
+
+func (p *PromptManageServiceListLabelArgs) GetRequest() (v *ListLabelRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return PromptManageServiceListLabelArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *PromptManageServiceListLabelArgs) SetRequest(val *ListLabelRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_PromptManageServiceListLabelArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *PromptManageServiceListLabelArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *PromptManageServiceListLabelArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceListLabelArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceListLabelArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListLabelRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *PromptManageServiceListLabelArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListLabel_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceListLabelArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *PromptManageServiceListLabelArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceListLabelArgs(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceListLabelArgs) DeepEqual(ano *PromptManageServiceListLabelArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceListLabelArgs) Field1DeepEqual(src *ListLabelRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceListLabelResult struct {
+	Success *ListLabelResponse `thrift:"success,0,optional" frugal:"0,optional,ListLabelResponse"`
+}
+
+func NewPromptManageServiceListLabelResult() *PromptManageServiceListLabelResult {
+	return &PromptManageServiceListLabelResult{}
+}
+
+func (p *PromptManageServiceListLabelResult) InitDefault() {
+}
+
+var PromptManageServiceListLabelResult_Success_DEFAULT *ListLabelResponse
+
+func (p *PromptManageServiceListLabelResult) GetSuccess() (v *ListLabelResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return PromptManageServiceListLabelResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PromptManageServiceListLabelResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListLabelResponse)
+}
+
+var fieldIDToName_PromptManageServiceListLabelResult = map[int16]string{
+	0: "success",
+}
+
+func (p *PromptManageServiceListLabelResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PromptManageServiceListLabelResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceListLabelResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceListLabelResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListLabelResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *PromptManageServiceListLabelResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListLabel_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceListLabelResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *PromptManageServiceListLabelResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceListLabelResult(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceListLabelResult) DeepEqual(ano *PromptManageServiceListLabelResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceListLabelResult) Field0DeepEqual(src *ListLabelResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceBatchGetLabelArgs struct {
+	Request *BatchGetLabelRequest `thrift:"request,1" frugal:"1,default,BatchGetLabelRequest"`
+}
+
+func NewPromptManageServiceBatchGetLabelArgs() *PromptManageServiceBatchGetLabelArgs {
+	return &PromptManageServiceBatchGetLabelArgs{}
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) InitDefault() {
+}
+
+var PromptManageServiceBatchGetLabelArgs_Request_DEFAULT *BatchGetLabelRequest
+
+func (p *PromptManageServiceBatchGetLabelArgs) GetRequest() (v *BatchGetLabelRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return PromptManageServiceBatchGetLabelArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *PromptManageServiceBatchGetLabelArgs) SetRequest(val *BatchGetLabelRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_PromptManageServiceBatchGetLabelArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceBatchGetLabelArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchGetLabelRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetLabel_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceBatchGetLabelArgs(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) DeepEqual(ano *PromptManageServiceBatchGetLabelArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceBatchGetLabelArgs) Field1DeepEqual(src *BatchGetLabelRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceBatchGetLabelResult struct {
+	Success *BatchGetLabelResponse `thrift:"success,0,optional" frugal:"0,optional,BatchGetLabelResponse"`
+}
+
+func NewPromptManageServiceBatchGetLabelResult() *PromptManageServiceBatchGetLabelResult {
+	return &PromptManageServiceBatchGetLabelResult{}
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) InitDefault() {
+}
+
+var PromptManageServiceBatchGetLabelResult_Success_DEFAULT *BatchGetLabelResponse
+
+func (p *PromptManageServiceBatchGetLabelResult) GetSuccess() (v *BatchGetLabelResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return PromptManageServiceBatchGetLabelResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PromptManageServiceBatchGetLabelResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchGetLabelResponse)
+}
+
+var fieldIDToName_PromptManageServiceBatchGetLabelResult = map[int16]string{
+	0: "success",
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceBatchGetLabelResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchGetLabelResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetLabel_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceBatchGetLabelResult(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) DeepEqual(ano *PromptManageServiceBatchGetLabelResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceBatchGetLabelResult) Field0DeepEqual(src *BatchGetLabelResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type PromptManageServiceListCommitArgs struct {
 	Request *ListCommitRequest `thrift:"request,1" frugal:"1,default,ListCommitRequest"`
 }
@@ -13024,6 +17560,350 @@ func (p *PromptManageServiceRevertDraftFromCommitResult) DeepEqual(ano *PromptMa
 }
 
 func (p *PromptManageServiceRevertDraftFromCommitResult) Field0DeepEqual(src *RevertDraftFromCommitResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceUpdateCommitLabelsArgs struct {
+	Request *UpdateCommitLabelsRequest `thrift:"request,1" frugal:"1,default,UpdateCommitLabelsRequest"`
+}
+
+func NewPromptManageServiceUpdateCommitLabelsArgs() *PromptManageServiceUpdateCommitLabelsArgs {
+	return &PromptManageServiceUpdateCommitLabelsArgs{}
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) InitDefault() {
+}
+
+var PromptManageServiceUpdateCommitLabelsArgs_Request_DEFAULT *UpdateCommitLabelsRequest
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) GetRequest() (v *UpdateCommitLabelsRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return PromptManageServiceUpdateCommitLabelsArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *PromptManageServiceUpdateCommitLabelsArgs) SetRequest(val *UpdateCommitLabelsRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_PromptManageServiceUpdateCommitLabelsArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceUpdateCommitLabelsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewUpdateCommitLabelsRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateCommitLabels_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceUpdateCommitLabelsArgs(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) DeepEqual(ano *PromptManageServiceUpdateCommitLabelsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsArgs) Field1DeepEqual(src *UpdateCommitLabelsRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceUpdateCommitLabelsResult struct {
+	Success *UpdateCommitLabelsResponse `thrift:"success,0,optional" frugal:"0,optional,UpdateCommitLabelsResponse"`
+}
+
+func NewPromptManageServiceUpdateCommitLabelsResult() *PromptManageServiceUpdateCommitLabelsResult {
+	return &PromptManageServiceUpdateCommitLabelsResult{}
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) InitDefault() {
+}
+
+var PromptManageServiceUpdateCommitLabelsResult_Success_DEFAULT *UpdateCommitLabelsResponse
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) GetSuccess() (v *UpdateCommitLabelsResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return PromptManageServiceUpdateCommitLabelsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PromptManageServiceUpdateCommitLabelsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*UpdateCommitLabelsResponse)
+}
+
+var fieldIDToName_PromptManageServiceUpdateCommitLabelsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceUpdateCommitLabelsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewUpdateCommitLabelsResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateCommitLabels_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceUpdateCommitLabelsResult(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) DeepEqual(ano *PromptManageServiceUpdateCommitLabelsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceUpdateCommitLabelsResult) Field0DeepEqual(src *UpdateCommitLabelsResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

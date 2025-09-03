@@ -13,7 +13,7 @@ import (
 
 type CozeLoopFilter struct{}
 
-func (c *CozeLoopFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) ([]*loop_span.FilterField, error) {
+func (c *CozeLoopFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) ([]*loop_span.FilterField, bool, error) {
 	return []*loop_span.FilterField{
 		{
 			FieldName: loop_span.SpanFieldSpaceId,
@@ -27,7 +27,7 @@ func (c *CozeLoopFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv)
 			Values:    []string{"Custom"},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
-	}, nil
+	}, false, nil
 }
 
 func (c *CozeLoopFilter) BuildRootSpanFilter(ctx context.Context, _ *SpanEnv) ([]*loop_span.FilterField, error) {

@@ -38,6 +38,7 @@ type MultiModalSpec struct {
 	MaxFileCount     int64    `json:"max_file_count,omitempty"`
 	MaxFileSize      int64    `json:"max_file_size,omitempty"`
 	SupportedFormats []string `json:"supported_formats,omitempty"`
+	MaxPartCount     int32    `json:"max_part_count,omitempty"`
 }
 
 type FieldDisplayFormat int64

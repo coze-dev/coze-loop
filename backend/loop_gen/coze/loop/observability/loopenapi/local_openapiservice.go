@@ -43,6 +43,69 @@ func (l *LocalOpenAPIService) IngestTraces(ctx context.Context, req *openapi.Ing
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalOpenAPIService) OtelIngestTraces(ctx context.Context, req *openapi.OtelIngestTracesRequest, callOptions ...callopt.Option) (*openapi.OtelIngestTracesResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceOtelIngestTracesArgs)
+		result := out.(*openapi.OpenAPIServiceOtelIngestTracesResult)
+		resp, err := l.impl.OtelIngestTraces(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceOtelIngestTracesArgs{Req: req}
+	result := &openapi.OpenAPIServiceOtelIngestTracesResult{}
+	ctx = l.injectRPCInfo(ctx, "OtelIngestTraces")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalOpenAPIService) SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (*openapi.SearchTraceOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceSearchTraceOApiArgs)
+		result := out.(*openapi.OpenAPIServiceSearchTraceOApiResult)
+		resp, err := l.impl.SearchTraceOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceSearchTraceOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceSearchTraceOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "SearchTraceOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalOpenAPIService) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (*openapi.ListSpansOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceListSpansOApiArgs)
+		result := out.(*openapi.OpenAPIServiceListSpansOApiResult)
+		resp, err := l.impl.ListSpansOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceListSpansOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceListSpansOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListSpansOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalOpenAPIService) CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (*openapi.CreateAnnotationResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.OpenAPIServiceCreateAnnotationArgs)

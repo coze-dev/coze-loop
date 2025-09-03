@@ -29,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -38,23 +39,27 @@ type IExperimentApplication interface {
 	service.ExptSchedulerEvent
 	service.ExptItemEvalEvent
 	service.ExptAggrResultService
+	service.IExptResultExportService
 }
 
 type experimentApplication struct {
 	idgen idgen.IIDGenerator
 	// tupleSvc  service.IExptTupleService
-	manager   service.IExptManager
-	resultSvc service.ExptResultService
-	configer  component.IConfiger
-	auth      rpc.IAuthProvider
+	manager       service.IExptManager
+	resultSvc     service.ExptResultService
+	configer      component.IConfiger
+	auth          rpc.IAuthProvider
+	tagRPCAdapter rpc.ITagRPCAdapter
 
 	service.ExptSchedulerEvent
 	service.ExptItemEvalEvent
 	service.ExptAggrResultService
+	service.IExptResultExportService
 	userInfoService userinfo.UserInfoService
 
 	evalTargetService        service.IEvalTargetService
 	evaluationSetItemService service.EvaluationSetItemService
+	annotateService          service.IExptAnnotateService
 }
 
 func NewExperimentApplication(
@@ -70,6 +75,9 @@ func NewExperimentApplication(
 	userInfoService userinfo.UserInfoService,
 	evalTargetService service.IEvalTargetService,
 	evaluationSetItemService service.EvaluationSetItemService,
+	annotateService service.IExptAnnotateService,
+	tagRPCAdapter rpc.ITagRPCAdapter,
+	exptResultExportService service.IExptResultExportService,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc: resultSvc,
@@ -84,13 +92,13 @@ func NewExperimentApplication(
 		userInfoService:          userInfoService,
 		evalTargetService:        evalTargetService,
 		evaluationSetItemService: evaluationSetItemService,
+		annotateService:          annotateService,
+		tagRPCAdapter:            tagRPCAdapter,
+		IExptResultExportService: exptResultExportService,
 	}
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
-	if req.CreateEvalTargetParam == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
-	}
 	session := entity.NewSession(ctx)
 	if req.Session != nil && req.Session.UserID != nil {
 		session = &entity.Session{
@@ -136,6 +144,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		MaxAliveTime:          req.MaxAliveTime,
 		SourceType:            req.SourceType,
 		SourceID:              req.SourceID,
+		TargetRuntimeParam:    req.TargetRuntimeParam,
 		Session:               req.Session,
 	})
 	if err != nil {
@@ -527,17 +536,33 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 }
 
 func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest) (r *expt.BatchGetExperimentResultResponse, err error) {
+	// 1. 如果指定了 BaselineExperimentID，先查出其真实的 SpaceID
+	var actualSpaceID int64
+	if req.BaselineExperimentID != nil {
+		session := entity.NewSession(ctx)
+		baseExpt, err := e.manager.Get(ctx, *req.BaselineExperimentID, req.WorkspaceID, session)
+		if err != nil {
+			return nil, err
+		}
+		actualSpaceID = baseExpt.SpaceID // 从实验信息中提取 SpaceID
+	} else {
+		// 如果没有指定 BaselineExperimentID，使用请求中的 WorkspaceID
+		actualSpaceID = req.WorkspaceID
+	}
+
+	// 2. 使用查出的真实 SpaceID 进行权限校验
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
-		SpaceID:       req.WorkspaceID,
+		ObjectID:      strconv.FormatInt(actualSpaceID, 10),
+		SpaceID:       actualSpaceID,
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
 	}
 	page := entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize()))
+	// 3. 构建查询参数，使用真实的 SpaceID
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:        req.GetWorkspaceID(),
+		SpaceID:        actualSpaceID, // 使用查出的真实 SpaceID
 		ExptIDs:        req.GetExperimentIds(),
 		BaseExptID:     req.BaselineExperimentID,
 		Page:           page,
@@ -546,17 +571,19 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 	if err = buildExptTurnResultFilter(req, param); err != nil {
 		return nil, err
 	}
-	columnEvaluators, columnEvalSetFields, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+	columnEvaluators, exptColumnEvaluators, columnEvalSetFields, exptColumnAnnotations, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &expt.BatchGetExperimentResultResponse{
-		ColumnEvalSetFields: experiment.ColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
-		ColumnEvaluators:    experiment.ColumnEvaluatorsDO2DTOs(columnEvaluators),
-		Total:               gptr.Of(total),
-		ItemResults:         experiment.ItemResultsDO2DTOs(itemResults),
-		BaseResp:            base.NewBaseResp(),
+		ColumnEvalSetFields:   experiment.ColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
+		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(columnEvaluators),
+		ExptColumnEvaluators:  experiment.ExptColumnEvaluatorsDO2DTOs(exptColumnEvaluators),
+		ExptColumnAnnotations: experiment.ExptColumnAnnotationDO2DTOs(exptColumnAnnotations),
+		Total:                 gptr.Of(total),
+		ItemResults:           experiment.ItemResultsDO2DTOs(itemResults),
+		BaseResp:              base.NewBaseResp(),
 	}
 
 	return resp, nil
@@ -778,4 +805,275 @@ func hasDuplicates(slice []int64) bool {
 	}
 
 	return false
+}
+
+func (e *experimentApplication) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq) (r *expt.AssociateAnnotationTagResp, err error) {
+	session := entity.NewSession(ctx)
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tagRef := &entity.ExptTurnResultTagRef{
+		SpaceID:  req.GetWorkspaceID(),
+		ExptID:   req.GetExptID(),
+		TagKeyID: req.GetTagKeyID(),
+	}
+	err = e.annotateService.CreateExptTurnResultTagRefs(ctx, []*entity.ExptTurnResultTagRef{tagRef})
+	if err != nil {
+		return nil, err
+	}
+	return &expt.AssociateAnnotationTagResp{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq) (r *expt.CreateAnnotateRecordResp, err error) {
+	session := entity.NewSession(ctx)
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	record := req.AnnotateRecord
+	recordDO := &entity.AnnotateRecord{
+		ID:           id,
+		TagKeyID:     record.GetTagKeyID(),
+		SpaceID:      req.GetWorkspaceID(),
+		ExperimentID: req.GetExptID(),
+		TagValueID:   record.GetTagValueID(),
+		AnnotateData: &entity.AnnotateData{
+			TextValue:      record.PlainText,
+			BoolValue:      record.BooleanOption,
+			Option:         record.CategoricalOption,
+			TagContentType: entity.TagContentType(record.GetTagContentType()),
+		},
+	}
+
+	if record.Score != nil {
+		score, err := strconv.ParseFloat(ptr.From(record.Score), 64)
+		if err != nil {
+			return nil, err
+		}
+		recordDO.AnnotateData.Score = &score
+	}
+
+	err = e.annotateService.SaveAnnotateRecord(ctx, req.GetExptID(), req.GetItemID(), req.GetTurnID(), recordDO)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.CreateAnnotateRecordResp{
+		AnnotateRecordID: id,
+		BaseResp:         base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq) (r *expt.UpdateAnnotateRecordResp, err error) {
+	session := entity.NewSession(ctx)
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	record := req.AnnotateRecords
+	recordDO := &entity.AnnotateRecord{
+		ID:           record.GetAnnotateRecordID(),
+		TagKeyID:     record.GetTagKeyID(),
+		SpaceID:      req.GetWorkspaceID(),
+		ExperimentID: req.GetExptID(),
+		TagValueID:   record.GetTagValueID(),
+		AnnotateData: &entity.AnnotateData{
+			TextValue:      record.PlainText,
+			BoolValue:      record.BooleanOption,
+			Option:         record.CategoricalOption,
+			TagContentType: entity.TagContentType(record.GetTagContentType()),
+		},
+	}
+	if record.Score != nil {
+		score, err := strconv.ParseFloat(ptr.From(record.Score), 64)
+		if err != nil {
+			return nil, err
+		}
+		recordDO.AnnotateData.Score = &score
+	}
+	err = e.annotateService.UpdateAnnotateRecord(ctx, req.GetItemID(), req.GetTurnID(), recordDO)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.UpdateAnnotateRecordResp{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq) (r *expt.DeleteAnnotationTagResp, err error) {
+	session := entity.NewSession(ctx)
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.annotateService.DeleteExptTurnResultTagRef(ctx, req.GetExptID(), req.GetWorkspaceID(), req.GetTagKeyID())
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.DeleteAnnotationTagResp{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest) (r *expt.ExportExptResultResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	if !e.configer.GetExptExportWhiteList(ctx).IsUserIDInWhiteList(session.UserID) {
+		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+			OwnerID:         gptr.Of(got.CreatedBy),
+			ResourceSpaceID: req.GetWorkspaceID(),
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	exportID, err := e.ExportCSV(ctx, req.GetWorkspaceID(), req.GetExptID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.ExportExptResultResponse{
+		ExportID: exportID,
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest) (r *expt.ListExptResultExportRecordResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	if !e.configer.GetExptExportWhiteList(ctx).IsUserIDInWhiteList(session.UserID) {
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+			SpaceID:       req.WorkspaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	page := entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize()))
+	records, total, err := e.ListExportRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), page)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]*domain_expt.ExptResultExportRecord, 0)
+	for _, record := range records {
+		dtos = append(dtos, experiment.ExportRecordDO2DTO(record))
+	}
+
+	userCarriers := make([]userinfo.UserInfoCarrier, 0, len(dtos))
+	for _, dto := range dtos {
+		userCarriers = append(userCarriers, dto)
+	}
+
+	e.userInfoService.PackUserInfo(ctx, userCarriers)
+
+	return &expt.ListExptResultExportRecordResponse{
+		ExptResultExportRecords: dtos,
+		Total:                   ptr.Of(total),
+		BaseResp:                base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest) (r *expt.GetExptResultExportRecordResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	if !e.configer.GetExptExportWhiteList(ctx).IsUserIDInWhiteList(session.UserID) {
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+			SpaceID:       req.WorkspaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	record, err := e.GetExptExportRecord(ctx, req.WorkspaceID, req.ExportID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.GetExptResultExportRecordResponse{
+		ExptResultExportRecord: experiment.ExportRecordDO2DTO(record),
+		BaseResp:               base.NewBaseResp(),
+	}, nil
 }

@@ -305,9 +305,13 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 	)
 
 	for _, etids := range tupleIDs {
-		versionedTargetIDs = append(versionedTargetIDs, etids.VersionedTargetID)
 		versionedEvalSetIDs = append(versionedEvalSetIDs, etids.VersionedEvalSetID)
-		evaluatorVersionIDs = append(evaluatorVersionIDs, etids.EvaluatorVersionIDs...)
+		if etids.VersionedTargetID != nil {
+			versionedTargetIDs = append(versionedTargetIDs, etids.VersionedTargetID)
+		}
+		if len(etids.EvaluatorVersionIDs) > 0 {
+			evaluatorVersionIDs = append(evaluatorVersionIDs, etids.EvaluatorVersionIDs...)
+		}
 	}
 
 	pool, err := goroutine.NewPool(3)
@@ -414,51 +418,80 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 
 	res := make([]*entity.ExptTuple, 0, len(tupleIDs))
 	for _, tupleIDs := range tupleIDs {
-		cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
-		for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
-			cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
+		//cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
+		//for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
+		//	cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
+		//}
+		tuple := &entity.ExptTuple{
+			EvalSet: evalSetMap[tupleIDs.VersionedEvalSetID.VersionID],
+			// Evaluators: cevaluators,
 		}
-		res = append(res, &entity.ExptTuple{
-			Target:     targetMap[tupleIDs.VersionedTargetID.VersionID],
-			EvalSet:    evalSetMap[tupleIDs.VersionedEvalSetID.VersionID],
-			Evaluators: cevaluators,
-		})
+		if tupleIDs.VersionedTargetID != nil {
+			tuple.Target = targetMap[tupleIDs.VersionedTargetID.VersionID]
+		}
+		if len(tupleIDs.EvaluatorVersionIDs) > 0 {
+			cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
+			for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
+				cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
+			}
+			tuple.Evaluators = cevaluators
+		}
+		res = append(res, tuple)
 	}
 
 	return res, nil
 }
 
 func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experiment) *entity.ExptTupleID {
-	evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
-	for _, ref := range expt.EvaluatorVersionRef {
-		evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
-	}
+	//evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
+	//for _, ref := range expt.EvaluatorVersionRef {
+	//	evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
+	//}
 
 	exptTupleID := &entity.ExptTupleID{
-		VersionedTargetID: &entity.VersionedTargetID{
-			TargetID:  expt.TargetID,
-			VersionID: expt.TargetVersionID,
-		},
 		VersionedEvalSetID: &entity.VersionedEvalSetID{
 			EvalSetID: expt.EvalSetID,
 			VersionID: expt.EvalSetVersionID,
 		},
-		EvaluatorVersionIDs: evaluatorVersionIDs,
+		// EvaluatorVersionIDs: evaluatorVersionIDs,
+	}
+
+	if expt.TargetID > 0 || expt.TargetVersionID > 0 {
+		exptTupleID.VersionedTargetID = &entity.VersionedTargetID{
+			TargetID:  expt.TargetID,
+			VersionID: expt.TargetVersionID,
+		}
+	}
+
+	if len(expt.EvaluatorVersionRef) > 0 {
+		evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
+		for _, ref := range expt.EvaluatorVersionRef {
+			evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
+		}
+		exptTupleID.EvaluatorVersionIDs = evaluatorVersionIDs
 	}
 
 	return exptTupleID
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
-	if req.ExptType == entity.ExptType_Online {
+	if req.ExptType == entity.ExptType_Online && req.CreateEvalTargetParam != nil {
 		req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
 	}
 
-	targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
-		entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
-		entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)))
-	if err != nil {
-		return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", json.Jsonify(req.CreateEvalTargetParam))
+	var versionedTargetID *entity.VersionedTargetID
+	if !req.CreateEvalTargetParam.IsNull() {
+		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
+			entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
+			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)))
+		if err != nil {
+			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", json.Jsonify(req.CreateEvalTargetParam))
+		}
+
+		versionedTargetID = &entity.VersionedTargetID{
+			TargetID:  targetID,
+			VersionID: targetVersionID,
+		}
 	}
 
 	tuple, err := e.getExptTupleByID(ctx, &entity.ExptTupleID{
@@ -466,10 +499,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			EvalSetID: req.EvalSetID,
 			VersionID: req.EvalSetVersionID,
 		},
-		VersionedTargetID: &entity.VersionedTargetID{
-			TargetID:  targetID,
-			VersionID: targetVersionID,
-		},
+		VersionedTargetID:   versionedTargetID,
 		EvaluatorVersionIDs: req.EvaluatorVersionIds,
 	}, req.WorkspaceID, session)
 	if err != nil {
@@ -496,10 +526,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			FieldType: entity.FieldTypeEvaluator,
 		})
 	}
-	// toEntity, err := experiment.NewEvalConfConvert().ConvertToEntity(req)
-	// if err != nil {
-	//	return nil, err
-	// }
+
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
@@ -508,9 +535,6 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Description:         req.Desc,
 		EvalSetVersionID:    req.EvalSetVersionID,
 		EvalSetID:           req.EvalSetID,
-		TargetVersionID:     targetVersionID,
-		TargetType:          gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
-		TargetID:            targetID,
 		EvaluatorVersionRef: evaluatorRefs,
 		EvalConf:            req.ExptConf,
 		Status:              entity.ExptStatus_Pending,
@@ -524,11 +548,16 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
 	}
-	if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
-		do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = targetVersionID
+
+	if req.CreateEvalTargetParam != nil {
+		do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		do.TargetID = versionedTargetID.TargetID
+		do.TargetVersionID = versionedTargetID.VersionID
+		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
+			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID
+		}
 	}
 
-	// te := &entity.TupleExpt{Expt: do, ExptTuple: tuple}
 	err = e.CheckRun(ctx, do, req.WorkspaceID, session, entity.WithCheckBenefit())
 	if err != nil {
 		return nil, err

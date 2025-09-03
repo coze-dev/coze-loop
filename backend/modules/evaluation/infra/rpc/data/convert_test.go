@@ -14,543 +14,526 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-func TestConvert2DatasetOrderBys(t *testing.T) {
+func TestConvert2EvaluationSetFieldData(t *testing.T) {
+	ctx := context.Background()
+
 	tests := []struct {
 		name     string
-		orderBys []*entity.OrderBy
-		want     []*dataset.OrderBy
+		input    *dataset.FieldData
+		expected *entity.FieldData
 	}{
 		{
-			name:     "empty order bys",
-			orderBys: nil,
-			want:     nil,
+			name:     "nil_input",
+			input:    nil,
+			expected: nil,
 		},
 		{
-			name: "single order by",
-			orderBys: []*entity.OrderBy{
-				{
-					Field: gptr.Of("field1"),
-					IsAsc: gptr.Of(true),
-				},
+			name: "empty_field_data",
+			input: &dataset.FieldData{
+				Key:  gptr.Of(""),
+				Name: gptr.Of(""),
 			},
-			want: []*dataset.OrderBy{
-				{
-					Field: gptr.Of("field1"),
-					IsAsc: gptr.Of(true),
-				},
-			},
-		},
-		{
-			name: "multiple order bys",
-			orderBys: []*entity.OrderBy{
-				{
-					Field: gptr.Of("field1"),
-					IsAsc: gptr.Of(true),
-				},
-				{
-					Field: gptr.Of("field2"),
-					IsAsc: gptr.Of(true),
-				},
-			},
-			want: []*dataset.OrderBy{
-				{
-					Field: gptr.Of("field1"),
-					IsAsc: gptr.Of(true),
-				},
-				{
-					Field: gptr.Of("field2"),
-					IsAsc: gptr.Of(true),
+			expected: &entity.FieldData{
+				Key:  "",
+				Name: "",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("<UNSET>")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(0)),
+					Text:        nil,
+					Image:       nil,
+					Audio:       nil,
+					MultiPart:   nil,
 				},
 			},
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2DatasetOrderBys(context.Background(), tt.orderBys)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestConvert2DatasetMultiModalSpec(t *testing.T) {
-	tests := []struct {
-		name           string
-		multiModalSpec *entity.MultiModalSpec
-		want           *dataset.MultiModalSpec
-	}{
 		{
-			name:           "nil spec",
-			multiModalSpec: nil,
-			want:           nil,
-		},
-		{
-			name: "valid spec",
-			multiModalSpec: &entity.MultiModalSpec{
-				MaxFileCount:     10,
-				MaxFileSize:      1024,
-				SupportedFormats: []string{"jpg", "png"},
+			name: "basic_key_name",
+			input: &dataset.FieldData{
+				Key:  gptr.Of("test_key"),
+				Name: gptr.Of("Test Name"),
 			},
-			want: &dataset.MultiModalSpec{
-				MaxFileCount:     gptr.Of(int64(10)),
-				MaxFileSize:      gptr.Of(int64(1024)),
-				SupportedFormats: []string{"jpg", "png"},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2DatasetMultiModalSpec(context.Background(), tt.multiModalSpec)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestConvert2DatasetFieldSchemas(t *testing.T) {
-	tests := []struct {
-		name    string
-		schemas []*entity.FieldSchema
-		want    []*dataset.FieldSchema
-		wantErr bool
-	}{
-		{
-			name:    "empty schemas",
-			schemas: nil,
-			want:    nil,
-			wantErr: false,
-		},
-		{
-			name: "valid schemas",
-			schemas: []*entity.FieldSchema{
-				{
-					Key:                  "test_key",
-					Name:                 "Test Name",
-					Description:          "Test Description",
-					ContentType:          entity.ContentTypeText,
-					DefaultDisplayFormat: entity.FieldDisplayFormat_PlainText,
-					Status:               entity.FieldStatus_Available,
-					TextSchema:           "test_schema",
-					Hidden:               false,
+			expected: &entity.FieldData{
+				Key:  "test_key",
+				Name: "Test Name",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("<UNSET>")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(0)),
+					Text:        nil,
+					Image:       nil,
+					Audio:       nil,
+					MultiPart:   nil,
 				},
 			},
-			want: []*dataset.FieldSchema{
-				{
-					Key:           gptr.Of("test_key"),
-					Name:          gptr.Of("Test Name"),
-					Description:   gptr.Of("Test Description"),
-					ContentType:   gptr.Of(dataset.ContentType_Text),
-					DefaultFormat: gptr.Of(dataset.FieldDisplayFormat_PlainText),
-					Status:        gptr.Of(dataset.FieldStatus_Available),
-					TextSchema:    gptr.Of("test_schema"),
-					Hidden:        gptr.Of(false),
+		},
+		{
+			name: "text_content",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("text_key"),
+				Name:        gptr.Of("Text Field"),
+				ContentType: gptr.Of(dataset.ContentType_Text),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Hello, World!"),
+			},
+			expected: &entity.FieldData{
+				Key:  "text_key",
+				Name: "Text Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("Text")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Hello, World!"),
+					Image:       nil,
+					Audio:       nil,
+					MultiPart:   nil,
 				},
 			},
-			wantErr: false,
 		},
 		{
-			name: "invalid content type",
-			schemas: []*entity.FieldSchema{
-				{
-					Key:         "test_key",
-					ContentType: "invalid_type",
+			name: "with_content_type_and_format",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("formatted_key"),
+				Name:        gptr.Of("Formatted Field"),
+				ContentType: gptr.Of(dataset.ContentType_Text),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_Markdown),
+				Content:     gptr.Of("# Markdown Content"),
+			},
+			expected: &entity.FieldData{
+				Key:  "formatted_key",
+				Name: "Formatted Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("Text")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(2)),
+					Text:        gptr.Of("# Markdown Content"),
+					Image:       nil,
+					Audio:       nil,
+					MultiPart:   nil,
 				},
 			},
-			want:    nil,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert2DatasetFieldSchemas(context.Background(), tt.schemas)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
-func TestConvert2DatasetData(t *testing.T) {
-	tests := []struct {
-		name    string
-		turns   []*entity.Turn
-		want    []*dataset.FieldData
-		wantErr bool
-	}{
-		{
-			name:    "nil turns",
-			turns:   nil,
-			want:    nil,
-			wantErr: false,
 		},
 		{
-			name:    "empty turns",
-			turns:   []*entity.Turn{},
-			want:    nil,
-			wantErr: false,
+			name: "image_attachment",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("image_key"),
+				Name:        gptr.Of("Image Field"),
+				ContentType: gptr.Of(dataset.ContentType_Image),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Image description"),
+				Attachments: []*dataset.ObjectStorage{
+					{
+						Name:     gptr.Of("test.jpg"),
+						URL:      gptr.Of("https://example.com/test.jpg"),
+						URI:      gptr.Of("tos://bucket/test.jpg"),
+						ThumbURL: gptr.Of("https://example.com/test_thumb.jpg"),
+						Provider: gptr.Of(dataset.StorageProvider_TOS),
+					},
+				},
+			},
+			expected: &entity.FieldData{
+				Key:  "image_key",
+				Name: "Image Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("Image")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Image description"),
+					Image: &entity.Image{
+						Name:            gptr.Of("test.jpg"),
+						URL:             gptr.Of("https://example.com/test.jpg"),
+						URI:             gptr.Of("tos://bucket/test.jpg"),
+						ThumbURL:        gptr.Of("https://example.com/test_thumb.jpg"),
+						StorageProvider: gptr.Of(entity.StorageProvider_TOS),
+					},
+					Audio:     nil,
+					MultiPart: nil,
+				},
+			},
 		},
 		{
-			name: "valid turns",
-			turns: []*entity.Turn{
-				{
-					FieldDataList: []*entity.FieldData{
+			name: "audio_attachment",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("audio_key"),
+				Name:        gptr.Of("Audio Field"),
+				ContentType: gptr.Of(dataset.ContentType_Audio),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Audio description"),
+				Attachments: []*dataset.ObjectStorage{
+					{
+						Name: gptr.Of("test.mp3"),
+						URL:  gptr.Of("https://example.com/test.mp3"),
+					},
+				},
+			},
+			expected: &entity.FieldData{
+				Key:  "audio_key",
+				Name: "Audio Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("Audio")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Audio description"),
+					Image:       nil,
+					Audio: &entity.Audio{
+						Format: gptr.Of("mp3"),
+						URL:    gptr.Of("https://example.com/test.mp3"),
+					},
+					MultiPart: nil,
+				},
+			},
+		},
+		{
+			name: "mixed_attachments",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("mixed_key"),
+				Name:        gptr.Of("Mixed Field"),
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Mixed content"),
+				Attachments: []*dataset.ObjectStorage{
+					{
+						Name:     gptr.Of("image.png"),
+						URL:      gptr.Of("https://example.com/image.png"),
+						Provider: gptr.Of(dataset.StorageProvider_ImageX),
+					},
+					{
+						Name: gptr.Of("audio.wav"),
+						URL:  gptr.Of("https://example.com/audio.wav"),
+					},
+				},
+			},
+			expected: &entity.FieldData{
+				Key:  "mixed_key",
+				Name: "Mixed Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("MultiPart")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Mixed content"),
+					Image: &entity.Image{
+						Name:            gptr.Of("image.png"),
+						URL:             gptr.Of("https://example.com/image.png"),
+						StorageProvider: gptr.Of(entity.StorageProvider_ImageX),
+					},
+					Audio: &entity.Audio{
+						Format: gptr.Of("wav"),
+						URL:    gptr.Of("https://example.com/audio.wav"),
+					},
+					MultiPart: nil,
+				},
+			},
+		},
+		{
+			name: "single_part",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("part_key"),
+				Name:        gptr.Of("Part Field"),
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Main content"),
+				Parts: []*dataset.FieldData{
+					{
+						Key:         gptr.Of("part1"),
+						Name:        gptr.Of("Part 1"),
+						ContentType: gptr.Of(dataset.ContentType_Text),
+						Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+						Content:     gptr.Of("Part 1 content"),
+					},
+				},
+			},
+			expected: &entity.FieldData{
+				Key:  "part_key",
+				Name: "Part Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("MultiPart")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Main content"),
+					Image:       nil,
+					Audio:       nil,
+					MultiPart: []*entity.Content{
 						{
-							Key:  "test_key",
-							Name: "Test Name",
-							Content: &entity.Content{
-								ContentType: gptr.Of(entity.ContentTypeText),
-								Format:      gptr.Of(entity.FieldDisplayFormat_PlainText),
-								Text:        gptr.Of("test content"),
+							ContentType: gptr.Of(entity.ContentType("Text")),
+							Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+							Text:        gptr.Of("Part 1 content"),
+							Image:       nil,
+							Audio:       nil,
+							MultiPart:   nil,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple_parts",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("multi_part_key"),
+				Name:        gptr.Of("Multi Part Field"),
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_JSON),
+				Content:     gptr.Of("Main content"),
+				Parts: []*dataset.FieldData{
+					{
+						Key:         gptr.Of("part1"),
+						Name:        gptr.Of("Part 1"),
+						ContentType: gptr.Of(dataset.ContentType_Text),
+						Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+						Content:     gptr.Of("Part 1 content"),
+					},
+					{
+						Key:         gptr.Of("part2"),
+						Name:        gptr.Of("Part 2"),
+						ContentType: gptr.Of(dataset.ContentType_Image),
+						Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+						Content:     gptr.Of("Part 2 content"),
+						Attachments: []*dataset.ObjectStorage{
+							{
+								Name: gptr.Of("part2.jpg"),
+								URL:  gptr.Of("https://example.com/part2.jpg"),
 							},
 						},
 					},
 				},
 			},
-			want: []*dataset.FieldData{
-				{
-					Key:         gptr.Of("test_key"),
-					Name:        gptr.Of("Test Name"),
-					ContentType: gptr.Of(dataset.ContentType_Text),
-					Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
-					Content:     gptr.Of("test content"),
-				},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert2DatasetData(context.Background(), tt.turns)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
-func TestConvert2DatasetFieldData(t *testing.T) {
-	tests := []struct {
-		name      string
-		fieldData *entity.FieldData
-		want      *dataset.FieldData
-		wantErr   bool
-	}{
-		{
-			name:      "nil field data",
-			fieldData: nil,
-			want:      nil,
-			wantErr:   false,
-		},
-		{
-			name: "valid field data",
-			fieldData: &entity.FieldData{
-				Key:  "test_key",
-				Name: "Test Name",
+			expected: &entity.FieldData{
+				Key:  "multi_part_key",
+				Name: "Multi Part Field",
 				Content: &entity.Content{
-					ContentType: gptr.Of(entity.ContentTypeText),
-					Format:      gptr.Of(entity.FieldDisplayFormat_PlainText),
-					Text:        gptr.Of("test content"),
+					ContentType: gptr.Of(entity.ContentType("MultiPart")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(3)),
+					Text:        gptr.Of("Main content"),
+					Image:       nil,
+					Audio:       nil,
+					MultiPart: []*entity.Content{
+						{
+							ContentType: gptr.Of(entity.ContentType("Text")),
+							Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+							Text:        gptr.Of("Part 1 content"),
+							Image:       nil,
+							Audio:       nil,
+							MultiPart:   nil,
+						},
+						{
+							ContentType: gptr.Of(entity.ContentType("Image")),
+							Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+							Text:        gptr.Of("Part 2 content"),
+							Image: &entity.Image{
+								Name: gptr.Of("part2.jpg"),
+								URL:  gptr.Of("https://example.com/part2.jpg"),
+							},
+							Audio:     nil,
+							MultiPart: nil,
+						},
+					},
 				},
 			},
-			want: &dataset.FieldData{
-				Key:         gptr.Of("test_key"),
-				Name:        gptr.Of("Test Name"),
-				ContentType: gptr.Of(dataset.ContentType_Text),
+		},
+		{
+			name: "nested_parts",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("nested_key"),
+				Name:        gptr.Of("Nested Field"),
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
 				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
-				Content:     gptr.Of("test content"),
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert2DatasetFieldData(context.Background(), tt.fieldData)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
-func TestConvert2DatasetItem(t *testing.T) {
-	tests := []struct {
-		name    string
-		item    *entity.EvaluationSetItem
-		want    *dataset.DatasetItem
-		wantErr bool
-	}{
-		{
-			name:    "nil item",
-			item:    nil,
-			want:    nil,
-			wantErr: false,
-		},
-		{
-			name: "valid item",
-			item: &entity.EvaluationSetItem{
-				ID:              1,
-				AppID:           int32(2),
-				SpaceID:         3,
-				EvaluationSetID: 4,
-				SchemaID:        5,
-				ItemID:          1,
-				ItemKey:         "key1",
-				Turns: []*entity.Turn{
+				Content:     gptr.Of("Root content"),
+				Parts: []*dataset.FieldData{
 					{
-						FieldDataList: []*entity.FieldData{
+						Key:         gptr.Of("level1"),
+						Name:        gptr.Of("Level 1"),
+						ContentType: gptr.Of(dataset.ContentType_MultiPart),
+						Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+						Content:     gptr.Of("Level 1 content"),
+						Parts: []*dataset.FieldData{
 							{
-								Key:  "test_key",
-								Name: "Test Name",
-								Content: &entity.Content{
-									ContentType: gptr.Of(entity.ContentTypeText),
-									Format:      gptr.Of(entity.FieldDisplayFormat_PlainText),
-									Text:        gptr.Of("test content"),
+								Key:         gptr.Of("level2"),
+								Name:        gptr.Of("Level 2"),
+								ContentType: gptr.Of(dataset.ContentType_Text),
+								Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+								Content:     gptr.Of("Level 2 content"),
+							},
+						},
+					},
+				},
+			},
+			expected: &entity.FieldData{
+				Key:  "nested_key",
+				Name: "Nested Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("MultiPart")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Root content"),
+					Image:       nil,
+					Audio:       nil,
+					MultiPart: []*entity.Content{
+						{
+							ContentType: gptr.Of(entity.ContentType("MultiPart")),
+							Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+							Text:        gptr.Of("Level 1 content"),
+							Image:       nil,
+							Audio:       nil,
+							MultiPart: []*entity.Content{
+								{
+									ContentType: gptr.Of(entity.ContentType("Text")),
+									Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+									Text:        gptr.Of("Level 2 content"),
+									Image:       nil,
+									Audio:       nil,
+									MultiPart:   nil,
 								},
 							},
 						},
 					},
 				},
 			},
-			want: &dataset.DatasetItem{
-				ID:        gptr.Of(int64(1)),
-				AppID:     gptr.Of(int32(2)),
-				SpaceID:   gptr.Of(int64(3)),
-				DatasetID: gptr.Of(int64(4)),
-				SchemaID:  gptr.Of(int64(5)),
-				ItemID:    gptr.Of(int64(1)),
-				ItemKey:   gptr.Of("key1"),
-				Data: []*dataset.FieldData{
+		},
+		{
+			name: "complex_nested_with_multimedia",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("complex_key"),
+				Name:        gptr.Of("Complex Field"),
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_Markdown),
+				Content:     gptr.Of("# Complex Content"),
+				Attachments: []*dataset.ObjectStorage{
 					{
-						Key:         gptr.Of("test_key"),
-						Name:        gptr.Of("Test Name"),
+						Name: gptr.Of("main.png"),
+						URL:  gptr.Of("https://example.com/main.png"),
+					},
+				},
+				Parts: []*dataset.FieldData{
+					{
+						Key:         gptr.Of("text_part"),
+						Name:        gptr.Of("Text Part"),
 						ContentType: gptr.Of(dataset.ContentType_Text),
 						Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
-						Content:     gptr.Of("test content"),
+						Content:     gptr.Of("Text part content"),
+					},
+					{
+						Key:         gptr.Of("media_part"),
+						Name:        gptr.Of("Media Part"),
+						ContentType: gptr.Of(dataset.ContentType_MultiPart),
+						Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+						Content:     gptr.Of("Media part content"),
+						Attachments: []*dataset.ObjectStorage{
+							{
+								Name: gptr.Of("media.jpg"),
+								URL:  gptr.Of("https://example.com/media.jpg"),
+							},
+							{
+								Name: gptr.Of("sound.mp3"),
+								URL:  gptr.Of("https://example.com/sound.mp3"),
+							},
+						},
+						Parts: []*dataset.FieldData{
+							{
+								Key:         gptr.Of("nested_audio"),
+								Name:        gptr.Of("Nested Audio"),
+								ContentType: gptr.Of(dataset.ContentType_Audio),
+								Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+								Content:     gptr.Of("Nested audio content"),
+								Attachments: []*dataset.ObjectStorage{
+									{
+										Name: gptr.Of("nested.wav"),
+										URL:  gptr.Of("https://example.com/nested.wav"),
+									},
+								},
+							},
+						},
 					},
 				},
 			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert2DatasetItem(context.Background(), tt.item)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
-func TestConvert2EvaluationSetSpec(t *testing.T) {
-	tests := []struct {
-		name string
-		spec *dataset.DatasetSpec
-		want *entity.DatasetSpec
-	}{
-		{
-			name: "nil spec",
-			spec: nil,
-			want: nil,
-		},
-		{
-			name: "valid spec",
-			spec: &dataset.DatasetSpec{
-				MaxFieldCount: gptr.Of(int32(10)),
-				MaxItemCount:  gptr.Of(int64(100)),
-				MaxItemSize:   gptr.Of(int64(1024)),
-			},
-			want: &entity.DatasetSpec{
-				MaxFieldCount: 10,
-				MaxItemCount:  100,
-				MaxItemSize:   1024,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2EvaluationSetSpec(context.Background(), tt.spec)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestConvert2DatasetFeatures(t *testing.T) {
-	tests := []struct {
-		name     string
-		features *dataset.DatasetFeatures
-		want     *entity.DatasetFeatures
-	}{
-		{
-			name:     "nil features",
-			features: nil,
-			want:     nil,
-		},
-		{
-			name: "valid features",
-			features: &dataset.DatasetFeatures{
-				EditSchema:   gptr.Of(true),
-				RepeatedData: gptr.Of(true),
-				MultiModal:   gptr.Of(true),
-			},
-			want: &entity.DatasetFeatures{
-				EditSchema:   true,
-				RepeatedData: true,
-				MultiModal:   true,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2DatasetFeatures(context.Background(), tt.features)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestConvert2EvaluationSetMultiModalSpec(t *testing.T) {
-	tests := []struct {
-		name           string
-		multiModalSpec *dataset.MultiModalSpec
-		want           *entity.MultiModalSpec
-	}{
-		{
-			name:           "nil spec",
-			multiModalSpec: nil,
-			want:           nil,
-		},
-		{
-			name: "valid spec",
-			multiModalSpec: &dataset.MultiModalSpec{
-				MaxFileCount:     gptr.Of(int64(10)),
-				MaxFileSize:      gptr.Of(int64(1024)),
-				SupportedFormats: []string{"jpg", "png"},
-			},
-			want: &entity.MultiModalSpec{
-				MaxFileCount:     10,
-				MaxFileSize:      1024,
-				SupportedFormats: []string{"jpg", "png"},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2EvaluationSetMultiModalSpec(context.Background(), tt.multiModalSpec)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestConvert2EvaluationSetFieldSchemas(t *testing.T) {
-	tests := []struct {
-		name    string
-		schemas []*dataset.FieldSchema
-		want    []*entity.FieldSchema
-	}{
-		{
-			name:    "empty schemas",
-			schemas: nil,
-			want:    nil,
-		},
-		{
-			name: "valid schemas",
-			schemas: []*dataset.FieldSchema{
-				{
-					Key:         gptr.Of("test_key"),
-					Name:        gptr.Of("Test Name"),
-					Description: gptr.Of("Test Description"),
-					TextSchema:  gptr.Of("test_schema"),
-					Hidden:      gptr.Of(false),
-					ContentType: gptr.Of(dataset.ContentType_Text),
-					MultiModelSpec: &dataset.MultiModalSpec{
-						MaxFileCount:     gptr.Of(int64(10)),
-						MaxFileSize:      gptr.Of(int64(1024)),
-						SupportedFormats: []string{"jpg", "png"},
+			expected: &entity.FieldData{
+				Key:  "complex_key",
+				Name: "Complex Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("MultiPart")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(2)),
+					Text:        gptr.Of("# Complex Content"),
+					Image: &entity.Image{
+						Name: gptr.Of("main.png"),
+						URL:  gptr.Of("https://example.com/main.png"),
 					},
-				},
-			},
-			want: []*entity.FieldSchema{
-				{
-					Key:         "test_key",
-					Name:        "Test Name",
-					Description: "Test Description",
-					TextSchema:  "test_schema",
-					Hidden:      false,
-					ContentType: entity.ContentTypeText,
-					MultiModelSpec: &entity.MultiModalSpec{
-						MaxFileCount:     10,
-						MaxFileSize:      1024,
-						SupportedFormats: []string{"jpg", "png"},
+					Audio: nil,
+					MultiPart: []*entity.Content{
+						{
+							ContentType: gptr.Of(entity.ContentType("Text")),
+							Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+							Text:        gptr.Of("Text part content"),
+							Image:       nil,
+							Audio:       nil,
+							MultiPart:   nil,
+						},
+						{
+							ContentType: gptr.Of(entity.ContentType("MultiPart")),
+							Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+							Text:        gptr.Of("Media part content"),
+							Image: &entity.Image{
+								Name: gptr.Of("media.jpg"),
+								URL:  gptr.Of("https://example.com/media.jpg"),
+							},
+							Audio: &entity.Audio{
+								Format: gptr.Of("mp3"),
+								URL:    gptr.Of("https://example.com/sound.mp3"),
+							},
+							MultiPart: []*entity.Content{
+								{
+									ContentType: gptr.Of(entity.ContentType("Audio")),
+									Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+									Text:        gptr.Of("Nested audio content"),
+									Image:       nil,
+									Audio: &entity.Audio{
+										Format: gptr.Of("wav"),
+										URL:    gptr.Of("https://example.com/nested.wav"),
+									},
+									MultiPart: nil,
+								},
+							},
+						},
 					},
 				},
 			},
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2EvaluationSetFieldSchemas(context.Background(), tt.schemas)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestConvert2EvaluationSetFieldSchema(t *testing.T) {
-	tests := []struct {
-		name   string
-		schema *dataset.FieldSchema
-		want   *entity.FieldSchema
-	}{
 		{
-			name:   "nil schema",
-			schema: nil,
-			want:   nil,
-		},
-		{
-			name: "valid schema",
-			schema: &dataset.FieldSchema{
-				Key:         gptr.Of("test_key"),
-				Name:        gptr.Of("Test Name"),
-				Description: gptr.Of("Test Description"),
-				TextSchema:  gptr.Of("test_schema"),
-				Hidden:      gptr.Of(false),
+			name: "invalid_attachment_format",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("invalid_key"),
+				Name:        gptr.Of("Invalid Field"),
 				ContentType: gptr.Of(dataset.ContentType_Text),
-				MultiModelSpec: &dataset.MultiModalSpec{
-					MaxFileCount:     gptr.Of(int64(10)),
-					MaxFileSize:      gptr.Of(int64(1024)),
-					SupportedFormats: []string{"jpg", "png"},
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Content with invalid attachment"),
+				Attachments: []*dataset.ObjectStorage{
+					{
+						Name: gptr.Of("document.pdf"), // 不是图片或音频格式
+						URL:  gptr.Of("https://example.com/document.pdf"),
+					},
 				},
 			},
-			want: &entity.FieldSchema{
-				Key:         "test_key",
-				Name:        "Test Name",
-				Description: "Test Description",
-				TextSchema:  "test_schema",
-				Hidden:      false,
-				ContentType: entity.ContentTypeText,
-				MultiModelSpec: &entity.MultiModalSpec{
-					MaxFileCount:     10,
-					MaxFileSize:      1024,
-					SupportedFormats: []string{"jpg", "png"},
+			expected: &entity.FieldData{
+				Key:  "invalid_key",
+				Name: "Invalid Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("Text")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Content with invalid attachment"),
+					Image:       nil, // 因为 PDF 不是图片格式
+					Audio:       nil, // 因为 PDF 不是音频格式
+					MultiPart:   nil,
+				},
+			},
+		},
+		{
+			name: "empty_parts_array",
+			input: &dataset.FieldData{
+				Key:         gptr.Of("empty_parts_key"),
+				Name:        gptr.Of("Empty Parts Field"),
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
+				Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				Content:     gptr.Of("Content with empty parts"),
+				Parts:       []*dataset.FieldData{}, // 空的 Parts 数组
+			},
+			expected: &entity.FieldData{
+				Key:  "empty_parts_key",
+				Name: "Empty Parts Field",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentType("MultiPart")),
+					Format:      gptr.Of(entity.FieldDisplayFormat(1)),
+					Text:        gptr.Of("Content with empty parts"),
+					Image:       nil,
+					Audio:       nil,
+					MultiPart:   nil, // 空数组会被转换为 nil
 				},
 			},
 		},
@@ -558,68 +541,248 @@ func TestConvert2EvaluationSetFieldSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convert2EvaluationSetFieldSchema(context.Background(), tt.schema)
-			assert.Equal(t, tt.want, got)
+			result := convert2EvaluationSetFieldData(ctx, tt.input)
+			assert.Equal(t, tt.expected, result, "convert2EvaluationSetFieldData() result mismatch")
 		})
 	}
 }
 
-func TestConvert2EvaluationSetSchema(t *testing.T) {
-	tests := []struct {
-		name   string
-		schema *dataset.DatasetSchema
-		want   *entity.EvaluationSetSchema
-	}{
+// 辅助函数：创建嵌套的 Parts 结构
+func createNestedParts(depth int) []*dataset.FieldData {
+	if depth <= 0 {
+		return nil
+	}
+
+	parts := []*dataset.FieldData{
 		{
-			name:   "nil schema",
-			schema: nil,
-			want:   nil,
-		},
-		{
-			name: "valid schema",
-			schema: &dataset.DatasetSchema{
-				ID:        gptr.Of(int64(1)),
-				AppID:     gptr.Of(int32(2)),
-				SpaceID:   gptr.Of(int64(3)),
-				DatasetID: gptr.Of(int64(4)),
-				Fields: []*dataset.FieldSchema{
-					{
-						Key:         gptr.Of("test_key"),
-						Name:        gptr.Of("Test Name"),
-						ContentType: gptr.Of(dataset.ContentType_Text),
-					},
-				},
-				CreatedAt: gptr.Of(int64(1234567890)),
-				UpdatedAt: gptr.Of(int64(1234567890)),
-				CreatedBy: gptr.Of("user1"),
-				UpdatedBy: gptr.Of("user2"),
-			},
-			want: &entity.EvaluationSetSchema{
-				ID:              1,
-				AppID:           2,
-				SpaceID:         3,
-				EvaluationSetID: 4,
-				FieldSchemas: []*entity.FieldSchema{
-					{
-						Key:         "test_key",
-						Name:        "Test Name",
-						ContentType: entity.ContentTypeText,
-					},
-				},
-				BaseInfo: &entity.BaseInfo{
-					CreatedAt: gptr.Of(int64(1234567890)),
-					UpdatedAt: gptr.Of(int64(1234567890)),
-					CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
-					UpdatedBy: &entity.UserInfo{UserID: gptr.Of("user2")},
-				},
-			},
+			Key:         gptr.Of("nested_part"),
+			Name:        gptr.Of("Nested Part"),
+			ContentType: gptr.Of(dataset.ContentType_Text),
+			Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+			Content:     gptr.Of("Nested content"),
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := convert2EvaluationSetSchema(context.Background(), tt.schema)
-			assert.Equal(t, tt.want, got)
-		})
+	if depth > 1 {
+		parts[0].Parts = createNestedParts(depth - 1)
 	}
+
+	return parts
+}
+
+// TestConvert2EvaluationSetFieldData_EdgeCases 测试边界情况
+func TestConvert2EvaluationSetFieldData_EdgeCases(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("nil_attachment_in_list", func(t *testing.T) {
+		input := &dataset.FieldData{
+			Key:         gptr.Of("nil_attachment_key"),
+			Name:        gptr.Of("Nil Attachment Field"),
+			ContentType: gptr.Of(dataset.ContentType_Image),
+			Attachments: []*dataset.ObjectStorage{
+				nil, // nil 附件
+				{
+					Name: gptr.Of("valid.jpg"),
+					URL:  gptr.Of("https://example.com/valid.jpg"),
+				},
+			},
+		}
+
+		result := convert2EvaluationSetFieldData(ctx, input)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Content.Image)
+		assert.Equal(t, "valid.jpg", *result.Content.Image.Name)
+	})
+
+	t.Run("attachment_with_nil_name", func(t *testing.T) {
+		input := &dataset.FieldData{
+			Key:         gptr.Of("nil_name_key"),
+			Name:        gptr.Of("Nil Name Field"),
+			ContentType: gptr.Of(dataset.ContentType_Image),
+			Attachments: []*dataset.ObjectStorage{
+				{
+					Name: nil, // nil 名称
+					URL:  gptr.Of("https://example.com/unknown.jpg"),
+				},
+			},
+		}
+
+		result := convert2EvaluationSetFieldData(ctx, input)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.Content.Image) // 因为名称为 nil，无法判断文件类型
+	})
+
+	t.Run("case_insensitive_extensions", func(t *testing.T) {
+		input := &dataset.FieldData{
+			Key:         gptr.Of("case_key"),
+			Name:        gptr.Of("Case Field"),
+			ContentType: gptr.Of(dataset.ContentType_Image),
+			Attachments: []*dataset.ObjectStorage{
+				{
+					Name: gptr.Of("image.JPG"), // 大写扩展名
+					URL:  gptr.Of("https://example.com/image.JPG"),
+				},
+			},
+		}
+
+		result := convert2EvaluationSetFieldData(ctx, input)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Content.Image)
+		assert.Equal(t, "image.JPG", *result.Content.Image.Name)
+	})
+
+	t.Run("deep_nesting", func(t *testing.T) {
+		// 创建深度嵌套的结构
+		input := &dataset.FieldData{
+			Key:         gptr.Of("deep_key"),
+			Name:        gptr.Of("Deep Field"),
+			ContentType: gptr.Of(dataset.ContentType_MultiPart),
+			Parts:       createNestedParts(5), // 5层嵌套
+		}
+
+		result := convert2EvaluationSetFieldData(ctx, input)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Content.MultiPart)
+		assert.Len(t, result.Content.MultiPart, 1)
+
+		// 验证嵌套结构
+		current := result.Content.MultiPart[0]
+		depth := 1
+		for current != nil && current.MultiPart != nil && len(current.MultiPart) > 0 {
+			current = current.MultiPart[0]
+			depth++
+		}
+		assert.Equal(t, 5, depth) // 应该有 5 层嵌套（因为最后一层没有 MultiPart）
+	})
+}
+
+// TestConvert2EvaluationSetFieldData_RealWorldScenarios 测试真实业务场景
+func TestConvert2EvaluationSetFieldData_RealWorldScenarios(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("conversation_with_mixed_content", func(t *testing.T) {
+		// 模拟对话场景，包含文本、图片和音频
+		input := &dataset.FieldData{
+			Key:         gptr.Of("conversation"),
+			Name:        gptr.Of("User Message"),
+			ContentType: gptr.Of(dataset.ContentType_MultiPart),
+			Format:      gptr.Of(dataset.FieldDisplayFormat_Markdown),
+			Content:     gptr.Of("Please analyze this image and audio:"),
+			Parts: []*dataset.FieldData{
+				{
+					Key:         gptr.Of("text_instruction"),
+					Name:        gptr.Of("Text Instruction"),
+					ContentType: gptr.Of(dataset.ContentType_Text),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+					Content:     gptr.Of("What do you see in this image?"),
+				},
+				{
+					Key:         gptr.Of("uploaded_image"),
+					Name:        gptr.Of("Uploaded Image"),
+					ContentType: gptr.Of(dataset.ContentType_Image),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+					Content:     gptr.Of("User uploaded image"),
+					Attachments: []*dataset.ObjectStorage{
+						{
+							Name:     gptr.Of("screenshot.png"),
+							URL:      gptr.Of("https://cdn.example.com/screenshot.png"),
+							URI:      gptr.Of("tos://bucket/user123/screenshot.png"),
+							ThumbURL: gptr.Of("https://cdn.example.com/screenshot_thumb.png"),
+							Provider: gptr.Of(dataset.StorageProvider_TOS),
+						},
+					},
+				},
+				{
+					Key:         gptr.Of("voice_note"),
+					Name:        gptr.Of("Voice Note"),
+					ContentType: gptr.Of(dataset.ContentType_Audio),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+					Content:     gptr.Of("User voice note"),
+					Attachments: []*dataset.ObjectStorage{
+						{
+							Name: gptr.Of("voice_note.m4a"),
+							URL:  gptr.Of("https://cdn.example.com/voice_note.m4a"),
+						},
+					},
+				},
+			},
+		}
+
+		result := convert2EvaluationSetFieldData(ctx, input)
+		assert.NotNil(t, result)
+		assert.Equal(t, "conversation", result.Key)
+		assert.Equal(t, "User Message", result.Name)
+		assert.NotNil(t, result.Content)
+		assert.Equal(t, entity.ContentType("MultiPart"), *result.Content.ContentType)
+		assert.Equal(t, "Please analyze this image and audio:", *result.Content.Text)
+		assert.Len(t, result.Content.MultiPart, 3)
+
+		// 验证文本部分
+		textPart := result.Content.MultiPart[0]
+		assert.Equal(t, entity.ContentType("Text"), *textPart.ContentType)
+		assert.Equal(t, "What do you see in this image?", *textPart.Text)
+		assert.Nil(t, textPart.Image)
+		assert.Nil(t, textPart.Audio)
+
+		// 验证图片部分
+		imagePart := result.Content.MultiPart[1]
+		assert.Equal(t, entity.ContentType("Image"), *imagePart.ContentType)
+		assert.Equal(t, "User uploaded image", *imagePart.Text)
+		assert.NotNil(t, imagePart.Image)
+		assert.Equal(t, "screenshot.png", *imagePart.Image.Name)
+		assert.Equal(t, "https://cdn.example.com/screenshot.png", *imagePart.Image.URL)
+
+		// 验证音频部分
+		audioPart := result.Content.MultiPart[2]
+		assert.Equal(t, entity.ContentType("Audio"), *audioPart.ContentType)
+		assert.Equal(t, "User voice note", *audioPart.Text)
+		assert.NotNil(t, audioPart.Audio)
+		assert.Equal(t, "m4a", *audioPart.Audio.Format)
+		assert.Equal(t, "https://cdn.example.com/voice_note.m4a", *audioPart.Audio.URL)
+	})
+
+	t.Run("code_review_scenario", func(t *testing.T) {
+		// 模拟代码审查场景
+		input := &dataset.FieldData{
+			Key:         gptr.Of("code_review"),
+			Name:        gptr.Of("Code Review Request"),
+			ContentType: gptr.Of(dataset.ContentType_MultiPart),
+			Format:      gptr.Of(dataset.FieldDisplayFormat_Markdown),
+			Content:     gptr.Of("# Code Review Request\n\nPlease review the following changes:"),
+			Parts: []*dataset.FieldData{
+				{
+					Key:         gptr.Of("code_diff"),
+					Name:        gptr.Of("Code Diff"),
+					ContentType: gptr.Of(dataset.ContentType_Text),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_Code),
+					Content:     gptr.Of("```diff\n+ function newFeature() {\n+   return 'implemented';\n+ }\n```"),
+				},
+				{
+					Key:         gptr.Of("test_results"),
+					Name:        gptr.Of("Test Results"),
+					ContentType: gptr.Of(dataset.ContentType_Text),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_JSON),
+					Content:     gptr.Of(`{"passed": 15, "failed": 0, "coverage": "95%"}`),
+				},
+			},
+		}
+
+		result := convert2EvaluationSetFieldData(ctx, input)
+		assert.NotNil(t, result)
+		assert.Equal(t, "code_review", result.Key)
+		assert.NotNil(t, result.Content)
+		assert.Len(t, result.Content.MultiPart, 2)
+
+		// 验证代码差异部分
+		codePart := result.Content.MultiPart[0]
+		assert.Equal(t, entity.ContentType("Text"), *codePart.ContentType)
+		assert.Equal(t, entity.FieldDisplayFormat(5), *codePart.Format) // Code format
+		assert.Contains(t, *codePart.Text, "function newFeature")
+
+		// 验证测试结果部分
+		testPart := result.Content.MultiPart[1]
+		assert.Equal(t, entity.ContentType("Text"), *testPart.ContentType)
+		assert.Equal(t, entity.FieldDisplayFormat(3), *testPart.Format) // JSON format
+		assert.Contains(t, *testPart.Text, "coverage")
+	})
 }

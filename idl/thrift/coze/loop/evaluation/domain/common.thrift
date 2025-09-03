@@ -8,6 +8,7 @@ const ContentType ContentType_Text = "Text" // 空间
 const ContentType ContentType_Image = "Image"
 const ContentType ContentType_Audio = "Audio"
 const ContentType ContentType_MultiPart = "MultiPart"
+const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct Content {
     1: optional ContentType content_type (go.tag='mapstructure:"content_type"'),
@@ -32,6 +33,8 @@ struct Image {
     2: optional string url,
     3: optional string uri,
     4: optional string thumb_url,
+
+    10: optional dataset.StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
 }
 
 struct OrderBy {
@@ -85,9 +88,16 @@ struct ModelConfig {
     3: optional double temperature
     4: optional i32 max_tokens
     5: optional double top_p
+
+    50: optional string json_ext
 }
 
 struct Session {
     1: optional i64 user_id
     2: optional i32 app_id
+}
+
+struct RuntimeParam {
+    1: optional string json_value
+    2: optional string json_demo
 }

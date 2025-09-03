@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -24,9 +25,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	evaluationservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
@@ -56,6 +59,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -72,6 +76,8 @@ var (
 		domainservice.NewExptAggrResultService,
 		domainservice.NewExptSchedulerSvc,
 		domainservice.NewExptRecordEvalService,
+		domainservice.NewExptAnnotateService,
+		domainservice.NewExptResultExportService,
 		domainservice.NewSchedulerModeFactory,
 		experiment.NewExptRepo,
 		experiment.NewExptStatsRepo,
@@ -80,6 +86,8 @@ var (
 		experiment.NewExptTurnResultRepo,
 		experiment.NewExptRunLogRepo,
 		experiment.NewExptTurnResultFilterRepo,
+		experiment.NewExptAnnotateRepo,
+		experiment.NewExptResultExportRecordRepo,
 		experiment.NewQuotaService,
 		idem.NewIdempotentService,
 		exptmysql.NewExptDAO,
@@ -91,6 +99,10 @@ var (
 		exptmysql.NewExptTurnEvaluatorResultRefDAO,
 		exptmysql.NewExptTurnResultFilterKeyMappingDAO,
 		exptmysql.NewExptAggrResultDAO,
+		exptmysql.NewExptTurnAnnotateRecordRefDAO,
+		exptmysql.NewAnnotateRecordDAO,
+		exptmysql.NewExptTurnResultTagRefDAO,
+		exptmysql.NewExptResultExportRecordDAO,
 		exptredis.NewQuotaDAO,
 		iredis.NewIdemDAO,
 		exptck.NewExptTurnResultFilterDAO,
@@ -100,6 +112,7 @@ var (
 		evaltargetmtr.NewEvalTargetMetrics,
 		foundation.NewAuthRPCProvider,
 		foundation.NewUserRPCProvider,
+		tag.NewTagRPCProvider,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		evalSetDomainService,
@@ -127,6 +140,7 @@ var (
 	evaluatorSet = wire.NewSet(
 		NewEvaluatorHandlerImpl,
 		foundation.NewAuthRPCProvider,
+		foundation.NewFileRPCProvider,
 		foundation.NewUserRPCProvider,
 		userinfo.NewUserInfoServiceImpl,
 		idem.NewIdempotentService,
@@ -206,6 +220,8 @@ func InitExperimentApplication(
 	llmcli llmruntimeservice.Client,
 	benefitSvc benefit.IBenefitService,
 	ckDb ck.Provider,
+	tagClient tagservice.Client,
+	objectStorage fileserver.ObjectStorage,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
@@ -227,6 +243,7 @@ func InitEvaluatorApplication(
 	cmdable redis.Cmdable,
 	benefitSvc benefit.IBenefitService,
 	limiterFactory limiter.IRateLimiterFactory,
+	fileClient fileservice.Client,
 ) (evaluation.EvaluatorService, error) {
 	wire.Build(
 		evaluatorSet,

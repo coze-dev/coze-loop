@@ -21,6 +21,7 @@ type CreateTagRequest struct {
 	TagDomainTypes []tag.TagDomainType `thrift:"tag_domain_types,6,optional" frugal:"6,optional,list<string>" form:"tag_domain_types" json:"tag_domain_types,omitempty" query:"tag_domain_types"`
 	TagContentType *tag.TagContentType `thrift:"tag_content_type,7,optional" frugal:"7,optional,string" form:"tag_content_type" json:"tag_content_type,omitempty" query:"tag_content_type"`
 	Version        *string             `thrift:"version,8,optional" frugal:"8,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	TagType        *tag.TagType        `thrift:"tag_type,9,optional" frugal:"9,optional,string" form:"tag_type" json:"tag_type,omitempty" query:"tag_type"`
 	Base           *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -117,6 +118,18 @@ func (p *CreateTagRequest) GetVersion() (v string) {
 	return *p.Version
 }
 
+var CreateTagRequest_TagType_DEFAULT tag.TagType
+
+func (p *CreateTagRequest) GetTagType() (v tag.TagType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagType() {
+		return CreateTagRequest_TagType_DEFAULT
+	}
+	return *p.TagType
+}
+
 var CreateTagRequest_Base_DEFAULT *base.Base
 
 func (p *CreateTagRequest) GetBase() (v *base.Base) {
@@ -152,6 +165,9 @@ func (p *CreateTagRequest) SetTagContentType(val *tag.TagContentType) {
 func (p *CreateTagRequest) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *CreateTagRequest) SetTagType(val *tag.TagType) {
+	p.TagType = val
+}
 func (p *CreateTagRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -165,6 +181,7 @@ var fieldIDToName_CreateTagRequest = map[int16]string{
 	6:   "tag_domain_types",
 	7:   "tag_content_type",
 	8:   "version",
+	9:   "tag_type",
 	255: "Base",
 }
 
@@ -190,6 +207,10 @@ func (p *CreateTagRequest) IsSetTagContentType() bool {
 
 func (p *CreateTagRequest) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *CreateTagRequest) IsSetTagType() bool {
+	return p.TagType != nil
 }
 
 func (p *CreateTagRequest) IsSetBase() bool {
@@ -277,6 +298,14 @@ func (p *CreateTagRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -439,6 +468,17 @@ func (p *CreateTagRequest) ReadField8(iprot thrift.TProtocol) error {
 	p.Version = _field
 	return nil
 }
+func (p *CreateTagRequest) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *tag.TagType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TagType = _field
+	return nil
+}
 func (p *CreateTagRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -484,6 +524,10 @@ func (p *CreateTagRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -664,6 +708,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *CreateTagRequest) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagType() {
+		if err = oprot.WriteFieldBegin("tag_type", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TagType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 func (p *CreateTagRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -719,6 +781,9 @@ func (p *CreateTagRequest) DeepEqual(ano *CreateTagRequest) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.TagType) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -806,6 +871,18 @@ func (p *CreateTagRequest) Field8DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateTagRequest) Field9DeepEqual(src *tag.TagType) bool {
+
+	if p.TagType == src {
+		return true
+	} else if p.TagType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TagType, *src) != 0 {
 		return false
 	}
 	return true
@@ -6507,6 +6584,634 @@ func (p *BatchGetTagsResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+type ArchiveOptionTagRequest struct {
+	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	TagKeyID    int64      `thrift:"tag_key_id,2,required" frugal:"2,required,i64" json:"tag_key_id" path:"tag_key_id,required" `
+	Name        string     `thrift:"name,3,required" frugal:"3,required,string" form:"name,required" json:"name,required" query:"name,required"`
+	Description *string    `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Base        *base.Base `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
+}
+
+func NewArchiveOptionTagRequest() *ArchiveOptionTagRequest {
+	return &ArchiveOptionTagRequest{}
+}
+
+func (p *ArchiveOptionTagRequest) InitDefault() {
+}
+
+func (p *ArchiveOptionTagRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *ArchiveOptionTagRequest) GetTagKeyID() (v int64) {
+	if p != nil {
+		return p.TagKeyID
+	}
+	return
+}
+
+func (p *ArchiveOptionTagRequest) GetName() (v string) {
+	if p != nil {
+		return p.Name
+	}
+	return
+}
+
+var ArchiveOptionTagRequest_Description_DEFAULT string
+
+func (p *ArchiveOptionTagRequest) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return ArchiveOptionTagRequest_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var ArchiveOptionTagRequest_Base_DEFAULT *base.Base
+
+func (p *ArchiveOptionTagRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ArchiveOptionTagRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ArchiveOptionTagRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *ArchiveOptionTagRequest) SetTagKeyID(val int64) {
+	p.TagKeyID = val
+}
+func (p *ArchiveOptionTagRequest) SetName(val string) {
+	p.Name = val
+}
+func (p *ArchiveOptionTagRequest) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *ArchiveOptionTagRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ArchiveOptionTagRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "tag_key_id",
+	3:   "name",
+	4:   "description",
+	255: "base",
+}
+
+func (p *ArchiveOptionTagRequest) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *ArchiveOptionTagRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ArchiveOptionTagRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetTagKeyID bool = false
+	var issetName bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTagKeyID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetName = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTagKeyID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetName {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ArchiveOptionTagRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ArchiveOptionTagRequest[fieldId]))
+}
+
+func (p *ArchiveOptionTagRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ArchiveOptionTagRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TagKeyID = _field
+	return nil
+}
+func (p *ArchiveOptionTagRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *ArchiveOptionTagRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *ArchiveOptionTagRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ArchiveOptionTagRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ArchiveOptionTagRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ArchiveOptionTagRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ArchiveOptionTagRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("tag_key_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TagKeyID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ArchiveOptionTagRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Name); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ArchiveOptionTagRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ArchiveOptionTagRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ArchiveOptionTagRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ArchiveOptionTagRequest(%+v)", *p)
+
+}
+
+func (p *ArchiveOptionTagRequest) DeepEqual(ano *ArchiveOptionTagRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TagKeyID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ArchiveOptionTagRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *ArchiveOptionTagRequest) Field2DeepEqual(src int64) bool {
+
+	if p.TagKeyID != src {
+		return false
+	}
+	return true
+}
+func (p *ArchiveOptionTagRequest) Field3DeepEqual(src string) bool {
+
+	if strings.Compare(p.Name, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ArchiveOptionTagRequest) Field4DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ArchiveOptionTagRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ArchiveOptionTagResponse struct {
+	BaseResp *base.BaseResp `thrift:"baseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"baseResp" json:"baseResp,omitempty" query:"baseResp"`
+}
+
+func NewArchiveOptionTagResponse() *ArchiveOptionTagResponse {
+	return &ArchiveOptionTagResponse{}
+}
+
+func (p *ArchiveOptionTagResponse) InitDefault() {
+}
+
+var ArchiveOptionTagResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ArchiveOptionTagResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ArchiveOptionTagResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ArchiveOptionTagResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ArchiveOptionTagResponse = map[int16]string{
+	255: "baseResp",
+}
+
+func (p *ArchiveOptionTagResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ArchiveOptionTagResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ArchiveOptionTagResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ArchiveOptionTagResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ArchiveOptionTagResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ArchiveOptionTagResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ArchiveOptionTagResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("baseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ArchiveOptionTagResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ArchiveOptionTagResponse(%+v)", *p)
+
+}
+
+func (p *ArchiveOptionTagResponse) DeepEqual(ano *ArchiveOptionTagResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ArchiveOptionTagResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type TagService interface {
 	/* Tag */
 	// 新增标签
@@ -6523,6 +7228,8 @@ type TagService interface {
 	GetTagSpec(ctx context.Context, req *GetTagSpecRequest) (r *GetTagSpecResponse, err error)
 	// 批量获取标签
 	BatchGetTags(ctx context.Context, req *BatchGetTagsRequest) (r *BatchGetTagsResponse, err error)
+	//将单选标签归档进标签管理
+	ArchiveOptionTag(ctx context.Context, request *ArchiveOptionTagRequest) (r *ArchiveOptionTagResponse, err error)
 }
 
 type TagServiceClient struct {
@@ -6614,6 +7321,15 @@ func (p *TagServiceClient) BatchGetTags(ctx context.Context, req *BatchGetTagsRe
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *TagServiceClient) ArchiveOptionTag(ctx context.Context, request *ArchiveOptionTagRequest) (r *ArchiveOptionTagResponse, err error) {
+	var _args TagServiceArchiveOptionTagArgs
+	_args.Request = request
+	var _result TagServiceArchiveOptionTagResult
+	if err = p.Client_().Call(ctx, "ArchiveOptionTag", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type TagServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -6642,6 +7358,7 @@ func NewTagServiceProcessor(handler TagService) *TagServiceProcessor {
 	self.AddToProcessorMap("GetTagDetail", &tagServiceProcessorGetTagDetail{handler: handler})
 	self.AddToProcessorMap("GetTagSpec", &tagServiceProcessorGetTagSpec{handler: handler})
 	self.AddToProcessorMap("BatchGetTags", &tagServiceProcessorBatchGetTags{handler: handler})
+	self.AddToProcessorMap("ArchiveOptionTag", &tagServiceProcessorArchiveOptionTag{handler: handler})
 	return self
 }
 func (p *TagServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -6981,6 +7698,54 @@ func (p *tagServiceProcessorBatchGetTags) Process(ctx context.Context, seqId int
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("BatchGetTags", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type tagServiceProcessorArchiveOptionTag struct {
+	handler TagService
+}
+
+func (p *tagServiceProcessorArchiveOptionTag) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := TagServiceArchiveOptionTagArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ArchiveOptionTag", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := TagServiceArchiveOptionTagResult{}
+	var retval *ArchiveOptionTagResponse
+	if retval, err2 = p.handler.ArchiveOptionTag(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ArchiveOptionTag: "+err2.Error())
+		oprot.WriteMessageBegin("ArchiveOptionTag", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ArchiveOptionTag", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -9399,6 +10164,350 @@ func (p *TagServiceBatchGetTagsResult) DeepEqual(ano *TagServiceBatchGetTagsResu
 }
 
 func (p *TagServiceBatchGetTagsResult) Field0DeepEqual(src *BatchGetTagsResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TagServiceArchiveOptionTagArgs struct {
+	Request *ArchiveOptionTagRequest `thrift:"request,1" frugal:"1,default,ArchiveOptionTagRequest"`
+}
+
+func NewTagServiceArchiveOptionTagArgs() *TagServiceArchiveOptionTagArgs {
+	return &TagServiceArchiveOptionTagArgs{}
+}
+
+func (p *TagServiceArchiveOptionTagArgs) InitDefault() {
+}
+
+var TagServiceArchiveOptionTagArgs_Request_DEFAULT *ArchiveOptionTagRequest
+
+func (p *TagServiceArchiveOptionTagArgs) GetRequest() (v *ArchiveOptionTagRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return TagServiceArchiveOptionTagArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *TagServiceArchiveOptionTagArgs) SetRequest(val *ArchiveOptionTagRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_TagServiceArchiveOptionTagArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *TagServiceArchiveOptionTagArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *TagServiceArchiveOptionTagArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TagServiceArchiveOptionTagArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TagServiceArchiveOptionTagArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewArchiveOptionTagRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *TagServiceArchiveOptionTagArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ArchiveOptionTag_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TagServiceArchiveOptionTagArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TagServiceArchiveOptionTagArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TagServiceArchiveOptionTagArgs(%+v)", *p)
+
+}
+
+func (p *TagServiceArchiveOptionTagArgs) DeepEqual(ano *TagServiceArchiveOptionTagArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *TagServiceArchiveOptionTagArgs) Field1DeepEqual(src *ArchiveOptionTagRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TagServiceArchiveOptionTagResult struct {
+	Success *ArchiveOptionTagResponse `thrift:"success,0,optional" frugal:"0,optional,ArchiveOptionTagResponse"`
+}
+
+func NewTagServiceArchiveOptionTagResult() *TagServiceArchiveOptionTagResult {
+	return &TagServiceArchiveOptionTagResult{}
+}
+
+func (p *TagServiceArchiveOptionTagResult) InitDefault() {
+}
+
+var TagServiceArchiveOptionTagResult_Success_DEFAULT *ArchiveOptionTagResponse
+
+func (p *TagServiceArchiveOptionTagResult) GetSuccess() (v *ArchiveOptionTagResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return TagServiceArchiveOptionTagResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *TagServiceArchiveOptionTagResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ArchiveOptionTagResponse)
+}
+
+var fieldIDToName_TagServiceArchiveOptionTagResult = map[int16]string{
+	0: "success",
+}
+
+func (p *TagServiceArchiveOptionTagResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *TagServiceArchiveOptionTagResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TagServiceArchiveOptionTagResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TagServiceArchiveOptionTagResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewArchiveOptionTagResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *TagServiceArchiveOptionTagResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ArchiveOptionTag_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TagServiceArchiveOptionTagResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *TagServiceArchiveOptionTagResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TagServiceArchiveOptionTagResult(%+v)", *p)
+
+}
+
+func (p *TagServiceArchiveOptionTagResult) DeepEqual(ano *TagServiceArchiveOptionTagResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *TagServiceArchiveOptionTagResult) Field0DeepEqual(src *ArchiveOptionTagResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

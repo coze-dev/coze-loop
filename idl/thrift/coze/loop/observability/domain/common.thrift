@@ -9,6 +9,10 @@ const PlatformType PlatformType_CozeBot = "coze_bot"
 const PlatformType PlatformType_Project = "coze_project"
 const PlatformType PlatformType_Workflow = "coze_workflow"
 const PlatformType PlatformType_LoopAll = "loop_all"
+const PlatformType PlatformType_InnerCozeloop = "inner_cozeloop"
+const PlatformType PlatformType_InnerDoubao = "inner_doubao"
+const PlatformType PlatformType_InnerPrompt = "inner_prompt"
+const PlatformType PlatformType_InnerCozeBot = "inner_coze_bot"
 
 typedef string SpanListType (ts.enum="true")
 const SpanListType SpanListType_RootSpan = "root_span"
@@ -37,3 +41,10 @@ struct BaseInfo {
     3: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"')
     4: optional i64 updated_at (api.js_conv='true', go.tag='json:"updated_at"')
 }
+
+typedef string ContentType(ts.enum="true")
+
+const ContentType ContentType_Text = "Text" // 空间
+const ContentType ContentType_Image = "Image"
+const ContentType ContentType_Audio = "Audio"
+const ContentType ContentType_MultiPart = "MultiPart"

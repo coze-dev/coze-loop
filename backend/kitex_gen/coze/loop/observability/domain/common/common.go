@@ -25,16 +25,34 @@ const (
 
 	PlatformTypeLoopAll = "loop_all"
 
+	PlatformTypeInnerCozeloop = "inner_cozeloop"
+
+	PlatformTypeInnerDoubao = "inner_doubao"
+
+	PlatformTypeInnerPrompt = "inner_prompt"
+
+	PlatformTypeInnerCozeBot = "inner_coze_bot"
+
 	SpanListTypeRootSpan = "root_span"
 
 	SpanListTypeAllSpan = "all_span"
 
 	SpanListTypeLlmSpan = "llm_span"
+
+	ContentTypeText = "Text"
+
+	ContentTypeImage = "Image"
+
+	ContentTypeAudio = "Audio"
+
+	ContentTypeMultiPart = "MultiPart"
 )
 
 type PlatformType = string
 
 type SpanListType = string
+
+type ContentType = string
 
 type OrderBy struct {
 	Field *string `thrift:"field,1,optional" frugal:"1,optional,string" form:"field" json:"field,omitempty" query:"field"`

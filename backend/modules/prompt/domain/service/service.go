@@ -18,28 +18,19 @@ type IPromptService interface {
 	FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error)
 	ExecuteStreaming(ctx context.Context, param ExecuteStreamingParam) (*entity.Reply, error)
 	Execute(ctx context.Context, param ExecuteParam) (*entity.Reply, error)
-
-	MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message) error
-
+	MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error
 	// MGetPromptIDs 根据prompt key获取prompt id
 	MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (PromptKeyIDMap map[string]int64, err error)
-	// MParseCommitVersionByPromptKey 根据prompt key解析提交版本，如果提交版本为空，则使用最新版本，否则返回指定版本
-	MParseCommitVersionByPromptKey(ctx context.Context, spaceID int64, pairs []PromptKeyVersionPair) (promptKeyCommitVersionMap map[PromptKeyVersionPair]string, err error)
-}
+	// MParseCommitVersion 统一解析提交版本，支持version和label两种方式
+	MParseCommitVersion(ctx context.Context, spaceID int64, params []PromptQueryParam) (promptKeyCommitVersionMap map[PromptQueryParam]string, err error)
 
-type GetBasicParam struct {
-	PromptID int64
-
-	SpaceID   int64
-	PromptKey string
-}
-
-type GetPromptCommitParam struct {
-	CommitVersion string
-}
-
-type GetPromptDraftParam struct {
-	UserID string
+	// Label管理相关方法
+	CreateLabel(ctx context.Context, labelDO *entity.PromptLabel) error
+	ListLabel(ctx context.Context, param ListLabelParam) ([]*entity.PromptLabel, *int64, error)
+	UpdateCommitLabels(ctx context.Context, param UpdateCommitLabelsParam) error
+	BatchGetCommitLabels(ctx context.Context, promptID int64, commitVersions []string) (map[string][]string, error)
+	ValidateLabelsExist(ctx context.Context, spaceID int64, labelKeys []string) error
+	BatchGetLabelMappingPromptVersion(ctx context.Context, queries []PromptLabelQuery) (map[PromptLabelQuery]string, error)
 }
 
 type PromptKeyVersionPair struct {
@@ -47,9 +38,30 @@ type PromptKeyVersionPair struct {
 	Version   string
 }
 
-type PromptIDVersionPair struct {
+type PromptQueryParam struct {
+	PromptID  int64
+	PromptKey string
+	Version   string // 可选，优先使用
+	Label     string // 可选，当Version为空时使用
+}
+
+type ListLabelParam struct {
+	SpaceID      int64
+	LabelKeyLike string
+	PageSize     int
+	PageToken    *int64
+}
+
+type UpdateCommitLabelsParam struct {
+	PromptID      int64
+	CommitVersion string
+	LabelKeys     []string
+	UpdatedBy     string
+}
+
+type PromptLabelQuery struct {
 	PromptID int64
-	Version  string
+	LabelKey string
 }
 
 type PromptServiceImpl struct {
@@ -57,6 +69,7 @@ type PromptServiceImpl struct {
 	debugLogRepo     repo.IDebugLogRepo
 	debugContextRepo repo.IDebugContextRepo
 	manageRepo       repo.IManageRepo
+	labelRepo        repo.ILabelRepo
 	configProvider   conf.IConfigProvider
 	llm              rpc.ILLMProvider
 	file             rpc.IFileProvider
@@ -67,6 +80,7 @@ func NewPromptService(
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
 	promptManageRepo repo.IManageRepo,
+	labelRepo repo.ILabelRepo,
 	configProvider conf.IConfigProvider,
 	llm rpc.ILLMProvider,
 	file rpc.IFileProvider,
@@ -76,6 +90,7 @@ func NewPromptService(
 		debugLogRepo:     debugLogRepo,
 		debugContextRepo: debugContextRepo,
 		manageRepo:       promptManageRepo,
+		labelRepo:        labelRepo,
 		configProvider:   configProvider,
 		llm:              llm,
 		file:             file,

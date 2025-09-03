@@ -58,12 +58,13 @@ func (mr *MockFilterMockRecorder) BuildALLSpanFilter(arg0, arg1 any) *gomock.Cal
 }
 
 // BuildBasicSpanFilter mocks base method.
-func (m *MockFilter) BuildBasicSpanFilter(arg0 context.Context, arg1 *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *MockFilter) BuildBasicSpanFilter(arg0 context.Context, arg1 *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildBasicSpanFilter", arg0, arg1)
 	ret0, _ := ret[0].([]*loop_span.FilterField)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // BuildBasicSpanFilter indicates an expected call of BuildBasicSpanFilter.

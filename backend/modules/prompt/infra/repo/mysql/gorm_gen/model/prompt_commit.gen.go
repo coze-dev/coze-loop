@@ -26,6 +26,7 @@ type PromptCommit struct {
 	BaseVersion    string    `gorm:"column:base_version;type:varchar(128);not null;comment:来源版本" json:"base_version"`                                                                           // 来源版本
 	CommittedBy    string    `gorm:"column:committed_by;type:varchar(128);not null;comment:提交人" json:"committed_by"`                                                                            // 提交人
 	Description    *string   `gorm:"column:description;type:text;comment:提交版本描述" json:"description"`                                                                                            // 提交版本描述
+	ExtInfo        *string   `gorm:"column:ext_info;type:text;comment:扩展字段" json:"ext_info"`                                                                                                    // 扩展字段
 	CreatedAt      time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                         // 创建时间
 	UpdatedAt      time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                         // 更新时间
 }

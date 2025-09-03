@@ -7,9 +7,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	idgenmock "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
@@ -198,6 +200,7 @@ func TestViewRepoImpl_DeleteView(t *testing.T) {
 func TestViewRepoImpl_CreateView(t *testing.T) {
 	type fields struct {
 		viewDao mysql.IViewDao
+		idgen   idgen.IIDGenerator
 	}
 	type args struct {
 		ctx  context.Context
@@ -214,8 +217,11 @@ func TestViewRepoImpl_CreateView(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				viewDao := mysqlmock.NewMockIViewDao(ctrl)
 				viewDao.EXPECT().CreateView(gomock.Any(), gomock.Any()).Return(int64(0), nil)
+				idgenMock := idgenmock.NewMockIIDGenerator(ctrl)
+				idgenMock.EXPECT().GenID(gomock.Any()).Return(int64(123), nil)
 				return fields{
 					viewDao: viewDao,
+					idgen:   idgenMock,
 				}
 			},
 			args: args{
@@ -230,7 +236,8 @@ func TestViewRepoImpl_CreateView(t *testing.T) {
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
 			v := &ViewRepoImpl{
-				viewDao: fields.viewDao,
+				viewDao:     fields.viewDao,
+				idGenerator: fields.idgen,
 			}
 			_, err := v.CreateView(tt.args.ctx, tt.args.view)
 			assert.Equal(t, tt.wantErr, err != nil)

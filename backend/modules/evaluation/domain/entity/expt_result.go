@@ -30,10 +30,20 @@ const (
 	FieldType_EvaluatorVersionID FieldType = 20
 	FieldType_TargetVersionID    FieldType = 21
 	FieldType_EvalSetVersionID   FieldType = 22
+
+	// 标注项, FieldKey为TagKeyID
+	FieldType_Annotation FieldType = 23
 )
 
 // aggregate result
 type UpdateExptAggrResultParam struct {
+	SpaceID      int64
+	ExperimentID int64
+	FieldType    FieldType
+	FieldKey     string
+}
+
+type CreateSpecificFieldAggrResultParam struct {
 	SpaceID      int64
 	ExperimentID int64
 	FieldType    FieldType
@@ -54,8 +64,10 @@ const (
 type AggrResultDataType int
 
 const (
-	Double            AggrResultDataType = 0 // 默认，有小数的浮点数值类型
-	ScoreDistribution AggrResultDataType = 1 // 得分分布
+	Double              AggrResultDataType = 0 // 默认，有小数的浮点数值类型
+	ScoreDistribution   AggrResultDataType = 1 // 得分分布
+	OptionDistribution  AggrResultDataType = 2 // 选项分布
+	BooleanDistribution AggrResultDataType = 3 // 布尔分布
 )
 
 type ScoreDistributionData struct {
@@ -68,10 +80,27 @@ type ScoreDistributionItem struct {
 	Percentage float64 // 占总数的百分比
 }
 
+type OptionDistributionData struct {
+	OptionDistributionItems []*OptionDistributionItem
+}
+type OptionDistributionItem struct {
+	Option     string // 选项ID,TOP5以外的聚合展示为“其他”
+	Count      int64
+	Percentage float64
+}
+
+type BooleanDistributionData struct {
+	TrueCount      int64
+	FalseCount     int64
+	TruePercentage float64
+}
+
 type AggregateData struct {
-	DataType          AggrResultDataType
-	Value             *float64
-	ScoreDistribution *ScoreDistributionData
+	DataType            AggrResultDataType
+	Value               *float64
+	ScoreDistribution   *ScoreDistributionData
+	OptionDistribution  *OptionDistributionData
+	BooleanDistribution *BooleanDistributionData
 }
 
 // AggregatorResult 一种聚合器类型的聚合结果
@@ -109,9 +138,10 @@ type ExptAggrResult struct {
 }
 
 type ExptAggregateResult struct {
-	ExperimentID     int64
-	EvaluatorResults map[int64]*EvaluatorAggregateResult
-	Status           int64
+	ExperimentID      int64
+	EvaluatorResults  map[int64]*EvaluatorAggregateResult
+	Status            int64
+	AnnotationResults map[int64]*AnnotationAggregateResult
 }
 
 type EvaluatorAggregateResult struct {
@@ -119,6 +149,13 @@ type EvaluatorAggregateResult struct {
 	AggregatorResults  []*AggregatorResult
 	Name               *string
 	Version            *string
+}
+
+// 人工标注项粒度聚合结果
+type AnnotationAggregateResult struct {
+	TagKeyID          int64
+	AggregatorResults []*AggregatorResult
+	Name              *string
 }
 
 // item result
@@ -436,6 +473,29 @@ type ExptTurnResultFilterAccelerator struct {
 	EvalSetSyncCkDate string
 }
 
+func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
+	hasFilters := e.EvaluatorScoreCorrected != nil ||
+		len(e.ItemIDs) > 0 ||
+		len(e.ItemRunStatus) > 0 ||
+		len(e.TurnRunStatus) > 0
+	hasFilters = hasFilters || (e.MapCond != nil && (len(e.MapCond.EvalTargetDataFilters) > 0 ||
+		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
+		len(e.MapCond.AnnotationFloatFilters) > 0 ||
+		len(e.MapCond.AnnotationBoolFilters) > 0 ||
+		len(e.MapCond.AnnotationStringFilters) > 0))
+	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
+		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
+		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
+		len(e.ItemSnapshotCond.StringMapFilters) > 0))
+	hasFilters = hasFilters || (e.KeywordSearch != nil && ((e.KeywordSearch.ItemSnapshotFilter != nil && (len(e.KeywordSearch.ItemSnapshotFilter.BoolMapFilters) > 0 ||
+		len(e.KeywordSearch.ItemSnapshotFilter.FloatMapFilters) > 0 ||
+		len(e.KeywordSearch.ItemSnapshotFilter.IntMapFilters) > 0 ||
+		len(e.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)) ||
+		len(e.KeywordSearch.EvalTargetDataFilters) > 0))
+
+	return hasFilters
+}
+
 // FieldTypeMapping 定义 ExptTurnResultFilterKeyMapping 中 FieldType 的常量
 type FieldTypeMapping int32
 
@@ -446,6 +506,10 @@ const (
 	FieldTypeEvaluator FieldTypeMapping = 1
 	// FieldTypeManualAnnotation 人工标注类型
 	FieldTypeManualAnnotation FieldTypeMapping = 2
+	// FieldTypeManualAnnotationScore FieldTypeMapping = 2
+	// FieldTypeManualAnnotationText FieldTypeMapping = 2
+	// FieldTypeManualAnnotationCategorical FieldTypeMapping = 2
+
 )
 
 type ExptTurnResultFilterKeyMapping struct {
@@ -473,6 +537,10 @@ type TurnTargetOutput struct {
 
 type TurnEvaluatorOutput struct {
 	EvaluatorRecords map[int64]*EvaluatorRecord
+}
+
+type TurnAnnotateResult struct {
+	AnnotateRecords map[int64]*AnnotateRecord
 }
 
 type TurnEvalSet struct {
@@ -515,6 +583,8 @@ type ExperimentTurnPayload struct {
 	EvaluatorOutput *TurnEvaluatorOutput
 	// 评测系统相关数据日志、error
 	SystemInfo *TurnSystemInfo
+	// 标注结果
+	AnnotateResult *TurnAnnotateResult
 }
 
 type ExperimentResult struct {
@@ -544,6 +614,11 @@ type ColumnEvaluator struct {
 	Name               *string
 	Version            *string
 	Description        *string
+}
+
+type ExptColumnEvaluator struct {
+	ExptID           int64
+	ColumnEvaluators []*ColumnEvaluator
 }
 
 type ExptTurnResultFilterEntity struct {
@@ -584,4 +659,19 @@ func IntersectInt64String(a []int64, b []string) []int64 {
 		}
 	}
 	return res
+}
+
+type ColumnAnnotation struct {
+	TagKeyID       int64
+	TagName        string
+	Description    string
+	TagValues      []*TagValue
+	TagContentType TagContentType
+	TagContentSpec *TagContentSpec
+	TagStatus      TagStatus
+}
+
+type ExptColumnAnnotation struct {
+	ExptID            int64
+	ColumnAnnotations []*ColumnAnnotation
 }

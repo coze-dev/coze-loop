@@ -68,15 +68,15 @@ func (d *Dataset) SetID(id int64) {
 }
 
 type DatasetSpec struct {
-	MaxItemCount  int64 `json:"max_item_count,omitempty"`  // 条数上限
-	MaxFieldCount int32 `json:"max_field_count,omitempty"` // 字段上限
-	MaxItemSize   int64 `json:"max_item_size,omitempty"`   // 单条数据字数上限
+	MaxItemCount  int64 `mapstructure:"max_item_count" json:"max_item_count,omitempty"`   // 条数上限
+	MaxFieldCount int32 `mapstructure:"max_field_count" json:"max_field_count,omitempty"` // 字段上限
+	MaxItemSize   int64 `mapstructure:"max_item_size" json:"max_item_size,omitempty"`     // 单条数据字数上限
 }
 
 type DatasetFeatures struct {
-	EditSchema   bool `json:"edit_schema,omitempty"`   // 变更 schema
-	RepeatedData bool `json:"repeated_data,omitempty"` // 多轮数据
-	MultiModal   bool `json:"multi_modal,omitempty"`   // 多模态
+	EditSchema   bool `mapstructure:"edit_schema" json:"edit_schema,omitempty"`     // 变更 schema
+	RepeatedData bool `mapstructure:"repeated_data" json:"repeated_data,omitempty"` // 多轮数据
+	MultiModal   bool `mapstructure:"multi_modal" json:"multi_modal,omitempty"`     // 多模态
 }
 
 type DatasetCategory string

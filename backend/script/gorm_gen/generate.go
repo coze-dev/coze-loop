@@ -25,7 +25,7 @@ func main() {
 
 func initDB() *gorm.DB {
 	cli, err := gorm.Open(rawsql.New(rawsql.Config{
-		FilePath: []string{"../conf/default/mysql/init-sql"},
+		FilePath: []string{"../release/deployment/docker-compose/bootstrap/mysql-init/init-sql"},
 	}))
 	if err != nil {
 		panic(err)
@@ -53,7 +53,10 @@ func generateForPrompt(db *gorm.DB) {
 	g.UseDB(db)
 
 	var models []any
-	for _, table := range []string{"prompt_basic", "prompt_user_draft", "prompt_debug_log", "prompt_debug_context"} {
+	for _, table := range []string{
+		"prompt_basic", "prompt_user_draft", "prompt_debug_log", "prompt_debug_context",
+		"prompt_label", "prompt_commit_label_mapping",
+	} {
 		models = append(models, g.GenerateModel(table,
 			// 添加软删除字段
 			gen.FieldType("deleted_at", "soft_delete.DeletedAt"),
@@ -71,6 +74,7 @@ func generateForPrompt(db *gorm.DB) {
 				return tag.Set("charset=utf8mb4")
 			})))
 	}
+
 	g.ApplyBasic(models...)
 	g.Execute()
 }
@@ -143,6 +147,7 @@ func generateForTag(db *gorm.DB) {
 		gen.FieldType("change_log", "datatypes.JSON"),
 		gen.FieldType("version_num", "*int32"),
 		gen.FieldType("spec", "datatypes.JSON"),
+		gen.FieldType("content_type", "*string"),
 	)
 
 	tagValue := g.GenerateModelAs("tag_value", "TagValue",
@@ -190,6 +195,10 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_turn_result_run_log",
 		"expt_run_log",
 		"expt_aggr_result",
+		"expt_turn_result_filter_key_mapping",
+		"expt_turn_result_tag_ref",
+		"expt_turn_annotate_record_ref",
+		"expt_result_export_record",
 	}
 
 	var models []any
@@ -204,6 +213,16 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		name := strings.Join(parts, "")
 		models = append(models, g.GenerateModelAs(tn, name))
 	}
+
+	models = append(models, g.GenerateModelAs("annotate_record", "AnnotateRecord",
+		gen.FieldType("score", "float64"),
+		gen.FieldType("annotate_data", "[]byte"),
+	))
+	models = append(models, g.GenerateModelAs("expt_turn_result_filter_key_mapping", "ExptTurnResultFilterKeyMapping",
+		gen.FieldType("created_at", "time.Time"),
+		gen.FieldType("created_by", "string"),
+	))
+
 	g.ApplyBasic(models...)
 	g.Execute()
 }

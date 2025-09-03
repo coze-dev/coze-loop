@@ -11,7 +11,6 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
-	"github.com/coze-dev/cozeloop-go"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -237,7 +236,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[ExecuteTarget]evalTargetDO is nil"))
 	}
 
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", cozeloop.WithStartNewTrace(), cozeloop.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
 	if err != nil {
 		logs.CtxWarn(ctx, "start span failed, err=%v", err)
 	}
@@ -270,7 +269,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("[ExecuteTarget]outputData is nil"))
 	}
 	// setSpan
-	setSpanInputOutput(spanParam, evalTargetDO, inputData, outputData)
+	setSpanInputOutput(ctx, spanParam, evalTargetDO, inputData, outputData)
 
 	return record, nil
 }
@@ -287,38 +286,82 @@ func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID
 	return e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
 }
 
-func setSpanInputOutput(spanParam *targetSpanTagsParams, do *entity.EvalTarget, inputData *entity.EvalTargetInputData, outputData *entity.EvalTargetOutputData) {
+func (e *EvalTargetServiceImpl) ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error {
+	if len(runtimeParam) == 0 {
+		return nil
+	}
+
+	so, err := e.sourceTargetOperator(targetType)
+	if err != nil {
+		return err
+	}
+
+	_, err = so.RuntimeParam().ParseFromJSON(runtimeParam)
+	return err
+}
+
+func (e *EvalTargetServiceImpl) sourceTargetOperator(targetType entity.EvalTargetType) (ISourceEvalTargetOperateService, error) {
+	o, ok := e.typedOperators[targetType]
+	if !ok || o == nil {
+		return nil, errorx.New("target %v operator not found", targetType)
+	}
+	return o, nil
+}
+
+func setSpanInputOutput(ctx context.Context, spanParam *targetSpanTagsParams, do *entity.EvalTarget, inputData *entity.EvalTargetInputData, outputData *entity.EvalTargetOutputData) {
 	spanParam.TargetType = do.EvalTargetType.String()
 	spanParam.TargetID = do.SourceTargetID
 	spanParam.TargetVersion = do.EvalTargetVersion.SourceTargetVersion
 
 	if inputData != nil {
-		spanParam.Inputs = map[string]*tracespec.ModelMessagePart{}
+		spanParam.Inputs = map[string][]*tracespec.ModelMessagePart{}
 		for key, content := range inputData.InputFields {
-			// TODO 先只处理text
-			spanParam.Inputs[key] = &tracespec.ModelMessagePart{
-				Text: content.GetText(),
-				Type: tracespec.ModelMessagePartType(content.GetContentType()),
-			}
+			spanParam.Inputs[key] = toTraceParts(ctx, content)
 		}
 	}
 	if outputData != nil {
-		spanParam.Outputs = map[string]*tracespec.ModelMessagePart{}
+		spanParam.Outputs = map[string][]*tracespec.ModelMessagePart{}
 		for key, content := range outputData.OutputFields {
-			spanParam.Outputs[key] = &tracespec.ModelMessagePart{
-				// TODO 先只处理text
-				Text: content.GetText(),
-				Type: tracespec.ModelMessagePartType(content.GetContentType()),
-			}
+			spanParam.Outputs[key] = toTraceParts(ctx, content)
 		}
 		spanParam.InputToken = outputData.EvalTargetUsage.InputTokens
 		spanParam.OutputToken = outputData.EvalTargetUsage.OutputTokens
 	}
 }
 
+func toTraceParts(ctx context.Context, content *entity.Content) []*tracespec.ModelMessagePart {
+	switch content.GetContentType() {
+	case entity.ContentTypeText:
+		return []*tracespec.ModelMessagePart{{
+			Text: content.GetText(),
+			Type: tracespec.ModelMessagePartType(content.GetContentType()),
+		}}
+	case entity.ContentTypeImage:
+		return []*tracespec.ModelMessagePart{{
+			ImageURL: &tracespec.ModelImageURL{
+				Name: gptr.Indirect(content.Image.Name),
+				URL:  gptr.Indirect(content.Image.URL),
+			},
+			Type: tracespec.ModelMessagePartType(content.GetContentType()),
+		}}
+	case entity.ContentTypeMultipart:
+		parts := make([]*tracespec.ModelMessagePart, 0, len(content.MultiPart))
+		for _, sub := range content.MultiPart {
+			parts = append(parts, toTraceParts(ctx, sub)...)
+		}
+		return parts
+	default:
+		logs.CtxInfo(ctx, "toTraceParts with unsupported content type %s", content.GetContentType())
+		return []*tracespec.ModelMessagePart{{
+			Text: content.GetText(),
+			Type: tracespec.ModelMessagePartType(content.GetContentType()),
+		}}
+	}
+}
+
 type targetSpanTagsParams struct {
-	Inputs  map[string]*tracespec.ModelMessagePart
-	Outputs map[string]*tracespec.ModelMessagePart
+	Inputs  map[string][]*tracespec.ModelMessagePart
+	Outputs map[string][]*tracespec.ModelMessagePart
 	Error   error
 	ErrCode string
 

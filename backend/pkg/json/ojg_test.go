@@ -142,7 +142,7 @@ func TestGetByJSONPath(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := GetByJSONPath(sampleJSON, tc.jsonpath)
+			result, err := GetByJSONPath(sampleJSON, tc.jsonpath, false)
 
 			switch tc.expectedType {
 			case "error":

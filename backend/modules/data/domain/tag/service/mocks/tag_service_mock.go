@@ -42,6 +42,25 @@ func (m *MockITagService) EXPECT() *MockITagServiceMockRecorder {
 	return m.recorder
 }
 
+// ArchiveOptionTag mocks base method.
+func (m *MockITagService) ArchiveOptionTag(arg0 context.Context, arg1, arg2 int64, arg3 *entity.TagKey, arg4 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ArchiveOptionTag", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ArchiveOptionTag indicates an expected call of ArchiveOptionTag.
+func (mr *MockITagServiceMockRecorder) ArchiveOptionTag(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArchiveOptionTag", reflect.TypeOf((*MockITagService)(nil).ArchiveOptionTag), varargs...)
+}
+
 // BatchGetTagsByTagKeyIDs mocks base method.
 func (m *MockITagService) BatchGetTagsByTagKeyIDs(arg0 context.Context, arg1 int64, arg2 []int64) ([]*entity.TagKey, error) {
 	m.ctrl.T.Helper()
@@ -198,6 +217,25 @@ func (m *MockITagService) SearchTags(arg0 context.Context, arg1 int64, arg2 *ent
 func (mr *MockITagServiceMockRecorder) SearchTags(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchTags", reflect.TypeOf((*MockITagService)(nil).SearchTags), arg0, arg1, arg2)
+}
+
+// UpdateOptionTag mocks base method.
+func (m *MockITagService) UpdateOptionTag(arg0 context.Context, arg1, arg2 int64, arg3 *entity.TagKey, arg4 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateOptionTag", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateOptionTag indicates an expected call of UpdateOptionTag.
+func (mr *MockITagServiceMockRecorder) UpdateOptionTag(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOptionTag", reflect.TypeOf((*MockITagService)(nil).UpdateOptionTag), varargs...)
 }
 
 // UpdateTag mocks base method.

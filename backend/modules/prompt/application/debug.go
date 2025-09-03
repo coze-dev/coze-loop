@@ -12,7 +12,6 @@ import (
 
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
-	"github.com/coze-dev/cozeloop-go"
 	loopentity "github.com/coze-dev/cozeloop-go/entity"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
@@ -90,7 +89,7 @@ func (p *PromptDebugApplicationImpl) DebugStreaming(ctx context.Context, req *de
 	}
 	var aggregatedReply *entity.Reply
 	var span looptracer.Span
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptExecutor, consts.SpanTypePromptExecutor, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(req.Prompt.GetWorkspaceID(), 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptExecutor, consts.SpanTypePromptExecutor, looptracer.WithSpanWorkspaceID(strconv.FormatInt(req.Prompt.GetWorkspaceID(), 10)))
 	if span != nil {
 		span.SetCallType(callType)
 		span.SetUserIDBaggage(ctx, session.UserIDInCtxOrEmpty(ctx))
@@ -260,7 +259,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		mockVariables := convertor.BatchVariableValDTO2DO(req.VariableVals)
 		mockTools := convertor.MockToolsDTO2DO(req.MockTools)
 		// complete multi modal file uri to url
-		executeErr = p.promptService.MCompleteMultiModalFileURL(ctx, messages)
+		executeErr = p.promptService.MCompleteMultiModalFileURL(ctx, messages, mockVariables)
 		if executeErr != nil {
 			return
 		}
@@ -325,7 +324,7 @@ func (p *PromptDebugApplicationImpl) reportDebugPromptHubSpan(ctx context.Contex
 	}
 	// 上报prompt hub span
 	var span looptracer.Span
-	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptHub, tracespec.VPromptHubSpanType, cozeloop.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
+	ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptHub, tracespec.VPromptHubSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
 	if span != nil {
 		span.SetPrompt(ctx, loopentity.Prompt{PromptKey: prompt.PromptKey, Version: prompt.GetVersion()})
 		span.SetInput(ctx, json.Jsonify(map[string]any{
@@ -455,6 +454,21 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 			fileKeys = append(fileKeys, part.ImageURL.URI)
 		}
 	}
+
+	if debugContext.DebugCore != nil && len(debugContext.DebugCore.MockVariables) > 0 {
+		for _, val := range debugContext.DebugCore.MockVariables {
+			if val == nil || len(val.MultiPartValues) == 0 {
+				continue
+			}
+			for _, part := range val.MultiPartValues {
+				if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+					continue
+				}
+				fileKeys = append(fileKeys, part.ImageURL.URI)
+			}
+		}
+	}
+
 	if len(fileKeys) == 0 {
 		return nil
 	}
@@ -472,6 +486,19 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 				continue
 			}
 			part.ImageURL.URL = urlMap[part.ImageURL.URI]
+		}
+	}
+	if debugContext.DebugCore != nil && len(debugContext.DebugCore.MockVariables) > 0 {
+		for _, val := range debugContext.DebugCore.MockVariables {
+			if val == nil || len(val.MultiPartValues) == 0 {
+				continue
+			}
+			for _, part := range val.MultiPartValues {
+				if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+					continue
+				}
+				part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			}
 		}
 	}
 	return nil

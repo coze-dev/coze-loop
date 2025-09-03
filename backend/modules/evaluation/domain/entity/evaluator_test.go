@@ -41,6 +41,45 @@ func TestEvaluatorRecord_GetSetBaseInfo(t *testing.T) {
 	assert.Equal(t, base, rec.GetBaseInfo())
 }
 
+func TestEvaluatorRecord_GetScore(t *testing.T) {
+	rec := &EvaluatorRecord{
+		EvaluatorOutputData: &EvaluatorOutputData{
+			EvaluatorResult: &EvaluatorResult{
+				Correction: &Correction{
+					Score: gptr.Of(0.9),
+				},
+			},
+		},
+	}
+	assert.NotNil(t, rec.GetScore())
+}
+
+func TestEvaluatorRecord_GetReasoning(t *testing.T) {
+	rec := &EvaluatorRecord{
+		EvaluatorOutputData: &EvaluatorOutputData{
+			EvaluatorResult: &EvaluatorResult{
+				Correction: &Correction{
+					Explain: "test",
+				},
+			},
+		},
+	}
+	assert.NotNil(t, rec.GetReasoning())
+}
+
+func TestEvaluatorRecord_GetCorrected(t *testing.T) {
+	rec := &EvaluatorRecord{
+		EvaluatorOutputData: &EvaluatorOutputData{
+			EvaluatorResult: &EvaluatorResult{
+				Correction: &Correction{
+					Explain: "test",
+				},
+			},
+		},
+	}
+	assert.NotNil(t, rec.GetCorrected())
+}
+
 func TestPromptEvaluatorVersion_GetSetMethods(t *testing.T) {
 	ver := &PromptEvaluatorVersion{}
 	ver.SetID(11)

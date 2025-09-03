@@ -168,6 +168,20 @@ func (mr *MockISourceEvalTargetOperateServiceMockRecorder) PackSourceVersionInfo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackSourceVersionInfo", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).PackSourceVersionInfo), ctx, spaceID, dos)
 }
 
+// RuntimeParam mocks base method.
+func (m *MockISourceEvalTargetOperateService) RuntimeParam() entity.IRuntimeParam {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RuntimeParam")
+	ret0, _ := ret[0].(entity.IRuntimeParam)
+	return ret0
+}
+
+// RuntimeParam indicates an expected call of RuntimeParam.
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) RuntimeParam() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RuntimeParam", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).RuntimeParam))
+}
+
 // ValidateInput mocks base method.
 func (m *MockISourceEvalTargetOperateService) ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error {
 	m.ctrl.T.Helper()

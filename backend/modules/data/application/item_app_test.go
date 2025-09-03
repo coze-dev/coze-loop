@@ -8,9 +8,10 @@ import (
 	"errors"
 	"testing"
 
+	"go.uber.org/mock/gomock"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 
 	mock_audit "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
@@ -632,6 +633,80 @@ func TestDatasetApplicationImpl_ClearDatasetItem(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedResp, resp)
 			}
+		})
+	}
+}
+
+func TestDatasetApplicationImpl_ValidateDatasetItems(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := mock_auth.NewMockIAuthProvider(ctrl)
+	mockRepo := mock_repo.NewMockIDatasetAPI(ctrl)
+	mockDatasetService := mock_dataset.NewMockIDatasetAPI(ctrl)
+	mockAudit := mock_audit.NewMockIAuditService(ctrl)
+
+	app := &DatasetApplicationImpl{
+		auth:        mockAuth,
+		repo:        mockRepo,
+		svc:         mockDatasetService,
+		auditClient: mockAudit,
+	}
+
+	tests := []struct {
+		name         string
+		req          *dataset.ValidateDatasetItemsReq
+		mockSetup    func()
+		expectedResp *dataset.ValidateDatasetItemsResp
+		expectedErr  assert.ErrorAssertionFunc
+	}{
+		{
+			name: "permission denied",
+			req:  &dataset.ValidateDatasetItemsReq{WorkspaceID: gptr.Of(int64(1))},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("permission denied"))
+			},
+			expectedErr: assert.Error,
+		},
+		{
+			name: "valid",
+			req: &dataset.ValidateDatasetItemsReq{
+				WorkspaceID: gptr.Of(int64(1)),
+				Items:       []*domain_dataset.DatasetItem{{ItemID: gptr.Of(int64(1))}},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockDatasetService.EXPECT().ValidateDatasetItems(gomock.Any(), gomock.Any()).
+					Return(&service.ValidateDatasetItemsResult{
+						ValidItemIndices: []int32{0},
+						ErrorGroups: []*entity.ItemErrorGroup{
+							{
+								Type:    gptr.Of(entity.ItemErrorType_ExceedDatasetCapacity),
+								Summary: gptr.Of("capacity=100, current=0, to_add=1"),
+							},
+						},
+					}, nil)
+			},
+			expectedResp: &dataset.ValidateDatasetItemsResp{
+				ValidItemIndices: []int32{0},
+				Errors: []*domain_dataset.ItemErrorGroup{
+					{
+						Type:    gptr.Of(domain_dataset.ItemErrorType_ExceedDatasetCapacity),
+						Summary: gptr.Of("capacity=100, current=0, to_add=1"),
+						Details: []*domain_dataset.ItemErrorDetail{},
+					},
+				},
+			},
+			expectedErr: assert.NoError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.ValidateDatasetItems(context.Background(), tt.req)
+			tt.expectedErr(t, err)
+			assert.Equal(t, tt.expectedResp, resp)
 		})
 	}
 }

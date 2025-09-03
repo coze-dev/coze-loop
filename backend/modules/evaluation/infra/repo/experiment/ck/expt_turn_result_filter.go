@@ -306,6 +306,37 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 			*args = append(*args, floatValue1, floatValue2)
 		}
 	}
+
+	for _, f := range cond.MapCond.AnnotationStringFilters {
+		switch f.Op {
+		case "=":
+			// 删除 mapContains 条件
+			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string{'%s'} = ?", f.Key)
+			*args = append(*args, f.Values[0])
+		case "LIKE":
+			// 删除 mapContains 条件
+			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string{'%s'} LIKE ?", f.Key)
+			*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
+		case "NOT LIKE":
+			// 删除 mapContains 条件
+			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string{'%s'} NOT LIKE ?", f.Key)
+			*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
+		case "!=":
+			// 删除 mapContains 条件
+			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string{'%s'}!=?", f.Key)
+			*args = append(*args, f.Values[0])
+
+			// tag_value_id
+		case "in", "IN":
+			//*whereSQL += " AND etrf.annotation_string IN ?"
+			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string{'%s'} IN ?", f.Key)
+			*args = append(*args, f.Values)
+		case "NOT IN":
+			//*whereSQL += " AND etrf.annotation_string NOT IN?"
+			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string{'%s'} NOT IN ?", f.Key)
+			*args = append(*args, f.Values)
+		}
+	}
 }
 
 // buildItemSnapshotConditions 构建联表条件

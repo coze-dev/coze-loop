@@ -29,6 +29,7 @@ struct PromptResultData {
 struct PromptQuery {
     1: optional string prompt_key
     2: optional string version
+    3: optional string label
 }
 
 struct PromptResult {
@@ -54,6 +55,8 @@ struct PromptTemplate {
 
 typedef string TemplateType
 const TemplateType TemplateType_Normal = "normal"
+const TemplateType TemplateType_Jinja2 = "jinja2"
+
 
 typedef string ToolChoiceType
 const ToolChoiceType ToolChoiceType_Auto = "auto"
@@ -66,7 +69,18 @@ struct ToolCallConfig {
 struct Message {
     1: optional Role role
     2: optional string content
+    3: optional list<ContentPart> parts
 }
+
+struct ContentPart {
+    1: optional ContentType type
+    2: optional string text
+}
+
+typedef string ContentType (ts.enum="true")
+
+const ContentType ContentType_Text = "text"
+const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct VariableDef {
      1: optional string key // 变量名字
@@ -76,7 +90,17 @@ struct VariableDef {
 
 typedef string VariableType
 const VariableType VariableType_String = "string"
+const VariableType VariableType_Boolean = "boolean"
+const VariableType VariableType_Integer = "integer"
+const VariableType VariableType_Float = "float"
+const VariableType VariableType_Object = "object"
+const VariableType VariableType_Array_String = "array<string>"
+const VariableType VariableType_Array_Boolean = "array<boolean>"
+const VariableType VariableType_Array_Integer = "array<integer>"
+const VariableType VariableType_Array_Float = "array<float>"
+const VariableType VariableType_Array_Object = "array<object>"
 const VariableType VariableType_Placeholder = "placeholder"
+const VariableType VariableType_MultiPart = "multi_part"
 
 typedef string Role
 const Role Role_System = "system"

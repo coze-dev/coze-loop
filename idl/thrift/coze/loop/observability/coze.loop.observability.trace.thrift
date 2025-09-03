@@ -1,11 +1,13 @@
 namespace go coze.loop.observability.trace
 
 include "../../../base.thrift"
+include "../data/domain/dataset.thrift"
 include "./domain/span.thrift"
 include "./domain/common.thrift"
 include "./domain/filter.thrift"
 include "./domain/view.thrift"
 include "./domain/annotation.thrift"
+include "./domain/export_dataset.thrift"
 
 struct ListSpansRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
@@ -227,6 +229,66 @@ struct ListAnnotationsResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ExportTracesToDatasetRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required list<SpanID> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
+    3: required dataset.DatasetCategory category (api.body="category")
+    4: required DatasetConfig config (api.body="config")
+    5: required i64 start_time (api.js_conv="true", go.tag='json:"start_time"', api.body="start_time")
+    6: required i64 end_time (api.js_conv="true", go.tag='json:"end_time"', api.body="end_time")
+    7: optional common.PlatformType platform_type (api.body="platform_type")
+    8: required export_dataset.ExportType export_type (api.body="export_type")                 // 导入方式，不填默认为追加
+    9: optional list<export_dataset.FieldMapping> field_mappings (api.body="field_mappings", vt.min_size="1", vt.max_size="100")
+
+    255: optional base.Base Base
+}
+
+struct SpanID {
+    1: required string trace_id
+    2: required string span_id
+}
+
+struct DatasetConfig {
+    1: required bool   is_new_dataset                        // 是否是新增数据集
+    2: optional i64    dataset_id (api.js_conv="true", go.tag='json:"dataset_id"')   // 数据集id，新增数据集时可为空
+    3: optional string dataset_name                          // 数据集名称，选择已有数据集时可为空
+    4: optional export_dataset.DatasetSchema dataset_schema (vt.not_nil="true")   // 数据集列数据schema
+}
+
+struct ExportTracesToDatasetResponse {
+    1: optional i32 success_count                       // 成功导入的数量
+    2: optional list<dataset.ItemErrorGroup> errors     // 错误信息
+    3: optional i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"')    // 数据集id
+    4: optional string dataset_name                     // 数据集名称
+
+    255: optional base.BaseResp BaseResp (api.none="true")
+    256: optional i32 Code (agw.key = "code")     // 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg
+    257: optional string Msg (agw.key = "msg")    // 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg
+}
+
+struct PreviewExportTracesToDatasetRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required list<SpanID> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
+    3: required dataset.DatasetCategory category (api.body="category")
+    4: required DatasetConfig config (api.body="config")
+    5: required i64 start_time (api.js_conv="true", go.tag='json:"start_time"', api.body="start_time")
+    6: required i64 end_time (api.js_conv="true", go.tag='json:"end_time"', api.body="end_time")
+    7: optional common.PlatformType platform_type (api.body="platform_type")
+    8: required export_dataset.ExportType export_type (api.body="export_type")                 // 导入方式，不填默认为追加
+    9: optional list<export_dataset.FieldMapping> field_mappings (api.body="field_mappings", vt.min_size="1", vt.max_size="100")
+
+    255: optional base.Base Base (api.none="true")
+}
+
+struct PreviewExportTracesToDatasetResponse {
+    1: optional list<export_dataset.Item> items         // 预览数据
+    2: optional list<dataset.ItemErrorGroup> errors     // 概要错误信息
+
+    255: optional base.BaseResp BaseResp (api.none="true")
+    256: optional i32 Code (agw.key = "code")     // 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg
+    257: optional string Msg (agw.key = "msg")    // 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg
+}
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     GetTraceResponse GetTrace(1: GetTraceRequest req) (api.get = '/api/observability/v1/traces/:trace_id')
@@ -241,4 +303,6 @@ service TraceService {
     UpdateManualAnnotationResponse UpdateManualAnnotation(1: UpdateManualAnnotationRequest req) (api.put = '/api/observability/v1/annotations/:annotation_id')
     DeleteManualAnnotationResponse DeleteManualAnnotation(1: DeleteManualAnnotationRequest req) (api.delete = '/api/observability/v1/annotations/:annotation_id')
     ListAnnotationsResponse ListAnnotations(1: ListAnnotationsRequest req) (api.post = '/api/observability/v1/annotations/list')
+    ExportTracesToDatasetResponse ExportTracesToDataset(1: ExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/export_to_dataset')
+    PreviewExportTracesToDatasetResponse PreviewExportTracesToDataset(1: PreviewExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/preview_export_to_dataset')
 }

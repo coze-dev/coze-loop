@@ -11,7 +11,9 @@ import (
 
 	evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -150,12 +152,14 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 				ModelConfig       *evaluatordo.ModelConfig     `json:"model_config"`
 				Tools             []*evaluatordo.Tool          `json:"tools"`
 			}
-			if err := json.Unmarshal(*po.Metainfo, &meta); err == nil {
+			if err := js_conv.GetUnmarshaler()(*po.Metainfo, &meta); err == nil {
 				do.PromptEvaluatorVersion.PromptSourceType = meta.PromptSourceType
 				do.PromptEvaluatorVersion.PromptTemplateKey = meta.PromptTemplateKey
 				do.PromptEvaluatorVersion.MessageList = meta.MessageList
 				do.PromptEvaluatorVersion.ModelConfig = meta.ModelConfig
 				do.PromptEvaluatorVersion.Tools = meta.Tools
+			} else {
+				return nil, errorx.Wrapf(err, "evaluator version metainfo json unmarshal fail, evluator_version_id: %v", po.ID)
 			}
 			if po.InputSchema != nil {
 				var schema []*evaluatordo.ArgsSchema

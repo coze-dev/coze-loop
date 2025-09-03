@@ -188,6 +188,36 @@ func (mr *MockITraceServiceMockRecorder) ListSpans(ctx, req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpans", reflect.TypeOf((*MockITraceService)(nil).ListSpans), ctx, req)
 }
 
+// ListSpansOApi mocks base method.
+func (m *MockITraceService) ListSpansOApi(ctx context.Context, req *service.ListSpansOApiReq) (*service.ListSpansOApiResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSpansOApi", ctx, req)
+	ret0, _ := ret[0].(*service.ListSpansOApiResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSpansOApi indicates an expected call of ListSpansOApi.
+func (mr *MockITraceServiceMockRecorder) ListSpansOApi(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpansOApi", reflect.TypeOf((*MockITraceService)(nil).ListSpansOApi), ctx, req)
+}
+
+// SearchTraceOApi mocks base method.
+func (m *MockITraceService) SearchTraceOApi(ctx context.Context, req *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchTraceOApi", ctx, req)
+	ret0, _ := ret[0].(*service.SearchTraceOApiResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchTraceOApi indicates an expected call of SearchTraceOApi.
+func (mr *MockITraceServiceMockRecorder) SearchTraceOApi(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchTraceOApi", reflect.TypeOf((*MockITraceService)(nil).SearchTraceOApi), ctx, req)
+}
+
 // Send mocks base method.
 func (m *MockITraceService) Send(ctx context.Context, msg *entity.AnnotationEvent) error {
 	m.ctrl.T.Helper()

@@ -615,8 +615,10 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotation: &loop_span.Annotation{
-						ID: "anno1",
+					Annotations: []*loop_span.Annotation{
+						{
+							ID: "anno1",
+						},
 					},
 				},
 			},
@@ -636,8 +638,10 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotation: &loop_span.Annotation{
-						ID: "anno1",
+					Annotations: []*loop_span.Annotation{
+						{
+							ID: "anno1",
+						},
 					},
 				},
 			},
@@ -653,7 +657,7 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				annoDao:     fields.annoDao,
 				traceConfig: fields.traceConfig,
 			}
-			err := r.InsertAnnotation(tt.args.ctx, tt.args.param)
+			err := r.InsertAnnotations(tt.args.ctx, tt.args.param)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}

@@ -13,6 +13,7 @@ struct CreateTagRequest {
     6: optional list<tag.TagDomainType> tag_domain_types
     7: optional tag.TagContentType tag_content_type
     8: optional string version
+    9: optional tag.TagType tag_type
 
     255: optional base.Base Base
 }
@@ -130,6 +131,18 @@ struct BatchGetTagsResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ArchiveOptionTagRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.gt="0")
+    2: required i64 tag_key_id (api.js_conv="true",go.tag='json:"tag_key_id"', api.path="tag_key_id", vt.gt="0")
+    3: required string name
+    4: optional string description
+    255: optional base.Base base
+}
+
+struct ArchiveOptionTagResponse {
+    255: optional base.BaseResp baseResp
+}
+
 service TagService {
     /* Tag */
     // 新增标签
@@ -146,4 +159,6 @@ service TagService {
     GetTagSpecResponse GetTagSpec(1: GetTagSpecRequest req) (api.get="/api/data/v1/tag_spec")
     // 批量获取标签
     BatchGetTagsResponse BatchGetTags(1: BatchGetTagsRequest req) (api.post="/api/data/v1/tags/batch_get")
+    //将单选标签归档进标签管理
+    ArchiveOptionTagResponse ArchiveOptionTag(1: ArchiveOptionTagRequest request) (api.post = "/api/data/v1/tags/:tag_key_id/archive_option_tag")
 }

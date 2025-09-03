@@ -40,7 +40,9 @@ func ConvertToLoopPrompt(p *prompt.Prompt) *rpc.LoopPrompt {
 				PromptTemplate: &rpc.PromptTemplate{
 					VariableDefs: gslice.Map(p.GetPromptCommit().GetDetail().GetPromptTemplate().GetVariableDefs(), func(p *prompt.VariableDef) *rpc.VariableDef {
 						return &rpc.VariableDef{
-							Key: gptr.Of(p.GetKey()),
+							Key:      gptr.Of(p.GetKey()),
+							Type:     gptr.Of(p.GetType()),
+							TypeTags: p.TypeTags,
 						}
 					}),
 				},
@@ -67,6 +69,7 @@ func ConvertVariables2Prompt(fromVals []*entity.VariableVal) (toVals []*prompt.V
 			Key:                 v.Key,
 			Value:               v.Value,
 			PlaceholderMessages: ConvertMessages2Prompt(v.PlaceholderMessages),
+			MultiPartValues:     ConvertContent(v.Content),
 		})
 	}
 	return
@@ -78,10 +81,13 @@ func ConvertMessages2Prompt(fromMsg []*entity.Message) (toMsg []*prompt.Message)
 	}
 	toMsg = make([]*prompt.Message, 0)
 	for _, m := range fromMsg {
+		if m == nil || m.Content == nil {
+			continue
+		}
 		toMsg = append(toMsg, &prompt.Message{
 			Role:    gptr.Of(Role2PromptRole(m.Role)),
 			Content: m.Content.Text,
-			// 暂不支持传递多模态
+			Parts:   ConvertContent(m.Content),
 			// Parts:      nil,
 			// ToolCallID: nil,
 			// ToolCalls:  nil,
@@ -122,5 +128,38 @@ func Role2PromptRole(role entity.Role) prompt.Role {
 	default:
 		// follow prompt's logic
 		return prompt.RoleUser
+	}
+}
+
+func ConvertContent(content *entity.Content) []*prompt.ContentPart {
+	if content == nil {
+		return nil
+	}
+	switch content.GetContentType() {
+	case entity.ContentTypeText:
+		return []*prompt.ContentPart{
+			{
+				Type: gptr.Of(prompt.ContentTypeText),
+				Text: gptr.Of(content.GetText()),
+			},
+		}
+	case entity.ContentTypeImage:
+		return []*prompt.ContentPart{
+			{
+				Type: gptr.Of(prompt.ContentTypeImageURL),
+				ImageURL: &prompt.ImageURL{
+					URL: content.Image.URL,
+					URI: content.Image.URI,
+				},
+			},
+		}
+	case entity.ContentTypeMultipart:
+		cps := make([]*prompt.ContentPart, 0, len(content.MultiPart))
+		for _, sub := range content.MultiPart {
+			cps = append(cps, ConvertContent(sub)...)
+		}
+		return cps
+	default:
+		return []*prompt.ContentPart{}
 	}
 }

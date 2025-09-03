@@ -19,6 +19,7 @@ const (
 	ExptOnlineEvalResultRMQKey      = "expt_online_eval_result_rmq"
 	EvaluatorRecordCorrectionRMQKey = "evaluator_record_correction_rmq"
 	ExptTurnResultFilterRMQKey      = "expt_turn_result_filter_rmq"
+	ExptExportCSVEventRMQKey        = "expt_export_csv_event_rmq"
 )
 
 type RMQConf struct {

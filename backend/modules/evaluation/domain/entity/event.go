@@ -34,8 +34,10 @@ type ExptItemEvalEvent struct {
 type CalculateMode int
 
 const (
-	CreateAllFields     CalculateMode = 1
-	UpdateSpecificField CalculateMode = 2
+	CreateAllFields        CalculateMode = 1
+	UpdateSpecificField    CalculateMode = 2
+	CreateAnnotationFields CalculateMode = 3
+	UpdateAnnotationFields CalculateMode = 4
 )
 
 type AggrCalculateEvent struct {
@@ -111,4 +113,10 @@ type ExptTurnResultFilterEvent struct {
 
 	RetryTimes *int32
 	FilterType *UpsertExptTurnResultFilterType
+}
+
+type ExportCSVEvent struct {
+	ExportID     int64
+	ExperimentID int64
+	SpaceID      int64
 }

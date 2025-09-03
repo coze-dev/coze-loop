@@ -28,10 +28,19 @@ const (
 )
 
 const (
-	InputSchemaKey      = "input"
-	OutputSchemaKey     = "actual_output"
-	StringJsonSchema    = "{\"type\":\"string\"}"
-	MapStringJsonSchema = "{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}"
+	InputSchemaKey         = "input"
+	OutputSchemaKey        = "actual_output"
+	StringJsonSchema       = "{\"type\":\"string\"}"
+	IntegerJsonSchema      = "{\"type\":\"integer\"}"
+	NumberJsonSchema       = "{\"type\":\"number\"}"
+	BooleanJsonSchema      = "{\"type\":\"boolean\"}"
+	ObjectJsonSchema       = "{\"type\":\"object\"}"
+	ArrayStringJsonSchema  = "{\"type\":\"array\",\"items\":{\"type\":\"string\"}}"
+	ArrayIntegerJsonSchema = "{\"type\":\"array\",\"items\":{\"type\":\"integer\"}}"
+	ArrayNumberJsonSchema  = "{\"type\":\"array\",\"items\":{\"type\":\"number\"}}"
+	ArrayBooleanJsonSchema = "{\"type\":\"array\",\"items\":{\"type\":\"boolean\"}}"
+	ArrayObjectJsonSchema  = "{\"type\":\"array\",\"items\":{\"type\":\"object\"}}"
+	MapStringJsonSchema    = "{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}"
 )
 
 const ClusterNameConsumer = "consumer"

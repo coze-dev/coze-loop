@@ -78,10 +78,15 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_tags.POST("/search", append(_searchtagsMw(handler), apis.SearchTags)...)
 				_tags.PATCH("/:tag_key_id", append(_tag_key_idMw(handler), apis.UpdateTag)...)
 				_tag_key_id := _tags.Group("/:tag_key_id", _tag_key_idMw(handler)...)
+				_tag_key_id.POST("/archive_option_tag", append(_archiveoptiontagMw(handler), apis.ArchiveOptionTag)...)
 				_tag_key_id.POST("/detail", append(_gettagdetailMw(handler), apis.GetTagDetail)...)
 				{
 					_dataset_io_jobs := _v10.Group("/dataset_io_jobs", _dataset_io_jobsMw(handler)...)
 					_dataset_io_jobs.GET("/:job_id", append(_getdatasetiojobMw(handler), apis.GetDatasetIOJob)...)
+				}
+				{
+					_dataset_items := _v10.Group("/dataset_items", _dataset_itemsMw(handler)...)
+					_dataset_items.POST("/validate", append(_validatedatasetitemsMw(handler), apis.ValidateDatasetItems)...)
 				}
 				{
 					_dataset_versions := _v10.Group("/dataset_versions", _dataset_versionsMw(handler)...)
@@ -186,9 +191,25 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_experiments.POST("/check_name", append(_checkexperimentnameMw(handler), apis.CheckExperimentName)...)
 					_experiments.DELETE("/:expt_id", append(_expt_idMw(handler), apis.DeleteExperiment)...)
 					_expt_id := _experiments.Group("/:expt_id", _expt_idMw(handler)...)
+					_expt_id.POST("/associate_tag", append(_associateannotationtagMw(handler), apis.AssociateAnnotationTag)...)
 					_expt_id.POST("/clone", append(_cloneexperimentMw(handler), apis.CloneExperiment)...)
+					_expt_id.DELETE("/delete_tag", append(_deleteannotationtagMw(handler), apis.DeleteAnnotationTag)...)
 					_expt_id.POST("/kill", append(_killexperimentMw(handler), apis.KillExperiment)...)
 					_expt_id.POST("/retry", append(_retryexperimentMw(handler), apis.RetryExperiment)...)
+					{
+						_annotate_record := _expt_id.Group("/annotate_record", _annotate_recordMw(handler)...)
+						_annotate_record.POST("/create", append(_createannotaterecordMw(handler), apis.CreateAnnotateRecord)...)
+						_annotate_record.POST("/update", append(_updateannotaterecordMw(handler), apis.UpdateAnnotateRecord)...)
+					}
+					{
+						_export_records := _expt_id.Group("/export_records", _export_recordsMw(handler)...)
+						_export_records.POST("/:export_id", append(_getexptresultexportrecordMw(handler), apis.GetExptResultExportRecord)...)
+						_export_records.POST("/list", append(_listexptresultexportrecordMw(handler), apis.ListExptResultExportRecord)...)
+					}
+					{
+						_results := _expt_id.Group("/results", _resultsMw(handler)...)
+						_results.POST("/export", append(_exportexptresultMw(handler), apis.ExportExptResult)...)
+					}
 					_experiments.PATCH("/:expt_id", append(_updateexperimentMw(handler), apis.UpdateExperiment)...)
 					_experiments.POST("/list", append(_listexperimentsMw(handler), apis.ListExperiments)...)
 					_experiments.POST("/submit", append(_submitexperimentMw(handler), apis.SubmitExperiment)...)
@@ -197,8 +218,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_aggr_results.POST("/batch_get", append(_batchgetexperimentaggrresultMw(handler), apis.BatchGetExperimentAggrResult)...)
 					}
 					{
-						_results := _experiments.Group("/results", _resultsMw(handler)...)
-						_results.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
+						_results0 := _experiments.Group("/results", _results0Mw(handler)...)
+						_results0.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
 					}
 				}
 			}
@@ -259,7 +280,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
+					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
+					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
 				}
 			}
@@ -268,6 +291,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			_prompt := _api.Group("/prompt", _promptMw(handler)...)
 			{
 				_v15 := _prompt.Group("/v1", _v15Mw(handler)...)
+				_v15.POST("/labels", append(_labelsMw(handler), apis.CreateLabel)...)
+				_labels := _v15.Group("/labels", _labelsMw(handler)...)
+				_labels.POST("/batch_get", append(_batchgetlabelMw(handler), apis.BatchGetLabel)...)
+				_labels.POST("/list", append(_listlabelMw(handler), apis.ListLabel)...)
 				_v15.POST("/prompts", append(_promptsMw(handler), apis.CreatePrompt)...)
 				_prompts := _v15.Group("/prompts", _promptsMw(handler)...)
 				_prompts.POST("/list", append(_listpromptMw(handler), apis.ListPrompt)...)
@@ -277,6 +304,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_commits := _prompt_id.Group("/commits", _commitsMw(handler)...)
 					_commits.POST("/list", append(_listcommitMw(handler), apis.ListCommit)...)
+					{
+						_commit_version := _commits.Group("/:commit_version", _commit_versionMw(handler)...)
+						_commit_version.POST("/labels_update", append(_updatecommitlabelsMw(handler), apis.UpdateCommitLabels)...)
+					}
 				}
 				{
 					_debug_context := _prompt_id.Group("/debug_context", _debug_contextMw(handler)...)
@@ -311,12 +342,24 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)
 			}
 			{
+				_opentelemetry := _loop.Group("/opentelemetry", _opentelemetryMw(handler)...)
+				{
+					_v17 := _opentelemetry.Group("/v1", _v17Mw(handler)...)
+					_v17.POST("/traces", append(_otelingesttracesMw(handler), apis.OtelIngestTraces)...)
+				}
+			}
+			{
 				_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
 				_prompts0.POST("/mget", append(_batchgetpromptbypromptkeyMw(handler), apis.BatchGetPromptByPromptKey)...)
 			}
 			{
+				_spans0 := _loop.Group("/spans", _spans0Mw(handler)...)
+				_spans0.POST("/search", append(_listspansoapiMw(handler), apis.ListSpansOApi)...)
+			}
+			{
 				_traces0 := _loop.Group("/traces", _traces0Mw(handler)...)
 				_traces0.POST("/ingest", append(_ingesttracesMw(handler), apis.IngestTraces)...)
+				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
 			}
 		}
 	}

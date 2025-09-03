@@ -11,8 +11,10 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	auditMocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitMocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	lockMocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
@@ -130,12 +132,16 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 	ctx := context.Background()
 	session := &entity.Session{UserID: "1"}
 	param := &entity.CreateExptParam{
-		WorkspaceID:           1,
-		Name:                  "expt",
-		EvalSetID:             2,
-		EvalSetVersionID:      3,
-		CreateEvalTargetParam: &entity.CreateEvalTargetParam{},
-		EvaluatorVersionIds:   []int64{10},
+		WorkspaceID:      1,
+		Name:             "expt",
+		EvalSetID:        2,
+		EvalSetVersionID: 3,
+		CreateEvalTargetParam: &entity.CreateEvalTargetParam{
+			EvalTargetType:      gptr.Of(entity.EvalTargetTypeLoopPrompt),
+			SourceTargetID:      gptr.Of("100"),
+			SourceTargetVersion: gptr.Of("v1"),
+		},
+		EvaluatorVersionIds: []int64{10},
 	}
 
 	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
@@ -145,15 +151,31 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
 		EXPECT().
 		GetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&entity.EvalTarget{}, nil).AnyTimes()
+		Return(&entity.EvalTarget{
+			ID:             100,
+			EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				OutputSchema: []*entity.ArgsSchema{},
+			},
+		}, nil).AnyTimes()
 	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 		EXPECT().
 		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, &entity.EvaluationSet{}, nil).AnyTimes()
+		Return(nil, &entity.EvaluationSet{
+			EvaluationSetVersion: &entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{},
+				},
+			},
+		}, nil).AnyTimes()
 	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 		EXPECT().
 		BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return([]*entity.Evaluator{{ID: 10, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 10}}}, nil).AnyTimes()
+		Return([]*entity.Evaluator{{
+			ID:                     10,
+			EvaluatorType:          entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 10},
+		}}, nil).AnyTimes()
 	mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(ctx, 2).Return([]int64{1, 2}, nil).AnyTimes()
 	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CreateStats(ctx, gomock.Any(), session).Return(nil).AnyTimes()
 	// 模拟 InsertExptTurnResultFilterKeyMappings 方法
@@ -165,6 +187,18 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		EXPECT().
 		Audit(gomock.Any(), gomock.Any()).
 		Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).AnyTimes()
+
+	// Mock CheckRun dependencies
+	mgr.benefitService.(*benefitMocks.MockIBenefitService).
+		EXPECT().
+		CheckAndDeductEvalBenefit(ctx, gomock.Any()).
+		Return(&benefit.CheckAndDeductEvalBenefitResult{
+			IsFreeEvaluate: gptr.Of(true),
+		}, nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+		EXPECT().
+		Update(ctx, gomock.Any()).
+		Return(nil).AnyTimes()
 
 	t.Run("normal", func(t *testing.T) {
 		_, err := mgr.CreateExpt(ctx, param, session)

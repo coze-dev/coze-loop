@@ -43,6 +43,11 @@ func (p *Dataset) IsValid() error {
 	return nil
 }
 func (p *DatasetSpec) IsValid() error {
+	if p.MultiModalSpec != nil {
+		if err := p.MultiModalSpec.IsValid(); err != nil {
+			return fmt.Errorf("field MultiModalSpec not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *DatasetVersion) IsValid() error {

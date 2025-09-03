@@ -79,6 +79,10 @@ func InvalidParamErrorf(msgFormat string, args ...any) error {
 	return Errorf(CommonInvalidParamCode, msgFormat, args...)
 }
 
+func MaybeInvalidParamErr(cause error, msgAndArgs ...any) error {
+	return MaybeWrapf(cause, CommonInvalidParamCode, msgAndArgs...)
+}
+
 func RPCErr(cause error, msgAndArgs ...any) error {
 	return Wrapf(cause, CommonRPCErrorCode, msgAndArgs...)
 }

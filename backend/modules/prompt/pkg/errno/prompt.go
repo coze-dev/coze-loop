@@ -60,6 +60,22 @@ const (
 	promptUncommittedMessage           = "prompt not committed"
 	promptUncommittedNoAffectStability = true
 
+	TemplateParseErrorCode              = 600501004
+	templateParseErrorMessage           = "template parse error"
+	templateParseErrorNoAffectStability = true
+
+	TemplateRenderErrorCode              = 600501005
+	templateRenderErrorMessage           = "template render error"
+	templateRenderErrorNoAffectStability = true
+
+	UnsupportedTemplateTypeCode              = 600501006
+	unsupportedTemplateTypeMessage           = "unsupported template type"
+	unsupportedTemplateTypeNoAffectStability = true
+
+	PromptLabelUnAssociatedCode              = 600501007
+	promptLabelUnAssociatedMessage           = "prompt label unassociated with commit version"
+	promptLabelUnAssociatedNoAffectStability = true
+
 	PromptHubQPSLimitCode              = 600502001
 	promptHubQPSLimitMessage           = "request is limited, cause prompt hub qps of current space reached the upper limit"
 	promptHubQPSLimitNoAffectStability = true
@@ -147,6 +163,30 @@ func init() {
 		PromptUncommittedCode,
 		promptUncommittedMessage,
 		code.WithAffectStability(!promptUncommittedNoAffectStability),
+	)
+
+	code.Register(
+		TemplateParseErrorCode,
+		templateParseErrorMessage,
+		code.WithAffectStability(!templateParseErrorNoAffectStability),
+	)
+
+	code.Register(
+		TemplateRenderErrorCode,
+		templateRenderErrorMessage,
+		code.WithAffectStability(!templateRenderErrorNoAffectStability),
+	)
+
+	code.Register(
+		UnsupportedTemplateTypeCode,
+		unsupportedTemplateTypeMessage,
+		code.WithAffectStability(!unsupportedTemplateTypeNoAffectStability),
+	)
+
+	code.Register(
+		PromptLabelUnAssociatedCode,
+		promptLabelUnAssociatedMessage,
+		code.WithAffectStability(!promptLabelUnAssociatedNoAffectStability),
 	)
 
 	code.Register(

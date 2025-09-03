@@ -6,6 +6,7 @@ package experiment
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -101,4 +102,9 @@ func (r *ExptAggrResultRepoImpl) UpdateExptAggrResultByVersion(ctx context.Conte
 // UpdateAndGetLatestVersion 返回更新后的version, clause.Returning 需要开启conf.WithReturning = true.
 func (r *ExptAggrResultRepoImpl) UpdateAndGetLatestVersion(ctx context.Context, experimentID int64, fieldType int32, fieldKey string) (int64, error) {
 	return r.exptAggrResultDAO.UpdateAndGetLatestVersion(ctx, experimentID, fieldType, fieldKey)
+}
+
+func (r *ExptAggrResultRepoImpl) DeleteExptAggrResult(ctx context.Context, exptAggrResult *entity.ExptAggrResult, opts ...db.Option) error {
+	exptAggrResultPO := convert.ExptAggrResultDOToPO(exptAggrResult)
+	return r.exptAggrResultDAO.DeleteExptAggrResult(ctx, exptAggrResultPO, opts...)
 }

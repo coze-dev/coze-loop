@@ -36,6 +36,7 @@ const (
 	AnnotationTypeManualEvaluationSet AnnotationType = "manual_evaluation_set"
 	AnnotationTypeManualFeedback      AnnotationType = "manual_feedback"
 	AnnotationTypeCozeFeedback        AnnotationType = "coze_feedback"
+	AnnotationTypeManualDataset       AnnotationType = "manual_dataset"
 )
 
 type AnnotationValue struct {
@@ -67,7 +68,7 @@ type AnnotationManualFeedback struct {
 	TagValue   string // 显示的标签值
 }
 
-type ManualEvaluationSetMetadata struct{}
+type ManualDatasetMetadata struct{}
 
 type AnnotationList []*Annotation
 
@@ -125,11 +126,11 @@ func (a *Annotation) GetAutoEvaluateMetadata() *AutoEvaluateMetadata {
 	return &metadata
 }
 
-func (a *Annotation) GetEvaluationSetMetadata() *ManualEvaluationSetMetadata {
-	if a.AnnotationType != AnnotationTypeManualEvaluationSet {
+func (a *Annotation) GetDatasetMetadata() *ManualDatasetMetadata {
+	if a.AnnotationType != AnnotationTypeManualEvaluationSet && a.AnnotationType != AnnotationTypeManualDataset {
 		return nil
 	}
-	metadata, ok := a.Metadata.(*ManualEvaluationSetMetadata)
+	metadata, ok := a.Metadata.(*ManualDatasetMetadata)
 	if !ok {
 		return nil
 	}

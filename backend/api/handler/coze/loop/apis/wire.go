@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
@@ -34,6 +35,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/data/infra/conf"
+	"github.com/coze-dev/coze-loop/backend/modules/data/infra/rpc/foundation"
 	evaluationapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
@@ -82,6 +84,7 @@ var (
 		NewDataHandler,
 		dataapp.InitDatasetApplication,
 		dataapp.InitTagApplication,
+		foundation.NewAuthRPCProvider,
 		conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(
@@ -158,6 +161,9 @@ func InitEvaluationHandler(
 	userClient userservice.Client,
 	benefitSvc benefit.IBenefitService,
 	limiterFactory limiter.IRateLimiterFactory,
+	fileClient fileservice.Client,
+	tagClient tagservice.Client,
+	objectStorage fileserver.ObjectStorage,
 ) (*EvaluationHandler, error) {
 	wire.Build(
 		evaluationSet,
@@ -191,12 +197,16 @@ func InitObservabilityHandler(
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
+	idgen idgen.IIDGenerator,
 	benefit benefit.IBenefitService,
 	fileClient fileservice.Client,
 	authCli authservice.Client,
 	userClient userservice.Client,
 	evalClient evaluatorservice.Client,
+	evalSetClient evaluationsetservice.Client,
 	tagClient tagservice.Client,
+	limiterFactory limiter.IRateLimiterFactory,
+	datasetClient datasetservice.Client,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,

@@ -229,7 +229,7 @@ func TestTagRepoImpl_MGetTagKeys(t *testing.T) {
 			wantErr: true,
 			mockSetup: func() {
 				dbMock.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB)
-				rows := sqlmock.NewRows([]string{"id", "content_type"}).AddRow(1, "categorical")
+				rows := sqlmock.NewRows([]string{"id", "content_type", "change_log"}).AddRow(1, "categorical", []byte("{"))
 				mock.ExpectQuery("^SELECT").WillReturnRows(rows)
 			},
 		},

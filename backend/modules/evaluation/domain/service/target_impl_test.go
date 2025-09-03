@@ -981,3 +981,180 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockRuntimeParam := entity.NewPromptRuntimeParam(nil)
+
+	service := &EvalTargetServiceImpl{
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+			entity.EvalTargetTypeLoopPrompt: mockOperator,
+		},
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		targetType     entity.EvalTargetType
+		runtimeParam   string
+		mockSetup      func()
+		wantErr        bool
+		wantErrContain string
+	}{
+		{
+			name:         "valid_runtime_param_success",
+			targetType:   entity.EvalTargetTypeLoopPrompt,
+			runtimeParam: `{"model_config":{"model_id":"123","model_name":"test"}}`,
+			mockSetup: func() {
+				mockOperator.EXPECT().RuntimeParam().Return(mockRuntimeParam).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:         "invalid_json_format",
+			targetType:   entity.EvalTargetTypeLoopPrompt,
+			runtimeParam: `{"model_config":invalid_json}`,
+			mockSetup: func() {
+				mockOperator.EXPECT().RuntimeParam().Return(mockRuntimeParam).Times(1)
+			},
+			wantErr:        true,
+			wantErrContain: "PromptRuntimeParam json unmarshal fail",
+		},
+		{
+			name:           "unsupported_target_type",
+			targetType:     entity.EvalTargetType(999),
+			runtimeParam:   `{"model_config":{"model_id":"123"}}`,
+			mockSetup:      func() {},
+			wantErr:        true,
+			wantErrContain: "operator not found",
+		},
+		{
+			name:         "empty_runtime_param",
+			targetType:   entity.EvalTargetTypeLoopPrompt,
+			runtimeParam: "",
+			mockSetup: func() {
+				// 空字符串直接返回 nil，不会调用 RuntimeParam()
+			},
+			wantErr: false, // 空字符串应该返回 nil，不是错误
+		},
+		{
+			name:         "malformed_runtime_param_structure",
+			targetType:   entity.EvalTargetTypeLoopPrompt,
+			runtimeParam: `{"wrong_field":"value"}`,
+			mockSetup: func() {
+				mockOperator.EXPECT().RuntimeParam().Return(mockRuntimeParam).Times(1)
+			},
+			wantErr: false, // This should pass as the JSON is valid, just different structure
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockSetup != nil {
+				tt.mockSetup()
+			}
+
+			err := service.ValidateRuntimeParam(ctx, tt.targetType, tt.runtimeParam)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrContain != "" {
+					assert.Contains(t, err.Error(), tt.wantErrContain)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_sourceTargetOperator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+	service := &EvalTargetServiceImpl{
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+			entity.EvalTargetTypeLoopPrompt: mockOperator,
+		},
+	}
+
+	tests := []struct {
+		name           string
+		targetType     entity.EvalTargetType
+		service        *EvalTargetServiceImpl
+		wantOperator   ISourceEvalTargetOperateService
+		wantErr        bool
+		wantErrContain string
+	}{
+		{
+			name:         "existing_operator_found",
+			targetType:   entity.EvalTargetTypeLoopPrompt,
+			service:      service,
+			wantOperator: mockOperator,
+			wantErr:      false,
+		},
+		{
+			name:           "operator_not_found",
+			targetType:     entity.EvalTargetType(999),
+			service:        service,
+			wantOperator:   nil,
+			wantErr:        true,
+			wantErrContain: "operator not found",
+		},
+		{
+			name:       "operator_exists_but_is_nil",
+			targetType: entity.EvalTargetTypeLoopPrompt,
+			service: &EvalTargetServiceImpl{
+				typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					entity.EvalTargetTypeLoopPrompt: nil,
+				},
+			},
+			wantOperator:   nil,
+			wantErr:        true,
+			wantErrContain: "operator not found",
+		},
+		{
+			name:       "typedOperators_is_nil",
+			targetType: entity.EvalTargetTypeLoopPrompt,
+			service: &EvalTargetServiceImpl{
+				typedOperators: nil,
+			},
+			wantOperator:   nil,
+			wantErr:        true,
+			wantErrContain: "operator not found",
+		},
+		{
+			name:       "typedOperators_is_empty",
+			targetType: entity.EvalTargetTypeLoopPrompt,
+			service: &EvalTargetServiceImpl{
+				typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
+			},
+			wantOperator:   nil,
+			wantErr:        true,
+			wantErrContain: "operator not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			operator, err := tt.service.sourceTargetOperator(tt.targetType)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrContain != "" {
+					assert.Contains(t, err.Error(), tt.wantErrContain)
+				}
+				assert.Nil(t, operator)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantOperator, operator)
+			}
+		})
+	}
+}

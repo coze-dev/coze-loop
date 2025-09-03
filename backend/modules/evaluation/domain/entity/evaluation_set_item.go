@@ -60,8 +60,18 @@ const (
 	ItemErrorType_ExceedMaxNestedDepth ItemErrorType = 8
 	// 数据转换失败
 	ItemErrorType_TransformItemFailed ItemErrorType = 9
+	// 图片数量超限
+	ItemErrorType_ExceedMaxImageCount ItemErrorType = 10
+	// 图片大小超限
+	ItemErrorType_ExceedMaxImageSize ItemErrorType = 11
+	// 图片获取失败（例如图片不存在/访问不在白名单内的内网链接）
+	ItemErrorType_GetImageFailed ItemErrorType = 12
+	// 文件扩展名不合法
+	ItemErrorType_IllegalExtension ItemErrorType = 13
 	/* system error*/
 	ItemErrorType_InternalError ItemErrorType = 100
+	// 上传图片失败
+	ItemErrorType_UploadImageFailed ItemErrorType = 103
 )
 
 func (p ItemErrorType) String() string {
@@ -84,8 +94,19 @@ func (p ItemErrorType) String() string {
 		return "ExceedMaxNestedDepth"
 	case ItemErrorType_TransformItemFailed:
 		return "TransformItemFailed"
+
+	case ItemErrorType_ExceedMaxImageCount:
+		return "ExceedMaxImageCount"
+	case ItemErrorType_ExceedMaxImageSize:
+		return "ExceedMaxImageSize"
+	case ItemErrorType_GetImageFailed:
+		return "GetImageFailed"
+	case ItemErrorType_IllegalExtension:
+		return "IllegalExtension"
 	case ItemErrorType_InternalError:
 		return "InternalError"
+	case ItemErrorType_UploadImageFailed:
+		return "UploadImageFailed"
 	}
 	return "<UNSET>"
 }
@@ -110,8 +131,18 @@ func ItemErrorTypeFromString(s string) (ItemErrorType, error) {
 		return ItemErrorType_ExceedMaxNestedDepth, nil
 	case "TransformItemFailed":
 		return ItemErrorType_TransformItemFailed, nil
+	case "ExceedMaxImageCount":
+		return ItemErrorType_ExceedMaxImageCount, nil
+	case "ExceedMaxImageSize":
+		return ItemErrorType_ExceedMaxImageSize, nil
+	case "GetImageFailed":
+		return ItemErrorType_GetImageFailed, nil
+	case "IllegalExtension":
+		return ItemErrorType_IllegalExtension, nil
 	case "InternalError":
 		return ItemErrorType_InternalError, nil
+	case "UploadImageFailed":
+		return ItemErrorType_UploadImageFailed, nil
 	}
 	return ItemErrorType(0), fmt.Errorf("not a valid ItemErrorType string")
 }

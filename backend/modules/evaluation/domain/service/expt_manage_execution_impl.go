@@ -12,9 +12,11 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
+	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -55,33 +57,6 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 	return nil
 }
 
-func (e *ExptMangerImpl) CheckRunWithTuple(ctx context.Context, tuple *entity.TupleExpt, spaceID int64, session *entity.Session, opts ...entity.ExptRunCheckOptionFn) error {
-	opt := &entity.ExptRunCheckOption{}
-	for _, fn := range opts {
-		fn(opt)
-	}
-
-	checkers := []ExptCheckFn{
-		e.CheckExpt,
-		e.CheckTarget,
-		e.CheckEvalSet,
-		e.CheckEvaluators,
-		e.CheckConnector,
-	}
-
-	if opt.CheckBenefit {
-		checkers = append(checkers, e.CheckBenefit)
-	}
-
-	for _, check := range checkers {
-		if err := check(ctx, tuple.Expt, session); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (e *ExptMangerImpl) CheckEvalSet(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
 	switch expt.ExptType {
 	case entity.ExptType_Offline:
@@ -102,6 +77,7 @@ func (e *ExptMangerImpl) CheckEvalSet(ctx context.Context, expt *entity.Experime
 }
 
 func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	// audit
 	data := map[string]string{
 		"texts": strings.Join([]string{expt.Name, expt.Description}, ","),
 	}
@@ -117,56 +93,127 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 	if record.AuditStatus == audit.AuditStatus_Rejected {
 		return errorx.NewByCode(errno.RiskContentDetectedCode)
 	}
+
+	// evaluate configuration
+	if expt.EvalConf == nil {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is invalid"))
+	}
+	if gptr.Indirect(expt.EvalConf.ItemConcurNum) > consts.MaxItemConcurrentNum {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", consts.MaxEvalSetItemLimit)))
+	}
+
 	return nil
 }
 
 func (e *ExptMangerImpl) CheckTarget(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if expt.EvalConf == nil || expt.EvalConf.ConnectorConf.TargetConf == nil {
+		return nil
+	}
 	if expt.TargetID == 0 || expt.TargetVersionID == 0 || expt.Target == nil {
-		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("experiment with invalid target, target_id= %d target_version_id= %d", expt.TargetID, expt.TargetVersionID)))
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid target, target_id= %d target_version_id= %d", expt.TargetID, expt.TargetVersionID)))
 	}
 	return nil
 }
 
 func (e *ExptMangerImpl) CheckEvaluators(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if expt.EvalConf == nil || expt.EvalConf.ConnectorConf.EvaluatorsConf == nil || len(expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf) == 0 {
+		return nil
+	}
 	if len(expt.EvaluatorVersionRef) == 0 || len(expt.Evaluators) != len(expt.EvaluatorVersionRef) {
-		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("experiment with invalid evaluators %v", expt.EvaluatorVersionRef)))
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid evaluators %v", expt.EvaluatorVersionRef)))
 	}
 	return nil
 }
 
 func (e *ExptMangerImpl) CheckConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
 	if expt.EvalConf == nil {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is nil"))
+	}
+
+	if err := e.checkTargetConnector(ctx, expt, session); err != nil {
+		return err
+	}
+
+	if err := e.checkEvaluatorsConnector(ctx, expt, session); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *ExptMangerImpl) checkTargetConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if expt.Target == nil ||
+		expt.Target.EvalTargetType == entity.EvalTargetTypeLoopTrace {
+		return nil
+	}
+
+	e.fixTargetConf(expt)
+	connectorConf := expt.EvalConf.ConnectorConf
+	if err := connectorConf.TargetConf.Valid(ctx, expt.Target.EvalTargetType); err != nil {
+		return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid target connector"))
+	}
+
+	evalSetFieldSchema := gslice.ToMap(expt.EvalSet.EvaluationSetVersion.EvaluationSetSchema.FieldSchemas, func(t *entity.FieldSchema) (string, *entity.FieldSchema) { return t.Name, t })
+	for _, fc := range connectorConf.TargetConf.IngressConf.EvalSetAdapter.FieldConfs {
+		firstField, err := json.GetFirstJSONPathField(fc.FromField)
+		if err != nil {
+			return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: target is expected to receive the missing evalset %v column, json parse error", fc.FromField)))
+		}
+		if esf := evalSetFieldSchema[firstField]; esf == nil {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: target is expected to receive the missing evalset %v column", fc.FromField)))
+		}
+	}
+
+	if cc := expt.EvalConf.ConnectorConf.TargetConf.IngressConf.CustomConf; cc != nil {
+		for _, fc := range cc.FieldConfs {
+			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+				if err := e.evalTargetService.ValidateRuntimeParam(ctx, expt.TargetType, fc.Value); err != nil {
+					logs.CtxError(ctx, "parse type %s runtime param fail, raw: %v, err: %v", expt.TargetType, fc.Value, err)
+					return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid runtime param"))
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (e *ExptMangerImpl) fixTargetConf(expt *entity.Experiment) {
+	switch expt.TargetType {
+	case entity.EvalTargetTypeLoopPrompt:
+		if expt.EvalConf.ConnectorConf.TargetConf == nil {
+			expt.EvalConf.ConnectorConf.TargetConf = &entity.TargetConf{
+				TargetVersionID: expt.TargetVersionID,
+				IngressConf: &entity.TargetIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{},
+				},
+			}
+		}
+	default:
+	}
+}
+
+func (e *ExptMangerImpl) checkEvaluatorsConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if len(expt.Evaluators) == 0 {
 		return nil
 	}
 	connectorConf := expt.EvalConf.ConnectorConf
-
 	if err := connectorConf.EvaluatorsConf.Valid(ctx); err != nil {
 		return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid evaluator connector"))
 	}
-	if expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace {
-		if err := connectorConf.TargetConf.Valid(ctx, expt.Target.EvalTargetType); err != nil {
-			return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid target connector"))
-		}
-	}
 
-	targetOutputSchema := gslice.ToMap(expt.Target.EvalTargetVersion.OutputSchema, func(t *entity.ArgsSchema) (string, *entity.ArgsSchema) {
-		if t.Key == nil {
-			return "", nil
-		}
-		return *t.Key, t
+	targetOutputSchema := lo.TernaryF(expt.Target == nil || expt.Target.EvalTargetVersion == nil || expt.Target.EvalTargetVersion.OutputSchema == nil, func() map[string]*entity.ArgsSchema {
+		return nil
+	}, func() map[string]*entity.ArgsSchema {
+		return gslice.ToMap(expt.Target.EvalTargetVersion.OutputSchema, func(t *entity.ArgsSchema) (string, *entity.ArgsSchema) {
+			if t.Key == nil {
+				return "", nil
+			}
+			return *t.Key, t
+		})
 	})
+
 	evalSetFieldSchema := gslice.ToMap(expt.EvalSet.EvaluationSetVersion.EvaluationSetSchema.FieldSchemas, func(t *entity.FieldSchema) (string, *entity.FieldSchema) { return t.Name, t })
-	if expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace {
-		for _, fc := range connectorConf.TargetConf.IngressConf.EvalSetAdapter.FieldConfs {
-			firstField, err := json.GetFirstJSONPathField(fc.FromField)
-			if err != nil {
-				return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: target is expected to receive the missing evalset %v column, json parse error", fc.FromField)))
-			}
-			if esf := evalSetFieldSchema[firstField]; esf == nil {
-				return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: target is expected to receive the missing evalset %v column", fc.FromField)))
-			}
-		}
-	}
 	for _, evaluatorConf := range connectorConf.EvaluatorsConf.EvaluatorConf {
 		for _, fc := range evaluatorConf.IngressConf.EvalSetAdapter.FieldConfs {
 			firstField, err := json.GetFirstJSONPathField(fc.FromField)
@@ -177,7 +224,7 @@ func (e *ExptMangerImpl) CheckConnector(ctx context.Context, expt *entity.Experi
 				return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: evaluator %v is expected to receive the missing evalset %v column", evaluatorConf.EvaluatorVersionID, fc.FromField)))
 			}
 		}
-		if expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace {
+		if expt.Target != nil && expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace {
 			for _, fc := range evaluatorConf.IngressConf.TargetAdapter.FieldConfs {
 				firstField, err := json.GetFirstJSONPathField(fc.FromField)
 				if err != nil {
@@ -233,11 +280,17 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
+	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
+	if err != nil {
+		return err
+	}
+
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     spaceID,
 		ExptID:      exptID,
 		ExptRunID:   runID,
 		ExptRunMode: runMode,
+		ExptType:    expt.ExptType,
 		CreatedAt:   time.Now().Unix(),
 		Session:     session,
 		Ext:         ext,
@@ -253,11 +306,17 @@ func (e *ExptMangerImpl) RetryUnSuccess(ctx context.Context, exptID, runID, spac
 		return err
 	}
 
+	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
+	if err != nil {
+		return err
+	}
+
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     spaceID,
 		ExptID:      exptID,
 		ExptRunID:   runID,
 		ExptRunMode: entity.EvaluationModeFailRetry,
+		ExptType:    expt.ExptType,
 		CreatedAt:   time.Now().Unix(),
 		Session:     session,
 		Ext:         ext,
@@ -413,6 +472,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 	got, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
 	if err != nil {
+		if se, ok := errorx.FromStatusError(err); ok && se.Code() == errno.ResourceNotFoundCode {
+			logs.CtxInfo(ctx, "[ExptEval] CompleteExpt abort with deleted expt, expt_id: %v", exptID)
+			return nil
+		}
 		return err
 	}
 
@@ -616,11 +679,17 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		return err
 	}
 
+	expt, err := e.GetDetail(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID, invokeExptReq.Session)
+	if err != nil {
+		return err
+	}
+
 	if err = e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,
 		ExptID:      invokeExptReq.ExptID,
 		ExptRunID:   invokeExptReq.RunID,
 		ExptRunMode: entity.EvaluationModeAppend,
+		ExptType:    expt.ExptType,
 		CreatedAt:   time.Now().Unix(),
 		Session:     invokeExptReq.Session,
 		Ext:         invokeExptReq.Ext,
@@ -692,6 +761,7 @@ func (e *ExptMangerImpl) Finish(ctx context.Context, expt *entity.Experiment, ex
 		ExptID:      expt.ID,
 		ExptRunID:   exptRunID,
 		ExptRunMode: entity.EvaluationModeAppend,
+		ExptType:    expt.ExptType,
 		CreatedAt:   time.Now().Unix(),
 		Session:     session,
 	}, gptr.Of(time.Second*3)); err != nil {

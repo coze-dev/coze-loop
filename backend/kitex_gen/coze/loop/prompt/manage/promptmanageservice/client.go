@@ -19,9 +19,13 @@ type Client interface {
 	ListPrompt(ctx context.Context, request *manage.ListPromptRequest, callOptions ...callopt.Option) (r *manage.ListPromptResponse, err error)
 	UpdatePrompt(ctx context.Context, request *manage.UpdatePromptRequest, callOptions ...callopt.Option) (r *manage.UpdatePromptResponse, err error)
 	SaveDraft(ctx context.Context, request *manage.SaveDraftRequest, callOptions ...callopt.Option) (r *manage.SaveDraftResponse, err error)
+	CreateLabel(ctx context.Context, request *manage.CreateLabelRequest, callOptions ...callopt.Option) (r *manage.CreateLabelResponse, err error)
+	ListLabel(ctx context.Context, request *manage.ListLabelRequest, callOptions ...callopt.Option) (r *manage.ListLabelResponse, err error)
+	BatchGetLabel(ctx context.Context, request *manage.BatchGetLabelRequest, callOptions ...callopt.Option) (r *manage.BatchGetLabelResponse, err error)
 	ListCommit(ctx context.Context, request *manage.ListCommitRequest, callOptions ...callopt.Option) (r *manage.ListCommitResponse, err error)
 	CommitDraft(ctx context.Context, request *manage.CommitDraftRequest, callOptions ...callopt.Option) (r *manage.CommitDraftResponse, err error)
 	RevertDraftFromCommit(ctx context.Context, request *manage.RevertDraftFromCommitRequest, callOptions ...callopt.Option) (r *manage.RevertDraftFromCommitResponse, err error)
+	UpdateCommitLabels(ctx context.Context, request *manage.UpdateCommitLabelsRequest, callOptions ...callopt.Option) (r *manage.UpdateCommitLabelsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -93,6 +97,21 @@ func (p *kPromptManageServiceClient) SaveDraft(ctx context.Context, request *man
 	return p.kClient.SaveDraft(ctx, request)
 }
 
+func (p *kPromptManageServiceClient) CreateLabel(ctx context.Context, request *manage.CreateLabelRequest, callOptions ...callopt.Option) (r *manage.CreateLabelResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateLabel(ctx, request)
+}
+
+func (p *kPromptManageServiceClient) ListLabel(ctx context.Context, request *manage.ListLabelRequest, callOptions ...callopt.Option) (r *manage.ListLabelResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListLabel(ctx, request)
+}
+
+func (p *kPromptManageServiceClient) BatchGetLabel(ctx context.Context, request *manage.BatchGetLabelRequest, callOptions ...callopt.Option) (r *manage.BatchGetLabelResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchGetLabel(ctx, request)
+}
+
 func (p *kPromptManageServiceClient) ListCommit(ctx context.Context, request *manage.ListCommitRequest, callOptions ...callopt.Option) (r *manage.ListCommitResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListCommit(ctx, request)
@@ -106,4 +125,9 @@ func (p *kPromptManageServiceClient) CommitDraft(ctx context.Context, request *m
 func (p *kPromptManageServiceClient) RevertDraftFromCommit(ctx context.Context, request *manage.RevertDraftFromCommitRequest, callOptions ...callopt.Option) (r *manage.RevertDraftFromCommitResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.RevertDraftFromCommit(ctx, request)
+}
+
+func (p *kPromptManageServiceClient) UpdateCommitLabels(ctx context.Context, request *manage.UpdateCommitLabelsRequest, callOptions ...callopt.Option) (r *manage.UpdateCommitLabelsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateCommitLabels(ctx, request)
 }

@@ -36,6 +36,7 @@ type QueryParam struct {
 	Filters          *loop_span.FilterFields
 	Limit            int32
 	OrderByStartTime bool
+	OmitColumns      []string // omit specific columns
 }
 
 type InsertParam struct {

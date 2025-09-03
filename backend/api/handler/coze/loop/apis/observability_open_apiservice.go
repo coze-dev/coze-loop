@@ -9,8 +9,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilityopenapiservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 )
 
 var observabilityOpenAPIClient observabilityopenapiservice.Client
@@ -19,4 +21,36 @@ var observabilityOpenAPIClient observabilityopenapiservice.Client
 // @router /v1/loop/traces/ingest [POST]
 func IngestTraces(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.IngestTraces)
+}
+
+// SearchTraceOApi .
+// @router /v1/loop/traces/search [POST]
+func SearchTraceOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.SearchTraceOApi)
+}
+
+// ListSpansOApi .
+// @router /v1/loop/spans/search [POST]
+func ListSpansOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListSpansOApi)
+}
+
+// OtelIngestTraces .
+// @router /v1/loop/opentelemetry/v1/traces [POST]
+func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
+	var err error
+
+	c.Request.Body()
+	resp, err := observabilityOpenAPIClient.OtelIngestTraces(ctx, &openapi.OtelIngestTracesRequest{
+		Body:            c.Request.Body(),
+		ContentType:     c.Request.Header.Get("Content-Type"),
+		ContentEncoding: c.Request.Header.Get("Content-Encoding"),
+		WorkspaceID:     c.Request.Header.Get("cozeloop-workspace-id"),
+	})
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(consts.StatusOK, resp)
 }

@@ -9,7 +9,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilitytraceservice"
+	trace "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 )
 
 var observabilityClient observabilitytraceservice.Client
@@ -84,4 +87,36 @@ func DeleteManualAnnotation(ctx context.Context, c *app.RequestContext) {
 // @router /api/observability/v1/annotations/list [POST]
 func ListAnnotations(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListAnnotations)
+}
+
+// ExportTracesToDataset .
+// @router /api/observation/v1/traces/export_to_dataset [POST]
+func ExportTracesToDataset(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ExportTracesToDatasetRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ExportTracesToDatasetResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// PreviewExportTracesToDataset .
+// @router /api/observation/v1/traces/preview_export_to_dataset [POST]
+func PreviewExportTracesToDataset(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.PreviewExportTracesToDatasetRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.PreviewExportTracesToDatasetResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

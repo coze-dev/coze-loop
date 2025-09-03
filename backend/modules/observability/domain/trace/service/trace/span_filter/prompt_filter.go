@@ -17,7 +17,7 @@ type PromptFilter struct {
 	transCfg loop_span.SpanTransCfgList
 }
 
-func (p *PromptFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) ([]*loop_span.FilterField, error) {
+func (p *PromptFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) ([]*loop_span.FilterField, bool, error) {
 	return []*loop_span.FilterField{
 		{
 			FieldName: loop_span.SpanFieldSpaceId,
@@ -31,7 +31,7 @@ func (p *PromptFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv) (
 			Values:    []string{"PromptPlayground", "PromptDebug"},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
-	}, nil
+	}, false, nil
 }
 
 func (p *PromptFilter) BuildRootSpanFilter(ctx context.Context, _ *SpanEnv) ([]*loop_span.FilterField, error) {

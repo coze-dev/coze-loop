@@ -94,13 +94,6 @@ func (s *TagServiceImpl) CreateTag(ctx context.Context, spaceID int64, val *enti
 			logs.CtxError(ctx, "[CreateTag] tag name is already existed")
 			return 0, errno.InvalidParamErrorf("tag name is already existed")
 		}
-		// check version
-		if val.Version != nil {
-			if err = ValidateVersion("", *val.Version); err != nil {
-				logs.CtxError(ctx, "[CreateTag] validate version failed, err: %v", err)
-				return 0, err
-			}
-		}
 	}
 	// insert tag key and tag value
 	var tagKeyID int64
@@ -305,13 +298,6 @@ func (s *TagServiceImpl) UpdateTag(ctx context.Context, spaceID, tagKeyID int64,
 		logs.CtxError(ctx, "[UpdateTag] get latest tag failed, spaceID: %d, tagKeyID: %d, err: %v", spaceID, tagKeyID, err)
 		return err
 	}
-	// 检查version
-	if val.Version != nil && preTagKey.Version != nil {
-		if err = ValidateVersion(*preTagKey.Version, *val.Version); err != nil {
-			logs.CtxError(ctx, "[UpdateTag] validate version failed, err: %v", err)
-			return err
-		}
-	}
 	val.SetCreatedBy(*preTagKey.CreatedBy)
 	val.SetCreatedAt(preTagKey.CreatedAt)
 	// 计算更新日志
@@ -434,14 +420,6 @@ func (s *TagServiceImpl) UpdateTagStatusWithNewVersion(ctx context.Context, spac
 	nowTagKey.SetAppID(session.AppIDInCtxOrEmpty(ctx))
 	nowTagKey.SetSpaceID(spaceID)
 	nowTagKey.Status = status
-	if nowTagKey.Version != nil {
-		nextVersion, err := SimpleIncrementVersion(*nowTagKey.Version)
-		if err != nil {
-			logs.CtxError(ctx, "[UpdateTagStatusWithNewVersion] increase version failed, err: %v", err)
-			return err
-		}
-		nowTagKey.Version = gptr.Of(nextVersion)
-	}
 	changeLogs, err := nowTagKey.CalculateChangeLogs(preTagKey)
 	if err != nil {
 		logs.CtxError(ctx, "[UpdateTagStatusWithNewVersion] calculate change logs failed, err: %v", err)
@@ -640,4 +618,198 @@ func (s *TagServiceImpl) BatchGetTagsByTagKeyIDs(ctx context.Context, spaceID in
 		item.TagValues = tagValues
 	}
 	return tagKeys, nil
+}
+
+// UpdateOptionTag 更新单选标签
+func (s *TagServiceImpl) UpdateOptionTag(ctx context.Context, spaceID, tagKeyID int64, val *entity2.TagKey, opts ...db.Option) error {
+	// validate tag
+	if err := val.Validate(s.tagSpecConfig().GetSpecBySpace(spaceID)); err != nil {
+		return errno.MaybeInvalidParamErr(err)
+	}
+
+	val.SetUpdatedAt(time.Now())
+	val.SetUpdatedBy(session.UserIDInCtxOrEmpty(ctx))
+	val.SetAppID(session.AppIDInCtxOrEmpty(ctx))
+	val.SetSpaceID(spaceID)
+
+	// 加锁
+	locked, err := s.locker.Lock(ctx, FormatUpdateTagKey(spaceID, tagKeyID), 10*time.Second)
+	if err != nil {
+		logs.CtxError(ctx, "[UpdateOptionTag] lock failed, spaceID: %d, tagKeyID: %d, err: %+v", spaceID, tagKeyID, err)
+		return err
+	}
+	if !locked {
+		logs.CtxWarn(ctx, "[UpdateOptionTag] other updating operation is processing, spaceID: %d, tagKeyID: %d", spaceID, tagKeyID)
+		return errno.BadReqErrorf("other updating operation is processing")
+	}
+	defer func() {
+		_, _ = s.locker.Unlock(FormatUpdateTagKey(spaceID, tagKeyID))
+	}()
+	// get lastest tag
+	tagKeys, _, err := s.tagRepo.MGetTagKeys(ctx, &entity2.MGetTagKeyParam{
+		Paginator: pagination.New(),
+		SpaceID:   spaceID,
+		TagKeyIDs: []int64{tagKeyID},
+		Status:    []entity2.TagStatus{entity2.TagStatusActive, entity2.TagStatusInactive},
+	}, opts...)
+	if err != nil {
+		logs.CtxError(ctx, "[UpdateOptionTag] get tag key failed, spaceID: %d, tagKeyID: %d, err: %+v", spaceID, tagKeyID, err)
+		return err
+	}
+	if len(tagKeys) == 0 {
+		logs.CtxError(ctx, "[UpdateOptionTag] tag key is not existed, tagKeyID: %v", tagKeyID)
+		return errno.InvalidParamErrorf("tag key is not exsited, tagKeyID: %v", tagKeyID)
+	}
+	preTagKey := tagKeys[0]
+
+	val.SetCreatedBy(*preTagKey.CreatedBy)
+	val.SetCreatedAt(preTagKey.CreatedAt)
+	// 更新tag key和 tag value的版本信息
+	val.SetVersionNum(*preTagKey.VersionNum + 1)
+	val.SetStatus(entity2.TagStatusActive)
+
+	// 落库
+	return s.db.Transaction(ctx, func(tx *gorm.DB) error {
+		// 分片库不支持嵌套事务，所以这里显示关闭嵌套事务
+		// disable nested transaction
+		tx.DisableNestedTransaction = true
+		innerOpt := db.WithTransaction(tx)
+
+		// disable old tag
+		err := s.UpdateTagStatus(ctx, spaceID, tagKeyID, *preTagKey.VersionNum, entity2.TagStatusDeprecated, false, false, innerOpt)
+		if err != nil {
+			logs.CtxError(ctx, "[UpdateOptionTag] disable old tag failed, spaceID: %d, tagKeyID:%v, versionNum: %d, err: %+v", spaceID, tagKeyID, preTagKey.VersionNum, err)
+			return err
+		}
+		// insert tag keys
+		err = s.tagRepo.MCreateTagKeys(ctx, []*entity2.TagKey{val}, innerOpt)
+		if err != nil {
+			logs.CtxError(ctx, "[UpdateOptionTag] insert tag key failed, err: %+v", err)
+			return err
+		}
+		// insert tag values
+		now := val.TagValues
+		for len(now) != 0 {
+			var next []*entity2.TagValue
+			for _, v := range now {
+				value := v
+				value.TagKeyID = val.TagKeyID
+			}
+			err := s.tagRepo.MCreateTagValues(ctx, now, innerOpt)
+			if err != nil {
+				logs.CtxError(ctx, "[UpdateOptionTag] insert tag values failed, err: %+v", err)
+				return err
+			}
+			for _, v := range now {
+				value := v
+				for _, vv := range value.Children {
+					value2 := vv
+					value2.ParentValueID = value.TagValueID
+				}
+				next = append(next, value.Children...)
+			}
+			now = next
+		}
+		return nil
+	}, opts...)
+}
+
+// ArchiveOptionTag 将单选转为标签
+func (s *TagServiceImpl) ArchiveOptionTag(ctx context.Context, spaceID, tagKeyID int64, val *entity2.TagKey, opts ...db.Option) error {
+	// validate tag
+	if err := val.Validate(s.tagSpecConfig().GetSpecBySpace(spaceID)); err != nil {
+		return errno.MaybeInvalidParamErr(err)
+	}
+
+	val.SetUpdatedAt(time.Now())
+	val.SetUpdatedBy(session.UserIDInCtxOrEmpty(ctx))
+	val.SetAppID(session.AppIDInCtxOrEmpty(ctx))
+	val.SetSpaceID(spaceID)
+
+	// check tag key name
+	exist, err := s.isTagNameExisted(ctx, spaceID, tagKeyID, val.TagKeyName)
+	if err != nil {
+		logs.CtxError(ctx, "[ArchiveOptionTag] check tag name existed failed, err: %v", err)
+		return err
+	}
+	if exist {
+		logs.CtxError(ctx, "[ArchiveOptionTag] tag name is already existed")
+		return errno.InvalidParamErrorf("tag name is already existed")
+	}
+
+	// 加锁
+	locked, err := s.locker.Lock(ctx, FormatUpdateTagKey(spaceID, tagKeyID), 10*time.Second)
+	if err != nil {
+		logs.CtxError(ctx, "[UpdateTag] lock failed, spaceID: %d, tagKeyID: %d, err: %v", spaceID, tagKeyID, err)
+		return err
+	}
+	if !locked {
+		logs.CtxWarn(ctx, "[UpdateTag] other updating operation is processing, spaceID: %d, tagKeyID: %d", spaceID, tagKeyID)
+		return errno.BadReqErrorf("other updating operation is processing")
+	}
+	defer func() {
+		_, _ = s.locker.Unlock(FormatUpdateTagKey(spaceID, tagKeyID))
+	}()
+	// get lastest tag
+	preTagKey, err := s.GetLatestTag(ctx, spaceID, tagKeyID, append(opts, db.WithMaster())...)
+	if err != nil {
+		logs.CtxError(ctx, "[UpdateTag] get latest tag failed, spaceID: %d, tagKeyID: %d, err: %v", spaceID, tagKeyID, err)
+		return err
+	}
+	val.SetCreatedBy(*preTagKey.CreatedBy)
+	val.SetCreatedAt(preTagKey.CreatedAt)
+	// 计算更新日志
+	changeLogs, err := val.CalculateChangeLogs(preTagKey)
+	if err != nil {
+		logs.CtxError(ctx, "[UpdateTag] calculate change logs failed, err: %v", err)
+		return err
+	}
+	val.ChangeLogs = changeLogs
+	// 更新tag key和 tag value的版本信息
+	val.SetVersionNum(*preTagKey.VersionNum + 1)
+	// 落库
+	return s.db.Transaction(ctx, func(tx *gorm.DB) error {
+		// 分片库不支持嵌套事务，所以这里显示关闭嵌套事务
+		// disable nested transaction
+		tx.DisableNestedTransaction = true
+		innerOpt := db.WithTransaction(tx)
+
+		// disable old tag
+		err := s.UpdateTagStatus(ctx, spaceID, tagKeyID, *preTagKey.VersionNum, entity2.TagStatusDeprecated, false, false, innerOpt)
+		if err != nil {
+			logs.CtxError(ctx, "[UpdateTag] disable old tag failed, spaceID: %d, tagKeyID:%v, versionNum: %d, err: %v", spaceID, tagKeyID, preTagKey.VersionNum, err)
+			return err
+		}
+		// insert tag keys
+		err = s.tagRepo.MCreateTagKeys(ctx, []*entity2.TagKey{val}, innerOpt)
+		if err != nil {
+			logs.CtxError(ctx, "[UpdateTag] insert tag key failed, err: %v", err)
+			return err
+		}
+		// insert tag values
+		now := val.TagValues
+		for len(now) != 0 {
+			var next []*entity2.TagValue
+			for _, v := range now {
+				value := v
+				value.TagKeyID = val.TagKeyID
+				value.Status = entity2.TagStatusActive
+			}
+			err := s.tagRepo.MCreateTagValues(ctx, now, innerOpt)
+			if err != nil {
+				logs.CtxError(ctx, "[UpdateTag] insert tag values failed, err: %v", err)
+				return err
+			}
+			for _, v := range now {
+				value := v
+				for _, vv := range value.Children {
+					value2 := vv
+					value2.ParentValueID = value.TagValueID
+				}
+				next = append(next, value.Children...)
+			}
+			now = next
+		}
+		return nil
+	}, opts...)
 }

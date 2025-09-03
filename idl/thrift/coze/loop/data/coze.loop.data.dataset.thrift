@@ -258,6 +258,23 @@ struct GetDatasetSchemaResponse {
     255: base.BaseResp BaseResp
 }
 
+struct ValidateDatasetItemsReq {
+    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.not_nil = "true", vt.gt = "0")
+    2: optional list<dataset.DatasetItem> items (vt.min_size = "1", vt.max_size = "500", vt.elem.skip = "false")
+    3: optional i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"', api.path = "dataset_id", vt.gt = "0") // 添加到已有数据集时提供
+    4: optional dataset.DatasetCategory dataset_category (vt.defined_only = "true")                               // 新建数据集并添加数据时提供
+    5: optional list<dataset.FieldSchema> dataset_fields (vt.elem.skip = "false")                                 // 新建数据集并添加数据时，必须提供；添加到已有数据集时，如非空，则覆盖已有 schema 用于校验
+    10: optional bool ignore_current_item_count                                                                     // 添加到已有数据集时，现有数据条数，做容量校验时不做考虑，仅考虑提供 items 数量是否超限
+    
+    255: optional base.Base Base
+}
+
+struct ValidateDatasetItemsResp {
+    1: optional list<i32> valid_item_indices          // 合法的 item 索引，与 ValidateCreateDatasetItemsReq.items 中的索引对应
+    2: optional list<dataset.ItemErrorGroup> errors
+    255: optional base.BaseResp baseResp
+}
+
 struct BatchCreateDatasetItemsRequest {
     1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.not_nil = "true", vt.gt = "0")
     2: required i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"', api.path = "dataset_id", vt.gt = "0")
@@ -455,7 +472,8 @@ service DatasetService {
     UpdateDatasetSchemaResponse UpdateDatasetSchema(1: UpdateDatasetSchemaRequest req) (api.put = "/api/data/v1/datasets/:dataset_id/schema")
 
     /* Dataset Item */
-
+    // 校验数据
+    ValidateDatasetItemsResp ValidateDatasetItems(1: ValidateDatasetItemsReq req) (api.post = "/api/data/v1/dataset_items/validate")
     // 批量新增数据
     BatchCreateDatasetItemsResponse BatchCreateDatasetItems(1: BatchCreateDatasetItemsRequest req) (api.post = "/api/data/v1/datasets/:dataset_id/items/batch_create")
     // 更新数据

@@ -6,6 +6,7 @@ package convertor
 import (
 	"strings"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 	"github.com/bytedance/sonic"
 
@@ -19,9 +20,11 @@ func TagKeyPO2DO(val *model.TagKey) (*entity2.TagKey, error) {
 		return nil, nil
 	}
 	res := &entity2.TagKey{
-		ID:             val.ID,
-		AppID:          val.AppID,
-		SpaceID:        val.SpaceID,
+		ID:      val.ID,
+		AppID:   val.AppID,
+		SpaceID: val.SpaceID,
+		// TODO need remove
+		Version:        gptr.Of(val.Version),
 		VersionNum:     val.VersionNum,
 		TagKeyID:       val.TagKeyID,
 		TagKeyName:     val.TagKeyName,
@@ -35,15 +38,19 @@ func TagKeyPO2DO(val *model.TagKey) (*entity2.TagKey, error) {
 		UpdatedAt:      val.UpdatedAt,
 		TagContentType: entity2.TagContentType(*val.ContentType),
 	}
-	if err := sonic.Unmarshal(val.ChangeLog, &res.ChangeLogs); err != nil {
-		return nil, errno.JSONErr(err, "unmarshal tag key change log failed")
+	if val.ChangeLog != nil {
+		if err := sonic.Unmarshal(val.ChangeLog, &res.ChangeLogs); err != nil {
+			return nil, errno.JSONErr(err, "unmarshal tag key change log failed")
+		}
 	}
 	targetTypes := strings.Split(val.TagTargetType, ",")
 	res.TagTargetType = gslice.Map(targetTypes, func(val string) entity2.TagTargetType {
 		return entity2.TagTargetType(val)
 	})
-	if err := sonic.Unmarshal(val.Spec, &res.ContentSpec); err != nil {
-		return nil, errno.JSONErr(err, "unmarshal tag key content spec failed")
+	if val.Spec != nil {
+		if err := sonic.Unmarshal(val.Spec, &res.ContentSpec); err != nil {
+			return nil, errno.JSONErr(err, "unmarshal tag key content spec failed")
+		}
 	}
 	return res, nil
 }
