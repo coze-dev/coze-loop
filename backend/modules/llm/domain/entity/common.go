@@ -10,7 +10,7 @@ const (
 	ScenarioPromptDebug      Scenario = "prompt_debug"
 	ScenarioEvalTarget       Scenario = "eval_target"
 	ScenarioEvaluator        Scenario = "evaluator"
-	ScenarioPromptAsAService Scenario = "prompt_as_a_service"
+	ScenarioPromptAsAService Scenario = "prompt_as_a_service" // ptaas
 )
 
 func ScenarioValue(scenario *Scenario) Scenario {
