@@ -462,7 +462,9 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	spansSize := 0
 	errCode := 0
 	defer func() {
-		o.metrics.EmitSearchTraceOapi(req.WorkspaceID, req.GetPlatformType(), int64(spansSize), errCode, st, err != nil)
+		if req != nil {
+			o.metrics.EmitSearchTraceOapi(req.WorkspaceID, req.GetPlatformType(), int64(spansSize), errCode, st, err != nil)
+		}
 	}()
 
 	if err = o.validateSearchOApiTraceReq(ctx, req); err != nil {
@@ -560,7 +562,9 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	spansSize := 0
 	errCode := 0
 	defer func() {
-		o.metrics.EmitListSpansOapi(req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+		if req != nil {
+			o.metrics.EmitListSpansOapi(req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+		}
 	}()
 	if err = o.validateListSpansOApi(ctx, req); err != nil {
 		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
