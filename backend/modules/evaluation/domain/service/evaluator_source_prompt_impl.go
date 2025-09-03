@@ -348,7 +348,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 	content := gptr.Indirect(replyItem.Content)
 
 	// 按优先级顺序执行解析策略
-	strategies := []func(string, *entity.EvaluatorOutputData) (bool, error){
+	strategies := []func(context.Context, string, *entity.EvaluatorOutputData) (bool, error){
 		parseDirectJSON,           // 策略1：直接解析完整JSON
 		parseRepairedJSON,         // 策略2：修复后解析完整JSON
 		parseRegexExtractedJSON,   // 策略3：正则提取JSON片段并解析
@@ -356,7 +356,7 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 	}
 
 	for _, strategy := range strategies {
-		success, err := strategy(content, output)
+		success, err := strategy(ctx, content, output)
 		if err != nil {
 			return err
 		}
@@ -366,12 +366,12 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 	}
 
 	// 兜底策略：当所有其他解析策略都失败时，score设置为0，使用评估器的完整输出作为reason
-	parseFallbackStrategy(content, output)
+	parseFallbackStrategy(ctx, content, output)
 	return nil
 }
 
 // parseDirectJSON 策略1：直接解析完整JSON内容
-func parseDirectJSON(content string, output *entity.EvaluatorOutputData) (bool, error) {
+func parseDirectJSON(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
 	var outputMsg outputMsgFormat
 	b := []byte(content)
 
@@ -390,7 +390,7 @@ func parseDirectJSON(content string, output *entity.EvaluatorOutputData) (bool, 
 }
 
 // parseRepairedJSON 策略2：使用jsonrepair修复后解析完整JSON内容
-func parseRepairedJSON(content string, output *entity.EvaluatorOutputData) (bool, error) {
+func parseRepairedJSON(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
 	var outputMsg outputMsgFormat
 	
 	repairedContent, repairErr := jsonrepair.JSONRepair(content)
@@ -411,7 +411,7 @@ func parseRepairedJSON(content string, output *entity.EvaluatorOutputData) (bool
 }
 
 // parseRegexExtractedJSON 策略3：使用正则表达式提取JSON片段并解析
-func parseRegexExtractedJSON(content string, output *entity.EvaluatorOutputData) (bool, error) {
+func parseRegexExtractedJSON(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
 	var outputMsg outputMsgFormat
 	b := []byte(content)
 
@@ -451,13 +451,15 @@ func parseRegexExtractedJSON(content string, output *entity.EvaluatorOutputData)
 }
 
 // parseScoreWithRegex 策略4：通过正则解析score字段，使用完整输出作为reason
-func parseScoreWithRegex(content string, output *entity.EvaluatorOutputData) (bool, error) {
+func parseScoreWithRegex(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
 	scoreRegex := regexp.MustCompile(`(?i)score[^0-9]*([0-9]+(?:\.[0-9]+)?)`)
 	scoreMatches := scoreRegex.FindStringSubmatch(content)
 	if len(scoreMatches) > 1 {
 		scoreStr := scoreMatches[1]
 		score, err := strconv.ParseFloat(scoreStr, 64)
 		if err == nil {
+			// 添加warn日志，记录命中正则解析策略的原始内容
+			logs.CtxWarn(ctx, "[parseScoreWithRegex] Hit regex parsing strategy, original content: %s", content)
 			output.EvaluatorResult.Score = &score
 			output.EvaluatorResult.Reasoning = content // 使用完整输出作为reason
 			return true, nil
@@ -467,7 +469,9 @@ func parseScoreWithRegex(content string, output *entity.EvaluatorOutputData) (bo
 }
 
 // parseFallbackStrategy 策略5：兜底策略，当所有其他解析策略都失败时使用
-func parseFallbackStrategy(content string, output *entity.EvaluatorOutputData) {
+func parseFallbackStrategy(ctx context.Context, content string, output *entity.EvaluatorOutputData) {
+	// 添加warn日志，记录命中兜底策略的原始内容
+	logs.CtxWarn(ctx, "[parseFallbackStrategy] Hit fallback parsing strategy, original content: %s", content)
 	// score设置为0，使用评估器的完整输出作为reason
 	score := 0.0
 	output.EvaluatorResult.Score = &score
