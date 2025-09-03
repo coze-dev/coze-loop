@@ -6,10 +6,11 @@ package entity
 type Scenario string
 
 const (
-	ScenarioDefault     Scenario = "default"
-	ScenarioPromptDebug Scenario = "prompt_debug"
-	ScenarioEvalTarget  Scenario = "eval_target"
-	ScenarioEvaluator   Scenario = "evaluator"
+	ScenarioDefault          Scenario = "default"
+	ScenarioPromptDebug      Scenario = "prompt_debug"
+	ScenarioEvalTarget       Scenario = "eval_target"
+	ScenarioEvaluator        Scenario = "evaluator"
+	ScenarioPromptAsAService Scenario = "prompt_as_a_service"
 )
 
 func ScenarioValue(scenario *Scenario) Scenario {
