@@ -39,7 +39,7 @@ struct OtelIngestTracesResponse {
 
 struct CreateAnnotationRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
-    2: required string span_id (api.body="span_id", vt.min_size="1")
+    2: optional string span_id (api.body="span_id")
     3: required string trace_id (api.body="trace_id", vt.min_size="1")
     4: required string annotation_key (api.body="annotation_key", vt.min_size="1")
     5: required string annotation_value (api.body="annotation_value")
@@ -54,8 +54,8 @@ struct CreateAnnotationResponse {
 }
 
 struct DeleteAnnotationRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
-    2: required string span_id (api.query='span_id', vt.min_size="1")
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query="workspace_id" vt.gt="0")
+    2: optional string span_id (api.query='span_id')
     4: required string trace_id (api.query="trace_id", vt.min_size="1")
     3: required string annotation_key (api.query='annotation_key', vt.min_size="1")
 
