@@ -947,9 +947,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 断言解析失败，并返回错误
-		// 失败原因：内容是纯文本字符串，不包含任何JSON结构，无法通过直接解析、JSON修复或正则表达式提取找到有效的score和reason字段
-		assert.Error(t, err)
+		// Assert: 由于有兜底策略，不会返回错误，但会使用兜底解析
+		// 兜底策略：score设置为0，使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景7: JSON中的score字段值不是数字", func(t *testing.T) {
@@ -963,9 +966,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 断言解析失败，并返回错误
-		// 失败原因：JSON结构正确但score字段值"not-a-number"无法转换为float64类型，outputMsg.Score.Float64()方法调用失败
-		assert.Error(t, err)
+		// Assert: 由于有兜底策略，不会返回错误，但会使用兜底解析
+		// 兜底策略：score设置为0，使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景8: 内容为空字符串", func(t *testing.T) {
@@ -979,9 +985,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 断言解析失败，并返回错误
-		// 失败原因：空字符串既不是有效的JSON格式，也无法通过jsonrepair修复成有效JSON，更无法通过正则表达式匹配到包含score和reason的JSON片段
-		assert.Error(t, err)
+		// Assert: 由于有兜底策略，不会返回错误，但会使用兜底解析
+		// 兜底策略：score设置为0，使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景9: JSON的reason字段中包含转义字符", func(t *testing.T) {
@@ -1033,9 +1042,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 这个复杂的内容实际上解析失败，因为JSON格式复杂
-		// 失败原因：内容包含大量Markdown格式文本和步骤说明，虽然末尾有JSON结构，但该JSON被嵌入在复杂的文本中，无法被正则表达式正确匹配和提取
-		assert.Error(t, err)
+		// Assert: 这个复杂的内容能够通过正则表达式提取JSON并解析成功
+		// 成功原因：虽然内容包含大量Markdown文本，但末尾的JSON结构格式正确，正则表达式能够匹配并提取有效的JSON片段
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "MINNESOTA")
 
 	})
 
@@ -1053,9 +1065,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 这个内容包含未转义引号，解析失败
-		// 失败原因：reason字段中包含未转义的双引号（如"麦肯锡"、"咨询公司"、"50万见面费都给不了，那就不是我的客户"），导致JSON格式错误，无法被sonic.Unmarshal正确解析，jsonrepair也无法完全修复这种复杂的引号嵌套问题
-		assert.Error(t, err)
+		// Assert: 这个内容包含未转义引号，但通过正则解析策略成功解析
+		// 成功原因：虽然reason字段包含未转义的双引号导致JSON格式错误，但parseScoreWithRegex策略能够通过正则表达式提取score值，并使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.7, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning) // 使用完整内容作为reason
 
 	})
 
@@ -1091,10 +1106,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 预期解析失败，返回错误
-		// 失败原因：JSON结构正确且能被成功解析，但只包含city、province、address字段，缺少必需的score和reason字段，导致outputMsg.Reason为空字符串，不满足解析条件
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "parse failed, content does not contain both score and reason")
+		// Assert: 由于有兜底策略，不会返回错误，但会使用兜底解析
+		// 兜底策略：score设置为0，使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景14: score字段为特殊值", func(t *testing.T) {
@@ -1109,18 +1126,17 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 预期解析失败，因为 score 为 "无" 无法转换或者 JSON 解析失败
-		// 失败原因：JSON结构正确且包含score和reason字段，但score字段值为"无"（中文字符），无法通过outputMsg.Score.Float64()转换为浮点数类型，导致类型转换失败
-		assert.Error(t, err)
-		// 错误可能是 score 转换失败或者整体解析失败
-		assert.True(t,
-			strings.Contains(err.Error(), "convert score to float64 failed") ||
-				strings.Contains(err.Error(), "parse failed, content does not contain both score and reason"))
+		// Assert: 由于有兜底策略，不会返回错误，但会使用兜底解析
+		// 兜底策略：score设置为0，使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景15: 复杂嵌套JSON结构", func(t *testing.T) {
 		// 基于 CSV 第11-15行记录：包含嵌套结构的评分结果
-		// 失败原因：JSON 结构不匹配预期的 score/reason 格式
+		// 实际测试发现这个JSON能够通过正则表达式提取嵌套的score和reason
 		content := `{
 			"1.5模型": {
 				"reason": "输出准确完整",
@@ -1135,10 +1151,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 预期解析失败，结构不匹配
-		// 失败原因：JSON结构为嵌套对象，顶层只有"1.5模型"字段，缺少直接的score和reason字段，parseContentOutput期望的是平铺结构的JSON，无法识别嵌套结构中的评分信息
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "parse failed, content does not contain both score and reason")
+		// Assert: 正则表达式能够提取嵌套JSON中的score和reason
+		// 成功原因：正则表达式能够匹配嵌套JSON结构中的score和reason字段
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 1.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, "输出准确完整", output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景16: 超长reason文本", func(t *testing.T) {
@@ -1180,9 +1198,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 这个Markdown格式的内容解析失败
-		// 失败原因：内容包含大量Markdown格式的文本和步骤说明，虽然中间有JSON片段，但该JSON被Markdown文本包围，正则表达式无法准确匹配和提取有效的JSON结构
-		assert.Error(t, err)
+		// Assert: 这个Markdown格式的内容能够通过正则表达式提取JSON并解析成功
+		// 成功原因：虽然内容包含Markdown格式文本，但中间的JSON片段格式正确，正则表达式能够匹配并提取有效的JSON结构
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.9, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "分析结果显示模型回答准确")
 	})
 
 	t.Run("场景18: 纯文本无JSON结构", func(t *testing.T) {
@@ -1199,10 +1220,12 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 预期解析失败，无有效 JSON
-		// 失败原因：内容是纯Markdown格式的技术文档，只包含步骤说明和文本描述，完全没有JSON结构，无法通过任何解析方式提取到score和reason字段
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "parse failed, content does not contain both score and reason")
+		// Assert: 由于有兜底策略，不会返回错误，但会使用兜底解析
+		// 兜底策略：score设置为0，使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
 	})
 
 	t.Run("场景19: JSON结构不完整", func(t *testing.T) {
@@ -1226,7 +1249,7 @@ func Test_parseContentOutput(t *testing.T) {
 
 	t.Run("场景20: 多层嵌套的评分分析", func(t *testing.T) {
 		// 基于 CSV 第63-77行记录：复杂嵌套的评分分析
-		// 包含多个模型的评分结果
+		// 实际测试发现正则表达式会匹配第一个找到的score和reason
 		content := `{
 			"1.5模型评估": {
 				"reason": "模型输出准确",
@@ -1245,9 +1268,196 @@ func Test_parseContentOutput(t *testing.T) {
 		// Act: 调用被测函数
 		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
 
-		// Assert: 预期解析失败，因为顶层没有 score 和 reason 字段
-		// 失败原因：JSON为多层嵌套结构，包含多个模型的评估结果，但顶层只有"1.5模型评估"和"1.6模型评估"字段，缺少直接的score和reason字段，parseContentOutput无法处理这种复杂的嵌套评分结构
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "parse failed, content does not contain both score and reason")
+		// Assert: 正则表达式会提取第一个匹配到的score和reason
+		// 成功原因：正则表达式能够匹配嵌套JSON中的第一个score和reason字段
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.8, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, "模型输出准确", output.EvaluatorResult.Reasoning)
+	})
+
+	// 新增测试场景：复杂JSON字符串解析
+	t.Run("场景21: 用户提供的复杂JSON字符串", func(t *testing.T) {
+		// 用户提供的实际复杂JSON字符串，包含SQL语句、复杂转义、多层引号嵌套
+		content := `{"reason": "用户问题要求查询前端集群\"tos-1az-front-azb-2\"主要访问的BS池，核心意图是筛选该集群的日志并按BS池字段分组统计访问次数。\n\n1. **筛选条件**：SQL使用` + "`" + `Cluster: \"\"tos-1az-front-azb-2\"\"` + "`" + `精准匹配用户指定的前端集群，符合筛选意图。\n2. **分析目标**：通过` + "`" + `SELECT \"\"LastAccessBsPoolName\"\", COUNT(*) AS access_count GROUP BY \"\"LastAccessBsPoolName\"\"` + "`" + `实现按BS池分组统计访问次数，与\"主要访问哪些BS池\"的分析需求一致。\n3. **字段依赖**：使用\"LastAccessBsPoolName\"字段对应BS池信息，假设该字段存在（用户问题未提及字段缺失，分析内容中已使用该字段）。\n\n**校验维度检查**：\n- 条件完整性：无遗漏筛选条件（仅需集群筛选）。\n- 条件准确性：集群名称匹配，无矛盾。\n- 分析目标一致性：GROUP BY+COUNT(*)符合统计访问次数需求。\n- 函数正确性：COUNT(*)参数类型正确。\n- 语法规范：字段\"LastAccessBsPoolName\"用双引号包裹（含大写字母，符合特殊字符处理规则），别名access_count合法，逻辑正确。\n\n**特殊场景**：用户未要求时间范围，SQL未包含时间筛选，符合默认规则；无歧义或未定义字段问题。", "score": 1.0}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 这个复杂的JSON字符串应该能够被成功解析
+		// 成功原因：虽然包含复杂的转义字符、SQL语句和多层引号嵌套，但JSON结构本身是正确的，
+		// parseDirectJSON策略能够直接解析成功
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 1.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "用户问题要求查询前端集群")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "SQL使用")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "LastAccessBsPoolName")
+	})
+
+	t.Run("场景22: 复杂SQL语句嵌入JSON", func(t *testing.T) {
+		// 测试reason字段包含完整SQL语句和复杂转义的情况
+		content := `{"score": 0.85, "reason": "查询语句：SELECT \"table_name\", COUNT(*) FROM database WHERE condition = 'value' AND status IN ('active', 'pending') GROUP BY \"table_name\" ORDER BY COUNT(*) DESC; 该SQL语句结构正确，使用了适当的引号转义。"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: SQL语句嵌入的JSON应该能够被正确解析
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.85, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "SELECT")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "GROUP BY")
+	})
+
+	t.Run("场景23: 多层引号嵌套复杂情况", func(t *testing.T) {
+		// 测试reason字段包含多层嵌套引号的复杂情况
+		content := `{"score": 0.9, "reason": "分析结果显示：字段\"name\"的值为\"John \\\"The Great\\\" Doe\"，其中包含转义的双引号。同时，配置项\"config\":{\"key\":\"value\"}也被正确解析。"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 多层引号嵌套应该能够被正确解析
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.9, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "John \\\"The Great\\\" Doe") // 转义后的格式
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "config")
+	})
+
+	t.Run("场景24: Markdown格式文本嵌入", func(t *testing.T) {
+		// 测试reason字段包含Markdown格式文本的解析
+		content := `{"score": 0.75, "reason": "## 分析结果\n\n### 1. 代码质量\n- **优点**：代码结构清晰\n- **缺点**：缺少注释\n\n### 2. 性能评估\n使用` + "`" + `SELECT * FROM table` + "`" + `查询可能存在性能问题。\n\n**总结**：整体质量良好，但需要优化。"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: Markdown格式文本应该能够被正确解析
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.75, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "## 分析结果")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "**优点**")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "SELECT * FROM table")
+	})
+
+	t.Run("场景25: 极长复杂文本性能测试", func(t *testing.T) {
+		// 构造类似用户提供JSON的超长复杂文本，测试解析性能
+		longReason := strings.Repeat("这是一个包含\"引号\"和复杂内容的长文本段落。", 100) +
+			"SQL查询：SELECT \"field1\", \"field2\" FROM \"table\" WHERE \"condition\" = 'value'。" +
+			strings.Repeat("更多复杂内容包含各种特殊字符：@#$%^&*()_+{}|:<>?[]\\;'\".,/", 50)
+		
+		content := fmt.Sprintf(`{"score": 0.95, "reason": "%s"}`, strings.ReplaceAll(longReason, `"`, `\"`))
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// 测试解析性能
+		start := time.Now()
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+		duration := time.Since(start)
+
+		// Assert: 超长文本应该能够被正确解析，且性能合理
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.95, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "SQL查询")
+		assert.Less(t, duration, 100*time.Millisecond) // 确保解析时间在合理范围内
+	})
+
+	t.Run("场景26: 特殊字符组合测试", func(t *testing.T) {
+		// 测试各种特殊字符组合的解析能力
+		content := `{"score": 0.8, "reason": "测试内容包含各种特殊字符：\n换行符、\t制表符、\"双引号\"、'单引号'、\\反斜杠、/正斜杠、@邮箱符号、#井号、$美元符号、%百分号、^异或、&与符号、*星号、()括号、[]方括号、{}花括号、|管道符、:冒号、;分号、<>尖括号、?问号、中文字符、数字123、emoji😀等。"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 特殊字符组合应该能够被正确解析
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.8, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "换行符")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "双引号")
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "emoji😀")
+	})
+
+	t.Run("场景27: 复杂转义失败场景", func(t *testing.T) {
+		// 测试复杂转义字符导致解析失败的场景
+		content := `{"score": 0.6, "reason": "这是一个包含未正确转义的"引号"和其他"复杂内容"的文本，可能导致JSON解析失败。包含SQL：SELECT "field" FROM "table" WHERE "condition" = "value"。"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 这种未正确转义的情况应该被jsonrepair修复后成功解析
+		// 成功原因：虽然reason字段包含未转义的双引号，但jsonrepair.JSONRepair能够智能识别并修复这些转义问题
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.6, *output.EvaluatorResult.Score, 0.0001)
+	})
+
+	t.Run("场景28: 边界情况-空reason但有score", func(t *testing.T) {
+		// 测试reason为空但score存在的边界情况
+		content := `{"score": 1.0, "reason": ""}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 正则解析策略能够提取score，使用完整内容作为reason
+		// 成功原因：parseScoreWithRegex策略能够通过正则表达式提取score值，并使用完整内容作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 1.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning)
+	})
+
+	t.Run("场景29: 性能边界测试-超大JSON", func(t *testing.T) {
+		// 测试超大JSON的解析性能和稳定性
+		hugeReason := strings.Repeat("这是一个非常长的文本内容，用于测试解析器的性能边界。", 1000)
+		content := fmt.Sprintf(`{"score": 0.5, "reason": "%s"}`, strings.ReplaceAll(hugeReason, `"`, `\"`))
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// 测试解析性能
+		start := time.Now()
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+		duration := time.Since(start)
+
+		// Assert: 超大JSON应该能够被正确解析，且性能在可接受范围内
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.5, *output.EvaluatorResult.Score, 0.0001)
+		assert.Less(t, duration, 500*time.Millisecond) // 允许更长的解析时间用于超大内容
+		assert.Greater(t, len(output.EvaluatorResult.Reasoning), 10000) // 确保长文本被完整保留
 	})
 }
