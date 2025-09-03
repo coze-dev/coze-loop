@@ -1211,7 +1211,7 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 		req.TraceID,
 		strconv.FormatInt(req.WorkspaceID, 10),
 		req.StartTime-time.Second.Milliseconds(),
-		req.StartTime+time.Second.Milliseconds(),
+		req.EndTime+time.Second.Milliseconds(),
 	)
 	if err != nil {
 		return resp, err
