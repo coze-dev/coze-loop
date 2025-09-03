@@ -8380,6 +8380,731 @@ func (p *ListSourceEvalTargetVersionsResponse) Field255DeepEqual(src *base.BaseR
 	return true
 }
 
+type MockEvalTargetOutputRequest struct {
+	WorkspaceID         int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	EvalTargetID        int64      `thrift:"eval_target_id,2,required" frugal:"2,required,i64" json:"eval_target_id" form:"eval_target_id,required" query:"eval_target_id,required"`
+	EvalTargetVersionID int64      `thrift:"eval_target_version_id,3,required" frugal:"3,required,i64" json:"eval_target_version_id" form:"eval_target_version_id,required" query:"eval_target_version_id,required"`
+	Base                *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewMockEvalTargetOutputRequest() *MockEvalTargetOutputRequest {
+	return &MockEvalTargetOutputRequest{}
+}
+
+func (p *MockEvalTargetOutputRequest) InitDefault() {
+}
+
+func (p *MockEvalTargetOutputRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *MockEvalTargetOutputRequest) GetEvalTargetID() (v int64) {
+	if p != nil {
+		return p.EvalTargetID
+	}
+	return
+}
+
+func (p *MockEvalTargetOutputRequest) GetEvalTargetVersionID() (v int64) {
+	if p != nil {
+		return p.EvalTargetVersionID
+	}
+	return
+}
+
+var MockEvalTargetOutputRequest_Base_DEFAULT *base.Base
+
+func (p *MockEvalTargetOutputRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return MockEvalTargetOutputRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *MockEvalTargetOutputRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *MockEvalTargetOutputRequest) SetEvalTargetID(val int64) {
+	p.EvalTargetID = val
+}
+func (p *MockEvalTargetOutputRequest) SetEvalTargetVersionID(val int64) {
+	p.EvalTargetVersionID = val
+}
+func (p *MockEvalTargetOutputRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_MockEvalTargetOutputRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "eval_target_id",
+	3:   "eval_target_version_id",
+	255: "Base",
+}
+
+func (p *MockEvalTargetOutputRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *MockEvalTargetOutputRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetEvalTargetID bool = false
+	var issetEvalTargetVersionID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEvalTargetID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEvalTargetVersionID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvalTargetID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvalTargetVersionID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MockEvalTargetOutputRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_MockEvalTargetOutputRequest[fieldId]))
+}
+
+func (p *MockEvalTargetOutputRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *MockEvalTargetOutputRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EvalTargetID = _field
+	return nil
+}
+func (p *MockEvalTargetOutputRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EvalTargetVersionID = _field
+	return nil
+}
+func (p *MockEvalTargetOutputRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *MockEvalTargetOutputRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MockEvalTargetOutputRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MockEvalTargetOutputRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *MockEvalTargetOutputRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("eval_target_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.EvalTargetID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *MockEvalTargetOutputRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("eval_target_version_id", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.EvalTargetVersionID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *MockEvalTargetOutputRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *MockEvalTargetOutputRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MockEvalTargetOutputRequest(%+v)", *p)
+
+}
+
+func (p *MockEvalTargetOutputRequest) DeepEqual(ano *MockEvalTargetOutputRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvalTargetID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.EvalTargetVersionID) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *MockEvalTargetOutputRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *MockEvalTargetOutputRequest) Field2DeepEqual(src int64) bool {
+
+	if p.EvalTargetID != src {
+		return false
+	}
+	return true
+}
+func (p *MockEvalTargetOutputRequest) Field3DeepEqual(src int64) bool {
+
+	if p.EvalTargetVersionID != src {
+		return false
+	}
+	return true
+}
+func (p *MockEvalTargetOutputRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type MockEvalTargetOutputResponse struct {
+	EvalTarget *eval_target.EvalTarget `thrift:"eval_target,1,optional" frugal:"1,optional,eval_target.EvalTarget" form:"eval_target" json:"eval_target,omitempty" query:"eval_target"`
+	MockOutput map[string]string       `thrift:"mock_output,2,optional" frugal:"2,optional,map<string:string>" form:"mock_output" json:"mock_output,omitempty" query:"mock_output"`
+	BaseResp   *base.BaseResp          `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewMockEvalTargetOutputResponse() *MockEvalTargetOutputResponse {
+	return &MockEvalTargetOutputResponse{}
+}
+
+func (p *MockEvalTargetOutputResponse) InitDefault() {
+}
+
+var MockEvalTargetOutputResponse_EvalTarget_DEFAULT *eval_target.EvalTarget
+
+func (p *MockEvalTargetOutputResponse) GetEvalTarget() (v *eval_target.EvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTarget() {
+		return MockEvalTargetOutputResponse_EvalTarget_DEFAULT
+	}
+	return p.EvalTarget
+}
+
+var MockEvalTargetOutputResponse_MockOutput_DEFAULT map[string]string
+
+func (p *MockEvalTargetOutputResponse) GetMockOutput() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMockOutput() {
+		return MockEvalTargetOutputResponse_MockOutput_DEFAULT
+	}
+	return p.MockOutput
+}
+
+var MockEvalTargetOutputResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *MockEvalTargetOutputResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return MockEvalTargetOutputResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *MockEvalTargetOutputResponse) SetEvalTarget(val *eval_target.EvalTarget) {
+	p.EvalTarget = val
+}
+func (p *MockEvalTargetOutputResponse) SetMockOutput(val map[string]string) {
+	p.MockOutput = val
+}
+func (p *MockEvalTargetOutputResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_MockEvalTargetOutputResponse = map[int16]string{
+	1:   "eval_target",
+	2:   "mock_output",
+	255: "BaseResp",
+}
+
+func (p *MockEvalTargetOutputResponse) IsSetEvalTarget() bool {
+	return p.EvalTarget != nil
+}
+
+func (p *MockEvalTargetOutputResponse) IsSetMockOutput() bool {
+	return p.MockOutput != nil
+}
+
+func (p *MockEvalTargetOutputResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *MockEvalTargetOutputResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MockEvalTargetOutputResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MockEvalTargetOutputResponse) ReadField1(iprot thrift.TProtocol) error {
+	_field := eval_target.NewEvalTarget()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalTarget = _field
+	return nil
+}
+func (p *MockEvalTargetOutputResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.MockOutput = _field
+	return nil
+}
+func (p *MockEvalTargetOutputResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *MockEvalTargetOutputResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MockEvalTargetOutputResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MockEvalTargetOutputResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTarget() {
+		if err = oprot.WriteFieldBegin("eval_target", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalTarget.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *MockEvalTargetOutputResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMockOutput() {
+		if err = oprot.WriteFieldBegin("mock_output", thrift.MAP, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.MockOutput)); err != nil {
+			return err
+		}
+		for k, v := range p.MockOutput {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *MockEvalTargetOutputResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *MockEvalTargetOutputResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MockEvalTargetOutputResponse(%+v)", *p)
+
+}
+
+func (p *MockEvalTargetOutputResponse) DeepEqual(ano *MockEvalTargetOutputResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvalTarget) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.MockOutput) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *MockEvalTargetOutputResponse) Field1DeepEqual(src *eval_target.EvalTarget) bool {
+
+	if !p.EvalTarget.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *MockEvalTargetOutputResponse) Field2DeepEqual(src map[string]string) bool {
+
+	if len(p.MockOutput) != len(src) {
+		return false
+	}
+	for k, v := range p.MockOutput {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *MockEvalTargetOutputResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvalTargetService interface {
 	// 创建评测对象
 	CreateEvalTarget(ctx context.Context, request *CreateEvalTargetRequest) (r *CreateEvalTargetResponse, err error)
@@ -8401,6 +9126,8 @@ type EvalTargetService interface {
 	GetEvalTargetRecord(ctx context.Context, request *GetEvalTargetRecordRequest) (r *GetEvalTargetRecordResponse, err error)
 
 	BatchGetEvalTargetRecords(ctx context.Context, request *BatchGetEvalTargetRecordsRequest) (r *BatchGetEvalTargetRecordsResponse, err error)
+	// mock输出数据
+	MockEvalTargetOutput(ctx context.Context, request *MockEvalTargetOutputRequest) (r *MockEvalTargetOutputResponse, err error)
 }
 
 type EvalTargetServiceClient struct {
@@ -8519,6 +9246,15 @@ func (p *EvalTargetServiceClient) BatchGetEvalTargetRecords(ctx context.Context,
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvalTargetServiceClient) MockEvalTargetOutput(ctx context.Context, request *MockEvalTargetOutputRequest) (r *MockEvalTargetOutputResponse, err error) {
+	var _args EvalTargetServiceMockEvalTargetOutputArgs
+	_args.Request = request
+	var _result EvalTargetServiceMockEvalTargetOutputResult
+	if err = p.Client_().Call(ctx, "MockEvalTargetOutput", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type EvalTargetServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -8550,6 +9286,7 @@ func NewEvalTargetServiceProcessor(handler EvalTargetService) *EvalTargetService
 	self.AddToProcessorMap("ExecuteEvalTarget", &evalTargetServiceProcessorExecuteEvalTarget{handler: handler})
 	self.AddToProcessorMap("GetEvalTargetRecord", &evalTargetServiceProcessorGetEvalTargetRecord{handler: handler})
 	self.AddToProcessorMap("BatchGetEvalTargetRecords", &evalTargetServiceProcessorBatchGetEvalTargetRecords{handler: handler})
+	self.AddToProcessorMap("MockEvalTargetOutput", &evalTargetServiceProcessorMockEvalTargetOutput{handler: handler})
 	return self
 }
 func (p *EvalTargetServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -9033,6 +9770,54 @@ func (p *evalTargetServiceProcessorBatchGetEvalTargetRecords) Process(ctx contex
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("BatchGetEvalTargetRecords", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evalTargetServiceProcessorMockEvalTargetOutput struct {
+	handler EvalTargetService
+}
+
+func (p *evalTargetServiceProcessorMockEvalTargetOutput) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvalTargetServiceMockEvalTargetOutputArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("MockEvalTargetOutput", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvalTargetServiceMockEvalTargetOutputResult{}
+	var retval *MockEvalTargetOutputResponse
+	if retval, err2 = p.handler.MockEvalTargetOutput(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing MockEvalTargetOutput: "+err2.Error())
+		oprot.WriteMessageBegin("MockEvalTargetOutput", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("MockEvalTargetOutput", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -12483,6 +13268,350 @@ func (p *EvalTargetServiceBatchGetEvalTargetRecordsResult) DeepEqual(ano *EvalTa
 }
 
 func (p *EvalTargetServiceBatchGetEvalTargetRecordsResult) Field0DeepEqual(src *BatchGetEvalTargetRecordsResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvalTargetServiceMockEvalTargetOutputArgs struct {
+	Request *MockEvalTargetOutputRequest `thrift:"request,1" frugal:"1,default,MockEvalTargetOutputRequest"`
+}
+
+func NewEvalTargetServiceMockEvalTargetOutputArgs() *EvalTargetServiceMockEvalTargetOutputArgs {
+	return &EvalTargetServiceMockEvalTargetOutputArgs{}
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) InitDefault() {
+}
+
+var EvalTargetServiceMockEvalTargetOutputArgs_Request_DEFAULT *MockEvalTargetOutputRequest
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) GetRequest() (v *MockEvalTargetOutputRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return EvalTargetServiceMockEvalTargetOutputArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) SetRequest(val *MockEvalTargetOutputRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_EvalTargetServiceMockEvalTargetOutputArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalTargetServiceMockEvalTargetOutputArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewMockEvalTargetOutputRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MockEvalTargetOutput_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvalTargetServiceMockEvalTargetOutputArgs(%+v)", *p)
+
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) DeepEqual(ano *EvalTargetServiceMockEvalTargetOutputArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputArgs) Field1DeepEqual(src *MockEvalTargetOutputRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvalTargetServiceMockEvalTargetOutputResult struct {
+	Success *MockEvalTargetOutputResponse `thrift:"success,0,optional" frugal:"0,optional,MockEvalTargetOutputResponse"`
+}
+
+func NewEvalTargetServiceMockEvalTargetOutputResult() *EvalTargetServiceMockEvalTargetOutputResult {
+	return &EvalTargetServiceMockEvalTargetOutputResult{}
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) InitDefault() {
+}
+
+var EvalTargetServiceMockEvalTargetOutputResult_Success_DEFAULT *MockEvalTargetOutputResponse
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) GetSuccess() (v *MockEvalTargetOutputResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvalTargetServiceMockEvalTargetOutputResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvalTargetServiceMockEvalTargetOutputResult) SetSuccess(x interface{}) {
+	p.Success = x.(*MockEvalTargetOutputResponse)
+}
+
+var fieldIDToName_EvalTargetServiceMockEvalTargetOutputResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalTargetServiceMockEvalTargetOutputResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewMockEvalTargetOutputResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MockEvalTargetOutput_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvalTargetServiceMockEvalTargetOutputResult(%+v)", *p)
+
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) DeepEqual(ano *EvalTargetServiceMockEvalTargetOutputResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvalTargetServiceMockEvalTargetOutputResult) Field0DeepEqual(src *MockEvalTargetOutputResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

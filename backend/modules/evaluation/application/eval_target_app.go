@@ -399,3 +399,46 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 		EvalTargets: dtos,
 	}, nil
 }
+
+func (e EvalTargetApplicationImpl) MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest) (r *eval_target.MockEvalTargetOutputResponse, err error) {
+	// 参数验证
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
+	}
+
+	// 获取评测目标信息
+	evalTarget, err := e.evalTargetService.GetEvalTargetVersion(ctx, request.WorkspaceID, request.EvalTargetVersionID, false)
+	if err != nil {
+		return nil, err
+	}
+	if evalTarget == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval target not found"))
+	}
+
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(evalTarget.ID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 生成mock数据
+	var mockOutput map[string]string
+	if evalTarget.EvalTargetVersion != nil && len(evalTarget.EvalTargetVersion.OutputSchema) > 0 {
+		mockOutput, err = e.evalTargetService.GenerateMockOutputData(evalTarget.EvalTargetVersion.OutputSchema)
+		if err != nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to generate mock data: "+err.Error()))
+		}
+	} else {
+		// 如果没有输出schema，返回空对象
+		mockOutput = map[string]string{}
+	}
+
+	return &eval_target.MockEvalTargetOutputResponse{
+		EvalTarget: target.EvalTargetDO2DTO(evalTarget),
+		MockOutput: mockOutput,
+	}, nil
+}

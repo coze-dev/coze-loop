@@ -1,0 +1,24 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package runtime
+
+import "time"
+
+// SandboxConfig 沙箱配置
+type SandboxConfig struct {
+	MemoryLimit    int64         `json:"memory_limit"`    // 内存限制 (MB)
+	TimeoutLimit   time.Duration `json:"timeout_limit"`   // 执行超时时间
+	MaxOutputSize  int64         `json:"max_output_size"` // 最大输出大小 (bytes)
+	NetworkEnabled bool          `json:"network_enabled"` // 是否允许网络访问
+}
+
+// DefaultSandboxConfig 默认沙箱配置
+func DefaultSandboxConfig() *SandboxConfig {
+	return &SandboxConfig{
+		MemoryLimit:    128,              // 128MB
+		TimeoutLimit:   30 * time.Second, // 30秒
+		MaxOutputSize:  1024 * 1024,      // 1MB
+		NetworkEnabled: false,            // 默认禁止网络
+	}
+}

@@ -106,3 +106,9 @@ func BatchGetEvalTargetRecords(ctx context.Context, c *app.RequestContext) {
 func BatchGetSourceEvalTargets(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalTargetSvc.BatchGetSourceEvalTargets)
 }
+
+// MockEvalTargetOutput .
+// @router /api/evaluation/v1/eval_targets/mock_output [POST]
+func MockEvalTargetOutput(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalTargetSvc.MockEvalTargetOutput)
+}

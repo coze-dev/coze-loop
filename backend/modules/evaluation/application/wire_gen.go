@@ -7,6 +7,7 @@
 package application
 
 import (
+	"context"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -28,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	metrics5 "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
@@ -53,10 +55,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
-	"context"
 	"github.com/google/wire"
+	"github.com/sirupsen/logrus"
 )
 
 // Injectors from wire.go:
@@ -83,7 +86,12 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmcli)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger)
+	logger := NewLogger()
+	sandboxConfig := NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
+	runtimeManager := runtime.NewRuntimeManager(iRuntimeFactory)
+	codeBuilderFactory := service.NewCodeBuilderFactory()
+	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, runtimeManager, codeBuilderFactory)
 	serviceEvaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
 	if err != nil {
@@ -158,7 +166,12 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmClient)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger)
+	logger := NewLogger()
+	sandboxConfig := NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
+	runtimeManager := runtime.NewRuntimeManager(iRuntimeFactory)
+	codeBuilderFactory := service.NewCodeBuilderFactory()
+	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, runtimeManager, codeBuilderFactory)
 	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
 	if err != nil {
@@ -175,7 +188,7 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	iExperimentRepo := experiment.NewExptRepo(iExptDAO, iExptEvaluatorRefDAO, idgen2)
 	evaluatorRecordService := service.NewEvaluatorRecordServiceImpl(idgen2, iEvaluatorRecordRepo, exptEventPublisher, evaluatorEventPublisher, userInfoService, iExperimentRepo)
 	iFileProvider := foundation.NewFileRPCProvider(fileClient)
-	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider)
+	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider, v)
 	return evaluationEvaluatorService, nil
 }
 
@@ -221,7 +234,9 @@ var (
 		flagSet,
 	)
 
-	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher)
+	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, runtime.NewRuntimeFactory, runtime.NewRuntimeManager, NewSandboxConfig,
+		NewLogger, wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)), service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher,
+	)
 
 	evaluatorSet = wire.NewSet(
 		NewEvaluatorHandlerImpl, foundation.NewAuthRPCProvider, foundation.NewFileRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl, idem.NewIdempotentService, redis2.NewIdemDAO, producer.NewExptEventPublisher, evaluatorDomainService,
@@ -251,6 +266,30 @@ func NewLock(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "evaluation")
 }
 
-func NewEvaluatorSourceServices(llmProvider rpc.ILLMProvider, metric metrics5.EvaluatorExecMetrics, config conf2.IConfiger) []service.EvaluatorSourceService {
-	return []service.EvaluatorSourceService{service.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config)}
+// NewSandboxConfig 创建默认沙箱配置
+func NewSandboxConfig() *runtime.SandboxConfig {
+	return runtime.DefaultSandboxConfig()
+}
+
+// NewLogger 创建默认日志记录器
+func NewLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+	return logger
+}
+
+func NewEvaluatorSourceServices(
+	llmProvider rpc.ILLMProvider,
+	metric metrics5.EvaluatorExecMetrics,
+	config conf2.IConfiger,
+	runtimeManager component.IRuntimeManager,
+	codeBuilderFactory service.CodeBuilderFactory,
+) map[entity.EvaluatorType]service.EvaluatorSourceService {
+	services := []service.EvaluatorSourceService{service.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config), service.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric)}
+
+	serviceMap := make(map[entity.EvaluatorType]service.EvaluatorSourceService)
+	for _, svc := range services {
+		serviceMap[svc.EvaluatorType()] = svc
+	}
+	return serviceMap
 }

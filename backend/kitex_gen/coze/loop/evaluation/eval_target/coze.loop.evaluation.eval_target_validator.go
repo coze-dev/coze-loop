@@ -230,3 +230,24 @@ func (p *ListSourceEvalTargetVersionsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *MockEvalTargetOutputRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MockEvalTargetOutputResponse) IsValid() error {
+	if p.EvalTarget != nil {
+		if err := p.EvalTarget.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTarget not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
