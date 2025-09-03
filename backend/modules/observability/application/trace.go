@@ -902,7 +902,7 @@ func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.Extra
 	}
 	sResp, err := t.traceService.ExtractSpanInfo(ctx, &service.ExtractSpanInfoRequest{
 		WorkspaceID:   req.WorkspaceID,
-		TraceID:       "",
+		TraceID:       req.TraceID,
 		SpanIds:       req.SpanIds,
 		StartTime:     req.GetStartTime(),
 		EndTime:       req.GetEndTime(),
