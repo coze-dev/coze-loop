@@ -1155,7 +1155,11 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 
 		evaluatorVersionIDS := make(map[int64]bool)
 		for _, taskPO := range taskPOs {
-			for _, evaluator := range tconv.TaskConfigPO2DO(ctx, taskPO.TaskConfig).AutoEvaluateConfigs {
+			taskConfig := tconv.TaskConfigPO2DO(ctx, taskPO.TaskConfig)
+			if taskConfig == nil {
+				continue
+			}
+			for _, evaluator := range taskConfig.AutoEvaluateConfigs {
 				evaluatorVersionIDS[evaluator.EvaluatorVersionID] = true
 				if len(evaluatorVersionIDS) >= 30 {
 					break
