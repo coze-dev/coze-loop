@@ -5,12 +5,11 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
-	"go.uber.org/mock/gomock"
-
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockExptSchedulerMode is a mock of ExptSchedulerMode interface.

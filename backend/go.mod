@@ -32,7 +32,7 @@ require (
 	github.com/cloudwego/eino-ext/components/model/qwen v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250519084852-38fafa73d9ea
 	github.com/cloudwego/gopkg v0.1.4
-	github.com/cloudwego/hertz v0.9.7
+	github.com/cloudwego/hertz v0.10.1
 	github.com/cloudwego/kitex v0.13.1
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
@@ -98,6 +98,8 @@ require (
 )
 
 require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+
+require github.com/brianvoe/gofakeit/v6 v6.28.0
 
 require (
 	cloud.google.com/go v0.116.0 // indirect
