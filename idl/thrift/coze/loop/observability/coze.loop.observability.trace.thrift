@@ -292,7 +292,7 @@ struct PreviewExportTracesToDatasetResponse {
 
 struct ChangeEvaluatorScoreRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: required i64 evaluator_record_id (api.js_conv='true', api.body="evaluator_record_id", vt.gt="0")
+    2: required string annotation_id (api.body="annotation_id", vt.min_size="1")
     3: required string span_id (api.body="span_id", vt.min_size="1")
     4: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
     5: required annotation.Correction correction (api.body="correction")

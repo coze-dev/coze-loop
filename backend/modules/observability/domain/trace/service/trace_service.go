@@ -204,12 +204,12 @@ type ListAnnotationsResp struct {
 }
 
 type ChangeEvaluatorScoreRequest struct {
-	WorkspaceID       int64
-	EvaluatorRecordID int64
-	SpanID            string
-	StartTime         int64
-	PlatformType      loop_span.PlatformType
-	Correction        *annotation.Correction
+	WorkspaceID  int64
+	AnnotationID string
+	SpanID       string
+	StartTime    int64
+	PlatformType loop_span.PlatformType
+	Correction   *annotation.Correction
 }
 type ChangeEvaluatorScoreResp struct {
 	Annotation *annotation.Annotation
@@ -1059,13 +1059,15 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	span := spans[0]
-	var annotation *loop_span.Annotation
-	for _, anno := range span.Annotations {
-		meta := anno.GetAutoEvaluateMetadata()
-		if meta != nil && meta.EvaluatorRecordID == req.EvaluatorRecordID {
-			annotation = anno
-			break
-		}
+	annotation, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
+		Tenants: tenants,
+		ID:      req.AnnotationID,
+		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
+		EndAt:   time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
+	})
+	if err != nil {
+		logs.CtxError(ctx, "get annotation %s err %v", req.AnnotationID, err)
+		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("get annotation error"))
 	}
 	if annotation == nil {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation not found"))

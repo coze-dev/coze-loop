@@ -10833,7 +10833,7 @@ func (p *ChangeEvaluatorScoreRequest) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetEvaluatorRecordID bool = false
+	var issetAnnotationID bool = false
 	var issetSpanID bool = false
 	var issetStartTime bool = false
 	var issetCorrection bool = false
@@ -10863,13 +10863,13 @@ func (p *ChangeEvaluatorScoreRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEvaluatorRecordID = true
+				issetAnnotationID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -10964,7 +10964,7 @@ func (p *ChangeEvaluatorScoreRequest) FastRead(buf []byte) (int, error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetEvaluatorRecordID {
+	if !issetAnnotationID {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
@@ -11011,14 +11011,14 @@ func (p *ChangeEvaluatorScoreRequest) FastReadField1(buf []byte) (int, error) {
 func (p *ChangeEvaluatorScoreRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 		_field = v
 	}
-	p.EvaluatorRecordID = _field
+	p.AnnotationID = _field
 	return offset, nil
 }
 
@@ -11096,8 +11096,8 @@ func (p *ChangeEvaluatorScoreRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -11131,8 +11131,8 @@ func (p *ChangeEvaluatorScoreRequest) fastWriteField1(buf []byte, w thrift.Nocop
 
 func (p *ChangeEvaluatorScoreRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EvaluatorRecordID)
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.AnnotationID)
 	return offset
 }
 
@@ -11185,7 +11185,7 @@ func (p *ChangeEvaluatorScoreRequest) field1Length() int {
 func (p *ChangeEvaluatorScoreRequest) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	l += thrift.Binary.StringLengthNocopy(p.AnnotationID)
 	return l
 }
 
@@ -11236,7 +11236,9 @@ func (p *ChangeEvaluatorScoreRequest) DeepCopy(s interface{}) error {
 
 	p.WorkspaceID = src.WorkspaceID
 
-	p.EvaluatorRecordID = src.EvaluatorRecordID
+	if src.AnnotationID != "" {
+		p.AnnotationID = kutils.StringDeepCopy(src.AnnotationID)
+	}
 
 	if src.SpanID != "" {
 		p.SpanID = kutils.StringDeepCopy(src.SpanID)

@@ -839,12 +839,12 @@ func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.
 	}
 
 	sResp, err := t.traceService.ChangeEvaluatorScore(ctx, &service.ChangeEvaluatorScoreRequest{
-		WorkspaceID:       req.WorkspaceID,
-		EvaluatorRecordID: req.EvaluatorRecordID,
-		SpanID:            req.SpanID,
-		StartTime:         req.StartTime,
-		Correction:        req.Correction,
-		PlatformType:      loop_span.PlatformType(req.GetPlatformType()),
+		WorkspaceID:  req.WorkspaceID,
+		SpanID:       req.SpanID,
+		StartTime:    req.StartTime,
+		Correction:   req.Correction,
+		PlatformType: loop_span.PlatformType(req.GetPlatformType()),
+		AnnotationID: req.AnnotationID,
 	})
 	if err != nil {
 		return nil, err
@@ -860,7 +860,7 @@ func (t *TraceApplication) validateChangeEvaluatorScoreReq(ctx context.Context, 
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetWorkspaceID() <= 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	} else if req.GetEvaluatorRecordID() <= 0 {
+	} else if len(req.GetAnnotationID()) <= 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid evaluator_record_id"))
 	} else if req.GetStartTime() <= 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid start_time"))

@@ -386,8 +386,8 @@ func (p *ChangeEvaluatorScoreRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
-	if p.EvaluatorRecordID <= int64(0) {
-		return fmt.Errorf("field EvaluatorRecordID gt rule failed, current value: %v", p.EvaluatorRecordID)
+	if len(p.AnnotationID) < int(1) {
+		return fmt.Errorf("field AnnotationID min_len rule failed, current value: %d", len(p.AnnotationID))
 	}
 	if len(p.SpanID) < int(1) {
 		return fmt.Errorf("field SpanID min_len rule failed, current value: %d", len(p.SpanID))

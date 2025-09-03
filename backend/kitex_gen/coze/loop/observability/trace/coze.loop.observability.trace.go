@@ -14566,13 +14566,13 @@ func (p *PreviewExportTracesToDatasetResponse) Field257DeepEqual(src *string) bo
 }
 
 type ChangeEvaluatorScoreRequest struct {
-	WorkspaceID       int64                  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	EvaluatorRecordID int64                  `thrift:"evaluator_record_id,2,required" frugal:"2,required,i64" form:"evaluator_record_id,required" json:"evaluator_record_id,string,required"`
-	SpanID            string                 `thrift:"span_id,3,required" frugal:"3,required,string" form:"span_id,required" json:"span_id,required"`
-	StartTime         int64                  `thrift:"start_time,4,required" frugal:"4,required,i64" json:"start_time" form:"start_time,required" `
-	Correction        *annotation.Correction `thrift:"correction,5,required" frugal:"5,required,annotation.Correction" form:"correction,required" json:"correction,required"`
-	PlatformType      *common.PlatformType   `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	Base              *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID  int64                  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	AnnotationID string                 `thrift:"annotation_id,2,required" frugal:"2,required,string" form:"annotation_id,required" json:"annotation_id,required"`
+	SpanID       string                 `thrift:"span_id,3,required" frugal:"3,required,string" form:"span_id,required" json:"span_id,required"`
+	StartTime    int64                  `thrift:"start_time,4,required" frugal:"4,required,i64" json:"start_time" form:"start_time,required" `
+	Correction   *annotation.Correction `thrift:"correction,5,required" frugal:"5,required,annotation.Correction" form:"correction,required" json:"correction,required"`
+	PlatformType *common.PlatformType   `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	Base         *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewChangeEvaluatorScoreRequest() *ChangeEvaluatorScoreRequest {
@@ -14589,9 +14589,9 @@ func (p *ChangeEvaluatorScoreRequest) GetWorkspaceID() (v int64) {
 	return
 }
 
-func (p *ChangeEvaluatorScoreRequest) GetEvaluatorRecordID() (v int64) {
+func (p *ChangeEvaluatorScoreRequest) GetAnnotationID() (v string) {
 	if p != nil {
-		return p.EvaluatorRecordID
+		return p.AnnotationID
 	}
 	return
 }
@@ -14648,8 +14648,8 @@ func (p *ChangeEvaluatorScoreRequest) GetBase() (v *base.Base) {
 func (p *ChangeEvaluatorScoreRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ChangeEvaluatorScoreRequest) SetEvaluatorRecordID(val int64) {
-	p.EvaluatorRecordID = val
+func (p *ChangeEvaluatorScoreRequest) SetAnnotationID(val string) {
+	p.AnnotationID = val
 }
 func (p *ChangeEvaluatorScoreRequest) SetSpanID(val string) {
 	p.SpanID = val
@@ -14669,7 +14669,7 @@ func (p *ChangeEvaluatorScoreRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_ChangeEvaluatorScoreRequest = map[int16]string{
 	1:   "workspace_id",
-	2:   "evaluator_record_id",
+	2:   "annotation_id",
 	3:   "span_id",
 	4:   "start_time",
 	5:   "correction",
@@ -14693,7 +14693,7 @@ func (p *ChangeEvaluatorScoreRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetEvaluatorRecordID bool = false
+	var issetAnnotationID bool = false
 	var issetSpanID bool = false
 	var issetStartTime bool = false
 	var issetCorrection bool = false
@@ -14722,11 +14722,11 @@ func (p *ChangeEvaluatorScoreRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEvaluatorRecordID = true
+				issetAnnotationID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -14791,7 +14791,7 @@ func (p *ChangeEvaluatorScoreRequest) Read(iprot thrift.TProtocol) (err error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetEvaluatorRecordID {
+	if !issetAnnotationID {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
@@ -14841,13 +14841,13 @@ func (p *ChangeEvaluatorScoreRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *ChangeEvaluatorScoreRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = v
 	}
-	p.EvaluatorRecordID = _field
+	p.AnnotationID = _field
 	return nil
 }
 func (p *ChangeEvaluatorScoreRequest) ReadField3(iprot thrift.TProtocol) error {
@@ -14969,10 +14969,10 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *ChangeEvaluatorScoreRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("evaluator_record_id", thrift.I64, 2); err != nil {
+	if err = oprot.WriteFieldBegin("annotation_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.EvaluatorRecordID); err != nil {
+	if err := oprot.WriteString(p.AnnotationID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -15086,7 +15086,7 @@ func (p *ChangeEvaluatorScoreRequest) DeepEqual(ano *ChangeEvaluatorScoreRequest
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.EvaluatorRecordID) {
+	if !p.Field2DeepEqual(ano.AnnotationID) {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.SpanID) {
@@ -15114,9 +15114,9 @@ func (p *ChangeEvaluatorScoreRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *ChangeEvaluatorScoreRequest) Field2DeepEqual(src int64) bool {
+func (p *ChangeEvaluatorScoreRequest) Field2DeepEqual(src string) bool {
 
-	if p.EvaluatorRecordID != src {
+	if strings.Compare(p.AnnotationID, src) != 0 {
 		return false
 	}
 	return true
