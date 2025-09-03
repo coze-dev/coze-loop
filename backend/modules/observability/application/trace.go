@@ -923,8 +923,9 @@ func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("span_ids length exceeds the limit"))
 	}
 	v := utils.DateValidator{
-		Start: req.GetStartTime(),
-		End:   req.GetEndTime(),
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
 	}
 
 	if newStartTime, newEndTime, err := v.CorrectDate(); err != nil {
