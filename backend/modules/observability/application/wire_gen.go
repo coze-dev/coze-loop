@@ -110,7 +110,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	return iTraceApplication, nil
 }
 
-func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter, evalService evaluatorservice.Client, db2 db.Provider, idgen2 idgen.IIDGenerator) (IObservabilityOpenAPIApplication, error) {
+func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter, db2 db.Provider, idgen2 idgen.IIDGenerator, evalService evaluatorservice.Client) (IObservabilityOpenAPIApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -203,8 +203,9 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, userClient 
 // wire.go:
 
 var (
-	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, NewDatasetServiceAdapter, evaluator.NewEvaluatorRPCProvider,
+	taskDomainSet  = wire.NewSet(service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl)
+	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, NewDatasetServiceAdapter, evaluator.NewEvaluatorRPCProvider, taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, traceDomainSet,
@@ -217,7 +218,7 @@ var (
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		NewTaskApplication, service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider,
+		NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider, taskDomainSet,
 	)
 )
 
