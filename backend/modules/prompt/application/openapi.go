@@ -311,8 +311,8 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 		Prompt:       promptDO,
 		Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
 		VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-		SingleStep:   true,                   // PTaaS不支持非单步模式
-		Scenario:     entity.ScenarioDefault, // PTaaS场景
+		SingleStep:   true,                 // PTaaS不支持非单步模式
+		Scenario:     entity.ScenarioPTaaS, // PTaaS场景
 	})
 	if err != nil {
 		return promptDO, nil, err
@@ -390,8 +390,8 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 				Prompt:       promptDO,
 				Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
 				VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-				SingleStep:   true,                   // PTaaS不支持非单步模式
-				Scenario:     entity.ScenarioDefault, // PTaaS场景
+				SingleStep:   true,                 // PTaaS不支持非单步模式
+				Scenario:     entity.ScenarioPTaaS, // PTaaS场景
 			},
 			ResultStream: resultStream,
 		})
