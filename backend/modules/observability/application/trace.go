@@ -879,27 +879,26 @@ func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *tr
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return nil, err
+		return resp, err
 	}
 	sResp, err := t.traceService.ListAnnotationEvaluators(ctx, &service.ListAnnotationEvaluatorsRequest{
 		WorkspaceID: req.WorkspaceID,
 		Name:        req.Name,
 	})
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	resp.Evaluators = sResp.Evaluators
-	return resp, nil
+	return &trace.ListAnnotationEvaluatorsResponse{Evaluators: sResp.Evaluators}, nil
 }
 func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (*trace.ExtractSpanInfoResponse, error) {
 	var resp *trace.ExtractSpanInfoResponse
 	if err := t.validateExtractSpanInfoReq(ctx, req); err != nil {
-		return nil, err
+		return resp, err
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return nil, err
+		return resp, err
 	}
 	sResp, err := t.traceService.ExtractSpanInfo(ctx, &service.ExtractSpanInfoRequest{
 		WorkspaceID:   req.WorkspaceID,
@@ -911,10 +910,9 @@ func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.Extra
 		FieldMappings: req.FieldMappings,
 	})
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	resp.SpanInfos = sResp.SpanInfos
-	return resp, nil
+	return &trace.ExtractSpanInfoResponse{SpanInfos: sResp.SpanInfos}, nil
 }
 func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *trace.ExtractSpanInfoRequest) error {
 	if req == nil {
