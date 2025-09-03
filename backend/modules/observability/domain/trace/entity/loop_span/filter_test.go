@@ -6,9 +6,8 @@ package loop_span
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFilterValidate(t *testing.T) {
@@ -1301,6 +1300,81 @@ func TestFilterSpan(t *testing.T) {
 				DurationMicros: 100,
 			},
 			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "abc",
+						FieldType: FieldTypeString,
+						QueryType: ptr.Of(QueryTypeEnumEq),
+						Values:    []string{""},
+						IsSystem:  true,
+					},
+				},
+			},
+			span: &Span{
+				SpanID:         "aaa",
+				TraceID:        "zz",
+				ParentID:       "zzz",
+				SpanType:       "span_type_a",
+				StatusCode:     100,
+				DurationMicros: 100,
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "abc",
+						FieldType: FieldTypeString,
+						QueryType: ptr.Of(QueryTypeEnumEq),
+						Values:    []string{"123"},
+						IsSystem:  true,
+					},
+				},
+			},
+			span: &Span{
+				SpanID:         "aaa",
+				TraceID:        "zz",
+				ParentID:       "zzz",
+				SpanType:       "span_type_a",
+				StatusCode:     100,
+				DurationMicros: 100,
+				SystemTagsString: map[string]string{
+					"abc": "123",
+				},
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "abc",
+						FieldType: FieldTypeString,
+						QueryType: ptr.Of(QueryTypeEnumEq),
+						Values:    []string{"123"},
+						IsSystem:  true,
+					},
+				},
+			},
+			span: &Span{
+				SpanID:         "aaa",
+				TraceID:        "zz",
+				ParentID:       "zzz",
+				SpanType:       "span_type_a",
+				StatusCode:     100,
+				DurationMicros: 100,
+				SystemTagsLong: map[string]int64{
+					"abc": 123,
+				},
+			},
+			satisfied: false,
 		},
 	}
 	for _, tc := range tests {

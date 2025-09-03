@@ -218,7 +218,7 @@ func (s *Span) getTokens(ctx context.Context) (inputTokens, outputTokens int64, 
 }
 
 // filter使用, 当前只支持特定参数,后续有需要可拓展到其他参数
-func (s *Span) GetFieldValue(fieldName string) any {
+func (s *Span) GetFieldValue(fieldName string, isSystem bool) any {
 	switch fieldName {
 	case SpanFieldStartTime:
 		return s.StartTime
@@ -252,6 +252,17 @@ func (s *Span) GetFieldValue(fieldName string) any {
 		return s.ObjectStorage
 	case SpanFieldMethod:
 		return s.Method
+	}
+	if isSystem {
+		if val, ok := s.SystemTagsString[fieldName]; ok {
+			return val
+		} else if val, ok := s.SystemTagsLong[fieldName]; ok {
+			return val
+		} else if val, ok := s.SystemTagsDouble[fieldName]; ok {
+			return val
+		} else {
+			return nil
+		}
 	}
 	if val, ok := s.TagsString[fieldName]; ok {
 		return val
@@ -401,7 +412,7 @@ func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath strin
 		data = s.Output
 	} else if strings.HasPrefix(key, "Tags.") {
 		key = strings.TrimPrefix(key, "Tags.")
-		tag := s.GetFieldValue(key)
+		tag := s.GetFieldValue(key, false)
 		data = conv.ToString(tag)
 	} else {
 		return "", errors.Errorf("unsupported mapping key: %s", key)
