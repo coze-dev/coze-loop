@@ -22,6 +22,10 @@ const (
 
 	ValueTypeString = "string"
 
+	ValueTypeCategory = "category"
+
+	ValueTypeNumber = "number"
+
 	ValueTypeLong = "long"
 
 	ValueTypeDouble = "double"
