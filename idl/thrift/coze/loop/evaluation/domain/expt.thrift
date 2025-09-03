@@ -447,3 +447,63 @@ struct ExptResultExportRecord {
     9: optional bool expired
     10: optional RunError error
 }
+
+// 分析任务状态
+typedef string InsightAnalysisStatus(ts.enum="true")
+
+const InsightAnalysisStatus InsightAnalysisStatus_Unknown = "Unknown"
+const InsightAnalysisStatus InsightAnalysisStatus_Running = "Running"
+const InsightAnalysisStatus InsightAnalysisStatus_Success = "Success"
+const InsightAnalysisStatus InsightAnalysisStatus_Failed = "Failed"
+
+// 投票类型
+typedef string InsightAnalysisReportVoteType(ts.enum="true")
+
+// 未投票
+const InsightAnalysisReportVoteType InsightAnalysisReportVoteType_None = "None"
+// 点赞
+const InsightAnalysisReportVoteType InsightAnalysisReportVoteType_Upvote = "Upvote"
+// 点踩
+const InsightAnalysisReportVoteType InsightAnalysisReportVoteType_Downvote = "Downvote"
+
+// 洞察分析记录
+struct ExptInsightAnalysisRecord {
+    1: required i64 record_id (api.js_conv='true', go.tag='json:"record_id"')
+    2: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    3: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    4: required InsightAnalysisStatus analysis_status
+    5: optional i64 analysis_report_id (api.js_conv = 'true', go.tag = 'json:"analysis_report_id"')
+    6: optional string analysis_report_content
+    7: optional ExptInsightAnalysisFeedback expt_insight_analysis_feedback
+    8: optional common.BaseInfo base_info
+}
+
+// 洞察分析反馈统计
+struct ExptInsightAnalysisFeedback {
+    1: optional i32 upvote_cnt
+    2: optional i32 downvote_cnt
+    // 当前用户点赞状态，用于展示用户是否已点赞点踩
+    3: optional InsightAnalysisReportVoteType current_user_vote_type
+}
+
+// 洞察分析反馈评论
+struct ExptInsightAnalysisFeedbackComment {
+    1: required i64 comment_id (api.js_conv='true', go.tag='json:"comment_id"')
+    2: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    3: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    4: required i64 record_id (api.js_conv='true', go.tag='json:"record_id"')
+    5: required string content
+    6: optional common.BaseInfo base_info
+}
+
+// 反馈动作
+typedef string FeedbackActionType(ts.enum="true")
+
+const FeedbackActionType FeedbackActionType_Upvote = "Upvote"
+const FeedbackActionType FeedbackActionType_Cancel_Upvote = "CancelUpvote"
+const FeedbackActionType FeedbackActionType_Downvote = "Downvote"
+const FeedbackActionType FeedbackActionType_Cancel_Downvote = "CancelDownvote"
+const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
+const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
+const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
+

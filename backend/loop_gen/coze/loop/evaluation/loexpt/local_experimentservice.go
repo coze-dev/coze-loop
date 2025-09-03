@@ -563,6 +563,134 @@ func (l *LocalExperimentService) GetExptResultExportRecord(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// InsightAnalysisExperiment
+// 报告分析
+func (l *LocalExperimentService) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest, callOptions ...callopt.Option) (*expt.InsightAnalysisExperimentResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceInsightAnalysisExperimentArgs)
+		result := out.(*expt.ExperimentServiceInsightAnalysisExperimentResult)
+		resp, err := l.impl.InsightAnalysisExperiment(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceInsightAnalysisExperimentArgs{Req: req}
+	result := &expt.ExperimentServiceInsightAnalysisExperimentResult{}
+	ctx = l.injectRPCInfo(ctx, "InsightAnalysisExperiment")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisRecordResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceListExptInsightAnalysisRecordArgs)
+		result := out.(*expt.ExperimentServiceListExptInsightAnalysisRecordResult)
+		resp, err := l.impl.ListExptInsightAnalysisRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceListExptInsightAnalysisRecordArgs{Req: req}
+	result := &expt.ExperimentServiceListExptInsightAnalysisRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "ListExptInsightAnalysisRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.DeleteExptInsightAnalysisRecordResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceDeleteExptInsightAnalysisRecordArgs)
+		result := out.(*expt.ExperimentServiceDeleteExptInsightAnalysisRecordResult)
+		resp, err := l.impl.DeleteExptInsightAnalysisRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceDeleteExptInsightAnalysisRecordArgs{Req: req}
+	result := &expt.ExperimentServiceDeleteExptInsightAnalysisRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "DeleteExptInsightAnalysisRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.GetExptInsightAnalysisRecordResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceGetExptInsightAnalysisRecordArgs)
+		result := out.(*expt.ExperimentServiceGetExptInsightAnalysisRecordResult)
+		resp, err := l.impl.GetExptInsightAnalysisRecord(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceGetExptInsightAnalysisRecordArgs{Req: req}
+	result := &expt.ExperimentServiceGetExptInsightAnalysisRecordResult{}
+	ctx = l.injectRPCInfo(ctx, "GetExptInsightAnalysisRecord")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (*expt.FeedbackExptInsightAnalysisReportResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceFeedbackExptInsightAnalysisReportArgs)
+		result := out.(*expt.ExperimentServiceFeedbackExptInsightAnalysisReportResult)
+		resp, err := l.impl.FeedbackExptInsightAnalysisReport(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceFeedbackExptInsightAnalysisReportArgs{Req: req}
+	result := &expt.ExperimentServiceFeedbackExptInsightAnalysisReportResult{}
+	ctx = l.injectRPCInfo(ctx, "FeedbackExptInsightAnalysisReport")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisCommentResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceListExptInsightAnalysisCommentArgs)
+		result := out.(*expt.ExperimentServiceListExptInsightAnalysisCommentResult)
+		resp, err := l.impl.ListExptInsightAnalysisComment(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceListExptInsightAnalysisCommentArgs{Req: req}
+	result := &expt.ExperimentServiceListExptInsightAnalysisCommentResult{}
+	ctx = l.injectRPCInfo(ctx, "ListExptInsightAnalysisComment")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

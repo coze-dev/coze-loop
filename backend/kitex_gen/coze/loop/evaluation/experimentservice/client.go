@@ -36,6 +36,12 @@ type Client interface {
 	ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest, callOptions ...callopt.Option) (r *expt.ExportExptResultResponse, err error)
 	ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.ListExptResultExportRecordResponse, err error)
 	GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptResultExportRecordResponse, err error)
+	InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest, callOptions ...callopt.Option) (r *expt.InsightAnalysisExperimentResponse, err error)
+	ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisRecordResponse, err error)
+	DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.DeleteExptInsightAnalysisRecordResponse, err error)
+	GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptInsightAnalysisRecordResponse, err error)
+	FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error)
+	ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -190,4 +196,34 @@ func (p *kExperimentServiceClient) ListExptResultExportRecord(ctx context.Contex
 func (p *kExperimentServiceClient) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptResultExportRecordResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetExptResultExportRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest, callOptions ...callopt.Option) (r *expt.InsightAnalysisExperimentResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.InsightAnalysisExperiment(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisRecordResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExptInsightAnalysisRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.DeleteExptInsightAnalysisRecordResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteExptInsightAnalysisRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptInsightAnalysisRecordResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExptInsightAnalysisRecord(ctx, req)
+}
+
+func (p *kExperimentServiceClient) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.FeedbackExptInsightAnalysisReport(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExptInsightAnalysisComment(ctx, req)
 }

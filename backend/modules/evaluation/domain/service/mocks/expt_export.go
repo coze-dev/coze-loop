@@ -37,17 +37,17 @@ func (m *MockIExptResultExportService) EXPECT() *MockIExptResultExportServiceMoc
 }
 
 // DoExportCSV mocks base method.
-func (m *MockIExptResultExportService) DoExportCSV(arg0 context.Context, arg1, arg2, arg3 int64) error {
+func (m *MockIExptResultExportService) DoExportCSV(arg0 context.Context, arg1, arg2 int64, arg3 string, arg4 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DoExportCSV", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DoExportCSV", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DoExportCSV indicates an expected call of DoExportCSV.
-func (mr *MockIExptResultExportServiceMockRecorder) DoExportCSV(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) DoExportCSV(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoExportCSV", reflect.TypeOf((*MockIExptResultExportService)(nil).DoExportCSV), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoExportCSV", reflect.TypeOf((*MockIExptResultExportService)(nil).DoExportCSV), arg0, arg1, arg2, arg3, arg4)
 }
 
 // ExportCSV mocks base method.
@@ -78,6 +78,20 @@ func (m *MockIExptResultExportService) GetExptExportRecord(arg0 context.Context,
 func (mr *MockIExptResultExportServiceMockRecorder) GetExptExportRecord(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).GetExptExportRecord), arg0, arg1, arg2)
+}
+
+// HandleExportEvent mocks base method.
+func (m *MockIExptResultExportService) HandleExportEvent(arg0 context.Context, arg1, arg2, arg3 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleExportEvent", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// HandleExportEvent indicates an expected call of HandleExportEvent.
+func (mr *MockIExptResultExportServiceMockRecorder) HandleExportEvent(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleExportEvent", reflect.TypeOf((*MockIExptResultExportService)(nil).HandleExportEvent), arg0, arg1, arg2, arg3)
 }
 
 // ListExportRecord mocks base method.

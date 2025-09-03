@@ -134,3 +134,22 @@ type IExptResultExportRecordRepo interface {
 	List(ctx context.Context, spaceID, exptID int64, page entity.Page, csvExportStatus *int32) ([]*entity.ExptResultExportRecord, int64, error)
 	Get(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)
 }
+
+type IExptInsightAnalysisRecordRepo interface {
+	CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) (int64, error)
+	UpdateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error
+	GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64) (*entity.ExptInsightAnalysisRecord, error)
+	ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*entity.ExptInsightAnalysisRecord, int64, error)
+	DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error
+
+	CreateFeedbackComment(ctx context.Context, feedbackComment *entity.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
+	UpdateFeedbackComment(ctx context.Context, feedbackComment *entity.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
+	GetFeedbackCommentByRecordID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackComment, error)
+	DeleteFeedbackComment(ctx context.Context, spaceID, exptID, commentID int64) error
+	List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*entity.ExptInsightAnalysisFeedbackComment, int64, error)
+
+	CreateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
+	UpdateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
+	GetFeedbackVoteByUser(ctx context.Context, spaceID, exptID, recordID int64, userID string, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackVote, error)
+	CountFeedbackVote(ctx context.Context, spaceID, exptID, recordID int64) (int64, int64, error)
+}

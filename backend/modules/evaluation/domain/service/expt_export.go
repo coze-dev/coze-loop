@@ -12,7 +12,8 @@ import (
 //go:generate  mockgen -destination  ./mocks/expt_export.go  --package mocks . IExptResultExportService
 type IExptResultExportService interface {
 	ExportCSV(ctx context.Context, spaceID, exptID int64, session *entity.Session) (int64, error)
-	DoExportCSV(ctx context.Context, spaceID, exptID, exportID int64) error
+	DoExportCSV(ctx context.Context, spaceID, exptID int64, fileName string, withLogID bool) error
+	HandleExportEvent(ctx context.Context, spaceID, exptID, exportID int64) (err error)
 	UpdateExportRecord(ctx context.Context, exportRecord *entity.ExptResultExportRecord) error
 	ListExportRecord(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*entity.ExptResultExportRecord, int64, error)
 	GetExptExportRecord(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)

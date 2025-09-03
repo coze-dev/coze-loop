@@ -562,3 +562,134 @@ func (p *GetExptResultExportRecordResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *GetExptInsightAnalysisRecordRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetExptInsightAnalysisRecordResponse) IsValid() error {
+	if p.ExptResultExportRecord != nil {
+		if err := p.ExptResultExportRecord.IsValid(); err != nil {
+			return fmt.Errorf("field ExptResultExportRecord not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *InsightAnalysisExperimentRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *InsightAnalysisExperimentResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExptInsightAnalysisRecordResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

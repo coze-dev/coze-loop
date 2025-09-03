@@ -199,6 +199,9 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_turn_result_tag_ref",
 		"expt_turn_annotate_record_ref",
 		"expt_result_export_record",
+		"expt_insight_analysis_record",
+		"expt_insight_analysis_feedback_comment",
+		"expt_insight_analysis_feedback_vote",
 	}
 
 	var models []any

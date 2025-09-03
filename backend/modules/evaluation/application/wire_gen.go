@@ -7,6 +7,7 @@
 package application
 
 import (
+	"context"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -48,6 +49,7 @@ import (
 	redis2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
 	mysql3 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
@@ -55,7 +57,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
-	"context"
 	"github.com/google/wire"
 )
 
@@ -140,7 +141,13 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	exptResultExportRecordDAO := mysql.NewExptResultExportRecordDAO(db2)
 	iExptResultExportRecordRepo := experiment.NewExptResultExportRecordRepo(exptResultExportRecordDAO, idgen2)
 	iExptResultExportService := service.NewExptResultExportService(db2, iExptResultExportRecordRepo, iExperimentRepo, iExptTurnResultRepo, exptEventPublisher, exptResultService, objectStorage, componentIConfiger, benefitSvc)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService)
+	iExptInsightAnalysisRecordDAO := mysql.NewExptInsightAnalysisRecordDAO(db2)
+	iExptInsightAnalysisFeedbackCommentDAO := mysql.NewExptInsightAnalysisFeedbackCommentDAO(db2)
+	iExptInsightAnalysisFeedbackVoteDAO := mysql.NewExptInsightAnalysisFeedbackVoteDAO(db2)
+	iExptInsightAnalysisRecordRepo := experiment.NewExptInsightAnalysisRecordRepo(iExptInsightAnalysisRecordDAO, iExptInsightAnalysisFeedbackCommentDAO, iExptInsightAnalysisFeedbackVoteDAO, idgen2)
+	iAgentAdapter := agent.NewAgentAdapter()
+	iExptInsightAnalysisService := service.NewInsightAnalysisService(iExptInsightAnalysisRecordRepo, exptEventPublisher, objectStorage, iAgentAdapter, iExptResultExportService)
+	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService)
 	return iExperimentApplication, nil
 }
 
@@ -214,7 +221,7 @@ var (
 	flagSet = wire.NewSet(platestwrite.NewLatestWriteTracker)
 
 	experimentSet = wire.NewSet(
-		NewExperimentApplication, service.NewExptManager, service.NewExptResultService, service.NewExptAggrResultService, service.NewExptSchedulerSvc, service.NewExptRecordEvalService, service.NewExptAnnotateService, service.NewExptResultExportService, service.NewSchedulerModeFactory, experiment.NewExptRepo, experiment.NewExptStatsRepo, experiment.NewExptAggrResultRepo, experiment.NewExptItemResultRepo, experiment.NewExptTurnResultRepo, experiment.NewExptRunLogRepo, experiment.NewExptTurnResultFilterRepo, experiment.NewExptAnnotateRepo, experiment.NewExptResultExportRecordRepo, experiment.NewQuotaService, idem.NewIdempotentService, mysql.NewExptDAO, mysql.NewExptEvaluatorRefDAO, mysql.NewExptRunLogDAO, mysql.NewExptStatsDAO, mysql.NewExptTurnResultDAO, mysql.NewExptItemResultDAO, mysql.NewExptTurnEvaluatorResultRefDAO, mysql.NewExptTurnResultFilterKeyMappingDAO, mysql.NewExptAggrResultDAO, mysql.NewExptTurnAnnotateRecordRefDAO, mysql.NewAnnotateRecordDAO, mysql.NewExptTurnResultTagRefDAO, mysql.NewExptResultExportRecordDAO, dao.NewQuotaDAO, redis2.NewIdemDAO, ck2.NewExptTurnResultFilterDAO, conf2.NewExptConfiger, producer.NewExptEventPublisher, metrics2.NewExperimentMetric, metrics3.NewEvalTargetMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, tag.NewTagRPCProvider, userinfo.NewUserInfoServiceImpl, NewLock,
+		NewExperimentApplication, service.NewExptManager, service.NewExptResultService, service.NewExptAggrResultService, service.NewExptSchedulerSvc, service.NewExptRecordEvalService, service.NewExptAnnotateService, service.NewExptResultExportService, service.NewInsightAnalysisService, service.NewSchedulerModeFactory, experiment.NewExptRepo, experiment.NewExptStatsRepo, experiment.NewExptAggrResultRepo, experiment.NewExptItemResultRepo, experiment.NewExptTurnResultRepo, experiment.NewExptRunLogRepo, experiment.NewExptTurnResultFilterRepo, experiment.NewExptAnnotateRepo, experiment.NewExptResultExportRecordRepo, experiment.NewExptInsightAnalysisRecordRepo, experiment.NewQuotaService, idem.NewIdempotentService, mysql.NewExptDAO, mysql.NewExptEvaluatorRefDAO, mysql.NewExptRunLogDAO, mysql.NewExptStatsDAO, mysql.NewExptTurnResultDAO, mysql.NewExptItemResultDAO, mysql.NewExptTurnEvaluatorResultRefDAO, mysql.NewExptTurnResultFilterKeyMappingDAO, mysql.NewExptAggrResultDAO, mysql.NewExptTurnAnnotateRecordRefDAO, mysql.NewAnnotateRecordDAO, mysql.NewExptTurnResultTagRefDAO, mysql.NewExptResultExportRecordDAO, mysql.NewExptInsightAnalysisRecordDAO, mysql.NewExptInsightAnalysisFeedbackVoteDAO, mysql.NewExptInsightAnalysisFeedbackCommentDAO, dao.NewQuotaDAO, redis2.NewIdemDAO, ck2.NewExptTurnResultFilterDAO, conf2.NewExptConfiger, producer.NewExptEventPublisher, metrics2.NewExperimentMetric, metrics3.NewEvalTargetMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, tag.NewTagRPCProvider, agent.NewAgentAdapter, userinfo.NewUserInfoServiceImpl, NewLock,
 		evalSetDomainService,
 		targetDomainService,
 		evaluatorDomainService,
