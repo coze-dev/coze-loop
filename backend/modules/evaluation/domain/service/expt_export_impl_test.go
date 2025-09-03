@@ -618,7 +618,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			svc := newTestExptResultExportService(ctrl)
 			tt.setup(svc)
 
-			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, tt.exportID)
+			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, "file_name", true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DoExportCSV() error = %v, wantErr %v", err, tt.wantErr)
 			}

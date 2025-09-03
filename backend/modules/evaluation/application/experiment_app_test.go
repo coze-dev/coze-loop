@@ -1785,6 +1785,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 			)
 
 			// 执行测试
@@ -1895,6 +1896,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // userInfoService
 				nil, // evalTargetService
 				nil, // evaluationSetItemService
+				nil,
 				nil,
 				nil,
 				nil,

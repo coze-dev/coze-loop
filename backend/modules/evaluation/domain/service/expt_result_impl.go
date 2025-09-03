@@ -619,6 +619,7 @@ func (e ExptResultServiceImpl) getColumnAnnotations(ctx context.Context, spaceID
 		}
 		exptColumnAnnotations = append(exptColumnAnnotations, exptColumnAnnotation)
 	}
+	ctx = contexts.WithCtxWriteDB(ctx)
 	tagRefs, err := e.ExptAnnotateRepo.BatchGetExptTurnResultTagRefs(ctx, exptIDs, spaceID)
 	if err != nil {
 		return nil, err
