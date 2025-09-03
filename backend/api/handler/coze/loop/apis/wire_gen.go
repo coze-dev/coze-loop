@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -158,11 +157,11 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, limiterFactory, authCli, meter)
+	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, limiterFactory, authCli, meter, db2, idgen2, evalClient)
 	if err != nil {
 		return nil, err
 	}
-	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, userClient, authCli, evalClient)
+	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, userClient, authCli, evalClient)
 	if err != nil {
 		return nil, err
 	}
