@@ -80,6 +80,10 @@ const (
 	promptHubQPSLimitMessage           = "request is limited, cause prompt hub qps of current space reached the upper limit"
 	promptHubQPSLimitNoAffectStability = true
 
+	PTaaSQPSLimitCode              = 600502002
+	pTaaSQPSLimitMessage           = "request is limited, cause PTaaS qps of current space reached the upper limit"
+	pTaaSQPSLimitNoAffectStability = true
+
 	RiskContentDetectedCode              = 600505014 // detected risk content in user input or model response
 	riskContentDetectedMessage           = "detected risk content in user input or model response"
 	riskContentDetectedNoAffectStability = true
@@ -193,6 +197,12 @@ func init() {
 		PromptHubQPSLimitCode,
 		promptHubQPSLimitMessage,
 		code.WithAffectStability(!promptHubQPSLimitNoAffectStability),
+	)
+
+	code.Register(
+		PTaaSQPSLimitCode,
+		pTaaSQPSLimitMessage,
+		code.WithAffectStability(!pTaaSQPSLimitNoAffectStability),
 	)
 
 	code.Register(

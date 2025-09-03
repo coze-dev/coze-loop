@@ -26,5 +26,6 @@ type Scenario string
 const (
 	ScenarioDefault     Scenario = "default"
 	ScenarioPromptDebug Scenario = "prompt_debug"
+	ScenarioPTaaS       Scenario = "ptaas"
 	ScenarioEvalTarget  Scenario = "eval_target"
 )

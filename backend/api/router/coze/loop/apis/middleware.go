@@ -1255,3 +1255,13 @@ func _batchgetlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _executeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _executestreamingMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

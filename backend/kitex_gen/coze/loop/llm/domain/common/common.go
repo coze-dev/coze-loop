@@ -9,6 +9,8 @@ const (
 
 	ScenarioPromptDebug = "prompt_debug"
 
+	ScenarioPromptAsAService = "prompt_as_a_service"
+
 	ScenarioEvalTarget = "eval_target"
 
 	ScenarioEvaluator = "evaluator"

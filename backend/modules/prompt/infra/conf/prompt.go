@@ -5,6 +5,7 @@ package conf
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
@@ -31,6 +32,11 @@ type promptHubRateLimitConfig struct {
 	SpaceMaxQPS   map[int64]int `mapstructure:"space_max_qps"`
 }
 
+type ptaasRateLimitConfig struct {
+	DefaultMaxQPS   int                       `mapstructure:"default_max_qps"`
+	PromptKeyMaxQPS map[string]map[string]int `mapstructure:"prompt_key_max_qps"`
+}
+
 type promptLabelVersionCacheConfig struct {
 	Enable     bool `mapstructure:"enable"`
 	TTLSeconds int  `mapstructure:"ttl_seconds"`
@@ -46,6 +52,27 @@ func (c *PromptConfigProvider) GetPromptHubMaxQPSBySpace(ctx context.Context, sp
 	if qps, ok := config.SpaceMaxQPS[spaceID]; ok {
 		return qps, nil
 	}
+	return config.DefaultMaxQPS, nil
+}
+
+func (c *PromptConfigProvider) GetPTaaSMaxQPSByPromptKey(ctx context.Context, spaceID int64, promptKey string) (maxQPS int, err error) {
+	const PTaaSRateLimitConfigKey = "ptaas_rate_limit_config"
+	config := &ptaasRateLimitConfig{}
+	err = c.ConfigLoader.UnmarshalKey(ctx, PTaaSRateLimitConfigKey, config)
+	if err != nil {
+		return 0, err
+	}
+
+	spaceIDStr := fmt.Sprintf("%d", spaceID)
+
+	// 优先使用特定 space_id 和 prompt_key 的配置
+	if spaceConfig, exists := config.PromptKeyMaxQPS[spaceIDStr]; exists {
+		if qps, exists := spaceConfig[promptKey]; exists {
+			return qps, nil
+		}
+	}
+
+	// 使用默认配置
 	return config.DefaultMaxQPS, nil
 }
 

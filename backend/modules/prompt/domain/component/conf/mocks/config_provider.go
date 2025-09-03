@@ -42,6 +42,21 @@ func (m *MockIConfigProvider) EXPECT() *MockIConfigProviderMockRecorder {
 	return m.recorder
 }
 
+// GetPTaaSMaxQPSByPromptKey mocks base method.
+func (m *MockIConfigProvider) GetPTaaSMaxQPSByPromptKey(ctx context.Context, spaceID int64, promptKey string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPTaaSMaxQPSByPromptKey", ctx, spaceID, promptKey)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPTaaSMaxQPSByPromptKey indicates an expected call of GetPTaaSMaxQPSByPromptKey.
+func (mr *MockIConfigProviderMockRecorder) GetPTaaSMaxQPSByPromptKey(ctx, spaceID, promptKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPTaaSMaxQPSByPromptKey", reflect.TypeOf((*MockIConfigProvider)(nil).GetPTaaSMaxQPSByPromptKey), ctx, spaceID, promptKey)
+}
+
 // GetPromptDefaultConfig mocks base method.
 func (m *MockIConfigProvider) GetPromptDefaultConfig(ctx context.Context) (*prompt.PromptDetail, error) {
 	m.ctrl.T.Helper()

@@ -113,6 +113,7 @@ func ContentPartToSpanPart(part *entity.ContentPart) *tracespec.ModelMessagePart
 			URL: part.ImageURL.URL,
 		}
 	}
+	// 二进制数据暂不上报
 	return &tracespec.ModelMessagePart{
 		Type:     ContentTypeToSpanPartType(part.Type),
 		Text:     ptr.From(part.Text),

@@ -14,6 +14,7 @@ require (
 	github.com/alitto/pond/v2 v2.3.4
 	github.com/apache/rocketmq-client-go/v2 v2.1.2
 	github.com/apache/thrift v0.19.0
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/baidubce/bce-qianfan-sdk/go/qianfan v0.0.15
 	github.com/bytedance/gg v1.0.0
@@ -37,7 +38,7 @@ require (
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
 	github.com/coze-dev/cozeloop-go v0.1.9
-	github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250829072213-3812ddbfb735
+	github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250901062520-61d3699b1e83
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0
@@ -78,6 +79,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/valyala/fasttemplate v1.2.2
+	github.com/vincent-petithory/dataurl v1.0.0
 	github.com/volcengine/volcengine-go-sdk v1.1.4
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/proto/otlp v1.7.1

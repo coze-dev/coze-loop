@@ -33,6 +33,10 @@ error_code:
     code: 2001
     message: request is limited, cause prompt hub qps of current space reached the upper limit
     no_affect_stability: true
+  - name: PTaaSQPSLimit
+    code: 2002
+    message: request is limited, cause PTaaS qps of current space reached the upper limit
+    no_affect_stability: true
   - name: RiskContentDetected
     code: 5014
     message: detected risk content in user input or model response

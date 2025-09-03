@@ -7,9 +7,14 @@ package apis
 
 import (
 	"context"
+	"io"
+	"net/http"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/hertz-contrib/sse"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi/promptopenapiservice"
 )
 
@@ -19,4 +24,47 @@ var promptOpenAPISvc promptopenapiservice.Client
 // @router /v1/loop/prompts/mget [POST]
 func BatchGetPromptByPromptKey(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, promptOpenAPISvc.BatchGetPromptByPromptKey)
+}
+
+// Execute .
+// @router /v1/loop/prompts/execute [POST]
+func Execute(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.Execute)
+}
+
+// ExecuteStreaming .
+// @router /v1/loop/prompts/execute_streaming [POST]
+func ExecuteStreaming(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi.ExecuteRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.SetStatusCode(http.StatusOK)
+	s := sse.NewStream(c)
+	stream, err := promptOpenAPISvc.ExecuteStreaming(ctx, &req)
+	if err != nil {
+		publishErrEvent(ctx, s, err)
+		return
+	}
+	if stream != nil {
+		for {
+			resp, err := stream.Recv(ctx)
+			if err == io.EOF {
+				return
+			}
+			if err != nil {
+				publishErrEvent(ctx, s, err)
+				return
+			}
+			err = publishDataEvent(ctx, s, resp)
+			if err != nil {
+				publishErrEvent(ctx, s, err)
+				return
+			}
+		}
+	}
 }
