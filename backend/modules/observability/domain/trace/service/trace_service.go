@@ -227,7 +227,7 @@ type ExtractSpanInfoRequest struct {
 	StartTime     int64
 	EndTime       int64
 	PlatformType  loop_span.PlatformType
-	FieldMappings []*entity.FieldMapping
+	FieldMappings []entity.FieldMapping
 }
 type ExtractSpanInfoResp struct {
 	SpanInfos []*trace.SpanInfo
@@ -1222,7 +1222,7 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 	for _, span := range spans {
 		var fieldList []*dataset.FieldData
 		for _, mapping := range req.FieldMappings {
-			value, err := buildExtractSpanInfo(ctx, span, mapping)
+			value, err := buildExtractSpanInfo(ctx, span, &mapping)
 			if err != nil {
 				// 非json但使用了jsonpath，也不报错，置空
 				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)

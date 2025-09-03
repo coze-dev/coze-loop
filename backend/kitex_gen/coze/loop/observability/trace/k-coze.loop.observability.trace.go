@@ -12158,8 +12158,8 @@ func (p *ExtractSpanInfoRequest) FastReadField7(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make([]*task.FieldMapping, 0, size)
-	values := make([]task.FieldMapping, size)
+	_field := make([]*dataset0.FieldMapping, 0, size)
+	values := make([]dataset0.FieldMapping, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -12416,11 +12416,11 @@ func (p *ExtractSpanInfoRequest) DeepCopy(s interface{}) error {
 	}
 
 	if src.FieldMappings != nil {
-		p.FieldMappings = make([]*task.FieldMapping, 0, len(src.FieldMappings))
+		p.FieldMappings = make([]*dataset0.FieldMapping, 0, len(src.FieldMappings))
 		for _, elem := range src.FieldMappings {
-			var _elem *task.FieldMapping
+			var _elem *dataset0.FieldMapping
 			if elem != nil {
-				_elem = &task.FieldMapping{}
+				_elem = &dataset0.FieldMapping{}
 				if err := _elem.DeepCopy(elem); err != nil {
 					return err
 				}

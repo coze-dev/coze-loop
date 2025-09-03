@@ -13,7 +13,6 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
 	"strings"
 )
@@ -15998,14 +15997,14 @@ func (p *ListAnnotationEvaluatorsResponse) Field255DeepEqual(src *base.BaseResp)
 }
 
 type ExtractSpanInfoRequest struct {
-	WorkspaceID   int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	TraceID       string               `thrift:"trace_id,2,required" frugal:"2,required,string" form:"trace_id,required" json:"trace_id,required"`
-	SpanIds       []string             `thrift:"span_ids,3,required" frugal:"3,required,list<string>" form:"span_ids,required" json:"span_ids,required"`
-	StartTime     *int64               `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" form:"start_time" `
-	EndTime       *int64               `thrift:"end_time,5,optional" frugal:"5,optional,i64" json:"end_time" form:"end_time" `
-	PlatformType  *common.PlatformType `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	FieldMappings []*task.FieldMapping `thrift:"field_mappings,7,optional" frugal:"7,optional,list<task.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
-	Base          *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"-" json:"-" query:"-"`
+	WorkspaceID   int64                    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	TraceID       string                   `thrift:"trace_id,2,required" frugal:"2,required,string" form:"trace_id,required" json:"trace_id,required"`
+	SpanIds       []string                 `thrift:"span_ids,3,required" frugal:"3,required,list<string>" form:"span_ids,required" json:"span_ids,required"`
+	StartTime     *int64                   `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" form:"start_time" `
+	EndTime       *int64                   `thrift:"end_time,5,optional" frugal:"5,optional,i64" json:"end_time" form:"end_time" `
+	PlatformType  *common.PlatformType     `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	FieldMappings []*dataset0.FieldMapping `thrift:"field_mappings,7,optional" frugal:"7,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
+	Base          *base.Base               `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"-" json:"-" query:"-"`
 }
 
 func NewExtractSpanInfoRequest() *ExtractSpanInfoRequest {
@@ -16072,9 +16071,9 @@ func (p *ExtractSpanInfoRequest) GetPlatformType() (v common.PlatformType) {
 	return *p.PlatformType
 }
 
-var ExtractSpanInfoRequest_FieldMappings_DEFAULT []*task.FieldMapping
+var ExtractSpanInfoRequest_FieldMappings_DEFAULT []*dataset0.FieldMapping
 
-func (p *ExtractSpanInfoRequest) GetFieldMappings() (v []*task.FieldMapping) {
+func (p *ExtractSpanInfoRequest) GetFieldMappings() (v []*dataset0.FieldMapping) {
 	if p == nil {
 		return
 	}
@@ -16113,7 +16112,7 @@ func (p *ExtractSpanInfoRequest) SetEndTime(val *int64) {
 func (p *ExtractSpanInfoRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
-func (p *ExtractSpanInfoRequest) SetFieldMappings(val []*task.FieldMapping) {
+func (p *ExtractSpanInfoRequest) SetFieldMappings(val []*dataset0.FieldMapping) {
 	p.FieldMappings = val
 }
 func (p *ExtractSpanInfoRequest) SetBase(val *base.Base) {
@@ -16367,8 +16366,8 @@ func (p *ExtractSpanInfoRequest) ReadField7(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make([]*task.FieldMapping, 0, size)
-	values := make([]task.FieldMapping, size)
+	_field := make([]*dataset0.FieldMapping, 0, size)
+	values := make([]dataset0.FieldMapping, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -16709,7 +16708,7 @@ func (p *ExtractSpanInfoRequest) Field6DeepEqual(src *common.PlatformType) bool 
 	}
 	return true
 }
-func (p *ExtractSpanInfoRequest) Field7DeepEqual(src []*task.FieldMapping) bool {
+func (p *ExtractSpanInfoRequest) Field7DeepEqual(src []*dataset0.FieldMapping) bool {
 
 	if len(p.FieldMappings) != len(src) {
 		return false
