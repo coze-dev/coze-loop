@@ -2140,7 +2140,7 @@ evaluator_template_conf_en-US:
         prompt_source_type: 1
         prompt_template_key: builtin_template_detail
         prompt_template_name: "Detail"
-       receive_chat_history: false
+        receive_chat_history: false
 
 code_evaluator_template_conf:
   equals_checker:
@@ -2192,4 +2192,4 @@ code_evaluator_template_conf:
         language_type: "JS"
         code_content: "function execEvaluation(turnData) {\n    try {\n        // 获取实际输出和参考输出\n        const actualText = turnData.turn.eval_target.actual_output.text;\n        const referenceText = turnData.turn.eval_set.reference_output.text;\n        \n        // 检查实际输出是否包含参考输出\n        const contains = actualText.includes(referenceText);\n        const score = contains ? 1.0 : 0.0;\n        \n        const status = contains ? \"包含\" : \"不包含\";\n        const reason = `实际输出${status}参考输出。实际输出: '${actualText}', 参考输出: '${referenceText}'`;\n        \n        return { score: score, reason: reason, err_msg: \"\" };\n        \n    } catch (e) {\n        return { score: 0.0, reason: `评估失败: ${e.message}`, err_msg: e.message };\n    }\n}"
         code_template_key: "contains_checker"
-        code_template_name: "包含性检查器"e
+        code_template_name: "包含性检查器"
