@@ -12,20 +12,19 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/infra/pyodide"
-	sandboxEntity "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime/pyodide"
 )
 
 // DenoPythonRuntimeAdapter 基于Deno+Pyodide的Python运行时适配器
 type DenoPythonRuntimeAdapter struct {
 	logger *logrus.Logger
-	config *SandboxConfig
+	config *entity.SandboxConfig
 }
 
 // NewDenoPythonRuntimeAdapter 创建Python运行时适配器
-func NewDenoPythonRuntimeAdapter(config *SandboxConfig, logger *logrus.Logger) (*DenoPythonRuntimeAdapter, error) {
+func NewDenoPythonRuntimeAdapter(config *entity.SandboxConfig, logger *logrus.Logger) (*DenoPythonRuntimeAdapter, error) {
 	if config == nil {
-		config = DefaultSandboxConfig()
+		config = entity.DefaultSandboxConfig()
 	}
 
 	return &DenoPythonRuntimeAdapter{
@@ -62,7 +61,7 @@ func (adapter *DenoPythonRuntimeAdapter) RunCode(ctx context.Context, code strin
 	defer pyodideRuntime.Cleanup()
 
 	// 构建执行请求
-	req := &sandboxEntity.ExecutionRequest{
+	req := &entity.SandboxExecutionRequest{
 		Code:     code,
 		Language: language,
 		Config:   adapter.convertConfig(),
@@ -103,17 +102,12 @@ func (adapter *DenoPythonRuntimeAdapter) Cleanup() error {
 }
 
 // convertConfig 转换配置格式
-func (adapter *DenoPythonRuntimeAdapter) convertConfig() *sandboxEntity.SandboxConfig {
-	return &sandboxEntity.SandboxConfig{
-		MemoryLimit:    adapter.config.MemoryLimit,
-		TimeoutLimit:   adapter.config.TimeoutLimit,
-		MaxOutputSize:  adapter.config.MaxOutputSize,
-		NetworkEnabled: adapter.config.NetworkEnabled,
-	}
+func (adapter *DenoPythonRuntimeAdapter) convertConfig() *entity.SandboxConfig {
+	return adapter.config
 }
 
 // convertResult 转换结果格式
-func (adapter *DenoPythonRuntimeAdapter) convertResult(sandboxResult *sandboxEntity.ExecutionResult) *entity.ExecutionResult {
+func (adapter *DenoPythonRuntimeAdapter) convertResult(sandboxResult *entity.SandboxExecutionResult) *entity.ExecutionResult {
 	var retVal string
 	if sandboxResult.Output != nil {
 		retVal = fmt.Sprintf(`{"score": %f, "reason": "%s"}`, sandboxResult.Output.Score, sandboxResult.Output.Reason)
