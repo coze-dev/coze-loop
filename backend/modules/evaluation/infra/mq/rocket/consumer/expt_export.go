@@ -20,9 +20,10 @@ type ExptExportConsumer struct {
 	exptInsightAnalysisService service.IExptInsightAnalysisService
 }
 
-func NewExptExportConsumer(exptResultExportService service.IExptResultExportService) mq.IConsumerHandler {
+func NewExptExportConsumer(exptResultExportService service.IExptResultExportService, exptInsightAnalysisService service.IExptInsightAnalysisService) mq.IConsumerHandler {
 	return &ExptExportConsumer{
-		exptResultExportService: exptResultExportService,
+		exptResultExportService:    exptResultExportService,
+		exptInsightAnalysisService: exptInsightAnalysisService,
 	}
 }
 

@@ -165,7 +165,7 @@ func (e ExptInsightAnalysisServiceImpl) DeleteAnalysisRecord(ctx context.Context
 	return e.repo.DeleteAnalysisRecord(ctx, spaceID, exptID, recordID)
 }
 
-func (e ExptInsightAnalysisServiceImpl) FeedbackExptInsightAnalysisReport(ctx context.Context, param *entity.ExptInsightAnalysisFeedbackParam) error {
+func (e ExptInsightAnalysisServiceImpl) FeedbackExptInsightAnalysis(ctx context.Context, param *entity.ExptInsightAnalysisFeedbackParam) error {
 	if param.Session == nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("empty session"))
 	}

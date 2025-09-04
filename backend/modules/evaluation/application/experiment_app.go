@@ -40,6 +40,7 @@ type IExperimentApplication interface {
 	service.ExptItemEvalEvent
 	service.ExptAggrResultService
 	service.IExptResultExportService
+	service.IExptInsightAnalysisService
 }
 
 type experimentApplication struct {
@@ -56,11 +57,11 @@ type experimentApplication struct {
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	userInfoService userinfo.UserInfoService
+	service.IExptInsightAnalysisService
 
-	evalTargetService          service.IEvalTargetService
-	evaluationSetItemService   service.EvaluationSetItemService
-	annotateService            service.IExptAnnotateService
-	exptInsightAnalysisService service.IExptInsightAnalysisService
+	evalTargetService        service.IEvalTargetService
+	evaluationSetItemService service.EvaluationSetItemService
+	annotateService          service.IExptAnnotateService
 }
 
 func NewExperimentApplication(
@@ -69,7 +70,7 @@ func NewExperimentApplication(
 	manager service.IExptManager,
 	scheduler service.ExptSchedulerEvent,
 	recordEval service.ExptItemEvalEvent,
-	// tupleSvc service.IExptTupleService,
+// tupleSvc service.IExptTupleService,
 	idgen idgen.IIDGenerator,
 	configer component.IConfiger,
 	auth rpc.IAuthProvider,
@@ -85,19 +86,19 @@ func NewExperimentApplication(
 		resultSvc: resultSvc,
 		manager:   manager,
 		// tupleSvc:                 tupleSvc,
-		idgen:                      idgen,
-		configer:                   configer,
-		ExptAggrResultService:      aggResultSvc,
-		ExptSchedulerEvent:         scheduler,
-		ExptItemEvalEvent:          recordEval,
-		auth:                       auth,
-		userInfoService:            userInfoService,
-		evalTargetService:          evalTargetService,
-		evaluationSetItemService:   evaluationSetItemService,
-		annotateService:            annotateService,
-		tagRPCAdapter:              tagRPCAdapter,
-		IExptResultExportService:   exptResultExportService,
-		exptInsightAnalysisService: exptInsightAnalysisService,
+		idgen:                       idgen,
+		configer:                    configer,
+		ExptAggrResultService:       aggResultSvc,
+		ExptSchedulerEvent:          scheduler,
+		ExptItemEvalEvent:           recordEval,
+		auth:                        auth,
+		userInfoService:             userInfoService,
+		evalTargetService:           evalTargetService,
+		evaluationSetItemService:    evaluationSetItemService,
+		annotateService:             annotateService,
+		tagRPCAdapter:               tagRPCAdapter,
+		IExptResultExportService:    exptResultExportService,
+		IExptInsightAnalysisService: exptInsightAnalysisService,
 	}
 }
 
@@ -1098,7 +1099,7 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
-	recordID, err := e.exptInsightAnalysisService.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
+	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
 		SpaceID:   req.GetWorkspaceID(),
 		ExptID:    req.GetExptID(),
 		CreatedBy: session.UserID,
@@ -1130,7 +1131,7 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	records, total, err := e.exptInsightAnalysisService.ListAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())), session)
+	records, total, err := e.ListAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())), session)
 	if err != nil {
 		return nil, err
 	}
@@ -1161,7 +1162,7 @@ func (e *experimentApplication) DeleteExptInsightAnalysisRecord(ctx context.Cont
 	if err != nil {
 		return nil, err
 	}
-	err = e.exptInsightAnalysisService.DeleteAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID())
+	err = e.DeleteAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID())
 	if err != nil {
 		return nil, err
 	}
@@ -1180,7 +1181,7 @@ func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	record, err := e.exptInsightAnalysisService.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	record, err := e.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
 	if err != nil {
 		return nil, err
 	}
@@ -1219,7 +1220,7 @@ func (e *experimentApplication) FeedbackExptInsightAnalysisReport(ctx context.Co
 		Comment:            ptr.Of(req.GetComment()),
 		Session:            session,
 	}
-	err = e.exptInsightAnalysisService.FeedbackExptInsightAnalysisReport(ctx, param)
+	err = e.FeedbackExptInsightAnalysis(ctx, param)
 	if err != nil {
 		return nil, err
 	}
@@ -1237,7 +1238,7 @@ func (e *experimentApplication) ListExptInsightAnalysisComment(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	comments, total, err := e.exptInsightAnalysisService.ListExptInsightAnalysisFeedbackComment(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())))
+	comments, total, err := e.ListExptInsightAnalysisFeedbackComment(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())))
 	if err != nil {
 		return nil, err
 	}
