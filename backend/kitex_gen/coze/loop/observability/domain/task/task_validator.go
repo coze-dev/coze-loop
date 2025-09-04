@@ -37,6 +37,11 @@ func (p *Task) IsValid() error {
 			return fmt.Errorf("field TaskDetail not valid, %w", err)
 		}
 	}
+	if p.BackfillTaskDetail != nil {
+		if err := p.BackfillTaskDetail.IsValid(); err != nil {
+			return fmt.Errorf("field BackfillTaskDetail not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
@@ -60,6 +65,11 @@ func (p *Rule) IsValid() error {
 			return fmt.Errorf("field EffectiveTime not valid, %w", err)
 		}
 	}
+	if p.BackfillEffectiveTime != nil {
+		if err := p.BackfillEffectiveTime.IsValid(); err != nil {
+			return fmt.Errorf("field BackfillEffectiveTime not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *Sampler) IsValid() error {
@@ -69,6 +79,20 @@ func (p *EffectiveTime) IsValid() error {
 	return nil
 }
 func (p *TaskConfig) IsValid() error {
+	if p.DataReflowConfig != nil {
+		if err := p.DataReflowConfig.IsValid(); err != nil {
+			return fmt.Errorf("field DataReflowConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DatasetConfig) IsValid() error {
+	if p.DatasetSchema == nil {
+		return fmt.Errorf("field DatasetSchema not_nil rule failed")
+	}
+	if err := p.DatasetSchema.IsValid(); err != nil {
+		return fmt.Errorf("field DatasetSchema not valid, %w", err)
+	}
 	return nil
 }
 func (p *AutoEvaluateConfig) IsValid() error {

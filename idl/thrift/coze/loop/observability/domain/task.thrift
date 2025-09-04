@@ -31,6 +31,7 @@ struct Task {
     7: optional Rule rule                                          // 规则
     8: optional TaskConfig task_config                             // 配置
     9: optional TaskDetail task_detail                             // 任务状态详情
+    10: optional TaskDetail backfill_task_detail                   // 任务历史数据执行详情
 
     100: optional common.BaseInfo base_info                        // 基础信息
 }
@@ -40,6 +41,7 @@ struct Rule {
     1: optional filter.SpanFilterFields  span_filters // Span 过滤条件
     2: optional Sampler sampler                   // 采样配置
     3: optional EffectiveTime effective_time      // 生效时间窗口
+    4: optional EffectiveTime backfill_effective_time    // 历史数据生效时间窗口
 }
 
 struct Sampler {
@@ -60,6 +62,14 @@ struct EffectiveTime {
 // TaskConfig
 struct TaskConfig {
     1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息
+    2: optional DatasetConfig data_reflow_config                             // 配置的数据回流的数据集信息
+}
+
+struct DatasetConfig {
+    1: required bool   is_new_dataset                        // 是否是新增数据集
+    2: optional i64    dataset_id (api.js_conv="true", go.tag='json:"dataset_id"')   // 数据集id，新增数据集时可为空
+    3: optional string dataset_name                          // 数据集名称，选择已有数据集时可为空
+    4: optional export_dataset.DatasetSchema dataset_schema (vt.not_nil="true")   // 数据集列数据schema
 }
 
 struct AutoEvaluateConfig {
