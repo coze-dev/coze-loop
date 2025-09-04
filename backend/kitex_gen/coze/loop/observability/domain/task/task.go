@@ -18,7 +18,7 @@ const (
 
 	TaskTypeAutoEval = "auto_evaluate"
 
-	TaskTypeDataReflow = "data_reflow"
+	TaskTypeAutoDataReflow = "auto_data_reflow"
 
 	TaskStatusUnstarted = "unstarted"
 

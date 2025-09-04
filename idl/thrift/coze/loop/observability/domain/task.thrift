@@ -9,8 +9,8 @@ const TimeUnit TimeUnit_Day = "day"
 const TimeUnit TimeUnit_Week = "week"
 
 typedef string TaskType (ts.enum="true")
-const TaskType TaskType_AutoEval = "auto_evaluate" // 自动评测
-const TaskType TaskType_DataReflow = "data_reflow" // 数据回流
+const TaskType TaskType_AutoEval = "auto_evaluate"          // 自动评测
+const TaskType TaskType_AutoDataReflow = "auto_data_reflow" // 数据回流
 
 typedef string TaskStatus (ts.enum="true")
 const TaskStatus TaskStatus_Unstarted = "unstarted"   // 未启动
