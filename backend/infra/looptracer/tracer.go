@@ -7,10 +7,18 @@ import (
 	"context"
 	"time"
 
-	cozeloop "github.com/coze-dev/cozeloop-go"
+	"github.com/coze-dev/cozeloop-go"
 )
 
 var _ Tracer = (*TracerImpl)(nil)
+
+// trace context header
+const (
+	TraceContextHeaderParent     = "X-Cozeloop-Traceparent"
+	TraceContextHeaderBaggage    = "X-Cozeloop-Tracestate"
+	TraceContextHeaderParentW3C  = "traceparent"
+	TraceContextHeaderBaggageW3C = "tracestate"
+)
 
 type TracerImpl struct {
 	cozeloop.Client
@@ -24,6 +32,7 @@ type StartSpanOptions struct {
 	StartTime     time.Time
 	StartNewTrace bool
 	WorkspaceID   string
+	ChildOf       cozeloop.SpanContext
 }
 
 type StartSpanOption = func(o *StartSpanOptions)
@@ -52,6 +61,13 @@ func WithSpanWorkspaceID(workspaceID string) StartSpanOption {
 	}
 }
 
+// WithChildOf Set the parent span of the span.
+func WithChildOf(childOf cozeloop.SpanContext) StartSpanOption {
+	return func(ops *StartSpanOptions) {
+		ops.ChildOf = childOf
+	}
+}
+
 func (t *TracerImpl) StartSpan(ctx context.Context, name, spanType string, opts ...StartSpanOption) (context.Context, Span) {
 	options := &StartSpanOptions{}
 	for _, opt := range opts {
@@ -67,6 +83,9 @@ func (t *TracerImpl) StartSpan(ctx context.Context, name, spanType string, opts 
 	}
 	if options.WorkspaceID != "" {
 		cozeLoopOpts = append(cozeLoopOpts, cozeloop.WithSpanWorkspaceID(options.WorkspaceID))
+	}
+	if options.ChildOf != nil {
+		cozeLoopOpts = append(cozeLoopOpts, cozeloop.WithChildOf(options.ChildOf))
 	}
 	ctx, span := t.Client.StartSpan(ctx, name, spanType, cozeLoopOpts...)
 	return ctx, SpanImpl{
@@ -85,6 +104,37 @@ func (t *TracerImpl) Inject(ctx context.Context) context.Context {
 	return ctx
 }
 
+func (t *TracerImpl) Flush(ctx context.Context) {
+	t.Client.Flush(ctx)
+}
+
+func (t *TracerImpl) InjectW3CTraceContext(ctx context.Context) map[string]string {
+	span := t.GetSpanFromContext(ctx)
+	if span == nil {
+		return map[string]string{}
+	}
+
+	// 获取现有的header格式
+	headers, err := span.ToHeader()
+	if err != nil {
+		return map[string]string{}
+	}
+
+	w3cHeaders := make(map[string]string)
+
+	// 转换traceparent
+	if traceparent, ok := headers[TraceContextHeaderParent]; ok {
+		w3cHeaders[TraceContextHeaderParentW3C] = traceparent
+	}
+
+	// 转换tracestate
+	if tracestate, ok := headers[TraceContextHeaderBaggage]; ok {
+		w3cHeaders[TraceContextHeaderBaggageW3C] = tracestate
+	}
+
+	return w3cHeaders
+}
+
 type noopTracer struct {
 	c cozeloop.Client
 }
@@ -101,6 +151,10 @@ func (d *noopTracer) Flush(ctx context.Context) {}
 
 func (d *noopTracer) Inject(ctx context.Context) context.Context {
 	return ctx
+}
+
+func (d *noopTracer) InjectW3CTraceContext(ctx context.Context) map[string]string {
+	return map[string]string{}
 }
 
 func (d *noopTracer) SetCallType(callType string) {

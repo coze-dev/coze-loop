@@ -40,6 +40,8 @@ struct EvalTargetContent {
     102: optional EvalPrompt prompt
     // EvalTargetType=4 时，传参此字段。 评测对象为 CozeWorkflow 时, 需要设置 CozeWorkflow 信息
     103: optional CozeWorkflow coze_workflow
+    // EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息
+    104: optional VolcengineAgent volcengine_agent
 }
 
 enum EvalTargetType {
@@ -47,6 +49,22 @@ enum EvalTargetType {
     CozeLoopPrompt = 2 // Prompt
     Trace = 3 // Trace
     CozeWorkflow = 4
+    VolcengineAgent = 5 // 火山智能体
+}
+
+struct VolcengineAgent {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')    // 罗盘应用ID
+
+    10: optional string name    // DTO使用，不存数据库
+    11: optional string description  // DTO使用，不存数据库
+    12: optional list<VolcengineAgentEndpoint> volcengine_agent_endpoints // DTO使用，不存数据库
+
+    100: optional common.BaseInfo base_info
+}
+
+struct VolcengineAgentEndpoint {
+    1: optional string endpoint_id
+    2: optional string api_key
 }
 
 struct CozeWorkflow {

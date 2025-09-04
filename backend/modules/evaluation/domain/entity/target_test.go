@@ -15,6 +15,7 @@ func TestEvalTargetType_String(t *testing.T) {
 	assert.Equal(t, "LoopPrompt", EvalTargetTypeLoopPrompt.String())
 	assert.Equal(t, "LoopTrace", EvalTargetTypeLoopTrace.String())
 	assert.Equal(t, "CozeWorkflow", EvalTargetTypeCozeWorkflow.String())
+	assert.Equal(t, "VolcengineAgent", EvalTargetTypeVolcengineAgent.String())
 	var unknown EvalTargetType = 99
 	assert.Equal(t, "<UNSET>", unknown.String())
 }
