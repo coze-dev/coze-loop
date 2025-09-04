@@ -75,6 +75,12 @@
       "safeForSimultaneousRushProcesses": true,
       "autoinstallerName": "rush-commitlint",
       "shellCommand": "export PRE_LINT='1' && rush lint-staged && cd common/autoinstallers/rush-commitlint && git cz"
+    },
+    {
+      "name": "update-api",
+      "commandKind": "global",
+      "summary": "⭐️ Update api-schema",
+      "shellCommand": "pushd frontend/packages/cozeloop/api-schema && npm run update && popd"
     }
   ],
   "parameters": [

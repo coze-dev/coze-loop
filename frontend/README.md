@@ -83,5 +83,13 @@ As you can see, many dependencies listed in [apps/cozeloop/package.json](./apps/
 
 Change the source code of workspace dependencies and the changes will work directly (sometimes re-run is required), since the cozeloop project depends the source codes rather than artifacts.
 
+### 4. Update api by idl
+
+Run the following command, and the idl files will be generated in [packages/cozeloop/api-schema](./packages/cozeloop/api-schema).
+
+```bash
+rush update-api
+```
+
 ## 📄 License
 * [Apache License, Version 2.0](../LICENSE)
