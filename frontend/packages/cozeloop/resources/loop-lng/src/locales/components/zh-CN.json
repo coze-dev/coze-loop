@@ -22,8 +22,6 @@
   "submit": "提交",
   "version": "版本",
   "select_x": "选择{field}",
-  "submit_time": "提交时间",
-  "submitter": "提交人",
   "version_description": "版本说明",
   "version_record": "版本记录"
 }

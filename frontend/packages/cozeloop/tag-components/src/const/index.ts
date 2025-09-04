@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { tag } from '@cozeloop/api-schema/data';
 
 const { TagContentType } = tag;
@@ -13,10 +14,10 @@ export const MAX_TAG_NAME_LENGTH = 50;
 export const MAX_TAG_DESC_LENGTH = 200;
 
 export const TAG_TYPE_TO_NAME_MAP = {
-  [TagContentType.Categorical]: '分类',
-  [TagContentType.Boolean]: '布尔值',
-  [TagContentType.ContinuousNumber]: '数字',
-  [TagContentType.FreeText]: '文本',
+  [TagContentType.Categorical]: I18n.t('category'),
+  [TagContentType.Boolean]: I18n.t('boolean'),
+  [TagContentType.ContinuousNumber]: I18n.t('number'),
+  [TagContentType.FreeText]: I18n.t('text'),
 };
 
 export const TAG_TYPE_OPTIONS = [

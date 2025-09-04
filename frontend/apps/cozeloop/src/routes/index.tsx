@@ -16,6 +16,7 @@ const Auth = lazy(() => import('@cozeloop/auth-pages'));
 const Evaluation = lazy(() => import('@cozeloop/evaluate-pages'));
 const Observation = lazy(() => import('@cozeloop/observation-pages'));
 const Prompt = lazy(() => import('@cozeloop/prompt-pages'));
+const Tag = lazy(() => import('@cozeloop/tag-pages'));
 
 export const routeConfig: RouteObject[] = [
   // 登录鉴权
@@ -75,6 +76,10 @@ export const routeConfig: RouteObject[] = [
                   {
                     path: 'observation/*',
                     element: <Observation />,
+                  },
+                  {
+                    path: 'tag/*',
+                    element: <Tag />,
                   },
                 ],
               },

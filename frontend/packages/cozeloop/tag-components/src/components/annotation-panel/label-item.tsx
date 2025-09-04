@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { debounce } from 'lodash-es';
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   annotation,
@@ -175,7 +176,7 @@ export const TagItem = (props: TagItemProps) => {
               </Typography.Text>
             ) : (
               <Tooltip
-                content="该分类标签选项已禁用，若修改将不再展示"
+                content={I18n.t('category_tag_option_disabled_warning')}
                 position="left"
                 theme="dark"
               >
@@ -203,7 +204,7 @@ export const TagItem = (props: TagItemProps) => {
         noLabel
         className="w-full max-w-full overflow-hidden"
         field={`${field}.tag_value_id`}
-        placeholder="请输入子标签名称"
+        placeholder={I18n.t('enter_subtag_name')}
         disabled={disabled}
         optionList={optionList}
         onChange={v => {
@@ -223,7 +224,7 @@ export const TagItem = (props: TagItemProps) => {
         max={Number.MAX_SAFE_INTEGER}
         formatter={numberInputFormatter}
         className="w-full max-w-full overflow-hidden"
-        placeholder="请输入数值"
+        placeholder={I18n.t('enter_number')}
         onBlur={debounce(event => {
           handleChange(
             numberInputFormatter(event.target.value),
@@ -242,7 +243,7 @@ export const TagItem = (props: TagItemProps) => {
         field={`${field}.tag_value`}
         noLabel
         className="w-full max-w-full overflow-hidden"
-        placeholder={'请输入文本'}
+        placeholder={I18n.t('enter_text')}
         onBlur={debounce(event => {
           if (event.target.value.length > 200) {
             return;
@@ -297,9 +298,7 @@ const BooleanTag: (props: BooleanTagProps) => JSX.Element = (
       return options;
     }
 
-    return options?.filter(
-      option => !disableTagItem.id.includes(option.value),
-    );
+    return options?.filter(option => !disableTagItem.id.includes(option.value));
   }, [disableTagItem, options]);
 
   const handleChange = (v: string) => {
@@ -366,7 +365,7 @@ const CategoryTag = withField((props: CategoryTagProps) => {
   return (
     <Select
       className="w-full"
-      placeholder="请选择分类"
+      placeholder={I18n.t('select_category')}
       optionList={options}
       disabled={disabled}
       onChange={onChange}

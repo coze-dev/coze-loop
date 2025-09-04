@@ -1,6 +1,7 @@
 import React, { useState, type ReactNode } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { type tag } from '@cozeloop/api-schema/data';
 import {
@@ -249,7 +250,7 @@ export const TagsItem: React.FC<TagsItemProps> = ({
                 type="secondary"
                 className={classNames('text-xs !coz-fg-secondary')}
               >
-                更新人：
+                {I18n.t('updated_by')}
               </Typography.Text>
               <CozAvatar
                 size="small"
