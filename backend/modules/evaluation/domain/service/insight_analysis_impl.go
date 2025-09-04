@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type ExptInsightAnalysisServiceImpl struct {
@@ -104,6 +105,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	if err != nil {
 		return err
 	}
+	logs.CtxInfo(ctx, "GenAnalysisReport get csv url=%v", url)
 
 	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url)
 	if err != nil {
