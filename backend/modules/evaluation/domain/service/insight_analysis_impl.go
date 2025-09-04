@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type ExptInsightAnalysisServiceImpl struct {
@@ -56,6 +57,12 @@ func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Second*3))
 	if err != nil {
 		return 0, err
+	}
+
+	time.Sleep(time.Second)
+	err = e.GenAnalysisReport(ctx, record.SpaceID, record.ExptID, recordID)
+	if err != nil {
+		logs.CtxError(ctx, "GenAnalysisReport err: %v", err)
 	}
 
 	return recordID, nil
