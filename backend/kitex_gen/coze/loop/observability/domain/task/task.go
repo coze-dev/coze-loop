@@ -18,6 +18,8 @@ const (
 
 	TaskTypeAutoEval = "auto_evaluate"
 
+	TaskTypeDataReflow = "data_reflow"
+
 	TaskStatusUnstarted = "unstarted"
 
 	TaskStatusRunning = "running"

@@ -28,8 +28,6 @@ const (
 	AuthEntityTypeModel = "Model"
 
 	AuthEntityTypeAnnotation = "Annotation"
-
-	AuthEntityTypeTraceTask = "Task"
 )
 
 // 主体类型
