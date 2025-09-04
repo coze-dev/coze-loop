@@ -17,6 +17,8 @@ import {
   IconCozDatabaseFill,
   IconCozLightbulbFill,
   IconCozNodeFill,
+  IconCozTag,
+  IconCozTagFill,
 } from '@coze-arch/coze-design/icons';
 
 export interface MenuConfig {
@@ -91,6 +93,19 @@ export function useMenuConfig() {
           text: 'Trace',
           icon: <IconCozNode />,
           selectedIcon: <IconCozNodeFill className="coz-fg-plus" />,
+        },
+      ],
+    },
+    {
+      itemKey: 'tag',
+      text: I18n.t('tag'),
+      visible: ({ space }) => Boolean(space?.id),
+      items: [
+        {
+          itemKey: 'tag/tag',
+          text: I18n.t('tag_management'),
+          icon: <IconCozTag />,
+          selectedIcon: <IconCozTagFill className="coz-fg-plus" />,
         },
       ],
     },

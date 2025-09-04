@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type PlatformType,
   type DeleteManualAnnotationRequest,
@@ -22,7 +23,7 @@ export const AnnotationRemoveButton = (props: AnnotationRemoveButtonProps) => {
   const { runAsync, loading } = useDeleteAnnotation();
 
   return (
-    <Tooltip content="删除" theme="dark">
+    <Tooltip content={I18n.t('delete')} theme="dark">
       <Button
         loading={loading}
         icon={<IconCozTrashCan />}
