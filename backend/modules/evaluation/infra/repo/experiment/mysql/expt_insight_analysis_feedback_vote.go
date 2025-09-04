@@ -72,7 +72,7 @@ func (e exptInsightAnalysisFeedbackVoteDAO) Count(ctx context.Context, spaceID, 
 		DownvoteCount int64 `json:"downvote_count"`
 	}
 	voteStatistic := &VoteStatistic{}
-	err := db.WithContext(ctx).Model(&VoteStatistic{}).
+	err := db.WithContext(ctx).Model(&model.ExptInsightAnalysisFeedbackVote{}).
 		Select(fmt.Sprintf("SUM(CASE WHEN vote_type = %v THEN 1 ELSE 0 END) AS upvote_count, SUM(CASE WHEN vote_type = %v THEN 1 ELSE 0 END) AS downvote_count", entity.Upvote, entity.Downvote)).
 		Where("space_id = ? AND expt_id = ? AND analysis_record_id = ?", spaceID, exptID, recordID).
 		Scan(voteStatistic).Error
