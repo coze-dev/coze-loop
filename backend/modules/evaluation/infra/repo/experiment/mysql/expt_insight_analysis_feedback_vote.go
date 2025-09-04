@@ -5,6 +5,7 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -13,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"gorm.io/gorm"
 )
 
 type IExptInsightAnalysisFeedbackVoteDAO interface {
@@ -59,6 +61,9 @@ func (e exptInsightAnalysisFeedbackVoteDAO) GetByUser(ctx context.Context, space
 		q.CreatedBy.Eq(userID),
 	).First()
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, errorx.Wrapf(err, "exptInsightAnalysisFeedbackVoteDAO GetByUser fail, spaceID: %v, exptID: %v", spaceID, exptID)
 	}
 
