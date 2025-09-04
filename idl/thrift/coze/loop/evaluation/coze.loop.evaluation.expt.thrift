@@ -462,7 +462,7 @@ struct GetExptInsightAnalysisRecordRequest {
 }
 
 struct GetExptInsightAnalysisRecordResponse {
-    1: optional expt.ExptInsightAnalysisRecord expt_result_export_record
+    1: optional expt.ExptInsightAnalysisRecord expt_insight_analysis_record
 
     255: base.BaseResp BaseResp
 }
