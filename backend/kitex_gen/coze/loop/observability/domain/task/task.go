@@ -2437,14 +2437,13 @@ func (p *TaskConfig) Field2DeepEqual(src *DatasetConfig) bool {
 }
 
 type DatasetConfig struct {
-	// 是否是新增数据集
-	IsNewDataset bool `thrift:"is_new_dataset,1,required" frugal:"1,required,bool" form:"is_new_dataset,required" json:"is_new_dataset,required" query:"is_new_dataset,required"`
 	// 数据集id，新增数据集时可为空
-	DatasetID *int64 `thrift:"dataset_id,2,optional" frugal:"2,optional,i64" json:"dataset_id" form:"dataset_id" query:"dataset_id"`
-	// 数据集名称，选择已有数据集时可为空
-	DatasetName *string `thrift:"dataset_name,3,optional" frugal:"3,optional,string" form:"dataset_name" json:"dataset_name,omitempty" query:"dataset_name"`
+	DatasetID *int64 `thrift:"dataset_id,1,optional" frugal:"1,optional,i64" json:"dataset_id" form:"dataset_id" query:"dataset_id"`
+	// 数据集名称
+	DatasetName *string `thrift:"dataset_name,2,optional" frugal:"2,optional,string" form:"dataset_name" json:"dataset_name,omitempty" query:"dataset_name"`
 	// 数据集列数据schema
-	DatasetSchema *dataset.DatasetSchema `thrift:"dataset_schema,4,optional" frugal:"4,optional,dataset.DatasetSchema" form:"dataset_schema" json:"dataset_schema,omitempty" query:"dataset_schema"`
+	DatasetSchema *dataset.DatasetSchema  `thrift:"dataset_schema,3,optional" frugal:"3,optional,dataset.DatasetSchema" form:"dataset_schema" json:"dataset_schema,omitempty" query:"dataset_schema"`
+	FieldMappings []*dataset.FieldMapping `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty"`
 }
 
 func NewDatasetConfig() *DatasetConfig {
@@ -2452,13 +2451,6 @@ func NewDatasetConfig() *DatasetConfig {
 }
 
 func (p *DatasetConfig) InitDefault() {
-}
-
-func (p *DatasetConfig) GetIsNewDataset() (v bool) {
-	if p != nil {
-		return p.IsNewDataset
-	}
-	return
 }
 
 var DatasetConfig_DatasetID_DEFAULT int64
@@ -2496,8 +2488,17 @@ func (p *DatasetConfig) GetDatasetSchema() (v *dataset.DatasetSchema) {
 	}
 	return p.DatasetSchema
 }
-func (p *DatasetConfig) SetIsNewDataset(val bool) {
-	p.IsNewDataset = val
+
+var DatasetConfig_FieldMappings_DEFAULT []*dataset.FieldMapping
+
+func (p *DatasetConfig) GetFieldMappings() (v []*dataset.FieldMapping) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldMappings() {
+		return DatasetConfig_FieldMappings_DEFAULT
+	}
+	return p.FieldMappings
 }
 func (p *DatasetConfig) SetDatasetID(val *int64) {
 	p.DatasetID = val
@@ -2508,12 +2509,15 @@ func (p *DatasetConfig) SetDatasetName(val *string) {
 func (p *DatasetConfig) SetDatasetSchema(val *dataset.DatasetSchema) {
 	p.DatasetSchema = val
 }
+func (p *DatasetConfig) SetFieldMappings(val []*dataset.FieldMapping) {
+	p.FieldMappings = val
+}
 
 var fieldIDToName_DatasetConfig = map[int16]string{
-	1: "is_new_dataset",
-	2: "dataset_id",
-	3: "dataset_name",
-	4: "dataset_schema",
+	1: "dataset_id",
+	2: "dataset_name",
+	3: "dataset_schema",
+	4: "field_mappings",
 }
 
 func (p *DatasetConfig) IsSetDatasetID() bool {
@@ -2528,10 +2532,13 @@ func (p *DatasetConfig) IsSetDatasetSchema() bool {
 	return p.DatasetSchema != nil
 }
 
+func (p *DatasetConfig) IsSetFieldMappings() bool {
+	return p.FieldMappings != nil
+}
+
 func (p *DatasetConfig) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetIsNewDataset bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -2548,16 +2555,15 @@ func (p *DatasetConfig) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.BOOL {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetIsNewDataset = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2565,7 +2571,7 @@ func (p *DatasetConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2573,7 +2579,7 @@ func (p *DatasetConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 4:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2593,10 +2599,6 @@ func (p *DatasetConfig) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetIsNewDataset {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return nil
 ReadStructBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
@@ -2611,22 +2613,9 @@ ReadFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_DatasetConfig[fieldId]))
 }
 
 func (p *DatasetConfig) ReadField1(iprot thrift.TProtocol) error {
-
-	var _field bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.IsNewDataset = _field
-	return nil
-}
-func (p *DatasetConfig) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -2637,7 +2626,7 @@ func (p *DatasetConfig) ReadField2(iprot thrift.TProtocol) error {
 	p.DatasetID = _field
 	return nil
 }
-func (p *DatasetConfig) ReadField3(iprot thrift.TProtocol) error {
+func (p *DatasetConfig) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2648,12 +2637,35 @@ func (p *DatasetConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.DatasetName = _field
 	return nil
 }
-func (p *DatasetConfig) ReadField4(iprot thrift.TProtocol) error {
+func (p *DatasetConfig) ReadField3(iprot thrift.TProtocol) error {
 	_field := dataset.NewDatasetSchema()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
 	p.DatasetSchema = _field
+	return nil
+}
+func (p *DatasetConfig) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.FieldMapping, 0, size)
+	values := make([]dataset.FieldMapping, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FieldMappings = _field
 	return nil
 }
 
@@ -2698,14 +2710,16 @@ WriteStructEndError:
 }
 
 func (p *DatasetConfig) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("is_new_dataset", thrift.BOOL, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.IsNewDataset); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetDatasetID() {
+		if err = oprot.WriteFieldBegin("dataset_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DatasetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -2714,11 +2728,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *DatasetConfig) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetID() {
-		if err = oprot.WriteFieldBegin("dataset_id", thrift.I64, 2); err != nil {
+	if p.IsSetDatasetName() {
+		if err = oprot.WriteFieldBegin("dataset_name", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.DatasetID); err != nil {
+		if err := oprot.WriteString(*p.DatasetName); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2732,11 +2746,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *DatasetConfig) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetName() {
-		if err = oprot.WriteFieldBegin("dataset_name", thrift.STRING, 3); err != nil {
+	if p.IsSetDatasetSchema() {
+		if err = oprot.WriteFieldBegin("dataset_schema", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.DatasetName); err != nil {
+		if err := p.DatasetSchema.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2750,11 +2764,19 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *DatasetConfig) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetSchema() {
-		if err = oprot.WriteFieldBegin("dataset_schema", thrift.STRUCT, 4); err != nil {
+	if p.IsSetFieldMappings() {
+		if err = oprot.WriteFieldBegin("field_mappings", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.DatasetSchema.Write(oprot); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldMappings)); err != nil {
+			return err
+		}
+		for _, v := range p.FieldMappings {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2782,29 +2804,22 @@ func (p *DatasetConfig) DeepEqual(ano *DatasetConfig) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.IsNewDataset) {
+	if !p.Field1DeepEqual(ano.DatasetID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.DatasetID) {
+	if !p.Field2DeepEqual(ano.DatasetName) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.DatasetName) {
+	if !p.Field3DeepEqual(ano.DatasetSchema) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.DatasetSchema) {
+	if !p.Field4DeepEqual(ano.FieldMappings) {
 		return false
 	}
 	return true
 }
 
-func (p *DatasetConfig) Field1DeepEqual(src bool) bool {
-
-	if p.IsNewDataset != src {
-		return false
-	}
-	return true
-}
-func (p *DatasetConfig) Field2DeepEqual(src *int64) bool {
+func (p *DatasetConfig) Field1DeepEqual(src *int64) bool {
 
 	if p.DatasetID == src {
 		return true
@@ -2816,7 +2831,7 @@ func (p *DatasetConfig) Field2DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *DatasetConfig) Field3DeepEqual(src *string) bool {
+func (p *DatasetConfig) Field2DeepEqual(src *string) bool {
 
 	if p.DatasetName == src {
 		return true
@@ -2828,10 +2843,23 @@ func (p *DatasetConfig) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *DatasetConfig) Field4DeepEqual(src *dataset.DatasetSchema) bool {
+func (p *DatasetConfig) Field3DeepEqual(src *dataset.DatasetSchema) bool {
 
 	if !p.DatasetSchema.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+func (p *DatasetConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
+
+	if len(p.FieldMappings) != len(src) {
+		return false
+	}
+	for i, v := range p.FieldMappings {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

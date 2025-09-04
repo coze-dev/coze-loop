@@ -93,6 +93,12 @@ func (p *DatasetConfig) IsValid() error {
 	if err := p.DatasetSchema.IsValid(); err != nil {
 		return fmt.Errorf("field DatasetSchema not valid, %w", err)
 	}
+	if len(p.FieldMappings) < int(1) {
+		return fmt.Errorf("field FieldMappings MinLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if len(p.FieldMappings) > int(100) {
+		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
+	}
 	return nil
 }
 func (p *AutoEvaluateConfig) IsValid() error {

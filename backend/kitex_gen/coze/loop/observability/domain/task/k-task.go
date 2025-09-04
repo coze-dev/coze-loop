@@ -1741,7 +1741,6 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetIsNewDataset bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -1753,13 +1752,12 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.BOOL {
+			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetIsNewDataset = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -1768,7 +1766,7 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1782,7 +1780,7 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 3:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1796,7 +1794,7 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 4:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1818,10 +1816,6 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetIsNewDataset {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -1829,25 +1823,9 @@ ReadFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DatasetConfig[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_DatasetConfig[fieldId]))
 }
 
 func (p *DatasetConfig) FastReadField1(buf []byte) (int, error) {
-	offset := 0
-
-	var _field bool
-	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
-	p.IsNewDataset = _field
-	return offset, nil
-}
-
-func (p *DatasetConfig) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1861,7 +1839,7 @@ func (p *DatasetConfig) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetConfig) FastReadField3(buf []byte) (int, error) {
+func (p *DatasetConfig) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1875,7 +1853,7 @@ func (p *DatasetConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetConfig) FastReadField4(buf []byte) (int, error) {
+func (p *DatasetConfig) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 	_field := dataset.NewDatasetSchema()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1884,6 +1862,31 @@ func (p *DatasetConfig) FastReadField4(buf []byte) (int, error) {
 		offset += l
 	}
 	p.DatasetSchema = _field
+	return offset, nil
+}
+
+func (p *DatasetConfig) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*dataset.FieldMapping, 0, size)
+	values := make([]dataset.FieldMapping, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.FieldMappings = _field
 	return offset, nil
 }
 
@@ -1917,46 +1920,48 @@ func (p *DatasetConfig) BLength() int {
 
 func (p *DatasetConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
-	offset += thrift.Binary.WriteBool(buf[offset:], p.IsNewDataset)
+	if p.IsSetDatasetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.DatasetID)
+	}
 	return offset
 }
 
 func (p *DatasetConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetDatasetID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.DatasetID)
+	if p.IsSetDatasetName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetName)
 	}
 	return offset
 }
 
 func (p *DatasetConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetDatasetName() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetName)
+	if p.IsSetDatasetSchema() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += p.DatasetSchema.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
 func (p *DatasetConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetDatasetSchema() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
-		offset += p.DatasetSchema.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetFieldMappings() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 4)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.FieldMappings {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
 
 func (p *DatasetConfig) field1Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.BoolLength()
-	return l
-}
-
-func (p *DatasetConfig) field2Length() int {
 	l := 0
 	if p.IsSetDatasetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1965,7 +1970,7 @@ func (p *DatasetConfig) field2Length() int {
 	return l
 }
 
-func (p *DatasetConfig) field3Length() int {
+func (p *DatasetConfig) field2Length() int {
 	l := 0
 	if p.IsSetDatasetName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1974,11 +1979,24 @@ func (p *DatasetConfig) field3Length() int {
 	return l
 }
 
-func (p *DatasetConfig) field4Length() int {
+func (p *DatasetConfig) field3Length() int {
 	l := 0
 	if p.IsSetDatasetSchema() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.DatasetSchema.BLength()
+	}
+	return l
+}
+
+func (p *DatasetConfig) field4Length() int {
+	l := 0
+	if p.IsSetFieldMappings() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.FieldMappings {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -1988,8 +2006,6 @@ func (p *DatasetConfig) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
-
-	p.IsNewDataset = src.IsNewDataset
 
 	if src.DatasetID != nil {
 		tmp := *src.DatasetID
@@ -2012,6 +2028,21 @@ func (p *DatasetConfig) DeepCopy(s interface{}) error {
 		}
 	}
 	p.DatasetSchema = _datasetSchema
+
+	if src.FieldMappings != nil {
+		p.FieldMappings = make([]*dataset.FieldMapping, 0, len(src.FieldMappings))
+		for _, elem := range src.FieldMappings {
+			var _elem *dataset.FieldMapping
+			if elem != nil {
+				_elem = &dataset.FieldMapping{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.FieldMappings = append(p.FieldMappings, _elem)
+		}
+	}
 
 	return nil
 }
