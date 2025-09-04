@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package application
-
 import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
@@ -45,7 +45,6 @@ import (
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
-
 func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 	type fields struct {
 		traceService service.ITraceService
@@ -84,12 +83,12 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("t")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("1")
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("1").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil).AnyTimes()
 				return fields{
 					traceService: traceServiceMock,
@@ -153,7 +152,17 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -196,6 +205,17 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -231,6 +251,17 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -264,7 +295,17 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.CreateAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -307,6 +348,17 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -338,7 +390,17 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.DeleteAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -377,6 +439,17 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -404,7 +477,17 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			err = o.Send(tt.args.ctx, tt.args.event)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -451,6 +534,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -498,6 +592,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -545,6 +650,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -588,6 +704,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -626,6 +753,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -656,6 +794,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -691,6 +840,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -726,6 +886,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -761,6 +932,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -796,6 +978,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -832,6 +1025,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -868,6 +1072,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -910,6 +1125,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -952,6 +1178,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -996,6 +1233,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1029,7 +1277,17 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.OtelIngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1044,10 +1302,6 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		})
 	}
 }
-
-// Test helper functions
-
-// Test helper functions
 
 // createValidJSONTraceData creates valid JSON format trace data for testing
 func createValidJSONTraceData() []byte {
@@ -1203,7 +1457,17 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1"})
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
@@ -1218,7 +1482,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).AnyTimes()
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
 					traceService: traceServiceMock,
@@ -1250,36 +1514,6 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "request is nil",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
-				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
-				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
-				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				return fields{
-					traceService: traceServiceMock,
-					auth:         authMock,
-					benefit:      benefitMock,
-					tenant:       tenantMock,
-					workspace:    workspaceMock,
-					rateLimiter:  rateLimiterMock,
-					traceConfig:  traceConfigMock,
-					metrics:      metricsMock,
-				}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: nil,
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
 			name: "page size exceeds limit",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
@@ -1287,6 +1521,17 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1332,7 +1577,17 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1381,10 +1636,20 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				metricsMock.EXPECT().EmitListSpansOapi(
 					int64(123),
 					gomock.Any(),
@@ -1431,10 +1696,20 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				metricsMock.EXPECT().EmitListSpansOapi(
 					int64(123),
 					gomock.Any(),
@@ -1472,7 +1747,17 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.ListSpansOApi(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1526,10 +1811,20 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				metricsMock.EXPECT().EmitSearchTraceOapi(
 					int64(123),
 					gomock.Any(),
@@ -1583,10 +1878,20 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				metricsMock.EXPECT().EmitSearchTraceOapi(
 					int64(123),
 					gomock.Any(),
@@ -1631,6 +1936,17 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1661,6 +1977,17 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1704,6 +2031,17 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1749,7 +2087,17 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -1801,10 +2149,20 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				metricsMock.EXPECT().EmitSearchTraceOapi(
 					int64(123),
 					gomock.Any(),
@@ -1843,7 +2201,17 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.SearchTraceOApi(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1903,7 +2271,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
@@ -1915,7 +2293,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).AnyTimes()
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
 					traceService: traceServiceMock,
@@ -1959,6 +2337,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2000,6 +2389,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2041,6 +2441,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2083,7 +2494,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2126,7 +2547,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
@@ -2138,7 +2569,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).AnyTimes()
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 				return fields{
 					traceService: traceServiceMock,
@@ -2173,7 +2604,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return(int64(123))
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
@@ -2185,7 +2626,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).AnyTimes()
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
 					traceService: traceServiceMock,
@@ -2217,7 +2658,17 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
 			got, err := o.ListTracesOApi(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -2262,6 +2713,17 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2291,7 +2753,14 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("")
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2323,8 +2792,19 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("workspace1").Times(2)
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("workspace2").Times(1)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+							return "workspace1"
+						case "span2":
+							return "workspace1"
+						case "span3":
+							return "workspace2"
+						}					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
@@ -2365,9 +2845,19 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
-			got := o.(*OpenAPIApplication).unpackSpace(tt.args.ctx, tt.args.spans)
+			got := o.unpackSpace(tt.args.ctx, tt.args.spans)
 			if tt.want == nil {
 				assert.Nil(t, got)
 			} else {
@@ -2382,8 +2872,8 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 	}
 }
 
-// TestOpenAPIApplication_AllowBySpace tests the AllowBySpace method
-func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
+// TestOpenAPIApplication_AllowByKey tests the AllowByKey method
+func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 	type fields struct {
 		traceService service.ITraceService
 		auth         rpc.IAuthProvider
@@ -2412,13 +2902,24 @@ func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "query_trace:qps:space_id:123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
+				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -2444,13 +2945,24 @@ func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "query_trace:qps:space_id:123", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
+				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -2476,12 +2988,23 @@ func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(0, assert.AnError)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(0, assert.AnError)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -2507,13 +3030,24 @@ func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "query_trace:qps:space_id:123", 1, gomock.Any()).Return(nil, assert.AnError)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
+				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(nil, assert.AnError)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -2539,13 +3073,24 @@ func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
+					if len(spans) > 0 {
+						switch spans[0].SpanID {
+						case "span1":
+						case "span2":
+						case "span3":
+							return "workspace2"						}
+					}
+					return ""
+				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPSBySpace(gomock.Any(), int64(123)).Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "query_trace:qps:space_id:123", 1, gomock.Any()).Return(nil, nil)
+				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
+				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(nil, nil)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -2570,9 +3115,19 @@ func TestOpenAPIApplication_AllowBySpace(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			o, err := NewOpenAPIApplication(fields.traceService, fields.auth, fields.benefit, fields.tenant, fields.workspace, fields.rateLimiter, fields.traceConfig, fields.metrics)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			err := error(nil)
 			assert.NoError(t, err)
-			got := o.(*OpenAPIApplication).AllowBySpace(tt.args.ctx, tt.args.workspaceID)
+			got := o.AllowByKey(tt.args.ctx, strconv.FormatInt(tt.args.workspaceID, 10))
 			assert.Equal(t, tt.want, got)
 		})
 	}
