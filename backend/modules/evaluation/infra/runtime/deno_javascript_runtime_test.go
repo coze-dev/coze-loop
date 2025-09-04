@@ -15,7 +15,7 @@ import (
 
 func TestNewDenoJavaScriptRuntimeAdapter(t *testing.T) {
 	logger := logrus.New()
-	config := DefaultSandboxConfig()
+	config := entity.DefaultSandboxConfig()
 
 	adapter, err := NewDenoJavaScriptRuntimeAdapter(config, logger)
 	assert.NoError(t, err)
@@ -30,7 +30,7 @@ func TestNewDenoJavaScriptRuntimeAdapter(t *testing.T) {
 
 func TestDenoJavaScriptRuntimeAdapter_RunCode(t *testing.T) {
 	logger := logrus.New()
-	config := DefaultSandboxConfig()
+	config := entity.DefaultSandboxConfig()
 	adapter, err := NewDenoJavaScriptRuntimeAdapter(config, logger)
 	assert.NoError(t, err)
 
@@ -86,7 +86,7 @@ func TestDenoJavaScriptRuntimeAdapter_RunCode(t *testing.T) {
 
 func TestDenoJavaScriptRuntimeAdapter_ValidateCode(t *testing.T) {
 	logger := logrus.New()
-	config := DefaultSandboxConfig()
+	config := entity.DefaultSandboxConfig()
 	adapter, err := NewDenoJavaScriptRuntimeAdapter(config, logger)
 	assert.NoError(t, err)
 
@@ -134,7 +134,7 @@ func TestDenoJavaScriptRuntimeAdapter_ValidateCode(t *testing.T) {
 
 func TestDenoJavaScriptRuntimeAdapter_Cleanup(t *testing.T) {
 	logger := logrus.New()
-	config := DefaultSandboxConfig()
+	config := entity.DefaultSandboxConfig()
 	adapter, err := NewDenoJavaScriptRuntimeAdapter(config, logger)
 	assert.NoError(t, err)
 

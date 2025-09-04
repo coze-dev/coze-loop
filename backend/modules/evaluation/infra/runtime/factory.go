@@ -15,13 +15,13 @@ import (
 // RuntimeFactoryImpl Runtime工厂实现
 type RuntimeFactoryImpl struct {
 	logger        *logrus.Logger
-	sandboxConfig *SandboxConfig
+	sandboxConfig *entity.SandboxConfig
 }
 
 // NewRuntimeFactory 创建Runtime工厂实例
-func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *SandboxConfig) component.IRuntimeFactory {
+func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
 	if sandboxConfig == nil {
-		sandboxConfig = DefaultSandboxConfig()
+		sandboxConfig = entity.DefaultSandboxConfig()
 	}
 	
 	return &RuntimeFactoryImpl{

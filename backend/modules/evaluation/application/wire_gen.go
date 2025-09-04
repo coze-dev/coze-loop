@@ -267,8 +267,8 @@ func NewLock(cmdable redis.Cmdable) lock.ILocker {
 }
 
 // NewSandboxConfig 创建默认沙箱配置
-func NewSandboxConfig() *runtime.SandboxConfig {
-	return runtime.DefaultSandboxConfig()
+func NewSandboxConfig() *entity.SandboxConfig {
+	return entity.DefaultSandboxConfig()
 }
 
 // NewLogger 创建默认日志记录器

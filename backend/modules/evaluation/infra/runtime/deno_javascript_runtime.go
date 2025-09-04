@@ -12,20 +12,19 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/infra/deno"
-	sandboxEntity "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/sandbox/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime/deno"
 )
 
 // DenoJavaScriptRuntimeAdapter 基于Deno的JavaScript运行时适配器
 type DenoJavaScriptRuntimeAdapter struct {
 	logger *logrus.Logger
-	config *SandboxConfig
+	config *entity.SandboxConfig
 }
 
 // NewDenoJavaScriptRuntimeAdapter 创建JavaScript运行时适配器
-func NewDenoJavaScriptRuntimeAdapter(config *SandboxConfig, logger *logrus.Logger) (*DenoJavaScriptRuntimeAdapter, error) {
+func NewDenoJavaScriptRuntimeAdapter(config *entity.SandboxConfig, logger *logrus.Logger) (*DenoJavaScriptRuntimeAdapter, error) {
 	if config == nil {
-		config = DefaultSandboxConfig()
+		config = entity.DefaultSandboxConfig()
 	}
 
 	return &DenoJavaScriptRuntimeAdapter{
@@ -62,7 +61,7 @@ func (adapter *DenoJavaScriptRuntimeAdapter) RunCode(ctx context.Context, code s
 	defer denoRuntime.Cleanup()
 
 	// 构建执行请求
-	req := &sandboxEntity.ExecutionRequest{
+	req := &entity.SandboxExecutionRequest{
 		Code:     code,
 		Language: language,
 		Config:   adapter.convertConfig(),
@@ -103,17 +102,12 @@ func (adapter *DenoJavaScriptRuntimeAdapter) Cleanup() error {
 }
 
 // convertConfig 转换配置格式
-func (adapter *DenoJavaScriptRuntimeAdapter) convertConfig() *sandboxEntity.SandboxConfig {
-	return &sandboxEntity.SandboxConfig{
-		MemoryLimit:    adapter.config.MemoryLimit,
-		TimeoutLimit:   adapter.config.TimeoutLimit,
-		MaxOutputSize:  adapter.config.MaxOutputSize,
-		NetworkEnabled: adapter.config.NetworkEnabled,
-	}
+func (adapter *DenoJavaScriptRuntimeAdapter) convertConfig() *entity.SandboxConfig {
+	return adapter.config
 }
 
 // convertResult 转换结果格式
-func (adapter *DenoJavaScriptRuntimeAdapter) convertResult(sandboxResult *sandboxEntity.ExecutionResult) *entity.ExecutionResult {
+func (adapter *DenoJavaScriptRuntimeAdapter) convertResult(sandboxResult *entity.SandboxExecutionResult) *entity.ExecutionResult {
 	var retVal string
 	if sandboxResult.Output != nil {
 		retVal = fmt.Sprintf(`{"score": %f, "reason": "%s"}`, sandboxResult.Output.Score, sandboxResult.Output.Reason)
