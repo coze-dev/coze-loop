@@ -5,6 +5,7 @@ import { useRef, useImperativeHandle, forwardRef } from 'react';
 
 import { cloneDeep } from 'lodash-es';
 import cls from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { tag } from '@cozeloop/api-schema/data';
 import { IconCozTrashCan, IconCozPlus } from '@coze-arch/coze-design/icons';
 import {
@@ -107,7 +108,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
             values.content_type === TagContentType.Categorical &&
             (!values.tag_values || values.tag_values.length === 0)
           ) {
-            Toast.error('请至少添加一个标签选项');
+            Toast.error(I18n.t('add_at_least_one_option'));
             return;
           }
           onSubmit?.(values);
@@ -120,13 +121,18 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
         {({ formState, formApi }) => (
           <>
             <div className="text-[16px] font-semibold leading-[22px] text-[var(--coz-fg-primary)] mb-3">
-              基础信息
+              {I18n.t('basic_info')}
             </div>
             <FormInput
               field="tag_key_name"
-              label="标签名称"
-              placeholder="请输入标签名称"
-              rules={[{ required: true, message: '请输入标签名称' }]}
+              label={I18n.t('tag_name')}
+              placeholder={I18n.t('enter_tag_name')}
+              rules={[
+                {
+                  required: true,
+                  message: I18n.t('enter_tag_name'),
+                },
+              ]}
               maxLength={50}
               validate={composeValidate([
                 tagNameValidate,
@@ -136,37 +142,37 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
             />
             <FormTextArea
               field="description"
-              label="描述"
-              placeholder="请输入描述"
+              label={I18n.t('description')}
+              placeholder={I18n.t('enter_description')}
               maxCount={200}
               maxLength={200}
               validate={value => {
                 if (value && value.length > 200) {
-                  return '描述不能超过200个字符';
+                  return I18n.t('description_length_limit');
                 }
                 return '';
               }}
             />
             <Divider className="my-3" />
             <div className="text-[16px] font-semibold leading-[22px] text-[var(--coz-fg-primary)] mb-3 pt-3">
-              标签配置
+              {I18n.t('tag_configuration')}
             </div>
             <FormSelect
               field="content_type"
-              label="标签类型"
+              label={I18n.t('tag_type')}
               className="w-full"
-              placeholder="请输入标签类型"
-              rules={[{ required: true, message: '请输入标签类型' }]}
+              placeholder={I18n.t('enter_tag_type')}
+              rules={[{ required: true, message: I18n.t('enter_tag_type') }]}
               optionList={TAG_TYPE_OPTIONS}
               disabled={entry === 'edit-tag'}
               onChange={value => {
                 if (value === tag.TagContentType.Boolean) {
                   formApi.setValue('tag_values', [
                     {
-                      tag_value_name: '是',
+                      tag_value_name: I18n.t('yes'),
                     },
                     {
-                      tag_value_name: '否',
+                      tag_value_name: I18n.t('no'),
                     },
                   ]);
                 } else {
@@ -209,7 +215,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                                   className="w-full"
                                   noLabel
                                   field={`${field}.tag_value_name`}
-                                  placeholder="请输入"
+                                  placeholder={I18n.t('please_enter')}
                                   fieldClassName="!py-0"
                                   maxLength={50}
                                   onChange={() => {
@@ -235,8 +241,8 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                                   theme="dark"
                                   content={
                                     currentValueItem?.tag_status
-                                      ? '禁用标签'
-                                      : '启用标签'
+                                      ? I18n.t('disable_tag')
+                                      : I18n.t('enable_tag')
                                   }
                                 >
                                   <FormSwitch
@@ -246,7 +252,10 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                                   />
                                 </Tooltip>
                               ) : (
-                                <Tooltip content="删除" theme="dark">
+                                <Tooltip
+                                  content={I18n.t('delete')}
+                                  theme="dark"
+                                >
                                   <Button
                                     onClick={() => remove()}
                                     color="secondary"
@@ -260,7 +269,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                             </div>
                             {isChanged ? (
                               <div className="flex items-center text-[12px] leading-4 font-normal text-[var(--coz-fg-secondary)] mt-2">
-                                <span>修改前:</span>
+                                <span>{I18n.t('before_modification')}</span>
                                 <span>{originValueItem?.tag_value_name}</span>
                               </div>
                             ) : null}
@@ -274,7 +283,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                         color="primary"
                         icon={<IconCozPlus />}
                       >
-                        <span>添加标签选项</span>
+                        <span>{I18n.t('add_tag_option')}</span>
                         <div className="coz-fg-dim ml-1">
                           {arrayFields.length}/{maxTags}
                         </div>
@@ -289,11 +298,11 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                 <div className="px-3 py-4 rounded-[12px] bg-[var(--coz-bg-primary)] flex flex-col gap-y-2">
                   <div className="flex items-center gap-x-3 w-full">
                     <span className="text-[var(--coz-fg-primary)] text-[14px] font-normal leading-5">
-                      选项一
+                      {I18n.t('tag_option_one')}
                     </span>
                     <FormInput
                       field="tag_values.0.tag_value_name"
-                      placeholder="请输入"
+                      placeholder={I18n.t('please_enter')}
                       fieldClassName="!py-0 flex-1"
                       noLabel
                       maxLength={50}
@@ -313,11 +322,11 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                   </div>
                   <div className="flex items-center gap-x-3 w-full">
                     <span className="text-[var(--coz-fg-primary)] text-[14px] font-normal leading-5">
-                      选项二
+                      {I18n.t('tag_option_two')}
                     </span>
                     <FormInput
                       field="tag_values.1.tag_value_name"
-                      placeholder="请输入"
+                      placeholder={I18n.t('please_enter')}
                       fieldClassName="!py-0 flex-1"
                       noLabel
                       maxLength={50}

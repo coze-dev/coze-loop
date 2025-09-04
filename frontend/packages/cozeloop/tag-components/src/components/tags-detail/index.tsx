@@ -2,6 +2,7 @@ import { useParams, useBlocker } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 
 import { isEqual } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
@@ -64,11 +65,11 @@ export const TagsDetail = ({
   useEffect(() => {
     if (blocker.state === 'blocked') {
       Modal.warning({
-        title: '退出编辑',
-        content: '修改还未提交，退出后将不会保存此次修改。',
-        cancelText: '取消',
+        title: I18n.t('exit_edit'),
+        content: I18n.t('unsaved_changes_exit_warning'),
+        cancelText: I18n.t('cancel'),
         onCancel: blocker.reset,
-        okText: '退出',
+        okText: I18n.t('exit'),
         onOk: blocker.proceed,
       });
     }
@@ -100,13 +101,13 @@ export const TagsDetail = ({
 
   const handleSubmit = (values: FormValues) => {
     Modal.confirm({
-      title: '确认保存',
-      content: '修改标签后，存量已打标数据将会自动同步更新。',
+      title: I18n.t('confirm_save'),
+      content: I18n.t('tag_edit_sync_warning'),
       onOk: () => {
         setChanged(false);
         setBlockLeave(false);
         updateTag(values).then(() => {
-          Toast.success('保存成功');
+          Toast.success(I18n.t('save_success'));
           setTimeout(() => {
             navigate(
               `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
@@ -114,8 +115,8 @@ export const TagsDetail = ({
           }, 300);
         });
       },
-      okText: '保存',
-      cancelText: '取消',
+      okText: I18n.t('save'),
+      cancelText: I18n.t('cancel'),
       width: 420,
       autoLoading: true,
       cancelButtonProps: {

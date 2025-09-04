@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useGuards, GuardPoint, GuardActionType } from '@cozeloop/guard';
 import { ResizeSidesheet } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -63,7 +64,7 @@ export const AnnotationPanel = (props: AnnotationPanelProps) => {
       >
         <IconCozCardPencil className="w-[14px] h-[14px]" />
         <span className="text-[14px] leading-[22px] font-medium ml-1">
-          标注数据
+          {I18n.t('annotation_data')}
         </span>
       </Button>
       <ResizeSidesheet
@@ -87,7 +88,7 @@ export const AnnotationPanel = (props: AnnotationPanelProps) => {
         title={
           <div className="h-[68px] px-6 box-border flex items-center border-0 border-solid border-b border-[var(--coz-stroke-primary)] gap-x-2">
             <span className="text-[18px] font-medium leading-[26px] text-[var(--coz-fg-plus)]">
-              标注数据
+              {I18n.t('annotation_data')}
             </span>
 
             <span
@@ -98,8 +99,8 @@ export const AnnotationPanel = (props: AnnotationPanelProps) => {
             >
               {editChanged
                 ? saveLoading
-                  ? '自动保存中...'
-                  : '已保存，请前往 Feedback 查看'
+                  ? I18n.t('auto_saving')
+                  : I18n.t('saved_check_feedback')
                 : null}
             </span>
           </div>

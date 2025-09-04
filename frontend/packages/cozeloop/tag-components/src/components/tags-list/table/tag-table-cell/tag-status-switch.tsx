@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardActionType, GuardPoint, useGuard } from '@cozeloop/guard';
 import { tag } from '@cozeloop/api-schema/data';
 import { Popconfirm, Switch, Tooltip } from '@coze-arch/coze-design';
@@ -21,9 +22,11 @@ export const TagStatusSwitch = (props: TagStatusSwitchProps) => {
 
   const { runAsync: updateTagStatus, loading } = useUpdateTagStatus();
 
-  const title = enabled ? '禁用标签' : '启用标签';
-  const content = enabled ? '禁用后该标签无法被搜索添加' : '确定启用该标签吗？';
-  const okText = enabled ? '禁用' : '启用';
+  const title = enabled ? I18n.t('disable_tag') : I18n.t('enable_tag');
+  const content = enabled
+    ? I18n.t('disabled_tag_not_searchable')
+    : I18n.t('confirm_enable_tag');
+  const okText = enabled ? I18n.t('disable') : I18n.t('enable');
 
   return (
     <div onClick={e => e.stopPropagation()}>
@@ -31,7 +34,7 @@ export const TagStatusSwitch = (props: TagStatusSwitchProps) => {
         title={title}
         content={content}
         okText={okText}
-        cancelText="取消"
+        cancelText={I18n.t('cancel')}
         cancelButtonProps={{
           color: 'primary',
         }}
@@ -48,7 +51,10 @@ export const TagStatusSwitch = (props: TagStatusSwitchProps) => {
         }}
       >
         <span>
-          <Tooltip theme="dark" content={enabled ? '启用标签' : '禁用标签'}>
+          <Tooltip
+            theme="dark"
+            content={enabled ? I18n.t('enable_tag') : I18n.t('disable_tag')}
+          >
             <Switch
               size="mini"
               checked={enabled}

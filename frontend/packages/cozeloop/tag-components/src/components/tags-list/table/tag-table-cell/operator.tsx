@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { type tag } from '@cozeloop/api-schema/data';
 import { Typography } from '@coze-arch/coze-design';
@@ -26,7 +27,7 @@ export const Operator = ({ tagInfo, tagListPagePath }: OperatorProps) => {
         }}
         className="text-inherit font-inherit leading-inherit"
       >
-        详情
+        {I18n.t('detail')}
       </Typography.Text>
     </div>
   );

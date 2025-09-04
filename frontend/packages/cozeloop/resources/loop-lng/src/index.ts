@@ -29,6 +29,10 @@ import observationLocaleEnUS from './locales/observation/en-US.json';
 import promptLocaleZhCN from './locales/prompt/zh-CN.json';
 import promptLocaleEnUS from './locales/prompt/en-US.json';
 
+// tag
+import tagLocaleZhCN from './locales/tag/zh-CN.json';
+import tagLocaleEnUS from './locales/tag/en-US.json';
+
 export const localeZhCN = Object.assign(
   {},
   commonLocaleZhCN,
@@ -38,6 +42,7 @@ export const localeZhCN = Object.assign(
   promptLocaleZhCN,
   evaluateLocaleZhCN,
   observationLocaleZhCN,
+  tagLocaleZhCN,
 );
 
 export const localeEnUS = Object.assign(
@@ -49,4 +54,5 @@ export const localeEnUS = Object.assign(
   promptLocaleEnUS,
   evaluateLocaleEnUS,
   observationLocaleEnUS,
+  tagLocaleEnUS,
 );

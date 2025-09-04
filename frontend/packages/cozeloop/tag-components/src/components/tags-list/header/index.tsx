@@ -1,5 +1,6 @@
 import { debounce } from 'lodash-es';
 import cls from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard, GuardActionType } from '@cozeloop/guard';
 import { UserSelect } from '@cozeloop/biz-components-adapter';
 import { type tag } from '@cozeloop/api-schema/data';
@@ -42,7 +43,7 @@ export const TagsListHeader = (props: TagListHeaderProps) => {
         <div className="w-60">
           <Search
             className="box-border !w-full !mr-0 !pr-0"
-            placeholder="请输入标签名称"
+            placeholder={I18n.t('enter_tag_name')}
             value={searchValue}
             onSearch={debounce(e => {
               onSearchValueChange?.(e as string);
@@ -54,7 +55,7 @@ export const TagsListHeader = (props: TagListHeaderProps) => {
         </div>
         <Select
           className="box-border w-[180px]"
-          placeholder="请输入标签类型"
+          placeholder={I18n.t('enter_tag_type')}
           optionList={TAG_TYPE_OPTIONS}
           multiple
           value={contentTypes}
@@ -65,7 +66,7 @@ export const TagsListHeader = (props: TagListHeaderProps) => {
           showClear
         />
         <UserSelect
-          placeholder="请输入创建人"
+          placeholder={I18n.t('enter_creator')}
           value={createdBys}
           onChange={debounce(value => {
             onCreatedBysChange?.(value as string[]);
@@ -80,7 +81,7 @@ export const TagsListHeader = (props: TagListHeaderProps) => {
         onClick={() => onCreateTag?.()}
         disabled={guard.data.type === GuardActionType.READONLY}
       >
-        新建标签
+        {I18n.t('create_tag')}
       </Button>
     </div>
   );

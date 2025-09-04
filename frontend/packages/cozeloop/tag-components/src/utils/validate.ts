@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { DataApi } from '@cozeloop/api-schema';
 import { logger } from '@coze-arch/logger';
@@ -10,22 +11,20 @@ export const tagNameValidate: ValidateFn = (name: string) => {
   const reg = new RegExp(/^[\u4e00-\u9fa5_a-zA-Z0-9]+$/);
 
   if (!name || name.length <= 0 || name.length > MAX_TAG_NAME_LENGTH) {
-    return '标签名称必须为 1～50 字符长度';
+    return I18n.t('tag_name_length_limit');
   }
 
   if (!reg.test(name)) {
-    return '标签名称仅支持输入中文、英文、数字和下划线';
+    return I18n.t('tag_name_valid_chars');
   }
 
   return '';
 };
 
-export const tagEmptyValueValidate: ValidateFn = (
-  value?: string | number,
-) => {
+export const tagEmptyValueValidate: ValidateFn = (value?: string | number) => {
   console.log('tagEmptyValueValidate', { value });
   if (!value || value.toString().trim() === '') {
-    return '标签值不能为空';
+    return I18n.t('tag_value_not_empty');
   }
 
   return '';
@@ -33,7 +32,7 @@ export const tagEmptyValueValidate: ValidateFn = (
 
 export const tagLengthMaxLengthValidate: ValidateFn = (value: string) => {
   if (value && value.length > 200) {
-    return '标签值长度不能超过 200 个字符';
+    return I18n.t('tag_value_length_limit');
   }
 
   return '';
@@ -52,7 +51,7 @@ export const useTagNameValidateUniqBySpace = (tagKeyId?: string) => {
       return tagInfos &&
         tagInfos?.length > 0 &&
         tagInfos.findIndex(item => item.tag_key_id === tagKeyId) === -1
-        ? '同空间内标签名称不允许重复'
+        ? I18n.t('tag_name_no_duplicate_space')
         : '';
     } catch (error) {
       logger.error({
@@ -70,7 +69,7 @@ export const tagValidateNameUniqByOptions = (
 ) =>
   ((name: string) => {
     if (options.includes(name) && options.indexOf(name) !== index) {
-      return '一个标签内的标签值不允许重复';
+      return I18n.t('tag_value_no_duplicate');
     }
     return '';
   }) as ValidateFn;

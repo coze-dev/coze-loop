@@ -213,17 +213,21 @@ export const useTagFormModal = (
       try {
         if (mode === 'create') {
           await createTagMutation.runAsync(values);
-          Toast.success('标签创建成功');
+          Toast.success(I18n.t('tag_create_success'));
         } else if (mode === 'edit') {
           await updateTagMutation.runAsync(values);
-          Toast.success('标签更新成功');
+          Toast.success(I18n.t('tag_update_success'));
         }
 
         getCurrentCallback('onSuccess')?.();
         close();
       } catch (error) {
         console.error('标签操作失败:', error);
-        Toast.error(mode === 'create' ? '标签创建失败' : '标签更新失败');
+        Toast.error(
+          mode === 'create'
+            ? I18n.t('tag_create_failure')
+            : I18n.t('tag_update_failure'),
+        );
       }
     },
     [mode, createTagMutation, updateTagMutation, close, getCurrentCallback],
@@ -242,16 +246,16 @@ export const useTagFormModal = (
   const modalConfig = useMemo(() => {
     const configs = {
       create: {
-        title: '新建标签',
-        okText: I18n.t('menu_evaluate_case_create'),
+        title: I18n.t('create_tag'),
+        okText: I18n.t('create'),
       },
       edit: {
-        title: '编辑标签',
-        okText: I18n.t('evaluate_dataset_save'),
+        title: I18n.t('edit_tag'),
+        okText: I18n.t('save'),
       },
       readonly: {
-        title: '查看标签',
-        okText: '只读',
+        title: I18n.t('view_tag'),
+        okText: I18n.t('read_only'),
       },
     };
     return configs[mode];
@@ -267,7 +271,7 @@ export const useTagFormModal = (
       onOk={handleOk}
       okText={modalOkText}
       onCancel={handleCancel}
-      cancelText={I18n.t('global_btn_cancel')}
+      cancelText={I18n.t('cancel')}
       confirmLoading={loading}
       width={600}
       height={640}
@@ -279,7 +283,7 @@ export const useTagFormModal = (
           justify="start"
           type="info"
           icon={<IconCozInfoCircleFillPalette className="coz-fg-hglt" />}
-          description={I18n.t('data_engine_changes_sync_to_space_mgmt')}
+          description={I18n.t('changes_sync_to_space_tag_management')}
           closeIcon={null}
         />
         <TagsForm

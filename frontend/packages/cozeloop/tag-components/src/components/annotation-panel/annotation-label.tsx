@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { type tag } from '@cozeloop/api-schema/data';
 import { withField } from '@coze-arch/coze-design';
@@ -42,7 +43,7 @@ export const AnnotationLabel = (props: AnnotationLabelProps) => {
   return (
     <div className={styles['annotation-label']}>
       <TooltipWhenDisabled
-        content="该标签已禁用，不允许修改"
+        content={I18n.t('tag_disabled_no_modification')}
         disabled={isTagDisabled}
         theme="dark"
       >
@@ -52,7 +53,7 @@ export const AnnotationLabel = (props: AnnotationLabelProps) => {
             paddingBottom: '6px',
           }}
           field={`${field}.annotation.manual_feedback.template_tag_key_id`}
-          placeholder="请输入标签名称"
+          placeholder={I18n.t('enter_tag_name')}
           noLabel
           className="w-[200px] min-w-[200px] max-w-[200px] overflow-hidden"
           showCreateTagButton

@@ -1,4 +1,5 @@
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardActionType } from '@cozeloop/guard';
 import { UserProfile } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
@@ -69,11 +70,19 @@ export const TagDetailHeader = ({
             </div>
             <Divider layout="vertical" className="h-[12px] mx-[3px]" />
             <div className="text-[var(--coz-fg-secondary)] whitespace-nowrap">
-              更新时间: {formatTimestampToString(base_info?.updated_at ?? '')}
+              {I18n.t('update_time', {
+                placeholder1: formatTimestampToString(
+                  base_info?.updated_at ?? '',
+                ),
+              })}
             </div>
             <Divider layout="vertical" className="h-[12px] mx-[3px]" />
             <div className="text-[var(--coz-fg-secondary)] whitespace-nowrap">
-              创建时间: {formatTimestampToString(base_info?.created_at ?? '')}
+              {I18n.t('create_time', {
+                placeholder1: formatTimestampToString(
+                  base_info?.created_at ?? '',
+                ),
+              })}
             </div>
             <Divider layout="vertical" className="h-[12px] mx-[3px]" />
             <div className="flex items-center flex-1 overflow-hidden">
@@ -88,14 +97,14 @@ export const TagDetailHeader = ({
       </div>
       <div className="flex items-center gap-x-2">
         <Button color="primary" onClick={onShowEditHistory}>
-          修改记录
+          {I18n.t('change_log')}
         </Button>
         <Button
           color="brand"
           disabled={!changed || guardType === GuardActionType.READONLY}
           onClick={onSubmit}
         >
-          保存
+          {I18n.t('save')}
         </Button>
       </div>
     </div>

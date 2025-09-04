@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { IconCozLongArrowUp } from '@coze-arch/coze-design/icons';
@@ -34,7 +35,7 @@ export const TagsCreatePage = ({
   const tagFormRef = useRef<TagFormRef>(null);
   const service = useCreateTag();
   useBreadcrumb({
-    text: '新建标签',
+    text: I18n.t('create_tag'),
   });
 
   const { data: tagSpec, loading: tagSpecLoading } = useGetTagSpec();
@@ -45,7 +46,7 @@ export const TagsCreatePage = ({
       navigate(
         `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
       );
-      Toast.success('创建成功');
+      Toast.success(I18n.t('create_success'));
     });
   };
 
@@ -71,7 +72,7 @@ export const TagsCreatePage = ({
           <IconCozLongArrowUp className="w-5 h-5" />
         </div>
         <div className="text-[20px] font-medium leading-5 text-[var(--coz-fg-plus)]">
-          新建标签
+          {I18n.t('create_tag')}
         </div>
       </div>
       <div className="pt-4 px-[52px] flex justify-center max-w-full flex-1 overflow-auto styled-scroll">
@@ -86,7 +87,7 @@ export const TagsCreatePage = ({
       </div>
       <div className="flex items-center justify-end w-[800px] mx-auto py-6">
         <Button color="brand" onClick={() => tagFormRef.current?.submit()}>
-          创建
+          {I18n.t('create')}
         </Button>
       </div>
     </div>
