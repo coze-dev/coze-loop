@@ -12,7 +12,8 @@ import (
 )
 
 type SpanEnv struct {
-	WorkspaceId int64
+	WorkspaceId           int64
+	ThirdPartyWorkspaceID string
 }
 
 type Factory interface {
