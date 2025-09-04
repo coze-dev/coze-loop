@@ -15,6 +15,6 @@ type IExptInsightAnalysisService interface {
 	GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64, session *entity.Session) (*entity.ExptInsightAnalysisRecord, error)
 	ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page, session *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error)
 	DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error
-	FeedbackExptInsightAnalysisReport(ctx context.Context, param *entity.ExptInsightAnalysisFeedbackParam) error
+	FeedbackExptInsightAnalysis(ctx context.Context, param *entity.ExptInsightAnalysisFeedbackParam) error
 	ListExptInsightAnalysisFeedbackComment(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*entity.ExptInsightAnalysisFeedbackComment, int64, error)
 }

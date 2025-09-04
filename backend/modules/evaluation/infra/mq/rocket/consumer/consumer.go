@@ -29,7 +29,7 @@ func NewConsumerWorkers(
 		newExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
 		newExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
 		newExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
-		newExptExportEventConsumer(NewExptExportConsumer(exptApp), loader),
+		newExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 	}, nil
 }
 
