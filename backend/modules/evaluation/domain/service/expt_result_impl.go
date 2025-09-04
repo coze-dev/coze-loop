@@ -2211,6 +2211,11 @@ func (e ExptResultServiceImpl) compareTurnResultFilter(ctx context.Context, turn
 		evaluatorScoreDiff = true
 	}
 
+	// 比较 Annotation 数据
+	if annotationDiff := e.compareAnnotations(ctx, exptTurnResultFilter, turnResult, turnKey); annotationDiff {
+		diffExist = true
+	}
+
 	return diffExist, evaluatorScoreDiff, actualOutputDiff
 }
 
@@ -2387,4 +2392,146 @@ func ParseTurnKey(turnKey string) (*TurnKeyComponents, error) {
 		ItemID:  itemID,
 		TurnID:  turnID,
 	}, nil
+}
+
+// compareAnnotations 比较 Annotation 数据
+func (e ExptResultServiceImpl) compareAnnotations(ctx context.Context, exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnResult *entity.TurnResult, turnKey string) bool {
+	// 检查基础数据有效性
+	if turnResult.ExperimentResults[0].Payload.AnnotateResult == nil ||
+		len(turnResult.ExperimentResults[0].Payload.AnnotateResult.AnnotateRecords) == 0 {
+		// 如果 RDS 中没有 Annotation 数据，但 ClickHouse 中有，则存在差异
+		if len(exptTurnResultFilter.AnnotationFloat) > 0 ||
+			len(exptTurnResultFilter.AnnotationBool) > 0 ||
+			len(exptTurnResultFilter.AnnotationString) > 0 {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters annotation data missing in RDS but exists in ClickHouse, turnKey: %v", turnKey)
+			return true
+		}
+		return false
+	}
+
+	diffExist := false
+
+	// 构建 RDS Annotation 数据映射
+	rdsAnnotationFloat := make(map[string]float64)
+	rdsAnnotationString := make(map[string]string)
+
+	// 获取 Annotation 键映射
+	annotationKeyMappings, err := e.getAnnotationKeyMappings(ctx, exptTurnResultFilter.SpaceID, exptTurnResultFilter.ExptID)
+	if err != nil {
+		logs.CtxError(ctx, "CompareExptTurnResultFilters get annotation key mappings failed, turnKey: %v, err: %v", turnKey, err)
+		return false
+	}
+
+	// 处理 RDS 中的 Annotation 数据
+	for _, annotateRecord := range turnResult.ExperimentResults[0].Payload.AnnotateResult.AnnotateRecords {
+		if annotateRecord.AnnotateData == nil {
+			continue
+		}
+
+		// 获取对应的键名
+		key, exists := annotationKeyMappings[fmt.Sprintf("%d", annotateRecord.TagKeyID)]
+		if !exists {
+			continue
+		}
+
+		switch annotateRecord.AnnotateData.TagContentType {
+		case entity.TagContentTypeContinuousNumber:
+			if annotateRecord.AnnotateData.Score != nil {
+				rdsAnnotationFloat[key] = *annotateRecord.AnnotateData.Score
+			}
+		case entity.TagContentTypeFreeText:
+			if annotateRecord.AnnotateData.TextValue != nil {
+				rdsAnnotationString[key] = *annotateRecord.AnnotateData.TextValue
+			}
+		case entity.TagContentTypeCategorical, entity.TagContentTypeBoolean:
+			rdsAnnotationString[key] = strconv.FormatInt(annotateRecord.TagValueID, 10)
+		}
+	}
+
+	// 双向对比 AnnotationFloat
+	diffExist = e.compareAnnotationFloat(ctx, exptTurnResultFilter.AnnotationFloat, rdsAnnotationFloat, turnKey) || diffExist
+
+	// 双向对比 AnnotationString
+	diffExist = e.compareAnnotationString(ctx, exptTurnResultFilter.AnnotationString, rdsAnnotationString, turnKey) || diffExist
+
+	return diffExist
+}
+
+// compareAnnotationFloat 比较 Float 类型的 Annotation
+func (e ExptResultServiceImpl) compareAnnotationFloat(ctx context.Context, ckAnnotationFloat, rdsAnnotationFloat map[string]float64, turnKey string) bool {
+	diffExist := false
+
+	// ClickHouse -> RDS
+	for ckKey, ckValue := range ckAnnotationFloat {
+		if rdsValue, exists := rdsAnnotationFloat[ckKey]; exists {
+			if ckValue != rdsValue {
+				logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_float_value_diff, turnKey: %v, annotationKey: %v, ckValue: %v, rdsValue: %v",
+					turnKey, ckKey, ckValue, rdsValue)
+				diffExist = true
+			}
+		} else {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_float_missing_in_rds, turnKey: %v, annotationKey: %v, ckValue: %v",
+				turnKey, ckKey, ckValue)
+			diffExist = true
+		}
+	}
+
+	// RDS -> ClickHouse
+	for rdsKey, rdsValue := range rdsAnnotationFloat {
+		if _, exists := ckAnnotationFloat[rdsKey]; !exists {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_float_missing_in_clickhouse, turnKey: %v, annotationKey: %v, rdsValue: %v",
+				turnKey, rdsKey, rdsValue)
+			diffExist = true
+		}
+	}
+
+	return diffExist
+}
+
+// compareAnnotationString 比较 String 类型的 Annotation
+func (e ExptResultServiceImpl) compareAnnotationString(ctx context.Context, ckAnnotationString, rdsAnnotationString map[string]string, turnKey string) bool {
+	diffExist := false
+
+	// ClickHouse -> RDS
+	for ckKey, ckValue := range ckAnnotationString {
+		if rdsValue, exists := rdsAnnotationString[ckKey]; exists {
+			if ckValue != rdsValue {
+				logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_string_value_diff, turnKey: %v, annotationKey: %v, ckValue: %v, rdsValue: %v",
+					turnKey, ckKey, ckValue, rdsValue)
+				diffExist = true
+			}
+		} else {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_string_missing_in_rds, turnKey: %v, annotationKey: %v, ckValue: %v",
+				turnKey, ckKey, ckValue)
+			diffExist = true
+		}
+	}
+
+	// RDS -> ClickHouse
+	for rdsKey, rdsValue := range rdsAnnotationString {
+		if _, exists := ckAnnotationString[rdsKey]; !exists {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_string_missing_in_clickhouse, turnKey: %v, annotationKey: %v, rdsValue: %v",
+				turnKey, rdsKey, rdsValue)
+			diffExist = true
+		}
+	}
+
+	return diffExist
+}
+
+// getAnnotationKeyMappings 获取 Annotation 键映射
+func (e ExptResultServiceImpl) getAnnotationKeyMappings(ctx context.Context, spaceID, exptID int64) (map[string]string, error) {
+	exptTurnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, exptID)
+	if err != nil {
+		return nil, err
+	}
+
+	annotationKeyMappings := make(map[string]string)
+	for _, mapping := range exptTurnResultFilterKeyMappings {
+		if mapping.FieldType == entity.FieldTypeManualAnnotation {
+			annotationKeyMappings[mapping.FromField] = mapping.ToKey
+		}
+	}
+
+	return annotationKeyMappings, nil
 }
