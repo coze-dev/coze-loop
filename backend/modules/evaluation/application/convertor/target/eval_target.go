@@ -165,6 +165,27 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.CozeWorkflow.BaseInfo),
 			}
 		}
+	case do.EvalTargetTypeVolcengineAgent:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.VolcengineAgent != nil {
+			endpoints := make([]*dto.VolcengineAgentEndpoint, 0)
+			for _, e := range targetVersionDO.VolcengineAgent.VolcengineAgentEndpoints {
+				endpoints = append(endpoints, &dto.VolcengineAgentEndpoint{
+					EndpointID: &e.EndpointID,
+					APIKey:     &e.APIKey,
+				})
+			}
+			targetVersionDTO.EvalTargetContent.VolcengineAgent = &dto.VolcengineAgent{
+				ID:                       &targetVersionDO.VolcengineAgent.ID,
+				Name:                     &targetVersionDO.VolcengineAgent.Name,
+				Description:              &targetVersionDO.VolcengineAgent.Description,
+				VolcengineAgentEndpoints: endpoints,
+				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
+			}
+		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),

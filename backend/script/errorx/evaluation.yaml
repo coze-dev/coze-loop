@@ -237,3 +237,9 @@ error_code:
     message: evaluator benefit deny
     description: evaluator benefit deny
     no_affect_stability: true
+
+  - name: AccessingEndpointError
+    code: 5027
+    message: accessing endpoint error
+    description: Accessing endpoint error
+    no_affect_stability: true

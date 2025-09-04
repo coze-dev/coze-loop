@@ -108,6 +108,7 @@ type ExecuteEvalTargetParam struct {
 	SourceTargetVersion string
 	Input               *EvalTargetInputData
 	TargetType          EvalTargetType
+	EvalTarget          *EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
 }
 
 type ListEvaluatorRequest struct {
