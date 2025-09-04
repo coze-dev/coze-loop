@@ -193,3 +193,219 @@ func TestTraceMetricsImpl_EmitGetTrace(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceMetricsImpl_EmitListSpansOapi(t *testing.T) {
+	type fields struct {
+		spansMetrics infraMetrics.Metric
+	}
+	type args struct {
+		workspaceId  int64
+		platformType string
+		spanType     string
+		spanSize     int64
+		errorCode    int
+		start        time.Time
+		isError      bool
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+	}{
+		{
+			name: "should not panic when spansMetrics is nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{
+					spansMetrics: nil,
+				}
+			},
+			args: args{123, "coze", "llm", 1024, 0, time.Now(), false},
+		},
+		{
+			name: "should emit metrics when spansMetrics is not nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				m := mocks.NewMockMetric(ctrl)
+				m.EXPECT().Emit(gomock.Any(), gomock.Any()).Times(1)
+				return fields{
+					spansMetrics: m,
+				}
+			},
+			args: args{123, "coze", "llm", 1024, 0, time.Now(), false},
+		},
+		{
+			name: "should emit metrics with error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				m := mocks.NewMockMetric(ctrl)
+				m.EXPECT().Emit(gomock.Any(), gomock.Any()).Times(1)
+				return fields{
+					spansMetrics: m,
+				}
+			},
+			args: args{456, "openai", "chat", 2048, 500, time.Now(), true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				singletonTraceMetrics = nil
+				traceMetricsOnce = sync.Once{}
+			})
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceMetricsImpl{
+				spansMetrics: fields.spansMetrics,
+			}
+			assert.NotPanics(t, func() {
+				tr.EmitListSpansOapi(tt.args.workspaceId, tt.args.platformType, tt.args.spanType, tt.args.spanSize, tt.args.errorCode, tt.args.start, tt.args.isError)
+			})
+		})
+	}
+}
+
+func TestTraceMetricsImpl_EmitSearchTraceOapi(t *testing.T) {
+	type fields struct {
+		spansMetrics infraMetrics.Metric
+	}
+	type args struct {
+		workspaceId  int64
+		platformType string
+		spanSize     int64
+		errorCode    int
+		start        time.Time
+		isError      bool
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+	}{
+		{
+			name: "should not panic when spansMetrics is nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{
+					spansMetrics: nil,
+				}
+			},
+			args: args{123, "coze", 512, 0, time.Now(), false},
+		},
+		{
+			name: "should emit metrics when spansMetrics is not nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				m := mocks.NewMockMetric(ctrl)
+				m.EXPECT().Emit(gomock.Any(), gomock.Any()).Times(1)
+				return fields{
+					spansMetrics: m,
+				}
+			},
+			args: args{123, "coze", 512, 0, time.Now(), false},
+		},
+		{
+			name: "should emit metrics with error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				m := mocks.NewMockMetric(ctrl)
+				m.EXPECT().Emit(gomock.Any(), gomock.Any()).Times(1)
+				return fields{
+					spansMetrics: m,
+				}
+			},
+			args: args{789, "openai", 1024, 400, time.Now(), true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				singletonTraceMetrics = nil
+				traceMetricsOnce = sync.Once{}
+			})
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceMetricsImpl{
+				spansMetrics: fields.spansMetrics,
+			}
+			assert.NotPanics(t, func() {
+				tr.EmitSearchTraceOapi(tt.args.workspaceId, tt.args.platformType, tt.args.spanSize, tt.args.errorCode, tt.args.start, tt.args.isError)
+			})
+		})
+	}
+}
+
+func TestTraceMetricsImpl_EmitListTracesOapi(t *testing.T) {
+	type fields struct {
+		spansMetrics infraMetrics.Metric
+	}
+	type args struct {
+		workspaceId int64
+		errorCode   int
+		start       time.Time
+		isError     bool
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+	}{
+		{
+			name: "should not panic when spansMetrics is nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{
+					spansMetrics: nil,
+				}
+			},
+			args: args{123, 0, time.Now(), false},
+		},
+		{
+			name: "should emit metrics when spansMetrics is not nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				m := mocks.NewMockMetric(ctrl)
+				m.EXPECT().Emit(gomock.Any(), gomock.Any()).Times(1)
+				return fields{
+					spansMetrics: m,
+				}
+			},
+			args: args{123, 0, time.Now(), false},
+		},
+		{
+			name: "should emit metrics with error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				m := mocks.NewMockMetric(ctrl)
+				m.EXPECT().Emit(gomock.Any(), gomock.Any()).Times(1)
+				return fields{
+					spansMetrics: m,
+				}
+			},
+			args: args{456, 404, time.Now(), true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				singletonTraceMetrics = nil
+				traceMetricsOnce = sync.Once{}
+			})
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceMetricsImpl{
+				spansMetrics: fields.spansMetrics,
+			}
+			assert.NotPanics(t, func() {
+				tr.EmitListTracesOapi(tt.args.workspaceId, tt.args.errorCode, tt.args.start, tt.args.isError)
+			})
+		})
+	}
+}
+
+func TestTraceQueryTagNames(t *testing.T) {
+	expected := []string{
+		tagSpaceID,
+		tagPlatformType,
+		tagSpanType,
+		tagIsErr,
+		tagErrCode,
+	}
+	result := traceQueryTagNames()
+	assert.Equal(t, expected, result)
+	assert.Len(t, result, 5)
+}

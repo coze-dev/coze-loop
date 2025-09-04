@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -182,7 +183,7 @@ func TestNewDatasetItem(t *testing.T) {
 	type args struct {
 		workspaceID int64
 		datasetID   int64
-		spanID      string
+		span        *loop_span.Span
 	}
 	tests := []struct {
 		name string
@@ -194,13 +195,21 @@ func TestNewDatasetItem(t *testing.T) {
 			args: args{
 				workspaceID: 100,
 				datasetID:   1,
-				spanID:      "span123",
+				span: &loop_span.Span{
+					TraceID:  "trace123",
+					SpanID:   "span123",
+					SpanName: "test span",
+					SpanType: "test type",
+				},
 			},
 			want: &DatasetItem{
 				WorkspaceID: 100,
 				DatasetID:   1,
+				TraceID:     "trace123",
 				SpanID:      "span123",
 				FieldData:   make([]*FieldData, 0),
+				SpanName:    "test span",
+				SpanType:    "test type",
 			},
 		},
 		{
@@ -208,19 +217,14 @@ func TestNewDatasetItem(t *testing.T) {
 			args: args{
 				workspaceID: 200,
 				datasetID:   2,
-				spanID:      "",
+				span:        nil,
 			},
-			want: &DatasetItem{
-				WorkspaceID: 200,
-				DatasetID:   2,
-				SpanID:      "",
-				FieldData:   make([]*FieldData, 0),
-			},
+			want: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDatasetItem(tt.args.workspaceID, tt.args.datasetID, tt.args.spanID)
+			got := NewDatasetItem(tt.args.workspaceID, tt.args.datasetID, tt.args.span)
 			assert.Equal(t, tt.want, got)
 		})
 	}

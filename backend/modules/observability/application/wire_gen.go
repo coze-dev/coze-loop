@@ -90,7 +90,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 		return nil, err
 	}
 	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
-	iTraceExportService, err := service.NewTraceExportServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, iTenantProvider, datasetServiceAdaptor)
+	iTraceExportService, err := service.NewTraceExportServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, iTenantProvider, datasetServiceAdaptor, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iWorkSpaceProvider := workspace.NewWorkspaceProvider()
-	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2, iTenantProvider, iWorkSpaceProvider, limiterFactory, iTraceConfig)
+	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2, iTenantProvider, iWorkSpaceProvider, limiterFactory, iTraceConfig, iTraceMetrics)
 	if err != nil {
 		return nil, err
 	}

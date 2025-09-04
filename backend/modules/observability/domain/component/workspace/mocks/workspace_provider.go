@@ -54,3 +54,17 @@ func (mr *MockIWorkSpaceProviderMockRecorder) GetIngestWorkSpaceID(ctx, spans an
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestWorkSpaceID", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).GetIngestWorkSpaceID), ctx, spans)
 }
+
+// GetQueryWorkSpaceID mocks base method.
+func (m *MockIWorkSpaceProvider) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetQueryWorkSpaceID", ctx, requestWorkspaceID)
+	ret0, _ := ret[0].(int64)
+	return ret0
+}
+
+// GetQueryWorkSpaceID indicates an expected call of GetQueryWorkSpaceID.
+func (mr *MockIWorkSpaceProviderMockRecorder) GetQueryWorkSpaceID(ctx, requestWorkspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryWorkSpaceID", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).GetQueryWorkSpaceID), ctx, requestWorkspaceID)
+}

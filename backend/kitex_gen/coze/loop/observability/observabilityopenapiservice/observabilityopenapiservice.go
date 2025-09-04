@@ -42,6 +42,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListTracesOApi": kitex.NewMethodInfo(
+		listTracesOApiHandler,
+		newOpenAPIServiceListTracesOApiArgs,
+		newOpenAPIServiceListTracesOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateAnnotation": kitex.NewMethodInfo(
 		createAnnotationHandler,
 		newOpenAPIServiceCreateAnnotationArgs,
@@ -165,6 +172,25 @@ func newOpenAPIServiceListSpansOApiResult() interface{} {
 	return openapi.NewOpenAPIServiceListSpansOApiResult()
 }
 
+func listTracesOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceListTracesOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceListTracesOApiResult)
+	success, err := handler.(openapi.OpenAPIService).ListTracesOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceListTracesOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceListTracesOApiArgs()
+}
+
+func newOpenAPIServiceListTracesOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceListTracesOApiResult()
+}
+
 func createAnnotationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.OpenAPIServiceCreateAnnotationArgs)
 	realResult := result.(*openapi.OpenAPIServiceCreateAnnotationResult)
@@ -250,6 +276,16 @@ func (p *kClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiR
 	_args.Req = req
 	var _result openapi.OpenAPIServiceListSpansOApiResult
 	if err = p.c.Call(ctx, "ListSpansOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest) (r *openapi.ListTracesOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceListTracesOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceListTracesOApiResult
+	if err = p.c.Call(ctx, "ListTracesOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

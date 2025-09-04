@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
@@ -120,10 +121,13 @@ type DatasetItem struct {
 	ID          int64
 	WorkspaceID int64
 	DatasetID   int64
+	TraceID     string
 	SpanID      string
 	ItemKey     *string
 	FieldData   []*FieldData
 	Error       []*ItemError
+	SpanType    string
+	SpanName    string
 }
 
 type ItemError struct {
@@ -197,12 +201,18 @@ func (c *Content) GetMultiPart() []*Content {
 	return c.MultiPart
 }
 
-func NewDatasetItem(workspaceID int64, datasetID int64, spanID string) *DatasetItem {
+func NewDatasetItem(workspaceID int64, datasetID int64, span *loop_span.Span) *DatasetItem {
+	if span == nil {
+		return nil
+	}
 	return &DatasetItem{
 		WorkspaceID: workspaceID,
 		DatasetID:   datasetID,
-		SpanID:      spanID,
+		TraceID:     span.TraceID,
+		SpanID:      span.SpanID,
 		FieldData:   make([]*FieldData, 0),
+		SpanType:    span.SpanType,
+		SpanName:    span.SpanName,
 	}
 }
 
