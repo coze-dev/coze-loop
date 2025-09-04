@@ -77,6 +77,8 @@ enum SchemaKey {
     Float = 3
     Bool = 4
     Message = 5
+    /* 单选 */
+    SingleChoice = 6
 }
 
 struct DatasetFeatures {
