@@ -14,12 +14,13 @@ import (
 
 func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *domain_expt.ExptInsightAnalysisRecord {
 	dto := &domain_expt.ExptInsightAnalysisRecord{
-		RecordID:              do.ID,
-		WorkspaceID:           do.SpaceID,
-		ExptID:                do.ExptID,
-		AnalysisStatus:        InsightAnalysisStatus2DTO(do.Status),
-		AnalysisReportID:      do.AnalysisReportID,
-		AnalysisReportContent: ptr.Of(do.AnalysisReportContent),
+		RecordID:                    do.ID,
+		WorkspaceID:                 do.SpaceID,
+		ExptID:                      do.ExptID,
+		AnalysisStatus:              InsightAnalysisStatus2DTO(do.Status),
+		AnalysisReportID:            do.AnalysisReportID,
+		AnalysisReportContent:       ptr.Of(do.AnalysisReportContent),
+		ExptInsightAnalysisFeedback: ExptInsightAnalysisFeedbackDO2DTO(do.ExptInsightAnalysisFeedback),
 		BaseInfo: &domain_common.BaseInfo{
 			CreatedBy: &domain_common.UserInfo{
 				UserID: ptr.Of(do.CreatedBy),
@@ -27,6 +28,15 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 			CreatedAt: ptr.Of(do.CreatedAt.Unix()),
 			UpdatedAt: ptr.Of(do.UpdatedAt.Unix()),
 		},
+	}
+	return dto
+}
+
+func ExptInsightAnalysisFeedbackDO2DTO(do entity.ExptInsightAnalysisFeedback) *domain_expt.ExptInsightAnalysisFeedback {
+	dto := &domain_expt.ExptInsightAnalysisFeedback{
+		UpvoteCnt:           ptr.Of(int32(do.UpvoteCount)),
+		DownvoteCnt:         ptr.Of(int32(do.DownvoteCount)),
+		CurrentUserVoteType: ptr.Of(InsightAnalysisReportVoteType2DTO(do.CurrentUserVoteType)),
 	}
 	return dto
 }
@@ -63,6 +73,19 @@ func FeedbackActionType2DO(action domain_expt.FeedbackActionType) (entity.Feedba
 
 	default:
 		return 0, fmt.Errorf("unknown feedback action type")
+	}
+}
+
+func InsightAnalysisReportVoteType2DTO(voteType entity.InsightAnalysisReportVoteType) domain_expt.InsightAnalysisReportVoteType {
+	switch voteType {
+	case entity.None:
+		return domain_expt.InsightAnalysisReportVoteTypeNone
+	case entity.Upvote:
+		return domain_expt.InsightAnalysisReportVoteTypeUpvote
+	case entity.Downvote:
+		return domain_expt.InsightAnalysisReportVoteTypeDownvote
+	default:
+		return domain_expt.InsightAnalysisReportVoteTypeNone
 	}
 }
 
