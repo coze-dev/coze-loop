@@ -6,8 +6,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"strconv"
-
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -141,12 +139,12 @@ func (t *TraceConfigCenter) GetAnnotationSourceCfg(ctx context.Context) (*config
 	return annotationSourceCfg, nil
 }
 
-func (t *TraceConfigCenter) GetQueryMaxQPSBySpace(ctx context.Context, workspaceID int64) (int, error) {
+func (t *TraceConfigCenter) GetQueryMaxQPS(ctx context.Context, key string) (int, error) {
 	qpsConfig := new(config.QueryTraceRateLimitConfig)
 	if err := t.UnmarshalKey(ctx, queryTraceRateLimitCfgKey, &qpsConfig); err != nil {
 		return 0, err
 	}
-	if qps, ok := qpsConfig.SpaceMaxQPS[strconv.FormatInt(workspaceID, 10)]; ok {
+	if qps, ok := qpsConfig.SpaceMaxQPS[key]; ok {
 		return qps, nil
 	}
 	return qpsConfig.DefaultMaxQPS, nil

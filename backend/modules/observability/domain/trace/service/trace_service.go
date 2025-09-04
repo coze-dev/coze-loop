@@ -64,14 +64,15 @@ type GetTraceResp struct {
 }
 
 type SearchTraceOApiReq struct {
-	WorkspaceID  int64
-	Tenants      []string
-	TraceID      string
-	LogID        string
-	StartTime    int64 // ms
-	EndTime      int64 // ms
-	Limit        int32
-	PlatformType loop_span.PlatformType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Tenants               []string
+	TraceID               string
+	LogID                 string
+	StartTime             int64 // ms
+	EndTime               int64 // ms
+	Limit                 int32
+	PlatformType          loop_span.PlatformType
 }
 
 type SearchTraceOApiResp struct {
@@ -79,16 +80,17 @@ type SearchTraceOApiResp struct {
 }
 
 type ListSpansOApiReq struct {
-	WorkspaceID     int64
-	Tenants         []string
-	StartTime       int64 // ms
-	EndTime         int64 // ms
-	Filters         *loop_span.FilterFields
-	Limit           int32
-	DescByStartTime bool
-	PageToken       string
-	PlatformType    loop_span.PlatformType
-	SpanListType    loop_span.SpanListType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Tenants               []string
+	StartTime             int64 // ms
+	EndTime               int64 // ms
+	Filters               *loop_span.FilterFields
+	Limit                 int32
+	DescByStartTime       bool
+	PageToken             string
+	PlatformType          loop_span.PlatformType
+	SpanListType          loop_span.SpanListType
 }
 
 type ListSpansOApiResp struct {
@@ -104,9 +106,10 @@ type TraceQueryParam struct {
 }
 
 type GetTracesAdvanceInfoReq struct {
-	WorkspaceID  int64
-	Traces       []*TraceQueryParam
-	PlatformType loop_span.PlatformType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Traces                []*TraceQueryParam
+	PlatformType          loop_span.PlatformType
 }
 
 type GetTracesAdvanceInfoResp struct {
@@ -354,10 +357,11 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		return nil, err
 	}
 	processors, err := r.buildHelper.BuildSearchTraceOApiProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		QueryStartTime: req.StartTime,
-		QueryEndTime:   req.EndTime,
-		PlatformType:   req.PlatformType,
+		WorkspaceId:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		QueryStartTime:        req.StartTime,
+		QueryEndTime:          req.EndTime,
+		PlatformType:          req.PlatformType,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)

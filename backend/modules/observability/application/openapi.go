@@ -471,12 +471,12 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err
 	}
-	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
 	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
 		errCode = obErrorx.CommonNoPermissionCode
 		return nil, err
 	}
-	if !o.AllowBySpace(ctx, req.GetWorkspaceID()) {
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
 		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 		errCode = obErrorx.CommonRequestRateLimitCode
 		return nil, err
@@ -540,14 +540,15 @@ func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *opena
 	}
 
 	ret := &service.SearchTraceOApiReq{
-		WorkspaceID:  req.WorkspaceID,
-		Tenants:      o.tenant.GetOAPIQueryTenants(ctx, platformType),
-		TraceID:      req.GetTraceID(),
-		LogID:        req.GetLogid(),
-		StartTime:    req.GetStartTime(),
-		EndTime:      req.GetEndTime(),
-		Limit:        req.GetLimit(),
-		PlatformType: platformType,
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: o.workspace.GetQueryWorkSpaceID(ctx, req.WorkspaceID),
+		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
+		TraceID:               req.GetTraceID(),
+		LogID:                 req.GetLogid(),
+		StartTime:             req.GetStartTime(),
+		EndTime:               req.GetEndTime(),
+		Limit:                 req.GetLimit(),
+		PlatformType:          platformType,
 	}
 	if len(ret.Tenants) == 0 {
 		logs.CtxError(ctx, "fail to get platform tenants")
@@ -570,13 +571,13 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err
 	}
-	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
 	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
 		errCode = obErrorx.CommonNoPermissionCode
 		return nil, err
 	}
 
-	if !o.AllowBySpace(ctx, req.GetWorkspaceID()) {
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
 		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 		errCode = obErrorx.CommonRequestRateLimitCode
 		return nil, err
@@ -628,12 +629,13 @@ func (o *OpenAPIApplication) validateListSpansOApi(ctx context.Context, req *ope
 
 func (o *OpenAPIApplication) buildListSpansOApiReq(ctx context.Context, req *openapi.ListSpansOApiRequest) (*service.ListSpansOApiReq, error) {
 	ret := &service.ListSpansOApiReq{
-		WorkspaceID:     req.WorkspaceID,
-		StartTime:       req.GetStartTime(),
-		EndTime:         req.GetEndTime(),
-		Limit:           QueryLimitDefault,
-		DescByStartTime: len(req.GetOrderBys()) > 0,
-		PageToken:       req.GetPageToken(),
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: o.workspace.GetQueryWorkSpaceID(ctx, req.WorkspaceID),
+		StartTime:             req.GetStartTime(),
+		EndTime:               req.GetEndTime(),
+		Limit:                 QueryLimitDefault,
+		DescByStartTime:       len(req.GetOrderBys()) > 0,
+		PageToken:             req.GetPageToken(),
 	}
 	if req.PageSize != nil {
 		ret.Limit = *req.PageSize
@@ -680,20 +682,20 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err
 	}
-	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
 	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
 		errCode = obErrorx.CommonNoPermissionCode
 		return nil, err
 	}
 
-	if !o.AllowBySpace(ctx, req.GetWorkspaceID()) {
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
 		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 		errCode = obErrorx.CommonRequestRateLimitCode
 		return nil, err
 	}
 
 	logs.CtxInfo(ctx, "ListTracesOApi request: %+v", req)
-	sReq := o.buildListTracesOApiReq(req)
+	sReq := o.buildListTracesOApiReq(ctx, req)
 	sResp, err := o.traceService.GetTracesAdvanceInfo(ctx, sReq)
 	if err != nil {
 		errCode = obErrorx.CommonInternalErrorCode
@@ -738,10 +740,11 @@ func (o *OpenAPIApplication) validateListTracesOApiReq(ctx context.Context, req 
 	return nil
 }
 
-func (o *OpenAPIApplication) buildListTracesOApiReq(req *openapi.ListTracesOApiRequest) *service.GetTracesAdvanceInfoReq {
+func (o *OpenAPIApplication) buildListTracesOApiReq(ctx context.Context, req *openapi.ListTracesOApiRequest) *service.GetTracesAdvanceInfoReq {
 	ret := &service.GetTracesAdvanceInfoReq{
-		WorkspaceID: req.GetWorkspaceID(),
-		Traces:      make([]*service.TraceQueryParam, len(req.GetTraceIds())),
+		WorkspaceID:           req.GetWorkspaceID(),
+		ThirdPartyWorkspaceID: o.workspace.GetQueryWorkSpaceID(ctx, req.WorkspaceID),
+		Traces:                make([]*service.TraceQueryParam, len(req.GetTraceIds())),
 	}
 	for i, id := range req.GetTraceIds() {
 		ret.Traces[i] = &service.TraceQueryParam{
@@ -762,13 +765,13 @@ func (o *OpenAPIApplication) Send(ctx context.Context, event *entity.AnnotationE
 	return o.traceService.Send(ctx, event)
 }
 
-func (p *OpenAPIApplication) AllowBySpace(ctx context.Context, workspaceID int64) bool {
-	maxQPS, err := p.traceConfig.GetQueryMaxQPSBySpace(ctx, workspaceID)
+func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
+	maxQPS, err := p.traceConfig.GetQueryMaxQPS(ctx, key)
 	if err != nil {
-		logs.CtxError(ctx, "get query max qps failed, err=%v, space_id=%d", err, workspaceID)
+		logs.CtxError(ctx, "get query max qps failed, err=%v, key=%s", err, key)
 		return true
 	}
-	result, err := p.rateLimiter.AllowN(ctx, fmt.Sprintf("query_trace:qps:space_id:%d", workspaceID), 1,
+	result, err := p.rateLimiter.AllowN(ctx, key, 1,
 		limiter.WithLimit(&limiter.Limit{
 			Rate:   maxQPS,
 			Burst:  maxQPS,

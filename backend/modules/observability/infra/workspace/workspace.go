@@ -5,6 +5,7 @@ package workspace
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
@@ -23,6 +24,6 @@ func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans 
 	return spans[0].WorkspaceID
 }
 
-func (t *WorkspaceProviderImpl) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) int64 {
-	return requestWorkspaceID
+func (t *WorkspaceProviderImpl) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string {
+	return strconv.FormatInt(requestWorkspaceID, 10)
 }
