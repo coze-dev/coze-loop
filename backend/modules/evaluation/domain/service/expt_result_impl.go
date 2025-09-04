@@ -1825,44 +1825,82 @@ func (e ExptResultServiceImpl) InsertExptTurnResultFilterKeyMappings(ctx context
 
 func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
 	ctx = contexts.WithCtxWriteDB(ctx) // 更新result时需要取最新的result
-	exptDO, err := e.ExperimentRepo.MGetByID(ctx, []int64{exptID}, spaceID)
+	
+	// 1. 验证实验数据
+	createdDate, err := e.validateExperimentData(ctx, spaceID, exptID)
 	if err != nil {
 		return err
+	}
+	if createdDate == "" {
+		return nil // 实验数据无效，直接返回
+	}
+
+	// 2. 处理ItemIDs（如果为空则获取所有ItemIDs）
+	itemIDs, err = e.resolveItemIDs(ctx, spaceID, exptID, itemIDs)
+	if err != nil {
+		return err
+	}
+
+	// 3. 获取过滤器键映射
+	evaluatorVersionID2Key, err := e.getFilterKeyMappings(ctx, spaceID, exptID)
+	if err != nil {
+		return err
+	}
+
+	// 4. 分页处理数据比较
+	return e.processPagedComparison(ctx, spaceID, exptID, itemIDs, createdDate, evaluatorVersionID2Key, retryTimes)
+}
+
+// validateExperimentData 验证实验数据
+func (e ExptResultServiceImpl) validateExperimentData(ctx context.Context, spaceID, exptID int64) (string, error) {
+	exptDO, err := e.ExperimentRepo.MGetByID(ctx, []int64{exptID}, spaceID)
+	if err != nil {
+		return "", err
 	}
 	if len(exptDO) == 0 {
 		logs.CtxWarn(ctx, "CompareExptTurnResultFilters get expt result by id empty, exptID: %d, spaceID: %d", exptID, spaceID)
-		return nil
+		return "", nil
 	}
 	if exptDO[0].StartAt == nil {
 		logs.CtxWarn(ctx, "CompareExptTurnResultFilters expt start time is nil, exptID: %d, spaceID: %d", exptID, spaceID)
-		return nil
+		return "", nil
 	}
 
-	createdDate := exptDO[0].StartAt.Format("2006-01-02")
+	return exptDO[0].StartAt.Format("2006-01-02"), nil
+}
 
-	// 如果itemIDs为空，获取当前实验下的所有itemIDs
-	if len(itemIDs) == 0 {
-		logs.CtxInfo(ctx, "CompareExptTurnResultFilters itemIDs is empty, getting all items for expt, exptID: %d, spaceID: %d", exptID, spaceID)
-		allItemResults, _, err := e.ExptItemResultRepo.ListItemResultsByExptID(ctx, exptID, spaceID, entity.Page{}, false)
-		if err != nil {
-			return err
-		}
-
-		itemIDs = make([]int64, 0, len(allItemResults))
-		for _, itemResult := range allItemResults {
-			itemIDs = append(itemIDs, itemResult.ItemID)
-		}
-		logs.CtxInfo(ctx, "CompareExptTurnResultFilters got all items for expt, exptID: %d, spaceID: %d, totalItems: %d", exptID, spaceID, len(itemIDs))
+// resolveItemIDs 处理ItemIDs，如果为空则获取所有ItemIDs
+func (e ExptResultServiceImpl) resolveItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]int64, error) {
+	if len(itemIDs) > 0 {
+		return itemIDs, nil
 	}
 
-	// 获取实验轮次结果过滤器键映射
+	logs.CtxInfo(ctx, "CompareExptTurnResultFilters itemIDs is empty, getting all items for expt, exptID: %d, spaceID: %d", exptID, spaceID)
+	allItemResults, _, err := e.ExptItemResultRepo.ListItemResultsByExptID(ctx, exptID, spaceID, entity.Page{}, false)
+	if err != nil {
+		return nil, err
+	}
+
+	resolvedItemIDs := make([]int64, 0, len(allItemResults))
+	for _, itemResult := range allItemResults {
+		resolvedItemIDs = append(resolvedItemIDs, itemResult.ItemID)
+	}
+	logs.CtxInfo(ctx, "CompareExptTurnResultFilters got all items for expt, exptID: %d, spaceID: %d, totalItems: %d", exptID, spaceID, len(resolvedItemIDs))
+	
+	return resolvedItemIDs, nil
+}
+
+// getFilterKeyMappings 获取过滤器键映射
+func (e ExptResultServiceImpl) getFilterKeyMappings(ctx context.Context, spaceID, exptID int64) (map[string]string, error) {
 	exptTurnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, exptID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	evaluatorVersionID2Key := e.createEvaluatorVersionIDToKeyMap(exptTurnResultFilterKeyMappings)
+	return e.createEvaluatorVersionIDToKeyMap(exptTurnResultFilterKeyMappings), nil
+}
 
-	// 分页处理，每页100条记录
+// processPagedComparison 分页处理数据比较
+func (e ExptResultServiceImpl) processPagedComparison(ctx context.Context, spaceID, exptID int64, itemIDs []int64, createdDate string, evaluatorVersionID2Key map[string]string, retryTimes int32) error {
 	const pageSize = 100
 	totalItems := len(itemIDs)
 
@@ -1872,106 +1910,158 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			end = totalItems
 		}
 
-		// 当前页的itemIDs
 		currentPageItemIDs := itemIDs[offset:end]
-
 		logs.CtxInfo(ctx, "CompareExptTurnResultFilters processing page: offset=%d, end=%d, itemCount=%d", offset, end, len(currentPageItemIDs))
 
-		// 获取实验轮次结果过滤器
-		startTime := time.Now()
-		exptTurnResultFilters, err := e.exptTurnResultFilterRepo.GetByExptIDItemIDs(ctx, strconv.FormatInt(spaceID, 10), strconv.FormatInt(exptID, 10), createdDate, gslice.Map(currentPageItemIDs, func(itemID int64) string {
-			return strconv.FormatInt(itemID, 10)
-		}))
+		err := e.processPageData(ctx, spaceID, exptID, currentPageItemIDs, createdDate, evaluatorVersionID2Key, retryTimes, offset)
 		if err != nil {
 			return err
 		}
-		e.Metric.EmitExptTurnResultFilterQueryLatency(spaceID, startTime.Unix(), err != nil)
-		turnKey2ExptTurnResultFilter := e.createTurnKeyToFilterMap(exptTurnResultFilters)
+	}
+	return nil
+}
 
-		// 获取基准分页的轮次结果
-		turnResultDAOs, processedItemIDs, err := e.getTurnResultDAOs(ctx, spaceID, exptID, currentPageItemIDs)
+// processPageData 处理单页数据
+func (e ExptResultServiceImpl) processPageData(ctx context.Context, spaceID, exptID int64, currentPageItemIDs []int64, createdDate string, evaluatorVersionID2Key map[string]string, retryTimes int32, offset int) error {
+	// 获取过滤器数据
+	turnKey2ExptTurnResultFilter, err := e.getFilterData(ctx, spaceID, exptID, currentPageItemIDs, createdDate)
+	if err != nil {
+		return err
+	}
+
+	// 获取轮次结果数据
+	turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, err := e.getTurnResultData(ctx, spaceID, exptID, currentPageItemIDs, offset)
+	if err != nil {
+		return err
+	}
+
+	// 执行比较逻辑
+	return e.performComparison(ctx, spaceID, exptID, turnKey2ExptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes)
+}
+
+// getFilterData 获取过滤器数据
+func (e ExptResultServiceImpl) getFilterData(ctx context.Context, spaceID, exptID int64, currentPageItemIDs []int64, createdDate string) (map[string]*entity.ExptTurnResultFilterEntity, error) {
+	startTime := time.Now()
+	exptTurnResultFilters, err := e.exptTurnResultFilterRepo.GetByExptIDItemIDs(ctx, strconv.FormatInt(spaceID, 10), strconv.FormatInt(exptID, 10), createdDate, gslice.Map(currentPageItemIDs, func(itemID int64) string {
+		return strconv.FormatInt(itemID, 10)
+	}))
+	if err != nil {
+		return nil, err
+	}
+	e.Metric.EmitExptTurnResultFilterQueryLatency(spaceID, startTime.Unix(), err != nil)
+	return e.createTurnKeyToFilterMap(exptTurnResultFilters), nil
+}
+
+// getTurnResultData 获取轮次结果数据
+func (e ExptResultServiceImpl) getTurnResultData(ctx context.Context, spaceID, exptID int64, currentPageItemIDs []int64, offset int) (map[string]*entity.TurnResult, map[string]int64, map[string]entity.ItemRunState, error) {
+	// 获取基准分页的轮次结果
+	turnResultDAOs, processedItemIDs, err := e.getTurnResultDAOs(ctx, spaceID, exptID, currentPageItemIDs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if len(turnResultDAOs) == 0 {
+		logs.CtxWarn(ctx, "CompareExptTurnResultFilters turnResultDAOs is empty for page, spaceID: %v, exptID: %v, offset: %d", spaceID, exptID, offset)
+		return make(map[string]*entity.TurnResult), make(map[string]int64), make(map[string]entity.ItemRunState), nil
+	}
+
+	// 获取实验项结果
+	itemResultDAOs, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, exptID, processedItemIDs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// 创建有效负载构建器并构建项结果
+	param := &entity.MGetExperimentResultParam{
+		SpaceID: spaceID,
+		ExptIDs: []int64{exptID},
+	}
+	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
+		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, make(map[int64]entity.ItemRunState))
+	itemResults, err := payloadBuilder.BuildItemResults(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// 创建轮次键到轮次结果、项索引和项运行状态的映射
+	turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState := e.createTurnKeyMaps(spaceID, itemResults)
+	return turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, nil
+}
+
+// performComparison 执行比较逻辑
+func (e ExptResultServiceImpl) performComparison(ctx context.Context, spaceID, exptID int64, turnKey2ExptTurnResultFilter map[string]*entity.ExptTurnResultFilterEntity, turnKey2TurnResult map[string]*entity.TurnResult, turnKey2ItemIdx map[string]int64, turnKey2ItemRunState map[string]entity.ItemRunState, evaluatorVersionID2Key map[string]string, retryTimes int32) error {
+	const maxRetryTimes = 3
+
+	for turnKey := range turnKey2TurnResult {
+		turnKeyComponents, err := ParseTurnKey(turnKey)
 		if err != nil {
-			return err
-		}
-
-		if len(turnResultDAOs) == 0 {
-			logs.CtxWarn(ctx, "CompareExptTurnResultFilters turnResultDAOs is empty for page, spaceID: %v, exptID: %v, offset: %d", spaceID, exptID, offset)
+			logs.CtxError(ctx, "CompareExptTurnResultFilters parse turnKey failed, turnKey: %v, err: %v", turnKey, err)
 			continue
 		}
+		itemID := turnKeyComponents.ItemID
 
-		// 获取实验项结果
-		itemResultDAOs, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, exptID, processedItemIDs)
-		if err != nil {
-			return err
-		}
-
-		// 创建有效负载构建器并构建项结果
-		param := &entity.MGetExperimentResultParam{
-			SpaceID: spaceID,
-			ExptIDs: []int64{exptID},
-		}
-		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, make(map[int64]entity.ItemRunState))
-		itemResults, err := payloadBuilder.BuildItemResults(ctx)
-		if err != nil {
-			return err
-		}
-
-		// 创建轮次键到轮次结果、项索引和项运行状态的映射
-		turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState := e.createTurnKeyMaps(spaceID, itemResults)
-
-		for turnKey := range turnKey2TurnResult {
-			turnKeyComponents, err := ParseTurnKey(turnKey)
+		if exptTurnResultFilter, ok := turnKey2ExptTurnResultFilter[turnKey]; !ok {
+			// 处理过滤器缺失的情况
+			err = e.handleMissingFilter(ctx, spaceID, exptID, itemID, turnKey, retryTimes, maxRetryTimes)
 			if err != nil {
-				logs.CtxError(ctx, "CompareExptTurnResultFilters parse turnKey failed, turnKey: %v, err: %v", turnKey, err)
-				continue
+				return err
 			}
-			itemID := turnKeyComponents.ItemID
-			const maxRetryTimes = 3
-			if exptTurnResultFilter, ok := turnKey2ExptTurnResultFilter[turnKey]; !ok {
-				if retryTimes >= maxRetryTimes {
-					logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, resultMissing: true, retryTimes: %d", turnKey, retryTimes)
-					e.Metric.EmitExptTurnResultFilterCheck(spaceID, false, false, true, true)
-				} else {
-					logs.CtxWarn(ctx, "CompareExptTurnResultFilters finish, diff exist, retrying, turnKey: %v, resultMissing: true, retryTimes: %d", turnKey, retryTimes)
-					err = e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-						ExperimentID: exptID,
-						SpaceID:      spaceID,
-						ItemID:       []int64{itemID},
-						RetryTimes:   ptr.Of(retryTimes + 1),
-						FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
-					}, ptr.Of(10*time.Second))
-					if err != nil {
-						return err
-					}
-				}
-				continue
-			} else {
-				// 比较实验轮次结果过滤器
-				diffExist, evaluatorScoreDiff, actualOutputDiff := e.compareTurnResultFilter(
-					ctx, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key)
+		} else {
+			// 执行过滤器比较
+			err = e.handleFilterComparison(ctx, spaceID, exptID, itemID, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes, maxRetryTimes)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
-				if !diffExist {
-					logs.CtxInfo(ctx, "CompareExptTurnResultFilters finish, all equal, turnKey: %v", turnKey)
-					e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
-				} else {
-					if retryTimes >= maxRetryTimes {
-						logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
-						e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
-					} else {
-						logs.CtxWarn(ctx, "CompareExptTurnResultFilters finish, diff exist, retrying, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
-						err = e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-							ExperimentID: exptID,
-							SpaceID:      spaceID,
-							ItemID:       []int64{itemID},
-							RetryTimes:   ptr.Of(retryTimes + 1),
-							FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
-						}, ptr.Of(10*time.Second))
-						if err != nil {
-							return err
-						}
-					}
-				}
+// handleMissingFilter 处理过滤器缺失的情况
+func (e ExptResultServiceImpl) handleMissingFilter(ctx context.Context, spaceID, exptID, itemID int64, turnKey string, retryTimes, maxRetryTimes int32) error {
+	if retryTimes >= maxRetryTimes {
+		logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, resultMissing: true, retryTimes: %d", turnKey, retryTimes)
+		e.Metric.EmitExptTurnResultFilterCheck(spaceID, false, false, true, true)
+	} else {
+		logs.CtxWarn(ctx, "CompareExptTurnResultFilters finish, diff exist, retrying, turnKey: %v, resultMissing: true, retryTimes: %d", turnKey, retryTimes)
+		err := e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+			ExperimentID: exptID,
+			SpaceID:      spaceID,
+			ItemID:       []int64{itemID},
+			RetryTimes:   ptr.Of(retryTimes + 1),
+			FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
+		}, ptr.Of(10*time.Second))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// handleFilterComparison 处理过滤器比较
+func (e ExptResultServiceImpl) handleFilterComparison(ctx context.Context, spaceID, exptID, itemID int64, turnKey string, exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnKey2TurnResult map[string]*entity.TurnResult, turnKey2ItemIdx map[string]int64, turnKey2ItemRunState map[string]entity.ItemRunState, evaluatorVersionID2Key map[string]string, retryTimes, maxRetryTimes int32) error {
+	// 比较实验轮次结果过滤器
+	diffExist, evaluatorScoreDiff, actualOutputDiff := e.compareTurnResultFilter(
+		ctx, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key)
+
+	if !diffExist {
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters finish, all equal, turnKey: %v", turnKey)
+		e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
+	} else {
+		if retryTimes >= maxRetryTimes {
+			logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
+			e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
+		} else {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters finish, diff exist, retrying, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
+			err := e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+				ExperimentID: exptID,
+				SpaceID:      spaceID,
+				ItemID:       []int64{itemID},
+				RetryTimes:   ptr.Of(retryTimes + 1),
+				FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
+			}, ptr.Of(10*time.Second))
+			if err != nil {
+				return err
 			}
 		}
 	}
