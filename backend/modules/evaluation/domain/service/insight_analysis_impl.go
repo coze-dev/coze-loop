@@ -132,11 +132,11 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		return nil, err
 	}
 	// 聚合报告生成状态
-	if status == entity.ReportStatus_Failure {
+	if status == entity.ReportStatus_Failed {
 		analysisRecord.Status = entity.InsightAnalysisStatus_Failed
 		return analysisRecord, nil
 	}
-	if status == entity.ReportStatus_InProgress {
+	if status == entity.ReportStatus_Running {
 		analysisRecord.Status = entity.InsightAnalysisStatus_Running
 		return analysisRecord, nil
 	}

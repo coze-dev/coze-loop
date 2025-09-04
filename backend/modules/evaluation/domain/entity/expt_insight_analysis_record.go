@@ -91,11 +91,11 @@ type ReportStatus int64
 
 const (
 	// 未定义
-	ReportStatus_Undefined ReportStatus = 0
-	// 生成成功
-	ReportStatus_Success ReportStatus = 1
+	ReportStatus_Unknown ReportStatus = 0
 	// 进行中
-	ReportStatus_InProgress ReportStatus = 2
+	ReportStatus_Running ReportStatus = 1
+	// 生成成功
+	ReportStatus_Success ReportStatus = 2
 	// 生成失败
-	ReportStatus_Failure ReportStatus = 3
+	ReportStatus_Failed ReportStatus = 3
 )
