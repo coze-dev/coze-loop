@@ -77,6 +77,9 @@ func ExptInsightAnalysisFeedbackVoteDOToPO(vote *entity.ExptInsightAnalysisFeedb
 }
 
 func ExptInsightAnalysisFeedbackVotePOToDO(vote *model.ExptInsightAnalysisFeedbackVote) *entity.ExptInsightAnalysisFeedbackVote {
+	if vote == nil {
+		return nil
+	}
 	return &entity.ExptInsightAnalysisFeedbackVote{
 		ID:               vote.ID,
 		SpaceID:          vote.SpaceID,

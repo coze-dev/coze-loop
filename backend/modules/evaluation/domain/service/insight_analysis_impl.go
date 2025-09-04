@@ -154,8 +154,13 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 	analysisRecord.ExptInsightAnalysisFeedback = entity.ExptInsightAnalysisFeedback{
 		UpvoteCount:         upvoteCount,
 		DownvoteCount:       downvoteCount,
-		CurrentUserVoteType: curUserFeedbackVote.VoteType,
+		CurrentUserVoteType: entity.None,
 	}
+
+	if curUserFeedbackVote != nil {
+		analysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
+	}
+
 	return analysisRecord, nil
 }
 
