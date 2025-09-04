@@ -70,7 +70,7 @@ func NewExperimentApplication(
 	manager service.IExptManager,
 	scheduler service.ExptSchedulerEvent,
 	recordEval service.ExptItemEvalEvent,
-// tupleSvc service.IExptTupleService,
+	// tupleSvc service.IExptTupleService,
 	idgen idgen.IIDGenerator,
 	configer component.IConfiger,
 	auth rpc.IAuthProvider,
@@ -1084,6 +1084,11 @@ func (e *experimentApplication) GetExptResultExportRecord(ctx context.Context, r
 
 func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest) (r *expt.InsightAnalysisExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
@@ -1116,6 +1121,11 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 
 func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest) (r *expt.ListExptInsightAnalysisRecordResponse, err error) {
 	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
@@ -1147,6 +1157,11 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 
 func (e *experimentApplication) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest) (r *expt.DeleteExptInsightAnalysisRecordResponse, err error) {
 	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
@@ -1193,6 +1208,11 @@ func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context
 
 func (e *experimentApplication) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error) {
 	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
