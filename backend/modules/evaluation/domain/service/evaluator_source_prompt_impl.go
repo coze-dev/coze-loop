@@ -365,8 +365,13 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 		}
 	}
 
-	// 兜底策略：当所有其他解析策略都失败时，score设置为0，使用评估器的完整输出作为reason
-	parseFallbackStrategy(ctx, content, output)
+	// 当所有解析策略都失败时，将错误信息存储到 EvaluatorRunError 字段中
+	logs.CtxWarn(ctx, "[parseContentOutput] All parsing strategies failed, original content: %s", content)
+	if output.EvaluatorRunError == nil {
+		output.EvaluatorRunError = &entity.EvaluatorRunError{}
+	}
+	output.EvaluatorRunError.Code = errno.InvalidOutputFromModelCode
+	output.EvaluatorRunError.Message = "All parsing strategies failed. Original content: " + content
 	return nil
 }
 
@@ -468,15 +473,7 @@ func parseScoreWithRegex(ctx context.Context, content string, output *entity.Eva
 	return false, nil
 }
 
-// parseFallbackStrategy 策略5：兜底策略，当所有其他解析策略都失败时使用
-func parseFallbackStrategy(ctx context.Context, content string, output *entity.EvaluatorOutputData) {
-	// 添加warn日志，记录命中兜底策略的原始内容
-	logs.CtxWarn(ctx, "[parseFallbackStrategy] Hit fallback parsing strategy, original content: %s", content)
-	// score设置为0，使用评估器的完整输出作为reason
-	score := 0.0
-	output.EvaluatorResult.Score = &score
-	output.EvaluatorResult.Reasoning = content
-}
+
 
 func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
 	if len(replyItem.ToolCalls) == 0 {
