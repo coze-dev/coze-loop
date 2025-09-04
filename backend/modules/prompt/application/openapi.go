@@ -246,10 +246,39 @@ func (p *PromptOpenAPIApplicationImpl) promptHubAllowBySpace(ctx context.Context
 }
 
 func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi.ExecuteRequest) (r *openapi.ExecuteResponse, err error) {
+	var promptDO *entity.Prompt
+	var reply *entity.Reply
+	startTime := time.Now()
 	defer func() {
+		var errCode int32
 		if err != nil {
 			logs.CtxError(ctx, "openapi execute prompt failed, err=%v", err)
+			errCode = prompterr.CommonInternalErrorCode
+			bizErr, ok := errorx.FromStatusError(err)
+			if ok {
+				errCode = bizErr.Code()
+			}
 		}
+		var intputTokens, outputTokens int64
+		var version string
+		if promptDO != nil {
+			version = promptDO.GetVersion()
+		}
+		if reply != nil && reply.Item != nil {
+			intputTokens = reply.Item.TokenUsage.InputTokens
+			outputTokens = reply.Item.TokenUsage.OutputTokens
+		}
+		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
+			SpaceID:      req.GetWorkspaceID(),
+			PromptKey:    req.GetPromptIdentifier().GetPromptKey(),
+			Version:      version,
+			Stream:       false,
+			InputTokens:  intputTokens,
+			OutputTokens: outputTokens,
+			StartedAt:    startTime,
+			EndedAt:      time.Now(),
+			StatusCode:   errCode,
+		})
 	}()
 	r = openapi.NewExecuteResponse()
 	err = validateExecuteRequest(req)
@@ -266,8 +295,6 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 		messages:         convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
 		variableVals:     convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
 	})
-	var promptDO *entity.Prompt
-	var reply *entity.Reply
 	defer func() {
 		p.finishPromptExecutorSpan(ctx, span, promptDO, reply, err)
 	}()
@@ -321,10 +348,39 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 }
 
 func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (err error) {
+	var promptDO *entity.Prompt
+	var aggregatedReply *entity.Reply
+	startTime := time.Now()
 	defer func() {
+		var errCode int32
 		if err != nil {
 			logs.CtxError(ctx, "openapi execute streaming prompt failed, err=%v", err)
+			errCode = prompterr.CommonInternalErrorCode
+			bizErr, ok := errorx.FromStatusError(err)
+			if ok {
+				errCode = bizErr.Code()
+			}
 		}
+		var intputTokens, outputTokens int64
+		var version string
+		if promptDO != nil {
+			version = promptDO.GetVersion()
+		}
+		if aggregatedReply != nil && aggregatedReply.Item != nil {
+			intputTokens = aggregatedReply.Item.TokenUsage.InputTokens
+			outputTokens = aggregatedReply.Item.TokenUsage.OutputTokens
+		}
+		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
+			SpaceID:      req.GetWorkspaceID(),
+			PromptKey:    req.GetPromptIdentifier().GetPromptKey(),
+			Version:      version,
+			Stream:       false,
+			InputTokens:  intputTokens,
+			OutputTokens: outputTokens,
+			StartedAt:    startTime,
+			EndedAt:      time.Now(),
+			StatusCode:   errCode,
+		})
 	}()
 	err = validateExecuteRequest(req)
 	if err != nil {
@@ -340,8 +396,6 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 		messages:         convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
 		variableVals:     convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
 	})
-	var promptDO *entity.Prompt
-	var aggregatedReply *entity.Reply
 	defer func() {
 		p.finishPromptExecutorSpan(ctx, span, promptDO, aggregatedReply, err)
 	}()
