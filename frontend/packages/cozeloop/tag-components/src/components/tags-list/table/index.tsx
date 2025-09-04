@@ -1,4 +1,5 @@
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TableWithPagination, UserProfile } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { type tag, type OrderBy } from '@cozeloop/api-schema/data';
@@ -32,14 +33,14 @@ export const TagsListTable = ({
 
   const columns: ColumnProps<TagInfo>[] = [
     {
-      title: '标签名称',
+      title: I18n.t('tag_name'),
       dataIndex: 'name',
       render: (_: string, record) => (
         <TableCellText text={record.tag_key_name ?? '-'} />
       ),
     },
     {
-      title: '类型',
+      title: I18n.t('type'),
       dataIndex: 'type',
       width: 95,
       render: (_: string, record) => (
@@ -49,7 +50,7 @@ export const TagsListTable = ({
       ),
     },
     {
-      title: '描述',
+      title: I18n.t('description'),
       dataIndex: 'description',
       width: 280,
       render: (_: string, record) => (
@@ -57,7 +58,7 @@ export const TagsListTable = ({
       ),
     },
     {
-      title: '创建人',
+      title: I18n.t('creator'),
       dataIndex: 'creator',
       width: 170,
       render: (_: string, record) => (
@@ -68,7 +69,7 @@ export const TagsListTable = ({
       ),
     },
     {
-      title: '创建时间',
+      title: I18n.t('create_time'),
       dataIndex: 'createTime',
       sorter: true,
       width: 178,
@@ -83,13 +84,13 @@ export const TagsListTable = ({
       ),
     },
     {
-      title: '启用',
+      title: I18n.t('enable'),
       dataIndex: 'enable',
       width: 68,
       render: (_: string, record) => <TagStatusSwitch tagInfo={record} />,
     },
     {
-      title: '操作',
+      title: I18n.t('operate'),
       dataIndex: 'operator',
       width: 68,
       render: (_: string, record) => (
@@ -131,8 +132,8 @@ export const TagsListTable = ({
         <EmptyState
           size="full_screen"
           icon={<IconCozIllusAdd />}
-          title="暂无标签"
-          description={'点击右上角创建按钮进行创建'}
+          title={I18n.t('no_tags_available')}
+          description={I18n.t('click_create_button')}
         />
       }
     />

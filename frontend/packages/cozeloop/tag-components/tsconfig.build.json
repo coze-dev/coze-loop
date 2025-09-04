@@ -4,7 +4,6 @@
   "compilerOptions": {
     "jsx": "preserve",
     "useUnknownInCatchVariables": false,
-    "types": ["vitest/globals"],
     "paths": {
       "@/*": ["./src/*"]
     },

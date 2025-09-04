@@ -45,7 +45,6 @@
   "leave_page_tip": "离开当前页面，信息将不被保存。",
   "confirm": "确认",
   "new_evaluator": "新建评估器",
-  "basic_info": "基础信息",
   "description": "描述",
   "create": "创建",
   "confirm_clear_prompt": "确认清空 Prompt？",
