@@ -1825,7 +1825,14 @@ func (e ExptResultServiceImpl) InsertExptTurnResultFilterKeyMappings(ctx context
 
 func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
 	ctx = contexts.WithCtxWriteDB(ctx) // 更新result时需要取最新的result
-	
+
+	// 检查itemIDs参数，如果为空则不做重试
+	var shouldSkipRetry bool
+	if len(itemIDs) == 0 {
+		shouldSkipRetry = true
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters itemIDs is empty, will skip retry logic, exptID: %d, spaceID: %d", exptID, spaceID)
+	}
+
 	// 1. 验证实验数据
 	createdDate, err := e.validateExperimentData(ctx, spaceID, exptID)
 	if err != nil {
@@ -1848,7 +1855,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 	}
 
 	// 4. 分页处理数据比较
-	return e.processPagedComparison(ctx, spaceID, exptID, itemIDs, createdDate, evaluatorVersionID2Key, retryTimes)
+	return e.processPagedComparisonWithRetryControl(ctx, spaceID, exptID, itemIDs, createdDate, evaluatorVersionID2Key, retryTimes, shouldSkipRetry)
 }
 
 // validateExperimentData 验证实验数据
@@ -1886,7 +1893,7 @@ func (e ExptResultServiceImpl) resolveItemIDs(ctx context.Context, spaceID, expt
 		resolvedItemIDs = append(resolvedItemIDs, itemResult.ItemID)
 	}
 	logs.CtxInfo(ctx, "CompareExptTurnResultFilters got all items for expt, exptID: %d, spaceID: %d, totalItems: %d", exptID, spaceID, len(resolvedItemIDs))
-	
+
 	return resolvedItemIDs, nil
 }
 
@@ -1901,6 +1908,11 @@ func (e ExptResultServiceImpl) getFilterKeyMappings(ctx context.Context, spaceID
 
 // processPagedComparison 分页处理数据比较
 func (e ExptResultServiceImpl) processPagedComparison(ctx context.Context, spaceID, exptID int64, itemIDs []int64, createdDate string, evaluatorVersionID2Key map[string]string, retryTimes int32) error {
+	return e.processPagedComparisonWithRetryControl(ctx, spaceID, exptID, itemIDs, createdDate, evaluatorVersionID2Key, retryTimes, false)
+}
+
+// processPagedComparisonWithRetryControl 分页处理数据比较（支持重试控制）
+func (e ExptResultServiceImpl) processPagedComparisonWithRetryControl(ctx context.Context, spaceID, exptID int64, itemIDs []int64, createdDate string, evaluatorVersionID2Key map[string]string, retryTimes int32, shouldSkipRetry bool) error {
 	const pageSize = 100
 	totalItems := len(itemIDs)
 
@@ -1913,7 +1925,7 @@ func (e ExptResultServiceImpl) processPagedComparison(ctx context.Context, space
 		currentPageItemIDs := itemIDs[offset:end]
 		logs.CtxInfo(ctx, "CompareExptTurnResultFilters processing page: offset=%d, end=%d, itemCount=%d", offset, end, len(currentPageItemIDs))
 
-		err := e.processPageData(ctx, spaceID, exptID, currentPageItemIDs, createdDate, evaluatorVersionID2Key, retryTimes, offset)
+		err := e.processPageDataWithRetryControl(ctx, spaceID, exptID, currentPageItemIDs, createdDate, evaluatorVersionID2Key, retryTimes, offset, shouldSkipRetry)
 		if err != nil {
 			return err
 		}
@@ -1923,6 +1935,11 @@ func (e ExptResultServiceImpl) processPagedComparison(ctx context.Context, space
 
 // processPageData 处理单页数据
 func (e ExptResultServiceImpl) processPageData(ctx context.Context, spaceID, exptID int64, currentPageItemIDs []int64, createdDate string, evaluatorVersionID2Key map[string]string, retryTimes int32, offset int) error {
+	return e.processPageDataWithRetryControl(ctx, spaceID, exptID, currentPageItemIDs, createdDate, evaluatorVersionID2Key, retryTimes, offset, false)
+}
+
+// processPageDataWithRetryControl 处理单页数据（支持重试控制）
+func (e ExptResultServiceImpl) processPageDataWithRetryControl(ctx context.Context, spaceID, exptID int64, currentPageItemIDs []int64, createdDate string, evaluatorVersionID2Key map[string]string, retryTimes int32, offset int, shouldSkipRetry bool) error {
 	// 获取过滤器数据
 	turnKey2ExptTurnResultFilter, err := e.getFilterData(ctx, spaceID, exptID, currentPageItemIDs, createdDate)
 	if err != nil {
@@ -1936,7 +1953,7 @@ func (e ExptResultServiceImpl) processPageData(ctx context.Context, spaceID, exp
 	}
 
 	// 执行比较逻辑
-	return e.performComparison(ctx, spaceID, exptID, turnKey2ExptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes)
+	return e.performComparisonWithRetryControl(ctx, spaceID, exptID, turnKey2ExptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes, shouldSkipRetry)
 }
 
 // getFilterData 获取过滤器数据
@@ -1990,6 +2007,11 @@ func (e ExptResultServiceImpl) getTurnResultData(ctx context.Context, spaceID, e
 
 // performComparison 执行比较逻辑
 func (e ExptResultServiceImpl) performComparison(ctx context.Context, spaceID, exptID int64, turnKey2ExptTurnResultFilter map[string]*entity.ExptTurnResultFilterEntity, turnKey2TurnResult map[string]*entity.TurnResult, turnKey2ItemIdx map[string]int64, turnKey2ItemRunState map[string]entity.ItemRunState, evaluatorVersionID2Key map[string]string, retryTimes int32) error {
+	return e.performComparisonWithRetryControl(ctx, spaceID, exptID, turnKey2ExptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes, false)
+}
+
+// performComparisonWithRetryControl 执行比较逻辑（支持重试控制）
+func (e ExptResultServiceImpl) performComparisonWithRetryControl(ctx context.Context, spaceID, exptID int64, turnKey2ExptTurnResultFilter map[string]*entity.ExptTurnResultFilterEntity, turnKey2TurnResult map[string]*entity.TurnResult, turnKey2ItemIdx map[string]int64, turnKey2ItemRunState map[string]entity.ItemRunState, evaluatorVersionID2Key map[string]string, retryTimes int32, shouldSkipRetry bool) error {
 	const maxRetryTimes = 3
 
 	for turnKey := range turnKey2TurnResult {
@@ -2002,13 +2024,13 @@ func (e ExptResultServiceImpl) performComparison(ctx context.Context, spaceID, e
 
 		if exptTurnResultFilter, ok := turnKey2ExptTurnResultFilter[turnKey]; !ok {
 			// 处理过滤器缺失的情况
-			err = e.handleMissingFilter(ctx, spaceID, exptID, itemID, turnKey, retryTimes, maxRetryTimes)
+			err = e.handleMissingFilterWithRetryControl(ctx, spaceID, exptID, itemID, turnKey, retryTimes, maxRetryTimes, shouldSkipRetry)
 			if err != nil {
 				return err
 			}
 		} else {
 			// 执行过滤器比较
-			err = e.handleFilterComparison(ctx, spaceID, exptID, itemID, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes, maxRetryTimes)
+			err = e.handleFilterComparisonWithRetryControl(ctx, spaceID, exptID, itemID, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes, maxRetryTimes, shouldSkipRetry)
 			if err != nil {
 				return err
 			}
@@ -2019,6 +2041,17 @@ func (e ExptResultServiceImpl) performComparison(ctx context.Context, spaceID, e
 
 // handleMissingFilter 处理过滤器缺失的情况
 func (e ExptResultServiceImpl) handleMissingFilter(ctx context.Context, spaceID, exptID, itemID int64, turnKey string, retryTimes, maxRetryTimes int32) error {
+	return e.handleMissingFilterWithRetryControl(ctx, spaceID, exptID, itemID, turnKey, retryTimes, maxRetryTimes, false)
+}
+
+// handleMissingFilterWithRetryControl 处理过滤器缺失的情况（支持重试控制）
+func (e ExptResultServiceImpl) handleMissingFilterWithRetryControl(ctx context.Context, spaceID, exptID, itemID int64, turnKey string, retryTimes, maxRetryTimes int32, shouldSkipRetry bool) error {
+	if shouldSkipRetry {
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters skip retry due to empty itemIDs, turnKey: %v, resultMissing: true", turnKey)
+		e.Metric.EmitExptTurnResultFilterCheck(spaceID, false, false, true, true)
+		return nil
+	}
+
 	if retryTimes >= maxRetryTimes {
 		logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, resultMissing: true, retryTimes: %d", turnKey, retryTimes)
 		e.Metric.EmitExptTurnResultFilterCheck(spaceID, false, false, true, true)
@@ -2040,6 +2073,11 @@ func (e ExptResultServiceImpl) handleMissingFilter(ctx context.Context, spaceID,
 
 // handleFilterComparison 处理过滤器比较
 func (e ExptResultServiceImpl) handleFilterComparison(ctx context.Context, spaceID, exptID, itemID int64, turnKey string, exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnKey2TurnResult map[string]*entity.TurnResult, turnKey2ItemIdx map[string]int64, turnKey2ItemRunState map[string]entity.ItemRunState, evaluatorVersionID2Key map[string]string, retryTimes, maxRetryTimes int32) error {
+	return e.handleFilterComparisonWithRetryControl(ctx, spaceID, exptID, itemID, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key, retryTimes, maxRetryTimes, false)
+}
+
+// handleFilterComparisonWithRetryControl 处理过滤器比较（支持重试控制）
+func (e ExptResultServiceImpl) handleFilterComparisonWithRetryControl(ctx context.Context, spaceID, exptID, itemID int64, turnKey string, exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnKey2TurnResult map[string]*entity.TurnResult, turnKey2ItemIdx map[string]int64, turnKey2ItemRunState map[string]entity.ItemRunState, evaluatorVersionID2Key map[string]string, retryTimes, maxRetryTimes int32, shouldSkipRetry bool) error {
 	// 比较实验轮次结果过滤器
 	diffExist, evaluatorScoreDiff, actualOutputDiff := e.compareTurnResultFilter(
 		ctx, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key)
@@ -2048,7 +2086,10 @@ func (e ExptResultServiceImpl) handleFilterComparison(ctx context.Context, space
 		logs.CtxInfo(ctx, "CompareExptTurnResultFilters finish, all equal, turnKey: %v", turnKey)
 		e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
 	} else {
-		if retryTimes >= maxRetryTimes {
+		if shouldSkipRetry {
+			logs.CtxInfo(ctx, "CompareExptTurnResultFilters skip retry due to empty itemIDs, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
+			e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
+		} else if retryTimes >= maxRetryTimes {
 			logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
 			e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
 		} else {
