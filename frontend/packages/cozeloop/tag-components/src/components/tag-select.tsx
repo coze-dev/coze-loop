@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 
 import { useDebounceFn, useRequest } from 'ahooks';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { tag } from '@cozeloop/api-schema/data';
@@ -79,7 +80,7 @@ export function TagSelect(props: TagSelectProps) {
                 {tagInfo.tag_key_name}
               </Typography.Text>
               {showDisableTag && tagInfo.status === tag.TagStatus.Inactive ? (
-                <Tag color="primary">禁用</Tag>
+                <Tag color="primary">{I18n.t('disable')}</Tag>
               ) : null}
             </div>
           ),
@@ -152,7 +153,7 @@ export function TagSelect(props: TagSelectProps) {
 
   return (
     <BaseSearchSelect
-      placeholder="标签名字"
+      placeholder={I18n.t('tag_name')}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       {...rest}
       value={value}
@@ -181,7 +182,7 @@ export function TagSelect(props: TagSelectProps) {
             }}
           >
             <IconCozPlus className="w-4 h-4" />
-            <span className="text-[14px] ">新建标签</span>
+            <span className="text-[14px] ">{I18n.t('create_tag')}</span>
           </div>
         )
       }

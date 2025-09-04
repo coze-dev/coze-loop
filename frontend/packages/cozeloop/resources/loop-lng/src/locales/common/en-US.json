@@ -71,5 +71,19 @@
   "version": "Version",
   "view": "View",
   "yes": "Yes",
-  "yesterday": "yesterday"
+  "yesterday": "yesterday",
+  "create": "Create",
+  "create_time": "Create Time",
+  "update_time": "Update Time",
+  "creator": "Creator",
+  "type": "Type",
+  "number": "Number",
+  "category": "Category",
+  "boolean": "Boolean",
+  "status": "Status",
+  "enable": "Enable",
+  "disable": "Disable",
+  "submit_time": "Submit Time",
+  "submit_user": "Submit User",
+  "basic_info": "Basic Information"
 }

@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { UserProfile } from '@cozeloop/components';
 import { type common } from '@cozeloop/api-schema/evaluation';
 import { type tag } from '@cozeloop/api-schema/data';
@@ -10,13 +11,13 @@ import { Descriptions, Typography } from '@coze-arch/coze-design';
 import styles from './index.module.less';
 
 const TAG_METADATA = {
-  tag_name: '标签名称',
-  tag_value_name: '标签选项',
-  tag_description: '标签描述',
-  tag_value_status: '标签选项启用状态',
-  inactive: '禁用',
-  active: '启用',
-  tag_status: '标签状态',
+  tag_name: I18n.t('tag_name'),
+  tag_value_name: I18n.t('tag_options'),
+  tag_description: I18n.t('tag_description'),
+  tag_value_status: I18n.t('tag_option_enable_status'),
+  inactive: I18n.t('disable'),
+  active: I18n.t('enable'),
+  tag_status: I18n.t('tag_status'),
 };
 
 const CONTENT_MAX_HEIGHT = 120;
@@ -40,12 +41,16 @@ const generateDescFromChangeLog = (
     if (logItem.operation === 'create' && logItem.target === 'tag') {
       desc.push(
         <span>
-          <span>创建人:@{updatedBy || '-'}</span>,
           <span>
-            创建时间:
-            {updatedAt
-              ? formatTimestampToString(updatedAt, 'YYYY-MM-DD HH:mm:ss')
-              : '-'}
+            {I18n.t('tag_creator_name', { placeholder1: updatedBy || '-' })}
+          </span>
+          ,
+          <span>
+            {I18n.t('tag_creation_time', {
+              placeholder1: updatedAt
+                ? formatTimestampToString(updatedAt, 'YYYY-MM-DD HH:mm:ss')
+                : '-',
+            })}
           </span>
         </span>,
       );
@@ -53,7 +58,7 @@ const generateDescFromChangeLog = (
     if (logItem.operation === 'create') {
       desc.push(
         <span>
-          新增
+          {I18n.t('add')}
           <span className="font-medium leading-[22px] text-[var(--coz-fg-plus)]">
             {TAG_METADATA[logItem.target ?? ''] ?? logItem.target}
           </span>
@@ -70,13 +75,19 @@ const generateDescFromChangeLog = (
           afterValue === 'active' || afterValue === 'inactive';
         desc.push(
           <span>
-            <span>将标签{isStatusChange ? logItem.target_value : ''}的</span>
+            <span>
+              {I18n.t('tag_placeholder_update_start', {
+                placeholder1: isStatusChange ? logItem.target_value : '',
+              })}
+            </span>
             <span className="font-medium leading-[22px] text-[var(--coz-fg-plus)]">
               {TAG_METADATA[fieldName] ?? fieldName}
             </span>
             <span>
-              从{TAG_METADATA[beforeValue] ?? beforeValue}更新为
-              {TAG_METADATA[afterValue] ?? afterValue}。
+              {I18n.t('tag_placeholder_update_end', {
+                placeholder1: TAG_METADATA[beforeValue] ?? beforeValue,
+                placeholder3: TAG_METADATA[afterValue] ?? afterValue,
+              })}
             </span>
           </span>,
         );
@@ -105,15 +116,15 @@ export const EditHistoryItem = (props: EditHistoryItemProps) => {
 
   return (
     <Descriptions align="left" className={styles.description}>
-      <Descriptions.Item itemKey="提交时间">
+      <Descriptions.Item itemKey={I18n.t('submit_time')}>
         <span className="font-medium leading-[22px] text-[13px] text-[var(--coz-fg-plus)]">
           {updatedAt ? formatTimestampToString(updatedAt) : '-'}
         </span>
       </Descriptions.Item>
-      <Descriptions.Item itemKey="提交人">
+      <Descriptions.Item itemKey={I18n.t('submit_user')}>
         <UserProfile name={updatedBy?.name} avatarUrl={updatedBy?.avatar_url} />
       </Descriptions.Item>
-      <Descriptions.Item itemKey="修改记录">
+      <Descriptions.Item itemKey={I18n.t('change_log')}>
         <div className="relative">
           <div
             ref={contentRef}
@@ -133,7 +144,7 @@ export const EditHistoryItem = (props: EditHistoryItemProps) => {
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="text-brand-9 text-[13px] cursor-pointer text-right"
               >
-                {isExpanded ? '收起' : '展开'}
+                {isExpanded ? I18n.t('collapse') : I18n.t('extend')}
               </Typography.Text>
             </div>
           ) : null}

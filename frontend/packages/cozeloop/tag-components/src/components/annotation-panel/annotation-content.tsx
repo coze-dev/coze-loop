@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { isEmpty } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type PlatformType, type span } from '@cozeloop/api-schema/observation';
 import { annotation } from '@cozeloop/api-schema/observation';
 import { tag } from '@cozeloop/api-schema/data';
@@ -109,7 +110,7 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
       {({ formState, formApi }) => (
         <>
           <div className="text-xxl font-semibold leading-6 text-[var(--coz-fg-plus)] mb-4 flex items-center gap-x-[6px]">
-            标签列表
+            {I18n.t('tag_list')}
             <span className="text-[12px] font-semibold leading-4 text-[var(--coz-fg-dim)]">
               {formState.values.tags?.length ?? 0} / 50
             </span>
@@ -125,11 +126,16 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                   return (
                     <div key={key} className="flex flex-col mb-[20px]">
                       <div className="flex items-center gap-x-2 text-[13px] font-normal leading-5 text-[var(--coz-fg-secondary)]">
-                        <span>标签 {index + 1}</span>
+                        <span>
+                          {I18n.t('tag_number_with_placeholder', {
+                            number: index + 1,
+                          })}
+                        </span>
                         <Tooltip
                           theme="dark"
                           content={
-                            tagItem?.tagInfo?.description ?? '暂无标签描述'
+                            tagItem?.tagInfo?.description ??
+                            I18n.t('no_tag_description')
                           }
                         >
                           <IconCozInfoCircle className="w-[14px] h-[14px]" />
@@ -151,19 +157,17 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                             }
                           }}
                           isTagDisabled={
-                            tagItem?.tagInfo?.status ===
-                            tag.TagStatus.Inactive
+                            tagItem?.tagInfo?.status === tag.TagStatus.Inactive
                           }
                           disableSelectList={disableSelectList}
                           onTagSelectChange={(v, extraInfo) => {
                             const { value, label, ...tagInfo } = v as any;
 
-                            const isCreateNewTag =
-                              !formState.values.tags?.some(
-                                item =>
-                                  item.tagInfo?.tag_key_id ===
-                                  extraInfo?.tag_key_id,
-                              );
+                            const isCreateNewTag = !formState.values.tags?.some(
+                              item =>
+                                item.tagInfo?.tag_key_id ===
+                                extraInfo?.tag_key_id,
+                            );
 
                             if (isCreateNewTag) {
                               formApi.setValue(

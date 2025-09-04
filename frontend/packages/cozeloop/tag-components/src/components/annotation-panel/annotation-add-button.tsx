@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
 import { Button } from '@coze-arch/coze-design';
 
@@ -18,7 +19,7 @@ export const AnnotationAddButton = (props: AnnotationAddButtonProps) => {
         onAdd?.();
       }}
     >
-      添加标签
+      {I18n.t('add_tag')}
     </Button>
   );
 };

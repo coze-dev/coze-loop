@@ -201,6 +201,34 @@ interface I18nTranslateFn {
   (key: 'yes', fallbackText?: string): string;
   /** 昨天 */
   (key: 'yesterday', fallbackText?: string): string;
+  /** 创建 */
+  (key: 'create', fallbackText?: string): string;
+  /** 创建时间 */
+  (key: 'create_time', fallbackText?: string): string;
+  /** 更新时间 */
+  (key: 'update_time', fallbackText?: string): string;
+  /** 创建人 */
+  (key: 'creator', fallbackText?: string): string;
+  /** 类型 */
+  (key: 'type', fallbackText?: string): string;
+  /** 数字 */
+  (key: 'number', fallbackText?: string): string;
+  /** 分类 */
+  (key: 'category', fallbackText?: string): string;
+  /** 布尔值 */
+  (key: 'boolean', fallbackText?: string): string;
+  /** 状态 */
+  (key: 'status', fallbackText?: string): string;
+  /** 启用 */
+  (key: 'enable', fallbackText?: string): string;
+  /** 禁用 */
+  (key: 'disable', fallbackText?: string): string;
+  /** 提交时间 */
+  (key: 'submit_time', fallbackText?: string): string;
+  /** 提交人 */
+  (key: 'submit_user', fallbackText?: string): string;
+  /** 基础信息 */
+  (key: 'basic_info', fallbackText?: string): string;
   /** 搜索创建人 */
   (key: 'search_creator', fallbackText?: string): string;
   /** 当前用户 */
@@ -245,10 +273,6 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 提交时间 */
-  (key: 'submit_time', fallbackText?: string): string;
-  /** 提交人： */
-  (key: 'submitter', fallbackText?: string): string;
   /** 版本说明 */
   (key: 'version_description', fallbackText?: string): string;
   /** 版本记录 */
@@ -686,8 +710,6 @@ interface I18nTranslateFn {
   (key: 'only_experiments_compared_tip', fallbackText?: string): string;
   /** 已选 */
   (key: 'selected', fallbackText?: string): string;
-  /** 创建人 */
-  (key: 'creator', fallbackText?: string): string;
   /** 评测对象类型 */
   (key: 'evaluation_object_type', fallbackText?: string): string;
   /** 评测对象 */
@@ -698,8 +720,6 @@ interface I18nTranslateFn {
   (key: 'coze_agent', fallbackText?: string): string;
   /** 评测集版本 */
   (key: 'evaluation_set_version', fallbackText?: string): string;
-  /** 状态 */
-  (key: 'status', fallbackText?: string): string;
   /** 这是一个 CozeBot */
   (key: 'this_is_a_coze_bot', fallbackText?: string): string;
   /** 百科知识数据集 {index} */
@@ -750,10 +770,6 @@ interface I18nTranslateFn {
   (key: 'leave_page_tip', fallbackText?: string): string;
   /** 新建评估器 */
   (key: 'new_evaluator', fallbackText?: string): string;
-  /** 基础信息 */
-  (key: 'basic_info', fallbackText?: string): string;
-  /** 创建 */
-  (key: 'create', fallbackText?: string): string;
   /** 确认清空 Prompt？ */
   (key: 'confirm_clear_prompt', fallbackText?: string): string;
   /** System Prompt 不可为空 */
@@ -802,6 +818,8 @@ interface I18nTranslateFn {
   ): string;
   /** 提交时间： */
   (key: 'submission_time', fallbackText?: string): string;
+  /** 提交人： */
+  (key: 'submitter', fallbackText?: string): string;
   /** 描述：{desc} */
   (
     key: 'description_is',
@@ -830,10 +848,6 @@ interface I18nTranslateFn {
   (key: 'latest_version', fallbackText?: string): string;
   /** 更新人 */
   (key: 'updated_person', fallbackText?: string): string;
-  /** 更新时间 */
-  (key: 'update_time', fallbackText?: string): string;
-  /** 创建时间 */
-  (key: 'create_time', fallbackText?: string): string;
   /** 确定删除评估器：{name}？ */
   (
     key: 'confirm_delete_evaluator',
@@ -900,8 +914,6 @@ interface I18nTranslateFn {
   (key: 'data_total_count', fallbackText?: string): string;
   /** 正在加载字段映射 */
   (key: 'loading_field_mapping', fallbackText?: string): string;
-  /** 类型 */
-  (key: 'type', fallbackText?: string): string;
   /** 请选择类型 */
   (key: 'select_type', fallbackText?: string): string;
   /** 实际输出 */
@@ -1207,8 +1219,6 @@ interface I18nTranslateFn {
   (key: 'continue_will_override_existing_data', fallbackText?: string): string;
   /** 执行中 */
   (key: 'execution_in_progress', fallbackText?: string): string;
-  /** 数字 */
-  (key: 'number', fallbackText?: string): string;
   /** 字符串 */
   (key: 'string', fallbackText?: string): string;
   /** 请输入大于等于{num}的数字 */
@@ -1705,6 +1715,171 @@ interface I18nTranslateFn {
   (key: 'task_filter_not_in', fallbackText?: string): string;
   /** 不为空 */
   (key: 'task_filter_not_null', fallbackText?: string): string;
+  /** 标签 */
+  (key: 'tag', fallbackText?: string): string;
+  /** 标签管理 */
+  (key: 'tag_management', fallbackText?: string): string;
+  /** 标签名称 */
+  (key: 'tag_name', fallbackText?: string): string;
+  /** 标签描述 */
+  (key: 'tag_description', fallbackText?: string): string;
+  /** 标签类型 */
+  (key: 'tag_type', fallbackText?: string): string;
+  /** 标签状态 */
+  (key: 'tag_status', fallbackText?: string): string;
+  /** 标签选项 */
+  (key: 'tag_options', fallbackText?: string): string;
+  /** 标签选项启用状态 */
+  (key: 'tag_option_enable_status', fallbackText?: string): string;
+  /** 选项一 */
+  (key: 'tag_option_one', fallbackText?: string): string;
+  /** 选项二 */
+  (key: 'tag_option_two', fallbackText?: string): string;
+  /** 标签列表 */
+  (key: 'tag_list', fallbackText?: string): string;
+  /** 共 {placeholder1} 个标签 */
+  (
+    key: 'tag_number_with_placeholder',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 创建人:@{placeholder1} */
+  (
+    key: 'tag_creator_name',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 创建时间: {placeholder1} */
+  (
+    key: 'tag_creation_time',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 将标签{placeholder1}的 */
+  (
+    key: 'tag_placeholder_update_start',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 从{placeholder1}更新为{placeholder3}。 */
+  (
+    key: 'tag_placeholder_update_end',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+      /** string */ placeholder3: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 修改标签后，存量已打标数据将会自动同步更新。 */
+  (key: 'tag_edit_sync_warning', fallbackText?: string): string;
+  /** 该分类标签选项已禁用，若修改将不再展示 */
+  (key: 'tag_disabled_no_modification', fallbackText?: string): string;
+  /** 标签名称必须为 1～50 字符长度 */
+  (key: 'tag_name_length_limit', fallbackText?: string): string;
+  /** 标签名称仅支持输入中文、英文、数字和下划线 */
+  (key: 'tag_name_valid_chars', fallbackText?: string): string;
+  /** 标签值不能为空 */
+  (key: 'tag_value_not_empty', fallbackText?: string): string;
+  /** 标签值长度不能超过 200 个字符 */
+  (key: 'tag_value_length_limit', fallbackText?: string): string;
+  /** 同空间内标签名称不允许重复 */
+  (key: 'tag_name_no_duplicate_space', fallbackText?: string): string;
+  /** 一个标签内的标签值不允许重复 */
+  (key: 'tag_value_no_duplicate', fallbackText?: string): string;
+  /** 标签创建成功 */
+  (key: 'tag_create_success', fallbackText?: string): string;
+  /** 标签更新成功 */
+  (key: 'tag_update_success', fallbackText?: string): string;
+  /** 标签创建失败 */
+  (key: 'tag_create_failure', fallbackText?: string): string;
+  /** 标签更新失败 */
+  (key: 'tag_update_failure', fallbackText?: string): string;
+  /** 新建标签 */
+  (key: 'create_tag', fallbackText?: string): string;
+  /** 编辑标签 */
+  (key: 'edit_tag', fallbackText?: string): string;
+  /** 查看标签 */
+  (key: 'view_tag', fallbackText?: string): string;
+  /** 添加标签 */
+  (key: 'add_tag', fallbackText?: string): string;
+  /** 添加标签选项 */
+  (key: 'add_tag_option', fallbackText?: string): string;
+  /** 启用标签 */
+  (key: 'enable_tag', fallbackText?: string): string;
+  /** 禁用标签 */
+  (key: 'disable_tag', fallbackText?: string): string;
+  /** 该分类标签选项已禁用，若修改将不再展示 */
+  (key: 'category_tag_option_disabled_warning', fallbackText?: string): string;
+  /** 禁用后该标签无法被搜索添加 */
+  (key: 'disabled_tag_not_searchable', fallbackText?: string): string;
+  /** 确定启用该标签吗？ */
+  (key: 'confirm_enable_tag', fallbackText?: string): string;
+  /** 修改将会同步至标签管理”。 */
+  (key: 'changes_sync_to_space_tag_management', fallbackText?: string): string;
+  /** 标签配置 */
+  (key: 'tag_configuration', fallbackText?: string): string;
+  /** 请输入标签名称 */
+  (key: 'enter_tag_name', fallbackText?: string): string;
+  /** 请输入描述 */
+  (key: 'enter_description', fallbackText?: string): string;
+  /** 请输入标签类型 */
+  (key: 'enter_tag_type', fallbackText?: string): string;
+  /** 请输入子标签名称 */
+  (key: 'enter_subtag_name', fallbackText?: string): string;
+  /** 请输入数值 */
+  (key: 'enter_number', fallbackText?: string): string;
+  /** 请输入文本 */
+  (key: 'enter_text', fallbackText?: string): string;
+  /** 请输入创建人 */
+  (key: 'enter_creator', fallbackText?: string): string;
+  /** 请输入 */
+  (key: 'please_enter', fallbackText?: string): string;
+  /** 请选择分类 */
+  (key: 'select_category', fallbackText?: string): string;
+  /** 描述不能超过200个字符 */
+  (key: 'description_length_limit', fallbackText?: string): string;
+  /** 请至少添加一个标签选项 */
+  (key: 'add_at_least_one_option', fallbackText?: string): string;
+  /** 修改前: */
+  (key: 'before_modification', fallbackText?: string): string;
+  /** 暂无标签描述 */
+  (key: 'no_tag_description', fallbackText?: string): string;
+  /** 暂无标签 */
+  (key: 'no_tags_available', fallbackText?: string): string;
+  /** 点击右上角创建按钮进行创建 */
+  (key: 'click_create_button', fallbackText?: string): string;
+  /** 数据引擎标签已禁用 */
+  (key: 'data_engine_label_disabled', fallbackText?: string): string;
+  /** 数据引擎编辑 */
+  (key: 'data_engine_edit', fallbackText?: string): string;
+  /** 数据引擎未选择标签 */
+  (key: 'data_engine_no_label_selected', fallbackText?: string): string;
+  /** 数据引擎刷新 */
+  (key: 'data_engine_refresh', fallbackText?: string): string;
+  /** 标注数据 */
+  (key: 'annotation_data', fallbackText?: string): string;
+  /** 自动保存中 */
+  (key: 'auto_saving', fallbackText?: string): string;
+  /** 已保存 */
+  (key: 'saved_check_feedback', fallbackText?: string): string;
+  /** 操作 */
+  (key: 'operate', fallbackText?: string): string;
+  /** 退出编辑 */
+  (key: 'exit_edit', fallbackText?: string): string;
+  /** 修改还未提交，退出后将不会保存此次修改。 */
+  (key: 'unsaved_changes_exit_warning', fallbackText?: string): string;
+  /** 退出 */
+  (key: 'exit', fallbackText?: string): string;
+  /** 确认保存 */
+  (key: 'confirm_save', fallbackText?: string): string;
 }
 
 /** I18n of Cozeloop */

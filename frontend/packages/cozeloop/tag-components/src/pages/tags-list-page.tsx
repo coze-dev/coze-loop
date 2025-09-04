@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { PrimaryPage } from '@cozeloop/components';
 
 import { TagsList } from '../components/tags-list';
@@ -10,7 +11,7 @@ interface TagsListPageProps {
 }
 
 export const TagsListPage = ({ tagListPagePath }: TagsListPageProps) => (
-  <PrimaryPage pageTitle="标签管理">
+  <PrimaryPage pageTitle={I18n.t('tag_management')}>
     <TagsList tagListPagePath={tagListPagePath} />
   </PrimaryPage>
 );
