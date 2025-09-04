@@ -35,7 +35,7 @@ func TestPromptFilter_BuildBasicSpanFilter(t *testing.T) {
 				{
 					FieldName: loop_span.SpanFieldCallType,
 					FieldType: loop_span.FieldTypeString,
-					Values:    []string{"PromptPlayground", "PromptDebug"},
+					Values:    []string{"PromptPlayground", "PromptDebug", "PTaaS"},
 					QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 				},
 			},
