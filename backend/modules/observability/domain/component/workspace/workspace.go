@@ -12,5 +12,5 @@ import (
 //go:generate mockgen -destination=mocks/workspace_provider.go -package=mocks . IWorkSpaceProvider
 type IWorkSpaceProvider interface {
 	GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan) string
-	GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) int64
+	GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string
 }

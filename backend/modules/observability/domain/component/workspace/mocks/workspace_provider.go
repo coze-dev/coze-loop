@@ -56,10 +56,10 @@ func (mr *MockIWorkSpaceProviderMockRecorder) GetIngestWorkSpaceID(ctx, spans an
 }
 
 // GetQueryWorkSpaceID mocks base method.
-func (m *MockIWorkSpaceProvider) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) int64 {
+func (m *MockIWorkSpaceProvider) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetQueryWorkSpaceID", ctx, requestWorkspaceID)
-	ret0, _ := ret[0].(int64)
+	ret0, _ := ret[0].(string)
 	return ret0
 }
 
