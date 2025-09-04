@@ -21,6 +21,7 @@ const (
 type IAuthProvider interface {
 	CheckWorkspacePermission(ctx context.Context, action, workspaceId string) error
 	CheckViewPermission(ctx context.Context, action, workspaceId, viewId string) error
+	CheckOpenAPIWorkspacePermission(ctx context.Context, action, workspaceId string) error
 	CheckIngestPermission(ctx context.Context, workspaceId string) error
 	CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error
 }

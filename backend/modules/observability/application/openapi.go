@@ -412,7 +412,7 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 	default:
 		val = loop_span.NewStringValue(req.AnnotationValue)
 	}
-	if err := o.auth.CheckWorkspacePermission(ctx,
+	if err := o.auth.CheckOpenAPIWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationCreate,
 		strconv.FormatInt(req.WorkspaceID, 10)); err != nil {
 		return nil, err
@@ -441,7 +441,7 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 }
 
 func (o *OpenAPIApplication) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest) (*openapi.DeleteAnnotationResponse, error) {
-	if err := o.auth.CheckWorkspacePermission(ctx,
+	if err := o.auth.CheckOpenAPIWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationCreate,
 		strconv.FormatInt(req.WorkspaceID, 10)); err != nil {
 		return nil, err
@@ -505,10 +505,8 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	if sResp != nil {
-		spansSize = loop_span.SizeofSpans(sResp.Spans)
-		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
-	}
+	spansSize = loop_span.SizeofSpans(sResp.Spans)
+	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
 			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
@@ -604,10 +602,8 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		errCode = obErrorx.CommonInternalErrorCode
 		return nil, err
 	}
-	if sResp != nil {
-		logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
-		spansSize = loop_span.SizeofSpans(sResp.Spans)
-	}
+	logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
+	spansSize = loop_span.SizeofSpans(sResp.Spans)
 
 	resp.Data = &openapi.ListSpansOApiData{
 		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
