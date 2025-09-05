@@ -59,13 +59,13 @@ func TestRuntimeFactory_CreateRuntime(t *testing.T) {
 				assert.Error(t, err)
 				assert.Nil(t, runtime)
 			} else {
-				// 注意：可能因为环境问题（如Deno未安装）导致创建失败
+				// 注意：可能因为环境问题（如FaaS服务未启动）导致创建失败
 				if err != nil {
 					t.Logf("创建运行时失败（可能是环境问题）: %v", err)
 					return
 				}
 				assert.NotNil(t, runtime)
-				// 简化运行时总是返回JS作为主要语言类型，但支持多种语言
+				// HTTP FaaS运行时总是返回JS作为主要语言类型，但支持多种语言
 				assert.Equal(t, entity.LanguageTypeJS, runtime.GetLanguageType())
 			}
 		})

@@ -44,20 +44,20 @@ func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (compon
 		
 		// 检查是否使用HTTP FaaS模式
 		faasURL := os.Getenv("COZE_LOOP_FAAS_URL")
-		if faasURL != "" {
-			// 使用HTTP FaaS运行时
-			config := &HTTPFaaSRuntimeConfig{
-				BaseURL:        faasURL,
-				Timeout:        30 * time.Second,
-				MaxRetries:     3,
-				RetryInterval:  1 * time.Second,
-				EnableEnhanced: true,
-			}
-			f.runtime, err = NewHTTPFaaSRuntimeAdapter(entity.LanguageTypeJS, config, f.logger)
-		} else {
-			// 使用本地简化运行时
-			f.runtime, err = NewSimpleRuntime(f.sandboxConfig, f.logger)
+		if faasURL == "" {
+			// 默认使用本地FaaS服务
+			faasURL = "http://localhost:8890"
 		}
+		
+		// 使用HTTP FaaS运行时
+		config := &HTTPFaaSRuntimeConfig{
+			BaseURL:        faasURL,
+			Timeout:        30 * time.Second,
+			MaxRetries:     3,
+			RetryInterval:  1 * time.Second,
+			EnableEnhanced: true,
+		}
+		f.runtime, err = NewHTTPFaaSRuntimeAdapter(entity.LanguageTypeJS, config, f.logger)
 		
 		if err != nil {
 			return nil, fmt.Errorf("创建运行时失败: %w", err)
