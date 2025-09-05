@@ -163,7 +163,7 @@ export const validarDatasetItem = (
       const division = decimalValue.dividedBy(multipleOfDecimal);
       if (!division.isInteger()) {
         callback(
-          `${I18n.t('data_engine_decimal_places_support', { placeholder1: multipleOfDecimal.decimalPlaces() })}`,
+          `${I18n.t('decimal_places_support', { num: multipleOfDecimal.decimalPlaces() })}`,
         );
         return false;
       }

@@ -26,7 +26,7 @@ export const ImportResultInfo = ({
         <Typography.Text className="!font-medium mx-1">
           {Number(progress?.processed) - Number(progress?.added) || 0}
         </Typography.Text>
-        {I18n.t('fornax_tiao')}
+        {I18n.t('tiao')}
       </Typography.Text>
     </div>
     {errors?.length ? (

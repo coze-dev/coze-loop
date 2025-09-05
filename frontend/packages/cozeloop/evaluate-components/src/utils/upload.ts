@@ -77,7 +77,7 @@ function getXlsxHeaders(file: File): Promise<string[]> {
     };
 
     reader.onerror = () =>
-      reject(new Error(I18n.t('fornax_knowledge_file_read_fail')));
+      reject(new Error(I18n.t('knowledge_file_read_fail')));
     reader.readAsArrayBuffer(file);
   });
 }
@@ -153,6 +153,6 @@ export const getFileHeaders = async (
     return { headers: [] };
   } catch (error) {
     console.error(error);
-    return { headers: [], error: I18n.t('data_engine_file_format_error') };
+    return { headers: [], error: I18n.t('file_format_error') };
   }
 };

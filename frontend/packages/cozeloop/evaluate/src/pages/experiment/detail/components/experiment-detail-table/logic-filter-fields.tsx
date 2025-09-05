@@ -148,7 +148,7 @@ export function getFilterFields(
         ?.map(getEvalSetLogicField),
     },
     {
-      title: I18n.t('data_engine_manual_annotation'),
+      title: I18n.t('manual_annotation'),
       name: 'annotation',
       type: 'options',
       children: columnAnnotations?.map(getAnnotationLogicField),

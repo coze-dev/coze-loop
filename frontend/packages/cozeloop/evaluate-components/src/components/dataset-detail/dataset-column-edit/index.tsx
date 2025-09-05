@@ -113,7 +113,7 @@ export const useDatasetColumnEdit = ({
             <div className="flex items-center gap-2">
               {I18n.t('edit_column')}
               <Typography.Text className="!coz-fg-secondary">
-                {I18n.t('data_engine_column_count_info', { currentColumnNum })}
+                {I18n.t('column_count_info', { currentColumnNum })}
               </Typography.Text>
             </div>
             {ExpandNode}
@@ -188,7 +188,7 @@ export const useDatasetColumnEdit = ({
                       <Anchor.Link
                         key={index}
                         href={`#column-${index}`}
-                        title={`${item.name || `${I18n.t('data_engine_column_placeholder', { placeholder1: index + 1 })}`}`}
+                        title={`${item.name || `${I18n.t('column_placeholder', { placeholder1: index + 1 })}`}`}
                       />
                     ))}
                   </LoopAnchor>

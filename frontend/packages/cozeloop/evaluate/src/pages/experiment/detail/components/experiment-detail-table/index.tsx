@@ -325,9 +325,7 @@ export default function ({
               setExpand(e.target.value === 'quick_annotate');
             }}
           >
-            <Radio value="default">
-              {I18n.t('fornax_prompt_compare_normal')}
-            </Radio>
+            <Radio value="default">{I18n.t('prompt_compare_normal')}</Radio>
             <Radio value="quick_annotate">
               {I18n.t('quick_annotation_mode')}
             </Radio>
