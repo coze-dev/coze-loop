@@ -34,6 +34,8 @@ services:
         condition: service_healthy
       rocketmq-init:
         condition: service_completed_successfully
+      coze-loop-faas:
+        condition: service_healthy
     environment:
       # redis
       COZE_LOOP_REDIS_DOMAIN: "${COZE_LOOP_REDIS_DOMAIN}"
@@ -62,6 +64,8 @@ services:
       # rmq
       COZE_LOOP_RMQ_NAMESRV_DOMAIN: "${COZE_LOOP_RMQ_NAMESRV_DOMAIN}"
       COZE_LOOP_RMQ_NAMESRV_PORT: "${COZE_LOOP_RMQ_NAMESRV_PORT}"
+      # faas
+      COZE_LOOP_FAAS_URL: "http://coze-loop-faas:8000"
     entrypoint: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
     healthcheck:
       test: [ "CMD", "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
@@ -295,6 +299,77 @@ services:
       retries: 5
       start_period: 10s
 
+  coze-loop-faas:
+    profiles: [ "faas", "app" ]
+    container_name: "coze-loop-faas"
+    image: "denoland/deno:1.45.5"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_FAAS_PORT:-8889}:8000"
+    volumes:
+      - faas_workspace:/tmp/faas-workspace
+      - ./bootstrap/faas:/app/bootstrap
+    environment:
+      DENO_DIR: "/tmp/.deno"
+      DENO_NO_UPDATE_CHECK: "1"
+      FAAS_WORKSPACE: "/tmp/faas-workspace"
+      FAAS_PORT: "8000"
+      FAAS_TIMEOUT: "30000"
+    working_dir: /app
+    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-server.ts"]
+    healthcheck:
+      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.status === 200) { console.log('OK'); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # 增强版FaaS服务 - 支持沙箱池和任务调度
+  coze-loop-faas-enhanced:
+    profiles: [ "faas-enhanced", "app-enhanced" ]
+    container_name: "coze-loop-faas-enhanced"
+    image: "denoland/deno:1.45.5"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_FAAS_ENHANCED_PORT:-8890}:8000"
+    volumes:
+      - faas_enhanced_workspace:/tmp/faas-workspace
+      - ./bootstrap/faas-enhanced:/app/bootstrap
+    environment:
+      DENO_DIR: "/tmp/.deno"
+      DENO_NO_UPDATE_CHECK: "1"
+      FAAS_WORKSPACE: "/tmp/faas-workspace"
+      FAAS_PORT: "8000"
+      FAAS_TIMEOUT: "30000"
+      # 沙箱池配置
+      FAAS_POOL_SIZE: "${FAAS_POOL_SIZE:-10}"
+      FAAS_MAX_INSTANCES: "${FAAS_MAX_INSTANCES:-50}"
+      FAAS_MEMORY_LIMIT: "${FAAS_MEMORY_LIMIT:-512}"
+      # 任务调度配置
+      FAAS_WORKER_COUNT: "${FAAS_WORKER_COUNT:-10}"
+      FAAS_QUEUE_SIZE: "${FAAS_QUEUE_SIZE:-100}"
+      FAAS_RATE_LIMIT: "${FAAS_RATE_LIMIT:-100}"
+    working_dir: /app
+    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-enhanced-server.ts"]
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.status === 200) { console.log('OK'); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   redis_data:
     name: coze-loop_redis_data
@@ -311,6 +386,11 @@ volumes:
   rmq_broker_data:
     name: coze-loop_rocketmq_broker_data
   nginx_data:
+    name: coze-loop_nginx_data
+  faas_workspace:
+    name: coze-loop_faas_workspace
+  faas_enhanced_workspace:
+    name: coze-loop_faas_enhanced_workspace
 
 networks:
   coze-loop-network:
