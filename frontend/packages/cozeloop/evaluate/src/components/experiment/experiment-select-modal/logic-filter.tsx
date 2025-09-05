@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   LogicEditor,
   type LogicField,
@@ -39,36 +40,36 @@ export default function ExperimentLogicFilter({
 }) {
   const logicFields: LogicField[] = [
     {
-      title: '创建人',
+      title: I18n.t('creator'),
       name: 'created_by',
       type: 'options',
       setterProps: {
         optionList: [
-          { label: '张三', value: 1 },
-          { label: '李四', value: 2 },
-          { label: '王五', value: 3 },
+          { label: I18n.t('user_zhangsan'), value: 1 },
+          { label: I18n.t('user_lisi'), value: 2 },
+          { label: I18n.t('user_wangwu'), value: 3 },
         ],
       },
     },
     {
-      title: '评测对象类型',
+      title: I18n.t('evaluation_object_type'),
       name: 'eval_target_type',
       type: 'options',
       setterProps: {
         optionList: [
           { label: 'Prompt', value: 1 },
-          { label: 'Coze 智能体', value: 2 },
+          { label: I18n.t('coze_agent'), value: 2 },
         ],
       },
     },
     {
-      title: '评测对象',
+      title: I18n.t('evaluation_object'),
       name: 'eval_target',
       type: 'options',
       setterProps: {
         optionList: [
-          { label: '百科达人', value: 1 },
-          { label: '笑话大王', value: 2 },
+          { label: I18n.t('encyclopedia_expert'), value: 1 },
+          { label: I18n.t('joke_king'), value: 2 },
         ],
       },
     },

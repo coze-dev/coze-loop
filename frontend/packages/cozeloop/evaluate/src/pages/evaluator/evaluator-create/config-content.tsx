@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useLatest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluateModelConfigEditor,
   OutputInfo,
@@ -31,20 +32,20 @@ export function ConfigContent({
   return (
     <>
       <FormSelect
-        label="评估器类型"
+        label={I18n.t('evaluator_type')}
         field="evaluator_type"
         initValue={EvaluatorType.Prompt}
         fieldClassName="hidden"
       />
       <FormModelConfig
         refreshModelKey={refreshEditorModelKey}
-        label="模型选择"
+        label={I18n.t('model_selection')}
         disabled={disabled}
         field="current_version.evaluator_content.prompt_evaluator.model_config"
         scenario={Scenario.scenario_evaluator}
         onModelChange={setModel}
         rules={[
-          { required: true, message: '请选择模型' },
+          { required: true, message: I18n.t('choose_model') },
           {
             asyncValidator: async (_, _val, callback) => {
               await wait(100);

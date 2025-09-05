@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { RouteBackAction } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
@@ -8,7 +9,7 @@ import { DatasetCreateForm } from '../../components/dataset-create-form';
 export const CreateDatasetPage = () => {
   const navigate = useNavigateModule();
   useBreadcrumb({
-    text: '新建评测集',
+    text: I18n.t('create_evaluation_set'),
   });
 
   return (
@@ -21,7 +22,7 @@ export const CreateDatasetPage = () => {
               heading={6}
               className="!coz-fg-plus !font-medium !text-[18px] !leading-[20px]"
             >
-              新建评测集
+              {I18n.t('create_evaluation_set')}
             </Typography.Title>
           </div>
         }

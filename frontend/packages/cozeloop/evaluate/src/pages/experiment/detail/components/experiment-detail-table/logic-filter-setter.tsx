@@ -11,14 +11,14 @@ export function InputLimitLengthHOC(limitLength: number) {
     const { onChange, ...rest } = inputProps;
     return (
       <Input
-        placeholder={`请输入，最长${limitLength}字符`}
+        placeholder={`${I18n.t('please_enter_max_limit_length', { limitLength })}`}
         {...rest}
         onChange={(val, e) => {
           let newVal = val;
           if (val && val.length > limitLength) {
             newVal = val?.slice(0, limitLength);
             Toast.warning(
-              `输入内容最长${limitLength}字符，超出部分已被自动截断`,
+              `${I18n.t('input_content_limited_truncated', { limitLength })}`,
             );
           }
           onChange?.(newVal, e);
@@ -34,14 +34,14 @@ export function TextAreaLimitLengthHOC(limitLength: number) {
     return (
       <TextArea
         rows={1}
-        placeholder={`请输入，最长${limitLength}字符`}
+        placeholder={`${I18n.t('please_enter_max_limit_length', { limitLength })}`}
         {...rest}
         onChange={(val, e) => {
           let newVal = val;
           if (val && val.length > limitLength) {
             newVal = val?.slice(0, limitLength);
             Toast.warning(
-              `输入内容最长${limitLength}字符，超出部分已被自动截断`,
+              `${I18n.t('input_content_limited_truncated', { limitLength })}`,
             );
           }
           onChange?.(newVal, e);
@@ -56,7 +56,7 @@ export function IDSearchInput(inputProps: InputProps) {
   const limitLength = 19;
   return (
     <Input
-      placeholder={`请输入${limitLength}位ID`}
+      placeholder={`${I18n.t('please_enter_id_limit_length', { limitLength })}`}
       {...rest}
       onChange={(val, e) => {
         onChange?.(val, e);
@@ -64,7 +64,9 @@ export function IDSearchInput(inputProps: InputProps) {
       onBlur={e => {
         const val = e.target.value;
         if (val && val.length !== limitLength) {
-          Toast.warning(`ID不合法，必须是${limitLength}位`);
+          Toast.warning(
+            `${I18n.t('id_invalid_must_be_limit_length', { limitLength })}`,
+          );
         }
       }}
     />

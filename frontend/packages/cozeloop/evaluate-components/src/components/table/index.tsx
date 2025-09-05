@@ -5,6 +5,7 @@ import {
   type PaginationResult,
 } from 'ahooks/lib/usePagination/types';
 import { useSize } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { LoopTable } from '@cozeloop/components';
 import { Empty, Pagination, type TableProps } from '@coze-arch/coze-design';
 
@@ -62,7 +63,7 @@ export default function TableWithPagination<RecordItem>(
         <LoopTable
           {...props}
           tableProps={{
-            empty: <Empty title="暂无数据" />,
+            empty: <Empty title={I18n.t('no_data')} />,
             ...(props.tableProps ?? {}),
             scroll: {
               // 表格容器的高度减去表格头的高度

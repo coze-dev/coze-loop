@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 export type SchemaSourceType = 'set' | 'target';
 
 export interface ExpandedProperty {
@@ -23,6 +24,6 @@ export interface OptionGroup {
 }
 
 export const schemaSourceTypeMap = {
-  set: '评测集',
-  target: '评测对象',
+  set: I18n.t('evaluation_set'),
+  target: I18n.t('evaluation_object_target'),
 };

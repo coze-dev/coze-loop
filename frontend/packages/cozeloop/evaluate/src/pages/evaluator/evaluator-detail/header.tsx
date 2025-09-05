@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import dayjs from 'dayjs';
 import { type Result } from 'ahooks/lib/useRequest/src/types';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { CozeUser } from '@cozeloop/evaluate-components';
 import { RouteBackAction, EditIconButton } from '@cozeloop/components';
@@ -51,13 +52,13 @@ export function Header({
       tagContent = (
         <>
           <IconCozLoading className="w-3 h-3 animate-spin mr-1" />
-          {'草稿自动保存中'}
+          {I18n.t('draft_auto_saving')}
         </>
       );
     } else if (autoSaveService.error) {
-      tagContent = '草稿自动保存失败';
+      tagContent = I18n.t('draft_auto_save_failed');
     } else if (autoSaveService.data?.lastSaveTime) {
-      tagContent = `草稿已自动保存于 ${dayjs(Number(autoSaveService.data.lastSaveTime)).format('YYYY-MM-DD HH:mm:ss')}`;
+      tagContent = `${I18n.t('draft_auto_saved_in')} ${dayjs(Number(autoSaveService.data.lastSaveTime)).format('YYYY-MM-DD HH:mm:ss')}`;
     }
 
     if (tagContent) {
@@ -85,14 +86,14 @@ export function Header({
           </Tag>
           <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" />
           <div className="text-xs coz-fg-secondary font-normal">
-            {'提交时间：'}
+            {I18n.t('submission_time')}
             {dayjs(Number(selectedVersion.base_info?.created_at)).format(
               'YYYY-MM-DD HH:mm:ss',
             )}
           </div>
           <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" />
           <div className="text-xs coz-fg-secondary font-normal flex items-center">
-            <span className="shrink-0">{'提交人：'}</span>
+            <span className="shrink-0">{I18n.t('submitter')}</span>
             <CozeUser
               user={selectedVersion.base_info?.created_by}
               size="small"
@@ -109,7 +110,7 @@ export function Header({
             color="yellow"
             className="!h-5 !px-2 !py-[2px] rounded-[3px] mr-1"
           >
-            {'修改未提交'}
+            {I18n.t('changes_not_submitted')}
           </Tag>
         ) : null}
 
@@ -133,7 +134,7 @@ export function Header({
           </div>
           <div className="h-6 flex flex-row items-center">
             <div className="text-xs font-normal !coz-fg-secondary max-w-[240px] overflow-hidden text-ellipsis whitespace-nowrap leading-4">
-              描述：{evaluator?.description || '-'}
+              {I18n.t('description')}：{evaluator?.description || '-'}
             </div>
             <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" />
             {renderExtra()}
@@ -142,13 +143,13 @@ export function Header({
 
         <div className="flex-shrink-0 flex flex-row gap-2">
           <Button color="primary" onClick={onOpenVersionList}>
-            {'版本记录'}
+            {I18n.t('version_record')}
           </Button>
           {selectedVersion ? null : <DebugButton {...debugButtonProps} />}
           {selectedVersion ? null : (
             <Guard point={GuardPoint['eval.evaluator.commit']}>
               <Button color="brand" onClick={onSubmitVersion}>
-                {'提交新版本'}
+                {I18n.t('submit_new_version')}
               </Button>
             </Guard>
           )}

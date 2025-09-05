@@ -1,4 +1,5 @@
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
 import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -7,8 +8,8 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { Divider, Popover, Tooltip } from '@coze-arch/coze-design';
 
-import { TypographyText } from '../text-ellipsis';
 import { TagRender } from './tag/tag-render';
+import { TypographyText } from '../text-ellipsis';
 
 interface NameScoreTagProps {
   name?: string;
@@ -51,7 +52,7 @@ export function AnnotationNameScoreTag({
       </div>
       <div className={classNames('flex items-center', 'ml-1')}>
         {enableLinkJump ? (
-          <Tooltip theme="dark" content="查看标签详情">
+          <Tooltip theme="dark" content={I18n.t('view_tag_details')}>
             <div className="flex items-center">
               <JumpIconButton
                 className={defaultShowAction ? '' : 'hidden group-hover:flex'}

@@ -4,6 +4,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useState, type MutableRefObject } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   ExptCreateFormCtx,
   ExtCreateStep,
@@ -54,7 +55,7 @@ const BackComponent = () => (
   <div className="px-6 py-3 h-[56px] flex-shrink-0 flex flex-row items-center">
     <RouteBackAction defaultModuleRoute="evaluation/experiments" />
     <span className="ml-2 text-[18px] font-medium coz-fg-plus">
-      {'新建实验'}
+      {I18n.t('new_experiment')}
     </span>
   </div>
 );
@@ -144,7 +145,7 @@ export default function ExperimentCreatePage() {
         });
       }, 100);
     } catch (e) {
-      console.error('提交表单遇到问题', e);
+      console.error(I18n.t('submit_form_problems'), e);
     } finally {
       setNextStepLoading(false);
     }
@@ -279,14 +280,12 @@ export default function ExperimentCreatePage() {
                             }
                           />
                         </StepVisibleWrapper>
-                        {/* 创建实验 */}
-                        <StepVisibleWrapper
-                          visible={step === ExtCreateStep.CREATE_EXPERIMENT}
-                        >
+                        {/* 创建实验，预览里仅展示没有可修改表单值的表单项，仅在该步骤时再渲染即可  */}
+                        {step === ExtCreateStep.CREATE_EXPERIMENT ? (
                           <ViewSubmitForm
                             createExperimentValues={createExperimentValues}
                           />
-                        </StepVisibleWrapper>
+                        ) : null}
                       </>
                     )}
                   </div>

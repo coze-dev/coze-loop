@@ -187,8 +187,6 @@ export {
 export {
   parsePromptVariables,
   parseMessagesVariables,
-  type PromptVariable,
-  PromptVariableType,
 } from './utils/parse-prompt-variable';
 export {
   uniqueExperimentsEvaluators,

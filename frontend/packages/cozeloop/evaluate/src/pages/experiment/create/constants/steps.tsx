@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint } from '@cozeloop/guard';
 
 export interface StepConfig {
@@ -14,35 +15,33 @@ export interface StepConfig {
 
 export const STEPS: StepConfig[] = [
   {
-    title: '基础信息',
-    nextStepText: '下一步：评测集',
+    title: I18n.t('basic_info'),
+    nextStepText: I18n.t('next_step_evaluation_set'),
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
   },
   {
-    title: '评测集',
-    nextStepText: '下一步：评测对象',
+    title: I18n.t('evaluation_set'),
+    nextStepText: I18n.t('next_step_evaluation_object'),
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
   },
   {
-    title: '评测对象',
-    nextStepText: '下一步：评估器',
+    title: I18n.t('evaluation_object'),
+    nextStepText: I18n.t('next_step_evaluator'),
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
     optional: true,
-    tooltip:
-      '跳过评测对象执行配置，适用于评测集已包含agent实际输出的评测场景。',
+    tooltip: I18n.t('skip_eval_object_execution_config'),
   },
   {
-    title: '评估器',
-    nextStepText: '确认实验配置',
+    title: I18n.t('evaluator'),
+    nextStepText: I18n.t('confirm_experiment_config'),
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
     optional: true,
-    tooltip:
-      '选择跳过评估器配置，实验仅获agent实际输出，适用于人工标注的评测场景。',
+    tooltip: I18n.t('skip_evaluator_config_agent_output_only'),
   },
   {
     hiddenStepBar: true,
-    title: '确认实验配置',
-    nextStepText: '发起实验',
+    title: I18n.t('confirm_experiment_config'),
+    nextStepText: I18n.t('initiate_experiment'),
     isLast: true,
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
   },

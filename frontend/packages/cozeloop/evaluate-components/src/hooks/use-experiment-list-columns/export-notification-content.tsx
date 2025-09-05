@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { CSVExportStatus } from '@cozeloop/api-schema/evaluation';
 import { Button, type ButtonProps } from '@coze-arch/coze-design';
 
@@ -32,7 +33,9 @@ const ExportNotificationContent: React.FC<ExportNotificationContentProps> = ({
     const wrapperClassName = 'flex items-center ml-[21px] text-[14px]';
     const buttonNode = (
       <Button {...publicButtonProps} onClick={onViewExportRecord}>
-        <span className="text-[#5A4DED] text-[14px]">导出记录</span>
+        <span className="text-[#5A4DED] text-[14px]">
+          {I18n.t('evaluate_export_records')}
+        </span>
       </Button>
     );
 
@@ -40,7 +43,9 @@ const ExportNotificationContent: React.FC<ExportNotificationContentProps> = ({
       case CSVExportStatus.Running:
         return (
           <div className={wrapperClassName}>
-            <span>导出中，查看</span>
+            <span>
+              {I18n.t('cozeloop_open_evaluate_export_in_progress_view')}
+            </span>
             {buttonNode}
           </div>
         );
@@ -48,7 +53,7 @@ const ExportNotificationContent: React.FC<ExportNotificationContentProps> = ({
       case CSVExportStatus.Failed:
         return (
           <div className={wrapperClassName}>
-            <span>导出失败</span>
+            <span>{I18n.t('evaluate_export_failed')}</span>
             {buttonNode}
           </div>
         );
@@ -57,14 +62,16 @@ const ExportNotificationContent: React.FC<ExportNotificationContentProps> = ({
         return (
           <div className={`${wrapperClassName} ml-[14px]`}>
             <Button {...publicButtonProps} onClick={handleDownload}>
-              <span className="text-[#5A4DED] text-[14px]">下载文件</span>
+              <span className="text-[#5A4DED] text-[14px]">
+                {I18n.t('cozeloop_open_evaluate_download_file')}
+              </span>
             </Button>
             {buttonNode}
           </div>
         );
 
       default:
-        return '导出中';
+        return I18n.t('model_exporting');
     }
   };
 

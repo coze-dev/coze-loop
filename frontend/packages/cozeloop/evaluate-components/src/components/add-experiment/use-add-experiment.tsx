@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { type Version } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
@@ -34,7 +35,7 @@ export const useAddExperiment = ({
         }}
         disabled={!datasetDetail?.latest_version}
       >
-        新建实验
+        {I18n.t('new_experiment')}
       </Button>
     </Guard>
   );

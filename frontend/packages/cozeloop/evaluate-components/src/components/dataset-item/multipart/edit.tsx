@@ -6,6 +6,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import Sortable from 'sortablejs';
 import { nanoid } from 'nanoid';
 import cs from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { uploadFile } from '@cozeloop/biz-components-adapter';
 import {
@@ -24,15 +25,15 @@ import {
   type UploadProps,
 } from '@coze-arch/coze-design';
 
+import { UrlInputModal } from './components/url-input-modal';
+import { ICON_ID } from './components/text-item-render';
+import { MultipartItemRenderer } from './components/multipart-item-renderer';
 import { getMultipartConfig } from '../util';
 import {
   ImageStatus,
   type DatasetItemProps,
   type MultipartItem,
 } from '../type';
-import { UrlInputModal } from './components/url-input-modal';
-import { ICON_ID } from './components/text-item-render';
-import { MultipartItemRenderer } from './components/multipart-item-renderer';
 
 import styles from './index.module.less';
 
@@ -61,6 +62,19 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
       multi_part: items?.map(({ uid, sourceImage, ...item }) => item),
     });
   }, [items]);
+
+  // 受控父数据变化
+  useEffect(() => {
+    if (!fieldContent?.multi_part && items?.length !== 0) {
+      setItems(
+        (fieldContent?.multi_part || []).map(item => ({
+          ...item,
+          uid: nanoid(),
+        })),
+      );
+    }
+  }, [fieldContent?.multi_part]);
+
   const imageCount = items?.filter(
     item => item.content_type === ContentType.Image,
   ).length;
@@ -245,7 +259,6 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
 
   // 更新item
   const handleItemChange = (newItem: MultipartItem) => {
-    console.log(newItem);
     setItems(prev =>
       prev.map(item => (item.uid === newItem.uid ? newItem : item)),
     );
@@ -263,21 +276,21 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
         className="!pl-2"
         disabled={items?.length >= maxPartCount}
       >
-        文本
+        {I18n.t('plaintext')}
       </Dropdown.Item>
       <Dropdown.Item
         onClick={handleAddImageFile}
         className="!pl-2"
         disabled={imageCount >= maxFileCount}
       >
-        图片-源文件
+        {I18n.t('image_source_file')}
       </Dropdown.Item>
       <Dropdown.Item
         className="!pl-2"
         onClick={handleAddImageUrl}
         disabled={imageCount >= maxFileCount}
       >
-        图片-外链
+        {I18n.t('image_external_link')}
       </Dropdown.Item>
     </Dropdown.Menu>
   );
@@ -322,7 +335,7 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
           color="primary"
           // disabled={items.length >= maxPartCount}
         >
-          添加数据
+          {I18n.t('add_data')}
           <Typography.Text
             className="ml-1"
             type="secondary"
@@ -335,7 +348,7 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
         action=""
         maxSize={maxFileSize}
         onSizeError={() => {
-          Toast.error('图片大小不能超过20MB');
+          Toast.error(I18n.t('cozeloop_open_evaluate_image_size_limit_20mb'));
         }}
         accept={supportedFormats}
         customRequest={handleUploadFile}

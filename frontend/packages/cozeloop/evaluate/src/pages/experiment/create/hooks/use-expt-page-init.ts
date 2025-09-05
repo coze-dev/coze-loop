@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useEvalTargetDefinition } from '@cozeloop/evaluate-components';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
 
@@ -32,7 +33,7 @@ export const useExptPageInit = () => {
 
   // 面包屑
   useBreadcrumb({
-    text: '新建实验',
+    text: I18n.t('new_experiment'),
   });
 
   return {

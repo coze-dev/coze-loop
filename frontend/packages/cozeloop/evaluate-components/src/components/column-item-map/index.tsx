@@ -1,4 +1,5 @@
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { IconCozEqual } from '@coze-arch/coze-design/icons';
 import { Tag, type TooltipProps, Typography } from '@coze-arch/coze-design';
@@ -40,7 +41,7 @@ export const peDataTypeMap = {
   [PeDataType.Float]: 'Float',
   // 多模态
   [PeDataType.Image]: 'Image',
-  [PeDataType.Multipart]: '多模态',
+  [PeDataType.Multipart]: I18n.t('multimodal'),
 };
 
 export function ReadonlyItem({

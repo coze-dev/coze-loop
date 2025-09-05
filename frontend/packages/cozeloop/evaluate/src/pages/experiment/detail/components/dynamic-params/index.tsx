@@ -17,7 +17,7 @@ export function DynamicParams({ data, evalTarget }: Props) {
       content={
         <div className="max-h-[640px] overflow-auto">
           <div className="px-5 py-3 text-[16px] font-medium coz-fg-plus">
-            参数详情
+            {I18n.t('parameter_details')}
           </div>
           <div className="w-[612px] px-5 pb-6">
             <PromptDynamicParams data={data} evalTarget={evalTarget} />
@@ -26,7 +26,7 @@ export function DynamicParams({ data, evalTarget }: Props) {
       }
     >
       <span>
-        <Typography.Text link>参数详情</Typography.Text>
+        <Typography.Text link>{I18n.t('parameter_details')}</Typography.Text>
       </span>
     </Popover>
   );

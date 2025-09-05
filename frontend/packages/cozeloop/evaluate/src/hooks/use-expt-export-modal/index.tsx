@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type ExptResultExportRecord } from '@cozeloop/api-schema/evaluation';
 
 import ExportTableModal from '@/components/experiment/experiment-export/export-table-modal';
@@ -17,7 +18,7 @@ export const useExptExportModal = () => {
 
   // 导出记录的表格列配置
   const exportRecordColumn = {
-    title: '导出记录',
+    title: I18n.t('export_records'),
     key: 'export_record',
     width: 80,
     render: (_: unknown, record: ExptResultExportRecord) => (
@@ -25,7 +26,7 @@ export const useExptExportModal = () => {
         className="cursor-pointer text-primary hover:text-primary-hover"
         onClick={() => onExportRecordClick(record)}
       >
-        导出记录
+        {I18n.t('export_records')}
       </span>
     ),
   };

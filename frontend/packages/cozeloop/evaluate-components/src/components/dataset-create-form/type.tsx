@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { InfoTooltip } from '@cozeloop/components';
 import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 
@@ -19,7 +20,7 @@ export const DEFAULT_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.String,
     default_display_format: FieldDisplayFormat.PlainText,
-    description: '作为输入投递给评测对象',
+    description: I18n.t('evaluation_set_input_tips'),
     additionalProperties: false,
   },
   {
@@ -27,7 +28,7 @@ export const DEFAULT_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.String,
     default_display_format: FieldDisplayFormat.PlainText,
-    description: '预期理想输出，可作为评估时的参考标准',
+    description: I18n.t('evaluation_set_reference_output_tips'),
     additionalProperties: false,
   },
 ];
@@ -37,8 +38,7 @@ export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.Object,
     default_display_format: FieldDisplayFormat.JSON,
-    description:
-      '工作流开始节点的输入参数及取值，你可以在指定工作流的编排页面查看参数列表。',
+    description: I18n.t('evaluation_set_workflow_params_tips'),
     additionalProperties: false,
   },
   {
@@ -46,7 +46,7 @@ export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.String,
     default_display_format: FieldDisplayFormat.PlainText,
-    description: '工作流需要关联的 Coze 智能体 ID。',
+    description: I18n.t('workflow_need_associated_coze_agent_id'),
     additionalProperties: false,
   },
   {
@@ -54,7 +54,7 @@ export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.Object,
     default_display_format: FieldDisplayFormat.JSON,
-    description: '用于指定工作流需要的一些额外的字段。',
+    description: I18n.t('workflow_additional_fields'),
     additionalProperties: false,
   },
   {
@@ -62,7 +62,7 @@ export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.String,
     default_display_format: FieldDisplayFormat.PlainText,
-    description: '该工作流关联的应用的 ID。',
+    description: I18n.t('workflow_associated_coze_agent_id'),
     additionalProperties: false,
   },
   {
@@ -70,7 +70,7 @@ export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.Object,
     default_display_format: FieldDisplayFormat.JSON,
-    description: '预期理想输出，可作为评估时的参考标准',
+    description: I18n.t('evaluation_set_reference_output_tips'),
     additionalProperties: false,
   },
 ];
@@ -100,18 +100,18 @@ export const COLUMNS_MAP = {
 
 export const CREATE_TEMPLATE_LIST = [
   {
-    label: '默认',
+    label: I18n.t('default'),
     value: CreateTemplate.Default,
-    displayText: '默认',
+    displayText: I18n.t('default'),
   },
   {
     label: (
       <div className="flex items-center gap-1">
-        <span>Coze 工作流</span>
-        <InfoTooltip content="一键将评测集的列调整为兼容工作流执行 API 的数据格式。" />
+        <span>{I18n.t('coze_workflow')}</span>
+        <InfoTooltip content={I18n.t('adjust_the_columns_with_workflow_api')} />
       </div>
     ),
     value: CreateTemplate.CozeWorkflow,
-    displayText: 'Coze 工作流',
+    displayText: I18n.t('coze_workflow'),
   },
 ];

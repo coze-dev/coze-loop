@@ -1,6 +1,7 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IDWithCopy, ColumnsManage } from '@cozeloop/evaluate-components';
 import { ResizeSidesheet } from '@cozeloop/components';
 import {
@@ -81,7 +82,7 @@ export default function ExperimentItemDetail({
   const header = (
     <div className="flex items-center h-5 gap-2 text-sm font-normal">
       <div className="flex items-center text-[18px] font-medium">
-        查看详情：
+        {I18n.t('loop_evaluate_view_details')}
         <IDWithCopy
           id={idString}
           prefix={
@@ -101,7 +102,7 @@ export default function ExperimentItemDetail({
         }}
         disabled={activeItemStore.isFirst}
       >
-        上一条
+        {I18n.t('data_engine_previous')}
       </Button>
       <Button
         icon={<IconCozArrowRight />}
@@ -113,7 +114,7 @@ export default function ExperimentItemDetail({
         }}
         disabled={activeItemStore.isLast}
       >
-        下一条
+        {I18n.t('data_engine_next')}
       </Button>
       <Divider layout="vertical" style={{ height: '12px' }} />
       <ColumnsManage
@@ -159,7 +160,7 @@ export default function ExperimentItemDetail({
             borderBottom: '1px solid var(--coz-stroke-primary',
           }}
         >
-          评测集数据
+          {I18n.t('loop_evaluate_evaluation_dataset')}
         </div>
         <div className="overflow-auto">
           <ExperimentItemDetailTable
@@ -175,7 +176,7 @@ export default function ExperimentItemDetail({
         <div className="text-[var(--coz-fg-plus)]">
           <EvalActualOutputTable expand={expand} item={item} />
         </div>
-        <CollapsibleField title="评估器得分">
+        <CollapsibleField title={I18n.t('loop_evaluate_evaluator_score')}>
           <EvaluatorResultTable
             spaceID={spaceID}
             evaluatorRecordMap={item?.evaluatorsResult}
@@ -183,12 +184,12 @@ export default function ExperimentItemDetail({
             onRefresh={() => onStepChange?.(0)}
           />
           <div className="place-self-center mt-2 text-[var(--coz-fg-dim)] text-xs leading-4">
-            {'内容由AI生成，无法确保真实准确，仅供参考。'}
+            {I18n.t('generated_by_ai_tip')}
           </div>
         </CollapsibleField>
         <div className="h-2"></div>
         {columnAnnotations.length ? (
-          <CollapsibleField title="人工标注">
+          <CollapsibleField title={I18n.t('data_engine_manual_annotation')}>
             <AnnotateTable
               spaceID={spaceID as string}
               annotation={columnAnnotations}

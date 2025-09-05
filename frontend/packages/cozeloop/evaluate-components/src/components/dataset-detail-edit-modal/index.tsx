@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint } from '@cozeloop/guard';
 import { EditIconButton } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -41,7 +42,7 @@ export const DatasetDetailEditModal = ({
       evaluation_set_id: datasetDetail?.id as string,
       workspace_id: spaceID,
     });
-    Toast.success('更新成功');
+    Toast.success(I18n.t('prompt_block_update_success'));
     onSuccess();
     setVisible(false);
   };
@@ -59,12 +60,12 @@ export const DatasetDetailEditModal = ({
           setVisible(false);
           onCancel?.();
         }}
-        title="编辑评测集"
+        title={I18n.t('edit_evaluation_set')}
         onOk={() => {
           formRef?.current?.submitForm();
         }}
-        okText="保存"
-        cancelText="取消"
+        okText={I18n.t('save')}
+        cancelText={I18n.t('cancel')}
       >
         <Form<FormValues>
           getFormApi={formApi => {
@@ -79,13 +80,13 @@ export const DatasetDetailEditModal = ({
         >
           <FormInput
             field="name"
-            label="评测集名称"
+            label={I18n.t('evaluation_set_name')}
             maxLength={50}
             autoComplete="off"
             rules={[
               {
                 required: true,
-                message: '请输入评测集名称',
+                message: I18n.t('enter_evaluation_name'),
               },
               {
                 validator: sourceNameRuleValidator,
@@ -94,7 +95,7 @@ export const DatasetDetailEditModal = ({
           />
           <FormTextArea
             field="description"
-            label="评测集描述"
+            label={I18n.t('evaluation_set_description')}
             maxCount={200}
             maxLength={200}
           />

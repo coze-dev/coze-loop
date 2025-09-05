@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { LogicExpr } from '@cozeloop/components';
 import { IconCozFilter, IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import {
@@ -129,7 +130,7 @@ export default function LogicEditor({
       )}
     >
       <div className="flex items-center px-4">
-        <div className="font-medium">过滤器</div>
+        <div className="font-medium">{I18n.t('data_filter')}</div>
         {tooltip ? (
           <Tooltip theme="dark" content={tooltip}>
             <IconCozInfoCircle className="ml-1 text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
@@ -142,7 +143,7 @@ export default function LogicEditor({
             onChange?.(undefined);
           }}
         >
-          清空筛选
+          {I18n.t('clear_filter')}
         </div>
       </div>
       <div className={hasMultiExpr ? '' : 'pl-3 pr-2'}>
@@ -163,7 +164,7 @@ export default function LogicEditor({
             onClose?.();
           }}
         >
-          应用
+          {I18n.t('application')}
         </Button>
       </div>
     </div>
@@ -187,7 +188,7 @@ export default function LogicEditor({
       }}
     >
       <Button icon={<IconCozFilter />} color="primary">
-        过滤器
+        {I18n.t('data_filter')}
         {count ? (
           <div className="flex items-center justify-center w-5 h-5 rounded-[50%] text-brand-9 bg-brand-4 ml-1 text-[13px]">
             {count}

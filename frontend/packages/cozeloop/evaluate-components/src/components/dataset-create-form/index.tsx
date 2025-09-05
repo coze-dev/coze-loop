@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 
 import { isEqual } from 'lodash-es';
 import cs from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { InfoTooltip } from '@cozeloop/components';
 import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -39,6 +40,7 @@ export interface DatasetCreateFormProps {
 
 // const FormColumnConfig = withField()
 
+// eslint-disable-next-line @coze-arch/max-line-per-function
 export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
   const formRef = useRef<FormApi<IDatasetCreateForm>>();
   const { spaceID } = useSpace();
@@ -61,7 +63,7 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
           workspace_id: spaceID,
         },
       });
-      Toast.success('创建成功');
+      Toast.success(I18n.t('create_success'));
       navigate(`evaluation/datasets/${res.evaluation_set_id}`);
     } finally {
       setLoading(false);
@@ -82,7 +84,7 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
               );
             }}
           >
-            如何创建评测集
+            {I18n.t('how_to_create_a_review_set')}
           </Typography.Text>
         </div>
       </div>
@@ -99,21 +101,24 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
       >
         {({ formApi, formState }) => (
           <div className="w-[800px] mx-auto flex flex-col gap-[40px]">
-            <FormSectionLayout title="基本信息" className="!mb-[14px]">
+            <FormSectionLayout
+              title={I18n.t('basic_information')}
+              className="!mb-[14px]"
+            >
               <FormInput
-                label="名称"
+                label={I18n.t('name')}
                 maxLength={50}
                 field="name"
-                placeholder="请输入评测集名称"
+                placeholder={I18n.t('enter_evaluation_name')}
                 rules={[
-                  { required: true, message: '请输入评测集名称' },
+                  { required: true, message: I18n.t('enter_evaluation_name') },
                   { validator: sourceNameRuleValidator },
                 ]}
               ></FormInput>
               <FormTextArea
-                label="描述"
+                label={I18n.t('description')}
                 field="description"
-                placeholder="请输入评测集描述"
+                placeholder={I18n.t('please_enter_a_review_set_description')}
                 maxLength={200}
                 maxCount={200}
               ></FormTextArea>
@@ -123,8 +128,8 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
               title={
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    配置列
-                    <InfoTooltip content="评测集创建完成后，仍可修改列配置" />
+                    {I18n.t('configuration_column')}
+                    <InfoTooltip content={I18n.t('can_still_modify_column')} />
                   </div>
                   {config.showCreateEvaluateSetTemplateSelect ? (
                     <CreateDatasetTemplate
@@ -139,9 +144,11 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
                           );
                         } else {
                           Modal.warning({
-                            title: '信息未保存',
+                            title: I18n.t('information_not_saved'),
                             width: 420,
-                            content: '切换后当前修改会被覆盖',
+                            content: I18n.t(
+                              'switching_modification_overwritten_tips',
+                            ),
                             onOk: () => {
                               setTemplate(newValue as CreateTemplate);
                               formApi.setValue(
@@ -149,9 +156,9 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
                                 COLUMNS_MAP[newValue as CreateTemplate],
                               );
                             },
-                            okText: '确认',
+                            okText: I18n.t('global_btn_confirm'),
                             okButtonColor: 'yellow',
-                            cancelText: '取消',
+                            cancelText: I18n.t('global_btn_cancel'),
                           });
                         }
                       }}
@@ -179,7 +186,7 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
             }}
             loading={loading}
           >
-            创建
+            {I18n.t('create')}
           </Button>
         </Guard>
       </div>

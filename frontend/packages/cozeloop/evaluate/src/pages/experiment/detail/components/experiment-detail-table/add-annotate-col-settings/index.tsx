@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet } from '@cozeloop/components';
 import { useModalData } from '@cozeloop/base-hooks';
 import { type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
@@ -24,10 +25,10 @@ export function AddAnnotateColumn({
   return (
     <>
       <Button color="primary" onClick={() => tagModal.open()}>
-        人工标注管理
+        {I18n.t('manual_annotation_management')}
       </Button>
       <ResizeSidesheet
-        title="人工标注管理"
+        title={I18n.t('manual_annotation_management')}
         visible={tagModal.visible}
         onCancel={tagModal.close}
         width={680}

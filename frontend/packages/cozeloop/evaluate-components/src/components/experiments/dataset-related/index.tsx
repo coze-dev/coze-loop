@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import classNames from 'classnames';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TableWithPagination } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -162,10 +163,10 @@ export function DatasetRelatedExperiment({
 
   const chartHeader = (
     <div className="flex items-center gap-1 w-full h-8">
-      <div className="text-sm font-semibold">总览</div>
+      <div className="text-sm font-semibold">{I18n.t('overview')}</div>
       <Tooltip
         theme="dark"
-        content="在实验列表中，聚合统计各实验在指标上的得分。"
+        content={I18n.t('aggregate_statistics_score_on_metrics')}
       >
         <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
       </Tooltip>
@@ -183,7 +184,7 @@ export function DatasetRelatedExperiment({
               updateChartConfig('chartType', e.target.value);
             }}
           >
-            <Tooltip content="折线图" theme="dark">
+            <Tooltip content={I18n.t('line_chart')} theme="dark">
               <Radio
                 value="line"
                 addonClassName="flex items-center"
@@ -192,7 +193,7 @@ export function DatasetRelatedExperiment({
                 <IconCozLineChart className="text-xxl" />
               </Radio>
             </Tooltip>
-            <Tooltip content="柱状图" theme="dark">
+            <Tooltip content={I18n.t('bar_chart')} theme="dark">
               <Radio
                 value="bar"
                 addonClassName="flex items-center"
@@ -203,8 +204,8 @@ export function DatasetRelatedExperiment({
             </Tooltip>
           </Radio.Group>
           <Select
-            prefix="指标"
-            placeholder="请选择"
+            prefix={I18n.t('indicator')}
+            placeholder={I18n.t('please_select', { field: '' })}
             style={{ minWidth: 200 }}
             multiple={true}
             maxTagCount={1}
@@ -270,7 +271,7 @@ export function DatasetRelatedExperiment({
                   setSelectedExperiments([]);
                 }}
               >
-                批量选择
+                {I18n.t('batch_select')}
               </Button>
             )}
           </>
@@ -306,7 +307,9 @@ export function DatasetRelatedExperiment({
           </div>
         ) : null}
       </div>
-      <div className="text-sm font-semibold mt-5 mb-3">实验列表</div>
+      <div className="text-sm font-semibold mt-5 mb-3">
+        {I18n.t('experiments_list')}
+      </div>
       <TableWithPagination<Experiment>
         service={service}
         heightFull={false}

@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   ContentType,
   EvalTargetType,
@@ -5,7 +6,9 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 
 export const evalTargetTypeMap = {
-  [EvalTargetType.CozeBot]: 'Coze 智能体',
+  [EvalTargetType.CozeBot]: I18n.t(
+    'cozeloop_open_evaluate_coze_intelligent_agent',
+  ),
   [EvalTargetType.CozeLoopPrompt]: 'Prompt',
 };
 

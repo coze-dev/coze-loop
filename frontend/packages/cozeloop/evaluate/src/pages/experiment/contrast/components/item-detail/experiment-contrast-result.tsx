@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
   EvaluatorNameScore,
@@ -114,7 +115,10 @@ export default function ExperimentContrastResult({
       <div className="flex items-center justify-between">
         <div className="flex gap-1 items-center">
           <div className="text-[var(--coz-fg-secondary)]">actual_output</div>
-          <Tooltip theme="dark" content="评测对象的实际输出">
+          <Tooltip
+            theme="dark"
+            content={I18n.t('evaluation_object_actual_output')}
+          >
             <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
           </Tooltip>
         </div>

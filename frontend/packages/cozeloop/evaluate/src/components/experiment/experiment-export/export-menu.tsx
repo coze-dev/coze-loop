@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   fetchExportStatus,
   useGlobalEvalConfig,
@@ -71,12 +72,16 @@ const ExportMenu = (props: ExportMenuProps) => {
       position="bottomLeft"
       render={
         <Dropdown.Menu>
-          <Dropdown.Title className="!pl-2">导出数据</Dropdown.Title>
+          <Dropdown.Title className="!pl-2">
+            {I18n.t('export_data')}
+          </Dropdown.Title>
           <TooltipWhenDisabled
             theme="dark"
             disabled={!isFinished}
             content={
-              !isFinished ? '当前实验未完成，不支持导出和下载' : undefined
+              !isFinished
+                ? I18n.t('export_not_supported_incomplete_experiment')
+                : undefined
             }
           >
             <Dropdown.Item
@@ -91,19 +96,21 @@ const ExportMenu = (props: ExportMenuProps) => {
                     : '',
                 }}
               >
-                CSV格式
+                {I18n.t('csv_format')}
               </span>
             </Dropdown.Item>
           </TooltipWhenDisabled>
-          <Dropdown.Title className="!pl-2">导出记录</Dropdown.Title>
+          <Dropdown.Title className="!pl-2">
+            {I18n.t('export_records')}
+          </Dropdown.Title>
           <Dropdown.Item className="!pl-2" onClick={onViewDownloadFiles}>
-            查看并下载文件
+            {I18n.t('view_and_download_files')}
           </Dropdown.Item>
         </Dropdown.Menu>
       }
     >
       <Button color="primary" iconPosition="right" icon={<IconCozArrowDown />}>
-        导出
+        {I18n.t('export')}
       </Button>
     </Dropdown>
   );

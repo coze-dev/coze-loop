@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
@@ -66,7 +67,7 @@ export function EvaluatorVersionSelect({
                 {label}
                 <InfoIconTooltip
                   className="ml-1"
-                  tooltip="为保证自动评测效果，评估器 Prompt 需至少有1个变量"
+                  tooltip={I18n.t('prompt_variable_to_ensure_effect')}
                 />
               </div>
             ) : (

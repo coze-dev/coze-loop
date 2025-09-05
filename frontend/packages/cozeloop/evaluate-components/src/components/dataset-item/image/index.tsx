@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozEye, IconCozDownload } from '@coze-arch/coze-design/icons';
 import { Image, ImagePreview } from '@coze-arch/coze-design';
 
@@ -57,7 +58,7 @@ export const ImageDatasetItem: React.FC<
             className="text-white w-[16px] h-[16px] cursor-pointer"
             onClick={() => {
               if (image?.url) {
-                downloadWithUrl(image?.url, image?.name || '测试');
+                downloadWithUrl(image?.url, image?.name || I18n.t('test'));
               }
             }}
           />

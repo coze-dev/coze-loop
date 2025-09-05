@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type RefObject, type FC } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ContentType, type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { withField, type CommonFieldProps } from '@coze-arch/coze-design';
 
@@ -130,10 +131,12 @@ const getWorkflowMappingRules = (schema: FieldSchema) => [
   {
     validator: (_rule, v) => {
       if (!v) {
-        return new Error('请选择');
+        return new Error(I18n.t('please_select'));
       }
       if (getTypeText(v) !== getTypeText(schema)) {
-        return new Error('所选字段数据类型不一致，请重新选择');
+        return new Error(
+          I18n.t('cozeloop_open_evaluate_selected_field_type_inconsistent'),
+        );
       }
       return true;
     },
@@ -208,7 +211,7 @@ const WorkflowMappingField: FC<CommonFieldProps & EvaluateTargetMappingProps> =
               name: fieldPath,
               status: 1,
               content_type: 'Text',
-              description: '作为输入投递给评测对象',
+              description: I18n.t('evaluation_set_input_tips'),
               text_schema: JSON.stringify({ type: wfMapping[fieldPath] }),
               default_display_format: 5,
               schemaSourceType: 'set',
@@ -255,7 +258,7 @@ const WorkflowMappingField: FC<CommonFieldProps & EvaluateTargetMappingProps> =
                         disabled={isChild}
                         field={`${prefixField}.${nodeData.key}`}
                         fieldClassName="!pt-0"
-                        keyTitle="评测对象"
+                        keyTitle={I18n.t('evaluation_object')}
                         keySchema={keySchema}
                         optionGroups={optionGroups}
                         rules={getWorkflowMappingRules(keySchema)}
@@ -274,7 +277,7 @@ const WorkflowMappingField: FC<CommonFieldProps & EvaluateTargetMappingProps> =
                 noLabel
                 field={`${prefixField}.${(schema as FieldSchema).name}`}
                 fieldClassName="!pt-0"
-                keyTitle="评测对象"
+                keyTitle={I18n.t('evaluation_object')}
                 keySchema={schema as FieldSchema}
                 optionGroups={optionGroups}
                 rules={getWorkflowMappingRules(schema as FieldSchema)}

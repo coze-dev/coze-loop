@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { DEFAULT_TEXT_STRING_SCHEMA } from '@cozeloop/evaluate-components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { IconCozArrowRight } from '@coze-arch/coze-design/icons';
@@ -53,13 +54,13 @@ export function EvaluateItemRender({
 
       <div className={open ? 'p-4' : 'hidden'}>
         <div className="text-sm font-medium coz-fg-primary mb-2">
-          {'字段映射'}
+          {I18n.t('field_mapping')}
         </div>
         <div className="flex flex-col gap-3">
           {inputSchemas.map(schema => (
             <ReadonlyMappingItem
               key={schema?.key}
-              keyTitle={'评估器'}
+              keyTitle={I18n.t('evaluator')}
               keySchema={{
                 name: schema?.key,
                 ...DEFAULT_TEXT_STRING_SCHEMA,
@@ -72,7 +73,7 @@ export function EvaluateItemRender({
           {/* {Object.entries(evaluatorPro.evaluatorMapping || {}).map(([k, v]) => (
             <ReadonlyMappingItem
               key={k}
-              keyTitle={'评估器'}
+              keyTitle={I18n.t('evaluator')}
               keySchema={{
                 name: k,
                 ...DEFAULT_TEXT_STRING_SCHEMA,

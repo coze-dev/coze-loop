@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { set } from 'lodash-es';
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
 import { RouteBackAction } from '@cozeloop/components';
@@ -39,18 +40,18 @@ function EvaluatorCreatePage() {
   useEffect(() => {
     if (blocker.state === 'blocked') {
       Modal.warning({
-        title: '信息未保存',
-        content: '离开当前页面，信息将不被保存。',
-        cancelText: '取消',
+        title: I18n.t('information_unsaved'),
+        content: I18n.t('leave_page_tip'),
+        cancelText: I18n.t('cancel'),
         onCancel: blocker.reset,
-        okText: '确认',
+        okText: I18n.t('confirm'),
         onOk: blocker.proceed,
       });
     }
   }, [blocker.state]);
 
   useBreadcrumb({
-    text: '新建评估器',
+    text: I18n.t('new_evaluator'),
   });
 
   const formRef = useRef<Form>(null);
@@ -109,17 +110,17 @@ function EvaluatorCreatePage() {
         }}
       >
         <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
-          {'基础信息'}
+          {I18n.t('basic_info')}
         </div>
         <FormInput
-          label="名称"
+          label={I18n.t('name')}
           field="name"
-          placeholder={'请输入名称'}
+          placeholder={I18n.t('please_input', { field: '' })}
           required
           maxLength={50}
           trigger="blur"
           rules={[
-            { required: true, message: '请输入名称' },
+            { required: true, message: I18n.t('please_input_name') },
             { max: 50 },
             { validator: sourceNameRuleValidator },
             {
@@ -130,7 +131,7 @@ function EvaluatorCreatePage() {
                     name: value,
                   });
                   if (pass === false) {
-                    throw new Error('名称已存在');
+                    throw new Error(I18n.t('name_already_exists'));
                   }
                 }
               },
@@ -138,9 +139,9 @@ function EvaluatorCreatePage() {
           ]}
         />
         <FormTextArea
-          label="描述"
+          label={I18n.t('description')}
           field="description"
-          placeholder={'请输入描述'}
+          placeholder={I18n.t('please_input_description')}
           fieldStyle={{ paddingTop: 8 }}
           maxCount={200}
           maxLength={200}
@@ -156,7 +157,7 @@ function EvaluatorCreatePage() {
       <div className="px-6 flex-shrink-0 py-3 h-[56px] flex flex-row items-center">
         <RouteBackAction defaultModuleRoute="evaluation/evaluators" />
         <span className="ml-2 text-[18px] font-medium coz-fg-plus">
-          {'新建评估器'}
+          {I18n.t('new_evaluator')}
         </span>
       </div>
       {sourceService.loading ? (
@@ -176,7 +177,7 @@ function EvaluatorCreatePage() {
               />
               <Guard point={GuardPoint['eval.evaluator_create.create']}>
                 <Button type="primary" onClick={handleSubmit}>
-                  {'创建'}
+                  {I18n.t('create')}
                 </Button>
               </Guard>
             </div>
