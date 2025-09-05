@@ -96,3 +96,4 @@ export { default as JumpIconButton } from './jump-button/jump-icon-button';
 export { default as RouteBackAction } from './route/route-back-action';
 
 export { BasicCard } from './basic-card';
+export { MultipartEditor } from './multi-part-editor';

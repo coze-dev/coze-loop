@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 
 import { useMemo, useState } from 'react';
@@ -11,7 +9,6 @@ import {
   TraceDetail,
   SpanType,
 } from '@cozeloop/observation-component-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet, TextWithCopy } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -137,21 +134,20 @@ export const TraceTab = ({
                 type="tertiary"
                 className="flex items-center gap-1"
               >
-                {I18n.t('prompt_debug_data_refresh_retry')}
+                Prompt调试数据在路上，请刷新重试
               </Typography.Text>
               <Typography.Text
                 className="text-brand-9 cursor-pointer pt-3"
                 icon={<IconCozRefresh className="text-secondary" />}
                 onClick={runAsync}
               >
-                {I18n.t('refresh')}
+                刷新
               </Typography.Text>
             </div>
           }
         />
       );
     }
-
     return (
       <div className="flex flex-col h-full w-full">
         {isDrawer ? null : traceItemHeader}
@@ -163,7 +159,7 @@ export const TraceTab = ({
             {spansItem?.map((item, index) => (
               <TabPane
                 tabIndex={index}
-                tab={I18n.t('x_step', { num: index + 1 })}
+                tab={`第${index + 1}步`}
                 key={item.span_id || index}
                 itemKey={String(index)}
                 className="px-5"

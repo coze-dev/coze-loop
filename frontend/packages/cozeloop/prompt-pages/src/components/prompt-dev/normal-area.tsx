@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-params */
 /* eslint-disable complexity */
@@ -12,10 +10,10 @@ import classNames from 'classnames';
 import { useSize } from 'ahooks';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { DevLayout } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozColumnCollapse,
   IconCozColumnExpand,
+  IconCozInfoCircle,
   IconCozSideCollapse,
   IconCozSideExpand,
 } from '@coze-arch/coze-design/icons';
@@ -34,7 +32,7 @@ export function NormalArea() {
   const { versionChangeVisible } = useBasicStore(
     useShallow(state => ({ versionChangeVisible: state.versionChangeVisible })),
   );
-  const { variables, tools, promptInfo } = usePromptStore(
+  const { variables, promptInfo } = usePromptStore(
     useShallow(state => ({
       variables: state.variables,
       tools: state.tools,
@@ -97,11 +95,17 @@ export function NormalArea() {
           right:
             isSmallWindowOpenVersion || !configExecuteVisible ? false : true,
         }}
+        handleStyles={{
+          right: {
+            width: '4px',
+            right: '-2px',
+          },
+        }}
         handleComponent={{
           right: isSmallWindowOpenVersion ? (
             <div />
           ) : (
-            <div className="w-[5px] h-full ml-[5px] border-0 border-solid border-brand-9 hover:border-l-2"></div>
+            <div className="w-[2px] h-full border-0 border-solid border-brand-9 hover:border-l-2"></div>
           ),
         }}
         className={classNames('flex flex-col', {
@@ -113,15 +117,15 @@ export function NormalArea() {
         }}
       >
         <DevLayout
-          title={I18n.t('orchestration')}
+          title="编排"
           actionBtns={
             <Space spacing="tight">
               <Tooltip
                 theme="dark"
                 content={
                   configAreaVisible
-                    ? I18n.t('collapse_model_and_var_area')
-                    : I18n.t('expand_model_and_var_area')
+                    ? '收起模型配置与变量区'
+                    : '展开模型配置与变量区'
                 }
               >
                 <IconButton
@@ -144,10 +148,7 @@ export function NormalArea() {
                 />
               </Tooltip>
               {configExecuteVisible ? null : (
-                <Tooltip
-                  theme="dark"
-                  content={I18n.t('expand_preview_and_debug')}
-                >
+                <Tooltip theme="dark" content="展开预览与调试">
                   <IconButton
                     size="mini"
                     color="primary"
@@ -204,12 +205,9 @@ export function NormalArea() {
             >
               <ModelConfigCard />
               <Divider />
-              <VariablesCard
-                defaultVisible={Boolean(variables?.length)}
-                key={variables?.length}
-              />
+              <VariablesCard defaultVisible key={variables?.length} />
               <Divider />
-              <ToolsCard defaultVisible={Boolean(tools?.length)} />
+              <ToolsCard defaultVisible />
             </div>
           </div>
         </DevLayout>
@@ -223,9 +221,21 @@ export function NormalArea() {
           },
         )}
         style={{ minWidth: '35%' }}
-        title={I18n.t('preview_and_debug')}
+        title={
+          <div className="flex items-center gap-2">
+            <span>预览与调试</span>
+            {promptInfo?.id ? null : (
+              <Tooltip
+                theme="dark"
+                content="历史图片消息1天后过期，可查看 Trace 或前往 Prompt 开发页面调试获取图片信息"
+              >
+                <IconCozInfoCircle className="cursor-pointer" />
+              </Tooltip>
+            )}
+          </div>
+        }
         actionBtns={
-          <Tooltip theme="dark" content={I18n.t('collapse_preview_and_debug')}>
+          <Tooltip theme="dark" content="收起预览与调试">
             <IconButton
               size="mini"
               color="primary"

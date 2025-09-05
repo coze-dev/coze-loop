@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type CSSProperties } from 'react';
 
 import classNames from 'classnames';
@@ -9,7 +7,6 @@ import {
   IconCozCrossCircleFill,
 } from '@coze-arch/coze-design/icons';
 import { Tag, Typography } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export enum Status {
   Success = 'success',
@@ -54,11 +51,9 @@ export const QueryItem = ({
     </Typography.Text>
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <Typography.Text type="tertiary">
-          {I18n.t('time_consumed')}:
-        </Typography.Text>
+        <Typography.Text type="tertiary">耗时:</Typography.Text>
         <Typography.Text>{formateMsToSeconds(costMs)}</Typography.Text>
-        <Typography.Text type="tertiary">{I18n.t('tokens')}:</Typography.Text>
+        <Typography.Text type="tertiary">Tokens:</Typography.Text>
         <Typography.Text>{duration}</Typography.Text>
         {status === Status.Success ? (
           <Tag
@@ -66,18 +61,16 @@ export const QueryItem = ({
             color="green"
             prefixIcon={<IconCozCheckMarkCircleFill />}
           >
-            {I18n.t('success')}
+            成功
           </Tag>
         ) : (
           <Tag size="mini" color="red" prefixIcon={<IconCozCrossCircleFill />}>
-            {I18n.t('failure')}
+            失败
           </Tag>
         )}
       </div>
       <div className="flex gap-2">
-        <Typography.Text type="tertiary">
-          {I18n.t('request_initiation_time')}:
-        </Typography.Text>
+        <Typography.Text type="tertiary">请求发起时间:</Typography.Text>
         <Typography.Text
           ellipsis={{
             showTooltip: {

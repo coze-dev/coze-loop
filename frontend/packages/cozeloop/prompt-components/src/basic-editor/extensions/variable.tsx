@@ -1,11 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable max-params */
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { useEffect, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
-import { type VariableDef } from '@cozeloop/api-schema/prompt';
 import {
   Mention,
   type MentionOpenChangeEvent,
@@ -17,7 +13,20 @@ import {
 import { type EditorAPI } from '@coze-editor/editor/preset-prompt';
 import { Popover, Typography } from '@coze-arch/coze-design';
 
-function Variable({ variables }: { variables: VariableDef[] }) {
+export interface VariableType {
+  /** 变量名字 */
+  key?: string;
+  /** 变量值/mock值 */
+  value?: string;
+}
+
+function Variable({
+  variables,
+  isGoTemplate,
+}: {
+  variables: VariableType[];
+  isGoTemplate?: boolean;
+}) {
   const [posKey, setPosKey] = useState('');
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState(-1);
@@ -32,7 +41,7 @@ function Variable({ variables }: { variables: VariableDef[] }) {
 
     editor.replaceText({
       ...range,
-      text: `{{${variableName}}}`,
+      text: isGoTemplate ? `{{.${variableName}}}` : `{{${variableName}}}`,
       cursorOffset: variableName ? 0 : -2,
     });
 
@@ -51,9 +60,13 @@ function Variable({ variables }: { variables: VariableDef[] }) {
 
     // 当变量浮层出现时，禁用 上、下、回车键 在编辑器中的默认行为
     if (visible) {
-      editor.disableKeybindings(['ArrowUp', 'ArrowDown', 'Enter']);
+      setTimeout(() => {
+        editor.disableKeybindings(['ArrowUp', 'ArrowDown', 'Enter']);
+      }, 100);
     } else {
-      editor.disableKeybindings([]);
+      setTimeout(() => {
+        editor.disableKeybindings([]);
+      }, 100);
     }
   }, [editor, visible]);
 
@@ -115,7 +128,7 @@ function Variable({ variables }: { variables: VariableDef[] }) {
         content={
           <div className="p-1 min-w-[100px] flex flex-col gap-1">
             <Typography.Text type="secondary" strong>
-              {I18n.t('insert_variable')}
+              插入变量
             </Typography.Text>
             <div className="max-h-[200px] overflow-y-auto">
               {variables.map((variable, index) => (
@@ -157,7 +170,7 @@ function Variable({ variables }: { variables: VariableDef[] }) {
 // 回车：插入变量
 function usePopoverNavigation(options: {
   enable: boolean;
-  variables: VariableDef[];
+  variables: VariableType[];
   onApply: (name: string) => void;
 }) {
   const { enable, variables, onApply } = options;

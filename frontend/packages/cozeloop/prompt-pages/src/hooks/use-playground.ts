@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable complexity */
@@ -8,23 +6,33 @@ import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
 import { debounce, isEqual } from 'lodash-es';
+import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { Role } from '@cozeloop/api-schema/prompt';
+import { type Message, Role, TemplateType } from '@cozeloop/api-schema/prompt';
 
 import { getPromptStorageInfo, setPromptStorageInfo } from '@/utils/prompt';
 import { type PromptState, usePromptStore } from '@/store/use-prompt-store';
 import {
+  type DebugMessage,
   type PromptMockDataState,
   usePromptMockDataStore,
 } from '@/store/use-mockdata-store';
 import { useBasicStore } from '@/store/use-basic-store';
-import { CALL_SLEEP_TIME, PromptStorageKey } from '@/consts';
+import {
+  CALL_SLEEP_TIME,
+  MESSAGE_TYPE_MAP,
+  MessageType,
+  PromptStorageKey,
+} from '@/consts';
+
+import { mockInfo, mockMockSet } from './playground-mock';
 
 type PlaygroundInfoStorage = Record<string, PromptState>;
 
 type PlaygroundMockSetStorage = Record<string, PromptMockDataState>;
 
 export const usePlayground = () => {
+  const globalDisabled = useGuard({ point: GuardPoint['pe.prompt.global'] });
   const { spaceID } = useSpace();
   const {
     setPromptInfo,
@@ -34,6 +42,7 @@ export const usePlayground = () => {
     setTools,
     setVariables,
     setCurrentModel,
+    setTemplateType,
     clearStore: clearPromptStore,
   } = usePromptStore(
     useShallow(state => ({
@@ -44,6 +53,7 @@ export const usePlayground = () => {
       setTools: state.setTools,
       setVariables: state.setVariables,
       setCurrentModel: state.setCurrentModel,
+      setTemplateType: state.setTemplateType,
       clearStore: state.clearStore,
     })),
   );
@@ -57,7 +67,7 @@ export const usePlayground = () => {
     setHistoricMessage,
     setMockVariables,
     setUserDebugConfig,
-    clearMockDataStore,
+    clearMockdataStore,
     setCompareConfig,
   } = usePromptMockDataStore(
     useShallow(state => ({
@@ -66,7 +76,7 @@ export const usePlayground = () => {
       setUserDebugConfig: state.setUserDebugConfig,
       compareConfig: state.compareConfig,
       setCompareConfig: state.setCompareConfig,
-      clearMockDataStore: state.clearMockDataStore,
+      clearMockdataStore: state.clearMockdataStore,
     })),
   );
 
@@ -77,16 +87,30 @@ export const usePlayground = () => {
     const storagePlaygroundInfo = getPromptStorageInfo<PlaygroundInfoStorage>(
       PromptStorageKey.PLAYGROUND_INFO,
     );
-    const info = storagePlaygroundInfo?.[spaceID];
+    const oldInfo = storagePlaygroundInfo?.[spaceID];
+
+    const info: PromptState | undefined = globalDisabled.data.readonly
+      ? mockInfo
+      : oldInfo;
 
     const storagePlaygroundMockSet =
       getPromptStorageInfo<PlaygroundMockSetStorage>(
         PromptStorageKey.PLAYGROUND_MOCKSET,
       );
-    const mock = storagePlaygroundMockSet?.[spaceID];
+    const oldMock = storagePlaygroundMockSet?.[spaceID];
+    const mock: PromptMockDataState | undefined = globalDisabled.data.readonly
+      ? mockMockSet
+      : oldMock;
 
     if (mock) {
-      setHistoricMessage(mock?.historicMessage || []);
+      setHistoricMessage(
+        mock?.historicMessage?.map(
+          (it: DebugMessage & { message_type?: MessageType }) => ({
+            ...it,
+            role: MESSAGE_TYPE_MAP[it?.message_type ?? MessageType.Assistant],
+          }),
+        ) || [],
+      );
       setMockVariables(mock?.mockVariables || []);
       setUserDebugConfig(mock?.userDebugConfig || {});
       setCompareConfig(mock?.compareConfig || {});
@@ -97,10 +121,19 @@ export const usePlayground = () => {
     setToolCallConfig(info?.toolCallConfig || {});
     setVariables(info?.variables || []);
     setMessageList(
-      info?.messageList || [{ role: Role.System, content: '', key: nanoid() }],
+      info?.messageList?.map(
+        (it: Message & { message_type?: MessageType }) => ({
+          ...it,
+          role: MESSAGE_TYPE_MAP[it?.message_type ?? MessageType.System],
+        }),
+      ) || [{ role: Role.System, content: '', key: nanoid() }],
     );
     setCurrentModel(info?.currentModel || {});
-    setPromptInfo(info?.promptInfo || { workspace_id: spaceID });
+    setTemplateType(info?.templateType || TemplateType.Normal);
+    setPromptInfo({
+      workspace_id: spaceID,
+      prompt_draft: { draft_info: {} },
+    });
 
     setInitPlaygroundLoading(false);
 
@@ -109,7 +142,7 @@ export const usePlayground = () => {
       setTimeout(() => {
         clearPromptStore();
         clearBasicStore();
-        clearMockDataStore();
+        clearMockdataStore();
       }, 0);
     };
   }, [spaceID]);
@@ -137,6 +170,7 @@ export const usePlayground = () => {
         [sID]: info,
       },
     );
+
     setAutoSaving(false);
   }, CALL_SLEEP_TIME);
 
@@ -150,11 +184,30 @@ export const usePlayground = () => {
         messageList: state.messageList,
         promptInfo: state.promptInfo,
         currentModel: state.currentModel,
+        templateType: state.templateType,
       }),
       val => {
         if (!initPlaygroundLoading) {
+          const time = `${new Date().getTime()}`;
+          setPromptInfo({
+            ...val.promptInfo,
+            prompt_draft: {
+              draft_info: { updated_at: time },
+            },
+          });
           setAutoSaving(true);
-          saveInfo(val, spaceID);
+          saveInfo(
+            {
+              ...val,
+              promptInfo: {
+                ...val.promptInfo,
+                prompt_draft: {
+                  draft_info: { updated_at: time },
+                },
+              },
+            },
+            spaceID,
+          );
         }
       },
       {
