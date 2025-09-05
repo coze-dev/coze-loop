@@ -345,7 +345,7 @@ func (p *Task) FastReadField8(buf []byte) (int, error) {
 
 func (p *Task) FastReadField9(buf []byte) (int, error) {
 	offset := 0
-	_field := NewTaskDetail()
+	_field := NewRunDetail()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -357,7 +357,7 @@ func (p *Task) FastReadField9(buf []byte) (int, error) {
 
 func (p *Task) FastReadField10(buf []byte) (int, error) {
 	offset := 0
-	_field := NewTaskDetail()
+	_field := NewRunDetail()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -664,18 +664,18 @@ func (p *Task) DeepCopy(s interface{}) error {
 	}
 	p.TaskConfig = _taskConfig
 
-	var _taskDetail *TaskDetail
+	var _taskDetail *RunDetail
 	if src.TaskDetail != nil {
-		_taskDetail = &TaskDetail{}
+		_taskDetail = &RunDetail{}
 		if err := _taskDetail.DeepCopy(src.TaskDetail); err != nil {
 			return err
 		}
 	}
 	p.TaskDetail = _taskDetail
 
-	var _backfillTaskDetail *TaskDetail
+	var _backfillTaskDetail *RunDetail
 	if src.BackfillTaskDetail != nil {
-		_backfillTaskDetail = &TaskDetail{}
+		_backfillTaskDetail = &RunDetail{}
 		if err := _backfillTaskDetail.DeepCopy(src.BackfillTaskDetail); err != nil {
 			return err
 		}
@@ -2306,7 +2306,7 @@ func (p *AutoEvaluateConfig) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *TaskDetail) FastRead(buf []byte) (int, error) {
+func (p *RunDetail) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -2364,12 +2364,12 @@ func (p *TaskDetail) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TaskDetail[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunDetail[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *TaskDetail) FastReadField1(buf []byte) (int, error) {
+func (p *RunDetail) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -2383,7 +2383,7 @@ func (p *TaskDetail) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *TaskDetail) FastReadField2(buf []byte) (int, error) {
+func (p *RunDetail) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -2397,11 +2397,11 @@ func (p *TaskDetail) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *TaskDetail) FastWrite(buf []byte) int {
+func (p *RunDetail) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *TaskDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *RunDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -2411,7 +2411,7 @@ func (p *TaskDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *TaskDetail) BLength() int {
+func (p *RunDetail) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -2421,7 +2421,7 @@ func (p *TaskDetail) BLength() int {
 	return l
 }
 
-func (p *TaskDetail) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *RunDetail) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSuccessCount() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
@@ -2430,7 +2430,7 @@ func (p *TaskDetail) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *TaskDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *RunDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetFailedCount() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
@@ -2439,7 +2439,7 @@ func (p *TaskDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *TaskDetail) field1Length() int {
+func (p *RunDetail) field1Length() int {
 	l := 0
 	if p.IsSetSuccessCount() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2448,7 +2448,7 @@ func (p *TaskDetail) field1Length() int {
 	return l
 }
 
-func (p *TaskDetail) field2Length() int {
+func (p *RunDetail) field2Length() int {
 	l := 0
 	if p.IsSetFailedCount() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2457,8 +2457,8 @@ func (p *TaskDetail) field2Length() int {
 	return l
 }
 
-func (p *TaskDetail) DeepCopy(s interface{}) error {
-	src, ok := s.(*TaskDetail)
+func (p *RunDetail) DeepCopy(s interface{}) error {
+	src, ok := s.(*RunDetail)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -2772,8 +2772,13 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetStartRunAt bool = false
-	var issetEndRunAt bool = false
+	var issetID bool = false
+	var issetWorkspaceID bool = false
+	var issetTaskID bool = false
+	var issetTaskType bool = false
+	var issetRunStatus bool = false
+	var issetRunStartAt bool = false
+	var issetRunEndAt bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -2791,6 +2796,7 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
+				issetID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2805,6 +2811,7 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
+				issetWorkspaceID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2819,6 +2826,7 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
+				issetTaskID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2833,6 +2841,7 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
+				issetTaskType = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2841,13 +2850,13 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField5(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartRunAt = true
+				issetRunStatus = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2856,13 +2865,12 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 6:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField6(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEndRunAt = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2884,6 +2892,64 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+				issetRunStartAt = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+				issetRunEndAt = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 100:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField100(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2893,13 +2959,38 @@ func (p *TaskRun) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetStartRunAt {
+	if !issetID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTaskID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTaskType {
+		fieldId = 4
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetRunStatus {
 		fieldId = 5
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetEndRunAt {
-		fieldId = 6
+	if !issetRunStartAt {
+		fieldId = 8
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetRunEndAt {
+		fieldId = 9
 		goto RequiredFieldNotSetError
 	}
 	return offset, nil
@@ -2916,12 +3007,12 @@ RequiredFieldNotSetError:
 func (p *TaskRun) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
+	var _field int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = &v
+		_field = v
 	}
 	p.ID = _field
 	return offset, nil
@@ -2930,12 +3021,12 @@ func (p *TaskRun) FastReadField1(buf []byte) (int, error) {
 func (p *TaskRun) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
+	var _field int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = &v
+		_field = v
 	}
 	p.WorkspaceID = _field
 	return offset, nil
@@ -2944,12 +3035,12 @@ func (p *TaskRun) FastReadField2(buf []byte) (int, error) {
 func (p *TaskRun) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
+	var _field int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = &v
+		_field = v
 	}
 	p.TaskID = _field
 	return offset, nil
@@ -2958,12 +3049,12 @@ func (p *TaskRun) FastReadField3(buf []byte) (int, error) {
 func (p *TaskRun) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *TaskType
+	var _field TaskType
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = &v
+		_field = v
 	}
 	p.TaskType = _field
 	return offset, nil
@@ -2972,18 +3063,42 @@ func (p *TaskRun) FastReadField4(buf []byte) (int, error) {
 func (p *TaskRun) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field RunStatus
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 		_field = v
 	}
-	p.StartRunAt = _field
+	p.RunStatus = _field
 	return offset, nil
 }
 
 func (p *TaskRun) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+	_field := NewRunDetail()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunDetail = _field
+	return offset, nil
+}
+
+func (p *TaskRun) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+	_field := NewRunDetail()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.BackfillRunDetail = _field
+	return offset, nil
+}
+
+func (p *TaskRun) FastReadField8(buf []byte) (int, error) {
 	offset := 0
 
 	var _field int64
@@ -2993,11 +3108,25 @@ func (p *TaskRun) FastReadField6(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.EndRunAt = _field
+	p.RunStartAt = _field
 	return offset, nil
 }
 
-func (p *TaskRun) FastReadField7(buf []byte) (int, error) {
+func (p *TaskRun) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	var _field int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = v
+	}
+	p.RunEndAt = _field
+	return offset, nil
+}
+
+func (p *TaskRun) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 	_field := NewTaskRunConfig()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -3006,6 +3135,18 @@ func (p *TaskRun) FastReadField7(buf []byte) (int, error) {
 		offset += l
 	}
 	p.TaskRunConfig = _field
+	return offset, nil
+}
+
+func (p *TaskRun) FastReadField100(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewBaseInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.BaseInfo = _field
 	return offset, nil
 }
 
@@ -3019,10 +3160,14 @@ func (p *TaskRun) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -3038,6 +3183,10 @@ func (p *TaskRun) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3045,118 +3194,170 @@ func (p *TaskRun) BLength() int {
 
 func (p *TaskRun) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.ID)
-	}
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.ID)
 	return offset
 }
 
 func (p *TaskRun) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetWorkspaceID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
-	}
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.WorkspaceID)
 	return offset
 }
 
 func (p *TaskRun) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetTaskID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.TaskID)
-	}
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.TaskID)
 	return offset
 }
 
 func (p *TaskRun) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetTaskType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TaskType)
-	}
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.TaskType)
 	return offset
 }
 
 func (p *TaskRun) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartRunAt)
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.RunStatus)
 	return offset
 }
 
 func (p *TaskRun) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EndRunAt)
+	if p.IsSetRunDetail() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 6)
+		offset += p.RunDetail.FastWriteNocopy(buf[offset:], w)
+	}
 	return offset
 }
 
 func (p *TaskRun) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetTaskRunConfig() {
+	if p.IsSetBackfillRunDetail() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 7)
+		offset += p.BackfillRunDetail.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *TaskRun) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 8)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.RunStartAt)
+	return offset
+}
+
+func (p *TaskRun) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 9)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.RunEndAt)
+	return offset
+}
+
+func (p *TaskRun) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTaskRunConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
 		offset += p.TaskRunConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *TaskRun) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBaseInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 100)
+		offset += p.BaseInfo.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
 func (p *TaskRun) field1Length() int {
 	l := 0
-	if p.IsSetID() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
-	}
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.I64Length()
 	return l
 }
 
 func (p *TaskRun) field2Length() int {
 	l := 0
-	if p.IsSetWorkspaceID() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
-	}
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.I64Length()
 	return l
 }
 
 func (p *TaskRun) field3Length() int {
 	l := 0
-	if p.IsSetTaskID() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
-	}
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.I64Length()
 	return l
 }
 
 func (p *TaskRun) field4Length() int {
 	l := 0
-	if p.IsSetTaskType() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.TaskType)
-	}
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.StringLengthNocopy(p.TaskType)
 	return l
 }
 
 func (p *TaskRun) field5Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	l += thrift.Binary.StringLengthNocopy(p.RunStatus)
 	return l
 }
 
 func (p *TaskRun) field6Length() int {
+	l := 0
+	if p.IsSetRunDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunDetail.BLength()
+	}
+	return l
+}
+
+func (p *TaskRun) field7Length() int {
+	l := 0
+	if p.IsSetBackfillRunDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.BackfillRunDetail.BLength()
+	}
+	return l
+}
+
+func (p *TaskRun) field8Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.I64Length()
 	return l
 }
 
-func (p *TaskRun) field7Length() int {
+func (p *TaskRun) field9Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.I64Length()
+	return l
+}
+
+func (p *TaskRun) field10Length() int {
 	l := 0
 	if p.IsSetTaskRunConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.TaskRunConfig.BLength()
+	}
+	return l
+}
+
+func (p *TaskRun) field100Length() int {
+	l := 0
+	if p.IsSetBaseInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.BaseInfo.BLength()
 	}
 	return l
 }
@@ -3167,29 +3368,37 @@ func (p *TaskRun) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.ID != nil {
-		tmp := *src.ID
-		p.ID = &tmp
+	p.ID = src.ID
+
+	p.WorkspaceID = src.WorkspaceID
+
+	p.TaskID = src.TaskID
+
+	p.TaskType = src.TaskType
+
+	p.RunStatus = src.RunStatus
+
+	var _runDetail *RunDetail
+	if src.RunDetail != nil {
+		_runDetail = &RunDetail{}
+		if err := _runDetail.DeepCopy(src.RunDetail); err != nil {
+			return err
+		}
 	}
+	p.RunDetail = _runDetail
 
-	if src.WorkspaceID != nil {
-		tmp := *src.WorkspaceID
-		p.WorkspaceID = &tmp
+	var _backfillRunDetail *RunDetail
+	if src.BackfillRunDetail != nil {
+		_backfillRunDetail = &RunDetail{}
+		if err := _backfillRunDetail.DeepCopy(src.BackfillRunDetail); err != nil {
+			return err
+		}
 	}
+	p.BackfillRunDetail = _backfillRunDetail
 
-	if src.TaskID != nil {
-		tmp := *src.TaskID
-		p.TaskID = &tmp
-	}
+	p.RunStartAt = src.RunStartAt
 
-	if src.TaskType != nil {
-		tmp := *src.TaskType
-		p.TaskType = &tmp
-	}
-
-	p.StartRunAt = src.StartRunAt
-
-	p.EndRunAt = src.EndRunAt
+	p.RunEndAt = src.RunEndAt
 
 	var _taskRunConfig *TaskRunConfig
 	if src.TaskRunConfig != nil {
@@ -3199,6 +3408,15 @@ func (p *TaskRun) DeepCopy(s interface{}) error {
 		}
 	}
 	p.TaskRunConfig = _taskRunConfig
+
+	var _baseInfo *common.BaseInfo
+	if src.BaseInfo != nil {
+		_baseInfo = &common.BaseInfo{}
+		if err := _baseInfo.DeepCopy(src.BaseInfo); err != nil {
+			return err
+		}
+	}
+	p.BaseInfo = _baseInfo
 
 	return nil
 }

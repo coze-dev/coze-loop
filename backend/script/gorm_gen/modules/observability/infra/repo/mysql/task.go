@@ -124,11 +124,6 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 	if qdf != nil {
 		qd = qd.Where(qdf)
 	}
-	// 计算总数
-	total, err = qd.Count()
-	if err != nil {
-		return nil, 0, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
 	// order by
 	qd = qd.Order(v.order(q, param.OrderBy.GetField(), param.OrderBy.GetIsAsc()))
 	// 计算分页参数

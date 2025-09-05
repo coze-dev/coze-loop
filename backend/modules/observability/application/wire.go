@@ -59,6 +59,7 @@ var (
 		taskSvc.NewTaskServiceImpl,
 		obrepo.NewTaskRepoImpl,
 		mysqldao.NewTaskDaoImpl,
+		mysqldao.NewTaskRunDaoImpl,
 	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,

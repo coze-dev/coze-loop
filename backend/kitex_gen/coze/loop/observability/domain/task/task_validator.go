@@ -104,7 +104,7 @@ func (p *DatasetConfig) IsValid() error {
 func (p *AutoEvaluateConfig) IsValid() error {
 	return nil
 }
-func (p *TaskDetail) IsValid() error {
+func (p *RunDetail) IsValid() error {
 	return nil
 }
 func (p *FieldMapping) IsValid() error {
@@ -116,9 +116,24 @@ func (p *FieldMapping) IsValid() error {
 	return nil
 }
 func (p *TaskRun) IsValid() error {
+	if p.RunDetail != nil {
+		if err := p.RunDetail.IsValid(); err != nil {
+			return fmt.Errorf("field RunDetail not valid, %w", err)
+		}
+	}
+	if p.BackfillRunDetail != nil {
+		if err := p.BackfillRunDetail.IsValid(); err != nil {
+			return fmt.Errorf("field BackfillRunDetail not valid, %w", err)
+		}
+	}
 	if p.TaskRunConfig != nil {
 		if err := p.TaskRunConfig.IsValid(); err != nil {
 			return fmt.Errorf("field TaskRunConfig not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
 	return nil

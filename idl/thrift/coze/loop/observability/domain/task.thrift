@@ -20,6 +20,10 @@ const TaskStatus TaskStatus_Success = "success"       // 成功
 const TaskStatus TaskStatus_Pending = "pending"       // 中止
 const TaskStatus TaskStatus_Disabled = "disabled"     // 禁用
 
+typedef string RunStatus (ts.enum="true")
+const RunStatus RunStatus_Running = "running"       // 正在运行
+const RunStatus RunStatus_Done = "done"           // 完成运行
+
 // Task
 struct Task {
     1: optional i64 id                                             // 任务 id
@@ -30,8 +34,8 @@ struct Task {
     6: optional TaskStatus task_status                             // 状态
     7: optional Rule rule                                          // 规则
     8: optional TaskConfig task_config                             // 配置
-    9: optional TaskDetail task_detail                             // 任务状态详情
-    10: optional TaskDetail backfill_task_detail                   // 任务历史数据执行详情
+    9: optional RunDetail task_detail                             // 任务状态详情
+    10: optional RunDetail backfill_task_detail                   // 任务历史数据执行详情
 
     100: optional common.BaseInfo base_info                        // 基础信息
 }
@@ -78,8 +82,8 @@ struct AutoEvaluateConfig {
     3: required list<FieldMapping> field_mappings
 }
 
-// TaskDetail
-struct TaskDetail {
+// RunDetail
+struct RunDetail {
     1: optional i64 success_count
     2: optional i64 failed_count
 }
@@ -93,13 +97,18 @@ struct FieldMapping {
 
 // TaskRun
 struct TaskRun {
-    1: optional i64 id                                             // 任务 run id
-    2: optional i64 workspace_id                                   // 所在空间
-    3: optional i64 task_id                                        // 任务 id
-    4: optional TaskType task_type                                 // 类型
-    5: required i64 start_run_at
-    6: required i64 end_run_at
-    7: optional TaskRunConfig task_run_config                      // 配置
+    1: required i64 id                                             // 任务 run id
+    2: required i64 workspace_id                                   // 所在空间
+    3: required i64 task_id                                        // 任务 id
+    4: required TaskType task_type                                 // 类型
+    5: required RunStatus run_status                               // 状态
+    6: optional RunDetail run_detail                               // 任务状态详情
+    7: optional RunDetail backfill_run_detail                      // 任务历史数据执行详情
+    8: required i64 run_start_at
+    9: required i64 run_end_at
+    10: optional TaskRunConfig task_run_config                      // 配置
+
+    100: optional common.BaseInfo base_info                         // 基础信息
 }
 struct TaskRunConfig {
     1: optional AutoEvaluateRunConfig auto_evaluate_run_config               // 自动评测对应的运行配置信息

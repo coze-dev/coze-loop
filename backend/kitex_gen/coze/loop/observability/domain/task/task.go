@@ -31,6 +31,10 @@ const (
 	TaskStatusPending = "pending"
 
 	TaskStatusDisabled = "disabled"
+
+	RunStatusRunning = "running"
+
+	RunStatusDone = "done"
 )
 
 type TimeUnit = string
@@ -38,6 +42,8 @@ type TimeUnit = string
 type TaskType = string
 
 type TaskStatus = string
+
+type RunStatus = string
 
 // Task
 type Task struct {
@@ -58,9 +64,9 @@ type Task struct {
 	// 配置
 	TaskConfig *TaskConfig `thrift:"task_config,8,optional" frugal:"8,optional,TaskConfig" form:"task_config" json:"task_config,omitempty" query:"task_config"`
 	// 任务状态详情
-	TaskDetail *TaskDetail `thrift:"task_detail,9,optional" frugal:"9,optional,TaskDetail" form:"task_detail" json:"task_detail,omitempty" query:"task_detail"`
+	TaskDetail *RunDetail `thrift:"task_detail,9,optional" frugal:"9,optional,RunDetail" form:"task_detail" json:"task_detail,omitempty" query:"task_detail"`
 	// 任务历史数据执行详情
-	BackfillTaskDetail *TaskDetail `thrift:"backfill_task_detail,10,optional" frugal:"10,optional,TaskDetail" form:"backfill_task_detail" json:"backfill_task_detail,omitempty" query:"backfill_task_detail"`
+	BackfillTaskDetail *RunDetail `thrift:"backfill_task_detail,10,optional" frugal:"10,optional,RunDetail" form:"backfill_task_detail" json:"backfill_task_detail,omitempty" query:"backfill_task_detail"`
 	// 基础信息
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -158,9 +164,9 @@ func (p *Task) GetTaskConfig() (v *TaskConfig) {
 	return p.TaskConfig
 }
 
-var Task_TaskDetail_DEFAULT *TaskDetail
+var Task_TaskDetail_DEFAULT *RunDetail
 
-func (p *Task) GetTaskDetail() (v *TaskDetail) {
+func (p *Task) GetTaskDetail() (v *RunDetail) {
 	if p == nil {
 		return
 	}
@@ -170,9 +176,9 @@ func (p *Task) GetTaskDetail() (v *TaskDetail) {
 	return p.TaskDetail
 }
 
-var Task_BackfillTaskDetail_DEFAULT *TaskDetail
+var Task_BackfillTaskDetail_DEFAULT *RunDetail
 
-func (p *Task) GetBackfillTaskDetail() (v *TaskDetail) {
+func (p *Task) GetBackfillTaskDetail() (v *RunDetail) {
 	if p == nil {
 		return
 	}
@@ -217,10 +223,10 @@ func (p *Task) SetRule(val *Rule) {
 func (p *Task) SetTaskConfig(val *TaskConfig) {
 	p.TaskConfig = val
 }
-func (p *Task) SetTaskDetail(val *TaskDetail) {
+func (p *Task) SetTaskDetail(val *RunDetail) {
 	p.TaskDetail = val
 }
-func (p *Task) SetBackfillTaskDetail(val *TaskDetail) {
+func (p *Task) SetBackfillTaskDetail(val *RunDetail) {
 	p.BackfillTaskDetail = val
 }
 func (p *Task) SetBaseInfo(val *common.BaseInfo) {
@@ -510,7 +516,7 @@ func (p *Task) ReadField8(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Task) ReadField9(iprot thrift.TProtocol) error {
-	_field := NewTaskDetail()
+	_field := NewRunDetail()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -518,7 +524,7 @@ func (p *Task) ReadField9(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Task) ReadField10(iprot thrift.TProtocol) error {
-	_field := NewTaskDetail()
+	_field := NewRunDetail()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -923,14 +929,14 @@ func (p *Task) Field8DeepEqual(src *TaskConfig) bool {
 	}
 	return true
 }
-func (p *Task) Field9DeepEqual(src *TaskDetail) bool {
+func (p *Task) Field9DeepEqual(src *RunDetail) bool {
 
 	if !p.TaskDetail.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *Task) Field10DeepEqual(src *TaskDetail) bool {
+func (p *Task) Field10DeepEqual(src *RunDetail) bool {
 
 	if !p.BackfillTaskDetail.DeepEqual(src) {
 		return false
@@ -3199,63 +3205,63 @@ func (p *AutoEvaluateConfig) Field3DeepEqual(src []*FieldMapping) bool {
 	return true
 }
 
-// TaskDetail
-type TaskDetail struct {
+// RunDetail
+type RunDetail struct {
 	SuccessCount *int64 `thrift:"success_count,1,optional" frugal:"1,optional,i64" form:"success_count" json:"success_count,omitempty" query:"success_count"`
 	FailedCount  *int64 `thrift:"failed_count,2,optional" frugal:"2,optional,i64" form:"failed_count" json:"failed_count,omitempty" query:"failed_count"`
 }
 
-func NewTaskDetail() *TaskDetail {
-	return &TaskDetail{}
+func NewRunDetail() *RunDetail {
+	return &RunDetail{}
 }
 
-func (p *TaskDetail) InitDefault() {
+func (p *RunDetail) InitDefault() {
 }
 
-var TaskDetail_SuccessCount_DEFAULT int64
+var RunDetail_SuccessCount_DEFAULT int64
 
-func (p *TaskDetail) GetSuccessCount() (v int64) {
+func (p *RunDetail) GetSuccessCount() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccessCount() {
-		return TaskDetail_SuccessCount_DEFAULT
+		return RunDetail_SuccessCount_DEFAULT
 	}
 	return *p.SuccessCount
 }
 
-var TaskDetail_FailedCount_DEFAULT int64
+var RunDetail_FailedCount_DEFAULT int64
 
-func (p *TaskDetail) GetFailedCount() (v int64) {
+func (p *RunDetail) GetFailedCount() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetFailedCount() {
-		return TaskDetail_FailedCount_DEFAULT
+		return RunDetail_FailedCount_DEFAULT
 	}
 	return *p.FailedCount
 }
-func (p *TaskDetail) SetSuccessCount(val *int64) {
+func (p *RunDetail) SetSuccessCount(val *int64) {
 	p.SuccessCount = val
 }
-func (p *TaskDetail) SetFailedCount(val *int64) {
+func (p *RunDetail) SetFailedCount(val *int64) {
 	p.FailedCount = val
 }
 
-var fieldIDToName_TaskDetail = map[int16]string{
+var fieldIDToName_RunDetail = map[int16]string{
 	1: "success_count",
 	2: "failed_count",
 }
 
-func (p *TaskDetail) IsSetSuccessCount() bool {
+func (p *RunDetail) IsSetSuccessCount() bool {
 	return p.SuccessCount != nil
 }
 
-func (p *TaskDetail) IsSetFailedCount() bool {
+func (p *RunDetail) IsSetFailedCount() bool {
 	return p.FailedCount != nil
 }
 
-func (p *TaskDetail) Read(iprot thrift.TProtocol) (err error) {
+func (p *RunDetail) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -3308,7 +3314,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TaskDetail[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunDetail[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3318,7 +3324,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TaskDetail) ReadField1(iprot thrift.TProtocol) error {
+func (p *RunDetail) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3329,7 +3335,7 @@ func (p *TaskDetail) ReadField1(iprot thrift.TProtocol) error {
 	p.SuccessCount = _field
 	return nil
 }
-func (p *TaskDetail) ReadField2(iprot thrift.TProtocol) error {
+func (p *RunDetail) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3341,9 +3347,9 @@ func (p *TaskDetail) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *TaskDetail) Write(oprot thrift.TProtocol) (err error) {
+func (p *RunDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("TaskDetail"); err != nil {
+	if err = oprot.WriteStructBegin("RunDetail"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3373,7 +3379,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TaskDetail) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *RunDetail) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccessCount() {
 		if err = oprot.WriteFieldBegin("success_count", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
@@ -3391,7 +3397,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *TaskDetail) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *RunDetail) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFailedCount() {
 		if err = oprot.WriteFieldBegin("failed_count", thrift.I64, 2); err != nil {
 			goto WriteFieldBeginError
@@ -3410,15 +3416,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
-func (p *TaskDetail) String() string {
+func (p *RunDetail) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TaskDetail(%+v)", *p)
+	return fmt.Sprintf("RunDetail(%+v)", *p)
 
 }
 
-func (p *TaskDetail) DeepEqual(ano *TaskDetail) bool {
+func (p *RunDetail) DeepEqual(ano *RunDetail) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3433,7 +3439,7 @@ func (p *TaskDetail) DeepEqual(ano *TaskDetail) bool {
 	return true
 }
 
-func (p *TaskDetail) Field1DeepEqual(src *int64) bool {
+func (p *RunDetail) Field1DeepEqual(src *int64) bool {
 
 	if p.SuccessCount == src {
 		return true
@@ -3445,7 +3451,7 @@ func (p *TaskDetail) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *TaskDetail) Field2DeepEqual(src *int64) bool {
+func (p *RunDetail) Field2DeepEqual(src *int64) bool {
 
 	if p.FailedCount == src {
 		return true
@@ -3854,17 +3860,25 @@ func (p *FieldMapping) Field4DeepEqual(src *string) bool {
 // TaskRun
 type TaskRun struct {
 	// 任务 run id
-	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	ID int64 `thrift:"id,1,required" frugal:"1,required,i64" form:"id,required" json:"id,required" query:"id,required"`
 	// 所在空间
-	WorkspaceID *int64 `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" form:"workspace_id" json:"workspace_id,omitempty" query:"workspace_id"`
+	WorkspaceID int64 `thrift:"workspace_id,2,required" frugal:"2,required,i64" form:"workspace_id,required" json:"workspace_id,required" query:"workspace_id,required"`
 	// 任务 id
-	TaskID *int64 `thrift:"task_id,3,optional" frugal:"3,optional,i64" form:"task_id" json:"task_id,omitempty" query:"task_id"`
+	TaskID int64 `thrift:"task_id,3,required" frugal:"3,required,i64" form:"task_id,required" json:"task_id,required" query:"task_id,required"`
 	// 类型
-	TaskType   *TaskType `thrift:"task_type,4,optional" frugal:"4,optional,string" form:"task_type" json:"task_type,omitempty" query:"task_type"`
-	StartRunAt int64     `thrift:"start_run_at,5,required" frugal:"5,required,i64" form:"start_run_at,required" json:"start_run_at,required" query:"start_run_at,required"`
-	EndRunAt   int64     `thrift:"end_run_at,6,required" frugal:"6,required,i64" form:"end_run_at,required" json:"end_run_at,required" query:"end_run_at,required"`
+	TaskType TaskType `thrift:"task_type,4,required" frugal:"4,required,string" form:"task_type,required" json:"task_type,required" query:"task_type,required"`
+	// 状态
+	RunStatus RunStatus `thrift:"run_status,5,required" frugal:"5,required,string" form:"run_status,required" json:"run_status,required" query:"run_status,required"`
+	// 任务状态详情
+	RunDetail *RunDetail `thrift:"run_detail,6,optional" frugal:"6,optional,RunDetail" form:"run_detail" json:"run_detail,omitempty" query:"run_detail"`
+	// 任务历史数据执行详情
+	BackfillRunDetail *RunDetail `thrift:"backfill_run_detail,7,optional" frugal:"7,optional,RunDetail" form:"backfill_run_detail" json:"backfill_run_detail,omitempty" query:"backfill_run_detail"`
+	RunStartAt        int64      `thrift:"run_start_at,8,required" frugal:"8,required,i64" form:"run_start_at,required" json:"run_start_at,required" query:"run_start_at,required"`
+	RunEndAt          int64      `thrift:"run_end_at,9,required" frugal:"9,required,i64" form:"run_end_at,required" json:"run_end_at,required" query:"run_end_at,required"`
 	// 配置
-	TaskRunConfig *TaskRunConfig `thrift:"task_run_config,7,optional" frugal:"7,optional,TaskRunConfig" form:"task_run_config" json:"task_run_config,omitempty" query:"task_run_config"`
+	TaskRunConfig *TaskRunConfig `thrift:"task_run_config,10,optional" frugal:"10,optional,TaskRunConfig" form:"task_run_config" json:"task_run_config,omitempty" query:"task_run_config"`
+	// 基础信息
+	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewTaskRun() *TaskRun {
@@ -3874,64 +3888,75 @@ func NewTaskRun() *TaskRun {
 func (p *TaskRun) InitDefault() {
 }
 
-var TaskRun_ID_DEFAULT int64
-
 func (p *TaskRun) GetID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetID() {
-		return TaskRun_ID_DEFAULT
-	}
-	return *p.ID
-}
-
-var TaskRun_WorkspaceID_DEFAULT int64
-
-func (p *TaskRun) GetWorkspaceID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetWorkspaceID() {
-		return TaskRun_WorkspaceID_DEFAULT
-	}
-	return *p.WorkspaceID
-}
-
-var TaskRun_TaskID_DEFAULT int64
-
-func (p *TaskRun) GetTaskID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTaskID() {
-		return TaskRun_TaskID_DEFAULT
-	}
-	return *p.TaskID
-}
-
-var TaskRun_TaskType_DEFAULT TaskType
-
-func (p *TaskRun) GetTaskType() (v TaskType) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTaskType() {
-		return TaskRun_TaskType_DEFAULT
-	}
-	return *p.TaskType
-}
-
-func (p *TaskRun) GetStartRunAt() (v int64) {
 	if p != nil {
-		return p.StartRunAt
+		return p.ID
 	}
 	return
 }
 
-func (p *TaskRun) GetEndRunAt() (v int64) {
+func (p *TaskRun) GetWorkspaceID() (v int64) {
 	if p != nil {
-		return p.EndRunAt
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *TaskRun) GetTaskID() (v int64) {
+	if p != nil {
+		return p.TaskID
+	}
+	return
+}
+
+func (p *TaskRun) GetTaskType() (v TaskType) {
+	if p != nil {
+		return p.TaskType
+	}
+	return
+}
+
+func (p *TaskRun) GetRunStatus() (v RunStatus) {
+	if p != nil {
+		return p.RunStatus
+	}
+	return
+}
+
+var TaskRun_RunDetail_DEFAULT *RunDetail
+
+func (p *TaskRun) GetRunDetail() (v *RunDetail) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunDetail() {
+		return TaskRun_RunDetail_DEFAULT
+	}
+	return p.RunDetail
+}
+
+var TaskRun_BackfillRunDetail_DEFAULT *RunDetail
+
+func (p *TaskRun) GetBackfillRunDetail() (v *RunDetail) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBackfillRunDetail() {
+		return TaskRun_BackfillRunDetail_DEFAULT
+	}
+	return p.BackfillRunDetail
+}
+
+func (p *TaskRun) GetRunStartAt() (v int64) {
+	if p != nil {
+		return p.RunStartAt
+	}
+	return
+}
+
+func (p *TaskRun) GetRunEndAt() (v int64) {
+	if p != nil {
+		return p.RunEndAt
 	}
 	return
 }
@@ -3947,63 +3972,92 @@ func (p *TaskRun) GetTaskRunConfig() (v *TaskRunConfig) {
 	}
 	return p.TaskRunConfig
 }
-func (p *TaskRun) SetID(val *int64) {
+
+var TaskRun_BaseInfo_DEFAULT *common.BaseInfo
+
+func (p *TaskRun) GetBaseInfo() (v *common.BaseInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseInfo() {
+		return TaskRun_BaseInfo_DEFAULT
+	}
+	return p.BaseInfo
+}
+func (p *TaskRun) SetID(val int64) {
 	p.ID = val
 }
-func (p *TaskRun) SetWorkspaceID(val *int64) {
+func (p *TaskRun) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *TaskRun) SetTaskID(val *int64) {
+func (p *TaskRun) SetTaskID(val int64) {
 	p.TaskID = val
 }
-func (p *TaskRun) SetTaskType(val *TaskType) {
+func (p *TaskRun) SetTaskType(val TaskType) {
 	p.TaskType = val
 }
-func (p *TaskRun) SetStartRunAt(val int64) {
-	p.StartRunAt = val
+func (p *TaskRun) SetRunStatus(val RunStatus) {
+	p.RunStatus = val
 }
-func (p *TaskRun) SetEndRunAt(val int64) {
-	p.EndRunAt = val
+func (p *TaskRun) SetRunDetail(val *RunDetail) {
+	p.RunDetail = val
+}
+func (p *TaskRun) SetBackfillRunDetail(val *RunDetail) {
+	p.BackfillRunDetail = val
+}
+func (p *TaskRun) SetRunStartAt(val int64) {
+	p.RunStartAt = val
+}
+func (p *TaskRun) SetRunEndAt(val int64) {
+	p.RunEndAt = val
 }
 func (p *TaskRun) SetTaskRunConfig(val *TaskRunConfig) {
 	p.TaskRunConfig = val
 }
+func (p *TaskRun) SetBaseInfo(val *common.BaseInfo) {
+	p.BaseInfo = val
+}
 
 var fieldIDToName_TaskRun = map[int16]string{
-	1: "id",
-	2: "workspace_id",
-	3: "task_id",
-	4: "task_type",
-	5: "start_run_at",
-	6: "end_run_at",
-	7: "task_run_config",
+	1:   "id",
+	2:   "workspace_id",
+	3:   "task_id",
+	4:   "task_type",
+	5:   "run_status",
+	6:   "run_detail",
+	7:   "backfill_run_detail",
+	8:   "run_start_at",
+	9:   "run_end_at",
+	10:  "task_run_config",
+	100: "base_info",
 }
 
-func (p *TaskRun) IsSetID() bool {
-	return p.ID != nil
+func (p *TaskRun) IsSetRunDetail() bool {
+	return p.RunDetail != nil
 }
 
-func (p *TaskRun) IsSetWorkspaceID() bool {
-	return p.WorkspaceID != nil
-}
-
-func (p *TaskRun) IsSetTaskID() bool {
-	return p.TaskID != nil
-}
-
-func (p *TaskRun) IsSetTaskType() bool {
-	return p.TaskType != nil
+func (p *TaskRun) IsSetBackfillRunDetail() bool {
+	return p.BackfillRunDetail != nil
 }
 
 func (p *TaskRun) IsSetTaskRunConfig() bool {
 	return p.TaskRunConfig != nil
 }
 
+func (p *TaskRun) IsSetBaseInfo() bool {
+	return p.BaseInfo != nil
+}
+
 func (p *TaskRun) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetStartRunAt bool = false
-	var issetEndRunAt bool = false
+	var issetID bool = false
+	var issetWorkspaceID bool = false
+	var issetTaskID bool = false
+	var issetTaskType bool = false
+	var issetRunStatus bool = false
+	var issetRunStartAt bool = false
+	var issetRunEndAt bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -4024,6 +4078,7 @@ func (p *TaskRun) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
+				issetID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -4032,6 +4087,7 @@ func (p *TaskRun) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
+				issetWorkspaceID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -4040,6 +4096,7 @@ func (p *TaskRun) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
+				issetTaskID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -4048,30 +4105,64 @@ func (p *TaskRun) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
+				issetTaskType = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartRunAt = true
+				issetRunStatus = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 6:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEndRunAt = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 7:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetRunStartAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetRunEndAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4090,13 +4181,38 @@ func (p *TaskRun) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetStartRunAt {
+	if !issetID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTaskID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTaskType {
+		fieldId = 4
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetRunStatus {
 		fieldId = 5
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetEndRunAt {
-		fieldId = 6
+	if !issetRunStartAt {
+		fieldId = 8
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetRunEndAt {
+		fieldId = 9
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -4119,60 +4235,76 @@ RequiredFieldNotSetError:
 
 func (p *TaskRun) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field *int64
+	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = &v
+		_field = v
 	}
 	p.ID = _field
 	return nil
 }
 func (p *TaskRun) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field *int64
+	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = &v
+		_field = v
 	}
 	p.WorkspaceID = _field
 	return nil
 }
 func (p *TaskRun) ReadField3(iprot thrift.TProtocol) error {
 
-	var _field *int64
+	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = &v
+		_field = v
 	}
 	p.TaskID = _field
 	return nil
 }
 func (p *TaskRun) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field *TaskType
+	var _field TaskType
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = &v
+		_field = v
 	}
 	p.TaskType = _field
 	return nil
 }
 func (p *TaskRun) ReadField5(iprot thrift.TProtocol) error {
 
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field RunStatus
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = v
 	}
-	p.StartRunAt = _field
+	p.RunStatus = _field
 	return nil
 }
 func (p *TaskRun) ReadField6(iprot thrift.TProtocol) error {
+	_field := NewRunDetail()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RunDetail = _field
+	return nil
+}
+func (p *TaskRun) ReadField7(iprot thrift.TProtocol) error {
+	_field := NewRunDetail()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BackfillRunDetail = _field
+	return nil
+}
+func (p *TaskRun) ReadField8(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -4180,15 +4312,34 @@ func (p *TaskRun) ReadField6(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.EndRunAt = _field
+	p.RunStartAt = _field
 	return nil
 }
-func (p *TaskRun) ReadField7(iprot thrift.TProtocol) error {
+func (p *TaskRun) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RunEndAt = _field
+	return nil
+}
+func (p *TaskRun) ReadField10(iprot thrift.TProtocol) error {
 	_field := NewTaskRunConfig()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
 	p.TaskRunConfig = _field
+	return nil
+}
+func (p *TaskRun) ReadField100(iprot thrift.TProtocol) error {
+	_field := common.NewBaseInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseInfo = _field
 	return nil
 }
 
@@ -4226,6 +4377,22 @@ func (p *TaskRun) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 7
 			goto WriteFieldError
 		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
 	}
 	if err = oprot.WriteFieldStop(); err != nil {
 		goto WriteFieldStopError
@@ -4245,16 +4412,14 @@ WriteStructEndError:
 }
 
 func (p *TaskRun) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetID() {
-		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.ID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
+	if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
 	}
 	return nil
 WriteFieldBeginError:
@@ -4263,16 +4428,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *TaskRun) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetWorkspaceID() {
-		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
 	}
 	return nil
 WriteFieldBeginError:
@@ -4281,16 +4444,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *TaskRun) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTaskID() {
-		if err = oprot.WriteFieldBegin("task_id", thrift.I64, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.TaskID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
+	if err = oprot.WriteFieldBegin("task_id", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TaskID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
 	}
 	return nil
 WriteFieldBeginError:
@@ -4299,16 +4460,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *TaskRun) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTaskType() {
-		if err = oprot.WriteFieldBegin("task_type", thrift.STRING, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.TaskType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
+	if err = oprot.WriteFieldBegin("task_type", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.TaskType); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
 	}
 	return nil
 WriteFieldBeginError:
@@ -4317,10 +4476,10 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *TaskRun) writeField5(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_run_at", thrift.I64, 5); err != nil {
+	if err = oprot.WriteFieldBegin("run_status", thrift.STRING, 5); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.StartRunAt); err != nil {
+	if err := oprot.WriteString(p.RunStatus); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -4333,14 +4492,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *TaskRun) writeField6(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("end_run_at", thrift.I64, 6); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.EndRunAt); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetRunDetail() {
+		if err = oprot.WriteFieldBegin("run_detail", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RunDetail.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4349,11 +4510,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *TaskRun) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTaskRunConfig() {
-		if err = oprot.WriteFieldBegin("task_run_config", thrift.STRUCT, 7); err != nil {
+	if p.IsSetBackfillRunDetail() {
+		if err = oprot.WriteFieldBegin("backfill_run_detail", thrift.STRUCT, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.TaskRunConfig.Write(oprot); err != nil {
+		if err := p.BackfillRunDetail.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4365,6 +4526,74 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *TaskRun) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("run_start_at", thrift.I64, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.RunStartAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *TaskRun) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("run_end_at", thrift.I64, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.RunEndAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *TaskRun) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTaskRunConfig() {
+		if err = oprot.WriteFieldBegin("task_run_config", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TaskRunConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *TaskRun) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseInfo() {
+		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
 
 func (p *TaskRun) String() string {
@@ -4393,83 +4622,103 @@ func (p *TaskRun) DeepEqual(ano *TaskRun) bool {
 	if !p.Field4DeepEqual(ano.TaskType) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.StartRunAt) {
+	if !p.Field5DeepEqual(ano.RunStatus) {
 		return false
 	}
-	if !p.Field6DeepEqual(ano.EndRunAt) {
+	if !p.Field6DeepEqual(ano.RunDetail) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.TaskRunConfig) {
+	if !p.Field7DeepEqual(ano.BackfillRunDetail) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.RunStartAt) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.RunEndAt) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.TaskRunConfig) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.BaseInfo) {
 		return false
 	}
 	return true
 }
 
-func (p *TaskRun) Field1DeepEqual(src *int64) bool {
+func (p *TaskRun) Field1DeepEqual(src int64) bool {
 
-	if p.ID == src {
-		return true
-	} else if p.ID == nil || src == nil {
-		return false
-	}
-	if *p.ID != *src {
+	if p.ID != src {
 		return false
 	}
 	return true
 }
-func (p *TaskRun) Field2DeepEqual(src *int64) bool {
+func (p *TaskRun) Field2DeepEqual(src int64) bool {
 
-	if p.WorkspaceID == src {
-		return true
-	} else if p.WorkspaceID == nil || src == nil {
-		return false
-	}
-	if *p.WorkspaceID != *src {
+	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *TaskRun) Field3DeepEqual(src *int64) bool {
+func (p *TaskRun) Field3DeepEqual(src int64) bool {
 
-	if p.TaskID == src {
-		return true
-	} else if p.TaskID == nil || src == nil {
-		return false
-	}
-	if *p.TaskID != *src {
+	if p.TaskID != src {
 		return false
 	}
 	return true
 }
-func (p *TaskRun) Field4DeepEqual(src *TaskType) bool {
+func (p *TaskRun) Field4DeepEqual(src TaskType) bool {
 
-	if p.TaskType == src {
-		return true
-	} else if p.TaskType == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.TaskType, *src) != 0 {
+	if strings.Compare(p.TaskType, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *TaskRun) Field5DeepEqual(src int64) bool {
+func (p *TaskRun) Field5DeepEqual(src RunStatus) bool {
 
-	if p.StartRunAt != src {
+	if strings.Compare(p.RunStatus, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *TaskRun) Field6DeepEqual(src int64) bool {
+func (p *TaskRun) Field6DeepEqual(src *RunDetail) bool {
 
-	if p.EndRunAt != src {
+	if !p.RunDetail.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *TaskRun) Field7DeepEqual(src *TaskRunConfig) bool {
+func (p *TaskRun) Field7DeepEqual(src *RunDetail) bool {
+
+	if !p.BackfillRunDetail.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TaskRun) Field8DeepEqual(src int64) bool {
+
+	if p.RunStartAt != src {
+		return false
+	}
+	return true
+}
+func (p *TaskRun) Field9DeepEqual(src int64) bool {
+
+	if p.RunEndAt != src {
+		return false
+	}
+	return true
+}
+func (p *TaskRun) Field10DeepEqual(src *TaskRunConfig) bool {
 
 	if !p.TaskRunConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TaskRun) Field100DeepEqual(src *common.BaseInfo) bool {
+
+	if !p.BaseInfo.DeepEqual(src) {
 		return false
 	}
 	return true
