@@ -129,12 +129,11 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
-		runtime.NewRuntimeFactory,
-		runtime.NewRuntimeManager,
+	runtime.NewRuntimeFactory,
+	NewRuntimeManagerFromFactory,
 		NewSandboxConfig,
 		NewLogger,
 
-		wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)),
 		service.NewCodeBuilderFactory,
 		evaluatorrepo.NewEvaluatorRepo,
 		evaluatorrepo.NewEvaluatorRecordRepo,
@@ -296,6 +295,11 @@ func NewLogger() *logrus.Logger {
 	logger := logrus.New()
 	logger.SetLevel(logrus.InfoLevel)
 	return logger
+}
+
+// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
+func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return runtime.NewRuntimeManager(factory, logger)
 }
 
 func NewEvaluatorSourceServices(

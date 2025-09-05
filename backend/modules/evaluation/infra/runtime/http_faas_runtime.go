@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -194,11 +195,11 @@ func (adapter *HTTPFaaSRuntimeAdapter) ValidateCode(ctx context.Context, code st
 
 	// 对于HTTP FaaS，我们可以发送一个快速的验证请求
 	// 这里简化实现，只做基本检查
-	switch language {
-	case "javascript", "typescript", "js", "ts":
+	switch normalizeLanguage(language) {
+	case "js":
 		// 基本的JavaScript/TypeScript语法检查
 		return adapter.basicJSValidation(code)
-	case "python", "py":
+	case "python":
 		// 基本的Python语法检查
 		return adapter.basicPythonValidation(code)
 	default:
@@ -266,7 +267,16 @@ func (adapter *HTTPFaaSRuntimeAdapter) getTaskID(response *HTTPFaaSResponse) str
 
 // basicJSValidation 基本的JavaScript/TypeScript语法检查
 func (adapter *HTTPFaaSRuntimeAdapter) basicJSValidation(code string) bool {
-	// 简单的语法检查：检查括号匹配
+	return basicSyntaxValidation(code)
+}
+
+// basicPythonValidation 基本的Python语法检查
+func (adapter *HTTPFaaSRuntimeAdapter) basicPythonValidation(code string) bool {
+	return basicSyntaxValidation(code)
+}
+
+// basicSyntaxValidation 基本的语法检查：检查括号匹配
+func basicSyntaxValidation(code string) bool {
 	brackets := 0
 	braces := 0
 	parentheses := 0
@@ -291,31 +301,16 @@ func (adapter *HTTPFaaSRuntimeAdapter) basicJSValidation(code string) bool {
 	return brackets == 0 && braces == 0 && parentheses == 0
 }
 
-// basicPythonValidation 基本的Python语法检查
-func (adapter *HTTPFaaSRuntimeAdapter) basicPythonValidation(code string) bool {
-	// 简单的语法检查：检查括号匹配和基本缩进
-	brackets := 0
-	braces := 0
-	parentheses := 0
-
-	for _, char := range code {
-		switch char {
-		case '[':
-			brackets++
-		case ']':
-			brackets--
-		case '{':
-			braces++
-		case '}':
-			braces--
-		case '(':
-			parentheses++
-		case ')':
-			parentheses--
-		}
+// normalizeLanguage 标准化语言名称
+func normalizeLanguage(language string) string {
+	switch strings.ToLower(language) {
+	case "javascript", "js", "typescript", "ts":
+		return "js"
+	case "python", "py":
+		return "python"
+	default:
+		return strings.ToLower(language)
 	}
-
-	return brackets == 0 && braces == 0 && parentheses == 0
 }
 
 // 确保HTTPFaaSRuntimeAdapter实现IRuntime接口

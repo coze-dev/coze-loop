@@ -12,25 +12,30 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-// RuntimeManager Runtime管理器，提供线程安全的Runtime实例缓存和管理
+// RuntimeManager 简化的运行时管理器，提供线程安全的Runtime实例缓存和管理
 type RuntimeManager struct {
 	factory component.IRuntimeFactory
 	cache   map[entity.LanguageType]component.IRuntime
 	mutex   sync.RWMutex
+	logger  *logrus.Logger
 }
 
-// NewRuntimeManager 创建RuntimeManager实例（向后兼容）
-func NewRuntimeManager(factory component.IRuntimeFactory) *RuntimeManager {
+// NewRuntimeManager 创建RuntimeManager实例
+func NewRuntimeManager(factory component.IRuntimeFactory, logger *logrus.Logger) *RuntimeManager {
+	if logger == nil {
+		logger = logrus.New()
+	}
 	return &RuntimeManager{
 		factory: factory,
 		cache:   make(map[entity.LanguageType]component.IRuntime),
+		logger:  logger,
 	}
 }
 
-// NewDefaultRuntimeManager 创建默认的统一运行时管理器
+// NewDefaultRuntimeManager 创建默认的运行时管理器
 func NewDefaultRuntimeManager(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeManager {
-	factory := NewUnifiedRuntimeFactory(logger, sandboxConfig)
-	return NewUnifiedRuntimeManager(factory, logger)
+	factory := NewRuntimeFactory(logger, sandboxConfig)
+	return NewRuntimeManager(factory, logger)
 }
 
 // GetRuntime 获取指定语言类型的Runtime实例，支持缓存和线程安全
@@ -55,11 +60,13 @@ func (m *RuntimeManager) GetRuntime(languageType entity.LanguageType) (component
 	// 通过工厂创建Runtime
 	runtime, err := m.factory.CreateRuntime(languageType)
 	if err != nil {
+		m.logger.WithError(err).WithField("language_type", languageType).Error("创建运行时失败")
 		return nil, err
 	}
 
 	// 缓存Runtime实例
 	m.cache[languageType] = runtime
+	m.logger.WithField("language_type", languageType).Info("运行时实例创建并缓存成功")
 	return runtime, nil
 }
 
@@ -68,11 +75,22 @@ func (m *RuntimeManager) GetSupportedLanguages() []entity.LanguageType {
 	return m.factory.GetSupportedLanguages()
 }
 
-// ClearCache 清空缓存（主要用于测试）
+// ClearCache 清空缓存
 func (m *RuntimeManager) ClearCache() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	
+	// 先清理现有的运行时实例
+	for languageType, runtime := range m.cache {
+		if cleanupRuntime, ok := runtime.(interface{ Cleanup() error }); ok {
+			if err := cleanupRuntime.Cleanup(); err != nil {
+				m.logger.WithError(err).WithField("language_type", languageType).Error("清理运行时实例失败")
+			}
+		}
+	}
+	
 	m.cache = make(map[entity.LanguageType]component.IRuntime)
+	m.logger.Info("运行时缓存已清空")
 }
 
 // 确保RuntimeManager实现IRuntimeManager接口
