@@ -38,7 +38,7 @@ export function LogicNot(props: LogicNotProps) {
         onClick();
       }}
     >
-      {I18n.t('fornax_components_logic_expr_not')}
+      {I18n.t('logic_expr_not')}
     </div>
   );
 }

@@ -190,7 +190,7 @@ export const ExprRender = <L, O, R>({
             {isEdit ? (
               <Tooltip
                 theme="dark"
-                content={I18n.t('fornax_components_logic_expr_delete_filter')}
+                content={I18n.t('logic_expr_delete_filter')}
               >
                 <IconButton
                   className={classNames(
