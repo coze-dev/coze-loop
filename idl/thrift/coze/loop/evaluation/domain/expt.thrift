@@ -500,9 +500,9 @@ struct ExptInsightAnalysisFeedbackComment {
 typedef string FeedbackActionType(ts.enum="true")
 
 const FeedbackActionType FeedbackActionType_Upvote = "Upvote"
-const FeedbackActionType FeedbackActionType_Cancel_Upvote = "CancelUpvote"
+const FeedbackActionType FeedbackActionType_Cancel_Upvote = "Cancel_Upvote"
 const FeedbackActionType FeedbackActionType_Downvote = "Downvote"
-const FeedbackActionType FeedbackActionType_Cancel_Downvote = "CancelDownvote"
+const FeedbackActionType FeedbackActionType_Cancel_Downvote = "Cancel_Downvote"
 const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
