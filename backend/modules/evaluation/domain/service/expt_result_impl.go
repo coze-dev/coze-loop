@@ -1825,6 +1825,9 @@ func (e ExptResultServiceImpl) InsertExptTurnResultFilterKeyMappings(ctx context
 
 func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
 	ctx = contexts.WithCtxWriteDB(ctx) // 更新result时需要取最新的result
+	
+	// 记录是否为整个实验的 diff（item_id 为空时）
+	isExperimentDiff := len(itemIDs) == 0
 
 	// 数据准备和验证
 	preparedData, err := e.prepareComparisonData(ctx, spaceID, exptID, itemIDs)
@@ -1836,7 +1839,15 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 	}
 
 	// 分页处理数据比较
-	return e.processComparisonByPages(ctx, preparedData, retryTimes)
+	err = e.processComparisonByPages(ctx, preparedData, retryTimes)
+	
+	// 当 item_id 为空时，补充整个实验的 diff 结果汇总日志
+	if isExperimentDiff {
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters experiment diff summary completed, exptID: %d, spaceID: %d, totalItems: %d, retryTimes: %d", 
+			exptID, spaceID, len(preparedData.ItemIDs), retryTimes)
+	}
+	
+	return err
 }
 
 // ComparisonPreparedData 比较准备数据
