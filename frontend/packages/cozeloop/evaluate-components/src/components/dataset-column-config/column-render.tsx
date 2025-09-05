@@ -73,7 +73,7 @@ export const ColumnRender = ({
       <div className="flex items-center gap-[4px]">
         <Typography.Text className="text-[14px] !font-semibold">
           {nameField.getValue() ||
-            `${I18n.t('data_engine_column_placeholder', { placeholder1: index + 1 })}`}
+            `${I18n.t('column_placeholder', { placeholder1: index + 1 })}`}
         </Typography.Text>
         {activeKey.includes(`${index}`) ? (
           <IconCozArrowDown

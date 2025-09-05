@@ -199,7 +199,7 @@ export function handleDelete({
       <>
         {I18n.t('cozeloop_open_evaluate_confirm_to_delete')}
         <span className="font-medium px-[2px]">{record.name}</span>
-        {I18n.t('data_engine_this_change_irreversible')}
+        {I18n.t('this_change_irreversible')}
       </>
     ),
     okText: I18n.t('delete'),

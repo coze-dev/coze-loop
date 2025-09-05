@@ -53,7 +53,7 @@ export const DatasetList = () => {
           <Typography.Text className="!font-medium mx-[2px]">
             {row.name}
           </Typography.Text>
-          {I18n.t('data_engine_this_change_irreversible')}
+          {I18n.t('this_change_irreversible')}
         </Typography.Text>
       ),
       autoLoading: true,
