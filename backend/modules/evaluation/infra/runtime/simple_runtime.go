@@ -83,28 +83,6 @@ func (sr *SimpleRuntime) RunCode(ctx context.Context, code string, language stri
 	}
 }
 
-// ValidateCode 验证代码语法
-func (sr *SimpleRuntime) ValidateCode(ctx context.Context, code string, language string) bool {
-	if code == "" {
-		return false
-	}
-
-	// 验证语言类型
-	if !sr.isLanguageSupported(language) {
-		sr.logger.WithField("language", language).Warn("不支持的语言类型")
-		return false
-	}
-
-	// 简单的语法检查
-	switch normalizeLanguage(language) {
-	case "js":
-		return sr.basicJSValidation(code)
-	case "python":
-		return sr.basicPythonValidation(code)
-	default:
-		return false
-	}
-}
 
 // Cleanup 清理资源
 func (sr *SimpleRuntime) Cleanup() error {
@@ -247,59 +225,7 @@ func (sr *SimpleRuntime) isLanguageSupported(language string) bool {
 
 
 
-// basicJSValidation 基本的JavaScript语法检查
-func (sr *SimpleRuntime) basicJSValidation(code string) bool {
-	// 简单的语法检查：检查括号匹配
-	brackets := 0
-	braces := 0
-	parentheses := 0
 
-	for _, char := range code {
-		switch char {
-		case '[':
-			brackets++
-		case ']':
-			brackets--
-		case '{':
-			braces++
-		case '}':
-			braces--
-		case '(':
-			parentheses++
-		case ')':
-			parentheses--
-		}
-	}
-
-	return brackets == 0 && braces == 0 && parentheses == 0
-}
-
-// basicPythonValidation 基本的Python语法检查
-func (sr *SimpleRuntime) basicPythonValidation(code string) bool {
-	// 简单的语法检查：检查括号匹配
-	brackets := 0
-	braces := 0
-	parentheses := 0
-
-	for _, char := range code {
-		switch char {
-		case '[':
-			brackets++
-		case ']':
-			brackets--
-		case '{':
-			braces++
-		case '}':
-			braces--
-		case '(':
-			parentheses++
-		case ')':
-			parentheses--
-		}
-	}
-
-	return brackets == 0 && braces == 0 && parentheses == 0
-}
 
 // 确保SimpleRuntime实现IRuntime接口
 var _ component.IRuntime = (*SimpleRuntime)(nil)

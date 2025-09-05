@@ -187,25 +187,6 @@ func (adapter *HTTPFaaSRuntimeAdapter) RunCode(ctx context.Context, code string,
 	return result, nil
 }
 
-// ValidateCode 验证代码（通过简单的语法检查）
-func (adapter *HTTPFaaSRuntimeAdapter) ValidateCode(ctx context.Context, code string, language string) bool {
-	if code == "" {
-		return false
-	}
-
-	// 对于HTTP FaaS，我们可以发送一个快速的验证请求
-	// 这里简化实现，只做基本检查
-	switch normalizeLanguage(language) {
-	case "js":
-		// 基本的JavaScript/TypeScript语法检查
-		return adapter.basicJSValidation(code)
-	case "python":
-		// 基本的Python语法检查
-		return adapter.basicPythonValidation(code)
-	default:
-		return false
-	}
-}
 
 // Cleanup 清理资源
 func (adapter *HTTPFaaSRuntimeAdapter) Cleanup() error {
@@ -265,15 +246,7 @@ func (adapter *HTTPFaaSRuntimeAdapter) getTaskID(response *HTTPFaaSResponse) str
 	return fmt.Sprintf("http_faas_%d", time.Now().UnixNano())
 }
 
-// basicJSValidation 基本的JavaScript/TypeScript语法检查
-func (adapter *HTTPFaaSRuntimeAdapter) basicJSValidation(code string) bool {
-	return basicSyntaxValidation(code)
-}
 
-// basicPythonValidation 基本的Python语法检查
-func (adapter *HTTPFaaSRuntimeAdapter) basicPythonValidation(code string) bool {
-	return basicSyntaxValidation(code)
-}
 
 // basicSyntaxValidation 基本的语法检查：检查括号匹配
 func basicSyntaxValidation(code string) bool {
