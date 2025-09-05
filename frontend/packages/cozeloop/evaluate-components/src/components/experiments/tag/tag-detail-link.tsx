@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import { IconCozLongArrowTopRight } from '@coze-arch/coze-design/icons';
 
@@ -10,7 +11,7 @@ export function TagDetailLink({ tagKey }: { tagKey?: string }) {
         window.open(getTagDetailURL(tagKey || ''));
       }}
     >
-      查看标签详情
+      {I18n.t('view_tag_details')}
       <IconCozLongArrowTopRight className="ml-1" />
     </span>
   );

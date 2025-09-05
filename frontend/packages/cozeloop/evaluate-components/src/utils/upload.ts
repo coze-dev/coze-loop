@@ -1,6 +1,7 @@
 import { utils as XLSXUtils, read as XLSXRead } from 'xlsx';
 import Papa from 'papaparse';
 import JSZip from 'jszip';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { FileFormat } from '@cozeloop/api-schema/data';
 
 export const CSV_FILE_NAME = 'index.csv';
@@ -75,7 +76,8 @@ function getXlsxHeaders(file: File): Promise<string[]> {
       }
     };
 
-    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.onerror = () =>
+      reject(new Error(I18n.t('fornax_knowledge_file_read_fail')));
     reader.readAsArrayBuffer(file);
   });
 }
@@ -151,6 +153,6 @@ export const getFileHeaders = async (
     return { headers: [] };
   } catch (error) {
     console.error(error);
-    return { headers: [], error: '文件格式错误' };
+    return { headers: [], error: I18n.t('data_engine_file_format_error') };
   }
 };

@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import {
   ColumnsManage,
@@ -134,7 +135,7 @@ export default function ExperimentList() {
           setSelectedExperiments([]);
         }}
       >
-        批量选择
+        {I18n.t('bulk_select')}
       </Button>
       <Guard point={GuardPoint['eval.experiments.create']} realtime>
         <Button
@@ -146,7 +147,7 @@ export default function ExperimentList() {
             navigateModule('evaluation/experiments/create');
           }}
         >
-          新建实验
+          {I18n.t('new_experiment')}
         </Button>
       </Guard>
     </>
@@ -229,7 +230,7 @@ export default function ExperimentList() {
   return (
     <>
       <PrimaryPage
-        pageTitle="实验"
+        pageTitle={I18n.t('experiment')}
         filterSlot={<TableHeader actions={actions} filters={filters} />}
         className="h-full overflow-hidden"
       >

@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { OpenDetailButton } from '@cozeloop/components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { Tag } from '@coze-arch/coze-design';
@@ -20,16 +21,20 @@ export const SetEvalTargetView = (props: {
   return (
     <>
       <div className="text-[16px] leading-[22px] font-medium coz-fg-primary mb-5">
-        评测对象
+        {I18n.t('evaluation_object')}
       </div>
       <div className="flex flex-row gap-5">
         <div className="flex-1 w-0">
-          <div className="text-sm font-medium coz-fg-primary mb-2">类型</div>
-          <div className="text-sm font-normal coz-fg-primary">评测集</div>
+          <div className="text-sm font-medium coz-fg-primary mb-2">
+            {I18n.t('type')}
+          </div>
+          <div className="text-sm font-normal coz-fg-primary">
+            {I18n.t('evaluation_set')}
+          </div>
         </div>
         <div className="flex-1 w-0">
           <div className="text-sm font-medium coz-fg-primary mb-2">
-            名称和版本
+            {I18n.t('name_and_version')}
           </div>
           <div className="flex flex-row items-center gap-1">
             <div className={'text-sm font-normal coz-fg-primary'}>

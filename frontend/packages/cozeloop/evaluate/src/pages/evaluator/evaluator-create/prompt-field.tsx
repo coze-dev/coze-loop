@@ -4,14 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 
 import cls from 'classnames';
 import { useDebounceFn } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
-  PromptVariableType,
   PromptVariablesList,
   parseMessagesVariables,
   EvaluatorPromptEditor,
   type EvaluatorPromptEditorProps,
-  type PromptVariable,
 } from '@cozeloop/evaluate-components';
+import { type VariableDef, VariableType } from '@cozeloop/api-schema/prompt';
 import {
   type EvaluatorContent,
   Role,
@@ -72,7 +72,7 @@ export function PromptField({
 
   const promptEvaluator: PromptEvaluator = promptEvaluatorFieldState.value;
 
-  const [variables, setVariables] = useState<PromptVariable[]>([]);
+  const [variables, setVariables] = useState<VariableDef[]>([]);
 
   const calcVariables = useDebounceFn(
     () => {
@@ -111,7 +111,7 @@ export function PromptField({
       }
       disabled={disabled}
       noLabel
-      rules={[{ required: true, message: 'System Prompt 不可为空' }]}
+      rules={[{ required: true, message: I18n.t('system_prompt_not_empty') }]}
       minHeight={300}
       maxHeight={500}
       dragBtnHidden
@@ -139,7 +139,7 @@ export function PromptField({
       }
       noLabel
       disabled={disabled}
-      rules={[{ required: true, message: 'User Prompt 不可为空' }]}
+      rules={[{ required: true, message: I18n.t('user_prompt_required') }]}
       maxHeight={500}
       dragBtnHidden
       modalVariableEnable={multiModalVariableEnable}
@@ -156,10 +156,10 @@ export function PromptField({
       }}
       rightActionBtns={
         <Popconfirm
-          title="删除 User Prompt"
-          content="确认删除 User Prompt ？"
-          okText="确认"
-          cancelText="取消"
+          title={I18n.t('delete_user_prompt')}
+          content={I18n.t('confirm_delete_user_prompt')}
+          okText={I18n.t('confirm')}
+          cancelText={I18n.t('cancel')}
           okButtonProps={{ color: 'red' }}
           onConfirm={() => {
             const messageList = promptEvaluator?.message_list || [];
@@ -199,7 +199,7 @@ export function PromptField({
       disabled={disabled}
       icon={<IconCozPlus />}
     >
-      {'添加 User Prompt'}
+      {I18n.t('add_user_prompt')}
     </Button>
   );
 
@@ -218,11 +218,10 @@ export function PromptField({
               icon={<IconCozTemplate />}
               onClick={() => setTemplateVisible(true)}
             >
-              {`选择模板${
-                promptEvaluator?.prompt_template_name
-                  ? `(${promptEvaluator.prompt_template_name})`
-                  : ''
-              }`}
+              {I18n.t('select_template')}
+              {promptEvaluator?.prompt_template_name
+                ? `(${promptEvaluator.prompt_template_name})`
+                : ''}
             </Button>
 
             <Divider layout="vertical" className="h-3 mx-2" />
@@ -235,13 +234,13 @@ export function PromptField({
                 icon={<IconCozTrashCan />}
                 disabled={disabled}
               >
-                {'清空'}
+                {I18n.t('clear')}
               </Button>
             ) : (
               <Popconfirm
-                title={'确认清空 Prompt？'}
-                cancelText="取消"
-                okText="清空"
+                title={I18n.t('confirm_clear_prompt')}
+                cancelText={I18n.t('cancel')}
+                okText={I18n.t('clear')}
                 okButtonProps={{ color: 'red' }}
                 onConfirm={() => {
                   promptEvaluatorFieldApi.setValue({
@@ -266,7 +265,7 @@ export function PromptField({
                   className="!px-[3px] !h-5"
                   icon={<IconCozTrashCan />}
                 >
-                  {'清空'}
+                  {I18n.t('clear')}
                 </Button>
               </Popconfirm>
             )}
@@ -315,10 +314,10 @@ export function generateInputSchemas(messageList?: Message[]) {
     const schema: common.ArgsSchema = {
       key: variable.key,
     };
-    if (variable.type === PromptVariableType.String) {
+    if (variable.type === VariableType.String) {
       schema.support_content_types = [ContentType.Text];
       schema.json_schema = '{"type": "string"}';
-    } else if (variable.type === PromptVariableType.MultiPartVariable) {
+    } else if (variable.type === VariableType.MultiPart) {
       schema.support_content_types = [ContentType.MultiPart];
     }
     return schema;

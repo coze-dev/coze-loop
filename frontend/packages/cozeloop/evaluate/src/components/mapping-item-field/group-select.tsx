@@ -32,6 +32,7 @@ import {
 } from './types';
 
 import styles from './group-select.module.less';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 export interface GroupSelectProps
   extends Omit<InputProps, 'value' | 'onChange'> {
@@ -135,7 +136,7 @@ export default function GroupSelect(props: GroupSelectProps) {
     renderSelectedItem,
     validateStatus,
     disabled = false,
-    placeholder = '请选择',
+    placeholder = I18n.t('please_select', { field: '' }),
     separator = defaultSeparator,
     className,
     ...restProps
@@ -377,7 +378,9 @@ export default function GroupSelect(props: GroupSelectProps) {
           </div>
         ))}
         {filteredOptionGroups.length === 0 && searchText && (
-          <div className="text-center py-4 text-gray-500">未找到匹配的选项</div>
+          <div className="text-center py-4 text-gray-500">
+            {I18n.t('no_matching_option')}
+          </div>
         )}
       </div>
 

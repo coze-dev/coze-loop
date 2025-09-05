@@ -1,6 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { useEffect, useMemo, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   ColumnsManage,
   dealColumnsFromStorage,
@@ -264,14 +265,14 @@ export default function ({
     <>
       <div className="w-60">
         <TextArea
-          placeholder={`请输入关键词检索,最长${MAX_SEARCH_LENGTH}字符`}
+          placeholder={`${I18n.t('enter_keyword_search_max_length', { MAX_SEARCH_LENGTH })}`}
           rows={1}
           showClear={true}
           value={keyword}
           onChange={val => {
             if (val && val.length > MAX_SEARCH_LENGTH) {
               Toast.warning(
-                `关键词检索最长${MAX_SEARCH_LENGTH}字符，超出部分已被自动截断`,
+                `${I18n.t('keyword_search_length_limited_truncated', { MAX_SEARCH_LENGTH })}`,
               );
             }
             const newVal = val?.slice(0, MAX_SEARCH_LENGTH);
@@ -324,8 +325,12 @@ export default function ({
               setExpand(e.target.value === 'quick_annotate');
             }}
           >
-            <Radio value="default">普通模式</Radio>
-            <Radio value="quick_annotate">快速标注模式</Radio>
+            <Radio value="default">
+              {I18n.t('fornax_prompt_compare_normal')}
+            </Radio>
+            <Radio value="quick_annotate">
+              {I18n.t('quick_annotation_mode')}
+            </Radio>
           </RadioGroup>
           <Divider margin={16} layout="vertical" />
         </>
@@ -390,17 +395,17 @@ export default function ({
       <EmptyState
         size="full_screen"
         icon={<IconCozIllusAdd />}
-        title="实验初始化中"
+        title={I18n.t('experiment_initializing')}
         description={
           <>
-            稍等几秒后
+            {I18n.t('wait_a_few_seconds')}
             <span
               className="text-[rgb(var(--coze-up-brand-9))] cursor-pointer"
               onClick={onRefreshPage}
             >
-              刷新
+              {I18n.t('task_refresh')}
             </span>
-            页面查看
+            {I18n.t('page_view')}
           </>
         }
       />
@@ -408,7 +413,7 @@ export default function ({
       <EmptyState
         size="full_screen"
         icon={<IconCozIllusAdd />}
-        title="暂无数据"
+        title={I18n.t('no_data')}
       />
     );
 

@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
 
@@ -53,7 +54,7 @@ export function EvalTargetCascadeSelect({
   return (
     <div className="flex items-center gap-2 overflow-hidden">
       <Select
-        placeholder="评测对象类型"
+        placeholder={I18n.t('evaluation_object_type')}
         showArrow={false}
         {...typeSelectProps}
         optionList={evalTargetOptions}

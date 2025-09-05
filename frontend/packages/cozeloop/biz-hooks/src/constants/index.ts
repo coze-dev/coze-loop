@@ -12,3 +12,6 @@ export const demoSpace = {
   name: 'Demo 空间',
   icon_url: DemoSpaceIcon,
 };
+
+/** 是否禁用多模态评测 */
+export const IS_DISABLED_MULTI_MODEL_EVAL = true as boolean;

@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Modal } from '@coze-arch/coze-design';
 
 interface ImportTypeSectionProps {
@@ -6,11 +7,11 @@ interface ImportTypeSectionProps {
 }
 const importTypeList = [
   {
-    label: '追加数据',
+    label: I18n.t('evaluation_set_append_data'),
     value: false,
   },
   {
-    label: '全量覆盖',
+    label: I18n.t('evaluation_set_overwrite_data'),
     value: true,
   },
 ];
@@ -25,10 +26,10 @@ export const OverWriteField = ({ value, onChange }: ImportTypeSectionProps) => (
         onClick={() => {
           if (type.value) {
             Modal.confirm({
-              title: '确认选择全量覆盖',
-              content: '导入数据将覆盖现有数据',
-              okText: '确认',
-              cancelText: '取消',
+              title: I18n.t('confirm_full_overwrite'),
+              content: I18n.t('importing_data_will_overwrite_existing_data'),
+              okText: I18n.t('global_btn_confirm'),
+              cancelText: I18n.t('global_btn_cancel'),
               onOk: () => {
                 onChange?.(type.value);
               },

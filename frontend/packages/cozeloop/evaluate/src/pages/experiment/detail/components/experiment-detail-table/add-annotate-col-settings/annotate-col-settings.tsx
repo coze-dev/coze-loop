@@ -46,19 +46,19 @@ export function AnnotateColSettings({
     <div className="py-4">
       <div className="mb-8">
         <div className="text-[16px] font-semibold coz-fg-plus mb-3">
-          标签列表
+          {I18n.t('tag_list')}
         </div>
         <TagSelect
           spaceID={spaceID}
           experimentID={experimentID}
           className={'w-full'}
           dropdownClassName={'!p-3'}
-          placeholder="请输入标签名称搜索"
+          placeholder={I18n.t('please_enter_tag_name_search')}
           showTick={false}
           tags={tags}
           onAdd={tag => {
             setTags(prev => [...(prev || []), tag]);
-            Toast.success('添加标签列至数据明细');
+            Toast.success(I18n.t('add_tag_column_to_data_details'));
             onAnnotateAdd?.();
           }}
         />
@@ -69,7 +69,9 @@ export function AnnotateColSettings({
       ) : (
         <div>
           {tags?.length ? (
-            <div className="mb-4">已添加标签 {tags.length}</div>
+            <div className="mb-4">
+              {I18n.t('tag_added_placeholder1', { placeholder1: tags.length })}
+            </div>
           ) : null}
           <div className="flex flex-col gap-3">
             {tags?.map(item => (

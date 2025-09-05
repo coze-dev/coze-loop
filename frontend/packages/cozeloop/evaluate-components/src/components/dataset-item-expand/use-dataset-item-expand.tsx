@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozLoose, IconCozTight } from '@coze-arch/coze-design/icons';
 import { Radio, Tooltip } from '@coze-arch/coze-design';
 
@@ -12,12 +13,12 @@ export const useDatasetItemExpand = () => {
       value={expand ? 'expand' : 'shrink'}
       onChange={e => setExpand(e.target.value === 'expand' ? true : false)}
     >
-      <Tooltip content="紧凑视图" theme="dark">
+      <Tooltip content={I18n.t('compact_view')} theme="dark">
         <Radio value="shrink" addonClassName="flex items-center">
           <IconCozTight className="text-lg" />
         </Radio>
       </Tooltip>
-      <Tooltip content="宽松视图" theme="dark">
+      <Tooltip content={I18n.t('loose_view')} theme="dark">
         <Radio value="expand" addonClassName="flex items-center">
           <IconCozLoose className="text-lg" />
         </Radio>

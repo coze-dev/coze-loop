@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Popconfirm, type PopconfirmProps } from '@coze-arch/coze-design';
 
 interface Props extends PopconfirmProps {
@@ -9,10 +10,10 @@ export const PopconfirmSave: React.FC<Props> = props => {
   const { children, needConfirm, ...reset } = props;
   return props.needConfirm ? (
     <Popconfirm
-      title="信息未保存"
-      content="如不保存，已编辑的信息将会丢失。"
-      okText="保存并继续"
-      cancelText="不保存"
+      title={I18n.t('information_unsaved')}
+      content={I18n.t('saved_lost_data_tips')}
+      okText={I18n.t('evaluation_set_save_and_continue')}
+      cancelText={I18n.t('do_not_save')}
       {...reset}
     >
       {props.children}

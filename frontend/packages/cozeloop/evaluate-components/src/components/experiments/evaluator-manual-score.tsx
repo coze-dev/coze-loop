@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint } from '@cozeloop/guard';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { Button, Form, type FormApi, Popover } from '@coze-arch/coze-design';
@@ -70,45 +71,50 @@ export function EvaluatorManualScore({
     >
       <Form.InputNumber
         field="score"
-        label="评分"
-        placeholder="请输入0-1的分值"
+        label={I18n.t('rating')}
+        placeholder={I18n.t('input_score_between_0_and_1')}
         className="w-full"
         step={0.1}
         rules={[
-          { required: true, message: '该字段必填' },
+          {
+            required: true,
+            message: I18n.t('evaluate_dataset_input_required'),
+          },
           {
             validator: (_rule, value) => value >= 0 && value <= 1,
-            message: '请输入0～1区间内的数字',
+            message: I18n.t('cozeloop_open_evaluate_enter_number_between_0_1'),
           },
           {
             validator: (_rule, value) => {
               const precision = String(value).split('.')[1];
               return !precision || precision.length <= 4;
             },
-            message: '最多保留小数点后四位',
+            message: I18n.t('cozeloop_open_evaluate_max_four_decimal_places'),
           },
         ]}
         autoComplete="off"
       />
       <Form.TextArea
         field="reasoning"
-        label="原因"
-        placeholder="请输入原因"
+        label={I18n.t('reason')}
+        placeholder={I18n.t('please_enter_the_reason')}
         maxCount={500}
         maxLength={500}
         autoComplete="off"
       />
     </Form>
   );
-  const header = <div className="text-xl font-bold">人工校准</div>;
+  const header = (
+    <div className="text-xl font-bold">{I18n.t('manual_calibration')}</div>
+  );
   const footer = (
     <div className="flex items-center justify-end gap-2">
       <Button color="primary" onClick={() => onVisibleChange?.(false)}>
-        取消
+        {I18n.t('cancel')}
       </Button>
       <Guard point={GuardPoint['eval.experiment.edit_result']}>
         <Button loading={loading} onClick={() => formRef.current?.submitForm()}>
-          更新
+          {I18n.t('cozeloop_open_evaluate_update')}
         </Button>
       </Guard>
     </div>

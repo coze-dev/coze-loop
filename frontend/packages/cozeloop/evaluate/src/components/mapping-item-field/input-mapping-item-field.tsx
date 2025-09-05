@@ -1,5 +1,6 @@
 import { type FC } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EqualItem,
   ReadonlyItem,
@@ -66,7 +67,7 @@ export const InputMappingItemField: FC<CommonFieldProps & MappingItemProps> =
         <GroupSelect
           validateStatus={validateStatus}
           className={styles.select}
-          placeholder="请选择"
+          placeholder={I18n.t('please_select', { field: '' })}
           optionGroups={optionGroups}
           value={selectValue}
           onChange={handleChange}

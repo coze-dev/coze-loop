@@ -1,4 +1,5 @@
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchFormSelect } from '@cozeloop/components';
 import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
@@ -71,7 +72,7 @@ export function EvaluateSetVersionSelect({
 
   return (
     <BaseSearchFormSelect
-      placeholder={'请选择评测集版本'}
+      placeholder={I18n.t('please_select_evaluation_set_version')}
       remote
       loading={service.loading}
       showRefreshBtn={true}

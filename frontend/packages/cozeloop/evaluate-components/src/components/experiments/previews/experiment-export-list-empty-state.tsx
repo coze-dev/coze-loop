@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozIllusAdd } from '@coze-arch/coze-design/illustrations';
 import { EmptyState } from '@coze-arch/coze-design';
 
@@ -6,8 +7,10 @@ export function ExperimentExportListEmptyState() {
     <EmptyState
       size="full_screen"
       icon={<IconCozIllusAdd />}
-      title={'暂无导出记录'}
-      description={'点击右上角导出按钮进行导出'}
+      title={I18n.t('no_export_record_yet')}
+      description={I18n.t(
+        'cozeloop_open_evaluate_click_export_button_top_right',
+      )}
     />
   );
 }

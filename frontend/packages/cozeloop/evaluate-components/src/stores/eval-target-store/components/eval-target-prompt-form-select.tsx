@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type CommonFieldProps,
   type SelectProps,
@@ -15,8 +16,8 @@ const PromptEvalTargetFormSelect: React.FC<
     remote
     onChangeWithObject
     label="Prompt key"
-    rules={[{ required: true, message: '请选择Prompt key' }]}
-    placeholder="请选择Prompt key"
+    rules={[{ required: true, message: I18n.t('please_select_prompt_key') }]}
+    placeholder={I18n.t('please_select_prompt_key')}
     showCreateBtn={true}
     {...props}
   />

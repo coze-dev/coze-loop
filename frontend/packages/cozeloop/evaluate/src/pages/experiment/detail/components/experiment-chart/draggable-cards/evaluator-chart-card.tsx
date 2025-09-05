@@ -33,7 +33,9 @@ export function EvaluatorChartCard({
     );
     const { data } = splitData(originalData, maxCount);
 
-    const nameMap = { [CHART_MORE_KEY]: '其他' };
+    const nameMap = {
+      [CHART_MORE_KEY]: I18n.t('fornax_analytics_subtitle_others'),
+    };
     const result: ChartItemValue[] = data.map(([score, item]) => ({
       name: nameMap[score] ?? score,
       dimension: score,

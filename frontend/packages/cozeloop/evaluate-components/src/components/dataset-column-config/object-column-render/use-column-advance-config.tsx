@@ -1,6 +1,7 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 import { Fragment, useEffect, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozSetting } from '@coze-arch/coze-design/icons';
 import {
   Button,
@@ -102,8 +103,8 @@ export const useColumnAdvanceConfig = ({
         setInputType(newType as InputType);
       } else {
         Modal.confirm({
-          title: '确认切换？',
-          content: '当前JSON Schema不合法，切换会导致配置丢失，是否继续切换',
+          title: I18n.t('cozeloop_open_evaluate_confirm_switch'),
+          content: I18n.t('evaluation_set_json_schema_invalid_tips'),
           onOk: () => {
             fieldApi.setValue({
               ...fieldValue,
@@ -113,8 +114,8 @@ export const useColumnAdvanceConfig = ({
             setInputType(newType as InputType);
           },
           okButtonColor: 'yellow',
-          okText: '确认',
-          cancelText: '取消',
+          okText: I18n.t('confirm'),
+          cancelText: I18n.t('cancel'),
         });
       }
     }
@@ -125,17 +126,22 @@ export const useColumnAdvanceConfig = ({
 
   const advanceRules = [
     {
-      label: '冗余字段校验',
+      label: I18n.t('redundant_field_check'),
       hideen: !isObject,
-      tooltip:
-        '开启后，Object数据类型支持配置校验规则，用于控制数据导入时，如果存在Object数据结构定义之外的字段，该数据是否准入',
+      tooltip: I18n.t(
+        'cozeloop_open_evaluate_enable_object_type_validation_rules',
+      ),
       node:
         showAdditional && !disabelChangeDatasetType ? (
           <Popconfirm
-            title="是否关闭 冗余字段校验 配置项"
-            content="关闭后 冗余字段校验 配置将采用默认配置“否”，确定关闭吗？"
-            okText="确认"
-            cancelText="取消"
+            title={I18n.t(
+              'cozeloop_open_evaluate_confirm_disable_redundant_field_validation',
+            )}
+            content={I18n.t(
+              'cozeloop_open_evaluate_disable_redundant_validation_default_no',
+            )}
+            okText={I18n.t('confirm')}
+            cancelText={I18n.t('cancel')}
             okButtonColor="yellow"
             zIndex={10000}
             onConfirm={() => {
@@ -162,18 +168,22 @@ export const useColumnAdvanceConfig = ({
   ];
   const menuItems = [
     {
-      title: '高级校验规则',
+      title: I18n.t('advanced_validation_rule'),
       hideen: !isObject || isJSON,
       children: advanceRules,
     },
     {
-      title: '数据加工',
+      title: I18n.t('data_processing_short'),
       hideen: !isObject,
-      tooltip: '导入数据时，在完成校验后对数据的加工操作。',
+      tooltip: I18n.t(
+        'cozeloop_open_evaluate_data_processing_after_validation_import',
+      ),
       children: [
         {
-          label: '移除冗余字段',
-          tooltip: '导入数据时，是否移除数据结构定义之外字段',
+          label: I18n.t('remove_redundant_fields'),
+          tooltip: I18n.t(
+            'cozeloop_open_evaluate_remove_fields_outside_structure_on_import',
+          ),
           node: (
             <FormRemovePropertyField
               disabled={disabelChangeDatasetType}
@@ -203,7 +213,9 @@ export const useColumnAdvanceConfig = ({
               size="small"
               onChange={onInputTypeChange}
             >
-              <Select.Option value={InputType.Form}>可视化配置</Select.Option>
+              <Select.Option value={InputType.Form}>
+                {I18n.t('visual_configuration')}
+              </Select.Option>
               <Select.Option value={InputType.JSON}>JSON</Select.Option>
             </Select>
             <Divider layout="vertical" className="w-[1px] h-[14px]" />

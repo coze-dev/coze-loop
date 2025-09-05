@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozArrowDown,
   IconCozArrowRight,
@@ -44,7 +45,7 @@ export const MultipartRender = ({ inputType }: MultipartRenderProps) => {
   const getHeader = () => (
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
-        数据结构
+        {I18n.t('cozeloop_open_evaluate_data_structure')}
         {activeKey?.length ? (
           <IconCozArrowDown
             onClick={() => setActiveKey([])}
@@ -68,9 +69,7 @@ export const MultipartRender = ({ inputType }: MultipartRenderProps) => {
     >
       <Collapse.Panel itemKey={'1'} header={getHeader()} showArrow={false}>
         <Typography.Text className="coz-fg-secondary mb-2 block -mt-1">
-          {
-            '预置Arrary<Object>数据类型，Object数据结构如下。适用于管理图、文等各类模态混排的数据。'
-          }
+          {I18n.t('cozeloop_open_evaluate_preset_array_object_data_type')}
         </Typography.Text>
         {inputType === InputType.Form ? (
           <>

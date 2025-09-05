@@ -1,4 +1,5 @@
 /* eslint-disable complexity */
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { Form, Tag } from '@coze-arch/coze-design';
 
@@ -31,23 +32,23 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
       {/* 类型存在时才使用 */}
       {evalTargetType === (5 as EvalTargetType) ? (
         <>
-          <Form.Slot label="名称和版本">
+          <Form.Slot label={I18n.t('name_and_version')}>
             <span className="text-sm coz-fg-primary font-normal mr-1">
               {evaluationSetDetail?.name || '-'}
             </span>
             <Tag color="primary">{versionDetail?.version || '-'}</Tag>
           </Form.Slot>
-          <Form.Slot label="描述">
+          <Form.Slot label={I18n.t('description')}>
             <div className="text-sm coz-fg-primary font-normal">
               {versionDetail?.description || '-'}
             </div>
           </Form.Slot>
-          <Form.Slot label="列名">
+          <Form.Slot label={I18n.t('column_name')}>
             {formSetVersionId && formSetId && fieldSchemas ? (
               <EvaluateSetColList fieldSchemas={fieldSchemas} />
             ) : null}
           </Form.Slot>
-          <Form.Slot label="数据总量">
+          <Form.Slot label={I18n.t('data_total_count')}>
             <div className="text-sm coz-fg-primary font-normal">
               {versionDetail?.item_count ?? '-'}
             </div>

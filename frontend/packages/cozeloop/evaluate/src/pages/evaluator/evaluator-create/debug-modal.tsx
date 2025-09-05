@@ -2,12 +2,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint, useGuard } from '@cozeloop/guard';
 import {
   EvaluatorTestRunResult,
   parseMessagesVariables,
-  PromptVariableType,
-  type PromptVariable,
 } from '@cozeloop/evaluate-components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -15,6 +14,7 @@ import {
   BenefitBannerScene,
   BenefitBaseBanner,
 } from '@cozeloop/biz-components-adapter';
+import { VariableType, type VariableDef } from '@cozeloop/api-schema/prompt';
 import {
   type EvaluatorInputData,
   type Evaluator,
@@ -45,6 +45,10 @@ import styles from './debug-modal.module.less';
 
 const FormMultiPartEdit = withField(MultiPartEdit);
 
+function hasMultipartVar(vars: VariableDef[]) {
+  return vars?.some(v => v.type === VariableType.MultiPart);
+}
+
 export function DebugModal({
   initValue,
   onCancel,
@@ -57,7 +61,7 @@ export function DebugModal({
   const { spaceID } = useSpace();
   const evaluatorFormRef = useRef<Form<Evaluator>>(null);
   const inputFormRef = useRef<Form<EvaluatorInputData>>(null);
-  const [variables, setVariables] = useState<PromptVariable[]>([]);
+  const [variables, setVariables] = useState<VariableDef[]>([]);
 
   const guard = useGuard({
     point: GuardPoint['eval.evaluator_create.debug'],
@@ -74,7 +78,13 @@ export function DebugModal({
         evaluator?.current_version?.evaluator_content?.prompt_evaluator
           ?.message_list;
       const newVariables = parseMessagesVariables(messageList ?? []);
-      setVariables(newVariables);
+      setVariables(originVars => {
+        // 存在多部分变量，但是新的变量中没有多部分变量，触发一次表单校验校验
+        if (hasMultipartVar(originVars) && !hasMultipartVar(newVariables)) {
+          evaluatorFormRef.current?.formApi?.validate();
+        }
+        return newVariables;
+      });
     },
     { wait: 500 },
   );
@@ -139,8 +149,8 @@ export function DebugModal({
       closeOnEsc={false}
       title={
         <div className="flex flex-row items-center text-xl font-medium coz-fg-plus">
-          {'预览与调试'}
-          <Tooltip content={'可通过构造测试数据，预览评估器的运行结果。'}>
+          {I18n.t('preview_and_debug')}
+          <Tooltip content={I18n.t('construct_data_to_preview')}>
             <div className="w-4 h-4 ml-1">
               <IconCozInfoCircle className="w-4 h-4 coz-fg-secondary" />
             </div>
@@ -156,7 +166,7 @@ export function DebugModal({
       <div className="h-full w-full overflow-hidden flex flex-row rounded-lg border border-solid coz-stroke-plus">
         <div className="w-1/2 flex flex-col border-0 border-r border-solid coz-stroke-plus">
           <div className="flex-shrink-0 h-9 px-4 coz-bg-secondary flex items-center text-sm coz-fg-plus font-semibold">
-            {'配置信息'}
+            {I18n.t('config_info')}
           </div>
           <div className="flex-1 overflow-y-auto px-4 pt-1 pb-6 styled-scrollbar pr-[10px]">
             <Form
@@ -171,7 +181,7 @@ export function DebugModal({
 
         <div className="w-1/2 flex flex-col">
           <div className="flex-shrink-0 h-9 px-4 coz-bg-secondary flex items-center text-sm coz-fg-plus font-semibold">
-            {'构造测试数据'}
+            {I18n.t('construct_test_data')}
           </div>
           {variables.length ? (
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -182,11 +192,11 @@ export function DebugModal({
                   disabled={guard2.data.readonly}
                 >
                   {variables.map(variable =>
-                    variable?.type === PromptVariableType.MultiPartVariable ? (
+                    variable?.type === VariableType.MultiPart ? (
                       <FormMultiPartEdit
                         key={variable?.key}
                         variable={variable}
-                        field={variable?.key}
+                        field={variable?.key ?? ''}
                         noLabel
                       />
                     ) : (
@@ -198,7 +208,7 @@ export function DebugModal({
                           </div>
                         }
                         labelPosition="inset"
-                        field={variable?.key}
+                        field={variable?.key ?? ''}
                         className="w-full"
                       />
                     ),
@@ -215,7 +225,7 @@ export function DebugModal({
                 ) : (
                   <BenefitBaseBanner
                     className="mb-3 !rounded-[6px]"
-                    description="试运行将产生资源点消耗"
+                    description={I18n.t('testrun_require_fee')}
                   />
                 )}
 
@@ -231,7 +241,7 @@ export function DebugModal({
                       );
                     }}
                   >
-                    {'清空'}
+                    {I18n.t('clear')}
                   </Button>
 
                   <Guard
@@ -243,7 +253,7 @@ export function DebugModal({
                       loading={service.loading}
                       onClick={service.run}
                     >
-                      {'运行'}
+                      {I18n.t('run')}
                     </Button>
                   </Guard>
                 </div>
@@ -257,14 +267,14 @@ export function DebugModal({
                 ) : null}
               </div>
               <div className="self-center text-[var(--coz-fg-dim)] text-xs leading-4 mb-6">
-                {'内容由AI生成，无法确保真实准确，仅供参考。'}
+                {I18n.t('generated_by_ai_tip')}
               </div>
             </div>
           ) : (
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusEmpty />}
-              title="评估器缺少输入"
+              title={I18n.t('evaluator_lacks_input')}
             />
           )}
         </div>

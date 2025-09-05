@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useRequest } from 'ahooks';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Version, VersionSwitchPanel } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
@@ -66,9 +67,9 @@ export const useVersionManage = ({
     () => ({
       id: 'draft',
       version: '0.0.0',
-      description: '当前草稿',
+      description: I18n.t('current_draft'),
       submitTime: datasetDetail?.base_info?.updated_at,
-      draftSubmitText: '更新时间',
+      draftSubmitText: I18n.t('prompt_prompt_update_time'),
       isDraft: true,
     }),
     [datasetDetail?.base_info?.updated_at],
@@ -109,7 +110,7 @@ export const useVersionManage = ({
         sendEvent(EVENT_NAMES.cozeloop_dataset_version);
       }}
     >
-      版本记录
+      {I18n.t('version_record')}
     </Button>
   );
 

@@ -3,6 +3,7 @@
 import { nanoid } from 'nanoid';
 import { type JSONSchema7TypeName, type JSONSchema7 } from 'json-schema';
 import Ajv from 'ajv';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 import {
   type DataType,
@@ -126,7 +127,7 @@ export const validColumnSchema = ({
     const schemaObj = JSON.parse(schema);
     const vaild = isValidSchema(schemaObj);
     if (!vaild) {
-      cb?.('JSON Schema格式错误');
+      cb?.(I18n.t('cozeloop_open_evaluate_json_schema_format_error'));
       return false;
     }
     if (type) {
@@ -134,13 +135,13 @@ export const validColumnSchema = ({
         text_schema: schema,
       });
       if (schemaType !== type) {
-        cb?.('JSON Schema数据类型与列的类型不一致，请修改');
+        cb?.(I18n.t('cozeloop_open_evaluate_json_schema_type_mismatch'));
         return false;
       }
     }
     return true;
   } catch (error) {
-    cb?.('JSON 格式错误');
+    cb?.(I18n.t('cozeloop_open_evaluate_json_format_error'));
     return false;
   }
 };

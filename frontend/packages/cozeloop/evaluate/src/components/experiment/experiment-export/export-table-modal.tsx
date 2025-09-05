@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useDebounceFn } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ExperimentExportListEmptyState } from '@cozeloop/evaluate-components';
 import { TableWithPagination } from '@cozeloop/components';
 import {
@@ -27,7 +28,7 @@ interface ExportTableModalProps {
 
 const ExportRefreshComp = ({ onRefresh }: { onRefresh: () => void }) => (
   <div className="flex items-center gap-[6px]">
-    <span>导出记录</span>
+    <span>{I18n.t('export_records')}</span>
     <Button
       color="secondary"
       iconPosition="left"
@@ -37,7 +38,9 @@ const ExportRefreshComp = ({ onRefresh }: { onRefresh: () => void }) => (
         onRefresh();
       }}
     >
-      <span className="text-[var(--coz-fg-secondary)]">刷新</span>
+      <span className="text-[var(--coz-fg-secondary)]">
+        {I18n.t('task_refresh')}
+      </span>
     </Button>
   </div>
 );
@@ -109,7 +112,7 @@ const ExportTableModal = (props: ExportTableModalProps) => {
         description={
           <div className="flex items-center">
             <IconCozInfoCircleFill className="mr-1.5 text-[#5A4DED]" />
-            <div>导出文件最多能保存100天，过期后需要重新导出再下载。</div>
+            <div>{I18n.t('export_files_save_limit_100_days')}</div>
           </div>
         }
       />

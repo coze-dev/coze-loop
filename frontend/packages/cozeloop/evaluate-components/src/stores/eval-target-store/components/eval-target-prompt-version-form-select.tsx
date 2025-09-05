@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import {
   type CommonFieldProps,
@@ -27,9 +28,9 @@ const PromptEvalTargetVersionFormSelect: React.FC<
     <FormSelectInner
       remote
       onChangeWithObject
-      rules={[{ required: true, message: '请选择版本' }]}
+      rules={[{ required: true, message: I18n.t('select_version') }]}
       label={{
-        text: '版本',
+        text: I18n.t('version'),
         className: 'justify-between pr-0',
         extra: (
           <>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type CozeTagColor } from '@cozeloop/evaluate-components';
 import {
   CSVExportStatus,
@@ -23,19 +24,19 @@ interface ExportStatusInfo {
 export const exportStatusInfoList: ExportStatusInfo[] = [
   {
     status: CSVExportStatus.Success,
-    text: '成功',
+    text: I18n.t('success'),
     tagColor: 'green',
     icon: <IconCozCheckMarkCircleFillPalette />,
   },
   {
     status: CSVExportStatus.Running,
-    text: '进行中',
+    text: I18n.t('in_progress'),
     tagColor: 'blue',
     icon: <IconCozLoading />,
   },
   {
     status: CSVExportStatus.Failed,
-    text: '失败',
+    text: I18n.t('failure'),
     tagColor: 'red',
     icon: <IconCozCrossCircleFill />,
   },

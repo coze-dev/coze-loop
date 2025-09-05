@@ -1,6 +1,7 @@
 import { type RefObject, useState } from 'react';
 
 import { cloneDeep } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { IconCozPlayFill } from '@coze-arch/coze-design/icons';
 import { Button, type Form } from '@coze-arch/coze-design';
@@ -24,7 +25,7 @@ export function DebugButton({ formApi, onApplyValue }: DebugButtonProps) {
           setDebugValue(formApi?.current?.formApi?.getValues() || {})
         }
       >
-        {'调试'}
+        {I18n.t('debug')}
       </Button>
       {debugValue ? (
         <DebugModal

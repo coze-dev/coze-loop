@@ -1,5 +1,6 @@
 import { type FC } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
@@ -32,7 +33,7 @@ function getGroupKey(group: OptionGroup) {
 export interface MappingItemProps {
   id?: string;
   keyTitle?: string;
-  keySchema?: FieldSchema;
+  keySchema?: FieldSchema & { type?: string };
   optionGroups?: OptionGroup[];
   value?: OptionSchema;
   onChange?: (v?: OptionSchema) => void;
@@ -85,7 +86,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
         <BaseSearchSelect
           validateStatus={validateStatus}
           className={styles.select}
-          placeholder="请选择"
+          placeholder={I18n.t('please_select', { field: '' })}
           prefix={
             value?.schemaSourceType &&
             schemaSourceTypeMap[value.schemaSourceType]

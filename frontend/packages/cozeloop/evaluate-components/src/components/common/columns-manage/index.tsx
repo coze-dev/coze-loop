@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnItem,
   ColumnSelector,
@@ -94,7 +95,7 @@ export function ColumnsManage({
   );
 
   return (
-    <Tooltip theme="dark" content="列管理">
+    <Tooltip theme="dark" content={I18n.t('column_management')}>
       <div>
         <ColumnSelector
           columns={options}

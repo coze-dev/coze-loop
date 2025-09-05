@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type RuleItem } from '@coze-arch/coze-design';
 
 export const sourceNameRuleValidator: RuleItem['validator'] = (
@@ -12,9 +13,11 @@ export const sourceNameRuleValidator: RuleItem['validator'] = (
     const firstChar = value.charAt(0);
     console.log(firstChar);
     if (/^[-_.]/.test(firstChar)) {
-      callback('仅支持英文字母、数字、中文开头');
+      callback(I18n.t('data_engine_support_letter_number_chinese_start'));
     } else {
-      callback('仅支持英文字母、数字、中文，“-”，“_”，“.”');
+      callback(
+        I18n.t('data_engine_support_letter_number_chinese_special_char'),
+      );
     }
   }
   return true;
@@ -26,7 +29,9 @@ export const columnNameRuleValidator: RuleItem['validator'] = (
   callback,
 ) => {
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) {
-    callback('仅支持英文、数字、下划线，且需要以字母开头');
+    callback(
+      I18n.t('data_engine_support_letter_number_underscore_start_letter'),
+    );
   }
   return true;
 };

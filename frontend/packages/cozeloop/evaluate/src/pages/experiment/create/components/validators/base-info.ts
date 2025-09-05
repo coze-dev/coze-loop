@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { I18n } from '@cozeloop/i18n-adapter';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
 
 import { checkExperimentName } from '@/request/experiment';
 
 export const baseInfoValidators: Record<string, any[]> = {
   name: [
-    { required: true, message: '请输入名称' },
+    { required: true, message: I18n.t('please_input_name') },
     { validator: sourceNameRuleValidator },
     {
       asyncValidator: async (_, value: string, spaceID: string) => {
@@ -17,10 +18,10 @@ export const baseInfoValidators: Record<string, any[]> = {
               name: value,
             });
             if (!result.pass) {
-              err = new Error('名称已存在');
+              err = new Error(I18n.t('name_already_exists'));
             }
           } catch (e) {
-            console.error('接口遇到问题', e);
+            console.error(I18n.t('interface_problem'), e);
           }
           if (err !== null) {
             throw err;

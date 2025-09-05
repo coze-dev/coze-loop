@@ -1,12 +1,13 @@
 import { useEffect, useMemo } from 'react';
 
 import { isEmpty } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { Form, Tooltip } from '@coze-arch/coze-design';
 
+import { promptVariableDefToFieldSchema } from '@/utils/parse-prompt-variable';
 import { type PluginEvalTargetFormProps } from '@/types/evaluate-target';
-import { DEFAULT_TEXT_STRING_SCHEMA } from '@/const/evaluate-target';
 import { EvaluateTargetMappingField } from '@/components/selectors/evaluate-target';
 
 import PromptEvalTargetVersionFormSelect from '../../components/eval-target-prompt-version-form-select';
@@ -17,10 +18,12 @@ import { EvalTargetDynamicParams } from './dynamic-params/eval-target-dynamic-pa
 
 const EvaluateTargetMappingFieldLabel = (
   <div className="inline-flex flex-row items-center">
-    {'字段映射'}
+    {I18n.t('field_mapping')}
     <Tooltip
       theme="dark"
-      content="评测集字段到评测对象字段的映射，用于评测对象准确获取输入。"
+      content={I18n.t(
+        'evaluation_set_field_to_evaluation_object_field_mapping',
+      )}
     >
       <IconCozInfoCircle className="ml-1 w-4 h-4 coz-fg-secondary" />
     </Tooltip>
@@ -60,12 +63,7 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
     promptDetail?.prompt_commit?.detail?.prompt_template?.variable_defs;
 
   const variableList = useMemo(
-    () =>
-      variableDefs?.map(v => ({
-        name: v.key,
-        ...DEFAULT_TEXT_STRING_SCHEMA,
-        ...v,
-      })) || [],
+    () => variableDefs?.map(promptVariableDefToFieldSchema) || [],
     [variableDefs],
   );
 
@@ -135,17 +133,19 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
                   // 需要配置变量, 并且配置过字段映射
                   // 没有值, 或者为空对象
                   if (variableList?.length > 0 && isEmpty(value)) {
-                    return new Error('请配置字段映射');
+                    return new Error(
+                      I18n.t('evaluate_please_configure_field_mapping'),
+                    );
                   }
                   return true;
                 },
-                message: '请配置字段映射',
+                message: I18n.t('evaluate_please_configure_field_mapping'),
               },
             ]}
             loading={loading}
             keySchemas={variableList}
             selectProps={{
-              prefix: '评测集',
+              prefix: I18n.t('evaluation_set'),
             }}
           />
           <EvalTargetDynamicParams
