@@ -24,20 +24,15 @@ func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfi
 		sandboxConfig = entity.DefaultSandboxConfig()
 	}
 	
-	// 默认使用增强版运行时工厂
-	return NewEnhancedRuntimeFactory(logger, sandboxConfig)
+	// 默认使用统一运行时工厂（整合了所有运行时功能）
+	return NewUnifiedRuntimeFactory(logger, sandboxConfig)
 }
 
-// CreateRuntime 根据语言类型创建Runtime实例
+// CreateRuntime 根据语言类型创建Runtime实例（已废弃，使用统一运行时）
 func (f *RuntimeFactoryImpl) CreateRuntime(languageType entity.LanguageType) (component.IRuntime, error) {
-	switch languageType {
-	case entity.LanguageTypePython:
-		return NewDenoPythonRuntimeAdapter(f.sandboxConfig, f.logger)
-	case entity.LanguageTypeJS:
-		return NewDenoJavaScriptRuntimeAdapter(f.sandboxConfig, f.logger)
-	default:
-		return nil, fmt.Errorf("unsupported language type: %s", languageType)
-	}
+	// 这个实现已经被废弃，统一使用 UnifiedRuntimeFactory
+	// 为了向后兼容，这里返回错误提示
+	return nil, fmt.Errorf("RuntimeFactoryImpl已废弃，请使用NewRuntimeFactory或NewUnifiedRuntimeFactory创建工厂")
 }
 
 // GetSupportedLanguages 获取支持的语言类型列表

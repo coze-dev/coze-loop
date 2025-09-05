@@ -6,6 +6,8 @@ package runtime
 import (
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -17,12 +19,18 @@ type RuntimeManager struct {
 	mutex   sync.RWMutex
 }
 
-// NewRuntimeManager 创建RuntimeManager实例
+// NewRuntimeManager 创建RuntimeManager实例（向后兼容）
 func NewRuntimeManager(factory component.IRuntimeFactory) *RuntimeManager {
 	return &RuntimeManager{
 		factory: factory,
 		cache:   make(map[entity.LanguageType]component.IRuntime),
 	}
+}
+
+// NewDefaultRuntimeManager 创建默认的统一运行时管理器
+func NewDefaultRuntimeManager(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeManager {
+	factory := NewUnifiedRuntimeFactory(logger, sandboxConfig)
+	return NewUnifiedRuntimeManager(factory, logger)
 }
 
 // GetRuntime 获取指定语言类型的Runtime实例，支持缓存和线程安全
