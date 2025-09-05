@@ -3,8 +3,10 @@
 /**
  * coze-loop-faas-enhanced 增强版服务器
  * 提供基于沙箱池和任务调度的高并发代码执行服务
- * 支持 JavaScript/TypeScript 和 Python
+ * 支持 JavaScript/TypeScript 和 Python (基于 Pyodide)
  */
+
+import { loadPyodide } from "npm:pyodide";
 
 interface ExecutionRequest {
   language: string;
@@ -41,6 +43,7 @@ interface SandboxInstance {
   createdAt: number;
   lastUsed: number;
   executeCount: number;
+  pyodide?: any; // Pyodide 实例（仅用于 Python）
 }
 
 interface TaskMetrics {
@@ -69,16 +72,20 @@ class SandboxPool {
   private async warmUpPool() {
     console.log(`预热沙箱池，创建 ${this.minInstances} 个实例...`);
     
+    const createPromises = [];
     for (let i = 0; i < this.minInstances; i++) {
       const language = i % 2 === 0 ? "javascript" : "python";
-      const instance = this.createInstance(language);
-      this.idleInstances.push(instance);
+      createPromises.push(this.createInstance(language));
     }
+    
+    // 并行创建实例
+    const instances = await Promise.all(createPromises);
+    this.idleInstances.push(...instances);
     
     console.log(`沙箱池预热完成，创建了 ${this.idleInstances.length} 个实例`);
   }
 
-  private createInstance(language: string): SandboxInstance {
+  private async createInstance(language: string): Promise<SandboxInstance> {
     const id = `sandbox-${++this.instanceCounter}-${Date.now()}`;
     const instance: SandboxInstance = {
       id,
@@ -88,6 +95,19 @@ class SandboxPool {
       lastUsed: Date.now(),
       executeCount: 0,
     };
+    
+    // 如果是 Python 实例，初始化 Pyodide
+    if (language === "python") {
+      try {
+        console.log(`为实例 ${id} 初始化 Pyodide...`);
+        instance.pyodide = await loadPyodide();
+        await instance.pyodide.loadPackage("micropip");
+        console.log(`实例 ${id} Pyodide 初始化完成`);
+      } catch (error) {
+        console.error(`实例 ${id} Pyodide 初始化失败:`, error);
+        instance.status = "error";
+      }
+    }
     
     this.instances.set(id, instance);
     console.log(`创建沙箱实例: ${id} (${language})`);
@@ -110,7 +130,7 @@ class SandboxPool {
     
     // 如果没有空闲实例且未达到最大限制，创建新实例
     if (this.instances.size < this.maxInstances) {
-      const instance = this.createInstance(language);
+      const instance = await this.createInstance(language);
       instance.status = "busy";
       return instance;
     }
@@ -262,10 +282,12 @@ class TaskScheduler {
     
     try {
       // 执行代码
-      return await this.executeCode(tempFile, timeout);
+      return await this.executeCode(tempFile, timeout, code, instance);
     } finally {
-      // 清理临时文件
-      await this.cleanup(tempFile);
+      // 清理临时文件（仅对非 Pyodide 执行）
+      if (tempFile !== 'pyodide-execution') {
+        await this.cleanup(tempFile);
+      }
     }
   }
 
@@ -319,37 +341,8 @@ try {
         break;
         
       case 'python':
-        extension = '.py';
-        fileContent = `
-import sys
-import json
-import io
-from contextlib import redirect_stdout, redirect_stderr
-
-stdout_capture = io.StringIO()
-stderr_capture = io.StringIO()
-
-try:
-    with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
-        ${code}
-        
-        ret_val = locals().get('result', None)
-    
-    result = {
-        "stdout": stdout_capture.getvalue(),
-        "stderr": stderr_capture.getvalue(),
-        "ret_val": json.dumps(ret_val) if ret_val is not None else ""
-    }
-    print(json.dumps(result))
-    
-except Exception as e:
-    result = {
-        "stdout": stdout_capture.getvalue(),
-        "stderr": stderr_capture.getvalue() + str(e),
-        "ret_val": ""
-    }
-    print(json.dumps(result))
-        `;
+        // Python 代码将通过 Pyodide 执行，返回特殊标识
+        return 'pyodide-execution';
         break;
     }
     
@@ -358,7 +351,12 @@ except Exception as e:
     return tempFile;
   }
 
-  private async executeCode(tempFile: string, timeout: number): Promise<ExecutionResult> {
+  private async executeCode(tempFile: string, timeout: number, code?: string, instance?: SandboxInstance): Promise<ExecutionResult> {
+    // 如果是 Python 代码，使用 Pyodide 执行
+    if (tempFile === 'pyodide-execution' && instance?.pyodide) {
+      return await this.executePythonWithPyodide(code!, timeout, instance.pyodide);
+    }
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
@@ -369,13 +367,6 @@ except Exception as e:
         command = new Deno.Command("deno", {
           args: ["run", "--allow-all", "--quiet", tempFile],
           stdout: "piped",
-          stderr: "piped",
-          signal: controller.signal,
-        });
-      } else if (tempFile.endsWith('.py')) {
-        command = new Deno.Command("python3", {
-          args: [tempFile],
-          stdout: "piped", 
           stderr: "piped",
           signal: controller.signal,
         });
@@ -415,6 +406,86 @@ except Exception as e:
         throw new Error(`Code execution timeout after ${timeout}ms`);
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
+   * 使用 Pyodide 执行 Python 代码
+   */
+  private async executePythonWithPyodide(code: string, timeout: number, pyodide: any): Promise<ExecutionResult> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      // 先设置捕获环境
+      pyodide.runPython(`
+import sys
+import json
+from io import StringIO
+
+# 捕获标准输出
+old_stdout = sys.stdout
+sys.stdout = stdout_capture = StringIO()
+
+# 捕获标准错误
+old_stderr = sys.stderr  
+sys.stderr = stderr_capture = StringIO()
+
+ret_val = None
+error_msg = ""
+      `);
+
+      // 执行用户代码
+      try {
+        pyodide.runPython(code);
+        
+        // 尝试获取 result 变量
+        pyodide.runPython(`
+if 'result' in locals():
+    ret_val = result
+        `);
+      } catch (execError) {
+        // 记录执行错误
+        pyodide.runPython(`
+error_msg = "${String(execError).replace(/"/g, '\\"')}"
+        `);
+      }
+
+      // 恢复输出并获取结果
+      const result = pyodide.runPython(`
+# 恢复标准输出和错误
+sys.stdout = old_stdout
+sys.stderr = old_stderr
+
+# 返回结果
+{
+    "stdout": stdout_capture.getvalue(),
+    "stderr": stderr_capture.getvalue() + error_msg,
+    "ret_val": ret_val
+}
+      `);
+      
+      // 解析结果
+      const parsedResult = typeof result === 'object' ? result : JSON.parse(result);
+      
+      return {
+        stdout: parsedResult.stdout || "",
+        stderr: parsedResult.stderr || "",
+        returnValue: parsedResult.ret_val ? JSON.stringify(parsedResult.ret_val) : ""
+      };
+      
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(`Python code execution timeout after ${timeout}ms`);
+      }
+      
+      return {
+        stdout: "",
+        stderr: error instanceof Error ? error.message : String(error),
+        returnValue: ""
+      };
     } finally {
       clearTimeout(timeoutId);
     }
@@ -533,7 +604,7 @@ class EnhancedFaaSServer {
       timestamp: new Date().toISOString(),
       pool: poolStats,
       scheduler: schedulerMetrics,
-      version: "enhanced-v1.0.0"
+      version: "enhanced-v1.0.0-pyodide"
     };
     
     return new Response(JSON.stringify(healthData), { 
@@ -567,12 +638,13 @@ async function main() {
   const port = parseInt(Deno.env.get("FAAS_PORT") || "8000");
   const faasServer = new EnhancedFaaSServer();
 
-  console.log(`启动增强版FaaS服务器，端口: ${port}...`);
+  console.log(`启动增强版FaaS服务器（支持Pyodide），端口: ${port}...`);
   console.log(`工作空间: ${Deno.env.get("FAAS_WORKSPACE")}`);
   console.log(`默认超时: ${Deno.env.get("FAAS_TIMEOUT")}ms`);
   console.log(`沙箱池大小: ${Deno.env.get("FAAS_POOL_SIZE")}`);
   console.log(`最大实例数: ${Deno.env.get("FAAS_MAX_INSTANCES")}`);
   console.log(`工作协程数: ${Deno.env.get("FAAS_WORKER_COUNT")}`);
+  console.log("Python执行: 基于Pyodide沙箱");
 
   const server = Deno.serve({
     port: port,
@@ -605,11 +677,11 @@ async function main() {
     });
   });
 
-  console.log(`增强版FaaS服务器启动成功: http://0.0.0.0:${port}`);
+  console.log(`增强版FaaS服务器（Pyodide支持）启动成功: http://0.0.0.0:${port}`);
   console.log("可用端点:");
   console.log("  GET  /health    - 健康检查");
   console.log("  GET  /metrics   - 指标信息");
-  console.log("  POST /run_code  - 执行代码");
+  console.log("  POST /run_code  - 执行代码 (JS/TS/Python via Pyodide)");
 }
 
 // 错误处理

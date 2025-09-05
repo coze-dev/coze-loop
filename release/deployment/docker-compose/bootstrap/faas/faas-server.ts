@@ -2,8 +2,10 @@
 
 /**
  * coze-loop-faas 服务器
- * 提供代码执行服务，支持 JavaScript/TypeScript 和 Python
+ * 提供代码执行服务，支持 JavaScript/TypeScript 和 Python (基于 Pyodide)
  */
+
+import { loadPyodide } from "npm:pyodide";
 
 interface ExecutionRequest {
   language: string;
@@ -29,10 +31,34 @@ interface ApiResponse {
 class FaaSServer {
   private readonly workspace: string;
   private readonly defaultTimeout: number;
+  private pyodide: any = null;
+  private pyodideInitialized = false;
 
   constructor() {
     this.workspace = Deno.env.get("FAAS_WORKSPACE") || "/tmp/faas-workspace";
     this.defaultTimeout = parseInt(Deno.env.get("FAAS_TIMEOUT") || "30000");
+    
+    // 异步初始化 Pyodide
+    this.initializePyodide();
+  }
+
+  /**
+   * 初始化 Pyodide
+   */
+  private async initializePyodide() {
+    try {
+      console.log("正在初始化 Pyodide...");
+      this.pyodide = await loadPyodide();
+      
+      // 加载 micropip 用于包管理
+      await this.pyodide.loadPackage("micropip");
+      
+      this.pyodideInitialized = true;
+      console.log("Pyodide 初始化完成");
+    } catch (error) {
+      console.error("Pyodide 初始化失败:", error);
+      this.pyodideInitialized = false;
+    }
   }
 
   /**
@@ -66,7 +92,7 @@ class FaaSServer {
 
       try {
         // 执行代码
-        const result = await this.executeCode(tempFile, timeout);
+        const result = await this.executeCode(tempFile, timeout, language.toLowerCase(), code);
 
         // 返回结果
         const response: ApiResponse = {
@@ -83,8 +109,10 @@ class FaaSServer {
         });
 
       } finally {
-        // 清理临时文件
-        await this.cleanup(tempFile);
+        // 清理临时文件（仅对非 Pyodide 执行）
+        if (tempFile !== 'pyodide-execution') {
+          await this.cleanup(tempFile);
+        }
       }
 
     } catch (error) {
@@ -157,44 +185,8 @@ try {
         break;
         
       case 'python':
-        extension = '.py';
-        fileContent = `
-import sys
-import json
-import io
-from contextlib import redirect_stdout, redirect_stderr
-
-# 捕获标准输出和错误输出
-stdout_capture = io.StringIO()
-stderr_capture = io.StringIO()
-
-try:
-    with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
-        # 用户输入数据
-        input_data = ${JSON.stringify(input || {})}
-        
-        # 用户代码
-        ${code}
-        
-        # 如果用户代码定义了返回值变量，捕获它
-        ret_val = locals().get('result', None)
-    
-    # 输出结果
-    result = {
-        "stdout": stdout_capture.getvalue(),
-        "stderr": stderr_capture.getvalue(),
-        "ret_val": json.dumps(ret_val) if ret_val is not None else ""
-    }
-    print(json.dumps(result))
-    
-except Exception as e:
-    result = {
-        "stdout": stdout_capture.getvalue(),
-        "stderr": stderr_capture.getvalue() + str(e),
-        "ret_val": ""
-    }
-    print(json.dumps(result))
-        `;
+        // Python 代码将通过 Pyodide 执行，不需要创建临时文件
+        return 'pyodide-execution';
         break;
     }
     
@@ -206,7 +198,12 @@ except Exception as e:
   /**
    * 执行代码
    */
-  private async executeCode(tempFile: string, timeout: number): Promise<ExecutionResult> {
+  private async executeCode(tempFile: string, timeout: number, language?: string, code?: string): Promise<ExecutionResult> {
+    // 如果是 Python 代码，使用 Pyodide 执行
+    if (tempFile === 'pyodide-execution' && language === 'python') {
+      return await this.executePythonWithPyodide(code!, timeout);
+    }
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
@@ -218,14 +215,6 @@ except Exception as e:
         command = new Deno.Command("deno", {
           args: ["run", "--allow-all", tempFile],
           stdout: "piped",
-          stderr: "piped",
-          signal: controller.signal,
-        });
-      } else if (tempFile.endsWith('.py')) {
-        // 执行 Python
-        command = new Deno.Command("python3", {
-          args: [tempFile],
-          stdout: "piped", 
           stderr: "piped",
           signal: controller.signal,
         });
@@ -274,6 +263,90 @@ except Exception as e:
   }
 
   /**
+   * 使用 Pyodide 执行 Python 代码
+   */
+  private async executePythonWithPyodide(code: string, timeout: number): Promise<ExecutionResult> {
+    if (!this.pyodideInitialized || !this.pyodide) {
+      throw new Error("Pyodide 未初始化，无法执行 Python 代码");
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      // 先设置捕获环境
+      this.pyodide.runPython(`
+import sys
+import json
+from io import StringIO
+
+# 捕获标准输出
+old_stdout = sys.stdout
+sys.stdout = stdout_capture = StringIO()
+
+# 捕获标准错误
+old_stderr = sys.stderr  
+sys.stderr = stderr_capture = StringIO()
+
+ret_val = None
+error_msg = ""
+      `);
+
+      // 执行用户代码
+      try {
+        this.pyodide.runPython(code);
+        
+        // 尝试获取 result 变量
+        this.pyodide.runPython(`
+if 'result' in locals():
+    ret_val = result
+        `);
+      } catch (execError) {
+        // 记录执行错误
+        this.pyodide.runPython(`
+error_msg = "${String(execError).replace(/"/g, '\\"')}"
+        `);
+      }
+
+      // 恢复输出并获取结果
+      const result = this.pyodide.runPython(`
+# 恢复标准输出和错误
+sys.stdout = old_stdout
+sys.stderr = old_stderr
+
+# 返回结果
+{
+    "stdout": stdout_capture.getvalue(),
+    "stderr": stderr_capture.getvalue() + error_msg,
+    "ret_val": ret_val
+}
+      `);
+      
+      // 解析结果
+      const parsedResult = typeof result === 'object' ? result : JSON.parse(result);
+      
+      return {
+        stdout: parsedResult.stdout || "",
+        stderr: parsedResult.stderr || "",
+        returnValue: parsedResult.ret_val ? JSON.stringify(parsedResult.ret_val) : ""
+      };
+      
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(`Python code execution timeout after ${timeout}ms`);
+      }
+      
+      return {
+        stdout: "",
+        stderr: error instanceof Error ? error.message : String(error),
+        returnValue: ""
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
    * 清理临时文件
    */
   private async cleanup(tempFile: string): Promise<void> {
@@ -289,9 +362,19 @@ except Exception as e:
    * 健康检查
    */
   handleHealth(): Response {
-    return new Response("OK", { 
+    const healthData = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      pyodide: {
+        initialized: this.pyodideInitialized,
+        available: this.pyodide !== null
+      },
+      version: "faas-v1.0.0-pyodide"
+    };
+    
+    return new Response(JSON.stringify(healthData), { 
       status: 200,
-      headers: { "Content-Type": "text/plain" }
+      headers: { "Content-Type": "application/json" }
     });
   }
 }
@@ -301,9 +384,10 @@ async function main() {
   const port = parseInt(Deno.env.get("FAAS_PORT") || "8000");
   const faasServer = new FaaSServer();
 
-  console.log(`Starting FaaS server on port ${port}...`);
+  console.log(`Starting FaaS server with Pyodide support on port ${port}...`);
   console.log(`Workspace: ${Deno.env.get("FAAS_WORKSPACE")}`);
   console.log(`Default timeout: ${Deno.env.get("FAAS_TIMEOUT")}ms`);
+  console.log("Python execution: Powered by Pyodide");
 
   const server = Deno.serve({
     port: port,
@@ -331,10 +415,10 @@ async function main() {
     });
   });
 
-  console.log(`FaaS server started successfully on http://0.0.0.0:${port}`);
+  console.log(`FaaS server with Pyodide started successfully on http://0.0.0.0:${port}`);
   console.log("Available endpoints:");
   console.log("  GET  /health    - Health check");
-  console.log("  POST /run_code  - Execute code");
+  console.log("  POST /run_code  - Execute code (JS/TS/Python via Pyodide)");
 }
 
 // 错误处理
