@@ -55,6 +55,7 @@ ignore:
   - "**/main.go"
   - "**/repo/mysql/**"
   - "**/repo/redis/**"
+  - "backend/api/router/coze/loop/apis/*.go"
 
 parsers:
   gcov:
