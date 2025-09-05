@@ -93,7 +93,7 @@ export function ExprGroupRender<L, O, R>({
           type="primary"
         >
           <span className="text-brand-9 text-[14px] leading-[20px]">
-            {I18n.t('fornax_components_logic_expr_add_filter')}
+            {I18n.t('logic_expr_add_filter')}
           </span>
         </ToolButton>
         {showAddGroupButton ? (
@@ -103,7 +103,7 @@ export function ExprGroupRender<L, O, R>({
               icon={<IconCozPlusCircle />}
               onClick={() => onAddGroup?.(path)}
             >
-              {I18n.t('fornax_components_logic_expr_add_filter_group')}
+              {I18n.t('logic_expr_add_filter_group')}
             </ToolButton>
           </>
         ) : null}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { type EventParams } from '@visactor/vchart';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
 
 import { CHART_MORE_KEY, getScorePercentage, splitData } from '../utils';
@@ -32,7 +33,7 @@ export function AnnotateChartCard({
         return cur;
       },
       {
-        [CHART_MORE_KEY]: I18n.t('fornax_analytics_subtitle_others'),
+        [CHART_MORE_KEY]: I18n.t('analytics_subtitle_others'),
       } as unknown as Record<string, string>,
     );
 

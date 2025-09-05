@@ -123,7 +123,7 @@ export const useBatchSelect = ({
         <Typography.Text size="small" className="mx-[2px]  font-medium">
           {batchSelectItems.size}
         </Typography.Text>
-        {I18n.t('data_engine_items')}
+        {I18n.t('tiao_items')}
       </Typography.Text>
       <Typography.Text
         link

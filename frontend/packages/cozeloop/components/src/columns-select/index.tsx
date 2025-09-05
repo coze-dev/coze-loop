@@ -3,7 +3,10 @@
 import * as sort from 'react-sortable-hoc';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
-import { IconCozHandle, IconCozTableSetting } from '@coze-arch/coze-design/icons';
+import {
+  IconCozHandle,
+  IconCozTableSetting,
+} from '@coze-arch/coze-design/icons';
 import {
   Button,
   Checkbox,
@@ -13,6 +16,7 @@ import {
   Tooltip,
   type ColumnProps,
 } from '@coze-arch/coze-design';
+import { I18n } from '@cozeloop/i18n-adapter';
 // @ts-expect-error react-sortable-hoc ts type issue
 const { sortableContainer, sortableElement, sortableHandle } = sort;
 const { arrayMove } = sort;
@@ -231,7 +235,11 @@ export const ColumnSelector = ({
         trigger="click"
       >
         <div>
-          <Tooltip content="列管理" theme="dark" position="top">
+          <Tooltip
+            content={I18n.t('column_management')}
+            theme="dark"
+            position="top"
+          >
             <Button
               icon={<IconCozTableSetting />}
               type="primary"

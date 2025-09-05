@@ -13,11 +13,9 @@ export const sourceNameRuleValidator: RuleItem['validator'] = (
     const firstChar = value.charAt(0);
     console.log(firstChar);
     if (/^[-_.]/.test(firstChar)) {
-      callback(I18n.t('data_engine_support_letter_number_chinese_start'));
+      callback(I18n.t('support_letter_number_chinese_start'));
     } else {
-      callback(
-        I18n.t('data_engine_support_letter_number_chinese_special_char'),
-      );
+      callback(I18n.t('support_letter_number_chinese_special_char'));
     }
   }
   return true;
@@ -29,9 +27,7 @@ export const columnNameRuleValidator: RuleItem['validator'] = (
   callback,
 ) => {
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) {
-    callback(
-      I18n.t('data_engine_support_letter_number_underscore_start_letter'),
-    );
+    callback(I18n.t('support_letter_number_underscore_start_letter'));
   }
   return true;
 };

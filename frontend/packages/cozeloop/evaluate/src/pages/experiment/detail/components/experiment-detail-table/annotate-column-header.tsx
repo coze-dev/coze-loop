@@ -34,7 +34,7 @@ export function AnnotateColumnHeader({
     <div className="group flex items-center max-w-full">
       <TypographyText>{annotation.tag_key_name}</TypographyText>
       <Tag color="grey" size="small" className="ml-1 shrink-0">
-        {I18n.t('data_engine_manual_annotation')}
+        {I18n.t('manual_annotation')}
       </Tag>
       <Button
         icon={<IconCozTrashCan />}
