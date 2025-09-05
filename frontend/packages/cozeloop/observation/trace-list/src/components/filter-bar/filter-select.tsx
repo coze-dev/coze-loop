@@ -1,10 +1,13 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-params */
+/* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useMemo } from 'react';
 
 import { keys } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace, useCurrentEnterpriseId } from '@cozeloop/biz-hooks-adapter';
 import {
   type PlatformType,
@@ -15,15 +18,16 @@ import { Toast } from '@coze-arch/coze-design';
 
 import { useTraceStore } from '@/stores/trace';
 import { type FilterInvalidateEnum } from '@/consts/trace-attrs';
+import { AUTO_EVAL_FEEDBACK } from '@/consts';
 import { FilterSelectUI } from '@/components/filter-select-ui';
 
 import {
   type CustomRightRenderMap,
   type LogicValue,
 } from '../logic-expr/logic-expr';
+import { MANUAL_FEEDBACK } from '../logic-expr/const';
 import { validateViewName } from '../../utils/name-validate';
 import type { View } from './custom-view';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface FilterSelectProps {
   viewList: View[];
@@ -38,6 +42,7 @@ interface FilterSelectProps {
   platformEnumOptionList: { label: string; value: string | number }[];
   spanListTypeEnumOptionList: { label: string; value: string | number }[];
   customRightRenderMap?: CustomRightRenderMap;
+  customLeftRenderMap?: CustomRightRenderMap;
 }
 
 export const FilterSelect = (props: FilterSelectProps) => {
@@ -49,11 +54,13 @@ export const FilterSelect = (props: FilterSelectProps) => {
     onSaveToCurrentView,
     platformEnumOptionList,
     customRightRenderMap,
+    customLeftRenderMap,
     spanListTypeEnumOptionList,
   } = props;
   const {
     filters,
     fieldMetas,
+    setFieldMetas,
     setFilters,
     setSelectedPlatform,
     setSelectedSpanType,
@@ -72,12 +79,14 @@ export const FilterSelect = (props: FilterSelectProps) => {
     newFilters: LogicValue,
     viewMethod: string | number,
     dataSource: string | number,
+    metaInfo?: Record<string, any>,
   ) => {
+    setFieldMetas(metaInfo);
     setFilters(newFilters);
+    setApplyFilters(newFilters);
     setSelectedPlatform(dataSource);
     setSelectedSpanType(viewMethod);
     onApplyFilters(newFilters, viewMethod, dataSource);
-    setApplyFilters(newFilters);
     setLastUserRecord({
       filters: newFilters,
       selectedPlatform: dataSource,
@@ -146,7 +155,9 @@ export const FilterSelect = (props: FilterSelectProps) => {
         filedFilter =>
           !(keys(fieldMetas) ?? []).includes(
             filedFilter.field_name as FilterInvalidateEnum,
-          ),
+          ) &&
+          filedFilter.logic_field_name_type !== AUTO_EVAL_FEEDBACK &&
+          filedFilter.logic_field_name_type !== MANUAL_FEEDBACK,
       )
       .map(filedFilter => filedFilter.field_name);
     return new Set(currentInvalidateExpr);
@@ -161,8 +172,9 @@ export const FilterSelect = (props: FilterSelectProps) => {
     <FilterSelectUI
       spanTabOptionList={spanListTypeEnumOptionList}
       customRightRenderMap={customRightRenderMap}
+      customLeftRenderMap={customLeftRenderMap}
       platformEnumOptionList={platformEnumOptionList}
-      filters={filters || {}}
+      filters={(filters || {}) as unknown as LogicValue}
       fieldMetas={fieldMetas}
       viewMethod={selectedSpanType}
       dataSource={selectedPlatform}

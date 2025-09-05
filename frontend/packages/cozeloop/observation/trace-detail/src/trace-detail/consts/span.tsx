@@ -106,11 +106,13 @@ export const NODE_CONFIG_MAP: Record<SpanType, NodeConfig> = {
     color: '#b9ecac',
     typeName: 'parser',
     character: 'Pa',
-    icon: ({ className }) => (
-      <IconSpanPluginTool
-        style={{ width: '100%', height: '100%' }}
-        className={className}
-      />
+    icon: ({ className, size }) => (
+      <CustomIconWrapper color="#b9ecac" size={size}>
+        <IconSpanPluginTool
+          style={{ width: '100%', height: '100%' }}
+          className={className}
+        />
+      </CustomIconWrapper>
     ),
   },
   [SpanType.Embedding]: {
@@ -122,22 +124,26 @@ export const NODE_CONFIG_MAP: Record<SpanType, NodeConfig> = {
     color: '#cfecac',
     typeName: 'memory',
     character: 'Me',
-    icon: ({ className }) => (
-      <IconSpanKnowledge
-        style={{ width: '100%', height: '100%' }}
-        className={className}
-      />
+    icon: ({ className, size }) => (
+      <CustomIconWrapper color="#cfecac" size={size}>
+        <IconSpanKnowledge
+          style={{ width: '100%', height: '100%' }}
+          className={className}
+        />
+      </CustomIconWrapper>
     ),
   },
   [SpanType.Plugin]: {
     color: '#abcbf4',
     typeName: 'plugin',
     character: 'Pl',
-    icon: ({ className }) => (
-      <IconSpanPluginTool
-        style={{ width: '100%', height: '100%' }}
-        className={className}
-      />
+    icon: ({ className, size }) => (
+      <CustomIconWrapper color="#abcbf4" size={size}>
+        <IconSpanPluginTool
+          style={{ width: '100%', height: '100%' }}
+          className={className}
+        />
+      </CustomIconWrapper>
     ),
   },
 
@@ -191,11 +197,13 @@ export const NODE_CONFIG_MAP: Record<SpanType, NodeConfig> = {
     color: '#ffd2d7',
     typeName: 'vector_store',
     character: 'VS',
-    icon: ({ className }) => (
-      <IconSpanDatabase
-        style={{ width: '100%', height: '100%' }}
-        className={className}
-      />
+    icon: ({ className, size }) => (
+      <CustomIconWrapper color="#ffd2d7" size={size}>
+        <IconSpanDatabase
+          style={{ width: '100%', height: '100%' }}
+          className={className}
+        />
+      </CustomIconWrapper>
     ),
   },
 
@@ -209,11 +217,13 @@ export const NODE_CONFIG_MAP: Record<SpanType, NodeConfig> = {
     color: '#d1aef4',
     typeName: 'agent',
     character: 'Ag',
-    icon: ({ className }) => (
-      <IconSpanAgent
-        style={{ width: '100%', height: '100%' }}
-        className={className}
-      />
+    icon: ({ className, size }) => (
+      <CustomIconWrapper color="#d1aef4" size={size}>
+        <IconSpanAgent
+          style={{ width: '100%', height: '100%' }}
+          className={className}
+        />
+      </CustomIconWrapper>
     ),
   },
   [SpanType.CozeBot]: {

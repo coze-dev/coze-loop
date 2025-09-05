@@ -1,7 +1,13 @@
 {
   "extends": "@coze-arch/ts-config/tsconfig.web.json",
   "$schema": "https://json.schemastore.org/tsconfig",
-  "include": ["__tests__", "vitest.config.mts", "tailwind.config.ts"],
+  "include": [
+    "__tests__",
+    "vitest.config.mts",
+    "tailwind.config.ts",
+    "stories",
+    ".storybook/*"
+  ],
   "exclude": ["./dist"],
   "references": [
     {

@@ -1,8 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { PlatformType } from '@cozeloop/api-schema/observation';
 import { Typography } from '@coze-arch/coze-design';
 
 import { type Span, SpanType } from '@/trace-detail/typings/params';
+import { useTraceDetailContext } from '@/trace-detail/hooks/use-trace-detail-context';
 
 import { getNodeConfig } from '../../utils/span';
 import { CustomIconWrapper } from '../../consts/span';
@@ -17,6 +19,7 @@ export const SpanDetailHeader: React.FC<{
     spanTypeEnum: type ?? SpanType.Unknown,
     spanType: span_type,
   });
+  const { spanDetailHeaderSlot, platformType } = useTraceDetailContext();
 
   return (
     <div className={styles['detail-header']}>
@@ -36,6 +39,9 @@ export const SpanDetailHeader: React.FC<{
         >
           {span.span_name}
         </Typography.Text>
+      </div>
+      <div className="flex items-center">
+        {spanDetailHeaderSlot?.(span, platformType ?? PlatformType.Cozeloop)}
       </div>
     </div>
   );

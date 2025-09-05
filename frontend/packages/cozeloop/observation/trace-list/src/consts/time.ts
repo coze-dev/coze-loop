@@ -257,7 +257,7 @@ export const timePickerPresets = {
     end: () => dayjs().toDate(),
   },
   [PresetRange.AllTime]: {
-    text: '全部时间',
+    text: I18n.t('time_all_time'),
     start: () => dayjs().subtract(365, 'd').toDate(),
     end: () => dayjs().toDate(),
   },

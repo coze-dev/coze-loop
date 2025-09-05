@@ -7,6 +7,14 @@ export {
   getStartTime,
   getRootSpan,
   NODE_CONFIG_MAP,
+  tabs,
+  TraceFeedBack,
+  ManualAnnotation,
 } from './trace-detail';
 export { SpanType } from './trace-detail/typings/params';
-export type { TraceDetailOptions, TraceDetailProps } from './trace-detail';
+export type {
+  TraceDetailOptions,
+  TraceDetailProps,
+  TraceDetailPanelProps,
+  TraceDetailContext,
+} from './trace-detail';

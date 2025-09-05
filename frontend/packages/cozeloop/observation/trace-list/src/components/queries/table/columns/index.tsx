@@ -58,7 +58,11 @@ export const COLUMN_RECORD = {
     displayName: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Status],
   },
   [QUERY_PROPERTY.TraceId]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.TraceId],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.TraceId]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.TraceId,
     width: 158,
     disabled: true,
@@ -71,7 +75,11 @@ export const COLUMN_RECORD = {
     ),
   },
   [QUERY_PROPERTY.Input]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Input],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Input]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.Input,
     width: 320,
     disabled: true,
@@ -106,7 +114,11 @@ export const COLUMN_RECORD = {
   },
 
   [QUERY_PROPERTY.Output]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Output],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Output]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.Output,
     width: 320,
     render: (_, record: Span) => {
@@ -141,9 +153,9 @@ export const COLUMN_RECORD = {
 
   [QUERY_PROPERTY.Tokens]: {
     title: (
-      <div className="text-right">
+      <TableHeaderText align="right">
         {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Tokens]}
-      </div>
+      </TableHeaderText>
     ),
     dataIndex: QUERY_PROPERTY.Tokens,
     width: 108,
@@ -166,7 +178,11 @@ export const COLUMN_RECORD = {
   },
 
   [QUERY_PROPERTY.Latency]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Latency],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.Latency]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.Latency,
     width: 108,
     render: (_, record) => <LatencyTag latency={record.duration} />,
@@ -192,7 +208,11 @@ export const COLUMN_RECORD = {
     },
   },
   [QUERY_PROPERTY.StartTime]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.StartTime],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.StartTime]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.StartTime,
     width: 146,
     checked: true,
@@ -208,7 +228,7 @@ export const COLUMN_RECORD = {
 
   [QUERY_PROPERTY.InputTokens]: {
     title: (
-      <TableHeaderText className="text-right">
+      <TableHeaderText align="right">
         {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.InputTokens]}
       </TableHeaderText>
     ),
@@ -231,7 +251,7 @@ export const COLUMN_RECORD = {
   },
   [QUERY_PROPERTY.OutputTokens]: {
     title: (
-      <TableHeaderText className="text-right">
+      <TableHeaderText align="right">
         {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.OutputTokens]}
       </TableHeaderText>
     ),
@@ -253,7 +273,11 @@ export const COLUMN_RECORD = {
     },
   },
   [QUERY_PROPERTY.SpanId]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.SpanId],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.SpanId]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.SpanId,
     width: 120,
     checked: true,
@@ -265,7 +289,11 @@ export const COLUMN_RECORD = {
     ),
   },
   [QUERY_PROPERTY.SpanType]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.SpanType],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.SpanType]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.SpanType,
     width: 120,
     checked: true,
@@ -277,7 +305,11 @@ export const COLUMN_RECORD = {
     ),
   },
   [QUERY_PROPERTY.SpanName]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.SpanName],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.SpanName]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.SpanName,
     width: 120,
     checked: true,
@@ -289,7 +321,11 @@ export const COLUMN_RECORD = {
     ),
   },
   [QUERY_PROPERTY.PromptKey]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.PromptKey],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.PromptKey]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.PromptKey,
     width: 110,
     checked: true,
@@ -302,7 +338,11 @@ export const COLUMN_RECORD = {
   },
 
   [QUERY_PROPERTY.LogicDeleteDate]: {
-    title: QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.LogicDeleteDate],
+    title: (
+      <TableHeaderText>
+        {QUERY_PROPERTY_LABEL_MAP[QUERY_PROPERTY.LogicDeleteDate]}
+      </TableHeaderText>
+    ),
     dataIndex: QUERY_PROPERTY.LogicDeleteDate,
     width: 176,
     checked: true,

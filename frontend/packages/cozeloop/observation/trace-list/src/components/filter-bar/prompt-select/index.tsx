@@ -3,7 +3,7 @@
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
 import { useUserInfo, useSpace } from '@cozeloop/biz-hooks-adapter';
-import { promptManage } from '@cozeloop/api-schema';
+import { StonePromptApi } from '@cozeloop/api-schema';
 import { Select, type SelectProps, Skeleton } from '@coze-arch/coze-design';
 
 import styles from './index.module.less';
@@ -24,7 +24,7 @@ export function PromptSelect({
   const { spaceID } = useSpace();
   const userInfo = useUserInfo();
   const service = useRequest(async () => {
-    const res = await promptManage.ListPrompt({
+    const res = await StonePromptApi.ListPrompt({
       workspace_id: spaceID,
       page_num: 1,
       page_size: PAGE_SIZE,

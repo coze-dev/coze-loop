@@ -3,6 +3,7 @@
 /* eslint-disable complexity */
 import queryString from 'query-string';
 import { isNil } from 'lodash-es';
+import { CozeLoopStorage } from '@cozeloop/toolkit';
 
 import { decodeJSON } from '@/utils/json';
 import { PresetRange, timePickerPresets } from '@/consts/time';
@@ -11,6 +12,12 @@ import { type LogicValue } from '@/components/logic-expr';
 import { type PersistentFilter } from '../typings/index';
 import { type TraceFilter } from '../typings/filter';
 import { TRACES_PERSISTENT_FILTER_PROPERTY } from '../consts/filter';
+
+const traceListStorage = new CozeLoopStorage({
+  field: 'trace',
+});
+
+// const TRACE_FILTER_STORAGE_KEY = 'trace-filter-storage';
 export const getPersistentFiltersFromUrl = (
   value: Record<string, string | string[] | undefined | null>,
 ) => {
@@ -44,6 +51,13 @@ export const getUrlTraceFilterData = (): TraceFilter => {
   const urlParams = queryString.parse(window.location.search, {
     arrayFormat: 'bracket',
   });
+
+  const hasUrlParams = Object.keys(urlParams).length > 0;
+
+  if (!hasUrlParams) {
+    const storedFilter = getTraceFilterFromStorage();
+    return { ...storedFilter } as unknown as TraceFilter;
+  }
 
   return urlParams as TraceFilter;
 };
@@ -118,4 +132,35 @@ export const initTraceUrlSearchInfo = (
     initPersistentFilters,
     initRelation,
   };
+};
+
+export const saveTraceFilterToStorage = (filter: Partial<TraceFilter>) => {
+  try {
+    const filteredData: Partial<TraceFilter> = {};
+    Object.keys(filter).forEach(key => {
+      const value = filter[key as keyof TraceFilter];
+      if (value !== undefined && value !== null && value !== '') {
+        filteredData[key as keyof TraceFilter] = value;
+      }
+    });
+
+    if (Object.keys(filteredData).length > 0) {
+      traceListStorage.setItem(
+        'trace-filter-storage',
+        JSON.stringify(filteredData),
+      );
+    }
+  } catch (error) {
+    console.warn('Failed to save trace filter to localStorage:', error);
+  }
+};
+
+export const getTraceFilterFromStorage = (): Partial<TraceFilter> => {
+  try {
+    const stored = traceListStorage.getItem('trace-filter-storage');
+    return stored ? JSON.parse(stored) : {};
+  } catch (error) {
+    console.warn('Failed to get trace filter from localStorage:', error);
+    return {};
+  }
 };
