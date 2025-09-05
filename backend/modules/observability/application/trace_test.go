@@ -56,7 +56,7 @@ func TestTraceApplication_CreateView(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockRepo := repomock.NewMockIViewRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockRepo.EXPECT().CreateView(gomock.Any(), gomock.Any()).Return(int64(0), nil)
 				return fields{
 					repo: mockRepo,
@@ -81,7 +81,7 @@ func TestTraceApplication_CreateView(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockRepo := repomock.NewMockIViewRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockRepo.EXPECT().CreateView(gomock.Any(), gomock.Any()).Return(int64(0), assert.AnError)
 				return fields{
 					repo: mockRepo,
@@ -296,7 +296,7 @@ func TestTraceApplication_ListViews(t *testing.T) {
 				mockRepo := repomock.NewMockIViewRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConf := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityView{}, nil)
 				mockConf.EXPECT().GetSystemViews(gomock.Any()).Return([]*config.SystemView{}, nil)
 				return fields{
@@ -322,7 +322,7 @@ func TestTraceApplication_ListViews(t *testing.T) {
 				mockRepo := repomock.NewMockIViewRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConf := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				mockConf.EXPECT().GetSystemViews(gomock.Any()).Return([]*config.SystemView{}, nil)
 				return fields{
@@ -390,7 +390,7 @@ func TestTraceApplication_ListSpans(t *testing.T) {
 				mockTag.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 				mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, nil, nil)
 				mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil, nil)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&service.ListSpansResp{
 					Spans: loop_span.SpanList{
 						{
@@ -584,7 +584,7 @@ func TestTraceApplication_ListSpans(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				return fields{
@@ -609,7 +609,7 @@ func TestTraceApplication_ListSpans(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("bad"))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("bad"))
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				return fields{
 					auth:     mockAuth,
@@ -687,7 +687,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{}, nil)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				return fields{
@@ -719,7 +719,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				return fields{
@@ -745,7 +745,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("bad"))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("bad"))
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				return fields{
 					auth:     mockAuth,
@@ -787,7 +787,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{}, nil)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				return fields{
@@ -857,7 +857,7 @@ func TestTraceApplication_BatchGetTracesAdvanceInfo(t *testing.T) {
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				mockSvc.EXPECT().GetTracesAdvanceInfo(gomock.Any(), gomock.Any()).Return(&service.GetTracesAdvanceInfoResp{}, nil)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				return fields{
 					traceSvc: mockSvc,
 					auth:     mockAuth,
@@ -890,7 +890,7 @@ func TestTraceApplication_BatchGetTracesAdvanceInfo(t *testing.T) {
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
 				mockSvc.EXPECT().GetTracesAdvanceInfo(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				return fields{
 					traceSvc: mockSvc,
 					auth:     mockAuth,
@@ -1016,7 +1016,7 @@ func TestTraceApplication_GetTracesMetaInfo(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTracesMetaInfo(gomock.Any(), gomock.Any()).Return(&service.GetTracesMetaInfoResp{FilesMetas: map[string]*config.FieldMeta{}}, nil)
 				return fields{
 					traceSvc: mockSvc,
@@ -1069,7 +1069,7 @@ func TestTraceApplication_CreateManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{}, nil)
 				return fields{
 					traceSvc: mockSvc,
@@ -1096,7 +1096,7 @@ func TestTraceApplication_CreateManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{
 					TagKeyId:       1,
 					TagContentType: rpc.TagContentTypeContinuousNumber,
@@ -1126,7 +1126,7 @@ func TestTraceApplication_CreateManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{
 					TagKeyId:       1,
 					TagContentType: rpc.TagContentTypeFreeText,
@@ -1196,7 +1196,7 @@ func TestTraceApplication_UpdateManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{}, nil)
 				return fields{
 					traceSvc: mockSvc,
@@ -1223,7 +1223,7 @@ func TestTraceApplication_UpdateManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{
 					TagKeyId:       1,
 					TagContentType: rpc.TagContentTypeContinuousNumber,
@@ -1253,7 +1253,7 @@ func TestTraceApplication_UpdateManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{
 					TagKeyId:       1,
 					TagContentType: rpc.TagContentTypeFreeText,
@@ -1317,7 +1317,7 @@ func TestTraceApplication_DeleteManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("fail"))
 				return fields{
 					traceSvc: mockSvc,
@@ -1340,7 +1340,7 @@ func TestTraceApplication_DeleteManualAnnotation(t *testing.T) {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockTag.EXPECT().GetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(&rpc.TagInfo{
 					TagKeyId:       1,
 					TagContentType: rpc.TagContentTypeFreeText,
@@ -1403,7 +1403,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
 
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123", gomock.Any()).Return(nil)
 				mockExportSvc.EXPECT().ExportTracesToDataset(gomock.Any(), gomock.Any()).Return(&service.ExportTracesToDatasetResponse{
 					SuccessCount: 10,
 					DatasetID:    1,
@@ -1464,7 +1464,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
 
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(fmt.Errorf("permission denied"))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123", gomock.Any()).Return(fmt.Errorf("permission denied"))
 
 				return fields{
 					authSvc:     mockAuth,
@@ -1503,7 +1503,7 @@ func TestTraceApplication_ExportTracesToDataset(t *testing.T) {
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
 
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123").Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceExport, "123", gomock.Any()).Return(nil)
 				mockExportSvc.EXPECT().ExportTracesToDataset(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("service error"))
 
 				return fields{
@@ -1580,7 +1580,7 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
 
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123", gomock.Any()).Return(nil)
 				mockExportSvc.EXPECT().PreviewExportTracesToDataset(gomock.Any(), gomock.Any()).Return(&service.PreviewExportTracesToDatasetResponse{
 					Items: []*entity.DatasetItem{
 						{
@@ -1658,33 +1658,33 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
 
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(fmt.Errorf("permission denied"))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123", gomock.Any()).Return(fmt.Errorf("permission denied"))
 
 				return fields{
 					authSvc:     mockAuth,
 					traceConfig: mockConfig,
 				}
 			}, args: args{
-			ctx: context.Background(),
-			req: &trace.PreviewExportTracesToDatasetRequest{
-				WorkspaceID: 123,
-				StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
-				EndTime:     time.Now().UnixMilli(),
-				SpanIds: []*trace.SpanID{
-					{TraceID: "trace1", SpanID: "span1"},
-				},
-				FieldMappings: []*dataset0.FieldMapping{
-					{
-						FieldSchema: &dataset0.FieldSchema{
-							Key:  ptr.Of("input"),
-							Name: ptr.Of("Input"),
+				ctx: context.Background(),
+				req: &trace.PreviewExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
 						},
-						TraceFieldKey:      "input",
-						TraceFieldJsonpath: "$.input",
 					},
 				},
 			},
-		},
 			want:    nil,
 			wantErr: true,
 		},
@@ -1696,7 +1696,7 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 				mockConfig := confmock.NewMockITraceConfig(ctrl)
 
 				mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123").Return(nil)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTracePreviewExport, "123", gomock.Any()).Return(nil)
 				mockExportSvc.EXPECT().PreviewExportTracesToDataset(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("service error"))
 
 				return fields{
