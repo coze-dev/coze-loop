@@ -14,7 +14,7 @@ const TableNameModelRequestRecord = "model_request_record"
 type ModelRequestRecord struct {
 	ID                  int64     `gorm:"column:id;type:bigint unsigned;primaryKey;autoIncrement:true;comment:è‡ªå¢žä¸»é”®ID" json:"id"`                                                       // è‡ªå¢žä¸»é”®ID
 	SpaceID             int64     `gorm:"column:space_id;type:bigint unsigned;not null;index:idx_space_id_create_time,priority:1;comment:ç©ºé—´id" json:"space_id"`                            // ç©ºé—´id
-	UserID              string     `gorm:"column:user_id;type:varchar(256);not null;comment:user id" json:"user_id"`                                                                         // user id
+	UserID              string    `gorm:"column:user_id;type:varchar(256);not null;comment:user id" json:"user_id"`                                                                            // user id
 	UsageScene          string    `gorm:"column:usage_scene;type:varchar(128);not null;comment:åœºæ™¯" json:"usage_scene"`                                                                     // åœºæ™¯
 	UsageSceneEntityID  string    `gorm:"column:usage_scene_entity_id;type:varchar(256);not null;comment:åœºæ™¯å®žä½“id" json:"usage_scene_entity_id"`                                         // åœºæ™¯å®žä½“id
 	Frame               string    `gorm:"column:frame;type:varchar(128);not null;comment:ä½¿ç”¨çš„æ¡†æž¶ï¼Œå¦‚eino" json:"frame"`                                                              // ä½¿ç”¨çš„æ¡†æž¶ï¼Œå¦‚eino

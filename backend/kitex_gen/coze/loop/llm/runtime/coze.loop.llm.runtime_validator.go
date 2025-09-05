@@ -22,15 +22,23 @@ var (
 )
 
 func (p *ChatRequest) IsValid() error {
-	if p.ModelConfig != nil {
-		if err := p.ModelConfig.IsValid(); err != nil {
-			return fmt.Errorf("field ModelConfig not valid, %w", err)
-		}
+	if p.ModelConfig == nil {
+		return fmt.Errorf("field ModelConfig not_nil rule failed")
 	}
-	if p.BizParam != nil {
-		if err := p.BizParam.IsValid(); err != nil {
-			return fmt.Errorf("field BizParam not valid, %w", err)
-		}
+	if err := p.ModelConfig.IsValid(); err != nil {
+		return fmt.Errorf("field ModelConfig not valid, %w", err)
+	}
+	if len(p.Messages) < int(1) {
+		return fmt.Errorf("field Messages MinLen rule failed, current value: %v", p.Messages)
+	}
+	if len(p.Tools) < int(1) {
+		return fmt.Errorf("field Tools MinLen rule failed, current value: %v", p.Tools)
+	}
+	if p.BizParam == nil {
+		return fmt.Errorf("field BizParam not_nil rule failed")
+	}
+	if err := p.BizParam.IsValid(); err != nil {
+		return fmt.Errorf("field BizParam not valid, %w", err)
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
