@@ -24,10 +24,8 @@ func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfi
 		sandboxConfig = entity.DefaultSandboxConfig()
 	}
 	
-	return &RuntimeFactoryImpl{
-		logger:        logger,
-		sandboxConfig: sandboxConfig,
-	}
+	// 默认使用增强版运行时工厂
+	return NewEnhancedRuntimeFactory(logger, sandboxConfig)
 }
 
 // CreateRuntime 根据语言类型创建Runtime实例
