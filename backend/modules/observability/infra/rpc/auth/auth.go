@@ -118,7 +118,8 @@ func (a *AuthProviderImpl) CheckIngestPermission(ctx context.Context, workspaceI
 }
 
 func (a *AuthProviderImpl) CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error {
-	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceRead, workspaceId)
+	// todo test
+	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceIngest, workspaceId)
 }
 
 func NewAuthProvider(cli authservice.Client) rpc.IAuthProvider {
