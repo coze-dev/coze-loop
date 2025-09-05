@@ -54,20 +54,6 @@ func (mr *MockIAuthProviderMockRecorder) CheckIngestPermission(ctx, workspaceId 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckIngestPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckIngestPermission), ctx, workspaceId)
 }
 
-// CheckOpenAPIWorkspacePermission mocks base method.
-func (m *MockIAuthProvider) CheckOpenAPIWorkspacePermission(ctx context.Context, action, workspaceId string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckOpenAPIWorkspacePermission", ctx, action, workspaceId)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CheckOpenAPIWorkspacePermission indicates an expected call of CheckOpenAPIWorkspacePermission.
-func (mr *MockIAuthProviderMockRecorder) CheckOpenAPIWorkspacePermission(ctx, action, workspaceId any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckOpenAPIWorkspacePermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckOpenAPIWorkspacePermission), ctx, action, workspaceId)
-}
-
 // CheckQueryPermission mocks base method.
 func (m *MockIAuthProvider) CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error {
 	m.ctrl.T.Helper()
@@ -97,15 +83,15 @@ func (mr *MockIAuthProviderMockRecorder) CheckViewPermission(ctx, action, worksp
 }
 
 // CheckWorkspacePermission mocks base method.
-func (m *MockIAuthProvider) CheckWorkspacePermission(ctx context.Context, action, workspaceId string) error {
+func (m *MockIAuthProvider) CheckWorkspacePermission(ctx context.Context, action, workspaceId string, isOpi bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckWorkspacePermission", ctx, action, workspaceId)
+	ret := m.ctrl.Call(m, "CheckWorkspacePermission", ctx, action, workspaceId, isOpi)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CheckWorkspacePermission indicates an expected call of CheckWorkspacePermission.
-func (mr *MockIAuthProviderMockRecorder) CheckWorkspacePermission(ctx, action, workspaceId any) *gomock.Call {
+func (mr *MockIAuthProviderMockRecorder) CheckWorkspacePermission(ctx, action, workspaceId, isOpi any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckWorkspacePermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckWorkspacePermission), ctx, action, workspaceId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckWorkspacePermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckWorkspacePermission), ctx, action, workspaceId, isOpi)
 }

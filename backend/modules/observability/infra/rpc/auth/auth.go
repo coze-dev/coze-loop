@@ -21,7 +21,7 @@ type AuthProviderImpl struct {
 	cli authservice.Client
 }
 
-func (a *AuthProviderImpl) CheckWorkspacePermission(ctx context.Context, action, workspaceId string) error {
+func (a *AuthProviderImpl) CheckWorkspacePermission(ctx context.Context, action, workspaceId string, _ bool) error {
 	authInfos := make([]*authentity.SubjectActionObjects, 0)
 	authInfos = append(authInfos, &authentity.SubjectActionObjects{
 		Subject: &authentity.AuthPrincipal{
@@ -113,16 +113,12 @@ func (a *AuthProviderImpl) CheckViewPermission(ctx context.Context, action, work
 	return nil
 }
 
-func (a *AuthProviderImpl) CheckOpenAPIWorkspacePermission(ctx context.Context, action, workspaceId string) error {
-	return a.CheckWorkspacePermission(ctx, action, workspaceId)
-}
-
 func (a *AuthProviderImpl) CheckIngestPermission(ctx context.Context, workspaceId string) error {
-	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceIngest, workspaceId)
+	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceIngest, workspaceId, true)
 }
 
 func (a *AuthProviderImpl) CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error {
-	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceList, workspaceId)
+	return a.CheckWorkspacePermission(ctx, rpc.AuthActionTraceList, workspaceId, true)
 }
 
 func NewAuthProvider(cli authservice.Client) rpc.IAuthProvider {

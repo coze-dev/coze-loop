@@ -1656,7 +1656,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				
+
 				// Mock ListSpans call with ParentID filter for root span
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
@@ -1670,7 +1670,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 							}
 						}
 						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-						
+
 						// Return a root span (ParentID = "0")
 						return &repo.ListSpansResult{
 							Spans: loop_span.SpanList{
@@ -1729,7 +1729,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				
+
 				// Mock ListSpans call with ParentID filter but return no spans
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
@@ -1743,7 +1743,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 							}
 						}
 						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-						
+
 						// Return empty result (no root span found)
 						return &repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil
 					},
@@ -1880,7 +1880,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				
+
 				// Mock ListSpans call with ParentID filter for root span
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
@@ -1894,7 +1894,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 							}
 						}
 						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-						
+
 						// Return a root span (ParentID = "0")
 						return &repo.ListSpansResult{
 							Spans: loop_span.SpanList{
@@ -1950,7 +1950,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
-				
+
 				// Mock ListSpans call with ParentID filter but return no spans
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
@@ -1964,7 +1964,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 							}
 						}
 						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-						
+
 						// Return empty result (no root span found)
 						return &repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil
 					},

@@ -198,7 +198,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 			name: "create annotation successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1").Return(nil)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
@@ -344,7 +344,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			name: "delete annotation successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1").Return(nil)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				traceServiceMock.EXPECT().DeleteAnnotation(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
