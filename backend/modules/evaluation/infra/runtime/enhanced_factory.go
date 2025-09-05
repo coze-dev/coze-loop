@@ -75,8 +75,10 @@ func (f *EnhancedRuntimeFactory) GetSupportedLanguages() []entity.LanguageType {
 // Cleanup 清理工厂资源
 func (f *EnhancedRuntimeFactory) Cleanup() error {
 	if f.enhancedRuntime != nil {
-		if err := f.enhancedRuntime.Cleanup(); err != nil {
-			return fmt.Errorf("清理增强运行时失败: %w", err)
+		if cleanupRuntime, ok := f.enhancedRuntime.(interface{ Cleanup() error }); ok {
+			if err := cleanupRuntime.Cleanup(); err != nil {
+				return fmt.Errorf("清理增强运行时失败: %w", err)
+			}
 		}
 		f.enhancedRuntime = nil
 	}

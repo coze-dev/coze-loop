@@ -17,12 +17,13 @@ import (
 // EnhancedRuntime 增强版运行时，集成沙箱池和任务调度
 type EnhancedRuntime struct {
 	// 增强组件
-	sandboxPool   *SandboxPool
-	taskScheduler *TaskScheduler
+	sandboxPool     *SandboxPool
+	taskScheduler   *TaskScheduler
+	processManager  *DenoProcessManager
 	
 	// 配置和日志
-	config        *entity.SandboxConfig
-	logger        *logrus.Logger
+	config          *entity.SandboxConfig
+	logger          *logrus.Logger
 	
 	// 支持的语言类型
 	supportedLanguages []entity.LanguageType
@@ -33,6 +34,9 @@ func NewEnhancedRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (*E
 	if config == nil {
 		config = entity.DefaultSandboxConfig()
 	}
+	
+	// 创建Deno进程管理器
+	processManager := NewDenoProcessManager(config, logger)
 	
 	// 创建沙箱池
 	sandboxPool := NewSandboxPool(config, logger)
@@ -49,6 +53,7 @@ func NewEnhancedRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (*E
 	return &EnhancedRuntime{
 		sandboxPool:        sandboxPool,
 		taskScheduler:      taskScheduler,
+		processManager:     processManager,
 		config:             config,
 		logger:             logger,
 		supportedLanguages: []entity.LanguageType{entity.LanguageTypeJS, entity.LanguageTypePython},
@@ -158,7 +163,10 @@ func (er *EnhancedRuntime) Cleanup() error {
 		errors = append(errors, fmt.Errorf("关闭沙箱池失败: %w", err))
 	}
 	
-	// 增强运行时不需要清理原始运行时，因为没有直接依赖
+	// 关闭Deno进程管理器
+	if err := er.processManager.StopAllProcesses(); err != nil {
+		errors = append(errors, fmt.Errorf("关闭Deno进程管理器失败: %w", err))
+	}
 	
 	if len(errors) > 0 {
 		er.logger.WithField("errors", errors).Error("清理过程中出现错误")
@@ -203,6 +211,9 @@ func (er *EnhancedRuntime) GetHealthStatus() map[string]interface{} {
 			"failed_tasks":      schedulerMetrics.FailedTasks,
 			"queued_tasks":      schedulerMetrics.QueuedTasks,
 			"throughput_per_sec": fmt.Sprintf("%.2f", schedulerMetrics.ThroughputPerSec),
+		},
+		"process_manager": map[string]interface{}{
+			"process_count": er.processManager.GetProcessCount(),
 		},
 		"supported_languages": er.supportedLanguages,
 	}
