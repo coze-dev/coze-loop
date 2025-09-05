@@ -69,14 +69,19 @@ function parseElement(el: MessageFormatElement): TypeInfo[] | undefined {
 }
 
 export function icu2Type(message: string) {
-  const elements = parse(message);
-  const types: TypeInfo[] = [];
+  try {
+    const elements = parse(message);
+    const types: TypeInfo[] = [];
 
-  for (const element of elements) {
-    const elementTypes = parseElement(element);
+    for (const element of elements) {
+      const elementTypes = parseElement(element);
 
-    elementTypes?.length && types.push(...elementTypes);
+      elementTypes?.length && types.push(...elementTypes);
+    }
+
+    return types;
+    // eslint-disable-next-line @coze-arch/use-error-in-catch -- skip
+  } catch {
+    return [];
   }
-
-  return types;
 }
