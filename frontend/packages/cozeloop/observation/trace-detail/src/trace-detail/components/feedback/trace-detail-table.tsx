@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import classNames from 'classnames';
 import { useUpdate } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import LoopTableSortIcon from '@cozeloop/components/src/table/sort-icon';
 import { LoopTable, UserProfile } from '@cozeloop/components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
@@ -30,9 +31,9 @@ import { useListAnnotations } from './hooks/use-list-annotations';
 const { Text } = Typography;
 
 const SOURCE_TEXT = {
-  [AnnotationType.AnnotationType.AutoEvaluate]: '自动评测',
-  [AnnotationType.AnnotationType.ManualFeedback]: '人工标注',
-  [AnnotationType.AnnotationType.CozeFeedback]: 'Coze 对话',
+  [AnnotationType.AnnotationType.AutoEvaluate]: 'auto_evaluate',
+  [AnnotationType.AnnotationType.ManualFeedback]: 'manual_annotation',
+  [AnnotationType.AnnotationType.CozeFeedback]: 'coze_conversation',
 };
 
 export const Source = ({
@@ -55,7 +56,7 @@ export const Source = ({
       }}
     >
       <Text ellipsis={{ showTooltip: true }} className="text-[13px]">
-        {SOURCE_TEXT[annotation.type ?? ''] ?? '-'}
+        {I18n.unsafeT(SOURCE_TEXT[annotation.type ?? ''] ?? '-')}
       </Text>
       {annotation.type === AnnotationType.AnnotationType.AutoEvaluate && (
         <div className="flex items-center group-hover:opacity-100 opacity-0  transition-opacity duration-200">
@@ -87,9 +88,9 @@ const FeedbackResult = (props: FeedbackResultProps) => {
   return (
     <div className="flex items-center gap-x-1 w-full">
       <Text className="text-inherit font-inherit !font-medium leading-inherit !text-[13px]">
-        反馈结果
+        {I18n.t('feedback_results')}
       </Text>
-      <Tooltip content="刷新" theme="dark">
+      <Tooltip content={I18n.t('refresh')} theme="dark">
         <Button color="secondary" size="mini" onClick={onRefresh}>
           <IconCozRefresh
             className={classNames('w-[14px] h-[14px] text-[var(--coz-fg-se)]', {
@@ -114,7 +115,7 @@ const UpdateTimeTitle = ({
     className="flex items-center gap-x-1 cursor-pointer"
     onClick={() => onChange?.()}
   >
-    <span>更新时间</span>
+    <span>{I18n.t('update_time')}</span>
     <LoopTableSortIcon sortOrder={descByUpdatedAt ? 'descend' : 'ascend'} />
   </div>
 );
@@ -142,7 +143,7 @@ export const TraceFeedBack = ({
   }, [annotationRefreshKey]);
   const columns = [
     {
-      title: '来源',
+      title: I18n.t('source'),
       dataIndex: 'source',
       width: 120,
       render: (_, annotation: AnnotationType.Annotation) => (
@@ -172,7 +173,7 @@ export const TraceFeedBack = ({
       ),
     },
     {
-      title: '更新人',
+      title: I18n.t('updater'),
       dataIndex: 'updater',
       width: 170,
       render: (_, annotation: AnnotationType.Annotation) => {
@@ -186,7 +187,7 @@ export const TraceFeedBack = ({
       },
     },
     {
-      title: '创建时间',
+      title: I18n.t('create_time'),
       dataIndex: 'createTime',
       width: 170,
       render: (_, annotation: AnnotationType.Annotation) => {
@@ -238,7 +239,7 @@ export const TraceFeedBack = ({
     },
 
     {
-      title: () => <div className="text-left">原因</div>,
+      title: () => <div className="text-left">{I18n.t('reason')}</div>,
       dataIndex: 'reasoning',
       width: 372,
       render: (_, annotation: AnnotationType.Annotation) => (
@@ -279,12 +280,12 @@ export const TraceFeedBack = ({
         <EmptyState
           size="full_screen"
           icon={<IconCozIllusNone />}
-          title="暂无 Feedback"
+          title={I18n.t('no_feedback')}
           description={
             <>
               {description ?? (
                 <div className="text-sm max-w-[540px]">
-                  点击右上方标注数据按钮进行创建
+                  {I18n.t('click_annotation_button_to_create')}
                 </div>
               )}
             </>

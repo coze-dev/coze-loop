@@ -31,6 +31,8 @@ import {
   MANUAL_FEEDBACK_PREFIX,
 } from './const';
 
+import { I18n } from '@cozeloop/i18n-adapter';
+
 const assignValueWithKind = <R>(params: { value: R; valueKind: string }) => {
   const { value, valueKind } = params;
   const defaultFieldValue = [];
@@ -235,11 +237,11 @@ export const getKeyCopywriting = (key: string) => {
     case FilterFields.APP_ID:
       return 'AppName';
     case FilterFields.FEEDBACK:
-      return 'Feedback-自动评测';
+      return I18n.t('feedback_auto_evaluate');
     case FilterFields.FEEDBACK_MANUAL:
-      return 'Feedback-人工标注';
+      return I18n.t('feedback_manual_annotation');
     case FilterFields.FEEDBACK_COZE:
-      return 'Feedback-Coze 对话';
+      return I18n.t('feedback_coze_conversation');
     case FilterFields.WORKFLOW_ID:
       return 'WorkflowName';
     default:
