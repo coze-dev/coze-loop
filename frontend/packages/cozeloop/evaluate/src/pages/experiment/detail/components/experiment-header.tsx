@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import {
   RefreshButton,
@@ -70,19 +71,24 @@ export default function ExperimentHeader({
           enableOnClick={false}
         />
         <Tag color="primary" size="small" className="ml-2">
-          总条数 {totalCount || 0}（成功 {success_turn_cnt}
+          {I18n.t('total_count_placeholder1_success_count', {
+            placeholder1: totalCount || 0,
+            success_turn_cnt,
+          })}
           <Divider
             layout="vertical"
             style={{ marginLeft: 8, marginRight: 8, height: 12 }}
           />
-          失败 {fail_turn_cnt}
+          {I18n.t('failure_count_fail_turn_cnt', { fail_turn_cnt })}
           <Divider
             layout="vertical"
             style={{ marginLeft: 8, marginRight: 8, height: 12 }}
           />
           {terminated_turn_cnt ? (
             <>
-              中止 {terminated_turn_cnt}
+              {I18n.t('terminated_count_terminated_turn_cnt', {
+                terminated_turn_cnt,
+              })}
               <Divider
                 layout="vertical"
                 style={{ marginLeft: 8, marginRight: 8, height: 12 }}
@@ -91,14 +97,16 @@ export default function ExperimentHeader({
           ) : null}
           {processing_turn_cnt ? (
             <>
-              执行中 {processing_turn_cnt}
+              {I18n.t('processing_count_processing_turn_cnt', {
+                processing_turn_cnt,
+              })}
               <Divider
                 layout="vertical"
                 style={{ marginLeft: 8, marginRight: 8, height: 12 }}
               />
             </>
           ) : null}
-          待执行 {pending_turn_cnt}）
+          {I18n.t('pending_count_pending_turn_cnt', { pending_turn_cnt })}
         </Tag>
       </div>
 

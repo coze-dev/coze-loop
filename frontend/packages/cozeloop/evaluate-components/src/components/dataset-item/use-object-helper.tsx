@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Divider, Popconfirm, Typography } from '@coze-arch/coze-design';
 
 import { InfoIconTooltip } from '../common';
@@ -59,20 +60,28 @@ export const useEditorObjectHelper = (props: DatasetItemProps) => {
   const HelperNode = (
     <div className="flex gap-2 items-center absolute right-0 -top-[30px]">
       <Typography.Text link onClick={parseJSONValue}>
-        格式化JSON
+        {I18n.t('format_json')}
       </Typography.Text>
       <Divider layout="vertical" className="w-[1px] h-[14px]" />
       <Popconfirm
-        title="自动补全字段将覆盖原有内容"
-        content="自动补全数据结构内所有字段将覆盖原有内容。确认覆盖吗？"
-        okText="确认"
+        title={I18n.t(
+          'cozeloop_open_evaluate_autocomplete_overwrites_original',
+        )}
+        content={I18n.t(
+          'cozeloop_open_evaluate_autocomplete_confirm_overwrite_all_fields',
+        )}
+        okText={I18n.t('confirm')}
         onConfirm={generateJSONObject}
         okButtonColor="yellow"
-        cancelText="取消"
+        cancelText={I18n.t('cancel')}
       >
         <div className="flex items-center gap-1">
-          <Typography.Text link>字段补全</Typography.Text>
-          <InfoIconTooltip tooltip="点击自动补全该数据结构内的所有字段"></InfoIconTooltip>
+          <Typography.Text link>{I18n.t('field_completion')}</Typography.Text>
+          <InfoIconTooltip
+            tooltip={I18n.t(
+              'cozeloop_open_evaluate_click_autocomplete_all_fields',
+            )}
+          ></InfoIconTooltip>
         </div>
       </Popconfirm>
     </div>

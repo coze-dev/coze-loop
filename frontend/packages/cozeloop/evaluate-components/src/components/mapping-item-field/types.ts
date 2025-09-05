@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 
 export type SchemaSourceType = 'set' | 'target';
@@ -12,6 +13,6 @@ export interface OptionGroup {
 }
 
 export const schemaSourceTypeMap = {
-  set: '评测集',
-  target: '评测对象',
+  set: I18n.t('evaluation_set'),
+  target: I18n.t('evaluate_case_create_eval_object'),
 };

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import { tag } from '@cozeloop/api-schema/data';
 import { DataApi, StoneEvaluationApi } from '@cozeloop/api-schema';
@@ -105,7 +106,7 @@ export function TagSelect({
       remote
       suffix={
         dropdownVisible ? (
-          <Tooltip theme="dark" content="刷新">
+          <Tooltip theme="dark" content={I18n.t('refresh')}>
             <div className="flex flex-row items-center">
               <Button
                 className="!h-6 !w-6"
@@ -130,7 +131,7 @@ export function TagSelect({
           }}
         >
           <IconCozPlus />
-          <span className="ml-2">新建标签</span>
+          <span className="ml-2">{I18n.t('data_engine_create_new_tag')}</span>
         </div>
       }
     />
@@ -167,7 +168,7 @@ function TagSelectOption({
                 onDetail(item);
               }}
             >
-              详情
+              {I18n.t('detail')}
             </Typography.Text>
             <Typography.Text
               link
@@ -189,7 +190,7 @@ function TagSelectOption({
                 }
               }}
             >
-              添加
+              {I18n.t('space_member_role_type_add_btn')}
             </Typography.Text>
           </div>
         }

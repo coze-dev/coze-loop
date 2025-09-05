@@ -2,6 +2,7 @@
 /* eslint-disable complexity */
 import React, { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { uploadFile } from '@cozeloop/biz-components-adapter';
 import { StorageProvider } from '@cozeloop/api-schema/data';
@@ -118,7 +119,7 @@ export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
         )}
       </div>
       {status === ImageStatus.Error && (
-        <div className="text-red-500">上传失败</div>
+        <div className="text-red-500">{I18n.t('upload_fail')}</div>
       )}
     </div>
   );

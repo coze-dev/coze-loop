@@ -1,11 +1,12 @@
 import Papa, { type UnparseObject } from 'papaparse';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 export const downloadCSVTemplate = () => {
   try {
     const fields = ['input', 'reference_output'];
     const data = [
-      ['世界上最大的动物是什么', '蓝鲸'],
-      ['告诉我一些这个动物的生活习性', '吃鱼'],
+      [I18n.t('evaluate_biggest_animal_world'), I18n.t('evaluate_blue_whale')],
+      [I18n.t('evaluate_living_habits_animal'), I18n.t('data_engine_eat_fish')],
     ];
     const templateJson: UnparseObject<string[]> = {
       fields,

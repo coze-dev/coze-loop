@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { nanoid } from 'nanoid';
 import { cloneDeep } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozAddNode, IconCozTrashCan } from '@coze-arch/coze-design/icons';
 import { Button, Tooltip } from '@coze-arch/coze-design';
 
@@ -108,7 +109,7 @@ function TitleRender({
     <div className="flex items-center h-8 gap-1">
       {/* 添加子节点按钮 - 根据 isShowAddNode 函数决定是否显示 */}
       {showAddNode ? (
-        <Tooltip content="添加子项">
+        <Tooltip content={I18n.t('add_child_item')}>
           <Button
             color="secondary"
             size="mini"
@@ -188,7 +189,7 @@ export function TreeEditor({
     // 创建新节点数据
     const newNode: NodeData = {
       key: newKey,
-      label: `新节点${Math.floor(Math.random() * 1000)}`,
+      label: `${I18n.t('cozeloop_open_evaluate_new_node_placeholder1', { placeholder1: Math.floor(Math.random() * 1000) })}`,
       data: {},
       ...defaultNodeData,
     };

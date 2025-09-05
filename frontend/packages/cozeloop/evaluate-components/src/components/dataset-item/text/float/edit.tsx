@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Input } from '@coze-arch/coze-design';
 
 import { type DatasetItemProps } from '../../type';
@@ -6,7 +7,7 @@ export const FloatDatasetItemEdit = ({
   onChange,
 }: DatasetItemProps) => (
   <Input
-    placeholder="请输入float,至多小数点后4位"
+    placeholder={I18n.t('input_float_with_precision')}
     className="rounded-[6px]"
     value={fieldContent?.text}
     onChange={value => {

@@ -1,5 +1,6 @@
 import { useMemo, type FC } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { IconCozEmpty } from '@coze-arch/coze-design/icons';
 import {
@@ -21,7 +22,7 @@ import emptyStyles from './empty-state.module.less';
 
 export interface EvaluateTargetMappingProps {
   loading?: boolean;
-  keySchemas?: FieldSchema[];
+  keySchemas?: (FieldSchema & { type?: string })[];
   prefixField: string;
   evaluationSetSchemas?: FieldSchema[];
   selectProps?: SelectProps;
@@ -54,59 +55,59 @@ const EvaluateTargetMappingField: FC<
     [evaluationSetSchemas],
   );
 
-  if (loading) {
-    return (
-      <div className="h-[84px] w-full flex items-center justify-center">
-        <Loading
-          className="!w-full"
-          size="large"
-          label={'正在加载字段映射'}
-          loading={true}
-        ></Loading>
-      </div>
-    );
-  }
-
   if (!keySchemas) {
     return (
       <div className="h-[84px] w-full flex items-center justify-center">
         <EmptyState
           size="default"
           icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
-          title="暂无数据"
+          title={I18n.t('no_data')}
           className={emptyStyles['empty-state']}
         />
       </div>
     );
   }
   return (
-    <div>
-      {keySchemas?.map(k => (
-        <MappingItemField
-          key={k.name}
-          noLabel
-          field={`${prefixField}.${k.name}`}
-          fieldClassName="!pt-0"
-          keyTitle="评测对象"
-          keySchema={k}
-          optionGroups={optionGroups}
-          selectProps={selectProps}
-          rules={[
-            {
-              validator: (_rule, v) => {
-                if (!v) {
-                  return new Error('请选择');
-                }
-                if (getTypeText(v) !== getSchemaTypeText(k)) {
-                  return new Error('所选字段数据类型不一致，请重新选择');
-                }
-                return true;
+    <>
+      <div className={loading ? 'hidden' : ''}>
+        {keySchemas?.map(k => (
+          <MappingItemField
+            key={k.name}
+            noLabel
+            field={`${prefixField}.${k.name}`}
+            fieldClassName="!pt-0"
+            keyTitle={I18n.t('evaluation_object')}
+            keySchema={k}
+            optionGroups={optionGroups}
+            selectProps={selectProps}
+            rules={[
+              {
+                validator: (_rule, v) => {
+                  if (!v) {
+                    return new Error(I18n.t('please_select'));
+                  }
+                  if (getTypeText(v) !== getSchemaTypeText(k)) {
+                    return new Error(I18n.t('selected_fields_inconsistent'));
+                  }
+                  return true;
+                },
               },
-            },
-          ]}
-        />
-      ))}
-    </div>
+            ]}
+          />
+        ))}
+      </div>
+      {/* loading态不能直接返回咯爱的loading dom，不渲染MappingItemField会导致表单数据丢失 */}
+      {loading ? (
+        <div className="h-[84px] w-full flex items-center justify-center">
+          <Loading
+            className="!w-full"
+            size="large"
+            label={I18n.t('loading_field_mapping')}
+            loading={true}
+          />
+        </div>
+      ) : null}
+    </>
   );
 });
 export default EvaluateTargetMappingField;

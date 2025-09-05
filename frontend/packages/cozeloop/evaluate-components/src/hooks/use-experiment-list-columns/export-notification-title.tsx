@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { CSVExportStatus } from '@cozeloop/api-schema/evaluation';
 import {
   IconCozLoading,
@@ -50,13 +51,17 @@ const ExportNotificationTitle: React.FC<ExportNotificationTitleProps> = ({
   const getTitle = () => {
     switch (status) {
       case CSVExportStatus.Running:
-        return '实验明细导出中';
+        return I18n.t('cozeloop_open_evaluate_experiment_details_exporting');
       case CSVExportStatus.Failed:
-        return '实验明细导出失败';
+        return I18n.t(
+          'cozeloop_open_evaluate_experiment_details_export_failed',
+        );
       case CSVExportStatus.Success:
-        return '实验明细导出成功';
+        return I18n.t(
+          'cozeloop_open_evaluate_experiment_details_export_success',
+        );
       default:
-        return '实验明细导出中';
+        return I18n.t('cozeloop_open_evaluate_experiment_details_exporting');
     }
   };
 

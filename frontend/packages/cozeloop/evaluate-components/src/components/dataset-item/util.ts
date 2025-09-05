@@ -4,6 +4,7 @@ import { type JSONSchema7, type JSONSchema7TypeName } from 'json-schema';
 import JSONBig from 'json-bigint';
 import Decimal from 'decimal.js';
 import { safeJsonParse } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type Content,
   type FieldSchema,
@@ -128,7 +129,7 @@ export const validarDatasetItem = (
     return true;
   }
   if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) {
-    callback('请输入数字');
+    callback(I18n.t('enter_number'));
     return false;
   }
   // 校验value 是否为数字；
@@ -141,29 +142,35 @@ export const validarDatasetItem = (
     const minValue = minimum ? new Decimal(minimum) : undefined;
     const maxValue = maximum ? new Decimal(maximum) : undefined;
     if (minValue && decimalValue.lt(minValue)) {
-      callback(`请输入大于等于${minimum}的数字`);
+      callback(
+        `${I18n.t('cozeloop_open_evaluate_enter_number_greater_equal_minimum', { minimum })}`,
+      );
       return false;
     }
     if (maxValue && decimalValue.gt(maxValue)) {
-      callback(`请输入小于等于${maximum}的数字`);
+      callback(
+        `${I18n.t('cozeloop_open_evaluate_enter_number_less_equal_maximum', { maximum })}`,
+      );
       return false;
     }
 
     if (type === DataType.Integer && decimalValue.isInteger() === false) {
-      callback('请输入整数');
+      callback(I18n.t('please_enter_integer'));
       return false;
     }
     if (type === DataType.Float && multipleOf) {
       const multipleOfDecimal = new Decimal(multipleOf);
       const division = decimalValue.dividedBy(multipleOfDecimal);
       if (!division.isInteger()) {
-        callback(`仅支持精确到小数点后${multipleOfDecimal.decimalPlaces()}位`);
+        callback(
+          `${I18n.t('data_engine_decimal_places_support', { placeholder1: multipleOfDecimal.decimalPlaces() })}`,
+        );
         return false;
       }
     }
     return true;
   } catch (error) {
-    callback('请输入数字');
+    callback(I18n.t('enter_number'));
     return false;
   }
 };
@@ -183,7 +190,7 @@ export const validateTextFieldData = (
       case DataType.Float:
       case DataType.Boolean: {
         if (isRequired && (value === undefined || value === '')) {
-          callback('请输入内容');
+          callback(I18n.t('please_enter_content'));
           return false;
         }
         break;
@@ -196,14 +203,14 @@ export const validateTextFieldData = (
       case DataType.ArrayObject: {
         if (value === undefined || value === '') {
           if (isRequired) {
-            callback('请输入内容');
+            callback(I18n.t('please_enter_content'));
             return false;
           }
           return true;
         }
         const data = safeJsonParse(value);
         if (typeof data !== 'object') {
-          callback('输入内容不是合法json格式');
+          callback(I18n.t('the_input_content_is_not_in_legal_json_format'));
           return false;
         }
         const validate = ajv.compile(schema);
@@ -227,7 +234,7 @@ export const validateTextFieldData = (
     }
     return true;
   } catch (error) {
-    callback('请输入对象');
+    callback(I18n.t('please_enter_an_object'));
     return false;
   }
 };
@@ -252,23 +259,27 @@ export const validateMultiPartData = (
 
 export const getSchemaErrorInfo = (errors: Object | null | undefined) => {
   if (!errors) {
-    return '输入内容不符合列的字段定义';
+    return I18n.t(
+      'the_input_does_not_match_the_field_definition_of_the_column',
+    );
   }
   const errorInfo = errors?.[0];
   const type = errorInfo?.keyword;
   const instancePath = errorInfo?.instancePath;
   switch (type) {
     case 'type': {
-      return `${instancePath}数据类型不符合字段定义`;
+      return `${I18n.t('cozeloop_open_evaluate_data_type_mismatch_instancepath', { instancePath })}`;
     }
     case 'required': {
-      return `缺少必填字段"${instancePath ? `${instancePath}/` : ''}${errorInfo?.params?.missingProperty}"`;
+      return `${I18n.t('cozeloop_open_evaluate_missing_required_field', { placeholder1: instancePath ? `${instancePath}/` : '', placeholder2: errorInfo?.params?.missingProperty })}`;
     }
     case 'additionalProperties': {
-      return `存在冗余字段${errorInfo?.params?.additionalProperty}`;
+      return `${I18n.t('cozeloop_open_evaluate_redundant_field_exists', { placeholder1: errorInfo?.params?.additionalProperty })}`;
     }
     default: {
-      return '输入内容不符合列的字段定义';
+      return I18n.t(
+        'the_input_does_not_match_the_field_definition_of_the_column',
+      );
     }
   }
 };

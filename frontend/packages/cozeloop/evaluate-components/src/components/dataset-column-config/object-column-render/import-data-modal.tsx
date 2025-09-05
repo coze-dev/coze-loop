@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import jsonGenerator from 'to-json-schema';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { CodeEditor } from '@cozeloop/components';
 import {
   Button,
@@ -39,12 +40,12 @@ export const useImportDataModal = (fieldKey: string, inputType: InputType) => {
       const jsonSchema = jsonGenerator(value, options);
       const isValid = validateJsonSchemaV7Strict(jsonSchema);
       if (!isValid) {
-        Toast.error('数据结构不符合要求，无法导入');
+        Toast.error(I18n.t('evaluation_set_import_error_data_structure_tips'));
         return;
       }
       const schemaObject = convertJSONSchemaToFieldObject(jsonSchema);
       if (schemaObject?.type !== fieldValue?.type) {
-        Toast.error('导入数据类型与列的数据类型不一致，无法导入');
+        Toast.error(I18n.t('evaluation_set_import_error_data_type_tips'));
         return;
       }
       fieldApi.setValue({
@@ -55,15 +56,19 @@ export const useImportDataModal = (fieldKey: string, inputType: InputType) => {
       });
       setVisible(false);
     } catch (error) {
-      Toast.error('样例数据格式错误');
+      Toast.error(I18n.t('sample_data_format_error'));
     }
   };
   const triggerButton = (
     <div className="flex gap-1">
       <Typography.Text link onClick={() => setVisible(true)}>
-        导入样例数据
+        {I18n.t('import_sample_data')}
       </Typography.Text>
-      <InfoIconTooltip tooltip="基于样例数据自动提取数据结构"></InfoIconTooltip>
+      <InfoIconTooltip
+        tooltip={I18n.t(
+          'automatic_extraction_of_data_structure_based_on_sample_data',
+        )}
+      ></InfoIconTooltip>
     </div>
   );
 
@@ -88,34 +93,34 @@ export const CodeEditorModal = ({
   const { LoadingNode, onEditorMount } = useEditorLoading();
   return (
     <Modal
-      title="样例数据"
+      title={I18n.t('evaluation_set_builtin_example_data')}
       visible={true}
       width={960}
       onCancel={onCancel}
       footer={
         <div>
           <Button color="primary" onClick={onCancel}>
-            取消
+            {I18n.t('cancel')}
           </Button>
           <Popconfirm
-            title="确认提取数据结构"
-            content="提取数据结构将覆盖原有的字段定义"
+            title={I18n.t('confirm_the_extracted_data_structure')}
+            content={I18n.t('extracting_the_data_structure_overwrite_tips')}
             position="top"
-            okText="确定"
+            okText={I18n.t('confirm')}
             okButtonColor="yellow"
             showArrow
-            cancelText="取消"
+            cancelText={I18n.t('cancel')}
             onConfirm={() => {
               try {
                 const obj = JSON.parse(value);
                 onSuccess(obj);
               } catch (error) {
-                Toast.error('样例数据格式错误');
+                Toast.error(I18n.t('sample_data_format_error'));
                 return;
               }
             }}
           >
-            <Button color="brand">提取数据结构</Button>
+            <Button color="brand">{I18n.t('extract_data_structure')}</Button>
           </Popconfirm>
         </div>
       }

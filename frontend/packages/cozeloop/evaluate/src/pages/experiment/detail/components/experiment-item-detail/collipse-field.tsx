@@ -1,6 +1,7 @@
 import { useState, type PropsWithChildren } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
 import { Collapsible } from '@coze-arch/coze-design';
 
@@ -23,7 +24,9 @@ export function CollapsibleField({
             setIsOpen(!isOpen);
           }}
         >
-          <span className="mr-2 text-[13px]">{isOpen ? '收起' : '展开'}</span>
+          <span className="mr-2 text-[13px]">
+            {isOpen ? I18n.t('collapse') : I18n.t('expand')}
+          </span>
           <IconCozArrowDown
             className={classNames('text-[16px] transition-transform', {
               'rotate-180': isOpen,

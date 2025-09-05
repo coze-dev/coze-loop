@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 import { isArray } from 'lodash-es';
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
@@ -118,7 +119,7 @@ export function EvaluateSetSelect(
 
   return (
     <BaseSearchSelect
-      placeholder={'请选择评测集'}
+      placeholder={I18n.t('select_evaluation_set')}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       filter
       remote
@@ -126,6 +127,7 @@ export function EvaluateSetSelect(
       onSearch={handleSearch.run}
       showRefreshBtn={true}
       onClickRefresh={() => service.run()}
+      emptyContent={I18n.t('no_data_yet')}
       outerBottomSlot={
         !props.disableAddEvalSet ? (
           <div
@@ -136,7 +138,7 @@ export function EvaluateSetSelect(
           >
             <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
             <div className="text-sm font-medium text-brand-9">
-              {'新建评测集'}
+              {I18n.t('create_evaluation_set')}
             </div>
           </div>
         ) : null

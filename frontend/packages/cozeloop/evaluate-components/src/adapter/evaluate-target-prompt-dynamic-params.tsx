@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { BasicModelConfigEditor } from '@cozeloop/prompt-components';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BasicCard } from '@cozeloop/components';
 import { useModelList, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type PromptRuntimeParam } from '@cozeloop/api-schema/evaluation';
@@ -47,7 +48,7 @@ export function EvaluateTargetPromptDynamicParams(
       className="mt-4"
       title={
         <div>
-          覆盖 Prompt 模型配置{' '}
+          {I18n.t('dataset_ai_annotation_prompt_config_override')}{' '}
           <Switch
             size="small"
             checked={!!props.value}
@@ -77,6 +78,7 @@ export function EvaluateTargetPromptDynamicParams(
               json_value: JSON.stringify({ model_config: v }),
             });
           }}
+          onModelChange={props.onModelChange}
           models={model.data?.models}
           modelSelectProps={{
             className: 'w-full',

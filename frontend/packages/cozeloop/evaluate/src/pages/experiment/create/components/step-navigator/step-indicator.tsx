@@ -1,6 +1,7 @@
 import React from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWithDisabled } from '@cozeloop/components';
 import {
   IconCozCheckMarkFill,
@@ -59,7 +60,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
               theme="dark"
             >
               <Tag color="grey" suffixIcon={<IconCozQuestionMarkCircle />}>
-                可选
+                {I18n.t('optional')}
               </Tag>
             </TooltipWithDisabled>
           ) : null}

@@ -1,8 +1,8 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
   useGlobalEvalConfig,
 } from '@cozeloop/evaluate-components';
-import { Tooltip } from '@coze-arch/coze-design';
 
 import { CellContentRender } from '@/utils/experiment';
 import { type DatasetCellContent } from '@/types';
@@ -28,6 +28,7 @@ export default function ActualOutputWithTrace({
   className?: string;
 }) {
   const { traceEvalTargetPlatformType } = useGlobalEvalConfig();
+
   return (
     <div
       className="group flex leading-5 w-full min-h-[20px] overflow-hidden"
@@ -48,17 +49,19 @@ export default function ActualOutputWithTrace({
       />
 
       {enableTrace && traceID ? (
-        <Tooltip theme="dark" content="查看实际输出的trace">
-          <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
-            <TraceTrigger
-              className="ml-1 invisible group-hover:visible"
-              traceID={traceID ?? ''}
-              platformType={traceEvalTargetPlatformType}
-              startTime={startTime}
-              endTime={endTime}
-            />
-          </div>
-        </Tooltip>
+        <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
+          <TraceTrigger
+            className="ml-1 invisible group-hover:visible"
+            traceID={traceID ?? ''}
+            platformType={traceEvalTargetPlatformType}
+            startTime={startTime}
+            endTime={endTime}
+            tooltipProps={{
+              content: I18n.t('view_actual_output_trace'),
+              theme: 'dark',
+            }}
+          />
+        </div>
       ) : null}
     </div>
   );

@@ -1,4 +1,5 @@
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozLongArrowTopRight } from '@coze-arch/coze-design/icons';
 import { Tooltip, Button } from '@coze-arch/coze-design';
 
@@ -10,7 +11,7 @@ export function OpenDetailButton({
   className?: string;
 }) {
   return (
-    <Tooltip theme="dark" content="查看详情">
+    <Tooltip theme="dark" content={I18n.t('detail')}>
       <Button
         onClick={e => {
           e.stopPropagation();

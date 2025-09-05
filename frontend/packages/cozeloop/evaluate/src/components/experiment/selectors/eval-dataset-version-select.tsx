@@ -1,4 +1,5 @@
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
@@ -26,10 +27,10 @@ export default function EvalDatasetVersionSelect(
 
   return (
     <Select
-      placeholder="请选择评测集版本"
+      placeholder={I18n.t('please_select', { field: '' })}
       filter={true}
       searchPosition="dropdown"
-      searchPlaceholder="请输入"
+      searchPlaceholder={I18n.t('please_input', { field: '' })}
       remote
       {...props}
       loading={service.loading}

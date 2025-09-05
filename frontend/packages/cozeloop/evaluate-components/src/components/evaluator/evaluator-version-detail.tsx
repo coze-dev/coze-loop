@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type EvaluatorVersion } from '@cozeloop/api-schema/evaluation';
 import { IconCozArrowRight, IconCozEmpty } from '@coze-arch/coze-design/icons';
 import { EmptyState, Loading } from '@coze-arch/coze-design';
@@ -30,7 +31,7 @@ export function EvaluatorVersionDetail({
         )}
         onClick={() => setOpen(pre => !pre)}
       >
-        {'Prompt 详情'}
+        {I18n.t('prompt_details')}
         <IconCozArrowRight
           className={classNames(
             'h-4 w-4 ml-2 coz-fg-plus transition-transform',
@@ -45,7 +46,7 @@ export function EvaluatorVersionDetail({
             <Loading
               className="!w-full"
               size="large"
-              label="正在加载 Prompt 详情"
+              label={I18n.t('loading_prompt_detail')}
               loading={true}
             />
           </div>
@@ -54,9 +55,9 @@ export function EvaluatorVersionDetail({
             <EmptyState
               size="default"
               icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
-              title="暂无数据"
+              title={I18n.t('no_data')}
               className={emptyStyles['empty-state']}
-              // description="请选择评估器和版本号后再查看"
+              // description={I18n.t('select_evaluator_and_version_number_to_view')}
             />
           </div>
         ) : (

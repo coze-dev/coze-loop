@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type prompt as promptDomain } from '@cozeloop/api-schema/prompt';
-import { type Message } from '@cozeloop/api-schema/evaluation';
 import { IconCozArrowRight, IconCozEmpty } from '@coze-arch/coze-design/icons';
 import { EmptyState, Loading } from '@coze-arch/coze-design';
 
+import { promptMessageToEvalMessage } from '@/utils/parse-prompt-variable';
 import { PromptVariablesList } from '@/components/evaluator/prompt-variables-list';
 import { PromptMessage } from '@/components/evaluator/prompt-message';
 import { EvaluateModelConfigEditor } from '@/components/evaluate-model-config-editor';
@@ -24,26 +25,12 @@ export function EvalTargetPromptDetail(props: {
 
   const messageList = useMemo(() => {
     if (promptTemplate?.messages) {
-      return promptTemplate?.messages?.map(m => {
-        const { role, content } = m;
-        const newM: Message = {
-          role: role as Message['role'],
-          content: {
-            text: content,
-          },
-        };
-        return newM;
-      });
+      return promptTemplate?.messages?.map(promptMessageToEvalMessage);
     }
     return [];
   }, [promptTemplate]);
 
-  const variableList = useMemo(() => {
-    if (promptTemplate?.variable_defs) {
-      return promptTemplate?.variable_defs?.map(v => v.key || '');
-    }
-    return [];
-  }, [promptDetail]);
+  const variableList = promptTemplate?.variable_defs;
 
   if (loading) {
     return (
@@ -51,7 +38,7 @@ export function EvalTargetPromptDetail(props: {
         <Loading
           className="!w-full"
           size="large"
-          label="正在加载 Prompt 详情"
+          label={I18n.t('loading_prompt_detail')}
           loading={true}
         />
       </div>
@@ -64,7 +51,7 @@ export function EvalTargetPromptDetail(props: {
         className="h-5 flex flex-row items-center cursor-pointer text-sm coz-fg-primary font-semibold"
         onClick={() => setOpen(pre => !pre)}
       >
-        {'Prompt 详情'}
+        {I18n.t('prompt_details')}
         <IconCozArrowRight
           className={classNames(
             'h-4 w-4 ml-2 coz-fg-plus transition-transform',
@@ -79,9 +66,11 @@ export function EvalTargetPromptDetail(props: {
             <EmptyState
               size="default"
               icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
-              title="暂无数据"
+              title={I18n.t('no_data')}
               className={emptyStyles['empty-state']}
-              description="请选择 Prompt key 和版本号后再查看"
+              description={I18n.t(
+                'cozeloop_open_evaluate_select_prompt_key_version_before_view',
+              )}
             />
           </div>
         ) : (
@@ -98,7 +87,7 @@ export function EvalTargetPromptDetail(props: {
               <PromptMessage className="mb-2" key={idx} message={m} />
             ))}
 
-            {variableList.length ? (
+            {variableList?.length ? (
               <PromptVariablesList variables={variableList} />
             ) : null}
           </div>

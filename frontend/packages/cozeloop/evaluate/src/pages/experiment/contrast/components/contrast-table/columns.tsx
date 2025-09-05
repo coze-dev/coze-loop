@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
@@ -23,19 +24,23 @@ function ExperimentColumnHeader({
   return (
     <div className="flex items-center">
       <TypographyText>
-        {index === 0 ? '基准组' : `实验组 ${index}`} - {experiment.name}
+        {index === 0
+          ? I18n.t('benchmark_group')
+          : I18n.t('experimental_group_index')}{' '}
+        + {index} - {experiment.name}
       </TypographyText>
       {index !== 0 && enableDelete ? (
         <Popconfirm
-          title="移除实验组"
+          title={I18n.t('remove_experimental_group')}
           content={
             <>
-              确认要移除 <span className="font-medium">{experiment.name}</span>{' '}
-              吗？
+              {I18n.t('confirm_removal')}
+              <span className="font-medium">{experiment.name}</span>
+              {I18n.t('confirm_placeholder_question')}
             </>
           }
-          okText="移除"
-          cancelText="取消"
+          okText={I18n.t('remove')}
+          cancelText={I18n.t('cancel')}
           showArrow={true}
           okButtonProps={{ color: 'red' }}
           onConfirm={onDelete}

@@ -93,6 +93,7 @@ export const convertDataTypeToSchema = (
   }
   return {
     ...data,
+    content_type: ContentType.Text,
     text_schema: textSchema,
   };
 };

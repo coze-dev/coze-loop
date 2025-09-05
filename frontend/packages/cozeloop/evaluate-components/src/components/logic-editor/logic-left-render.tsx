@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type LeftRenderProps } from '@cozeloop/components';
 import { Cascader, Select } from '@coze-arch/coze-design';
 
@@ -29,7 +30,7 @@ export default function LeftRender(
     return (
       <div className="w-56">
         <Cascader
-          placeholder="请选择"
+          placeholder={I18n.t('please_select', { field: '' })}
           value={expr.left}
           className="w-full"
           disabled={disabled}
@@ -67,7 +68,7 @@ export default function LeftRender(
   return (
     <div className="w-40">
       <Select
-        placeholder="请选择"
+        placeholder={I18n.t('please_select', { field: '' })}
         value={expr.left}
         className="w-full"
         disabled={disabled}

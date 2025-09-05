@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
@@ -46,7 +47,7 @@ const PromptEvalTargetSelect = ({
     <>
       <BaseSearchSelect
         className={classNames(props.className)}
-        emptyContent="暂无数据"
+        emptyContent={I18n.t('no_data')}
         loading={service.loading}
         onSearch={handleSearch.run}
         showRefreshBtn={true}
@@ -61,7 +62,7 @@ const PromptEvalTargetSelect = ({
             >
               <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
               <div className="text-sm font-medium text-brand-9">
-                {'新建 Prompt'}
+                {I18n.t('create_new_prompt')}
               </div>
             </div>
           ) : null

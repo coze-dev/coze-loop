@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import cs from 'classnames';
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { type Version } from '@cozeloop/components';
 import { TableColActions, TableWithPagination } from '@cozeloop/components';
@@ -91,15 +92,15 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
   const handleDeleteItem = (item: EvaluationSetItemTableData) => {
     Modal.error({
       width: 420,
-      title: '删除数据项',
+      title: I18n.t('delete_data_items'),
       type: 'dialog',
       content: (
         <Typography.Text className="break-all">
-          确定删除数据项
+          {I18n.t('confirm_delete_data_items')}
           <Typography.Text className="!font-medium">
             #{(item.item_id as string)?.slice(-5)}
           </Typography.Text>
-          吗？此修改将不可逆。
+          {I18n.t('data_engine_this_change_irreversible')}
         </Typography.Text>
       ),
       autoLoading: true,
@@ -112,17 +113,17 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         refreshDatasetDetail();
       },
       showCancelButton: true,
-      cancelText: '取消',
-      okText: '删除',
+      cancelText: I18n.t('global_btn_cancel'),
+      okText: I18n.t('space_member_role_type_del_btn'),
     });
   };
   const columnsItems: ColumnProps[] = [
     ...(batchSelectVisible ? [selectColumn] : []),
     ...(columns?.filter(column => !!column.checked) || []),
     {
-      title: '更新时间',
+      title: I18n.t('prompt_prompt_update_time'),
       key: 'updated_at',
-      displayName: '更新时间',
+      displayName: I18n.t('prompt_prompt_update_time'),
       sorter: true,
       width: 180,
       dataIndex: 'base_info.updated_at',
@@ -136,9 +137,9 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         ),
     },
     {
-      title: '创建时间',
+      title: I18n.t('prompt_prompt_create_time'),
       key: 'created_at',
-      displayName: '创建时间',
+      displayName: I18n.t('prompt_prompt_create_time'),
       width: 180,
       dataIndex: 'base_info.created_at',
       sorter: true,
@@ -157,7 +158,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
     ...(isDraftVersion
       ? ([
           {
-            title: '操作',
+            title: I18n.t('operation'),
             key: 'action',
             width: 140,
             fixed: 'right',
@@ -166,7 +167,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
               <TableColActions
                 actions={[
                   {
-                    label: '编辑',
+                    label: I18n.t('space_basic_edit_btn'),
                     onClick: () => {
                       setSelectedItem({
                         item: row,
@@ -177,7 +178,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
                   },
 
                   {
-                    label: '查看',
+                    label: I18n.t('view'),
                     onClick: () => {
                       setSelectedItem({
                         item: row,
@@ -187,7 +188,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
                     },
                   },
                   {
-                    label: '删除',
+                    label: I18n.t('delete'),
                     type: 'danger',
                     disabled: guard.data.readonly,
                     onClick: () => {
@@ -245,8 +246,10 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusAdd />}
-              title="暂无数据"
-              description={'点击右上角添加数据进行添加'}
+              title={I18n.t('no_data')}
+              description={I18n.t(
+                'cozeloop_open_evaluate_click_top_right_to_add_data',
+              )}
             />
           }
           header={

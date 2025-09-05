@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   downloadExptExportFile,
   formateTime,
@@ -37,14 +38,14 @@ function ExportTaskRowActions({
 
   const popoverText = useMemo(() => {
     if (inProgress) {
-      return '导出进行中，请等导出结束后再尝试';
+      return I18n.t('export_in_progress_wait');
     }
     if (isFailed) {
-      return '导出失败，请重新导出';
+      return I18n.t('export_failed_retry');
     }
     // 过期
     if (isExpired) {
-      return '导出文件最多存储100天，已过期';
+      return I18n.t('export_file_expired_100_days_limit');
     }
     return null;
   }, [inProgress, isExpired, isFailed]);
@@ -52,7 +53,7 @@ function ExportTaskRowActions({
   const actionsArr = [
     // 下载操作 - 只有成功状态才可下载
     {
-      label: '下载',
+      label: I18n.t('download'),
       disabledTooltip: popoverText ?? undefined,
       disabled: inProgress || isExpired || isFailed,
       onClick: async () => {
@@ -90,8 +91,8 @@ function ExportTaskRowActions({
 export function getExportExperimentColumns() {
   const newColumns: ColumnItem[] = [
     {
-      title: '导出任务 ID',
-      value: '导出任务 ID',
+      title: I18n.t('export_task_id'),
+      value: I18n.t('export_task_id'),
       disableColumnManage: true,
       dataIndex: 'export_id',
       key: 'export_id',
@@ -103,8 +104,8 @@ export function getExportExperimentColumns() {
       render: (text: string) => <TypographyText>{text}</TypographyText>,
     },
     {
-      title: '导出状态',
-      value: '导出状态',
+      title: I18n.t('export_status'),
+      value: I18n.t('export_status'),
       disableColumnManage: true,
       dataIndex: 'csv_export_status',
       key: 'csv_export_status',
@@ -115,8 +116,8 @@ export function getExportExperimentColumns() {
       ),
     },
     {
-      title: '导出格式',
-      value: '导出格式',
+      title: I18n.t('export_format'),
+      value: I18n.t('export_format'),
       dataIndex: 'export_type',
       key: 'export_type',
       width: 100,
@@ -124,8 +125,8 @@ export function getExportExperimentColumns() {
       render: () => <TypographyText>csv</TypographyText>,
     },
     {
-      title: '操作人',
-      value: '操作人',
+      title: I18n.t('operator'),
+      value: I18n.t('application_operator'),
       dataIndex: 'base_info',
       key: 'base_info',
       width: 220,
@@ -138,8 +139,8 @@ export function getExportExperimentColumns() {
       ),
     },
     {
-      title: '开始时间',
-      value: '开始时间',
+      title: I18n.t('start_time'),
+      value: I18n.t('start_time'),
       dataIndex: 'start_time',
       key: 'start_time',
       width: 200,
@@ -148,8 +149,8 @@ export function getExportExperimentColumns() {
       ),
     },
     {
-      title: '完成时间',
-      value: '完成时间',
+      title: I18n.t('completion_time'),
+      value: I18n.t('data_annotate_end_time'),
       dataIndex: 'end_time',
       key: 'end_time',
       width: 200,
@@ -176,8 +177,10 @@ export function useExportExperimentListColumns({
     const newColumns = getExportExperimentColumns();
 
     const actionsColumn: ColumnItem = {
-      title: () => <div style={{ padding: '5px 20px' }}>操作</div>,
-      value: '操作',
+      title: () => (
+        <div style={{ padding: '5px 20px' }}>{I18n.t('operation')}</div>
+      ),
+      value: I18n.t('operation'),
       disableColumnManage: true,
       dataIndex: 'action',
       key: 'action',

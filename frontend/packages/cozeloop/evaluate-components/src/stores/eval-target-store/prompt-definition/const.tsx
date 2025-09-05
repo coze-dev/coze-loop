@@ -7,12 +7,17 @@ import {
 } from '../../../types/evaluate-target';
 import { PromptEvalTargetSelect } from '../../../components/selectors/evaluate-target';
 import PromptTargetPreview from './prompt-target-preview';
+import { PromptFieldMappingPreview } from './prompt-field-mapping-preview';
 import { PromptEvalTargetView } from './prompt-eval-target-view';
 import PluginEvalTargetForm from './plugin-eval-target-form';
 
 const getEvalTargetValidFields = (values: CreateExperimentValues) => {
-  const { evalTargetMapping = {} } = values;
+  const { evalTargetMapping = {}, target_runtime_param } = values;
   const result = ['evalTarget', 'evalTargetVersion', 'evalTargetMapping'];
+  // 动态参数校验
+  if (target_runtime_param) {
+    result.push('target_runtime_param');
+  }
 
   Object.keys(evalTargetMapping).forEach(key => {
     // evalTargetMapping.input
@@ -31,6 +36,7 @@ export const promptEvalTargetDefinitionPayload: EvalTargetDefinition = {
   },
   evalTargetFormSlotContent: PluginEvalTargetForm,
   evalTargetView: PromptEvalTargetView,
+  viewSubmitFieldMappingPreview: PromptFieldMappingPreview,
   targetInfo: {
     color: 'primary',
     tagColor: 'primary',

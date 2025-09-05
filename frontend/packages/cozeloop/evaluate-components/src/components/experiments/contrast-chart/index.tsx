@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isEqual } from 'lodash-es';
 import { useRequest } from 'ahooks';
 import { type ISpec } from '@visactor/vchart';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type Experiment,
   type Evaluator,
@@ -190,8 +191,8 @@ function EvaluatorChart({
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusAdd />}
-              title="暂无数据"
-              description="实验完成后，再刷新重试"
+              title={I18n.t('no_data')}
+              description={I18n.t('refresh_after_experiment')}
             />
           ) : (
             <Chart
@@ -356,8 +357,8 @@ export function ExperimentContrastChart({
       {showActions ? (
         <div className="flex justify-end mb-3 gap-2">
           <EvaluatorSelectLocalData
-            prefix="指标"
-            placeholder="请选择指标"
+            prefix={I18n.t('indicator')}
+            placeholder={I18n.t('please_select_an_indicator')}
             multiple={true}
             maxTagCount={1}
             style={{ minWidth: 200 }}
