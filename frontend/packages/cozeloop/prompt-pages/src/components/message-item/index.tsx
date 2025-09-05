@@ -1,20 +1,20 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
 
 /* eslint-disable complexity */
 
-import { useMemo, useState } from 'react';
+import { type SetStateAction, useMemo, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 import classNames from 'classnames';
 import { formateMsToSeconds } from '@cozeloop/toolkit';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { useUserInfo } from '@cozeloop/biz-hooks-adapter';
+import { MessageToolBtns } from '@cozeloop/biz-components-adapter';
 import {
   type ContentPart,
   ContentType,
   type DebugToolCall,
+  type Message,
   type MockTool,
   type ModelConfig,
   Role,
@@ -34,13 +34,14 @@ import {
 } from '@coze-arch/coze-design';
 import { MdBoxLazy } from '@coze-arch/bot-md-box-adapter/lazy';
 
+import { usePromptStore } from '@/store/use-prompt-store';
 import {
   usePromptMockDataStore,
   type DebugMessage,
 } from '@/store/use-mockdata-store';
+import { useBasicStore } from '@/store/use-basic-store';
 import IconLogo from '@/assets/mini-logo.svg';
 
-import { ToolBtns } from './tool-btns';
 import { FunctionList } from './function-list';
 
 import styles from './index.module.less';
@@ -62,6 +63,7 @@ interface MessageItemProps {
     hideCancel?: boolean;
     hideOk?: boolean;
     hideTrace?: boolean;
+    hideOptimize?: boolean;
   };
   modelConfig?: ModelConfig;
   updateType?: (type: Role) => void;
@@ -75,6 +77,10 @@ interface MessageItemProps {
   tools?: MockTool[];
   variables?: VariableVal[];
   stepSendMessage?: () => void;
+  messageList?: Array<Message & { key?: string }>;
+  setMessageList?: SetStateAction<
+    Array<Message & { key?: string }> | undefined
+  >;
 }
 
 export function MessageItem({
@@ -91,9 +97,23 @@ export function MessageItem({
   rerunLLM,
   canReRun,
   stepSendMessage,
+  messageList,
+  setMessageList,
+  variables,
+  btnConfig,
 }: MessageItemProps) {
   const [reasoningExpand, setReasoningExpand] = useState(true);
   const userInfo = useUserInfo();
+
+  const { setDebugId } = useBasicStore(
+    useShallow(state => ({ setDebugId: state.setDebugId })),
+  );
+
+  const { promptInfo } = usePromptStore(
+    useShallow(state => ({
+      promptInfo: state.promptInfo,
+    })),
+  );
 
   const { compareConfig, userDebugConfig } = usePromptMockDataStore(
     useShallow(state => ({
@@ -166,6 +186,8 @@ export function MessageItem({
     }
   }, [role, userInfo?.avatar_url]);
 
+  const optimizeSystemPrompt = messageList?.find(it => it.role === Role.System);
+
   return (
     <div className={styles['message-item']}>
       {avatarDom}
@@ -203,7 +225,7 @@ export function MessageItem({
                   />
                 }
               >
-                {content ? I18n.t('deeply_thought') : I18n.t('deep_thinking')}
+                {content ? '已深度思考' : '深度思考中'}
               </Tag>
               {reasoningExpand ? (
                 <MdBoxLazy
@@ -268,17 +290,16 @@ export function MessageItem({
                 type="tertiary"
                 className="flex-1 flex-shrink-0"
               >
-                {I18n.t('time_consumed')}: {formateMsToSeconds(cost_ms)} |
-                Tokens:
+                耗时: {formateMsToSeconds(cost_ms)} | Tokens:
                 <Tooltip
                   theme="dark"
                   content={
                     <Space vertical align="start">
                       <Typography.Text style={{ color: '#fff' }}>
-                        {I18n.t('input')} Tokens: {input_tokens}
+                        输入 Tokens: {input_tokens}
                       </Typography.Text>
                       <Typography.Text style={{ color: '#fff' }}>
-                        {I18n.t('output')} Tokens: {output_tokens}
+                        输出 Tokens: {output_tokens}
                       </Typography.Text>
                     </Space>
                   }
@@ -291,15 +312,16 @@ export function MessageItem({
                     } Tokens`}
                   </span>
                 </Tooltip>
-                {`| ${I18n.t('num_words', { num: content.length })}`}
+                {`| 字数: ${content.length}`}
               </Typography.Text>
             ) : null}
 
             {!streaming ? (
-              <ToolBtns
+              <MessageToolBtns
                 item={item}
+                lastItem={lastItem}
                 isMarkdown={isMarkdown}
-                btnConfig={{ hideOptimize: !isAI }}
+                btnConfig={{ hideOptimize: !isAI, ...btnConfig }}
                 setIsMarkdown={v => setIsMarkdown(v)}
                 deleteChat={deleteChat}
                 updateEditable={updateEditable}
@@ -343,12 +365,18 @@ export function MessageItem({
                 }}
                 rerunLLM={rerunLLM}
                 canReRun={canReRun}
+                canOptimize={isAI}
+                promptInfo={promptInfo}
+                variables={variables}
+                optimizeSystemPrompt={optimizeSystemPrompt}
+                setMessageList={setMessageList}
+                setDebugId={setDebugId}
               />
             ) : null}
             {stepDebuggingTrace && stepDebugger && !isCompare ? (
               <div className="w-full text-right">
                 <Button color="brand" size="mini" onClick={stepSendMessage}>
-                  {I18n.t('confirm')}
+                  确认
                 </Button>
               </div>
             ) : null}

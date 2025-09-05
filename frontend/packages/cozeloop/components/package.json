@@ -25,7 +25,8 @@
     "monaco-editor": "^0.45.0",
     "nanoid": "^4.0.2",
     "react": "~18.2.0",
-    "react-sortable-hoc": "2.0.0"
+    "react-sortable-hoc": "2.0.0",
+    "sortablejs": "~1.15.2"
   },
   "devDependencies": {
     "@coze-arch/bot-typings": "workspace:*",
@@ -46,4 +47,3 @@
   },
   "peerDependencies": {}
 }
-

@@ -106,8 +106,9 @@ export interface ContentPart {
   image_url?: ImageURL,
 }
 export enum ContentType {
-  Text = "text",
-  ImageURL = "image_url",
+  Text = 'text',
+  ImageURL = 'image_url',
+  MultiPartVariable = 'multi_part',
 }
 export interface ImageURL {
   uri?: string,

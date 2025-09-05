@@ -1,10 +1,10 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type Dispatch, type SetStateAction } from 'react';
 
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import { produce } from 'immer';
+
+import { MessageListGroupType, MessageListRoundType } from '@/consts';
 interface BasicState {
   readonly?: boolean;
   saveLock?: boolean;
@@ -15,6 +15,9 @@ interface BasicState {
   debugId?: Int64;
   executeHistoryVisible?: boolean;
   optimizeEditorKey: string;
+  roundType?: MessageListRoundType;
+  groupType?: MessageListGroupType;
+  executeDisabled?: boolean;
 }
 
 type PromptActionType<S> = Dispatch<SetStateAction<S>>;
@@ -27,6 +30,9 @@ interface BasicAction {
   setDebugId: PromptActionType<Int64 | undefined>;
   setExecuteHistoryVisible: PromptActionType<boolean | undefined>;
   setSaveLock: PromptActionType<boolean | undefined>;
+  setRoundType: PromptActionType<MessageListRoundType | undefined>;
+  setGroupType: PromptActionType<MessageListGroupType | undefined>;
+  setExecuteDisabled: PromptActionType<boolean | undefined>;
   clearStore: () => void;
 }
 
@@ -91,6 +97,29 @@ export const useBasicStore = create<BasicState & BasicAction>()((set, get) => ({
         state.saveLock = val instanceof Function ? val(get().saveLock) : val;
       }),
     ),
+  roundType: MessageListRoundType.Multi,
+  setRoundType: (val: SetStateAction<MessageListRoundType | undefined>) => {
+    set(
+      produce((state: BasicState) => {
+        state.roundType = val instanceof Function ? val(get().roundType) : val;
+      }),
+    );
+  },
+  groupType: MessageListGroupType.Single,
+  setGroupType: (val: SetStateAction<MessageListGroupType | undefined>) =>
+    set(
+      produce((state: BasicState) => {
+        state.groupType = val instanceof Function ? val(get().groupType) : val;
+      }),
+    ),
+  executeDisabled: false,
+  setExecuteDisabled: (val: SetStateAction<boolean | undefined>) =>
+    set(
+      produce((state: BasicState) => {
+        state.executeDisabled =
+          val instanceof Function ? val(get().executeDisabled) : val;
+      }),
+    ),
   clearStore: () =>
     set({
       debugId: undefined,
@@ -101,5 +130,8 @@ export const useBasicStore = create<BasicState & BasicAction>()((set, get) => ({
       executeHistoryVisible: false,
       saveLock: true,
       optimizeEditorKey: nanoid(),
+      roundType: MessageListRoundType.Multi,
+      groupType: MessageListGroupType.Single,
+      executeDisabled: false,
     }),
 }));

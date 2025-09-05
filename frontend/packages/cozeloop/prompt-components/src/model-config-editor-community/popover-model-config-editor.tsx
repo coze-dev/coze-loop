@@ -1,11 +1,8 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useLatest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { type Model } from '@cozeloop/api-schema/llm-manage';
+import { type Scenario, type Model } from '@cozeloop/api-schema/llm-manage';
 import {
   Form,
   type FormApi,
@@ -16,8 +13,9 @@ import {
   Typography,
 } from '@coze-arch/coze-design';
 
+import { ModelSelectWithObject } from '@/model-select';
+
 import { convertModelToModelConfig, type ModelConfigWithName } from './utils';
-import { ModelSelectWithObject } from './model-select';
 import { ModelConfigFormCommunity } from './model-config-form-community';
 
 export interface ModelConfigPopoverProps {
@@ -30,6 +28,8 @@ export interface ModelConfigPopoverProps {
     wrapStyle?: CSSProperties;
   };
   defaultActiveFirstModel?: boolean;
+  /** 使用场景 */
+  scenario?: Scenario;
   onChange?: (value?: ModelConfigWithName) => void;
   renderDisplayContent?: (
     model?: Model,
@@ -117,7 +117,7 @@ export function PopoverModelConfigEditor({
       content={
         <div className="pt-1 px-4 pb-4" style={{ width: 496 }}>
           <Form<ModelConfigWithName>
-            labelWidth={120}
+            labelWidth={140}
             // 有值时value生效，否则 initValues 生效
             initValues={value || initValues}
             onValueChange={values => {
@@ -128,7 +128,7 @@ export function PopoverModelConfigEditor({
           >
             <Space className="py-0 flex">
               <Typography.Title heading={6} style={{ minWidth: 120 }}>
-                {I18n.t('model_selection')}
+                模型选择
               </Typography.Title>
               <ModelSelectWithObject
                 {...modelSelectProps}
@@ -153,7 +153,7 @@ export function PopoverModelConfigEditor({
               heading={6}
               style={{ marginTop: 12, marginBottom: 12 }}
             >
-              {I18n.t('parameter_config')}
+              参数配置
             </Typography.Title>
             <ModelConfigFormCommunity model={selectModel} />
           </Form>

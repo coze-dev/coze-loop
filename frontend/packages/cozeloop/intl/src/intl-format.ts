@@ -47,7 +47,7 @@ export class IntlFormat {
         ? messageFormat.format(fillMissingOptions(messageFormat, options))
         : res;
     } catch (e) {
-      console.error(e);
+      console.warn(`Failed to parse ${key}, ${e}`);
       return res;
     }
   }

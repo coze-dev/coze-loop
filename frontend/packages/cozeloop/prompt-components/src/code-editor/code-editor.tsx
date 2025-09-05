@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { createRenderer, option } from '@coze-editor/editor/react';
 import preset, { languages, themes } from '@coze-editor/editor/preset-code';
 import { shell } from '@coze-editor/editor/language-shell';
