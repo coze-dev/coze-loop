@@ -1,13 +1,17 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 /* eslint-disable max-params */
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
+import { nanoid } from 'nanoid';
+import classNames from 'classnames';
 import { getPlaceholderErrorContent } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
+import {
+  BenefitBanner,
+  BenefitBannerScene,
+} from '@cozeloop/biz-components-adapter';
 import { type Message, Role } from '@cozeloop/api-schema/prompt';
 import { Toast } from '@coze-arch/coze-design';
 
@@ -20,15 +24,22 @@ import {
 } from '@/store/use-mockdata-store';
 import { useBasicStore } from '@/store/use-basic-store';
 import { isResponding, useLLMStreamRun } from '@/hooks/use-llm-stream-run';
+import { MessageListGroupType } from '@/consts';
 
+import { GroupSelectContext } from '../send-msg-area/group-select';
 import { SendMsgArea } from '../send-msg-area';
-import { CompareMessageArea } from '../message-area';
+import { ChatSubArea, type ChatSubAreaRef } from '../message-area/sub-area';
+import {
+  CompareMessageArea,
+  type CompareMessageAreaRef,
+} from '../message-area';
 
 export function ExecuteArea() {
-  const { setStreaming, streaming } = useBasicStore(
+  const { setStreaming, streaming, groupType } = useBasicStore(
     useShallow(state => ({
       setStreaming: state.setStreaming,
       streaming: state.streaming,
+      groupType: state.groupType,
     })),
   );
   const { messageList, variables } = usePromptStore(
@@ -55,6 +66,14 @@ export function ExecuteArea() {
   );
 
   const stepDebugger = userDebugConfig?.single_step_debug;
+
+  const [showMultiGroupResult, setShowMultiGroupResult] = useState(false);
+  const isMultiGroup = groupType === MessageListGroupType.Multi;
+  const messageAreaRef = useRef<CompareMessageAreaRef>(null);
+  const [groupNum, setGroupNum] = useState(2);
+  const [array, setArray] = useState<Array<{ key: string }>>([]);
+  const textRunAreaRefs = useRef<ChatSubAreaRef[] | null[]>([]);
+  const [acceptKey, setAcceptKey] = useState<string>(nanoid());
 
   const {
     startStream,
@@ -107,7 +126,7 @@ export function ExecuteArea() {
     );
 
     if (historyHasEmpty) {
-      return Toast.error(I18n.t('historical_data_has_empty_content'));
+      return Toast.error('历史数据有空内容');
     }
 
     const placeholderHasError = messageList?.some(message => {
@@ -117,30 +136,40 @@ export function ExecuteArea() {
       return false;
     });
     if (placeholderHasError) {
-      return Toast.error(I18n.t('placeholder_var_error'));
+      return Toast.error('Placeholder 变量不存在或命名错误');
     }
 
     setHistoricMessage?.(history);
-    const newHistory = historicMessage
-      .slice(0, lastIndex - 1)
-      .map(it => ({
-        id: it.id,
-        role: it?.role,
-        content: it?.content,
-        parts: it?.parts,
-      }))
-      .filter(v => Boolean(v));
 
-    runLLM(
-      last
-        ? {
-            content: last.content,
-            role: last.role,
-            parts: last.parts,
-          }
-        : undefined,
-      newHistory,
-    );
+    if (isMultiGroup) {
+      setShowMultiGroupResult(true);
+      setTimeout(() => {
+        textRunAreaRefs.current.forEach((tref: ChatSubAreaRef | null) => {
+          tref?.sendMessage();
+        });
+      }, 300);
+    } else {
+      const newHistory = historicMessage
+        .slice(0, lastIndex - 1)
+        .map(it => ({
+          id: it.id,
+          role: it?.role,
+          content: it?.content,
+          parts: it?.parts,
+        }))
+        .filter(v => Boolean(v));
+
+      runLLM(
+        last
+          ? {
+              content: last.content,
+              role: last.role,
+              parts: last.parts,
+            }
+          : undefined,
+        newHistory,
+      );
+    }
   };
 
   const stopStreaming = () => {
@@ -164,7 +193,7 @@ export function ExecuteArea() {
 
   const sendMessage = (message?: Message) => {
     if (!messageList?.length && !(message?.content || message?.parts?.length)) {
-      Toast.error(I18n.t('add_prompt_tpl_or_input_question'));
+      Toast.error('请添加 Prompt 模板或输入提问内容');
       return;
     }
 
@@ -175,7 +204,7 @@ export function ExecuteArea() {
       return false;
     });
     if (placeholderHasError) {
-      return Toast.error(I18n.t('placeholder_var_execute_error'));
+      return Toast.error('Placeholder 变量不存在或命名错误');
     }
     const chatArray = historicMessage.filter(v => Boolean(v));
     const historyHasEmpty = Boolean(
@@ -188,9 +217,18 @@ export function ExecuteArea() {
         }),
     );
 
+    if (isMultiGroup && (message?.content || message?.parts?.length)) {
+      const hasResult = textRunAreaRefs.current.some(it => it?.hasResult);
+
+      if (hasResult) {
+        Toast.warning('请先采纳运行建议');
+        return;
+      }
+    }
+
     if (message?.content || message?.parts?.length) {
       if (historyHasEmpty) {
-        return Toast.error(I18n.t('historical_data_has_empty_content'));
+        return Toast.error('历史数据有空内容');
       }
 
       if (message) {
@@ -207,32 +245,63 @@ export function ExecuteArea() {
         ]);
       }
 
-      const history = chatArray.map(it => ({
-        role: it.role,
-        content: it.content,
-        parts: it.parts,
-      }));
-      runLLM(message, history);
-    } else if (chatArray.length) {
-      const last = chatArray?.[chatArray.length - 1];
-      if (last.role === Role.Assistant) {
-        rerunSendMessage();
+      if (isMultiGroup) {
+        setShowMultiGroupResult(true);
+        setTimeout(() => {
+          textRunAreaRefs.current.forEach((tref: ChatSubAreaRef | null) => {
+            tref?.sendMessage();
+          });
+        }, 300);
       } else {
-        if (historyHasEmpty && chatArray.length > 2) {
-          return Toast.error(I18n.t('historical_data_has_empty_content'));
-        }
-        const history = chatArray.slice(0, chatArray.length - 1).map(it => ({
+        const history = chatArray.map(it => ({
           role: it.role,
           content: it.content,
           parts: it.parts,
         }));
-        runLLM(
-          { content: last.content, role: last.role, parts: last.parts },
-          history,
-        );
+        runLLM(message, history);
+      }
+    } else if (chatArray.length) {
+      const last = chatArray?.[chatArray.length - 1];
+      if (isMultiGroup) {
+        setShowMultiGroupResult(true);
+        if (last?.role === Role.Assistant) {
+          const newHistory = chatArray.slice(0, chatArray.length - 1);
+          setHistoricMessage?.(newHistory);
+        }
+        setTimeout(() => {
+          textRunAreaRefs.current.forEach((tref: ChatSubAreaRef | null) => {
+            tref?.sendMessage();
+          });
+        }, 300);
+      } else {
+        if (last.role === Role.Assistant) {
+          rerunSendMessage();
+        } else {
+          if (historyHasEmpty && chatArray.length > 2) {
+            return Toast.error('历史数据有空内容');
+          }
+          const history = chatArray.slice(0, chatArray.length - 1).map(it => ({
+            role: it.role,
+            content: it.content,
+            parts: it.parts,
+          }));
+          runLLM(
+            { content: last.content, role: last.role, parts: last.parts },
+            history,
+          );
+        }
       }
     } else {
-      runLLM(undefined, []);
+      if (isMultiGroup) {
+        setShowMultiGroupResult(true);
+        setTimeout(() => {
+          textRunAreaRefs.current.forEach((tref: ChatSubAreaRef | null) => {
+            tref?.sendMessage();
+          });
+        }, 300);
+      } else {
+        runLLM(undefined, []);
+      }
     }
   };
 
@@ -278,12 +347,43 @@ export function ExecuteArea() {
     }
   }, [respondingStatus, stepDebuggingTrace]);
 
+  useEffect(() => {
+    setArray(arr => {
+      if (arr.length >= groupNum) {
+        return arr.slice(0, groupNum);
+      } else {
+        const newArr = new Array(groupNum - arr.length).fill(0);
+        const newArray = newArr.map(() => ({ key: messageId() }));
+        return arr.concat(newArray);
+      }
+    });
+  }, [groupNum]);
+
+  const streamingSendEnd = () => {
+    const hasStreaming = array.some(
+      (_it, index) => textRunAreaRefs.current?.[index]?.streaming,
+    );
+    setStreaming?.(hasStreaming);
+  };
+
+  const onClearHistory = () => {
+    textRunAreaRefs.current.forEach((tref: ChatSubAreaRef | null) => {
+      tref?.clearHistory();
+    });
+    setShowMultiGroupResult(false);
+  };
+
+  useEffect(() => {
+    setShowMultiGroupResult(false);
+  }, [groupType]);
+
   return (
     <div
-      className="flex-1 box-border flex flex-col overflow-hidden"
+      className="flex-1 box-border flex flex-col overflow-hidden gap-1"
       style={{ padding: '18px 0 24px 18px' }}
     >
       <CompareMessageArea
+        ref={messageAreaRef}
         streaming={streaming}
         streamingMessage={smoothExecuteResult}
         historicMessage={historicMessage}
@@ -294,12 +394,52 @@ export function ExecuteArea() {
         stepDebuggingTrace={stepDebuggingTrace}
         setToolCalls={setToolCalls}
         stepSendMessage={stepSendMessage}
+        isMultiGroup={isMultiGroup}
       />
-      <SendMsgArea
-        streaming={streaming}
-        onMessageSend={sendMessage}
-        stopStreaming={stopStreaming}
+
+      {isMultiGroup ? (
+        <div
+          className={classNames('flex gap-1 overflow-x-auto h-1/2 px-1 pt-1', {
+            '!h-0': !showMultiGroupResult,
+            'opacity-0': !showMultiGroupResult,
+          })}
+          key={acceptKey}
+        >
+          {array.map((item, index) => (
+            <ChatSubArea
+              className="!w-1/2 !min-w-[400px] flex-shrink-0"
+              key={item.key}
+              index={index}
+              times={groupNum}
+              ref={el => (textRunAreaRefs.current[index] = el)}
+              streamingSendEnd={streamingSendEnd}
+              acceptResult={message => {
+                if (message) {
+                  setHistoricMessage?.(prev => [...prev, message]);
+                  setArray(arr => arr.map(it => ({ ...it, key: messageId() })));
+                  messageAreaRef?.current?.scrollToBottom();
+                  setShowMultiGroupResult(false);
+                  setAcceptKey(nanoid());
+                }
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+      <BenefitBanner
+        closable={false}
+        className="mb-2 mr-6"
+        scene={BenefitBannerScene.PromptDetail}
       />
+      <GroupSelectContext.Provider value={{ groupNum, setGroupNum }}>
+        <SendMsgArea
+          streaming={streaming}
+          onMessageSend={sendMessage}
+          stopStreaming={stopStreaming}
+          onClearHistory={onClearHistory}
+          isSingleRound={showMultiGroupResult}
+        />
+      </GroupSelectContext.Provider>
     </div>
   );
 }

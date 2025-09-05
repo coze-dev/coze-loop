@@ -1,0 +1,29 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.tool-btns {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+
+  margin-left: -4px;
+
+
+  .icon-button {
+    background: transparent;
+
+    &:hover {
+      color: var(--semi-color-primary);
+    }
+
+    &-active{
+      background-color:rgba(var(--coze-bg-6), var(--coze-bg-6-alpha))!important;
+    }
+  }
+
+  :global {
+    .semi-button-disabled {
+      color: var(--semi-color-disabled-text) !important;
+    }
+  }
+}

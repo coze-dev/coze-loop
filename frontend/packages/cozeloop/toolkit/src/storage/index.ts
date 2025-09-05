@@ -9,19 +9,29 @@ interface CozeLoopStorageConfig {
 export class CozeLoopStorage {
   private field: string;
   private static userID: string;
+  private static spaceID: string;
 
   static setUserID(id: string) {
     CozeLoopStorage.userID = id;
+  }
+  static setSpaceID(id: string) {
+    CozeLoopStorage.spaceID = id;
   }
   constructor(config: CozeLoopStorageConfig) {
     this.field = config.field;
   }
 
   private makeKey(key: LocalStorageKeys) {
+    let result = `[${this.field}]`;
+
     if (cacheConfig[key]?.bindAccount) {
-      return `[${this.field}]:[${CozeLoopStorage.userID}]:${key}`;
+      result += `:[${CozeLoopStorage.userID}]`;
     }
-    return `[${this.field}]:${key}`;
+    if (cacheConfig[key]?.bindSpace) {
+      result += `:[${CozeLoopStorage.spaceID}]`;
+    }
+
+    return `${result}:${key}`;
   }
   setItem(key: LocalStorageKeys, value: string) {
     localStorage.setItem(`${this.makeKey(key)}`, value);

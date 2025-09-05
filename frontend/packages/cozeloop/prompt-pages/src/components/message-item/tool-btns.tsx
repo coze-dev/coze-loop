@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 
@@ -30,7 +28,6 @@ import { type DebugMessage } from '@/store/use-mockdata-store';
 import { useBasicStore } from '@/store/use-basic-store';
 
 import styles from './index.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface ToolBtnsProps {
   item: DebugMessage;
@@ -92,7 +89,7 @@ export function ToolBtns({
     parts?.find(it => it?.type === ContentType.Text)?.text || item.content;
 
   const copyBtn = !btnConfig?.hideCopy && (
-    <Tooltip content={I18n.t('Copy')} theme="dark">
+    <Tooltip content="复制" theme="dark">
       <IconButton
         className={styles['icon-button']}
         icon={<IconCozCopy fontSize={14} />}
@@ -117,7 +114,7 @@ export function ToolBtns({
   );
 
   const editBtn = !btnConfig?.hideEdit && (
-    <Tooltip content={I18n.t('edit')} theme="dark">
+    <Tooltip content="编辑" theme="dark">
       <IconButton
         className={styles['icon-button']}
         icon={<IconCozPencil fontSize={14} />}
@@ -131,10 +128,10 @@ export function ToolBtns({
     <Popconfirm
       trigger="custom"
       visible={showPopconfirm}
-      title={I18n.t('delete_message')}
-      content={I18n.t('confirm_delete_message')}
-      cancelText={I18n.t('Cancel')}
-      okText={I18n.t('delete')}
+      title="删除消息"
+      content="确认删除该消息吗？"
+      cancelText="取消"
+      okText="删除"
       okButtonProps={{ color: 'red' }}
       stopPropagation={true}
       onConfirm={() => {
@@ -152,7 +149,7 @@ export function ToolBtns({
         />
       ) : (
         <span>
-          <Tooltip content={I18n.t('delete')} theme="dark">
+          <Tooltip content="删除" theme="dark">
             <IconButton
               className={styles['icon-button']}
               icon={<IconCozTrashCan fontSize={14} />}
@@ -173,7 +170,7 @@ export function ToolBtns({
       className={styles['icon-button']}
       onClick={() => updateEditable?.(false)}
     >
-      {I18n.t('Cancel')}
+      取消
     </Button>
   );
 
@@ -184,12 +181,12 @@ export function ToolBtns({
       icon
       onClick={() => updateMessageItem?.({ ...item, isEdit: false })}
     >
-      {I18n.t('confirm')}
+      确认
     </Button>
   );
 
   const refreshBtn = !btnConfig?.hideRerun && (
-    <Tooltip content={I18n.t('rerun')} theme="dark">
+    <Tooltip content="重新运行" theme="dark">
       <IconButton
         className={styles['icon-button']}
         icon={<IconCozRefresh fontSize={14} />}

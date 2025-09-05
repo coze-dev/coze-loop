@@ -1,11 +1,10 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { type Dispatch, type SetStateAction } from 'react';
 
 import { subscribeWithSelector } from 'zustand/middleware';
 import { create } from 'zustand';
 import { produce } from 'immer';
 import {
+  TemplateType,
   type Prompt,
   type Message,
   type VariableDef,
@@ -28,6 +27,7 @@ export interface PromptState {
   modelConfig?: ModelConfig;
   tools?: Array<Tool>;
   currentModel?: Model;
+  templateType?: TemplateType;
 }
 
 export type PromptActionType<S> = Dispatch<SetStateAction<S>>;
@@ -42,6 +42,7 @@ interface PromptAction {
   setModelConfig: PromptActionType<ModelConfig | undefined>;
   setTools: PromptActionType<Array<Tool> | undefined>;
   setCurrentModel: PromptActionType<Model | undefined>;
+  setTemplateType: PromptActionType<TemplateType | undefined>;
   clearStore: () => void;
 }
 
@@ -65,17 +66,21 @@ export const usePromptStore = create<PromptState & PromptAction>()(
             val instanceof Function ? val(get().messageList) : val;
         }),
       );
-      const { messageList = [] } = get();
-      const { mockVariables = [], setMockVariables } =
-        usePromptMockDataStore.getState();
-      const variables = getInputVariablesFromPrompt(messageList);
-      const newMockVariables = getMockVariables(variables, mockVariables);
-      set(
-        produce(state => {
-          state.variables = variables;
-        }),
-      );
-      setMockVariables(newMockVariables);
+      const { messageList = [], templateType } = get();
+      const isNormal = templateType === TemplateType.Normal;
+
+      if (isNormal) {
+        const { mockVariables = [], setMockVariables } =
+          usePromptMockDataStore.getState();
+        const variables = getInputVariablesFromPrompt(messageList);
+        const newMockVariables = getMockVariables(variables, mockVariables);
+        set(
+          produce(state => {
+            state.variables = variables;
+          }),
+        );
+        setMockVariables(newMockVariables);
+      }
     },
     variables: [],
     setVariables: (val: SetStateAction<Array<VariableDef> | undefined>) =>
@@ -116,6 +121,14 @@ export const usePromptStore = create<PromptState & PromptAction>()(
             val instanceof Function ? val(get().currentModel) : val;
         }),
       ),
+    templateType: undefined,
+    setTemplateType: (val: SetStateAction<TemplateType | undefined>) =>
+      set(
+        produce((state: PromptState) => {
+          state.templateType =
+            val instanceof Function ? val(get().templateType) : val;
+        }),
+      ),
     clearStore: () =>
       set(
         produce((state: PromptState) => {
@@ -126,6 +139,7 @@ export const usePromptStore = create<PromptState & PromptAction>()(
           state.modelConfig = undefined;
           state.tools = [];
           state.currentModel = undefined;
+          state.templateType = undefined;
         }),
       ),
   })),
