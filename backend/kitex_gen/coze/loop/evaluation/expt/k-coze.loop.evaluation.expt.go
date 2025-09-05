@@ -16128,7 +16128,7 @@ func (p *GetExptInsightAnalysisRecordResponse) FastReadField1(buf []byte) (int, 
 	} else {
 		offset += l
 	}
-	p.ExptResultExportRecord = _field
+	p.ExptInsightAnalysisRecord = _field
 	return offset, nil
 }
 
@@ -16170,9 +16170,9 @@ func (p *GetExptInsightAnalysisRecordResponse) BLength() int {
 
 func (p *GetExptInsightAnalysisRecordResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetExptResultExportRecord() {
+	if p.IsSetExptInsightAnalysisRecord() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-		offset += p.ExptResultExportRecord.FastWriteNocopy(buf[offset:], w)
+		offset += p.ExptInsightAnalysisRecord.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -16186,9 +16186,9 @@ func (p *GetExptInsightAnalysisRecordResponse) fastWriteField255(buf []byte, w t
 
 func (p *GetExptInsightAnalysisRecordResponse) field1Length() int {
 	l := 0
-	if p.IsSetExptResultExportRecord() {
+	if p.IsSetExptInsightAnalysisRecord() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.ExptResultExportRecord.BLength()
+		l += p.ExptInsightAnalysisRecord.BLength()
 	}
 	return l
 }
@@ -16206,14 +16206,14 @@ func (p *GetExptInsightAnalysisRecordResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _exptResultExportRecord *expt.ExptInsightAnalysisRecord
-	if src.ExptResultExportRecord != nil {
-		_exptResultExportRecord = &expt.ExptInsightAnalysisRecord{}
-		if err := _exptResultExportRecord.DeepCopy(src.ExptResultExportRecord); err != nil {
+	var _exptInsightAnalysisRecord *expt.ExptInsightAnalysisRecord
+	if src.ExptInsightAnalysisRecord != nil {
+		_exptInsightAnalysisRecord = &expt.ExptInsightAnalysisRecord{}
+		if err := _exptInsightAnalysisRecord.DeepCopy(src.ExptInsightAnalysisRecord); err != nil {
 			return err
 		}
 	}
-	p.ExptResultExportRecord = _exptResultExportRecord
+	p.ExptInsightAnalysisRecord = _exptInsightAnalysisRecord
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
@@ -17865,6 +17865,20 @@ func (p *FeedbackExptInsightAnalysisReportRequest) FastRead(buf []byte) (int, er
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 200:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField200(buf[offset:])
@@ -18002,6 +18016,20 @@ func (p *FeedbackExptInsightAnalysisReportRequest) FastReadField5(buf []byte) (i
 	return offset, nil
 }
 
+func (p *FeedbackExptInsightAnalysisReportRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.CommentID = _field
+	return offset, nil
+}
+
 func (p *FeedbackExptInsightAnalysisReportRequest) FastReadField200(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewSession()
@@ -18036,6 +18064,7 @@ func (p *FeedbackExptInsightAnalysisReportRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
@@ -18053,6 +18082,7 @@ func (p *FeedbackExptInsightAnalysisReportRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field200Length()
 		l += p.field255Length()
 	}
@@ -18093,6 +18123,15 @@ func (p *FeedbackExptInsightAnalysisReportRequest) fastWriteField5(buf []byte, w
 	if p.IsSetComment() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Comment)
+	}
+	return offset
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCommentID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.CommentID)
 	}
 	return offset
 }
@@ -18152,6 +18191,15 @@ func (p *FeedbackExptInsightAnalysisReportRequest) field5Length() int {
 	return l
 }
 
+func (p *FeedbackExptInsightAnalysisReportRequest) field6Length() int {
+	l := 0
+	if p.IsSetCommentID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *FeedbackExptInsightAnalysisReportRequest) field200Length() int {
 	l := 0
 	if p.IsSetSession() {
@@ -18190,6 +18238,11 @@ func (p *FeedbackExptInsightAnalysisReportRequest) DeepCopy(s interface{}) error
 			tmp = kutils.StringDeepCopy(*src.Comment)
 		}
 		p.Comment = &tmp
+	}
+
+	if src.CommentID != nil {
+		tmp := *src.CommentID
+		p.CommentID = &tmp
 	}
 
 	var _session *common.Session

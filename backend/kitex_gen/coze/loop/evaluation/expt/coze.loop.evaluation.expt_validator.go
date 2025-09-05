@@ -576,9 +576,9 @@ func (p *GetExptInsightAnalysisRecordRequest) IsValid() error {
 	return nil
 }
 func (p *GetExptInsightAnalysisRecordResponse) IsValid() error {
-	if p.ExptResultExportRecord != nil {
-		if err := p.ExptResultExportRecord.IsValid(); err != nil {
-			return fmt.Errorf("field ExptResultExportRecord not valid, %w", err)
+	if p.ExptInsightAnalysisRecord != nil {
+		if err := p.ExptInsightAnalysisRecord.IsValid(); err != nil {
+			return fmt.Errorf("field ExptInsightAnalysisRecord not valid, %w", err)
 		}
 	}
 	if p.BaseResp != nil {

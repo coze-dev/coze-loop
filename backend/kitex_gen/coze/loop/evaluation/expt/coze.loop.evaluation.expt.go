@@ -21937,8 +21937,8 @@ func (p *GetExptInsightAnalysisRecordRequest) Field255DeepEqual(src *base.Base) 
 }
 
 type GetExptInsightAnalysisRecordResponse struct {
-	ExptResultExportRecord *expt.ExptInsightAnalysisRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptInsightAnalysisRecord" form:"expt_result_export_record" json:"expt_result_export_record,omitempty" query:"expt_result_export_record"`
-	BaseResp               *base.BaseResp                  `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExptInsightAnalysisRecord *expt.ExptInsightAnalysisRecord `thrift:"expt_insight_analysis_record,1,optional" frugal:"1,optional,expt.ExptInsightAnalysisRecord" form:"expt_insight_analysis_record" json:"expt_insight_analysis_record,omitempty" query:"expt_insight_analysis_record"`
+	BaseResp                  *base.BaseResp                  `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewGetExptInsightAnalysisRecordResponse() *GetExptInsightAnalysisRecordResponse {
@@ -21948,16 +21948,16 @@ func NewGetExptInsightAnalysisRecordResponse() *GetExptInsightAnalysisRecordResp
 func (p *GetExptInsightAnalysisRecordResponse) InitDefault() {
 }
 
-var GetExptInsightAnalysisRecordResponse_ExptResultExportRecord_DEFAULT *expt.ExptInsightAnalysisRecord
+var GetExptInsightAnalysisRecordResponse_ExptInsightAnalysisRecord_DEFAULT *expt.ExptInsightAnalysisRecord
 
-func (p *GetExptInsightAnalysisRecordResponse) GetExptResultExportRecord() (v *expt.ExptInsightAnalysisRecord) {
+func (p *GetExptInsightAnalysisRecordResponse) GetExptInsightAnalysisRecord() (v *expt.ExptInsightAnalysisRecord) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptResultExportRecord() {
-		return GetExptInsightAnalysisRecordResponse_ExptResultExportRecord_DEFAULT
+	if !p.IsSetExptInsightAnalysisRecord() {
+		return GetExptInsightAnalysisRecordResponse_ExptInsightAnalysisRecord_DEFAULT
 	}
-	return p.ExptResultExportRecord
+	return p.ExptInsightAnalysisRecord
 }
 
 var GetExptInsightAnalysisRecordResponse_BaseResp_DEFAULT *base.BaseResp
@@ -21971,20 +21971,20 @@ func (p *GetExptInsightAnalysisRecordResponse) GetBaseResp() (v *base.BaseResp) 
 	}
 	return p.BaseResp
 }
-func (p *GetExptInsightAnalysisRecordResponse) SetExptResultExportRecord(val *expt.ExptInsightAnalysisRecord) {
-	p.ExptResultExportRecord = val
+func (p *GetExptInsightAnalysisRecordResponse) SetExptInsightAnalysisRecord(val *expt.ExptInsightAnalysisRecord) {
+	p.ExptInsightAnalysisRecord = val
 }
 func (p *GetExptInsightAnalysisRecordResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_GetExptInsightAnalysisRecordResponse = map[int16]string{
-	1:   "expt_result_export_record",
+	1:   "expt_insight_analysis_record",
 	255: "BaseResp",
 }
 
-func (p *GetExptInsightAnalysisRecordResponse) IsSetExptResultExportRecord() bool {
-	return p.ExptResultExportRecord != nil
+func (p *GetExptInsightAnalysisRecordResponse) IsSetExptInsightAnalysisRecord() bool {
+	return p.ExptInsightAnalysisRecord != nil
 }
 
 func (p *GetExptInsightAnalysisRecordResponse) IsSetBaseResp() bool {
@@ -22059,7 +22059,7 @@ func (p *GetExptInsightAnalysisRecordResponse) ReadField1(iprot thrift.TProtocol
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.ExptResultExportRecord = _field
+	p.ExptInsightAnalysisRecord = _field
 	return nil
 }
 func (p *GetExptInsightAnalysisRecordResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -22104,11 +22104,11 @@ WriteStructEndError:
 }
 
 func (p *GetExptInsightAnalysisRecordResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptResultExportRecord() {
-		if err = oprot.WriteFieldBegin("expt_result_export_record", thrift.STRUCT, 1); err != nil {
+	if p.IsSetExptInsightAnalysisRecord() {
+		if err = oprot.WriteFieldBegin("expt_insight_analysis_record", thrift.STRUCT, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.ExptResultExportRecord.Write(oprot); err != nil {
+		if err := p.ExptInsightAnalysisRecord.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -22152,7 +22152,7 @@ func (p *GetExptInsightAnalysisRecordResponse) DeepEqual(ano *GetExptInsightAnal
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ExptResultExportRecord) {
+	if !p.Field1DeepEqual(ano.ExptInsightAnalysisRecord) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -22163,7 +22163,7 @@ func (p *GetExptInsightAnalysisRecordResponse) DeepEqual(ano *GetExptInsightAnal
 
 func (p *GetExptInsightAnalysisRecordResponse) Field1DeepEqual(src *expt.ExptInsightAnalysisRecord) bool {
 
-	if !p.ExptResultExportRecord.DeepEqual(src) {
+	if !p.ExptInsightAnalysisRecord.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -24292,11 +24292,13 @@ func (p *DeleteExptInsightAnalysisRecordResponse) Field255DeepEqual(src *base.Ba
 type FeedbackExptInsightAnalysisReportRequest struct {
 	WorkspaceID             int64                   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ExptID                  int64                   `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
-	InsightAnalysisRecordID int64                   `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"export_id" path:"export_id,required" `
+	InsightAnalysisRecordID int64                   `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
 	FeedbackActionType      expt.FeedbackActionType `thrift:"FeedbackActionType,4,required" frugal:"4,required,string" form:"FeedbackActionType,required" json:"FeedbackActionType,required" query:"FeedbackActionType,required"`
 	Comment                 *string                 `thrift:"comment,5,optional" frugal:"5,optional,string" form:"comment" json:"comment,omitempty" query:"comment"`
-	Session                 *common.Session         `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base                    *base.Base              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 用于更新comment
+	CommentID *int64          `thrift:"comment_id,6,optional" frugal:"6,optional,i64" json:"comment_id" form:"comment_id" `
+	Session   *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base      *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewFeedbackExptInsightAnalysisReportRequest() *FeedbackExptInsightAnalysisReportRequest {
@@ -24346,6 +24348,18 @@ func (p *FeedbackExptInsightAnalysisReportRequest) GetComment() (v string) {
 	return *p.Comment
 }
 
+var FeedbackExptInsightAnalysisReportRequest_CommentID_DEFAULT int64
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetCommentID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCommentID() {
+		return FeedbackExptInsightAnalysisReportRequest_CommentID_DEFAULT
+	}
+	return *p.CommentID
+}
+
 var FeedbackExptInsightAnalysisReportRequest_Session_DEFAULT *common.Session
 
 func (p *FeedbackExptInsightAnalysisReportRequest) GetSession() (v *common.Session) {
@@ -24384,6 +24398,9 @@ func (p *FeedbackExptInsightAnalysisReportRequest) SetFeedbackActionType(val exp
 func (p *FeedbackExptInsightAnalysisReportRequest) SetComment(val *string) {
 	p.Comment = val
 }
+func (p *FeedbackExptInsightAnalysisReportRequest) SetCommentID(val *int64) {
+	p.CommentID = val
+}
 func (p *FeedbackExptInsightAnalysisReportRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -24397,12 +24414,17 @@ var fieldIDToName_FeedbackExptInsightAnalysisReportRequest = map[int16]string{
 	3:   "insight_analysis_record_id",
 	4:   "FeedbackActionType",
 	5:   "comment",
+	6:   "comment_id",
 	200: "session",
 	255: "Base",
 }
 
 func (p *FeedbackExptInsightAnalysisReportRequest) IsSetComment() bool {
 	return p.Comment != nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) IsSetCommentID() bool {
+	return p.CommentID != nil
 }
 
 func (p *FeedbackExptInsightAnalysisReportRequest) IsSetSession() bool {
@@ -24474,6 +24496,14 @@ func (p *FeedbackExptInsightAnalysisReportRequest) Read(iprot thrift.TProtocol) 
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -24600,6 +24630,17 @@ func (p *FeedbackExptInsightAnalysisReportRequest) ReadField5(iprot thrift.TProt
 	p.Comment = _field
 	return nil
 }
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommentID = _field
+	return nil
+}
 func (p *FeedbackExptInsightAnalysisReportRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -24641,6 +24682,10 @@ func (p *FeedbackExptInsightAnalysisReportRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -24751,6 +24796,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommentID() {
+		if err = oprot.WriteFieldBegin("comment_id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CommentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *FeedbackExptInsightAnalysisReportRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -24817,6 +24880,9 @@ func (p *FeedbackExptInsightAnalysisReportRequest) DeepEqual(ano *FeedbackExptIn
 	if !p.Field5DeepEqual(ano.Comment) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.CommentID) {
+		return false
+	}
 	if !p.Field200DeepEqual(ano.Session) {
 		return false
 	}
@@ -24862,6 +24928,18 @@ func (p *FeedbackExptInsightAnalysisReportRequest) Field5DeepEqual(src *string) 
 		return false
 	}
 	if strings.Compare(*p.Comment, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.CommentID == src {
+		return true
+	} else if p.CommentID == nil || src == nil {
+		return false
+	}
+	if *p.CommentID != *src {
 		return false
 	}
 	return true
@@ -25055,7 +25133,7 @@ func (p *FeedbackExptInsightAnalysisReportResponse) Field255DeepEqual(src *base.
 type ListExptInsightAnalysisCommentRequest struct {
 	WorkspaceID             int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ExptID                  int64           `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
-	InsightAnalysisRecordID int64           `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"export_id" path:"export_id,required" `
+	InsightAnalysisRecordID int64           `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
 	PageNumber              *int32          `thrift:"page_number,4,optional" frugal:"4,optional,i32" form:"page_number" json:"page_number,omitempty"`
 	PageSize                *int32          `thrift:"page_size,5,optional" frugal:"5,optional,i32" form:"page_size" json:"page_size,omitempty"`
 	Session                 *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`

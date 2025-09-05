@@ -1201,8 +1201,8 @@ func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context
 		return nil, err
 	}
 	return &expt.GetExptInsightAnalysisRecordResponse{
-		ExptResultExportRecord: experiment.ExptInsightAnalysisRecordDO2DTO(record),
-		BaseResp:               base.NewBaseResp(),
+		ExptInsightAnalysisRecord: experiment.ExptInsightAnalysisRecordDO2DTO(record),
+		BaseResp:                  base.NewBaseResp(),
 	}, nil
 }
 
@@ -1237,7 +1237,8 @@ func (e *experimentApplication) FeedbackExptInsightAnalysisReport(ctx context.Co
 		ExptID:             req.GetExptID(),
 		AnalysisRecordID:   req.GetInsightAnalysisRecordID(),
 		FeedbackActionType: actionType,
-		Comment:            ptr.Of(req.GetComment()),
+		Comment:            req.Comment,
+		CommentID:          req.CommentID,
 		Session:            session,
 	}
 	err = e.FeedbackExptInsightAnalysis(ctx, param)
