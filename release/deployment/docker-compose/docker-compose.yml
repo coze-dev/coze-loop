@@ -311,7 +311,7 @@ services:
       - "${COZE_LOOP_FAAS_PORT:-8889}:8000"
     volumes:
       - faas_workspace:/tmp/faas-workspace
-      - ./bootstrap/faas-unified:/app/bootstrap
+      - ./bootstrap/faas:/app/bootstrap
     environment:
       DENO_DIR: "/tmp/.deno"
       DENO_NO_UPDATE_CHECK: "1"
@@ -328,7 +328,7 @@ services:
       FAAS_ENABLE_SCHEDULER: "${FAAS_ENABLE_SCHEDULER:-true}"
       FAAS_ENABLE_METRICS: "${FAAS_ENABLE_METRICS:-true}"
     working_dir: /app
-    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-unified-server.ts"]
+    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-server.ts"]
     deploy:
       resources:
         limits:
