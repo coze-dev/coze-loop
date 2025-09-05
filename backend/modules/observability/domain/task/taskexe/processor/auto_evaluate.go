@@ -19,6 +19,7 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -236,8 +237,73 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		}
 	}
 	// 4、更新任务配置
+	effectiveTime := currentTask.GetRule().GetEffectiveTime()
+	taskConfig, err := p.TaskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
+	if err != nil {
+		return err
+	}
+	var cycleStartAt, cycleEndAt int64
+	currentTime := time.Now().UnixMilli()
+
+	if len(taskConfig.TaskRuns) == 0 {
+		// 首次创建 taskrun，从任务生效时间开始
+		cycleStartAt = resetStartTime(currentTime, effectiveTime.GetStartAt(), maxAliveTime)
+	} else {
+		// 找到最新的 cycleEndAt 作为新的 cycleStartAt
+		for _, run := range taskConfig.TaskRuns {
+			if run.RunStartAt.UnixMilli() > cycleStartAt {
+				cycleStartAt = run.RunEndAt.UnixMilli()
+			}
+		}
+		cycleStartAt = resetStartTime(currentTime, cycleStartAt, maxAliveTime)
+	}
+	cycleEndAt = cycleStartAt + maxAliveTime
+
+	// 确保周期开始时间不早于任务生效时间
+	if cycleStartAt < effectiveTime.GetStartAt() {
+		cycleStartAt = effectiveTime.GetStartAt()
+		cycleEndAt = cycleStartAt + maxAliveTime
+	}
+
+	// 确保周期结束时间不晚于任务结束时间
+	if cycleEndAt > effectiveTime.GetEndAt() {
+		cycleEndAt = effectiveTime.GetEndAt()
+	}
+	logs.CtxInfo(ctx, "Creating taskrun with cycle: startAt=%d, endAt=%d, currentTime=%d", cycleStartAt, cycleEndAt, currentTime)
+	// 5、创建 taskrun
+	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
+		ID:             exptID,
+		TaskID:         currentTask.GetID(),
+		WorkspaceID:    currentTask.GetWorkspaceID(),
+		TaskType:       currentTask.GetTaskType(),
+		RunStatus:      task.RunStatusRunning,
+		RunDetail:      nil,
+		BackfillDetail: nil,
+		RunStartAt:     time.UnixMilli(cycleStartAt),
+		RunEndAt:       time.UnixMilli(cycleEndAt),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	})
+	// 6、更新任务配置
+	// todo:[xun]改task_run?
+	err = p.TaskRepo.UpdateTask(ctx, taskConfig)
+	if err != nil {
+		return err
+	}
 	return nil
 
+}
+
+func resetStartTime(currentTime int64, originalStartTime int64, maxAliveTime int64) int64 {
+	if currentTime > originalStartTime {
+		// 计算需要跳过的周期数
+		timeDiff := currentTime - originalStartTime
+		skipCycles := timeDiff / maxAliveTime
+
+		// 跳过过期的时间段，直接计算新的周期开始时间
+		return originalStartTime + (skipCycles * maxAliveTime)
+	}
+	return originalStartTime
 }
 
 func getSession(ctx context.Context, task *task.Task) *common.Session {

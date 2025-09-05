@@ -54,7 +54,7 @@ type Task struct {
 	// 描述
 	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	// 所在空间
-	WorkspaceID *int64 `thrift:"workspace_id,4,optional" frugal:"4,optional,i64" form:"workspace_id" json:"workspace_id,omitempty" query:"workspace_id"`
+	WorkspaceID *int64 `thrift:"workspace_id,4,optional" frugal:"4,optional,i64" form:"workspace_id" json:"workspace_id,string,omitempty" query:"workspace_id"`
 	// 类型
 	TaskType TaskType `thrift:"task_type,5,required" frugal:"5,required,string" form:"task_type,required" json:"task_type,required" query:"task_type,required"`
 	// 状态

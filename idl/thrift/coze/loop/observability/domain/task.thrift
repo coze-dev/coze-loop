@@ -29,7 +29,7 @@ struct Task {
     1: optional i64 id                                             // 任务 id
     2: required string name                                        // 名称
     3: optional string description                                 // 描述
-    4: optional i64 workspace_id                                   // 所在空间
+    4: optional i64 workspace_id(api.js_conv='true')               // 所在空间
     5: required TaskType task_type                                 // 类型
     6: optional TaskStatus task_status                             // 状态
     7: optional Rule rule                                          // 规则

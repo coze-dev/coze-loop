@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
 //go:generate mockgen -destination=mocks/Task_dao.go -package=mocks . ITaskDAO
 type ITaskDAO interface {
 	// 原有方法
@@ -35,15 +36,15 @@ type ITaskDAO interface {
 	GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error)
 	SetTask(ctx context.Context, task *entity.ObservabilityTask, ttl time.Duration) error
 	DeleteTask(ctx context.Context, id int64) error
-	
+
 	GetTaskList(ctx context.Context, key string) ([]*entity.ObservabilityTask, int64, error)
 	SetTaskList(ctx context.Context, key string, tasks []*entity.ObservabilityTask, total int64, ttl time.Duration) error
 	DeleteTaskList(ctx context.Context, pattern string) error
-	
+
 	GetNonFinalTaskList(ctx context.Context) ([]*entity.ObservabilityTask, error)
 	SetNonFinalTaskList(ctx context.Context, tasks []*entity.ObservabilityTask, ttl time.Duration) error
 	DeleteNonFinalTaskList(ctx context.Context) error
-	
+
 	GetTaskCount(ctx context.Context, workspaceID int64) (int64, error)
 	SetTaskCount(ctx context.Context, workspaceID int64, count int64, ttl time.Duration) error
 	DeleteTaskCount(ctx context.Context, workspaceID int64) error
@@ -59,6 +60,7 @@ func NewTaskDAO(cmdable redis.Cmdable) ITaskDAO {
 		cmdable: cmdable,
 	}
 }
+
 // 原有 key 生成方法
 func (q *TaskDAOImpl) makeTaskConfigKey(taskID int64) string {
 	return fmt.Sprintf("task_config_%d", taskID)
@@ -94,14 +96,14 @@ func (q *TaskDAOImpl) generateFilterHash(param mysql.ListTaskParam) string {
 	if param.TaskFilters == nil {
 		return "no_filter"
 	}
-	
+
 	// 将过滤条件序列化为 JSON 字符串
 	filterBytes, err := json.Marshal(param.TaskFilters)
 	if err != nil {
 		logs.Error("failed to marshal filter: %v", err)
 		return "no_filter"
 	}
-	
+
 	// 生成 MD5 hash
 	hash := md5.Sum(filterBytes)
 	return hex.EncodeToString(hash[:])
@@ -180,7 +182,7 @@ func (p *TaskDAOImpl) MDecrTaskRunCount(ctx context.Context, taskID, runID int64
 
 // GetTask 获取单个任务缓存
 func (p *TaskDAOImpl) GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error) {
-	key := p.makeTaskDetailKey(id)
+	key := p.makeTaskConfigKey(id)
 	got, err := p.cmdable.Get(ctx, key).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
@@ -197,7 +199,7 @@ func (p *TaskDAOImpl) SetTask(ctx context.Context, task *entity.ObservabilityTas
 	if err != nil {
 		return err
 	}
-	key := p.makeTaskDetailKey(task.ID)
+	key := p.makeTaskConfigKey(task.ID)
 	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
 		logs.CtxError(ctx, "redis set task cache failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis set task key: %v", key)
@@ -217,9 +219,9 @@ func (p *TaskDAOImpl) DeleteTask(ctx context.Context, id int64) error {
 
 // TaskListCache 任务列表缓存结构
 type TaskListCache struct {
-	Items     []*entity.ObservabilityTask `json:"items"`
-	Total     int64                       `json:"total"`
-	CachedAt  time.Time                   `json:"cached_at"`
+	Items    []*entity.ObservabilityTask `json:"items"`
+	Total    int64                       `json:"total"`
+	CachedAt time.Time                   `json:"cached_at"`
 }
 
 // GetTaskList 获取任务列表缓存
@@ -231,12 +233,12 @@ func (p *TaskDAOImpl) GetTaskList(ctx context.Context, key string) ([]*entity.Ob
 		}
 		return nil, 0, errorx.Wrapf(err, "redis get task list fail, key: %v", key)
 	}
-	
+
 	var cache TaskListCache
 	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &cache); err != nil {
 		return nil, 0, errorx.Wrapf(err, "unmarshal task list cache failed")
 	}
-	
+
 	return cache.Items, cache.Total, nil
 }
 
@@ -247,12 +249,12 @@ func (p *TaskDAOImpl) SetTaskList(ctx context.Context, key string, tasks []*enti
 		Total:    total,
 		CachedAt: time.Now(),
 	}
-	
+
 	bytes, err := json.Marshal(cache)
 	if err != nil {
 		return errorx.Wrapf(err, "marshal task list cache failed")
 	}
-	
+
 	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
 		logs.CtxError(ctx, "redis set task list cache failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis set task list key: %v", key)
@@ -278,24 +280,24 @@ func (p *TaskDAOImpl) GetNonFinalTaskList(ctx context.Context) ([]*entity.Observ
 		}
 		return nil, errorx.Wrapf(err, "redis get non final task list fail, key: %v", key)
 	}
-	
+
 	var tasks []*entity.ObservabilityTask
 	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &tasks); err != nil {
 		return nil, errorx.Wrapf(err, "unmarshal non final task list cache failed")
 	}
-	
+
 	return tasks, nil
 }
 
 // SetNonFinalTaskList 设置非最终状态任务列表缓存
 func (p *TaskDAOImpl) SetNonFinalTaskList(ctx context.Context, tasks []*entity.ObservabilityTask, ttl time.Duration) error {
 	key := p.makeNonFinalTaskListKey()
-	
+
 	bytes, err := json.Marshal(tasks)
 	if err != nil {
 		return errorx.Wrapf(err, "marshal non final task list cache failed")
 	}
-	
+
 	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
 		logs.CtxError(ctx, "redis set non final task list cache failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis set non final task list key: %v", key)
