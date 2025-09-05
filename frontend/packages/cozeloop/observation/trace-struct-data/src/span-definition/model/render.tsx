@@ -52,17 +52,23 @@ const ModelTool = (tool?: Tool) => {
         <Collapse.Panel
           className={styles['function-panel-content']}
           header={
-            <div className="flex w-full items-center justify-between">
+            <div className="flex w-full max-w-full items-center justify-between">
               <Typography.Text
-                ellipsis
+                ellipsis={{ showTooltip: true }}
                 className="!font-mono"
-                icon={
-                  <IconSpanPluginTool
-                    style={{ width: '16px', height: '16px' }}
-                  />
-                }
               >
-                {raw?.function?.name}
+                <span className="flex items-center gap-x-1">
+                  <span className="text-[16px] inline-flex items-center">
+                    <IconSpanPluginTool
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                      }}
+                    />
+                  </span>
+
+                  <span>{raw?.function?.name}</span>
+                </span>
               </Typography.Text>
 
               <Tooltip content={I18n.t('Copy')} theme="dark">

@@ -12,7 +12,7 @@ export {
   type QueryPropertyEnum,
 } from './trace-attrs';
 
-export { COLUMN_RECORD } from '../components/queries/table/columns/index';
+export { COLUMN_RECORD } from '../components/queries/table/columns';
 export { DEFAULT_SELECTED_KEYS } from './col';
 
 export enum PlatformType {
@@ -26,3 +26,8 @@ export enum SpanType {
   LlmSpan = 'llm_span',
 }
 export { jsonViewerConfig } from './json-view';
+
+export {
+  AUTO_EVAL_FEEDBACK,
+  AUTO_EVAL_FEEDBACK_PREFIX,
+} from '../components/logic-expr/const';

@@ -111,7 +111,7 @@ const useTraceActions = (
   const [lastUserRecord, setLastUserRecordState] = useState<
     TraceContextState['lastUserRecord']
   >({
-    filters: {},
+    filters: { filter_fields: [] },
     selectedPlatform: initPlatform,
     selectedSpanType: initSelectedSpanType,
   });

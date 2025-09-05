@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import React from 'react';
 
-import { isEmpty, isObject, truncate } from 'lodash-es';
-import { JsonViewer } from '@textea/json-viewer';
+import { isEmpty } from 'lodash-es';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { handleCopy as copy } from '@cozeloop/components';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
@@ -11,10 +10,10 @@ import { Button, Collapse, Typography } from '@coze-arch/coze-design';
 
 import { type RemoveUndefinedOrString } from '../../types/utils';
 import { type RawMessage, type Span, TagType } from '../../types';
-import { JSON_VIEW_CONFIG } from '../../consts/json-view';
 import { SpanFieldRender } from '../../components/span-field-render';
 import { RawContent } from '../../components/raw-content';
 import type { Input, Output } from './index';
+import { ArgumentValueRender } from './argument-value-render';
 
 import styles from './index.module.less';
 
@@ -77,35 +76,16 @@ export const PromptDataRender: PromptDataRender = {
             {input.arguments?.map((argu, ind: number) => (
               <div key={ind} className={styles['argu-item-container']}>
                 <div
-                  className={`
-                    ${styles['argu-item']}
-                    flex gap-2 !items-start min-w-0
-                  `}
+                  className={`${styles['argu-item']} flex gap-2 !items-start min-w-0`}
                 >
                   <Typography.Text
                     className="w-[140px] coz-fg-secondary text-xs"
-                    ellipsis={{
-                      showTooltip: {
-                        opts: {
-                          theme: 'dark',
-                        },
-                      },
-                    }}
+                    ellipsis={{ showTooltip: { opts: { theme: 'dark' } } }}
                   >
                     {argu.key}
                   </Typography.Text>
                   <div className="flex-1 overflow-hidden">
-                    {isObject(argu.value) ? (
-                      <JsonViewer value={argu.value} {...JSON_VIEW_CONFIG} />
-                    ) : (
-                      <span className="coz-fg-primary break-all whitespace-pre-wrap leading-4">
-                        {argu.value
-                          ? truncate(argu.value, {
-                              length: 1000,
-                            })
-                          : '-'}
-                      </span>
-                    )}
+                    <ArgumentValueRender promptArgument={argu} />
                   </div>
                 </div>
               </div>

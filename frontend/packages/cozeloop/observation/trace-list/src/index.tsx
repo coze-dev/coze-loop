@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @typescript-eslint/naming-convention */
 import { I18n } from '@cozeloop/i18n-adapter';
 import { PrimaryPage } from '@cozeloop/components';
 
@@ -17,6 +18,12 @@ import { PLATFORM_ENUM_OPTION_LIST } from './consts/filter';
 import { COLUMN_RECORD, SPAN_COLUMNS } from './consts';
 import { useFetchTraces } from './components/queries/table/hooks/use-fetch-traces';
 import { Queries } from './components/queries';
+import { MANUAL_FEEDBACK } from './components/logic-expr/const';
+import {
+  LeftManualExpr,
+  type LeftManualExprProps,
+} from './components/left-manual-expr';
+import { PromptSelect } from './components/filter-bar/prompt-select';
 import { QueryFilterBar } from './components/filter-bar';
 import { CozeLoopTraceBanner } from './components/banner';
 
@@ -62,6 +69,14 @@ const TraceListApp = () => {
             platformEnumOptionList={PLATFORM_ENUM_OPTION_LIST}
             spanListTypeEnumOptionList={SPAN_TAB_OPTION_LIST}
             tooltipContent={getTooltipContent()}
+            customLeftRenderMap={{
+              [MANUAL_FEEDBACK]: v => (
+                <LeftManualExpr {...(v as unknown as LeftManualExprProps)} />
+              ),
+            }}
+            customRightRenderMap={{
+              prompt_key: v => <PromptSelect {...v} />,
+            }}
           />
         }
         className="!pb-0"

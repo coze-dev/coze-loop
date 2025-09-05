@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useEffect } from 'react';
 
-import { getUrlParamsFromPersistentFilters } from '../utils/url';
+import {
+  getUrlParamsFromPersistentFilters,
+  saveTraceFilterToStorage,
+} from '../utils/url';
 import { encodeJSON } from '../utils/json';
 import { type TraceFilter } from '../typings/filter';
 import { useTraceStore } from '../stores/trace';
@@ -28,18 +31,20 @@ export const useSyncUrlParams = (disableUrlParams?: boolean) => {
   } = useTraceStore();
 
   useEffect(() => {
+    const urlParams = {
+      selected_span_type: selectedSpanType.toString(),
+      trace_platform: selectedPlatform.toString(),
+      trace_filters: filters ? encodeJSON(filters) : undefined,
+      trace_start_time: startTime.toString(),
+      trace_end_time: endTime.toString(),
+      trace_preset_time_range: presetTimeRange,
+      relation: relation.toString(),
+      ...getUrlParamsFromPersistentFilters(persistentFilters),
+    };
     if (!disableUrlParams) {
-      setSearchValue({
-        selected_span_type: selectedSpanType.toString(),
-        trace_platform: selectedPlatform.toString(),
-        trace_filters: filters ? encodeJSON(filters) : undefined,
-        trace_start_time: startTime.toString(),
-        trace_end_time: endTime.toString(),
-        trace_preset_time_range: presetTimeRange,
-        relation: relation.toString(),
-        ...getUrlParamsFromPersistentFilters(persistentFilters),
-      });
+      setSearchValue(urlParams);
     }
+    saveTraceFilterToStorage(urlParams);
   }, [
     disableUrlParams,
     selectedSpanType,

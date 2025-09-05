@@ -14,3 +14,5 @@ export { FilterSelect } from './filter-bar/filter-select';
 export { SpanTypeSelect } from './filter-bar/trace-list';
 export { CustomTableTooltip } from './table-cell-text';
 export { TableHeaderText } from './table-header-text';
+export { FilterSelectUI } from './filter-select-ui';
+export { PromptSelect } from './filter-bar/prompt-select';

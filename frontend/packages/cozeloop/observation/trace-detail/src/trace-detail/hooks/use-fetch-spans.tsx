@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
-import { uniqWith } from 'lodash-es';
+import { cloneDeep, uniqWith } from 'lodash-es';
 import { useRequest } from 'ahooks';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { type PlatformType } from '@cozeloop/api-schema/observation';
@@ -62,9 +62,10 @@ export const useFetchSpans = ({
             platform_type: platformType as PlatformType,
           },
           {
-            __disableErrorToast: true,
+            disableErrorToast: true,
           },
         );
+
         data = {
           spans: res.spans,
           advanceInfo: res.traces_advance_info,
@@ -91,7 +92,7 @@ export const useFetchSpans = ({
 
         resSpans = resSpans.map(span => {
           if (span.span_id === newRootSpan.span_id) {
-            return newRootSpan;
+            return cloneDeep(newRootSpan);
           }
           return span;
         });
