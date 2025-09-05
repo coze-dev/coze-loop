@@ -330,7 +330,7 @@ services:
   coze-loop-faas-enhanced:
     profiles: [ "faas-enhanced", "app-enhanced" ]
     container_name: "coze-loop-faas-enhanced"
-    image: "denoland/deno:1.45.5"
+    image: "python:3.11-slim"
     restart: always
     networks:
       - coze-loop-network
@@ -340,8 +340,6 @@ services:
       - faas_enhanced_workspace:/tmp/faas-workspace
       - ./bootstrap/faas-enhanced:/app/bootstrap
     environment:
-      DENO_DIR: "/tmp/.deno"
-      DENO_NO_UPDATE_CHECK: "1"
       FAAS_WORKSPACE: "/tmp/faas-workspace"
       FAAS_PORT: "8000"
       FAAS_TIMEOUT: "30000"
@@ -354,7 +352,7 @@ services:
       FAAS_QUEUE_SIZE: "${FAAS_QUEUE_SIZE:-100}"
       FAAS_RATE_LIMIT: "${FAAS_RATE_LIMIT:-100}"
     working_dir: /app
-    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-enhanced-server.ts"]
+    command: ["python3", "/app/bootstrap/simple_faas_server.py"]
     deploy:
       resources:
         limits:
@@ -364,13 +362,12 @@ services:
           memory: 512M
           cpus: "0.5"
     healthcheck:
-      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.status === 200) { console.log('OK'); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
 
-volumes:
 volumes:
   redis_data:
     name: coze-loop_redis_data
