@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable complexity */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { Fragment, useState } from 'react';
@@ -115,6 +116,7 @@ interface CustomViewProps {
   onDelteView: (view: View) => void;
   onUpdateView: (view: View) => void;
   customRightRenderMap: CustomRightRenderMap;
+  customLeftRenderMap: CustomRightRenderMap;
   platformEnumOptionList: { label: string; value: string | number }[];
   spanListTypeEnumOptionList: { label: string; value: string | number }[];
 }
@@ -129,11 +131,13 @@ const CustomView = (props: CustomViewProps) => {
     onDelteView,
     onUpdateView,
     customRightRenderMap,
+    customLeftRenderMap,
     platformEnumOptionList,
     spanListTypeEnumOptionList,
   } = props;
   const {
     fieldMetas,
+    setFieldMetas,
     setSelectedPlatform,
     setSelectedSpanType,
     setFilters,
@@ -141,6 +145,8 @@ const CustomView = (props: CustomViewProps) => {
     setFilterPopupVisible,
     filterPopupVisible,
     lastUserRecord,
+    selectedPlatform: selectedPlatformType,
+    selectedSpanType: selectedSpanTypeType,
   } = useTraceStore();
 
   const { spaceID } = useSpace();
@@ -170,23 +176,23 @@ const CustomView = (props: CustomViewProps) => {
   };
 
   const handleUpdateView = async (
-    view: Omit<View, 'is_system' | 'filters'> & { filters: LogicValue },
+    newView: Omit<View, 'is_system' | 'filters'> & { filters: LogicValue },
   ) => {
     try {
       await observabilityTrace.UpdateView({
-        view_id: view.id,
-        view_name: view.view_name,
-        filters: JSON.stringify(view.filters),
-        span_list_type: view.spanList_type,
-        platform_type: view.platform_type,
+        view_id: newView.id,
+        view_name: newView.view_name,
+        filters: JSON.stringify(newView.filters),
+        span_list_type: newView.spanList_type,
+        platform_type: newView.platform_type,
         workspace_id: spaceID,
       });
       onUpdateView({
-        id: view.id,
-        view_name: view.view_name,
-        filters: JSON.stringify(view.filters),
-        spanList_type: view.spanList_type,
-        platform_type: view.platform_type,
+        id: newView.id,
+        view_name: newView.view_name,
+        filters: JSON.stringify(newView.filters),
+        spanList_type: newView.spanList_type,
+        platform_type: newView.platform_type,
         workspace_id: spaceID,
         is_system: false,
       });
@@ -194,20 +200,11 @@ const CustomView = (props: CustomViewProps) => {
       console.log(e);
     }
   };
-  const [currentEditView, setCurrentEditView] = useState<{
-    filters: LogicValue;
-    viewMethod: string;
-    dataSource: string;
-  }>({
-    filters: {},
-    viewMethod: 'root_span',
-    dataSource: 'cozeloop',
-  });
 
   const [editViewVisible, setEditViewVisible] = useState(false);
   const [editViewId, setEditViewId] = useState('');
   const [viewListVisible, setViewListVisible] = useState(false);
-  const handleSaveCurrentEditView = async (
+  const handleSaveCurrentEditView = (
     view: View,
     currentFilter: {
       filters: LogicValue;
@@ -216,13 +213,16 @@ const CustomView = (props: CustomViewProps) => {
     },
   ) => {
     const { filters } = currentFilter;
-    await handleUpdateView({
+    const newView = {
       id: view.id,
       view_name: view.view_name,
       filters,
       spanList_type: currentFilter.viewMethod as SpanListType,
-      platform_type: currentEditView.dataSource as PlatformType,
+      platform_type: currentFilter.dataSource as PlatformType,
       workspace_id: spaceID,
+    };
+    handleUpdateView({
+      ...newView,
     });
   };
 
@@ -230,15 +230,32 @@ const CustomView = (props: CustomViewProps) => {
     if (activeViewKey === view.id.toString()) {
       const { filters, selectedPlatform, selectedSpanType } = lastUserRecord;
       onSelectView(null);
+      if (
+        selectedPlatform !== selectedPlatformType ||
+        selectedSpanType !== selectedSpanTypeType
+      ) {
+        setFieldMetas(undefined);
+      }
       setSelectedPlatform(selectedPlatform ?? PlatformType.Cozeloop);
       setSelectedSpanType(selectedSpanType ?? SpanType.RootSpan);
-      setApplyFilters(filters ?? {});
-      setFilters(filters ?? {});
+      setApplyFilters(filters ?? { filter_fields: [] });
+      setFilters(filters ?? { filter_fields: [] });
       return;
     }
     onSelectView(view);
-    setSelectedPlatform(view.platform_type ?? '');
-    setSelectedSpanType(view.spanList_type ?? '');
+
+    const viewPlatformType = view.platform_type ?? PlatformType.Cozeloop;
+    const viewSpanType = view.spanList_type ?? SpanType.RootSpan;
+
+    if (
+      viewPlatformType !== selectedPlatformType ||
+      viewSpanType !== selectedSpanTypeType
+    ) {
+      setFieldMetas(undefined);
+    }
+
+    setSelectedPlatform(viewPlatformType);
+    setSelectedSpanType(viewSpanType);
     setApplyFilters(view.filters ? safeJsonParse(view.filters) || {} : {});
     setFilters(view.filters ? safeJsonParse(view.filters) || {} : {});
   };
@@ -282,23 +299,38 @@ const CustomView = (props: CustomViewProps) => {
                     <TooltipWhenDisabled
                       theme="dark"
                       disabled={
-                        (visibleViewIds.length >= MAX_VIEW_COUNT &&
-                          !visibleViewIds.includes(view.id)) ||
-                        templateShowView?.id === view.id
+                        visibleViewIds.length >= MAX_VIEW_COUNT &&
+                        !visibleViewIds.includes(view.id)
                       }
                       content={I18n.t('max_display_view_num', { num: 5 })}
                     >
                       <Button
-                        className="w-[24px] h-[24px] box-border p-1"
-                        color="secondary"
-                        disabled={
+                        className={classNames(
+                          'w-[24px] h-[24px] box-border p-1',
+                        )}
+                        style={
                           (visibleViewIds.length >= MAX_VIEW_COUNT &&
                             !visibleViewIds.includes(view.id)) ||
                           templateShowView?.id === view.id
+                            ? {
+                                color:
+                                  'rgba(var(--coze-fg-1), var(--coze-fg-1-alpha))',
+                                backgroundColor: '#0000',
+                                cursor: 'not-allowed',
+                              }
+                            : {}
                         }
+                        color="secondary"
                         size="mini"
                         onClick={e => {
                           e.stopPropagation();
+                          if (
+                            (visibleViewIds.length >= MAX_VIEW_COUNT &&
+                              !visibleViewIds.includes(view.id)) ||
+                            templateShowView?.id === view.id
+                          ) {
+                            return;
+                          }
                           onTriggerViewVisible(view);
                         }}
                       >
@@ -312,6 +344,7 @@ const CustomView = (props: CustomViewProps) => {
                     </TooltipWhenDisabled>
                     <FilterSelectUI
                       customRightRenderMap={customRightRenderMap}
+                      customLeftRenderMap={customLeftRenderMap}
                       spanTabOptionList={spanListTypeEnumOptionList}
                       fieldMetas={fieldMetas}
                       filters={
@@ -319,7 +352,6 @@ const CustomView = (props: CustomViewProps) => {
                       }
                       dataSource={(view.platform_type ?? '') as string}
                       viewMethod={(view.spanList_type ?? '') as string}
-                      onFiltersChange={params => setCurrentEditView(params)}
                       onVisibleChange={visible => {
                         setEditViewVisible(visible);
                         if (!visible) {
