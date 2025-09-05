@@ -48,7 +48,9 @@ func (e exptInsightAnalysisFeedbackVoteDAO) Update(ctx context.Context, feedback
 		Where("space_id = ?", feedbackVote.SpaceID).
 		Where("expt_id = ?", feedbackVote.ExptID).
 		Where("analysis_record_id = ?", feedbackVote.AnalysisRecordID).
-		Where("created_by = ?", feedbackVote.CreatedBy).Updates(feedbackVote).Error; err != nil {
+		Where("created_by = ?", feedbackVote.CreatedBy).Updates(map[string]interface{}{
+		"vote_type": feedbackVote.VoteType,
+	}).Error; err != nil {
 		return errorx.Wrapf(err, "exptInsightAnalysisFeedbackVoteDAO update fail, model: %v", json.Jsonify(feedbackVote))
 	}
 	return nil
