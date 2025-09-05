@@ -215,6 +215,7 @@ func (e ExptInsightAnalysisServiceImpl) FeedbackExptInsightAnalysis(ctx context.
 		return e.repo.CreateFeedbackComment(ctx, feedbackComment)
 	case entity.FeedbackActionType_Update_Comment:
 		feedbackComment := &entity.ExptInsightAnalysisFeedbackComment{
+			ID:               ptr.From(param.CommentID),
 			SpaceID:          param.SpaceID,
 			ExptID:           param.ExptID,
 			AnalysisRecordID: param.AnalysisRecordID,

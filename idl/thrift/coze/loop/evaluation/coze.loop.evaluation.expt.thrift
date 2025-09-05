@@ -518,6 +518,7 @@ struct FeedbackExptInsightAnalysisReportRequest {
     3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
     4: required expt.FeedbackActionType FeedbackActionType
     5: optional string comment
+    6: optional i64 comment_id (api.body = 'comment_id', api.js_conv = 'true', go.tag = 'json:"comment_id"')    // 用于更新comment
 
 
     200: optional common.Session session

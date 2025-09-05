@@ -42,11 +42,11 @@ const (
 
 	FeedbackActionTypeUpvote = "Upvote"
 
-	FeedbackActionTypeCancelUpvote = "CancelUpvote"
+	FeedbackActionTypeCancelUpvote = "Cancel_Upvote"
 
 	FeedbackActionTypeDownvote = "Downvote"
 
-	FeedbackActionTypeCancelDownvote = "CancelDownvote"
+	FeedbackActionTypeCancelDownvote = "Cancel_Downvote"
 
 	FeedbackActionTypeCreateComment = "Create_Comment"
 

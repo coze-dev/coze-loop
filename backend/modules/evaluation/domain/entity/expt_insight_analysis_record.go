@@ -84,6 +84,7 @@ type ExptInsightAnalysisFeedbackParam struct {
 	AnalysisRecordID   int64
 	FeedbackActionType FeedbackActionType
 	Comment            *string
+	CommentID          *int64
 	Session            *Session
 }
 
