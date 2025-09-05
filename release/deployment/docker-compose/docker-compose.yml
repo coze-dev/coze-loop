@@ -299,6 +299,7 @@ services:
       retries: 5
       start_period: 10s
 
+  # 统一FaaS服务 - 通过配置控制基础模式和增强模式
   coze-loop-faas:
     profiles: [ "faas", "app" ]
     container_name: "coze-loop-faas"
@@ -310,73 +311,38 @@ services:
       - "${COZE_LOOP_FAAS_PORT:-8889}:8000"
     volumes:
       - faas_workspace:/tmp/faas-workspace
-      - ./bootstrap/faas:/app/bootstrap
+      - ./bootstrap/faas-unified:/app/bootstrap
     environment:
       DENO_DIR: "/tmp/.deno"
       DENO_NO_UPDATE_CHECK: "1"
       FAAS_WORKSPACE: "/tmp/faas-workspace"
       FAAS_PORT: "8000"
       FAAS_TIMEOUT: "30000"
+      # 运行模式配置 (basic/enhanced)
+      FAAS_MODE: "${FAAS_MODE:-enhanced}"
+      # 增强模式配置 (仅在enhanced模式下生效)
+      FAAS_POOL_SIZE: "${FAAS_POOL_SIZE:-10}"
+      FAAS_MAX_INSTANCES: "${FAAS_MAX_INSTANCES:-50}"
+      FAAS_WORKER_COUNT: "${FAAS_WORKER_COUNT:-10}"
+      FAAS_ENABLE_POOL: "${FAAS_ENABLE_POOL:-true}"
+      FAAS_ENABLE_SCHEDULER: "${FAAS_ENABLE_SCHEDULER:-true}"
+      FAAS_ENABLE_METRICS: "${FAAS_ENABLE_METRICS:-true}"
     working_dir: /app
-    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-server.ts"]
+    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-unified-server.ts"]
     deploy:
       resources:
         limits:
-          memory: 1G
-          cpus: "0.5"
+          memory: "${FAAS_MEMORY_LIMIT:-2G}"
+          cpus: "${FAAS_CPU_LIMIT:-1.0}"
         reservations:
-          memory: 256M
-          cpus: "0.25"
+          memory: "${FAAS_MEMORY_RESERVE:-512M}"
+          cpus: "${FAAS_CPU_RESERVE:-0.5}"
     healthcheck:
-      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
+      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status, 'Mode:', data.mode); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 30s
-
-  # 增强版FaaS服务 - 支持沙箱池和任务调度（基于Deno+Pyodide）
-  coze-loop-faas-enhanced:
-    profiles: [ "faas-enhanced", "app-enhanced" ]
-    container_name: "coze-loop-faas-enhanced"
-    image: "denoland/deno:1.45.5"
-    restart: always
-    networks:
-      - coze-loop-network
-    ports:
-      - "${COZE_LOOP_FAAS_ENHANCED_PORT:-8890}:8000"
-    volumes:
-      - faas_enhanced_workspace:/tmp/faas-workspace
-      - ./bootstrap/faas-enhanced:/app/bootstrap
-    environment:
-      DENO_DIR: "/tmp/.deno"
-      DENO_NO_UPDATE_CHECK: "1"
-      FAAS_WORKSPACE: "/tmp/faas-workspace"
-      FAAS_PORT: "8000"
-      FAAS_TIMEOUT: "30000"
-      # 沙箱池配置
-      FAAS_POOL_SIZE: "${FAAS_POOL_SIZE:-10}"
-      FAAS_MAX_INSTANCES: "${FAAS_MAX_INSTANCES:-50}"
-      FAAS_MEMORY_LIMIT: "${FAAS_MEMORY_LIMIT:-512}"
-      # 任务调度配置
-      FAAS_WORKER_COUNT: "${FAAS_WORKER_COUNT:-10}"
-      FAAS_QUEUE_SIZE: "${FAAS_QUEUE_SIZE:-100}"
-      FAAS_RATE_LIMIT: "${FAAS_RATE_LIMIT:-100}"
-    working_dir: /app
-    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-enhanced-server.ts"]
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "1.0"
-        reservations:
-          memory: 512M
-          cpus: "0.5"
-    healthcheck:
-      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
 
 volumes:
   redis_data:
@@ -397,8 +363,6 @@ volumes:
     name: coze-loop_nginx_data
   faas_workspace:
     name: coze-loop_faas_workspace
-  faas_enhanced_workspace:
-    name: coze-loop_faas_enhanced_workspace
 
 networks:
   coze-loop-network:
