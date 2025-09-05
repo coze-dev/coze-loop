@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuards, GuardActionType } from '@cozeloop/guard';
 import {
   TableColActions,
@@ -155,7 +156,7 @@ export function useExperimentListColumns({
 
   useEffect(() => {
     const actionsColumn: ColumnProps<Experiment> = {
-      title: '操作',
+      title: I18n.t('prompt_prompt_operate'),
       disableColumnManage: true,
       dataIndex: 'action',
       key: 'action',
@@ -169,8 +170,8 @@ export function useExperimentListColumns({
         const actions: TableColAction[] = [
           {
             label: (
-              <Tooltip content="仅针对执行失败的部分重新评测" theme="dark">
-                重试
+              <Tooltip content={I18n.t('re_evaluate_failed_only')} theme="dark">
+                {I18n.t('retry')}
               </Tooltip>
             ),
             hide: hideRun,
@@ -179,16 +180,19 @@ export function useExperimentListColumns({
           },
           {
             label: (
-              <Tooltip content="查看详情" theme="dark">
-                详情
+              <Tooltip content={I18n.t('view_detail')} theme="dark">
+                {I18n.t('detail')}
               </Tooltip>
             ),
             onClick: () => handleDetailOnClick(record),
           },
           {
             label: (
-              <Tooltip content="复制实验配置并新建实验" theme="dark">
-                复制
+              <Tooltip
+                content={I18n.t('copy_and_create_experiment')}
+                theme="dark"
+              >
+                {I18n.t('copy')}
               </Tooltip>
             ),
             hide: actionVisibleControl?.copy === false,
@@ -220,7 +224,7 @@ export function useExperimentListColumns({
             }
           : {
               // 默认
-              label: '导出',
+              label: I18n.t('evaluate_export'),
               onClick: () => {
                 handleExport({
                   record,
@@ -231,7 +235,9 @@ export function useExperimentListColumns({
               },
               disabled: !isFinalStatus,
               disabledTooltip: !isFinalStatus
-                ? '仅支持导出终态(成功或失败)的实验'
+                ? I18n.t(
+                    'cozeloop_open_evaluate_export_only_final_state_experiments',
+                  )
                 : undefined,
             };
 
@@ -240,7 +246,7 @@ export function useExperimentListColumns({
           ...extraShrinkActions,
           exportActionCol,
           {
-            label: '导出记录',
+            label: I18n.t('evaluate_export_records'),
             onClick: () => {
               sendEvent(EVENT_NAMES.cozeloop_experiment_export_record_click, {
                 from: source,
@@ -249,7 +255,7 @@ export function useExperimentListColumns({
             },
           },
           {
-            label: '删除',
+            label: I18n.t('space_member_role_type_del_btn'),
             type: 'danger',
             hide: actionVisibleControl?.delete === false,
             disabled: deleteGuardType === GuardActionType.READONLY,

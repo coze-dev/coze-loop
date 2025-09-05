@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { get } from 'lodash-es';
 import { type ISpec, type Datum } from '@visactor/vchart/esm/typings';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   Chart,
   ChartCardItemRender,
@@ -128,7 +129,7 @@ function ComplexTooltipContent(
       </div>
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-[var(--semi-color-primary)]" />
-        <span className="text-muted-foreground">得分</span>
+        <span className="text-muted-foreground">{I18n.t('score')}</span>
         <span className="font-semibold ml-auto">{datum?.score}</span>
       </div>
     </div>
@@ -191,15 +192,15 @@ export default function EvaluatorsScoreChart({
     <ChartCardItemRender
       item={{
         id: '',
-        title: '聚合得分',
+        title: I18n.t('aggregation_score'),
         content:
           ready && evaluatorAggregateResult?.length === 0 ? (
             <div className="pt-10 pb-6">
               <EmptyState
                 size="full_screen"
                 icon={<IconCozIllusAdd />}
-                title="暂无数据"
-                description="实验完成后，再刷新重试"
+                title={I18n.t('no_data')}
+                description={I18n.t('refresh_after_experiment')}
               />
             </div>
           ) : (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   ChartCardItemRender,
   DraggableGrid,
@@ -41,7 +42,7 @@ function getEvaluatorScoreMap(results: EvaluatorAggregateResult[] = []) {
           }
           map[versionId][scoreItem.score] = {
             ...scoreItem,
-            prefix: '得分',
+            prefix: I18n.t('score'),
             dimension: scoreItem.score,
           };
         },
@@ -85,7 +86,7 @@ function getAnnotationOptionMap(results: AnnotationAggregateResult[] = []) {
             }
             map[tagKeyId][scoreItem.score] = {
               ...scoreItem,
-              prefix: '得分',
+              prefix: I18n.t('score'),
               dimension: scoreItem.score,
               option: '',
             };

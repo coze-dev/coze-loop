@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type Evaluator } from '@cozeloop/api-schema/evaluation';
@@ -78,7 +79,8 @@ export function EvaluatorSelect(props: SelectProps) {
     <BaseSearchSelect
       filter
       remote
-      placeholder={'请选择评估器'}
+      emptyContent={I18n.t('no_data_yet')}
+      placeholder={I18n.t('please_select_evaluator')}
       loading={service.loading}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       {...props}
@@ -94,7 +96,9 @@ export function EvaluatorSelect(props: SelectProps) {
           className="h-8 px-2 flex flex-row items-center cursor-pointer"
         >
           <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
-          <div className="text-sm font-medium text-brand-9">{'新建评估器'}</div>
+          <div className="text-sm font-medium text-brand-9">
+            {I18n.t('create_evaluator')}
+          </div>
         </div>
       }
       optionList={service.data}

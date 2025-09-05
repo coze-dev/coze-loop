@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozArrowRight,
   IconCozInfoCircle,
@@ -22,10 +23,12 @@ export const DynamicParamsField = ({
         className="h-5 flex flex-row items-center cursor-pointer text-sm coz-fg-primary font-semibold"
         onClick={() => setOpen(pre => !pre)}
       >
-        参数注入
+        {I18n.t('evaluate_parameter_injection')}
         <Tooltip
           theme="dark"
-          content="请求评测对象时，可注入填写的参数，来拿到评测对象的输出结果。如请求环境的泳道、测试账号的 UID 等。"
+          content={I18n.t(
+            'cozeloop_open_evaluate_inject_parameters_for_evaluation_request',
+          )}
         >
           <IconCozInfoCircle className="ml-1 w-4 h-4 coz-fg-secondary" />
         </Tooltip>

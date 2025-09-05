@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
@@ -57,18 +58,18 @@ export default function ExperimentInfoEditFormModal({
     >
       <FormInput
         field="name"
-        label="实验名称"
-        placeholder="请输入"
+        label={I18n.t('experiment_name')}
+        placeholder={I18n.t('please_input', { field: '' })}
         maxLength={50}
         rules={[
-          { required: true, message: '该字段必填' },
+          { required: true, message: I18n.t('the_field_required') },
           { validator: sourceNameRuleValidator },
         ]}
       />
       <FormTextArea
         field="desc"
-        label="实验描述"
-        placeholder="请输入"
+        label={I18n.t('experiment_description')}
+        placeholder={I18n.t('please_input', { field: '' })}
         maxCount={200}
         maxLength={200}
       />
@@ -78,9 +79,9 @@ export default function ExperimentInfoEditFormModal({
   return (
     <Modal
       visible={visible}
-      title="编辑实验"
-      okText="确定"
-      cancelText="取消"
+      title={I18n.t('edit_experiment')}
+      okText={I18n.t('confirm')}
+      cancelText={I18n.t('cancel')}
       okButtonProps={{ loading }}
       onOk={() => formRef.current?.submitForm()}
       onCancel={onClose}

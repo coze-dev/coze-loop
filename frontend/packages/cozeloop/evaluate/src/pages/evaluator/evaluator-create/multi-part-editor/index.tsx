@@ -1,14 +1,11 @@
-import {
-  ContentType,
-  DatasetItem,
-  type PromptVariable,
-} from '@cozeloop/evaluate-components';
+import { ContentType, DatasetItem } from '@cozeloop/evaluate-components';
+import { type VariableDef } from '@cozeloop/api-schema/prompt';
 import { Collapse } from '@coze-arch/coze-design';
 
 import styles from './index.module.less';
 
 export function MultiPartEdit(props: {
-  variable: PromptVariable | undefined;
+  variable: VariableDef | undefined;
   value?: unknown;
   onChange?: (value: unknown) => void;
 }) {
@@ -30,6 +27,7 @@ export function MultiPartEdit(props: {
           }}
           fieldContent={{
             content_type: ContentType.MultiPart,
+            ...(props.value || {}),
           }}
           isEdit={true}
           className="bg-inherit"

@@ -8,6 +8,7 @@ export {
 export { useApp } from './use-app';
 export { useBenefit, type BenefitConfig } from './benefit/use-benefit';
 export { useFetchUserBenefit } from './benefit/use-fetch-user-benefit';
+export { IS_DISABLED_MULTI_MODEL_EVAL } from './constants';
 export { useDemoSpace } from './use-demo-space';
 export { useUserListApi } from './user-select';
 

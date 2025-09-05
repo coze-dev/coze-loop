@@ -2,6 +2,7 @@
 import { Fragment, type ReactNode } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnItem,
   ColumnSelector,
@@ -70,7 +71,7 @@ export const TableHeader = ({
   });
   const ADD_DATA_TYPE_LIST = [
     {
-      label: '手动添加',
+      label: I18n.t('app_client_add_env'),
       onClick: () => {
         setAddItemsVisible(true);
         sendEvent(EVENT_NAMES.cozeloop_dataset_add_data, {
@@ -79,7 +80,7 @@ export const TableHeader = ({
       },
     },
     {
-      label: '本地导入',
+      label: I18n.t('local_import'),
       onClick: () => {
         setImportModalVisible(true);
         sendEvent(EVENT_NAMES.cozeloop_dataset_add_data, {
@@ -165,7 +166,7 @@ export const TableHeader = ({
           }
         >
           <Button color="primary">
-            添加数据
+            {I18n.t('add_data')}
             <IconCozArrowDown className="ml-1" />
           </Button>
         </Dropdown>
@@ -192,7 +193,7 @@ export const TableHeader = ({
   return (
     <div className="flex items-center justify-between">
       <Typography.Text className="!text-fg-plus !text-[16px] !font-medium ">
-        数据项
+        {I18n.t('data_item')}
       </Typography.Text>
       <div className="flex items-center justify-end gap-2">
         {headerActionList.map(action =>

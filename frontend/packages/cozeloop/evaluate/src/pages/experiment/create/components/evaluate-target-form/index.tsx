@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type EvalTargetDefinition,
   useEvalTargetDefinition,
@@ -70,6 +71,9 @@ export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
     setCreateExperimentValues(prev => ({
       ...prev,
       evalTargetType: v,
+      evalTarget: undefined,
+      evalTargetVersion: undefined,
+      evalTargetMapping: undefined,
     }));
   };
 
@@ -91,8 +95,8 @@ export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
       <FormSelect
         className="w-full"
         field="evalTargetType"
-        label="类型"
-        placeholder="请选择类型"
+        label={I18n.t('type')}
+        placeholder={I18n.t('select_type')}
         optionList={evalTargetTypeOptions}
         showClear={true}
         rules={evaluateTargetValidators.evalTargetType}

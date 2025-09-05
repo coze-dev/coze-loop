@@ -1,4 +1,5 @@
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
 import { type Ellipsis, Tag, Tooltip } from '@coze-arch/coze-design';
 
@@ -44,7 +45,7 @@ export function BaseTargetPreview({
         </Tag>
       ) : null}
       {enableLinkJump ? (
-        <Tooltip theme="dark" content="查看详情">
+        <Tooltip theme="dark" content={I18n.t('view_detail')}>
           <div>
             <JumpIconButton
               className={classNames(

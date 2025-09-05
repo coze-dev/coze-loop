@@ -1,22 +1,33 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ItemErrorType } from '@cozeloop/api-schema/data';
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const DATASET_ADD_ITEM_PREFIX = 'dataset-add-item';
 
 export const ErrorTypeMap = {
-  [ItemErrorType.MismatchSchema]: 'schema 不匹配',
-  [ItemErrorType.EmptyData]: '空数据',
-  [ItemErrorType.ExceedMaxItemSize]: '单条数据大小超限',
-  [ItemErrorType.ExceedDatasetCapacity]: '数据集容量超限',
-  [ItemErrorType.MalformedFile]: '文件格式错误',
-  [ItemErrorType.InternalError]: '系统错误',
-  [ItemErrorType.IllegalContent]: '包含非法内容',
-  [ItemErrorType.MissingRequiredField]: '缺少必填字段',
-  [ItemErrorType.ExceedMaxNestedDepth]: '数据嵌套层数超限',
-  [ItemErrorType.TransformItemFailed]: '数据转换失败',
-  [ItemErrorType.ExceedMaxImageCount]: '图片数量超限',
-  [ItemErrorType.ExceedMaxImageSize]: '图片大小超限',
-  [ItemErrorType.GetImageFailed]: '图片获取失败',
-  [ItemErrorType.IllegalExtension]: '文件扩展名不合法',
-  [ItemErrorType.UploadImageFailed]: '上传图片失败',
+  [ItemErrorType.MismatchSchema]: I18n.t('schema_mismatch'),
+  [ItemErrorType.EmptyData]: I18n.t('empty_data'),
+  [ItemErrorType.ExceedMaxItemSize]: I18n.t('single_data_size_exceeded'),
+  [ItemErrorType.ExceedDatasetCapacity]: I18n.t('dataset_capacity_exceeded'),
+  [ItemErrorType.MalformedFile]: I18n.t('file_format_error'),
+  [ItemErrorType.InternalError]: I18n.t('system_error'),
+  [ItemErrorType.IllegalContent]: I18n.t('contains_illegal_content'),
+  [ItemErrorType.MissingRequiredField]: I18n.t('missing_required_field'),
+  [ItemErrorType.ExceedMaxNestedDepth]: I18n.t(
+    'data_engine_data_nesting_exceeds_limit',
+  ),
+  [ItemErrorType.TransformItemFailed]: I18n.t(
+    'data_engine_data_conversion_failed',
+  ),
+  [ItemErrorType.ExceedMaxImageCount]: I18n.t(
+    'data_engine_exceed_max_image_count',
+  ),
+  [ItemErrorType.ExceedMaxImageSize]: I18n.t(
+    'data_engine_exceed_max_image_size',
+  ),
+  [ItemErrorType.GetImageFailed]: I18n.t('data_engine_get_image_failed'),
+  [ItemErrorType.IllegalExtension]: I18n.t('data_engine_illegal_extension'),
+  [ItemErrorType.UploadImageFailed]: I18n.t(
+    'cozeloop_open_evaluate_image_upload_failed',
+  ),
 };

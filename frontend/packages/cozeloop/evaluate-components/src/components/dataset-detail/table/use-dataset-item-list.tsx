@@ -4,6 +4,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { usePagination, useUpdateEffect } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type Version,
   type ColumnItem,
@@ -58,7 +59,7 @@ export const useDatasetItemList = ({
         id: DRAFT_VERSION,
         isDraft: true,
         version: '0.0.0',
-        description: '当前草稿',
+        description: I18n.t('current_draft'),
       };
   const draftFieldSchemas =
     datasetDetail?.evaluation_set_version?.evaluation_set_schema

@@ -64,7 +64,7 @@ const AnnotateItem = ({ data, actions, disabled }: Props) => (
               disabled ? '!coz-fg-dim' : '!coz-fg-secondary',
             )}
           >
-            更新人：
+            {I18n.t('updated_by')}
           </Typography.Text>
           <CozAvatar
             size="small"

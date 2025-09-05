@@ -13,7 +13,7 @@ export const SkipButton = (props: {
 
   return (
     <Popover
-      content="跳过评测对象执行配置，适用于评测集已包含agent实际输出的评测场景。"
+      content={I18n.t('skip_eval_object_execution_config')}
       position="top"
       className="w-[320px] rounded-[8px] !py-2 !px-3"
     >
@@ -23,7 +23,7 @@ export const SkipButton = (props: {
         // 有类型存在, 不允许点击跳过
         disabled={disabled}
       >
-        跳过
+        {I18n.t('skip')}
       </Button>
     </Popover>
   );

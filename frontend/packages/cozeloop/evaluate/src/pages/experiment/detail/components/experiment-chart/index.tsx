@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnAnnotation,
   type ColumnEvaluator,
@@ -110,7 +111,7 @@ export default function ExperimentChart({
     <div className=" flex flex-col gap-4">
       <Spin spinning={loading || service.loading}>
         <div className="flex items-center text-sm font-semibold mb-3 h-[32px]">
-          总览
+          {I18n.t('overview')}
         </div>
         <div className="flex gap-2">
           <div className="flex-1">
@@ -134,7 +135,7 @@ export default function ExperimentChart({
         </div>
         <div className="flex items-center h-[32px] mt-5 mb-3">
           <div className="text-sm font-semibold mr-auto">
-            得分明细 - 数据项分布
+            {I18n.t('score_details_data_item_distribution')}
           </div>
           <RadioGroup
             type="button"

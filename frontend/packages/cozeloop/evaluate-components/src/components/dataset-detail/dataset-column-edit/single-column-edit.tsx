@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 
 import cs from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { EditIconButton } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -105,7 +106,7 @@ export const DatasetSingleColumnEdit = ({
         title={
           <div className="flex overflow-hidden w-full justify-between items-center">
             <div className="flex">
-              <span>编辑列：</span>
+              <span>{I18n.t('cozeloop_open_evaluate_edit_column')}</span>
               <Typography.Text
                 className="!text-[18px] !font-semibold flex-1"
                 ellipsis={{
@@ -125,9 +126,9 @@ export const DatasetSingleColumnEdit = ({
           formApiRef.current?.submitForm();
         }}
         keepDOM={false}
-        okText="保存"
+        okText={I18n.t('save')}
         okButtonProps={{ loading, disabled: guardData.readonly }}
-        cancelText="取消"
+        cancelText={I18n.t('cancel')}
         zIndex={1000}
       >
         <Form<ColumnForm>
@@ -142,14 +143,14 @@ export const DatasetSingleColumnEdit = ({
             <>
               <div className="flex gap-2 flex-wrap">
                 <FormInput
-                  label="名称"
+                  label={I18n.t('name')}
                   maxLength={50}
                   fieldClassName="flex-1"
                   field={`columns.${selectedFieldIndex}.name`}
                   rules={[
                     {
                       required: true,
-                      message: '请输入列名称',
+                      message: I18n.t('please_enter_column_name'),
                     },
                     {
                       validator: columnNameRuleValidator,
@@ -168,7 +169,7 @@ export const DatasetSingleColumnEdit = ({
                         }
                         return true;
                       },
-                      message: '列名称已存在',
+                      message: I18n.t('column_name_exists'),
                     },
                   ]}
                 ></FormInput>
@@ -211,7 +212,7 @@ export const ObjectContent = ({
   return (
     <>
       <FormDataTypeSelect
-        label="数据类型"
+        label={I18n.t('data_type')}
         labelWidth={90}
         zIndex={1070}
         fieldClassName="w-[190px]"
@@ -226,11 +227,11 @@ export const ObjectContent = ({
         }}
         field={`${fieldKey}.type`}
         className="w-full"
-        rules={[{ required: true, message: '请选择数据类型' }]}
+        rules={[{ required: true, message: I18n.t('select_data_type') }]}
       ></FormDataTypeSelect>
       <FormRequiredField
         label={{
-          text: '必填',
+          text: I18n.t('required'),
           required: true,
         }}
         fieldClassName="w-[60px]"
@@ -241,7 +242,7 @@ export const ObjectContent = ({
       <FormAdditionalPropertyField
         disabled={disabelChangeDatasetType}
         label={{
-          text: '允许冗余字段',
+          text: I18n.t('redundant_fields_allowed'),
           required: true,
         }}
         fieldClassName={cs(
@@ -252,7 +253,7 @@ export const ObjectContent = ({
         field={`${fieldKey}.additionalProperties`}
       />
       <Form.TextArea
-        label="描述"
+        label={I18n.t('description')}
         maxCount={200}
         autosize={{ minRows: 1, maxRows: 6 }}
         fieldClassName="w-full"

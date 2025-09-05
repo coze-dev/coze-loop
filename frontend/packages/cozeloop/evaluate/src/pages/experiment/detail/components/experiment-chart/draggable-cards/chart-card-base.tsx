@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { type EventParams, type ISpec } from '@visactor/vchart';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Chart } from '@cozeloop/evaluate-components';
 import { IconCozIllusAdd } from '@coze-arch/coze-design/illustrations';
 import { EmptyState } from '@coze-arch/coze-design';
@@ -38,11 +39,11 @@ export function ChartCardBase({
       <EmptyState
         size="full_screen"
         icon={<IconCozIllusAdd />}
-        title="暂无数据"
+        title={I18n.t('no_data')}
         description={
           type === 'evaluator'
-            ? '实验完成后，再刷新重试'
-            : '完成该标签的所有数据标注后，再刷新重试'
+            ? I18n.t('refresh_after_experiment')
+            : I18n.t('refresh_after_all_tag_annotations_completed')
         }
       />
     </div>

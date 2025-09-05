@@ -46,7 +46,7 @@ export function AnnotateTable({
             content={
               <div>
                 <span className="coz-fg-primary mr-1">
-                  该标签已禁用，不允许修改
+                  {I18n.t('tag_disabled_no_modification')}
                 </span>
                 <TagDetailLink tagKey={item.tag_key_id} />
               </div>

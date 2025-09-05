@@ -1,8 +1,9 @@
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
+import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluationSetVersion,
   type EvaluationSet,
@@ -87,7 +88,7 @@ export default function EvalDatasetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder="请选择评测集"
+      placeholder={I18n.t('please_select', { field: '' })}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

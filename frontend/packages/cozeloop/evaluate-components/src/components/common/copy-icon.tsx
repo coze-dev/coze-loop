@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { handleCopy, IconButtonContainer } from '@cozeloop/components';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
 import { Tooltip } from '@coze-arch/coze-design';
@@ -13,7 +14,7 @@ export function CopyIcon({
   onClick?: (e: React.MouseEvent) => void;
 }) {
   return (
-    <Tooltip content="复制" theme="dark">
+    <Tooltip content={I18n.t('copy')} theme="dark">
       <div className={className}>
         <IconButtonContainer
           icon={<IconCozCopy />}

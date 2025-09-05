@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { nanoid } from 'nanoid';
 import { cloneDeep } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozArrowDown,
   IconCozArrowRight,
@@ -54,7 +55,7 @@ export const ObjectStructRender = ({
   const getHeader = () => (
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
-        数据结构
+        {I18n.t('cozeloop_open_evaluate_data_structure')}
         {activeKey?.length ? (
           <IconCozArrowDown
             onClick={() => setActiveKey([])}
@@ -165,7 +166,7 @@ export const ObjectStructRender = ({
                   });
                 }}
               >
-                字段
+                {I18n.t('field')}
               </Button>
             )}
           </>

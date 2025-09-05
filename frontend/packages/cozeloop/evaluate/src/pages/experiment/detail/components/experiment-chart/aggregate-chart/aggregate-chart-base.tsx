@@ -2,6 +2,7 @@ import { type ReactNode, useCallback } from 'react';
 
 import { get } from 'lodash-es';
 import { type ISpec, type Datum } from '@visactor/vchart/esm/typings';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   Chart,
   ChartCardItemRender,
@@ -72,8 +73,8 @@ const spec: ISpec = {
 };
 
 const titleMap = {
-  evaluator: '评估器聚合得分',
-  annotation: '标注聚合得分',
+  evaluator: I18n.t('evaluator_aggregate_score'),
+  annotation: I18n.t('annotation_aggregate_score'),
 };
 interface ChartDataItem {
   name: string;
@@ -119,11 +120,11 @@ export function AggregateChartBase<T extends keyof Columns>({
         <EmptyState
           size="full_screen"
           icon={<IconCozIllusAdd />}
-          title="暂无数据"
+          title={I18n.t('no_data')}
           description={
             type === 'evaluator'
-              ? '实验完成后，再刷新重试'
-              : '完成该标签的所有数据标注后，再刷新重试'
+              ? I18n.t('refresh_after_experiment')
+              : I18n.t('refresh_after_all_tag_annotations_completed')
           }
         />
       </div>
@@ -139,7 +140,7 @@ export function AggregateChartBase<T extends keyof Columns>({
     <ChartCardItemRender
       item={{
         id: '',
-        title: titleMap[type] || '聚合得分',
+        title: titleMap[type] || I18n.t('aggregation_score'),
         content: renderContent(maxCount),
         fullContent: renderContent(),
       }}
@@ -192,7 +193,7 @@ function ComplexTooltipContent<T extends keyof Columns>(
       <div className="text-sm font-medium">{header}</div>
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-[var(--semi-color-primary)]" />
-        <span className="text-muted-foreground">得分</span>
+        <span className="text-muted-foreground">{I18n.t('score')}</span>
         <span className="font-semibold ml-auto">{datum?.score}</span>
       </div>
     </div>

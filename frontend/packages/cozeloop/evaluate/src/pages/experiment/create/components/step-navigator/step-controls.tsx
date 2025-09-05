@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type GuardPoint, Guard } from '@cozeloop/guard';
 import { EVAL_EXPERIMENT_CONCUR_COUNT_MAX } from '@cozeloop/biz-config-adapter';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
@@ -36,10 +37,12 @@ export const StepControls: React.FC<StepControlsProps> = ({
             labelPosition="left"
             initValue={5}
             label={{
-              text: '最大并发执行条数',
+              text: I18n.t('max_concurrent_execution_count'),
               extra: (
                 <Tooltip
-                  content="实验支持并发执行评测集中的条目，但受限于评测对象的并发度和调用评估器的模型 TPM 限制。这里设置理想的最大执行条数。"
+                  content={I18n.t(
+                    'experiment_supports_concurrent_eval_limitations',
+                  )}
                   theme="dark"
                 >
                   <IconCozInfoCircle />
@@ -52,14 +55,16 @@ export const StepControls: React.FC<StepControlsProps> = ({
             max={EVAL_EXPERIMENT_CONCUR_COUNT_MAX}
           />
           <div className="coz-fg-dim ml-2">
-            最大并发执行条数最多支持 {EVAL_EXPERIMENT_CONCUR_COUNT_MAX} 条。
+            {I18n.t('max_concurrent_execution_count_limit', {
+              EVAL_EXPERIMENT_CONCUR_COUNT_MAX,
+            })}
           </div>
         </div>
 
         <div>
           {currentStep > 0 && (
             <Button color="primary" onClick={onPrevious} className="mr-2">
-              上一步
+              {I18n.t('dataset_previous_step')}
             </Button>
           )}
           {currentStepConfig.optional ? (
@@ -68,7 +73,7 @@ export const StepControls: React.FC<StepControlsProps> = ({
               onClick={() => onSkip?.()}
               disabled={isSkipDisabled}
             >
-              跳过
+              {I18n.t('skip')}
             </Button>
           ) : null}
 

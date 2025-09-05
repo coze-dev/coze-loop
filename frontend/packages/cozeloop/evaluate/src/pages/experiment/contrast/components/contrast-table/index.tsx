@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { type PaginationResult } from 'ahooks/lib/usePagination/types';
 import { safeJsonParse } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type LogicFilter } from '@cozeloop/evaluate-components';
 import { TableColActions, IDRender } from '@cozeloop/components';
 import {
@@ -172,7 +173,7 @@ export default function ExperimentContrastTable({
         canManage: false,
       })),
       {
-        title: '操作',
+        title: I18n.t('operation'),
         dataIndex: 'action',
         key: 'action',
         fixed: 'right',
@@ -183,8 +184,8 @@ export default function ExperimentContrastTable({
             actions={[
               {
                 label: (
-                  <Tooltip content="查看详情" theme="dark">
-                    详情
+                  <Tooltip content={I18n.t('detail')} theme="dark">
+                    {I18n.t('detail')}
                   </Tooltip>
                 ),
                 onClick: () => {

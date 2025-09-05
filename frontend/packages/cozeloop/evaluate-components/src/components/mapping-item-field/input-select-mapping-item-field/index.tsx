@@ -1,17 +1,18 @@
 import { type FC } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { Tag, withField, type CommonFieldProps } from '@coze-arch/coze-design';
 
-import { EqualItem, ReadonlyItem, getTypeText } from '../../column-item-map';
 import {
   type OptionGroup,
   type OptionSchema,
   schemaSourceTypeMap,
 } from '../types';
+import { EqualItem, ReadonlyItem, getTypeText } from '../../column-item-map';
+import GroupSelect from './group-select';
 
 import styles from './index.module.less';
-import GroupSelect from './group-select';
 
 const separator = '--';
 
@@ -67,7 +68,7 @@ export const InputSelectMappingItemField: FC<
       <GroupSelect
         validateStatus={validateStatus}
         className={styles.select}
-        placeholder="请选择"
+        placeholder={I18n.t('please_select', { field: '' })}
         optionGroups={optionGroups}
         value={selectValue}
         disabled={disabled}
@@ -90,7 +91,7 @@ export const InputSelectMappingItemField: FC<
       {/* <BaseSearchSelect
         validateStatus={validateStatus}
         className={styles.select}
-        placeholder="请选择"
+        placeholder={I18n.t('please_select', { field: '' })}
         prefix={
           value?.schemaSourceType && schemaSourceTypeMap[value.schemaSourceType]
         }

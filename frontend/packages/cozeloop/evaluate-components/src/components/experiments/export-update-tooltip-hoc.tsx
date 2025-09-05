@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useUIStore, UIEvent } from '@cozeloop/stores';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Tooltip } from '@coze-arch/coze-design';
 
 /**
@@ -72,9 +73,9 @@ export const ExportUpdateTooltipHoc = ({
             handleUpgradeClick(e);
           }}
         >
-          升级「企业团队版套餐」
+          {I18n.t('upgrade_enterprise_team_edition_package')}
         </span>
-        <span>后可使用此功能</span>
+        <span>{I18n.t('you_can_use_this_function_later')}</span>
       </div>
     ),
     [handleUpgradeClick],

@@ -39,7 +39,8 @@ export default function ExperimentContrastItemDetail({
       closable={false}
       title={
         <div className="flex items-center gap-2">
-          对比实验详情 <IDRender id={experimentContrastItem?.groupID ?? ''} />
+          {I18n.t('comparison_experiment_details')}
+          <IDRender id={experimentContrastItem?.groupID ?? ''} />
         </div>
       }
       dragOptions={{

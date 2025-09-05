@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { getTypeText } from '@cozeloop/evaluate-components';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { Space, Dropdown, Typography, Tag } from '@coze-arch/coze-design';
@@ -17,7 +18,7 @@ export function EvaluateSetColList({
               <div className="w-[150px] overflow-hidden p-3 flex flex-col gap-2">
                 <div className="flex items-center">
                   <Typography.Text className="flex-1 !text-[13px]">
-                    数据类型
+                    {I18n.t('data_type')}
                   </Typography.Text>
                   <Typography.Text className="flex-1 !text-[13px] !font-bold">
                     {getTypeText(item)}
@@ -25,7 +26,7 @@ export function EvaluateSetColList({
                 </div>
                 <div className="flex items-center ">
                   <Typography.Text className="flex-1 !text-[13px]">
-                    描述
+                    {I18n.t('description')}
                   </Typography.Text>
                   <Typography.Text
                     className="flex-1 !text-[13px] !font-bold"

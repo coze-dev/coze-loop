@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type OperatorRenderProps } from '@cozeloop/components';
 import { Select } from '@coze-arch/coze-design';
 
@@ -38,7 +39,7 @@ export default function OperatorRender(
   return (
     <div className="w-24">
       <Select
-        placeholder="操作符"
+        placeholder={I18n.t('operator')}
         value={expr.operator}
         style={{ width: '100%' }}
         disabled={disabled}
