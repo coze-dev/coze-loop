@@ -1,20 +1,20 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
+import { useShallow } from 'zustand/react/shallow';
 import {
   type PromptBasicEditorRef,
   PromptEditor,
   type PromptEditorProps,
 } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { handleCopy } from '@cozeloop/components';
+import { EditorTools } from '@cozeloop/biz-components-adapter';
 import { Role } from '@cozeloop/api-schema/prompt';
-import { IconCozCopy, IconCozTrashCan } from '@coze-arch/coze-design/icons';
-import { IconButton, Popconfirm, Space } from '@coze-arch/coze-design';
 
-interface LoopPromptEditorProps extends PromptEditorProps {
+import { usePromptStore } from '@/store/use-prompt-store';
+
+interface LoopPromptEditorProps extends PromptEditorProps<string> {
   onDelete?: (id?: Int64) => void;
+  optimizeBtnHidden?: boolean;
   showDragBtn?: boolean;
   children?: React.ReactNode;
 }
@@ -23,6 +23,11 @@ export const LoopPromptEditor = forwardRef<
   PromptBasicEditorRef,
   LoopPromptEditorProps
 >(({ showDragBtn, messageTypeList, ...restProps }, ref) => {
+  const { promptInfo } = usePromptStore(
+    useShallow(state => ({
+      promptInfo: state.promptInfo,
+    })),
+  );
   const editorRef = useRef<PromptBasicEditorRef>(null);
 
   useImperativeHandle(ref, () => ({
@@ -32,42 +37,33 @@ export const LoopPromptEditor = forwardRef<
     insertText: (text: string) => {
       editorRef.current?.insertText?.(text);
     },
+    getEditor: () => editorRef.current?.getEditor?.() || null,
   }));
+
+  useEffect(() => {
+    if (!restProps.optimizeBtnHidden) {
+      if (!window.optimizeEditorMap) {
+        window.optimizeEditorMap = {};
+      }
+      window.optimizeEditorMap[
+        restProps?.message?.key || restProps?.message?.id || ''
+      ] = editorRef.current;
+    }
+  }, [restProps.optimizeBtnHidden]);
 
   return (
     <>
       <PromptEditor
         ref={editorRef}
         rightActionBtns={
-          <Space>
-            <IconButton
-              icon={<IconCozCopy />}
-              color="secondary"
-              size="mini"
-              onClick={() => handleCopy(restProps.message?.content || '')}
-            />
-            {!restProps.onDelete ? null : (
-              <Popconfirm
-                title={I18n.t('delete_prompt_template')}
-                content={I18n.t('confirm_delete_current_prompt_template')}
-                cancelText={I18n.t('Cancel')}
-                okText={I18n.t('delete')}
-                okButtonProps={{ color: 'red' }}
-                onConfirm={() =>
-                  restProps.onDelete?.(
-                    `${restProps.message?.key || restProps.message?.id || ''}`,
-                  )
-                }
-              >
-                <IconButton
-                  icon={<IconCozTrashCan />}
-                  color="secondary"
-                  size="mini"
-                  disabled={restProps.disabled}
-                />
-              </Popconfirm>
-            )}
-          </Space>
+          <EditorTools<Role>
+            onDelete={restProps.onDelete}
+            disabled={restProps.disabled}
+            message={restProps.message as any}
+            promptInfo={promptInfo}
+            onMessageChange={restProps.onMessageChange}
+            optimizeBtnHidden={restProps.optimizeBtnHidden}
+          />
         }
         dragBtnHidden={!showDragBtn}
         messageTypeList={

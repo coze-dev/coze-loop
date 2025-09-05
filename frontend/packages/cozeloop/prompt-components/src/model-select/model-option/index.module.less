@@ -1,0 +1,33 @@
+/* stylelint-disable declaration-no-important */
+
+.model-option {
+    &:hover{
+        background-color: rgba(var(--coze-bg-5), var(--coze-bg-5-alpha));
+    }
+
+    &:last-of-type,
+    &.model-option_selected,
+    &:hover,
+    &:has(+ &.model-option_selected),
+    &:has(+ &:hover) {
+        .model-info-border {
+            border-color: transparent;
+        }
+    }
+
+    // UI 要改 coze design 默认样式，无奈
+        :global(.coz-tag.coz-tag-mini) {
+        padding-right: 3px;
+        padding-left: 3px;
+        font-weight: 500;
+    }
+}
+
+.model-option_selected{
+    background-color: rgba(var(--coze-brand-1), var(--coze-brand-1-alpha));
+    border: 0;
+
+    &:hover{
+        background-color: rgba(var(--coze-brand-2), var(--coze-brand-2-alpha)) !important;
+    }
+}

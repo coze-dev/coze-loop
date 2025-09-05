@@ -1,10 +1,7 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 import { useShallow } from 'zustand/react/shallow';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { CollapseCard } from '@cozeloop/components';
 import { useModalData } from '@cozeloop/base-hooks';
 import { ToolChoiceType } from '@cozeloop/api-schema/prompt';
@@ -52,7 +49,7 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
     setMockTools,
   } = useCompare(uid);
 
-  const { readonly } = useBasicStore(
+  const { readonly: basicReadonly } = useBasicStore(
     useShallow(state => ({ readonly: state.readonly })),
   );
 
@@ -62,7 +59,7 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
 
   const toolModal = useModalData<ToolWithMock>();
 
-  const currentReadonly = readonly || streaming;
+  const currentReadonly = basicReadonly || streaming;
   const functionCallEnabled = currentModel?.ability?.function_call;
 
   const deleteToolByTool = (name?: string) => {
@@ -86,11 +83,11 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
         subInfo={
           functionCallEnabled || !currentModel ? null : (
             <Tag size="mini" color="red" prefixIcon={<IconCozWarningCircle />}>
-              {I18n.t('model_not_support')}
+              模型不支持
             </Tag>
           )
         }
-        title={<Typography.Text strong>{I18n.t('function')}</Typography.Text>}
+        title={<Typography.Text strong>函数</Typography.Text>}
         extra={
           <Space spacing="tight">
             <div
@@ -113,9 +110,7 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
                 }}
                 disabled={currentReadonly || !functionCallEnabled}
               />
-              <Typography.Text size="small">
-                {I18n.t('enable_function')}
-              </Typography.Text>
+              <Typography.Text size="small">启用函数</Typography.Text>
             </div>
             {isCompare ? null : (
               <div
@@ -137,16 +132,14 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
                     currentReadonly
                   }
                 />
-                <Typography.Text size="small">
-                  {I18n.t('single_step_debugging')}
-                </Typography.Text>
+                <Typography.Text size="small">单步调试</Typography.Text>
               </div>
             )}
           </Space>
         }
         defaultVisible={defaultVisible}
       >
-        <div className="flex flex-col gap-2 pt-4">
+        <div className="flex flex-col gap-2 pt-2">
           {tools?.map(item => {
             const mockTool = mockTools?.find(
               it => it?.name === item?.function?.name,
@@ -171,12 +164,12 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
             onClick={() => toolModal.open()}
             disabled={currentReadonly || !functionCallEnabled}
           >
-            {I18n.t('new_function')}
+            新增函数
           </Button>
         </div>
       </CollapseCard>
       <ToolModal
-        disabled={!functionCallEnabled}
+        disabled={!functionCallEnabled || currentReadonly}
         visible={toolModal.visible}
         data={toolModal.data}
         onClose={() => toolModal.close()}

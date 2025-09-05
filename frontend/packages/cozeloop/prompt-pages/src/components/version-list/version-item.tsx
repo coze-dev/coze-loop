@@ -1,28 +1,37 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 import cs from 'classnames';
 import { formatTimestampToString } from '@cozeloop/toolkit';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { UserProfile } from '@cozeloop/components';
-import { type CommitInfo } from '@cozeloop/api-schema/prompt';
+import { type CommitInfo, type Label } from '@cozeloop/api-schema/prompt';
 import { type UserInfoDetail } from '@cozeloop/api-schema/foundation';
-import { Descriptions, Tag, Typography } from '@coze-arch/coze-design';
+import { IconCozEdit } from '@coze-arch/coze-design/icons';
+import {
+  Button,
+  Descriptions,
+  Space,
+  Tag,
+  Typography,
+} from '@coze-arch/coze-design';
 
 import styles from './index.module.less';
 
 export default function VersionItem({
   version,
   active,
+  labels,
   className,
   onClick,
+  onEditLabels,
 }: {
   version?: CommitInfo & { user?: UserInfoDetail };
   active?: boolean;
+  labels?: Label[];
   className?: string;
   onClick?: () => void;
+  onEditLabels?: (labels: Label[]) => void;
 }) {
   const isDraft = !version?.version;
+
   return (
     <div className={`group flex cursor-pointer ${className}`} onClick={onClick}>
       <div className="w-6 h-10 flex items-center shrink-0">
@@ -38,16 +47,16 @@ export default function VersionItem({
           className={cs(styles.description, className)}
         >
           <Tag color={isDraft ? 'primary' : 'green'} className="mb-2">
-            {isDraft ? I18n.t('current_draft') : I18n.t('submit')}
+            {isDraft ? '当前草稿' : '提交'}
           </Tag>
           {isDraft ? null : (
-            <Descriptions.Item itemKey={I18n.t('version')}>
+            <Descriptions.Item itemKey="版本">
               <span className="font-medium">{version.version ?? '-'}</span>
             </Descriptions.Item>
           )}
           {!version?.committed_at ? null : (
             <Descriptions.Item
-              itemKey={isDraft ? I18n.t('save_time') : I18n.t('submit_time')}
+              itemKey={isDraft ? '保存时间' : '提交时间'}
               className="!text-[13px]"
             >
               <span className="font-medium !text-[13px]">
@@ -61,10 +70,7 @@ export default function VersionItem({
             </Descriptions.Item>
           )}
           {isDraft && !version?.committed_by ? null : (
-            <Descriptions.Item
-              itemKey={I18n.t('submitter')}
-              className="!text-[13px]"
-            >
+            <Descriptions.Item itemKey="提交人" className="!text-[13px]">
               <UserProfile
                 avatarUrl={version?.user?.avatar_url}
                 name={version?.user?.nick_name}
@@ -72,18 +78,55 @@ export default function VersionItem({
             </Descriptions.Item>
           )}
           {isDraft ? null : (
-            <Descriptions.Item
-              itemKey={I18n.t('version_description')}
-              className="!text-[13px]"
-            >
-              <Typography.Text
-                ellipsis={{ rows: 2, showTooltip: true }}
-                className="!text-[13px]"
-              >
-                {version.description || '-'}
-              </Typography.Text>
+            <Descriptions.Item itemKey="版本说明" className="!text-[13px]">
+              <div className="max-w-[195px]">
+                <Typography.Text
+                  ellipsis={{
+                    showTooltip: {
+                      opts: {
+                        theme: 'dark',
+                      },
+                    },
+                  }}
+                  className="!text-[13px]"
+                >
+                  {version.description || '-'}
+                </Typography.Text>
+              </div>
             </Descriptions.Item>
           )}
+          {!isDraft ? (
+            <Descriptions.Item itemKey="版本标识" className="!text-[13px]">
+              <Space spacing={4} wrap>
+                {labels?.map(item => (
+                  <Tag key={item.key} color="grey" className="max-w-[80px]">
+                    <Typography.Text
+                      className="!coz-fg-primary !text-[12px]"
+                      ellipsis={{
+                        showTooltip: {
+                          opts: {
+                            theme: 'dark',
+                          },
+                        },
+                      }}
+                    >
+                      {item.key}
+                    </Typography.Text>
+                  </Tag>
+                ))}
+
+                <Button
+                  icon={<IconCozEdit />}
+                  size="mini"
+                  color="secondary"
+                  onClick={e => {
+                    e.stopPropagation();
+                    onEditLabels?.(labels || []);
+                  }}
+                ></Button>
+              </Space>
+            </Descriptions.Item>
+          ) : null}
         </Descriptions>
       </div>
     </div>

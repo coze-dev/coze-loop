@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable security/detect-object-injection */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @coze-arch/max-line-per-function */
@@ -12,9 +10,9 @@ import { isUndefined } from 'lodash-es';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import {
   type DebugStreamingRequest,
+  type DebugToolCall,
   type Message,
   Role,
-  TemplateType,
   ToolChoiceType,
 } from '@cozeloop/api-schema/prompt';
 
@@ -36,6 +34,10 @@ export const createLLMRun = ({
   traceKey,
   notReport,
   singleRound,
+
+  toolCalls: originToolCalls,
+  setToolCalls: setOriginToolCalls,
+  setHistoricChat: setOriginHistoricChat,
 }: {
   startStream: (
     params: DebugStreamingRequest,
@@ -47,6 +49,10 @@ export const createLLMRun = ({
   traceKey?: string;
   notReport?: boolean;
   singleRound?: boolean;
+
+  toolCalls?: DebugToolCall[];
+  setToolCalls?: React.Dispatch<React.SetStateAction<DebugToolCall[]>>;
+  setHistoricChat?: React.Dispatch<React.SetStateAction<DebugMessage[]>>;
 }) => {
   const { readonly } = useBasicStore.getState();
   const {
@@ -57,6 +63,7 @@ export const createLLMRun = ({
     currentModel: draftCurrentModel,
     variables: draftVariables,
     tools: draftTools,
+    templateType,
   } = usePromptStore.getState();
 
   const {
@@ -65,8 +72,8 @@ export const createLLMRun = ({
     userDebugConfig,
     mockTools: draftMockTools,
     mockVariables: draftMockVariables,
-    toolCalls,
-    setToolCalls,
+    toolCalls: draftToolCalls,
+    setToolCalls: setDraftToolCalls,
     setHistoricMessageById,
   } = usePromptMockDataStore.getState();
   const compareItem = isUndefined(uid)
@@ -87,16 +94,21 @@ export const createLLMRun = ({
   const mockVariables =
     compareItem?.debug_core?.mock_variables || draftMockVariables;
 
+  const toolCalls = originToolCalls || draftToolCalls;
+  const setToolCalls = setOriginToolCalls || setDraftToolCalls;
+
   const functionCllAble = currentModel?.ability?.function_call;
 
   const mockTools = functionCllAble
     ? compareItem?.debug_core?.mock_tools || draftMockTools
     : undefined;
 
-  const setHistoricMessage = isUndefined(uid)
-    ? setDraftHistoricMessage
-    : (list: SetStateAction<DebugMessage[]>) =>
-        setHistoricMessageById(uid, list);
+  const setHistoricMessage =
+    setOriginHistoricChat ||
+    (isUndefined(uid)
+      ? setDraftHistoricMessage
+      : (list: SetStateAction<DebugMessage[]>) =>
+          setHistoricMessageById(uid, list));
 
   const stepDebugger = !compareConfig?.groups?.length
     ? userDebugConfig?.single_step_debug
@@ -124,9 +136,8 @@ export const createLLMRun = ({
           draft_info: promptInfo?.prompt_draft?.draft_info,
           detail: {
             prompt_template: {
-              ...(promptInfo?.prompt_draft?.detail?.prompt_template || {
-                template_type: TemplateType.Normal,
-              }),
+              ...promptInfo?.prompt_draft?.detail?.prompt_template,
+              template_type: templateType,
               messages: messageList,
               variable_defs: variables,
             },
@@ -144,7 +155,12 @@ export const createLLMRun = ({
     messages: newMessage
       ? [...newHistoriceMessages, newMessage]
       : newHistoriceMessages,
-    variable_vals: mockVariables,
+    variable_vals: mockVariables?.map(it => ({
+      key: it.key,
+      value: it.value ? it.value : undefined,
+      placeholder_messages: it.placeholder_messages,
+      multi_part_values: it.multi_part_values,
+    })),
     mock_tools: mockTools,
     single_step_debug: singleStepDebug,
     debug_trace_key: traceKey,

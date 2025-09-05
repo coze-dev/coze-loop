@@ -1,21 +1,20 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useRequest } from 'ahooks';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { PromptCreate } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { getBaseUrl } from '@cozeloop/components';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { useModalData } from '@cozeloop/base-hooks';
-import { type CommitInfo, type Prompt } from '@cozeloop/api-schema/prompt';
-import { promptManage } from '@cozeloop/api-schema';
+import {
+  type Label,
+  type CommitInfo,
+  type Prompt,
+} from '@cozeloop/api-schema/prompt';
+import { StonePromptApi } from '@cozeloop/api-schema';
 import { IconCozDuplicate, IconCozUpdate } from '@coze-arch/coze-design/icons';
 import {
   Button,
@@ -33,12 +32,18 @@ import { useVersionList } from '@/hooks/use-version-list';
 import { usePrompt } from '@/hooks/use-prompt';
 import { CALL_SLEEP_TIME } from '@/consts';
 
+import { VersionLabelModal } from '../version-label';
 import VersionItem from './version-item';
 
 export function VersionList() {
   const { spaceID } = useSpace();
-  const navigate = useNavigate();
-  const baseURL = getBaseUrl(spaceID);
+  const navigate = useNavigateModule();
+
+  const labelModal = useModalData<{
+    labels: Label[];
+    version: string;
+  }>();
+
   const { promptInfo } = usePromptStore(
     useShallow(state => ({ promptInfo: state.promptInfo })),
   );
@@ -69,6 +74,7 @@ export function VersionList() {
     versionListLoading,
     versionListReload,
     versionListLoadingMore,
+    versionListMutate,
   } = useVersionList({
     promptID: promptInfo?.id,
     draftVersion,
@@ -78,7 +84,7 @@ export function VersionList() {
 
   const { runAsync: rollbackRunAsync } = useRequest(
     () =>
-      promptManage.RevertDraftFromCommit({
+      StonePromptApi.RevertDraftFromCommit({
         prompt_id: promptInfo?.id,
         commit_version_reverting_from: activeVersion,
       }),
@@ -87,7 +93,7 @@ export function VersionList() {
       ready: Boolean(spaceID && promptInfo?.id && activeVersion),
       refreshDeps: [spaceID, promptInfo?.id, activeVersion],
       onSuccess: async () => {
-        Toast.success(I18n.t('rollback_success'));
+        Toast.success('回滚成功');
         setVersionChangeLoading(true);
         await sleep(CALL_SLEEP_TIME);
         getPromptByVersion()
@@ -120,6 +126,32 @@ export function VersionList() {
       });
 
     setActiveVersion(version);
+  };
+
+  const handleLabelChange = (version: string, labels: Label[]) => {
+    if (!versionListData) {
+      return;
+    }
+    const newLabelMap = {
+      ...versionListData.versionLabelMap,
+    };
+    if (!newLabelMap[version]) {
+      newLabelMap[version] = [];
+    }
+
+    const changeLabelSet = new Set(labels.map(item => item.key));
+
+    for (const [key, value] of Object.entries(newLabelMap)) {
+      if (key !== version) {
+        newLabelMap[key] = value.filter(item => !changeLabelSet.has(item.key));
+      } else {
+        newLabelMap[key] = labels;
+      }
+    }
+    versionListMutate({
+      ...versionListData,
+      versionLabelMap: newLabelMap,
+    });
   };
 
   useEffect(() => {
@@ -173,7 +205,16 @@ export function VersionList() {
               key={item.version}
               active={activeVersion === item.version}
               version={item}
+              labels={
+                versionListData?.versionLabelMap?.[item.version || ''] || []
+              }
               onClick={() => handleVersionChange(item.version)}
+              onEditLabels={v => {
+                labelModal.open({
+                  labels: v,
+                  version: item.version || '',
+                });
+              }}
             />
           )}
           size="small"
@@ -199,7 +240,7 @@ export function VersionList() {
             icon={<IconCozDuplicate />}
             onClick={() => promptInfoModal.open(promptInfo)}
           >
-            {I18n.t('create_copy')}
+            创建副本
           </Button>
           <Button
             className="flex-1"
@@ -208,11 +249,11 @@ export function VersionList() {
             icon={<IconCozUpdate />}
             onClick={() =>
               Modal.confirm({
-                title: I18n.t('restore_to_this_version'),
-                content: I18n.t('restore_version_tip'),
+                title: '还原为此版本',
+                content: '还原后将覆盖最新编辑的提示词。确认还原为此版本？',
                 onOk: rollbackRunAsync,
-                cancelText: I18n.t('Cancel'),
-                okText: I18n.t('restore'),
+                cancelText: '取消',
+                okText: '还原',
                 okButtonProps: {
                   color: 'red',
                 },
@@ -220,7 +261,7 @@ export function VersionList() {
               })
             }
           >
-            {I18n.t('restore_to_this_version')}
+            还原为此版本
           </Button>
         </Space>
       ) : null}
@@ -230,8 +271,25 @@ export function VersionList() {
         data={promptInfoModal?.data}
         isCopy
         onOk={res => {
-          navigate(`${baseURL}/pe/prompts/${res.cloned_prompt_id}`);
+          navigate(`pe/prompts/${res.cloned_prompt_id}`);
           promptInfoModal.close();
+        }}
+      />
+      <VersionLabelModal
+        visible={labelModal.visible}
+        spaceID={spaceID}
+        promptID={promptInfo?.id || ''}
+        labels={labelModal.data?.labels || []}
+        version={labelModal.data?.version}
+        onCancel={() => {
+          labelModal.close();
+        }}
+        onConfirm={val => {
+          handleLabelChange(
+            labelModal.data?.version || '',
+            val.map(item => ({ key: item })),
+          );
+          labelModal.close();
         }}
       />
     </div>

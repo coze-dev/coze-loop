@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* stylelint-disable font-family-no-missing-generic-family-keyword */
 /* stylelint-disable declaration-no-important */
 .prompt-editor-container {
@@ -26,7 +24,7 @@
 
     border-bottom: 1px solid var(--Stroke-COZ-stroke-primary, rgba(82, 100, 154, 13%));
 
-    .drag {
+    .drag-btn {
       color: var(--coz-fg-dim);
 
       &:hover {
@@ -47,15 +45,24 @@
   input::placeholder {
     font-family: JetBrainsMonoBold !important;
     font-size: 13px !important;
+    line-height: 20px !important;
   }
 
   :global {
+    .cm-line{
+      font-size: 13px !important;
+      line-height: 20px !important;
+    }
     .cm-scroller {
       scrollbar-gutter: stable;
 
       &::-webkit-scrollbar-thumb {
         visibility: hidden;
       }
+    }
+
+    .coz-input.semi-input-wrapper:hover{
+      background: transparent;
     }
   }
 
@@ -92,4 +99,16 @@
 
 .role-display {
   color: var(--Fg-COZ-fg-dim, rgba(55, 67, 106, 38%)) !important;
+}
+
+.full-screen {
+  position: fixed !important;
+  z-index: 1000;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  background-color: var(--semi-color-bg-0);
+
 }

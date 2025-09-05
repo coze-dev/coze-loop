@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
 import { Typography } from '@coze-arch/coze-design';
 
@@ -10,7 +8,7 @@ export function DevLayout({
   className,
   style,
 }: {
-  title: string;
+  title: React.ReactNode;
   actionBtns?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
