@@ -872,12 +872,6 @@ func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId
 	filter := &loop_span.FilterFields{
 		FilterFields: []*loop_span.FilterField{
 			{
-				FieldName: loop_span.SpanFieldSpanId,
-				FieldType: loop_span.FieldTypeString,
-				Values:    []string{spanId},
-				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-			},
-			{
 				FieldName: loop_span.SpanFieldSpaceId,
 				FieldType: loop_span.FieldTypeString,
 				Values:    []string{workspaceId},

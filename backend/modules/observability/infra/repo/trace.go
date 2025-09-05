@@ -296,8 +296,10 @@ func (t *TraceCkRepoImpl) getQueryTenantTables(ctx context.Context, tenants []st
 		}
 		for _, tableCfg := range tables {
 			ret.SpanTables = append(ret.SpanTables, tableCfg.SpanTable)
-			ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
-			ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+			if tableCfg.AnnoTable != "" {
+				ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
+				ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+			}
 		}
 	}
 	for _, tenant := range tenants {
