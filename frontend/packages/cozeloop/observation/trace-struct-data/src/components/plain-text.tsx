@@ -3,21 +3,19 @@
 import { isObject } from 'lodash-es';
 import classNames from 'classnames';
 import { JsonViewer, type JsonViewerProps } from '@textea/json-viewer';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { Tag } from '@coze-arch/coze-design';
 
 import { JSON_VIEW_CONFIG } from '../consts/json-view';
 
 import styles from './index.module.less';
 
-export const PlantText = ({ content }: { content: string }) => (
+export const PlantText = ({ content }: { content: string | null }) => (
   <span className={classNames(styles['view-string'], {})}>
     {content || '-'}
   </span>
 );
 
 export const renderPlainText = (
-  content: string | object,
+  content: string | object | null,
   config?: Partial<JsonViewerProps>,
 ) =>
   isObject(content) ? (
@@ -27,16 +25,11 @@ export const renderPlainText = (
   );
 
 export const renderJsonContent = (
-  content: string | object,
+  content: string | object | null,
   config?: Partial<JsonViewerProps>,
 ) =>
   isObject(content) ? (
     <JsonViewer {...JSON_VIEW_CONFIG} {...(config ?? {})} value={content} />
   ) : (
-    <>
-      <Tag color="red" size="small" className="inline-block !w-fit">
-        {I18n.t('invalid_json')}
-      </Tag>
-      <PlantText content={content} />
-    </>
+    <PlantText content={content} />
   );

@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { isEmpty } from 'lodash-es';
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Typography } from '@coze-arch/coze-design';
 
 import { capitalizeFirstLetter } from '../utils/letter';
@@ -15,7 +16,6 @@ import { renderPlainText } from './plain-text';
 import { MessageParts } from './message-parts';
 
 import styles from './index.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface SpanFieldRenderProps {
   messages?: RawMessage[];
@@ -59,15 +59,23 @@ export const SpanFieldRender = (props: SpanFieldRenderProps) => {
                       !content && !tool_calls && !reasoning_content,
                   })}
                 >
-                  {!isEmpty(rawContent.tool_calls) ||
-                  !isEmpty(rawContent.parts) ? (
-                    <>
-                      <ToolCall raw={rawContent} />
-                      <MessageParts raw={rawContent} attrTos={attrTos} />
-                    </>
-                  ) : (
-                    <>{renderPlainText(rawContent.content ?? '')}</>
-                  )}
+                  <>
+                    {(!isEmpty(rawContent.tool_calls) ||
+                      !isEmpty(rawContent.parts)) && (
+                      <>
+                        <ToolCall raw={rawContent} />
+                        <MessageParts raw={rawContent} attrTos={attrTos} />
+                      </>
+                    )}
+                    {rawContent.content
+                      ? renderPlainText(rawContent.content ?? '')
+                      : null}
+                    {/* 全部都是空的时候渲染 -  */}
+                    {isEmpty(rawContent.tool_calls) &&
+                      isEmpty(rawContent.parts) &&
+                      !rawContent.content &&
+                      renderPlainText('')}
+                  </>
                 </span>
               </div>
             </div>

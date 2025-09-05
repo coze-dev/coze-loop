@@ -7,13 +7,14 @@ import classNames from 'classnames';
 import { useMouseDownOffset } from '@cozeloop/base-hooks';
 import { Layout, SideSheet } from '@coze-arch/coze-design';
 
+import { type TraceDetailContext } from '@/trace-detail';
 import { PERCENT } from '@/consts';
 
 import { type TraceDetailProps } from '../trace-detail/interface';
 import { TraceDetail } from '../trace-detail';
 import { DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from './config';
 
-interface TraceDetailPanelProps
+export interface TraceDetailPanelProps
   extends Omit<TraceDetailProps, 'layout' | 'spanDetailConfig'> {
   visible: boolean;
   onClose: () => void;
@@ -24,7 +25,7 @@ export const TraceDetailPanel = ({
   onClose,
   headerConfig,
   ...props
-}: TraceDetailPanelProps) => {
+}: TraceDetailPanelProps & TraceDetailContext) => {
   const [sidePaneWidth, setSidePaneWidth] = useState(DEFAULT_WIDTH);
   const prevWidthRef = useRef(sidePaneWidth);
 
