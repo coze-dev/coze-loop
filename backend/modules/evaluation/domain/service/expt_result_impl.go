@@ -1834,28 +1834,193 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 	}
 
 	// 1. 验证实验数据
-	createdDate, err := e.validateExperimentData(ctx, spaceID, exptID)
+	exptDO, err := e.ExperimentRepo.MGetByID(ctx, []int64{exptID}, spaceID)
 	if err != nil {
 		return err
 	}
-	if createdDate == "" {
-		return nil // 实验数据无效，直接返回
+	if len(exptDO) == 0 {
+		logs.CtxWarn(ctx, "CompareExptTurnResultFilters get expt result by id empty, exptID: %d, spaceID: %d", exptID, spaceID)
+		return nil
 	}
+	if exptDO[0].StartAt == nil {
+		logs.CtxWarn(ctx, "CompareExptTurnResultFilters expt start time is nil, exptID: %d, spaceID: %d", exptID, spaceID)
+		return nil
+	}
+	createdDate := exptDO[0].StartAt.Format("2006-01-02")
 
 	// 2. 处理ItemIDs（如果为空则获取所有ItemIDs）
-	itemIDs, err = e.resolveItemIDs(ctx, spaceID, exptID, itemIDs)
-	if err != nil {
-		return err
+	if len(itemIDs) == 0 {
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters itemIDs is empty, getting all items for expt, exptID: %d, spaceID: %d", exptID, spaceID)
+		allItemResults, _, err := e.ExptItemResultRepo.ListItemResultsByExptID(ctx, exptID, spaceID, entity.Page{}, false)
+		if err != nil {
+			return err
+		}
+		itemIDs = make([]int64, 0, len(allItemResults))
+		for _, itemResult := range allItemResults {
+			itemIDs = append(itemIDs, itemResult.ItemID)
+		}
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters got all items for expt, exptID: %d, spaceID: %d, totalItems: %d", exptID, spaceID, len(itemIDs))
 	}
 
 	// 3. 获取过滤器键映射
-	evaluatorVersionID2Key, err := e.getFilterKeyMappings(ctx, spaceID, exptID)
+	exptTurnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, exptID)
 	if err != nil {
 		return err
 	}
+	evaluatorVersionID2Key := make(map[string]string)
+	for _, mapping := range exptTurnResultFilterKeyMappings {
+		if mapping.FieldType == entity.FieldTypeEvaluator {
+			evaluatorVersionID2Key[mapping.FromField] = mapping.ToKey
+		}
+	}
 
 	// 4. 分页处理数据比较
-	return e.processPagedComparisonWithRetryControl(ctx, spaceID, exptID, itemIDs, createdDate, evaluatorVersionID2Key, retryTimes, shouldSkipRetry)
+	const pageSize = 100
+	totalItems := len(itemIDs)
+	for offset := 0; offset < totalItems; offset += pageSize {
+		end := offset + pageSize
+		if end > totalItems {
+			end = totalItems
+		}
+
+		currentPageItemIDs := itemIDs[offset:end]
+		logs.CtxInfo(ctx, "CompareExptTurnResultFilters processing page: offset=%d, end=%d, itemCount=%d", offset, end, len(currentPageItemIDs))
+
+		// 获取过滤器数据
+		startTime := time.Now()
+		exptTurnResultFilters, err := e.exptTurnResultFilterRepo.GetByExptIDItemIDs(ctx, strconv.FormatInt(spaceID, 10), strconv.FormatInt(exptID, 10), createdDate, gslice.Map(currentPageItemIDs, func(itemID int64) string {
+			return strconv.FormatInt(itemID, 10)
+		}))
+		if err != nil {
+			return err
+		}
+		e.Metric.EmitExptTurnResultFilterQueryLatency(spaceID, startTime.Unix(), err != nil)
+
+		// 创建过滤器映射
+		turnKey2ExptTurnResultFilter := make(map[string]*entity.ExptTurnResultFilterEntity)
+		for _, filter := range exptTurnResultFilters {
+			turnKey := GenerateTurnKey(filter.SpaceID, filter.ExptID, filter.ItemID, filter.TurnID)
+			turnKey2ExptTurnResultFilter[turnKey] = filter
+		}
+
+		// 获取轮次结果数据
+		turnResultDAOs, _, err := e.ExptTurnResultRepo.ListTurnResultByItemIDs(ctx, spaceID, exptID, currentPageItemIDs, entity.Page{}, false)
+		if err != nil {
+			return err
+		}
+
+		if len(turnResultDAOs) == 0 {
+			logs.CtxWarn(ctx, "CompareExptTurnResultFilters turnResultDAOs is empty for page, spaceID: %v, exptID: %v, offset: %d", spaceID, exptID, offset)
+			continue
+		}
+
+		// 获取实际处理的ItemIDs
+		itemIDMap := make(map[int64]bool)
+		for _, turnResult := range turnResultDAOs {
+			itemIDMap[turnResult.ItemID] = true
+		}
+		processedItemIDs := maps.ToSlice(itemIDMap, func(k int64, v bool) int64 {
+			return k
+		})
+
+		// 获取实验项结果
+		itemResultDAOs, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, exptID, processedItemIDs)
+		if err != nil {
+			return err
+		}
+
+		// 创建有效负载构建器并构建项结果
+		param := &entity.MGetExperimentResultParam{
+			SpaceID: spaceID,
+			ExptIDs: []int64{exptID},
+		}
+		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
+			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, make(map[int64]entity.ItemRunState))
+		itemResults, err := payloadBuilder.BuildItemResults(ctx)
+		if err != nil {
+			return err
+		}
+
+		// 创建轮次键映射
+		turnKey2TurnResult := make(map[string]*entity.TurnResult)
+		turnKey2ItemIdx := make(map[string]int64)
+		turnKey2ItemRunState := make(map[string]entity.ItemRunState)
+		for _, itemResult := range itemResults {
+			for _, turnResult := range itemResult.TurnResults {
+				if len(turnResult.ExperimentResults) == 0 {
+					continue
+				}
+				turnKey := GenerateTurnKey(spaceID, turnResult.ExperimentResults[0].ExperimentID, itemResult.ItemID, turnResult.TurnID)
+				turnKey2TurnResult[turnKey] = turnResult
+				turnKey2ItemIdx[turnKey] = ptr.From(itemResult.ItemIndex)
+				turnKey2ItemRunState[turnKey] = itemResult.SystemInfo.RunState
+			}
+		}
+
+		// 执行比较逻辑
+		const maxRetryTimes = 3
+		for turnKey, exptTurnResultFilter := range turnKey2ExptTurnResultFilter {
+			turnKeyComponents, err := ParseTurnKey(turnKey)
+			if err != nil {
+				logs.CtxError(ctx, "CompareExptTurnResultFilters parse turnKey failed, turnKey: %v, err: %v", turnKey, err)
+				continue
+			}
+
+			itemID := turnKeyComponents.ItemID
+			if _, exists := turnKey2TurnResult[turnKey]; !exists {
+				// 处理缺失的过滤器
+				if shouldSkipRetry {
+					logs.CtxInfo(ctx, "CompareExptTurnResultFilters skip retry due to empty itemIDs, turnKey: %v, resultMissing: true", turnKey)
+					e.Metric.EmitExptTurnResultFilterCheck(spaceID, false, false, true, true)
+				} else if retryTimes >= maxRetryTimes {
+					logs.CtxError(ctx, "CompareExptTurnResultFilters finish, result missing, retryTimes >= maxRetryTimes, turnKey: %v", turnKey)
+					e.Metric.EmitExptTurnResultFilterCheck(spaceID, false, false, true, true)
+				} else {
+					logs.CtxWarn(ctx, "CompareExptTurnResultFilters finish, result missing, retrying, turnKey: %v", turnKey)
+					err := e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+						ExperimentID: exptID,
+						SpaceID:      spaceID,
+						ItemID:       []int64{itemID},
+						RetryTimes:   ptr.Of(retryTimes + 1),
+						FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
+					}, ptr.Of(10*time.Second))
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				// 处理过滤器比较
+				diffExist, evaluatorScoreDiff, actualOutputDiff := e.compareTurnResultFilter(
+					ctx, turnKey, exptTurnResultFilter, turnKey2TurnResult, turnKey2ItemIdx, turnKey2ItemRunState, evaluatorVersionID2Key)
+
+				if !diffExist {
+					logs.CtxInfo(ctx, "CompareExptTurnResultFilters finish, all equal, turnKey: %v", turnKey)
+					e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
+				} else {
+					if shouldSkipRetry {
+						logs.CtxInfo(ctx, "CompareExptTurnResultFilters skip retry due to empty itemIDs, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
+						e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
+					} else if retryTimes >= maxRetryTimes {
+						logs.CtxError(ctx, "CompareExptTurnResultFilters finish, diff exist, retryTimes >= maxRetryTimes, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
+						e.Metric.EmitExptTurnResultFilterCheck(spaceID, evaluatorScoreDiff, actualOutputDiff, diffExist, false)
+					} else {
+						logs.CtxWarn(ctx, "CompareExptTurnResultFilters finish, diff exist, retrying, turnKey: %v, evaluatorScoreDiff: %v, actualOutputDiff: %v", turnKey, evaluatorScoreDiff, actualOutputDiff)
+						err := e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
+							ExperimentID: exptID,
+							SpaceID:      spaceID,
+							ItemID:       []int64{itemID},
+							RetryTimes:   ptr.Of(retryTimes + 1),
+							FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
+						}, ptr.Of(10*time.Second))
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // validateExperimentData 验证实验数据
@@ -2184,31 +2349,102 @@ func (e ExptResultServiceImpl) compareTurnResultFilter(ctx context.Context, turn
 		logs.CtxInfo(ctx, "CompareExptTurnResultFilters turn not finished, turnKey: %v", turnKey)
 		return false, false, false
 	}
+
 	// 比较实际输出
-	if actualDiff := e.compareActualOutput(exptTurnResultFilter, turnResult, turnKey); actualDiff {
-		diffExist = true
-		actualOutputDiff = true
+	ckActualOutput := exptTurnResultFilter.EvalTargetData["actual_output"]
+	if turnResult.ExperimentResults[0].Payload.TargetOutput != nil && 
+		turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord != nil && 
+		turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil &&
+		turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"] != nil {
+		rdsActualOutput := turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"].GetText()
+		if ckActualOutput != rdsActualOutput {
+			logs.Warn("CompareExptTurnResultFilters diff actual_output not equal, turnKey: %v, ckActualOutput: %v, rdsActualOutput: %v", turnKey, ckActualOutput, rdsActualOutput)
+			diffExist = true
+			actualOutputDiff = true
+		}
+	} else {
+		logs.Warn("CompareExptTurnResultFilters compareActualOutput actual_output is nil, turnKey: %v", turnKey)
 	}
 
 	// 比较项索引
-	if itemIdxDiff := e.compareItemIndex(exptTurnResultFilter, turnKey2ItemIdx, turnKey); itemIdxDiff {
+	ckItemIdx := exptTurnResultFilter.ItemIdx
+	rdsItemIdx := turnKey2ItemIdx[turnKey]
+	if ckItemIdx != int32(rdsItemIdx) {
+		logs.Warn("CompareExptTurnResultFilters diff item_idx not equal, turnKey: %v, ckItemIdx: %v, rdsItemIdx: %v", turnKey, ckItemIdx, rdsItemIdx)
 		diffExist = true
 	}
 
 	// 比较状态
-	if statusDiff := e.compareStatus(exptTurnResultFilter, turnKey2ItemRunState, turnKey); statusDiff {
+	ckStatus := exptTurnResultFilter.Status
+	rdsStatus := turnKey2ItemRunState[turnKey]
+	if ckStatus != rdsStatus {
+		logs.Warn("CompareExptTurnResultFilters diff status not equal, turnKey: %v, ckStatus: %v, rdsStatus: %v", turnKey, ckStatus, rdsStatus)
 		diffExist = true
 	}
 
 	// 比较评估器分数是否修正
-	if scoreCorrectedDiff := e.compareEvaluatorScoreCorrected(exptTurnResultFilter, turnResult, turnKey); scoreCorrectedDiff {
+	ckEvaluatorScoreCorrected := exptTurnResultFilter.EvaluatorScoreCorrected
+	rdsEvaluatorScoreCorrected := false
+	for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
+		if record.EvaluatorOutputData.EvaluatorResult != nil && record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
+			rdsEvaluatorScoreCorrected = true
+			break
+		}
+	}
+	if ckEvaluatorScoreCorrected != rdsEvaluatorScoreCorrected {
+		logs.Warn("CompareExptTurnResultFilters diff evaluator_score_corrected not equal, turnKey: %v, ckEvaluatorScoreCorrected: %v, rdsEvaluatorScoreCorrected: %v", turnKey, ckEvaluatorScoreCorrected, rdsEvaluatorScoreCorrected)
 		diffExist = true
 	}
 
-	// 比较评估器分数
-	if scoreDiff := e.compareEvaluatorScore(exptTurnResultFilter, turnResult, evaluatorVersionID2Key, turnKey); scoreDiff {
-		diffExist = true
-		evaluatorScoreDiff = true
+	// 比较评估器分数 - 支持双向对比
+	if turnResult.ExperimentResults[0].Payload.EvaluatorOutput != nil && len(turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords) > 0 {
+		// 构建RDS评估器分数映射
+		rdsEvaluatorScores := make(map[string]float64)
+		for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
+			// 获取评估器对应的键名
+			key, exists := evaluatorVersionID2Key[strconv.FormatInt(record.EvaluatorVersionID, 10)]
+			if !exists || record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvaluatorResult == nil {
+				continue
+			}
+
+			// 优先使用修正分数，其次使用原始分数
+			var score float64
+			if record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
+				score = ptr.From(record.EvaluatorOutputData.EvaluatorResult.Correction.Score)
+			} else {
+				score = ptr.From(record.EvaluatorOutputData.EvaluatorResult.Score)
+			}
+			rdsEvaluatorScores[key] = score
+		}
+
+		// 双向对比 - ClickHouse -> RDS
+		for ckKey, ckScore := range exptTurnResultFilter.EvaluatorScore {
+			if rdsScore, exists := rdsEvaluatorScores[ckKey]; exists {
+				if ckScore != rdsScore {
+					logs.Warn("CompareExptTurnResultFilters diff evaluator_score_value_diff, turnKey: %v, evaluatorKey: %v, ckScore: %v, rdsScore: %v",
+						turnKey, ckKey, ckScore, rdsScore)
+					diffExist = true
+					evaluatorScoreDiff = true
+				}
+			} else {
+				logs.Warn("CompareExptTurnResultFilters diff evaluator_score_missing_in_rds, turnKey: %v, evaluatorKey: %v, ckScore: %v",
+					turnKey, ckKey, ckScore)
+				diffExist = true
+				evaluatorScoreDiff = true
+			}
+		}
+
+		// 双向对比 - RDS -> ClickHouse
+		for rdsKey, rdsScore := range rdsEvaluatorScores {
+			if _, exists := exptTurnResultFilter.EvaluatorScore[rdsKey]; !exists {
+				logs.Warn("CompareExptTurnResultFilters diff evaluator_score_missing_in_clickhouse, turnKey: %v, evaluatorKey: %v, rdsScore: %v",
+					turnKey, rdsKey, rdsScore)
+				diffExist = true
+				evaluatorScoreDiff = true
+			}
+		}
+	} else {
+		logs.Warn("CompareExptTurnResultFilters compareEvaluatorScore EvaluatorOutput is nil, turnKey: %v", turnKey)
 	}
 
 	// 比较 Annotation 数据
@@ -2219,132 +2455,7 @@ func (e ExptResultServiceImpl) compareTurnResultFilter(ctx context.Context, turn
 	return diffExist, evaluatorScoreDiff, actualOutputDiff
 }
 
-// compareActualOutput 比较实际输出
-func (e ExptResultServiceImpl) compareActualOutput(exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnResult *entity.TurnResult, turnKey string) bool {
-	ckActualOutput := exptTurnResultFilter.EvalTargetData["actual_output"]
-	var rdsActualOutput string
-	if turnResult.ExperimentResults[0].Payload.TargetOutput == nil || turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord == nil || turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil ||
-		turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"] == nil {
-		logs.Warn("CompareExptTurnResultFilters compareActualOutput actual_output is nil, turnKey: %v", turnKey)
-		return false
-	}
-	rdsActualOutput = turnResult.ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"].GetText()
-	if ckActualOutput != rdsActualOutput {
-		logs.Warn("CompareExptTurnResultFilters diff actual_output not equal, turnKey: %v, ckActualOutput: %v, rdsActualOutput: %v", turnKey, ckActualOutput, rdsActualOutput)
-		return true
-	}
-	return false
-}
 
-// compareItemIndex 比较项索引
-func (e ExptResultServiceImpl) compareItemIndex(exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnKey2ItemIdx map[string]int64, turnKey string) bool {
-	ckItemIdx := exptTurnResultFilter.ItemIdx
-	rdsItemIdx := turnKey2ItemIdx[turnKey]
-
-	if ckItemIdx != int32(rdsItemIdx) {
-		logs.Warn("CompareExptTurnResultFilters diff item_idx not equal, turnKey: %v, ckItemIdx: %v, rdsItemIdx: %v", turnKey, ckItemIdx, rdsItemIdx)
-		return true
-	}
-	return false
-}
-
-// compareStatus 比较状态
-func (e ExptResultServiceImpl) compareStatus(exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnKey2ItemRunState map[string]entity.ItemRunState, turnKey string) bool {
-	ckStatus := exptTurnResultFilter.Status
-	rdsStatus := turnKey2ItemRunState[turnKey]
-
-	if ckStatus != rdsStatus {
-		logs.Warn("CompareExptTurnResultFilters diff status not equal, turnKey: %v, ckStatus: %v, rdsStatus: %v", turnKey, ckStatus, rdsStatus)
-		return true
-	}
-	return false
-}
-
-// compareEvaluatorScoreCorrected 比较评估器分数是否修正
-func (e ExptResultServiceImpl) compareEvaluatorScoreCorrected(exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnResult *entity.TurnResult, turnKey string) bool {
-	ckEvaluatorScoreCorrected := exptTurnResultFilter.EvaluatorScoreCorrected
-	rdsEvaluatorScoreCorrected := false
-
-	for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
-		if record.EvaluatorOutputData.EvaluatorResult != nil && record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
-			rdsEvaluatorScoreCorrected = true
-			break
-		}
-	}
-
-	if ckEvaluatorScoreCorrected != rdsEvaluatorScoreCorrected {
-		logs.Warn("CompareExptTurnResultFilters diff evaluator_score_corrected not equal, turnKey: %v, ckEvaluatorScoreCorrected: %v, rdsEvaluatorScoreCorrected: %v", turnKey, ckEvaluatorScoreCorrected, rdsEvaluatorScoreCorrected)
-		return true
-	}
-	return false
-}
-
-// compareEvaluatorScore 比较评估器分数 - 支持双向对比
-func (e ExptResultServiceImpl) compareEvaluatorScore(exptTurnResultFilter *entity.ExptTurnResultFilterEntity, turnResult *entity.TurnResult, evaluatorVersionID2Key map[string]string, turnKey string) bool {
-	// 检查基础数据有效性
-	if turnResult.ExperimentResults[0].Payload.EvaluatorOutput == nil || len(turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords) == 0 {
-		logs.Warn("CompareExptTurnResultFilters compareEvaluatorScore EvaluatorOutput is nil, turnKey: %v", turnKey)
-		return false
-	}
-
-	diffExist := false
-
-	// 第一步：构建RDS评估器分数映射
-	rdsEvaluatorScores := make(map[string]float64)
-	for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
-		// 获取评估器对应的键名
-		key, exists := evaluatorVersionID2Key[strconv.FormatInt(record.EvaluatorVersionID, 10)]
-		if !exists {
-			continue
-		}
-
-		// 检查评估器结果数据有效性
-		if record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvaluatorResult == nil {
-			continue
-		}
-
-		// 优先使用修正分数，其次使用原始分数
-		var score float64
-		if record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
-			score = ptr.From(record.EvaluatorOutputData.EvaluatorResult.Correction.Score)
-		} else {
-			score = ptr.From(record.EvaluatorOutputData.EvaluatorResult.Score)
-		}
-		rdsEvaluatorScores[key] = score
-	}
-
-	// 第二步：双向对比 - ClickHouse -> RDS
-	// 检查ClickHouse中存在的评估器分数在RDS中是否存在且一致
-	for ckKey, ckScore := range exptTurnResultFilter.EvaluatorScore {
-		if rdsScore, exists := rdsEvaluatorScores[ckKey]; exists {
-			// 两边都存在，检查分数是否一致
-			if ckScore != rdsScore {
-				logs.Warn("CompareExptTurnResultFilters diff evaluator_score_value_diff, turnKey: %v, evaluatorKey: %v, ckScore: %v, rdsScore: %v",
-					turnKey, ckKey, ckScore, rdsScore)
-				diffExist = true
-			}
-		} else {
-			// ClickHouse中存在但RDS中缺失
-			logs.Warn("CompareExptTurnResultFilters diff evaluator_score_missing_in_rds, turnKey: %v, evaluatorKey: %v, ckScore: %v",
-				turnKey, ckKey, ckScore)
-			diffExist = true
-		}
-	}
-
-	// 第三步：双向对比 - RDS -> ClickHouse
-	// 检查RDS中存在的评估器分数在ClickHouse中是否存在
-	for rdsKey, rdsScore := range rdsEvaluatorScores {
-		if _, exists := exptTurnResultFilter.EvaluatorScore[rdsKey]; !exists {
-			// RDS中存在但ClickHouse中缺失
-			logs.Warn("CompareExptTurnResultFilters diff evaluator_score_missing_in_clickhouse, turnKey: %v, evaluatorKey: %v, rdsScore: %v",
-				turnKey, rdsKey, rdsScore)
-			diffExist = true
-		}
-		// 注意：RDS -> ClickHouse的一致性检查在第二步已经完成了
-	}
-
-	return diffExist
-}
 
 // TurnKeyComponents turnKey组件结构
 type TurnKeyComponents struct {
@@ -2409,18 +2520,22 @@ func (e ExptResultServiceImpl) compareAnnotations(ctx context.Context, exptTurnR
 		return false
 	}
 
-	diffExist := false
-
-	// 构建 RDS Annotation 数据映射
-	rdsAnnotationFloat := make(map[string]float64)
-	rdsAnnotationString := make(map[string]string)
-
 	// 获取 Annotation 键映射
-	annotationKeyMappings, err := e.getAnnotationKeyMappings(ctx, exptTurnResultFilter.SpaceID, exptTurnResultFilter.ExptID)
+	exptTurnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, exptTurnResultFilter.SpaceID, exptTurnResultFilter.ExptID)
 	if err != nil {
 		logs.CtxError(ctx, "CompareExptTurnResultFilters get annotation key mappings failed, turnKey: %v, err: %v", turnKey, err)
 		return false
 	}
+	annotationKeyMappings := make(map[string]string)
+	for _, mapping := range exptTurnResultFilterKeyMappings {
+		if mapping.FieldType == entity.FieldTypeManualAnnotation {
+			annotationKeyMappings[mapping.FromField] = mapping.ToKey
+		}
+	}
+
+	// 构建 RDS Annotation 数据映射
+	rdsAnnotationFloat := make(map[string]float64)
+	rdsAnnotationString := make(map[string]string)
 
 	// 处理 RDS 中的 Annotation 数据
 	for _, annotateRecord := range turnResult.ExperimentResults[0].Payload.AnnotateResult.AnnotateRecords {
@@ -2448,21 +2563,11 @@ func (e ExptResultServiceImpl) compareAnnotations(ctx context.Context, exptTurnR
 		}
 	}
 
-	// 双向对比 AnnotationFloat
-	diffExist = e.compareAnnotationFloat(ctx, exptTurnResultFilter.AnnotationFloat, rdsAnnotationFloat, turnKey) || diffExist
-
-	// 双向对比 AnnotationString
-	diffExist = e.compareAnnotationString(ctx, exptTurnResultFilter.AnnotationString, rdsAnnotationString, turnKey) || diffExist
-
-	return diffExist
-}
-
-// compareAnnotationFloat 比较 Float 类型的 Annotation
-func (e ExptResultServiceImpl) compareAnnotationFloat(ctx context.Context, ckAnnotationFloat, rdsAnnotationFloat map[string]float64, turnKey string) bool {
 	diffExist := false
 
+	// 双向对比 AnnotationFloat
 	// ClickHouse -> RDS
-	for ckKey, ckValue := range ckAnnotationFloat {
+	for ckKey, ckValue := range exptTurnResultFilter.AnnotationFloat {
 		if rdsValue, exists := rdsAnnotationFloat[ckKey]; exists {
 			if ckValue != rdsValue {
 				logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_float_value_diff, turnKey: %v, annotationKey: %v, ckValue: %v, rdsValue: %v",
@@ -2475,25 +2580,18 @@ func (e ExptResultServiceImpl) compareAnnotationFloat(ctx context.Context, ckAnn
 			diffExist = true
 		}
 	}
-
 	// RDS -> ClickHouse
 	for rdsKey, rdsValue := range rdsAnnotationFloat {
-		if _, exists := ckAnnotationFloat[rdsKey]; !exists {
+		if _, exists := exptTurnResultFilter.AnnotationFloat[rdsKey]; !exists {
 			logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_float_missing_in_clickhouse, turnKey: %v, annotationKey: %v, rdsValue: %v",
 				turnKey, rdsKey, rdsValue)
 			diffExist = true
 		}
 	}
 
-	return diffExist
-}
-
-// compareAnnotationString 比较 String 类型的 Annotation
-func (e ExptResultServiceImpl) compareAnnotationString(ctx context.Context, ckAnnotationString, rdsAnnotationString map[string]string, turnKey string) bool {
-	diffExist := false
-
+	// 双向对比 AnnotationString
 	// ClickHouse -> RDS
-	for ckKey, ckValue := range ckAnnotationString {
+	for ckKey, ckValue := range exptTurnResultFilter.AnnotationString {
 		if rdsValue, exists := rdsAnnotationString[ckKey]; exists {
 			if ckValue != rdsValue {
 				logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_string_value_diff, turnKey: %v, annotationKey: %v, ckValue: %v, rdsValue: %v",
@@ -2506,10 +2604,9 @@ func (e ExptResultServiceImpl) compareAnnotationString(ctx context.Context, ckAn
 			diffExist = true
 		}
 	}
-
 	// RDS -> ClickHouse
 	for rdsKey, rdsValue := range rdsAnnotationString {
-		if _, exists := ckAnnotationString[rdsKey]; !exists {
+		if _, exists := exptTurnResultFilter.AnnotationString[rdsKey]; !exists {
 			logs.CtxWarn(ctx, "CompareExptTurnResultFilters diff annotation_string_missing_in_clickhouse, turnKey: %v, annotationKey: %v, rdsValue: %v",
 				turnKey, rdsKey, rdsValue)
 			diffExist = true
@@ -2517,21 +2614,4 @@ func (e ExptResultServiceImpl) compareAnnotationString(ctx context.Context, ckAn
 	}
 
 	return diffExist
-}
-
-// getAnnotationKeyMappings 获取 Annotation 键映射
-func (e ExptResultServiceImpl) getAnnotationKeyMappings(ctx context.Context, spaceID, exptID int64) (map[string]string, error) {
-	exptTurnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, exptID)
-	if err != nil {
-		return nil, err
-	}
-
-	annotationKeyMappings := make(map[string]string)
-	for _, mapping := range exptTurnResultFilterKeyMappings {
-		if mapping.FieldType == entity.FieldTypeManualAnnotation {
-			annotationKeyMappings[mapping.FromField] = mapping.ToKey
-		}
-	}
-
-	return annotationKeyMappings, nil
 }
