@@ -27,16 +27,41 @@ func newObservabilityTaskRun(db *gorm.DB, opts ...gen.DOOption) observabilityTas
 
 	tableName := _observabilityTaskRun.observabilityTaskRunDo.TableName()
 	_observabilityTaskRun.ALL = field.NewAsterisk(tableName)
+	_observabilityTaskRun.ID = field.NewInt64(tableName, "id")
+	_observabilityTaskRun.WorkspaceID = field.NewInt64(tableName, "workspace_id")
+	_observabilityTaskRun.TaskID = field.NewInt64(tableName, "task_id")
+	_observabilityTaskRun.TaskType = field.NewString(tableName, "task_type")
+	_observabilityTaskRun.RunStatus = field.NewString(tableName, "run_status")
+	_observabilityTaskRun.RunDetail = field.NewString(tableName, "run_detail")
+	_observabilityTaskRun.BackfillDetail = field.NewString(tableName, "backfill_detail")
+	_observabilityTaskRun.RunStartAt = field.NewTime(tableName, "run_start_at")
+	_observabilityTaskRun.RunEndAt = field.NewTime(tableName, "run_end_at")
+	_observabilityTaskRun.RunConfig = field.NewString(tableName, "run_config")
+	_observabilityTaskRun.CreatedAt = field.NewTime(tableName, "created_at")
+	_observabilityTaskRun.UpdatedAt = field.NewTime(tableName, "updated_at")
 
 	_observabilityTaskRun.fillFieldMap()
 
 	return _observabilityTaskRun
 }
 
+// observabilityTaskRun Task Run信息
 type observabilityTaskRun struct {
 	observabilityTaskRunDo observabilityTaskRunDo
 
-	ALL field.Asterisk
+	ALL            field.Asterisk
+	ID             field.Int64  // TaskRun ID
+	WorkspaceID    field.Int64  // 空间ID
+	TaskID         field.Int64  // Task ID
+	TaskType       field.String // Task类型
+	RunStatus      field.String // Task Run状态
+	RunDetail      field.String // Task Run运行状态详情
+	BackfillDetail field.String // 历史回溯Task Run运行状态详情
+	RunStartAt     field.Time   // 任务开始时间
+	RunEndAt       field.Time   // 任务结束时间
+	RunConfig      field.String // 相关Run的配置信息
+	CreatedAt      field.Time   // 创建时间
+	UpdatedAt      field.Time   // 更新时间
 
 	fieldMap map[string]field.Expr
 }
@@ -53,6 +78,18 @@ func (o observabilityTaskRun) As(alias string) *observabilityTaskRun {
 
 func (o *observabilityTaskRun) updateTableName(table string) *observabilityTaskRun {
 	o.ALL = field.NewAsterisk(table)
+	o.ID = field.NewInt64(table, "id")
+	o.WorkspaceID = field.NewInt64(table, "workspace_id")
+	o.TaskID = field.NewInt64(table, "task_id")
+	o.TaskType = field.NewString(table, "task_type")
+	o.RunStatus = field.NewString(table, "run_status")
+	o.RunDetail = field.NewString(table, "run_detail")
+	o.BackfillDetail = field.NewString(table, "backfill_detail")
+	o.RunStartAt = field.NewTime(table, "run_start_at")
+	o.RunEndAt = field.NewTime(table, "run_end_at")
+	o.RunConfig = field.NewString(table, "run_config")
+	o.CreatedAt = field.NewTime(table, "created_at")
+	o.UpdatedAt = field.NewTime(table, "updated_at")
 
 	o.fillFieldMap()
 
@@ -81,7 +118,19 @@ func (o *observabilityTaskRun) GetFieldByName(fieldName string) (field.OrderExpr
 }
 
 func (o *observabilityTaskRun) fillFieldMap() {
-	o.fieldMap = make(map[string]field.Expr, 0)
+	o.fieldMap = make(map[string]field.Expr, 12)
+	o.fieldMap["id"] = o.ID
+	o.fieldMap["workspace_id"] = o.WorkspaceID
+	o.fieldMap["task_id"] = o.TaskID
+	o.fieldMap["task_type"] = o.TaskType
+	o.fieldMap["run_status"] = o.RunStatus
+	o.fieldMap["run_detail"] = o.RunDetail
+	o.fieldMap["backfill_detail"] = o.BackfillDetail
+	o.fieldMap["run_start_at"] = o.RunStartAt
+	o.fieldMap["run_end_at"] = o.RunEndAt
+	o.fieldMap["run_config"] = o.RunConfig
+	o.fieldMap["created_at"] = o.CreatedAt
+	o.fieldMap["updated_at"] = o.UpdatedAt
 }
 
 func (o observabilityTaskRun) clone(db *gorm.DB) observabilityTaskRun {
