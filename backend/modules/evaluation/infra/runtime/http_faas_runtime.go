@@ -1,0 +1,322 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package runtime
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+)
+
+// HTTPFaaSRequest HTTP FaaS请求结构
+type HTTPFaaSRequest struct {
+	Language string      `json:"language"`
+	Code     string      `json:"code"`
+	Input    interface{} `json:"input,omitempty"`
+	Timeout  int64       `json:"timeout,omitempty"`
+	Priority string      `json:"priority,omitempty"`
+}
+
+// HTTPFaaSResponse HTTP FaaS响应结构
+type HTTPFaaSResponse struct {
+	Output struct {
+		Stdout string `json:"stdout"`
+		Stderr string `json:"stderr"`
+		RetVal string `json:"ret_val"`
+	} `json:"output"`
+	Metadata *struct {
+		TaskID     string `json:"task_id"`
+		InstanceID string `json:"instance_id"`
+		Duration   int64  `json:"duration"`
+		PoolStats  struct {
+			TotalInstances  int `json:"totalInstances"`
+			IdleInstances   int `json:"idleInstances"`
+			ActiveInstances int `json:"activeInstances"`
+		} `json:"pool_stats"`
+	} `json:"metadata,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Details string `json:"details,omitempty"`
+}
+
+// HTTPFaaSRuntimeConfig HTTP FaaS运行时配置
+type HTTPFaaSRuntimeConfig struct {
+	BaseURL        string        `json:"base_url"`         // FaaS服务基础URL
+	Timeout        time.Duration `json:"timeout"`          // HTTP请求超时
+	MaxRetries     int           `json:"max_retries"`      // 最大重试次数
+	RetryInterval  time.Duration `json:"retry_interval"`   // 重试间隔
+	EnableEnhanced bool          `json:"enable_enhanced"`  // 是否启用增强版FaaS
+}
+
+// HTTPFaaSRuntimeAdapter 基于HTTP调用的FaaS运行时适配器
+type HTTPFaaSRuntimeAdapter struct {
+	config       *HTTPFaaSRuntimeConfig
+	logger       *logrus.Logger
+	httpClient   *http.Client
+	languageType entity.LanguageType
+}
+
+// NewHTTPFaaSRuntimeAdapter 创建HTTP FaaS运行时适配器
+func NewHTTPFaaSRuntimeAdapter(languageType entity.LanguageType, config *HTTPFaaSRuntimeConfig, logger *logrus.Logger) (*HTTPFaaSRuntimeAdapter, error) {
+	if config == nil {
+		config = &HTTPFaaSRuntimeConfig{
+			BaseURL:        "http://coze-loop-faas-enhanced:8000", // 默认使用增强版
+			Timeout:        30 * time.Second,
+			MaxRetries:     3,
+			RetryInterval:  1 * time.Second,
+			EnableEnhanced: true,
+		}
+	}
+
+	// 创建HTTP客户端
+	httpClient := &http.Client{
+		Timeout: config.Timeout,
+	}
+
+	return &HTTPFaaSRuntimeAdapter{
+		config:       config,
+		logger:       logger,
+		httpClient:   httpClient,
+		languageType: languageType,
+	}, nil
+}
+
+// GetLanguageType 获取支持的语言类型
+func (adapter *HTTPFaaSRuntimeAdapter) GetLanguageType() entity.LanguageType {
+	return adapter.languageType
+}
+
+// RunCode 通过HTTP调用FaaS服务执行代码
+func (adapter *HTTPFaaSRuntimeAdapter) RunCode(ctx context.Context, code string, language string, timeoutMS int64) (*entity.ExecutionResult, error) {
+	if code == "" {
+		return nil, fmt.Errorf("代码不能为空")
+	}
+
+	// 构建请求
+	request := HTTPFaaSRequest{
+		Language: language,
+		Code:     code,
+		Timeout:  timeoutMS,
+		Priority: "normal",
+	}
+
+	// 执行HTTP请求（带重试）
+	var response *HTTPFaaSResponse
+	var err error
+
+	for retry := 0; retry <= adapter.config.MaxRetries; retry++ {
+		if retry > 0 {
+			adapter.logger.WithFields(logrus.Fields{
+				"retry":    retry,
+				"language": language,
+			}).Warn("重试HTTP FaaS请求")
+			
+			// 等待重试间隔
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(adapter.config.RetryInterval):
+			}
+		}
+
+		response, err = adapter.executeHTTPRequest(ctx, &request)
+		if err == nil {
+			break
+		}
+
+		adapter.logger.WithError(err).WithFields(logrus.Fields{
+			"retry":    retry,
+			"language": language,
+		}).Error("HTTP FaaS请求失败")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("HTTP FaaS请求失败（已重试%d次）: %w", adapter.config.MaxRetries, err)
+	}
+
+	// 检查响应错误
+	if response.Error != "" {
+		return &entity.ExecutionResult{
+			Output: &entity.ExecutionOutput{
+				Stdout: response.Output.Stdout,
+				Stderr: response.Output.Stderr + "\n" + response.Error,
+				RetVal: "",
+			},
+			WorkloadInfo: &entity.ExecutionWorkloadInfo{
+				ID:     adapter.getTaskID(response),
+				Status: "error",
+			},
+		}, fmt.Errorf("FaaS执行错误: %s", response.Error)
+	}
+
+	// 转换结果
+	result := &entity.ExecutionResult{
+		Output: &entity.ExecutionOutput{
+			Stdout: response.Output.Stdout,
+			Stderr: response.Output.Stderr,
+			RetVal: response.Output.RetVal,
+		},
+		WorkloadInfo: &entity.ExecutionWorkloadInfo{
+			ID:     adapter.getTaskID(response),
+			Status: "success",
+		},
+	}
+
+	// 记录执行统计信息
+	if response.Metadata != nil {
+		adapter.logger.WithFields(logrus.Fields{
+			"task_id":          response.Metadata.TaskID,
+			"instance_id":      response.Metadata.InstanceID,
+			"duration_ms":      response.Metadata.Duration,
+			"total_instances":  response.Metadata.PoolStats.TotalInstances,
+			"idle_instances":   response.Metadata.PoolStats.IdleInstances,
+			"active_instances": response.Metadata.PoolStats.ActiveInstances,
+		}).Info("FaaS执行完成")
+	}
+
+	return result, nil
+}
+
+// ValidateCode 验证代码（通过简单的语法检查）
+func (adapter *HTTPFaaSRuntimeAdapter) ValidateCode(ctx context.Context, code string, language string) bool {
+	if code == "" {
+		return false
+	}
+
+	// 对于HTTP FaaS，我们可以发送一个快速的验证请求
+	// 这里简化实现，只做基本检查
+	switch language {
+	case "javascript", "typescript", "js", "ts":
+		// 基本的JavaScript/TypeScript语法检查
+		return adapter.basicJSValidation(code)
+	case "python", "py":
+		// 基本的Python语法检查
+		return adapter.basicPythonValidation(code)
+	default:
+		return false
+	}
+}
+
+// Cleanup 清理资源
+func (adapter *HTTPFaaSRuntimeAdapter) Cleanup() error {
+	// HTTP客户端无需特殊清理
+	return nil
+}
+
+// executeHTTPRequest 执行HTTP请求
+func (adapter *HTTPFaaSRuntimeAdapter) executeHTTPRequest(ctx context.Context, request *HTTPFaaSRequest) (*HTTPFaaSResponse, error) {
+	// 序列化请求
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("序列化请求失败: %w", err)
+	}
+
+	// 构建HTTP请求
+	url := fmt.Sprintf("%s/run_code", adapter.config.BaseURL)
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, fmt.Errorf("创建HTTP请求失败: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// 执行请求
+	resp, err := adapter.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP请求失败，状态码: %d, 响应: %s", resp.StatusCode, string(responseBody))
+	}
+
+	// 解析响应
+	var response HTTPFaaSResponse
+	if err := json.Unmarshal(responseBody, &response); err != nil {
+		return nil, fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	return &response, nil
+}
+
+// getTaskID 获取任务ID
+func (adapter *HTTPFaaSRuntimeAdapter) getTaskID(response *HTTPFaaSResponse) string {
+	if response.Metadata != nil && response.Metadata.TaskID != "" {
+		return response.Metadata.TaskID
+	}
+	return fmt.Sprintf("http_faas_%d", time.Now().UnixNano())
+}
+
+// basicJSValidation 基本的JavaScript/TypeScript语法检查
+func (adapter *HTTPFaaSRuntimeAdapter) basicJSValidation(code string) bool {
+	// 简单的语法检查：检查括号匹配
+	brackets := 0
+	braces := 0
+	parentheses := 0
+
+	for _, char := range code {
+		switch char {
+		case '[':
+			brackets++
+		case ']':
+			brackets--
+		case '{':
+			braces++
+		case '}':
+			braces--
+		case '(':
+			parentheses++
+		case ')':
+			parentheses--
+		}
+	}
+
+	return brackets == 0 && braces == 0 && parentheses == 0
+}
+
+// basicPythonValidation 基本的Python语法检查
+func (adapter *HTTPFaaSRuntimeAdapter) basicPythonValidation(code string) bool {
+	// 简单的语法检查：检查括号匹配和基本缩进
+	brackets := 0
+	braces := 0
+	parentheses := 0
+
+	for _, char := range code {
+		switch char {
+		case '[':
+			brackets++
+		case ']':
+			brackets--
+		case '{':
+			braces++
+		case '}':
+			braces--
+		case '(':
+			parentheses++
+		case ')':
+			parentheses--
+		}
+	}
+
+	return brackets == 0 && braces == 0 && parentheses == 0
+}
+
+// 确保HTTPFaaSRuntimeAdapter实现IRuntime接口
+var _ component.IRuntime = (*HTTPFaaSRuntimeAdapter)(nil)

@@ -5,6 +5,8 @@ package runtime
 
 import (
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -34,6 +36,26 @@ func NewEnhancedRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.Sand
 
 // CreateRuntime 根据语言类型创建Runtime实例
 func (f *EnhancedRuntimeFactory) CreateRuntime(languageType entity.LanguageType) (component.IRuntime, error) {
+	// 检查是否启用HTTP FaaS模式
+	faasURL := os.Getenv("COZE_LOOP_FAAS_URL")
+	if faasURL != "" {
+		// 使用HTTP FaaS运行时
+		f.logger.WithFields(logrus.Fields{
+			"language_type": languageType,
+			"faas_url":      faasURL,
+		}).Info("使用HTTP FaaS运行时")
+
+		config := &HTTPFaaSRuntimeConfig{
+			BaseURL:        faasURL,
+			Timeout:        30 * time.Second,
+			MaxRetries:     3,
+			RetryInterval:  1 * time.Second,
+			EnableEnhanced: true,
+		}
+
+		return NewHTTPFaaSRuntimeAdapter(languageType, config, f.logger)
+	}
+
 	// 对于增强版运行时，我们使用单例模式
 	// 因为增强运行时内部已经包含了沙箱池和任务调度器，可以处理多种语言
 	if f.enhancedRuntime == nil {
