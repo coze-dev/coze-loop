@@ -224,7 +224,7 @@ func (e ExptInsightAnalysisServiceImpl) FeedbackExptInsightAnalysis(ctx context.
 		}
 		return e.repo.UpdateFeedbackComment(ctx, feedbackComment)
 	case entity.FeedbackActionType_Delete_Comment:
-		return e.repo.DeleteFeedbackComment(ctx, param.SpaceID, param.ExptID, param.AnalysisRecordID)
+		return e.repo.DeleteFeedbackComment(ctx, param.SpaceID, param.ExptID, ptr.From(param.CommentID))
 	default:
 		return nil
 	}
