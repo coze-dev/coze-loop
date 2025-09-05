@@ -65,11 +65,11 @@ struct EffectiveTime {
 
 // TaskConfig
 struct TaskConfig {
-    1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息
-    2: optional DatasetConfig data_reflow_config                             // 配置的数据回流的数据集信息
+    1: optional list<AutoEvaluateConfig> auto_evaluate_configs                  // 配置的评测规则信息
+    2: optional list<DataReflowConfig> data_reflow_configs                      // 配置的数据回流的数据集信息
 }
 
-struct DatasetConfig {
+struct DataReflowConfig {
     1: optional i64    dataset_id (api.js_conv="true", go.tag='json:"dataset_id"')   // 数据集id，新增数据集时可为空
     2: optional string dataset_name                                                  // 数据集名称
     3: optional export_dataset.DatasetSchema dataset_schema (vt.not_nil="true")      // 数据集列数据schema

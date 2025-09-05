@@ -79,14 +79,9 @@ func (p *EffectiveTime) IsValid() error {
 	return nil
 }
 func (p *TaskConfig) IsValid() error {
-	if p.DataReflowConfig != nil {
-		if err := p.DataReflowConfig.IsValid(); err != nil {
-			return fmt.Errorf("field DataReflowConfig not valid, %w", err)
-		}
-	}
 	return nil
 }
-func (p *DatasetConfig) IsValid() error {
+func (p *DataReflowConfig) IsValid() error {
 	if p.DatasetSchema == nil {
 		return fmt.Errorf("field DatasetSchema not_nil rule failed")
 	}

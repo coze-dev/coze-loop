@@ -1562,7 +1562,7 @@ func (p *TaskConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1620,13 +1620,26 @@ func (p *TaskConfig) FastReadField1(buf []byte) (int, error) {
 
 func (p *TaskConfig) FastReadField2(buf []byte) (int, error) {
 	offset := 0
-	_field := NewDatasetConfig()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
 		return offset, err
-	} else {
-		offset += l
 	}
-	p.DataReflowConfig = _field
+	_field := make([]*DataReflowConfig, 0, size)
+	values := make([]DataReflowConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.DataReflowConfigs = _field
 	return offset, nil
 }
 
@@ -1672,9 +1685,16 @@ func (p *TaskConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *TaskConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetDataReflowConfig() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
-		offset += p.DataReflowConfig.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetDataReflowConfigs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.DataReflowConfigs {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -1694,9 +1714,13 @@ func (p *TaskConfig) field1Length() int {
 
 func (p *TaskConfig) field2Length() int {
 	l := 0
-	if p.IsSetDataReflowConfig() {
+	if p.IsSetDataReflowConfigs() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.DataReflowConfig.BLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.DataReflowConfigs {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -1722,19 +1746,25 @@ func (p *TaskConfig) DeepCopy(s interface{}) error {
 		}
 	}
 
-	var _dataReflowConfig *DatasetConfig
-	if src.DataReflowConfig != nil {
-		_dataReflowConfig = &DatasetConfig{}
-		if err := _dataReflowConfig.DeepCopy(src.DataReflowConfig); err != nil {
-			return err
+	if src.DataReflowConfigs != nil {
+		p.DataReflowConfigs = make([]*DataReflowConfig, 0, len(src.DataReflowConfigs))
+		for _, elem := range src.DataReflowConfigs {
+			var _elem *DataReflowConfig
+			if elem != nil {
+				_elem = &DataReflowConfig{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.DataReflowConfigs = append(p.DataReflowConfigs, _elem)
 		}
 	}
-	p.DataReflowConfig = _dataReflowConfig
 
 	return nil
 }
 
-func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
+func (p *DataReflowConfig) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -1820,12 +1850,12 @@ func (p *DatasetConfig) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DatasetConfig[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DataReflowConfig[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *DatasetConfig) FastReadField1(buf []byte) (int, error) {
+func (p *DataReflowConfig) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1839,7 +1869,7 @@ func (p *DatasetConfig) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetConfig) FastReadField2(buf []byte) (int, error) {
+func (p *DataReflowConfig) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1853,7 +1883,7 @@ func (p *DatasetConfig) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetConfig) FastReadField3(buf []byte) (int, error) {
+func (p *DataReflowConfig) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 	_field := dataset.NewDatasetSchema()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1865,7 +1895,7 @@ func (p *DatasetConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetConfig) FastReadField4(buf []byte) (int, error) {
+func (p *DataReflowConfig) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -1890,11 +1920,11 @@ func (p *DatasetConfig) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetConfig) FastWrite(buf []byte) int {
+func (p *DataReflowConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *DatasetConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *DataReflowConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -1906,7 +1936,7 @@ func (p *DatasetConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *DatasetConfig) BLength() int {
+func (p *DataReflowConfig) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -1918,7 +1948,7 @@ func (p *DatasetConfig) BLength() int {
 	return l
 }
 
-func (p *DatasetConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *DataReflowConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDatasetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
@@ -1927,7 +1957,7 @@ func (p *DatasetConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *DatasetConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *DataReflowConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDatasetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
@@ -1936,7 +1966,7 @@ func (p *DatasetConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *DatasetConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *DataReflowConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDatasetSchema() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
@@ -1945,7 +1975,7 @@ func (p *DatasetConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *DatasetConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *DataReflowConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetFieldMappings() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 4)
@@ -1961,7 +1991,7 @@ func (p *DatasetConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *DatasetConfig) field1Length() int {
+func (p *DataReflowConfig) field1Length() int {
 	l := 0
 	if p.IsSetDatasetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1970,7 +2000,7 @@ func (p *DatasetConfig) field1Length() int {
 	return l
 }
 
-func (p *DatasetConfig) field2Length() int {
+func (p *DataReflowConfig) field2Length() int {
 	l := 0
 	if p.IsSetDatasetName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1979,7 +2009,7 @@ func (p *DatasetConfig) field2Length() int {
 	return l
 }
 
-func (p *DatasetConfig) field3Length() int {
+func (p *DataReflowConfig) field3Length() int {
 	l := 0
 	if p.IsSetDatasetSchema() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1988,7 +2018,7 @@ func (p *DatasetConfig) field3Length() int {
 	return l
 }
 
-func (p *DatasetConfig) field4Length() int {
+func (p *DataReflowConfig) field4Length() int {
 	l := 0
 	if p.IsSetFieldMappings() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2001,8 +2031,8 @@ func (p *DatasetConfig) field4Length() int {
 	return l
 }
 
-func (p *DatasetConfig) DeepCopy(s interface{}) error {
-	src, ok := s.(*DatasetConfig)
+func (p *DataReflowConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*DataReflowConfig)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}

@@ -12,13 +12,13 @@ struct CreateTaskRequest {
 }
 
 struct CreateTaskResponse {
-    1: optional i64 task_id (api.js_conv="true" api.body = "task_id"),
+    1: optional i64 task_id (api.js_conv="true" api.body="task_id"),
 
     255: optional base.BaseResp BaseResp
 }
 
 struct UpdateTaskRequest {
-    1: required i64 task_id (api.js_conv="true" api.path = "task_id"),
+    1: required i64 task_id (api.js_conv="true" api.path="task_id"),
     2: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
     3: optional task.TaskStatus task_status (api.body = "task_status"),
     4: optional string description  (api.body = "description"),
@@ -45,7 +45,7 @@ struct ListTasksRequest {
 struct ListTasksResponse {
     1: optional list<task.Task> tasks (api.body = "tasks"),
 
-    100: optional i64 total (api.js_conv="true" api.body = "total"),
+    100: optional i64 total (api.js_conv="true" api.body="total"),
     255: optional base.BaseResp BaseResp
 }
 
@@ -57,7 +57,7 @@ struct GetTaskRequest {
 }
 
 struct GetTaskResponse {
-    1: optional task.Task task (api.body = "task"),
+    1: optional task.Task task (api.body="task"),
 
     255: optional base.BaseResp BaseResp
 }
@@ -69,8 +69,8 @@ struct CheckTaskNameRequest {
 }
 
 struct CheckTaskNameResponse {
-    1: optional bool Pass (agw.key = 'pass')
-    2: optional string Message (agw.key ='message')
+    1: optional bool Pass (agw.key='pass')
+    2: optional string Message (agw.key='message')
     255: base.BaseResp BaseResp
 }
 

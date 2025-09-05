@@ -2173,7 +2173,7 @@ type TaskConfig struct {
 	// 配置的评测规则信息
 	AutoEvaluateConfigs []*AutoEvaluateConfig `thrift:"auto_evaluate_configs,1,optional" frugal:"1,optional,list<AutoEvaluateConfig>" form:"auto_evaluate_configs" json:"auto_evaluate_configs,omitempty" query:"auto_evaluate_configs"`
 	// 配置的数据回流的数据集信息
-	DataReflowConfig *DatasetConfig `thrift:"data_reflow_config,2,optional" frugal:"2,optional,DatasetConfig" form:"data_reflow_config" json:"data_reflow_config,omitempty" query:"data_reflow_config"`
+	DataReflowConfigs []*DataReflowConfig `thrift:"data_reflow_configs,2,optional" frugal:"2,optional,list<DataReflowConfig>" form:"data_reflow_configs" json:"data_reflow_configs,omitempty" query:"data_reflow_configs"`
 }
 
 func NewTaskConfig() *TaskConfig {
@@ -2195,35 +2195,35 @@ func (p *TaskConfig) GetAutoEvaluateConfigs() (v []*AutoEvaluateConfig) {
 	return p.AutoEvaluateConfigs
 }
 
-var TaskConfig_DataReflowConfig_DEFAULT *DatasetConfig
+var TaskConfig_DataReflowConfigs_DEFAULT []*DataReflowConfig
 
-func (p *TaskConfig) GetDataReflowConfig() (v *DatasetConfig) {
+func (p *TaskConfig) GetDataReflowConfigs() (v []*DataReflowConfig) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetDataReflowConfig() {
-		return TaskConfig_DataReflowConfig_DEFAULT
+	if !p.IsSetDataReflowConfigs() {
+		return TaskConfig_DataReflowConfigs_DEFAULT
 	}
-	return p.DataReflowConfig
+	return p.DataReflowConfigs
 }
 func (p *TaskConfig) SetAutoEvaluateConfigs(val []*AutoEvaluateConfig) {
 	p.AutoEvaluateConfigs = val
 }
-func (p *TaskConfig) SetDataReflowConfig(val *DatasetConfig) {
-	p.DataReflowConfig = val
+func (p *TaskConfig) SetDataReflowConfigs(val []*DataReflowConfig) {
+	p.DataReflowConfigs = val
 }
 
 var fieldIDToName_TaskConfig = map[int16]string{
 	1: "auto_evaluate_configs",
-	2: "data_reflow_config",
+	2: "data_reflow_configs",
 }
 
 func (p *TaskConfig) IsSetAutoEvaluateConfigs() bool {
 	return p.AutoEvaluateConfigs != nil
 }
 
-func (p *TaskConfig) IsSetDataReflowConfig() bool {
-	return p.DataReflowConfig != nil
+func (p *TaskConfig) IsSetDataReflowConfigs() bool {
+	return p.DataReflowConfigs != nil
 }
 
 func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2253,7 +2253,7 @@ func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2313,11 +2313,26 @@ func (p *TaskConfig) ReadField1(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *TaskConfig) ReadField2(iprot thrift.TProtocol) error {
-	_field := NewDatasetConfig()
-	if err := _field.Read(iprot); err != nil {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
 		return err
 	}
-	p.DataReflowConfig = _field
+	_field := make([]*DataReflowConfig, 0, size)
+	values := make([]DataReflowConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DataReflowConfigs = _field
 	return nil
 }
 
@@ -2380,11 +2395,19 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *TaskConfig) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDataReflowConfig() {
-		if err = oprot.WriteFieldBegin("data_reflow_config", thrift.STRUCT, 2); err != nil {
+	if p.IsSetDataReflowConfigs() {
+		if err = oprot.WriteFieldBegin("data_reflow_configs", thrift.LIST, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.DataReflowConfig.Write(oprot); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DataReflowConfigs)); err != nil {
+			return err
+		}
+		for _, v := range p.DataReflowConfigs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2415,7 +2438,7 @@ func (p *TaskConfig) DeepEqual(ano *TaskConfig) bool {
 	if !p.Field1DeepEqual(ano.AutoEvaluateConfigs) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.DataReflowConfig) {
+	if !p.Field2DeepEqual(ano.DataReflowConfigs) {
 		return false
 	}
 	return true
@@ -2434,15 +2457,21 @@ func (p *TaskConfig) Field1DeepEqual(src []*AutoEvaluateConfig) bool {
 	}
 	return true
 }
-func (p *TaskConfig) Field2DeepEqual(src *DatasetConfig) bool {
+func (p *TaskConfig) Field2DeepEqual(src []*DataReflowConfig) bool {
 
-	if !p.DataReflowConfig.DeepEqual(src) {
+	if len(p.DataReflowConfigs) != len(src) {
 		return false
+	}
+	for i, v := range p.DataReflowConfigs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }
 
-type DatasetConfig struct {
+type DataReflowConfig struct {
 	// 数据集id，新增数据集时可为空
 	DatasetID *int64 `thrift:"dataset_id,1,optional" frugal:"1,optional,i64" json:"dataset_id" form:"dataset_id" query:"dataset_id"`
 	// 数据集名称
@@ -2452,97 +2481,97 @@ type DatasetConfig struct {
 	FieldMappings []*dataset.FieldMapping `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty"`
 }
 
-func NewDatasetConfig() *DatasetConfig {
-	return &DatasetConfig{}
+func NewDataReflowConfig() *DataReflowConfig {
+	return &DataReflowConfig{}
 }
 
-func (p *DatasetConfig) InitDefault() {
+func (p *DataReflowConfig) InitDefault() {
 }
 
-var DatasetConfig_DatasetID_DEFAULT int64
+var DataReflowConfig_DatasetID_DEFAULT int64
 
-func (p *DatasetConfig) GetDatasetID() (v int64) {
+func (p *DataReflowConfig) GetDatasetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDatasetID() {
-		return DatasetConfig_DatasetID_DEFAULT
+		return DataReflowConfig_DatasetID_DEFAULT
 	}
 	return *p.DatasetID
 }
 
-var DatasetConfig_DatasetName_DEFAULT string
+var DataReflowConfig_DatasetName_DEFAULT string
 
-func (p *DatasetConfig) GetDatasetName() (v string) {
+func (p *DataReflowConfig) GetDatasetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDatasetName() {
-		return DatasetConfig_DatasetName_DEFAULT
+		return DataReflowConfig_DatasetName_DEFAULT
 	}
 	return *p.DatasetName
 }
 
-var DatasetConfig_DatasetSchema_DEFAULT *dataset.DatasetSchema
+var DataReflowConfig_DatasetSchema_DEFAULT *dataset.DatasetSchema
 
-func (p *DatasetConfig) GetDatasetSchema() (v *dataset.DatasetSchema) {
+func (p *DataReflowConfig) GetDatasetSchema() (v *dataset.DatasetSchema) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDatasetSchema() {
-		return DatasetConfig_DatasetSchema_DEFAULT
+		return DataReflowConfig_DatasetSchema_DEFAULT
 	}
 	return p.DatasetSchema
 }
 
-var DatasetConfig_FieldMappings_DEFAULT []*dataset.FieldMapping
+var DataReflowConfig_FieldMappings_DEFAULT []*dataset.FieldMapping
 
-func (p *DatasetConfig) GetFieldMappings() (v []*dataset.FieldMapping) {
+func (p *DataReflowConfig) GetFieldMappings() (v []*dataset.FieldMapping) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetFieldMappings() {
-		return DatasetConfig_FieldMappings_DEFAULT
+		return DataReflowConfig_FieldMappings_DEFAULT
 	}
 	return p.FieldMappings
 }
-func (p *DatasetConfig) SetDatasetID(val *int64) {
+func (p *DataReflowConfig) SetDatasetID(val *int64) {
 	p.DatasetID = val
 }
-func (p *DatasetConfig) SetDatasetName(val *string) {
+func (p *DataReflowConfig) SetDatasetName(val *string) {
 	p.DatasetName = val
 }
-func (p *DatasetConfig) SetDatasetSchema(val *dataset.DatasetSchema) {
+func (p *DataReflowConfig) SetDatasetSchema(val *dataset.DatasetSchema) {
 	p.DatasetSchema = val
 }
-func (p *DatasetConfig) SetFieldMappings(val []*dataset.FieldMapping) {
+func (p *DataReflowConfig) SetFieldMappings(val []*dataset.FieldMapping) {
 	p.FieldMappings = val
 }
 
-var fieldIDToName_DatasetConfig = map[int16]string{
+var fieldIDToName_DataReflowConfig = map[int16]string{
 	1: "dataset_id",
 	2: "dataset_name",
 	3: "dataset_schema",
 	4: "field_mappings",
 }
 
-func (p *DatasetConfig) IsSetDatasetID() bool {
+func (p *DataReflowConfig) IsSetDatasetID() bool {
 	return p.DatasetID != nil
 }
 
-func (p *DatasetConfig) IsSetDatasetName() bool {
+func (p *DataReflowConfig) IsSetDatasetName() bool {
 	return p.DatasetName != nil
 }
 
-func (p *DatasetConfig) IsSetDatasetSchema() bool {
+func (p *DataReflowConfig) IsSetDatasetSchema() bool {
 	return p.DatasetSchema != nil
 }
 
-func (p *DatasetConfig) IsSetFieldMappings() bool {
+func (p *DataReflowConfig) IsSetFieldMappings() bool {
 	return p.FieldMappings != nil
 }
 
-func (p *DatasetConfig) Read(iprot thrift.TProtocol) (err error) {
+func (p *DataReflowConfig) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -2611,7 +2640,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DatasetConfig[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DataReflowConfig[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -2621,7 +2650,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *DatasetConfig) ReadField1(iprot thrift.TProtocol) error {
+func (p *DataReflowConfig) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -2632,7 +2661,7 @@ func (p *DatasetConfig) ReadField1(iprot thrift.TProtocol) error {
 	p.DatasetID = _field
 	return nil
 }
-func (p *DatasetConfig) ReadField2(iprot thrift.TProtocol) error {
+func (p *DataReflowConfig) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2643,7 +2672,7 @@ func (p *DatasetConfig) ReadField2(iprot thrift.TProtocol) error {
 	p.DatasetName = _field
 	return nil
 }
-func (p *DatasetConfig) ReadField3(iprot thrift.TProtocol) error {
+func (p *DataReflowConfig) ReadField3(iprot thrift.TProtocol) error {
 	_field := dataset.NewDatasetSchema()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2651,7 +2680,7 @@ func (p *DatasetConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.DatasetSchema = _field
 	return nil
 }
-func (p *DatasetConfig) ReadField4(iprot thrift.TProtocol) error {
+func (p *DataReflowConfig) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -2675,9 +2704,9 @@ func (p *DatasetConfig) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *DatasetConfig) Write(oprot thrift.TProtocol) (err error) {
+func (p *DataReflowConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("DatasetConfig"); err != nil {
+	if err = oprot.WriteStructBegin("DataReflowConfig"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -2715,7 +2744,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *DatasetConfig) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *DataReflowConfig) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDatasetID() {
 		if err = oprot.WriteFieldBegin("dataset_id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
@@ -2733,7 +2762,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *DatasetConfig) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *DataReflowConfig) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDatasetName() {
 		if err = oprot.WriteFieldBegin("dataset_name", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -2751,7 +2780,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *DatasetConfig) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *DataReflowConfig) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDatasetSchema() {
 		if err = oprot.WriteFieldBegin("dataset_schema", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -2769,7 +2798,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *DatasetConfig) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *DataReflowConfig) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFieldMappings() {
 		if err = oprot.WriteFieldBegin("field_mappings", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
@@ -2796,15 +2825,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
-func (p *DatasetConfig) String() string {
+func (p *DataReflowConfig) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("DatasetConfig(%+v)", *p)
+	return fmt.Sprintf("DataReflowConfig(%+v)", *p)
 
 }
 
-func (p *DatasetConfig) DeepEqual(ano *DatasetConfig) bool {
+func (p *DataReflowConfig) DeepEqual(ano *DataReflowConfig) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -2825,7 +2854,7 @@ func (p *DatasetConfig) DeepEqual(ano *DatasetConfig) bool {
 	return true
 }
 
-func (p *DatasetConfig) Field1DeepEqual(src *int64) bool {
+func (p *DataReflowConfig) Field1DeepEqual(src *int64) bool {
 
 	if p.DatasetID == src {
 		return true
@@ -2837,7 +2866,7 @@ func (p *DatasetConfig) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *DatasetConfig) Field2DeepEqual(src *string) bool {
+func (p *DataReflowConfig) Field2DeepEqual(src *string) bool {
 
 	if p.DatasetName == src {
 		return true
@@ -2849,14 +2878,14 @@ func (p *DatasetConfig) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *DatasetConfig) Field3DeepEqual(src *dataset.DatasetSchema) bool {
+func (p *DataReflowConfig) Field3DeepEqual(src *dataset.DatasetSchema) bool {
 
 	if !p.DatasetSchema.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *DatasetConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
+func (p *DataReflowConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
 
 	if len(p.FieldMappings) != len(src) {
 		return false
