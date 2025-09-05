@@ -365,16 +365,35 @@ func (p *SandboxPool) Shutdown() error {
 	// 等待协程结束
 	p.wg.Wait()
 	
-	// 清理所有实例
-	close(p.warmPool)
-	for instance := range p.warmPool {
-		p.destroyInstance(instance)
+	// 安全清理所有实例
+	defer func() {
+		if r := recover(); r != nil {
+			// Channel已经关闭，忽略panic
+			p.logger.Debug("沙箱池channel已关闭")
+		}
+	}()
+	
+	// 先清理warmPool中的实例（非阻塞方式）
+	done := false
+	for !done {
+		select {
+		case instance := <-p.warmPool:
+			if instance != nil {
+				go p.destroyInstance(instance) // 异步清理避免阻塞
+			}
+		default:
+			// 没有更多实例
+			done = true
+		}
 	}
 	
-	// 清理活跃实例
+	// 关闭channel
+	close(p.warmPool)
+	
+	// 清理活跃实例（异步方式）
 	p.activePool.Range(func(key, value interface{}) bool {
 		if instance, ok := value.(*SandboxInstance); ok {
-			p.destroyInstance(instance)
+			go p.destroyInstance(instance) // 异步清理
 		}
 		p.activePool.Delete(key)
 		return true

@@ -500,6 +500,14 @@ func (s *TaskScheduler) GetMetrics() *SchedulerMetrics {
 
 // Shutdown 关闭调度器
 func (s *TaskScheduler) Shutdown() error {
+	// 检查是否已经关闭
+	select {
+	case <-s.ctx.Done():
+		s.logger.Info("任务调度器已经关闭")
+		return nil
+	default:
+	}
+	
 	s.logger.Info("开始关闭任务调度器...")
 	
 	// 取消上下文
@@ -528,13 +536,29 @@ func (s *TaskScheduler) Shutdown() error {
 		s.logger.Warn("任务调度器关闭超时，强制退出")
 	}
 	
-	// 关闭队列
-	close(s.urgentQueue)
-	close(s.highQueue)
-	close(s.normalQueue)
-	close(s.lowQueue)
-	close(s.workerPool)
+	// 安全关闭队列（检查是否已关闭）
+	s.safeCloseChannel(s.urgentQueue)
+	s.safeCloseChannel(s.highQueue)
+	s.safeCloseChannel(s.normalQueue)
+	s.safeCloseChannel(s.lowQueue)
+	s.safeCloseChannel(s.workerPool)
 	
 	s.logger.Info("任务调度器已关闭")
 	return nil
+}
+
+// safeCloseChannel 安全关闭channel
+func (s *TaskScheduler) safeCloseChannel(ch interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Channel已经关闭，忽略panic
+		}
+	}()
+	
+	switch c := ch.(type) {
+	case chan *ExecutionTask:
+		close(c)
+	case chan chan *ExecutionTask:
+		close(c)
+	}
 }
