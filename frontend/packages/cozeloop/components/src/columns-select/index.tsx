@@ -3,7 +3,11 @@
 import * as sort from 'react-sortable-hoc';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
-import { IconCozHandle, IconCozTableSetting } from '@coze-arch/coze-design/icons';
+import { I18n } from '@cozeloop/i18n-adapter';
+import {
+  IconCozHandle,
+  IconCozTableSetting,
+} from '@coze-arch/coze-design/icons';
 import {
   Button,
   Checkbox,
@@ -41,7 +45,7 @@ export const ColumnSelector = ({
   defaultColumns = columns,
   onChange,
   buttonText,
-  resetButtonText = '重置为默认',
+  resetButtonText = I18n.t('reset_to_default'),
   className,
   sortable = true,
   itemRender,
@@ -231,7 +235,11 @@ export const ColumnSelector = ({
         trigger="click"
       >
         <div>
-          <Tooltip content="列管理" theme="dark" position="top">
+          <Tooltip
+            content={I18n.t('column_management')}
+            theme="dark"
+            position="top"
+          >
             <Button
               icon={<IconCozTableSetting />}
               type="primary"
