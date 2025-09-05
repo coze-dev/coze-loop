@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 const tmLanguage = {
   foldingStartMarker: '\\{\\{\\s*(?:if|with|range)\\b',
   foldingStopMarker: '\\{\\{\\s*(?:else|end)\\b',

@@ -1,13 +1,9 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState } from 'react';
 
-import classNames from 'classnames';
 import { safeParseJson } from '@cozeloop/toolkit';
-import { BaseJsonEditor, BaseRawTextEditor } from '@cozeloop/prompt-components';
 import { handleCopy, TooltipWhenDisabled } from '@cozeloop/components';
 import { ToolType } from '@cozeloop/api-schema/prompt';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
@@ -21,10 +17,9 @@ import {
   Toast,
   Typography,
 } from '@coze-arch/coze-design';
+import { SchemaEditor } from '@cozeloop/prompt-components';
 
 import { type ToolWithMock } from '.';
-import { I18n } from '@cozeloop/i18n-adapter';
-
 interface ToolModalProps {
   visible?: boolean;
   data?: ToolWithMock;
@@ -71,41 +66,6 @@ const TEMPLATE_DATA = `{
     ]
   }
 }`;
-
-export const SchemaEditor = ({
-  value,
-  onChange,
-  placeholder,
-  readOnly,
-  language,
-  className,
-}: SchemaEditorProps) => (
-  <div
-    className={classNames(
-      'w-full h-[500px] border border-solid coz-stroke-primary rounded-[4px] overflow-hidden relative bg-white',
-      className,
-    )}
-  >
-    {language === 'json' ? (
-      <BaseJsonEditor
-        className="w-full h-full overflow-y-auto"
-        onChange={onChange}
-        value={value || ''}
-        placeholder={placeholder}
-        readonly={readOnly}
-        borderRadius={4}
-      />
-    ) : (
-      <BaseRawTextEditor
-        className="w-full h-full overflow-y-auto"
-        onChange={onChange}
-        value={value || ''}
-        placeholder={placeholder}
-        readonly={readOnly}
-      />
-    )}
-  </div>
-);
 
 interface ToolSchemaProps {
   name?: string;
@@ -182,7 +142,7 @@ export function ToolModal({
 
     if (hasItem) {
       Toast.warning({
-        content: I18n.t('method_exists'),
+        content: '当前方法已经存在，请重新命名',
         zIndex: 99999,
       });
       return;
@@ -207,7 +167,7 @@ export function ToolModal({
 
   return (
     <Modal
-      title={data?.function?.name || I18n.t('new_function')}
+      title={data?.function?.name || '新函数'}
       width={960}
       visible={visible}
       onCancel={onClose}
@@ -217,14 +177,14 @@ export function ToolModal({
         disabled ? null : (
           <Space>
             <Button className="mr-2" onClick={onClose} color="primary">
-              {I18n.t('cancel')}
+              取消
             </Button>
             <TooltipWhenDisabled
-              content={I18n.t('method_name_rule')}
+              content="方法名称必须是 a-z、A-Z、0-9，或包含下划线和破折号，长度最长为 64。"
               disabled={Boolean(schema && !canSaveTool)}
             >
               <Button onClick={handleSaveTool} disabled={!canSaveTool}>
-                {I18n.t('confirm')}
+                确认
               </Button>
             </TooltipWhenDisabled>
           </Space>
@@ -235,7 +195,10 @@ export function ToolModal({
       <Row gutter={16}>
         <Col span={14}>
           <div className="flex justify-between items-center w-full h-8 mb-2">
-            <Typography.Text className="font-semibold items" type="tertiary">
+            <Typography.Text
+              className="font-semibold flex items-center"
+              type="tertiary"
+            >
               SCHEMA
               <IconCozCopy
                 className="ml-2 hover:text-semi-primary cursor-pointer"
@@ -251,7 +214,7 @@ export function ToolModal({
                   setMockValue('Sunny');
                 }}
               >
-                {I18n.t('insert_template')}
+                插入模版
               </Button>
             )}
           </div>
@@ -266,7 +229,7 @@ export function ToolModal({
         <Col span={10}>
           <div className="flex justify-between items-center w-full h-8 mb-2">
             <Typography.Text className="font-semibold" type="tertiary">
-              {I18n.t('default_mock_value')}
+              默认模拟值
             </Typography.Text>
             <Select
               value={mockType}
@@ -282,7 +245,7 @@ export function ToolModal({
             language={mockType}
             value={mockValue}
             onChange={v => setMockValue(v)}
-            placeholder={I18n.t('input_mock_value_here')}
+            placeholder="在此处输入模拟值以模拟函数的返回值。"
             readOnly={disabled}
           />
         </Col>

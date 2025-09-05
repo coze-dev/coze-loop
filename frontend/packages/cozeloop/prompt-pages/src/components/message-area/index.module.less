@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* stylelint-disable declaration-no-important */
 .compare-execute {
   overflow: hidden;
@@ -84,7 +82,7 @@
   position: relative;
 
   overflow: hidden auto;
-  // flex flex-col flex-1 overflow-y-auto overflow-x-hidden
+
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -133,5 +131,22 @@
       pointer-events: auto;
       opacity: 1;
     }
+  }
+}
+
+.execute-sub-area-content{
+  position: relative;
+  overflow-y: auto;
+  flex:1;
+  padding: 4px 8px;
+
+  &-img {
+    position: absolute;
+    top: calc(50% - 24px);
+    left: calc(50% - 24px);
+
+    width: 48px;
+
+    opacity: 0.6;
   }
 }

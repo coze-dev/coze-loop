@@ -1,15 +1,16 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 /* eslint-disable security/detect-object-injection */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
 import { cloneDeep, debounce } from 'lodash-es';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
+import {
+  BenefitBanner,
+  BenefitBannerScene,
+} from '@cozeloop/biz-components-adapter';
 import { type Message } from '@cozeloop/api-schema/prompt';
 
 import { usePromptStore } from '@/store/use-prompt-store';
@@ -90,6 +91,7 @@ export function CompareArea() {
     });
   };
 
+  const [exchanegKey, setExchangeKey] = useState(nanoid());
   const exchangePromptToDraft = debounce((index: number) => {
     const {
       compareConfig: newComparePrompts,
@@ -136,6 +138,7 @@ export function CompareArea() {
             key: nanoid(),
           })),
         );
+        setExchangeKey(nanoid());
       }, 0);
       sendEvent(EVENT_NAMES.prompt_compare_use, {
         prompt_id: `${promptInfo?.id || 'playground'}`,
@@ -151,15 +154,16 @@ export function CompareArea() {
         style={{ scrollbarGutter: 'auto' }}
       >
         <CompareItem
+          key={exchanegKey}
           ref={el => (singleAreaRefs.current[0] = el)}
           allStreaming={allStreaming}
           style={{ position: 'sticky', left: 0, zIndex: 7 }}
         />
         {compareConfig?.groups?.map((_, idx) => (
           <CompareItem
-            key={idx}
+            key={`${idx}-${exchanegKey}`}
             uid={idx}
-            title={I18n.t('control_group_index', { index: idx + 1 })}
+            title={`对照组${idx + 1}`}
             ref={el => (singleAreaRefs.current[idx + 1] = el)}
             deleteCompare={() => !allStreaming && deleteComparePrompt(idx)}
             exchangePromptToDraft={() =>
@@ -171,6 +175,11 @@ export function CompareArea() {
         ))}
       </div>
       <div className="w-full flex-shrink-0 pl-6 pb-6 pt-3 border-0 border-t border-solid">
+        <BenefitBanner
+          closable={false}
+          className="mb-2 mr-6"
+          scene={BenefitBannerScene.PromptDetail}
+        />
         <SendMsgArea onMessageSend={sendMessage} streaming={allStreaming} />
       </div>
     </div>

@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable complexity */
@@ -14,21 +12,19 @@ import React, {
 
 import { useShallow } from 'zustand/react/shallow';
 import { Resizable } from 're-resizable';
-import { useRequest, useSize } from 'ahooks';
+import { isUndefined } from 'lodash-es';
+import { useSize } from 'ahooks';
 import {
   getPlaceholderErrorContent,
   PopoverModelConfigEditor,
 } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useModelList, useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type DebugMessage,
   type DebugToolCall,
   type Message,
   Role,
 } from '@cozeloop/api-schema/prompt';
-import { Scenario } from '@cozeloop/api-schema/llm-manage';
-import { LlmManageApi } from '@cozeloop/api-schema';
 import {
   IconCozDubbleHorizontal,
   IconCozSetting,
@@ -84,8 +80,8 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
     },
     ref,
   ) => {
-    const wrapperRef = useRef<HTMLDivElement>(null);
-    const { spaceID } = useSpace();
+    const warpperRef = useRef<HTMLDivElement>(null);
+    const { spaceIDWhenDemoSpaceItsPersonal } = useSpace();
     const { readonly } = useBasicStore(
       useShallow(state => ({ readonly: state.readonly })),
     );
@@ -101,7 +97,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
       setCurrentModel,
     } = useCompare(uid);
 
-    const size = useSize(wrapperRef.current);
+    const size = useSize(warpperRef.current);
     const maxHeight = size?.height ? size.height - 40 : '100%';
 
     const [toolCalls, setToolCalls] = useState<DebugToolCall[]>([]);
@@ -115,14 +111,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
       reasoningContentResult,
     } = useLLMStreamRun(uid);
 
-    const service = useRequest(async () =>
-      LlmManageApi.ListModels({
-        workspace_id: spaceID,
-        page_size: 100,
-        page_token: '0',
-        scenario: Scenario.scenario_prompt_debug,
-      }),
-    );
+    const service = useModelList(spaceIDWhenDemoSpaceItsPersonal);
 
     const runLLM = (
       queryMsg?: Message,
@@ -136,7 +125,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
         return false;
       });
       if (placeholderHasError) {
-        return Toast.error(I18n.t('placeholder_var_error'));
+        return Toast.error('Placeholder 变量不存在或命名错误');
       }
 
       setStreaming?.(true);
@@ -172,7 +161,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
       );
 
       if (historyHasEmpty) {
-        return Toast.error(I18n.t('historical_data_has_empty_content'));
+        return Toast.error('历史数据有空内容');
       }
 
       setHistoricMessage?.(history);
@@ -215,7 +204,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
         !messageList?.length &&
         !(message?.content || message?.parts?.length)
       ) {
-        Toast.error(I18n.t('add_prompt_tpl_or_input_question'));
+        Toast.error('请添加 Prompt 模板或输入提问内容');
         return;
       }
       const chatArray = historicMessage.filter(v => Boolean(v)) as Message[];
@@ -231,7 +220,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
 
       if (message?.content || message?.parts?.length) {
         if (historyHasEmpty) {
-          return Toast.error(I18n.t('historical_data_has_empty_content'));
+          return Toast.error('历史数据有空内容');
         }
 
         if (message) {
@@ -260,7 +249,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
           rerunSendMessage();
         } else {
           if (historyHasEmpty && chatArray.length > 2) {
-            return Toast.error(I18n.t('historical_data_has_empty_content'));
+            return Toast.error('历史数据有空内容');
           }
           const history = chatArray.slice(0, chatArray.length - 1).map(it => ({
             role: it.role,
@@ -286,7 +275,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
     }, [respondingStatus, stepDebuggingTrace]);
 
     return (
-      <div className={styles['compare-item']} ref={wrapperRef} style={style}>
+      <div className={styles['compare-item']} ref={warpperRef} style={style}>
         <div className="flex flex-1 flex-col w-full min-h-[40px]">
           <div
             className="px-6 py-2 box-border border-0 border-t border-b border-solid coz-fg-plus w-full h-[40px] flex items-center justify-between"
@@ -294,14 +283,11 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
           >
             <div className="flex items-center gap-2 flex-shrink-0">
               <Typography.Text className="flex-shrink-0" strong>
-                {title || I18n.t('benchmark_group')}
+                {title || '基准组'}
               </Typography.Text>
-              {uid ? (
+              {!isUndefined(uid) ? (
                 <div className={styles['btn-group']}>
-                  <Tooltip
-                    content={I18n.t('set_to_reference_group')}
-                    theme="dark"
-                  >
+                  <Tooltip content="设置为基准组" theme="dark">
                     <IconButton
                       color="secondary"
                       size="small"
@@ -310,10 +296,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
                       disabled={allStreaming}
                     />
                   </Tooltip>
-                  <Tooltip
-                    content={I18n.t('delete_control_group')}
-                    theme="dark"
-                  >
+                  <Tooltip content="删除对照组" theme="dark">
                     <IconButton
                       color="secondary"
                       size="small"
@@ -326,6 +309,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
               ) : null}
             </div>
             <PopoverModelConfigEditor
+              key={uid}
               value={modelConfig}
               onChange={config => {
                 setModelConfig({ ...config });
@@ -377,9 +361,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
             className="px-6 py-2 box-border border-0 border-t border-b border-solid coz-fg-plus w-full h-[40px]"
             style={{ background: '#F6F6FB' }}
           >
-            <Typography.Text strong>
-              {I18n.t('preview_and_debug')}
-            </Typography.Text>
+            <Typography.Text strong>预览与调试</Typography.Text>
           </div>
           <CompareMessageArea
             uid={uid}
@@ -402,7 +384,7 @@ export const CompareItem = forwardRef<CompareItemRef, CompareItemProps>(
               size="small"
               onClick={stopStreaming}
             >
-              {I18n.t('stop_respond')}
+              停止响应
             </Button>
           ) : null}
         </div>

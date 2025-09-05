@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable security/detect-object-injection */
@@ -116,7 +114,7 @@ interface PromptMockDataAction {
     index: number,
     model: SetStateAction<Model | undefined>,
   ) => void;
-  clearMockDataStore: () => void;
+  clearMockdataStore: () => void;
 }
 
 const normalUpdateFunc = (
@@ -435,7 +433,7 @@ export const usePromptMockDataStore = create<
           group.currentModel = newValue;
         }),
       ),
-    clearMockDataStore: () =>
+    clearMockdataStore: () =>
       set(
         produce((state: PromptMockDataState) => {
           state.historicMessage = [];

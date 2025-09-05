@@ -17,12 +17,13 @@ export const LOCAL_STORAGE_KEYS = [
   'first-login-flag',
   'metrics-filter-preset-time-range',
   'trace-selected-columns-open',
+  'trace-filter-storage',
 ] as const;
 
 export type LocalStorageKeys = (typeof LOCAL_STORAGE_KEYS)[number];
 
 export type LocalStorageCacheConfigMap = {
-  [key in LocalStorageKeys]?: { bindAccount: boolean };
+  [key in LocalStorageKeys]?: { bindAccount: boolean; bindSpace?: boolean };
 };
 
 export const cacheConfig: LocalStorageCacheConfigMap = {
@@ -39,10 +40,12 @@ export const cacheConfig: LocalStorageCacheConfigMap = {
     bindAccount: true,
   },
   'metrics-filter': {
-    bindAccount: true,
+    bindSpace: true,
+    bindAccount: false,
   },
   'metrics-filter-type': {
-    bindAccount: true,
+    bindAccount: false,
+    bindSpace: true,
   },
   'evaluate-used-up-notify': {
     bindAccount: true,
@@ -51,6 +54,11 @@ export const cacheConfig: LocalStorageCacheConfigMap = {
     bindAccount: true,
   },
   'metrics-filter-preset-time-range': {
-    bindAccount: true,
+    bindAccount: false,
+    bindSpace: true,
+  },
+  'trace-filter-storage': {
+    bindAccount: false,
+    bindSpace: true,
   },
 };

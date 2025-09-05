@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { createTheme, tags as t } from '@coze-editor/editor/preset-code';
 import { EditorView } from '@codemirror/view';
 

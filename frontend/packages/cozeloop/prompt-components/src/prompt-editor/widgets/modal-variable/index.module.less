@@ -1,0 +1,47 @@
+.modal-variable-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0px 4px;
+  border-radius: 4px;
+  background: rgba(0, 161, 54, 0.10);
+  color: #00A136;
+
+  font-family: "JetBrains Mono";
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  margin: 0 2px;
+  vertical-align: bottom;
+  cursor: pointer;
+  border: 0.5px solid transparent;
+  position: relative;
+  line-height: 19px;
+
+  &-delete {
+    cursor: pointer;
+    position: absolute;
+    right: -6px;
+    top: -4px;
+    color: var(--coz-fg-secondary);
+    display: none;
+  }
+
+  &:hover {
+    border: 0.5px solid rgba(0, 161, 54, 0.10);
+
+    .modal-variable-widget-delete {
+      display: block;
+    }
+  }
+
+  &-disabled {
+    cursor: default;
+    color: var(--Fg-COZ-fg-dim, rgba(55, 67, 106, 0.38));
+    background: var(--Mg-COZ-mg-primary, rgba(87, 104, 161, 0.08));
+
+    &:hover {
+      border: 0.5px solid var(--Stroke-COZ-stroke-primary, rgba(82, 100, 154, 0.13));
+    }
+  }
+}

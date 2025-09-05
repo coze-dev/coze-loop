@@ -10,7 +10,8 @@
     "test": "NODE_OPTIONS='--max_old_space_size=2048' NODE_ENV=test vitest --run --passWithNoTests"
   },
   "dependencies": {
-    "dayjs": "^1.11.7"
+    "dayjs": "^1.11.7",
+    "json-bigint": "~1.0.0"
   },
   "devDependencies": {
     "@coze-arch/eslint-config": "workspace:*",

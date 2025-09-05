@@ -1,5 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable security/detect-object-injection */
 /* eslint-disable complexity */
@@ -109,11 +107,11 @@ export const useCompare = (uid?: number) => {
     const compareItem = compareConfig?.groups?.[uid] || {};
     return {
       messageList: compareItem?.prompt_detail?.prompt_template?.messages?.map(
-        (it: Message & { key?: string }) => {
+        (it: Message & { key?: string }, index) => {
           if (!it?.key) {
             return {
               ...it,
-              key: nanoid(),
+              key: `${uid}-${index}`,
             };
           }
           return it;
