@@ -1,3 +1,5 @@
+import { I18n } from '@cozeloop/i18n-adapter';
+
 import { promptVariableDefToFieldSchema } from '@/utils/parse-prompt-variable';
 import { type CreateExperimentValues } from '@/types/evaluate-target';
 import { ReadonlyMappingItem } from '@/components/mapping-item-field/readonly-mapping-item';
@@ -30,7 +32,7 @@ export function PromptFieldMappingPreview({
         return (
           <ReadonlyMappingItem
             key={key}
-            keyTitle={'评测对象'}
+            keyTitle={I18n.t('evaluation_object')}
             keySchema={fieldSchema}
             optionSchema={optionSchema}
           />
