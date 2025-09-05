@@ -1973,7 +1973,7 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 普通模式 */
-  (key: 'fornax_prompt_compare_normal', fallbackText?: string): string;
+  (key: 'prompt_compare_normal', fallbackText?: string): string;
   /** 快速标注模式 */
   (key: 'quick_annotation_mode', fallbackText?: string): string;
   /** 稍等几秒后 */
@@ -2031,7 +2031,7 @@ interface I18nTranslateFn {
   /** 完成该标签的所有数据标注后,再刷新重试 */
   (key: 'refresh_after_all_tag_annotations_completed', fallbackText?: string): string;
   /** 其他 */
-  (key: 'fornax_analytics_subtitle_others', fallbackText?: string): string;
+  (key: 'analytics_subtitle_others', fallbackText?: string): string;
   /** {placeholder0}明细 */
   (
     key: 'placeholder0_details',
@@ -2069,7 +2069,7 @@ interface I18nTranslateFn {
   /** 人工标注管理 */
   (key: 'manual_annotation_management', fallbackText?: string): string;
   /** 新建标签 */
-  (key: 'data_engine_create_new_tag', fallbackText?: string): string;
+  (key: 'create_new_tag', fallbackText?: string): string;
   /** 添加 */
   (key: 'space_member_role_type_add_btn', fallbackText?: string): string;
   /** 该分类标签选项已禁用，若修改将不再展示 */
@@ -2099,17 +2099,17 @@ interface I18nTranslateFn {
   /** Coze 智能体 */
   (key: 'cozeloop_open_evaluate_coze_intelligent_agent', fallbackText?: string): string;
   /** 数据嵌套层数超限 */
-  (key: 'data_engine_data_nesting_exceeds_limit', fallbackText?: string): string;
+  (key: 'data_nesting_exceeds_limit', fallbackText?: string): string;
   /** 数据转换失败 */
-  (key: 'data_engine_data_conversion_failed', fallbackText?: string): string;
+  (key: 'data_conversion_failed', fallbackText?: string): string;
   /** 图片数量超限 */
-  (key: 'data_engine_exceed_max_image_count', fallbackText?: string): string;
+  (key: 'exceed_max_image_count', fallbackText?: string): string;
   /** 图片大小超限 */
-  (key: 'data_engine_exceed_max_image_size', fallbackText?: string): string;
+  (key: 'exceed_max_image_size', fallbackText?: string): string;
   /** 图片获取失败 */
-  (key: 'data_engine_get_image_failed', fallbackText?: string): string;
+  (key: 'get_image_failed', fallbackText?: string): string;
   /** 文件扩展名不合法 */
-  (key: 'data_engine_illegal_extension', fallbackText?: string): string;
+  (key: 'illegal_extension', fallbackText?: string): string;
   /** 上传图片失败 */
   (key: 'cozeloop_open_evaluate_image_upload_failed', fallbackText?: string): string;
   /** 世界上最大的动物是什么 */
@@ -2119,7 +2119,7 @@ interface I18nTranslateFn {
   /** 告诉我一些这个动物的生活习性 */
   (key: 'evaluate_living_habits_animal', fallbackText?: string): string;
   /** 吃鱼 */
-  (key: 'data_engine_eat_fish', fallbackText?: string): string;
+  (key: 'eat_fish', fallbackText?: string): string;
   /** 实验对比最大数量不能超过 {MAX_EXPERIMENT_CONTRAST_COUNT} 个，请重新选择。 */
   (
     key: 'cozeloop_open_evaluate_max_experiment_contrast_limit',
@@ -2135,13 +2135,13 @@ interface I18nTranslateFn {
   /** JSON 格式错误 */
   (key: 'cozeloop_open_evaluate_json_format_error', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文开头 */
-  (key: 'data_engine_support_letter_number_chinese_start', fallbackText?: string): string;
+  (key: 'support_letter_number_chinese_start', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (key: 'data_engine_support_letter_number_chinese_special_char', fallbackText?: string): string;
+  (key: 'support_letter_number_chinese_special_char', fallbackText?: string): string;
   /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (key: 'data_engine_support_letter_number_underscore_start_letter', fallbackText?: string): string;
+  (key: 'support_letter_number_underscore_start_letter', fallbackText?: string): string;
   /** 文件读取失败 */
-  (key: 'fornax_knowledge_file_read_fail', fallbackText?: string): string;
+  (key: 'knowledge_file_read_fail', fallbackText?: string): string;
   /** 文件格式错误 */
   (key: 'data_engine_file_format_error', fallbackText?: string): string;
   /** 单次最多添加10条数据项 */
@@ -2172,7 +2172,7 @@ interface I18nTranslateFn {
   ): string;
   /** 列 {placeholder1} */
   (
-    key: 'data_engine_column_placeholder',
+    key: 'column_placeholder',
     options?: {
       /** string */ placeholder1: ReactNode;
     },
@@ -2262,7 +2262,7 @@ interface I18nTranslateFn {
   /** 确定删除评测集 */
   (key: 'cozeloop_open_evaluate_confirm_delete_evaluation_set', fallbackText?: string): string;
   /** 吗？此修改将不可逆。 */
-  (key: 'data_engine_this_change_irreversible', fallbackText?: string): string;
+  (key: 'this_change_irreversible', fallbackText?: string): string;
   /** 删除 */
   (key: 'space_member_role_type_del_btn', fallbackText?: string): string;
   /** {placeholder1} 分 */
@@ -2276,7 +2276,7 @@ interface I18nTranslateFn {
   /** 条， 失败 */
   (key: 'cozeloop_open_evaluate_items_failed', fallbackText?: string): string;
   /** 条 */
-  (key: 'fornax_tiao', fallbackText?: string): string;
+  (key: 'tiao', fallbackText?: string): string;
   /** 存在以下原因导致执行失败，请自行纠正后重试 */
   (key: 'cozeloop_open_evaluate_execution_failed_reasons', fallbackText?: string): string;
   /** （{placeholder1}条） */
@@ -2359,7 +2359,7 @@ interface I18nTranslateFn {
   (key: 'cozeloop_open_evaluate_preset_array_object_data_type', fallbackText?: string): string;
   /** (共有{currentColumnNum}/50列) */
   (
-    key: 'data_engine_column_count_info',
+    key: 'column_count_info',
     options?: {
       /** string */ currentColumnNum: ReactNode;
     },
@@ -2430,7 +2430,7 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 条数据 */
-  (key: 'data_engine_items', fallbackText?: string): string;
+  (key: 'tiao_items', fallbackText?: string): string;
   /** 图片大小不能超过20MB */
   (key: 'cozeloop_open_evaluate_image_size_limit_20mb', fallbackText?: string): string;
   /** 点击右上角导出按钮进行导出 */

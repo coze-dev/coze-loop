@@ -6,7 +6,7 @@ export const downloadCSVTemplate = () => {
     const fields = ['input', 'reference_output'];
     const data = [
       [I18n.t('evaluate_biggest_animal_world'), I18n.t('evaluate_blue_whale')],
-      [I18n.t('evaluate_living_habits_animal'), I18n.t('data_engine_eat_fish')],
+      [I18n.t('evaluate_living_habits_animal'), I18n.t('eat_fish')],
     ];
     const templateJson: UnparseObject<string[]> = {
       fields,

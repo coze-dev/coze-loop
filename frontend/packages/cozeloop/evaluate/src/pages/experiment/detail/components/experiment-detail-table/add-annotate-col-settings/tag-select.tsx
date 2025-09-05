@@ -131,7 +131,7 @@ export function TagSelect({
           }}
         >
           <IconCozPlus />
-          <span className="ml-2">{I18n.t('data_engine_create_new_tag')}</span>
+          <span className="ml-2">{I18n.t('create_new_tag')}</span>
         </div>
       }
     />

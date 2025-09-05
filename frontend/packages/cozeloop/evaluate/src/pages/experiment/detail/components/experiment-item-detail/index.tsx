@@ -102,7 +102,7 @@ export default function ExperimentItemDetail({
         }}
         disabled={activeItemStore.isFirst}
       >
-        {I18n.t('data_engine_previous')}
+        {I18n.t('previous')}
       </Button>
       <Button
         icon={<IconCozArrowRight />}
@@ -114,7 +114,7 @@ export default function ExperimentItemDetail({
         }}
         disabled={activeItemStore.isLast}
       >
-        {I18n.t('data_engine_next')}
+        {I18n.t('next')}
       </Button>
       <Divider layout="vertical" style={{ height: '12px' }} />
       <ColumnsManage
@@ -160,7 +160,7 @@ export default function ExperimentItemDetail({
             borderBottom: '1px solid var(--coz-stroke-primary',
           }}
         >
-          {I18n.t('loop_evaluate_evaluation_dataset')}
+          {I18n.t('loop_evaluation_dataset')}
         </div>
         <div className="overflow-auto">
           <ExperimentItemDetailTable
@@ -176,7 +176,7 @@ export default function ExperimentItemDetail({
         <div className="text-[var(--coz-fg-plus)]">
           <EvalActualOutputTable expand={expand} item={item} />
         </div>
-        <CollapsibleField title={I18n.t('loop_evaluate_evaluator_score')}>
+        <CollapsibleField title={I18n.t('evaluator_score')}>
           <EvaluatorResultTable
             spaceID={spaceID}
             evaluatorRecordMap={item?.evaluatorsResult}
@@ -189,7 +189,7 @@ export default function ExperimentItemDetail({
         </CollapsibleField>
         <div className="h-2"></div>
         {columnAnnotations.length ? (
-          <CollapsibleField title={I18n.t('data_engine_manual_annotation')}>
+          <CollapsibleField title={I18n.t('manual_annotation')}>
             <AnnotateTable
               spaceID={spaceID as string}
               annotation={columnAnnotations}

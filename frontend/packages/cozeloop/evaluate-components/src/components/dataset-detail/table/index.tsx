@@ -100,7 +100,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
           <Typography.Text className="!font-medium">
             #{(item.item_id as string)?.slice(-5)}
           </Typography.Text>
-          {I18n.t('data_engine_this_change_irreversible')}
+          {I18n.t('this_change_irreversible')}
         </Typography.Text>
       ),
       autoLoading: true,

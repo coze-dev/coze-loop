@@ -127,9 +127,7 @@ export const SubmitVersion = ({
                       datasetDetail?.latest_version || '',
                     ) <= 0
                   ) {
-                    callback(
-                      `${I18n.t('data_engine_new_version_greater_than_current', { placeholder1: datasetDetail?.latest_version })}`,
-                    );
+                    callback(`${I18n.t('new_version_greater_than_current')}`);
                     return false;
                   }
                   return true;
