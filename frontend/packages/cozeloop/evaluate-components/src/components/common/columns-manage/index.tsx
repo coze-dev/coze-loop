@@ -95,15 +95,13 @@ export function ColumnsManage({
   );
 
   return (
-    <Tooltip theme="dark" content={I18n.t('column_management')}>
-      <div>
-        <ColumnSelector
-          columns={options}
-          defaultColumns={defaultOptions}
-          sortable={sortable}
-          onChange={hanldeColumnsChange}
-        />
-      </div>
-    </Tooltip>
+    <div>
+      <ColumnSelector
+        columns={options}
+        defaultColumns={defaultOptions}
+        sortable={sortable}
+        onChange={hanldeColumnsChange}
+      />
+    </div>
   );
 }
