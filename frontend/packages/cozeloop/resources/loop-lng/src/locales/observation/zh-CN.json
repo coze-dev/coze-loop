@@ -98,5 +98,8 @@
   "task_filter_lte": "小于等于",
   "task_filter_not_eq": "不等于",
   "task_filter_not_in": "不属于",
-  "task_filter_not_null": "不为空"
+  "task_filter_not_null": "不为空",
+  "task_filter_thumbs_up": "点赞",
+  "task_filter_thumbs_down": "点踩",
+  "analytics_fetch_meta_error": "获取元数据信息失败：{msg}"
 }

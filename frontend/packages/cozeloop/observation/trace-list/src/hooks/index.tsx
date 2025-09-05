@@ -4,3 +4,5 @@ export { useFetchTraces } from '@/components/queries/table/hooks/use-fetch-trace
 export { usePerformance } from './use-performance';
 export { usePageStay } from './use-page-stay';
 export { useColumns } from './use-column';
+export { useFetchMetaInfo } from './use-fetch-meta-info';
+export { useGetMetaInfo, fetchMetaInfo } from './use-get-meta-info';

@@ -79,6 +79,10 @@ export enum FilterFields {
   TOKENS = 'token',
   BOT_ID = 'bot_id',
   APP_ID = 'app_id',
+  FEEDBACK = 'feedback_auto_evaluator',
+  FEEDBACK_MANUAL = 'feedback_manual',
+  FEEDBACK_COZE = 'feedback_coze',
+  WORKFLOW_ID = 'workflow_id',
 }
 
 export const SELECT_RENDER_CMP_OP_LIST = ['in_list'];
@@ -101,6 +105,7 @@ export const NUMBER_RENDER_CMP_OP_LIST = [
   FilterFields.OUTPUT_TOKENS,
   FilterFields.TOTAL_TOKENS,
   FilterFields.TOKENS,
+  FilterFields.FEEDBACK,
 ];
 
 export const THREADS_STATUS_RECORDS: Partial<
@@ -116,6 +121,15 @@ export const THREADS_STATUS_RECORDS: Partial<
   },
   error: {
     label: I18n.t('observation_threads_options_fail'),
+  },
+};
+
+export const THREADS_FEEDBACK_COZE_RECORDS = {
+  like: {
+    label: I18n.t('task_filter_thumbs_up'),
+  },
+  dislike: {
+    label: I18n.t('task_filter_thumbs_down'),
   },
 };
 

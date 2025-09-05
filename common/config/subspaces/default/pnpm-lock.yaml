@@ -1806,7 +1806,7 @@ importers:
         version: link:../i18n
       '@cozeloop/observation-component-adapter':
         specifier: workspace:*
-        version: link:../observation/trace-detail
+        version: link:../observation/trace-detail-open
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components
@@ -1936,7 +1936,7 @@ importers:
         version: link:../i18n
       '@cozeloop/observation-component-adapter':
         specifier: workspace:*
-        version: link:../observation/trace-detail
+        version: link:../observation/trace-detail-open
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components
@@ -2484,6 +2484,88 @@ importers:
       '@rsbuild/core':
         specifier: ~1.1.0
         version: 1.1.13
+      '@types/json-bigint':
+        specifier: ~1.0.4
+        version: 1.0.4
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      happy-dom:
+        specifier: ^15.10.2
+        version: 15.11.7
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      tsconfig-paths:
+        specifier: 4.1.0
+        version: 4.1.0
+      vite:
+        specifier: ^4.3.9
+        version: 4.5.14(@types/node@18.18.9)
+      vite-plugin-svgr:
+        specifier: ~3.3.0
+        version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@15.11.7)
+
+  ../../../frontend/packages/cozeloop/observation/trace-detail-open:
+    dependencies:
+      '@coze-arch/coze-design':
+        specifier: 0.0.6-alpha.101d0c
+        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../../api-schema
+      '@cozeloop/biz-hooks-adapter':
+        specifier: workspace:*
+        version: link:../../biz-hooks
+      '@cozeloop/components':
+        specifier: workspace:*
+        version: link:../../components
+      '@cozeloop/observation-component':
+        specifier: workspace:*
+        version: link:../trace-detail
+      '@cozeloop/tag-components':
+        specifier: workspace:*
+        version: link:../../tag-components
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      classnames:
+        specifier: ^2.3.2
+        version: 2.5.1
+      dayjs:
+        specifier: ^1.11.7
+        version: 1.11.13
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../../config/eslint-config
+      '@coze-arch/stylelint-config':
+        specifier: workspace:*
+        version: link:../../../../config/stylelint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../../config/vitest-config
       '@storybook/addon-essentials':
         specifier: ^7.6.7
         version: 7.6.20(@types/react-dom@18.2.15)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
@@ -2508,12 +2590,15 @@ importers:
       '@storybook/test':
         specifier: ^7.6.7
         version: 7.6.20
-      '@types/json-bigint':
-        specifier: ~1.0.4
-        version: 1.0.4
-      '@types/lodash-es':
-        specifier: ^4.17.10
-        version: 4.17.12
+      '@testing-library/jest-dom':
+        specifier: ^6.1.5
+        version: 6.6.3
+      '@testing-library/react':
+        specifier: ^14.1.2
+        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
+      '@testing-library/react-hooks':
+        specifier: ^8.0.1
+        version: 8.0.1(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
       '@types/react':
         specifier: 18.2.37
         version: 18.2.37
@@ -2523,21 +2608,18 @@ importers:
       '@vitest/coverage-v8':
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
-      happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
       storybook:
         specifier: ^7.6.7
         version: 7.6.20
-      tsconfig-paths:
-        specifier: 4.1.0
-        version: 4.1.0
-      vite:
-        specifier: ^4.3.9
-        version: 4.5.14(@types/node@18.18.9)
+      stylelint:
+        specifier: ^15.11.0
+        version: 15.11.0(typescript@5.8.2)
       vite-plugin-svgr:
         specifier: ~3.3.0
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
@@ -2573,7 +2655,10 @@ importers:
         version: link:../../i18n
       '@cozeloop/observation-component-adapter':
         specifier: workspace:*
-        version: link:../trace-detail
+        version: link:../trace-detail-open
+      '@cozeloop/tag-components':
+        specifier: workspace:*
+        version: link:../../tag-components
       '@cozeloop/tea-adapter':
         specifier: workspace:*
         version: link:../../tea
@@ -2626,30 +2711,6 @@ importers:
       '@coze-arch/vitest-config':
         specifier: workspace:*
         version: link:../../../../config/vitest-config
-      '@storybook/addon-essentials':
-        specifier: ^7.6.7
-        version: 7.6.20(@types/react-dom@18.2.15)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
-      '@storybook/addon-interactions':
-        specifier: ^7.6.7
-        version: 7.6.20
-      '@storybook/addon-links':
-        specifier: ^7.6.7
-        version: 7.6.20(react@18.2.0)
-      '@storybook/addon-onboarding':
-        specifier: ^1.0.10
-        version: 1.0.11(react-dom@18.2.0)(react@18.2.0)
-      '@storybook/blocks':
-        specifier: ^7.6.7
-        version: 7.6.20(@types/react-dom@18.2.15)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
-      '@storybook/react':
-        specifier: ^7.6.7
-        version: 7.6.20(react-dom@18.2.0)(react@18.2.0)(typescript@5.8.2)
-      '@storybook/react-vite':
-        specifier: ^7.6.7
-        version: 7.6.20(react-dom@18.2.0)(react@18.2.0)(typescript@5.8.2)(vite@4.5.14)
-      '@storybook/test':
-        specifier: ^7.6.7
-        version: 7.6.20
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.6.3
@@ -2677,9 +2738,6 @@ importers:
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
-      storybook:
-        specifier: ^7.6.7
-        version: 7.6.20
       stylelint:
         specifier: ^15.11.0
         version: 15.11.0(typescript@5.8.2)
@@ -2987,7 +3045,7 @@ importers:
         version: link:../i18n
       '@cozeloop/observation-component-adapter':
         specifier: workspace:*
-        version: link:../observation/trace-detail
+        version: link:../observation/trace-detail-open
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components

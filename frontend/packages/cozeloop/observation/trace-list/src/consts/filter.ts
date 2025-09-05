@@ -1,6 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
+
 import { QUERY_PROPERTY } from './trace-attrs';
 
 export const SPAN_COLUMNS = [
@@ -43,6 +44,7 @@ export const QUERY_PROPERTY_LABEL_MAP: Record<
   [QUERY_PROPERTY.OutputTokens]: 'Output Tokens',
   [QUERY_PROPERTY.LogicDeleteDate]: I18n.t('data_expiration_time'),
   [QUERY_PROPERTY.StartTime]: 'Start Time',
+  [QUERY_PROPERTY.Feedback]: 'Feedback',
 };
 
 export const SPAN_TAB_OPTION_LIST = [

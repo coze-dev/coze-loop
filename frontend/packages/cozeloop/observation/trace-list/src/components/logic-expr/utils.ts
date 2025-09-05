@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-params */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { isArray, isEmpty, isNil } from 'lodash-es';
 import { type ExprGroup } from '@cozeloop/components';
@@ -21,7 +22,14 @@ import {
   THREADS_STATUS_RECORDS,
   TimeUnit,
   FilterFields,
+  THREADS_FEEDBACK_COZE_RECORDS,
 } from './consts';
+import {
+  AUTO_EVAL_FEEDBACK_PREFIX,
+  AUTO_EVAL_FEEDBACK,
+  MANUAL_FEEDBACK,
+  MANUAL_FEEDBACK_PREFIX,
+} from './const';
 
 const assignValueWithKind = <R>(params: { value: R; valueKind: string }) => {
   const { value, valueKind } = params;
@@ -69,11 +77,13 @@ export const getOptionsWithKind = (params: {
 };
 
 export const formatExprValue = <L, O, R>(
-  originValue?: Record<string, any>,
+  originValue?: LogicValue,
   tagFilterRecord?: Record<string, FieldMeta>,
   defaultImmutableKeys?: string[],
+  ignoreKeys: string[] = [],
 ): ExprGroup<L, O, R> | undefined => {
   const { query_and_or, filter_fields, sub_filter } = originValue || {};
+
   if (!originValue || !filter_fields) {
     return undefined;
   }
@@ -81,15 +91,31 @@ export const formatExprValue = <L, O, R>(
   const exprOpNode: ExprGroup<L, O, R> = {
     logicOperator: query_and_or === 'or' ? 'or' : 'and',
     disableDeletion: Boolean(defaultImmutableKeys?.length),
-    exprs: filter_fields.map(fieldFilter => {
-      const { field_name, query_type, values } = fieldFilter || {};
-      return {
-        left: field_name as L,
-        operator: query_type as O,
-        disableDeletion: defaultImmutableKeys?.includes(field_name ?? ''),
-        right: values as R,
-      };
-    }),
+    exprs: filter_fields
+      .filter(
+        fieldFilter =>
+          !ignoreKeys.includes(
+            fieldFilter.logic_field_name_type ?? fieldFilter.field_name,
+          ),
+      )
+      .map(fieldFilter => {
+        const { field_name, query_type, values } = fieldFilter || {};
+        const leftValue = {
+          value: field_name,
+          type: field_name?.startsWith(AUTO_EVAL_FEEDBACK_PREFIX)
+            ? AUTO_EVAL_FEEDBACK
+            : field_name?.startsWith(MANUAL_FEEDBACK_PREFIX)
+              ? MANUAL_FEEDBACK
+              : (fieldFilter.logic_field_name_type ?? field_name),
+          extraInfo: fieldFilter.extraInfo,
+        };
+        return {
+          left: leftValue as L,
+          operator: query_type as O,
+          disableDeletion: defaultImmutableKeys?.includes(field_name ?? ''),
+          right: values as R,
+        };
+      }),
   };
 
   if (sub_filter && sub_filter.length > 0) {
@@ -101,6 +127,7 @@ export const formatExprValue = <L, O, R>(
             child,
             tagFilterRecord,
             defaultImmutableKeys,
+            ignoreKeys,
           ) as ExprGroup<L, O, R>,
       ),
     ];
@@ -121,11 +148,23 @@ export const formatSpanFilterValue = <L, O, R>(
   const spanFilterNode: any = {
     query_and_or: logicOperator === 'or' ? 'or' : 'and',
     filter_fields: exprs?.map(item => {
+      const left = item.left as {
+        type: string;
+        value: string;
+        extraInfo?: Record<string, any>;
+      };
+      const fieldName = left?.value ?? left?.type;
+
       const valueKind =
-        tagFilterRecord?.[item.left as string]?.value_type ?? 'string';
+        tagFilterRecord?.[left?.type as string]?.value_type ?? 'string';
 
       return {
-        field_name: item.left as string,
+        field_name:
+          fieldName === AUTO_EVAL_FEEDBACK || fieldName === MANUAL_FEEDBACK
+            ? ''
+            : fieldName,
+        logic_field_name_type: left?.type,
+        extraInfo: left?.extraInfo,
         query_type: item.operator,
         values: assignValueWithKind<R>({
           value:
@@ -195,6 +234,14 @@ export const getKeyCopywriting = (key: string) => {
       return 'BotName';
     case FilterFields.APP_ID:
       return 'AppName';
+    case FilterFields.FEEDBACK:
+      return 'Feedback-自动评测';
+    case FilterFields.FEEDBACK_MANUAL:
+      return 'Feedback-人工标注';
+    case FilterFields.FEEDBACK_COZE:
+      return 'Feedback-Coze 对话';
+    case FilterFields.WORKFLOW_ID:
+      return 'WorkflowName';
     default:
       return snakeToPascalCase(key);
   }
@@ -204,6 +251,8 @@ export const getOptionCopywriting = (key: string, option: string | number) => {
   switch (key) {
     case FilterFields.STATUS_KEY:
       return THREADS_STATUS_RECORDS[option]?.label;
+    case FilterFields.FEEDBACK_COZE:
+      return THREADS_FEEDBACK_COZE_RECORDS[option]?.label;
     default:
       return option;
   }

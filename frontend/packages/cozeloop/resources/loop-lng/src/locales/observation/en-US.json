@@ -98,5 +98,8 @@
   "task_filter_lte": "Less than or equal to",
   "task_filter_not_eq": "Not equal to",
   "task_filter_not_in": "Does not belong to",
-  "task_filter_not_null": "Is not empty"
+  "task_filter_not_null": "Is not empty",
+  "task_filter_thumbs_up": "Thumbs up",
+  "task_filter_thumbs_down": "Thumbs down",
+  "analytics_fetch_meta_error": "Fail to fetch metadata: {msg}"
 }
