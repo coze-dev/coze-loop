@@ -1642,6 +1642,140 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "create annotation on root span when span_id is empty",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+
+				// Mock ListSpans call with ParentID filter for root span
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+						// Verify that the filter contains ParentID filter when span_id is empty
+						hasParentIDFilter := false
+						for _, filter := range param.Filters.FilterFields {
+							if filter.FieldName == loop_span.SpanFieldParentID {
+								hasParentIDFilter = true
+								assert.Equal(t, []string{"0", ""}, filter.Values)
+								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
+							}
+						}
+						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
+
+						// Return a root span (ParentID = "0")
+						return &repo.ListSpansResult{
+							Spans: loop_span.SpanList{
+								{
+									TraceID:     "test-trace-id",
+									SpanID:      "root-span-id",
+									ParentID:    "0", // This is a root span
+									WorkspaceID: "1",
+									SystemTagsString: map[string]string{
+										loop_span.SpanFieldTenant: "spans",
+									},
+								},
+							},
+						}, nil
+					},
+				)
+				repoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+					buildHelper:        buildHelper,
+					tenantProvider:     tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "", // Empty span_id to trigger root span search
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					AnnotationVal: loop_span.AnnotationValue{StringValue: "test-value"},
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "create annotation when span_id is empty but no root span found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+
+				// Mock ListSpans call with ParentID filter but return no spans
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+						// Verify that the filter contains ParentID filter when span_id is empty
+						hasParentIDFilter := false
+						for _, filter := range param.Filters.FilterFields {
+							if filter.FieldName == loop_span.SpanFieldParentID {
+								hasParentIDFilter = true
+								assert.Equal(t, []string{"0", ""}, filter.Values)
+								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
+							}
+						}
+						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
+
+						// Return empty result (no root span found)
+						return &repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil
+					},
+				)
+				// Expect annotation to be sent via producer when no span found
+				annoProducerMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+					buildHelper:        buildHelper,
+					tenantProvider:     tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &CreateAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "", // Empty span_id to trigger root span search
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					AnnotationVal: loop_span.AnnotationValue{StringValue: "test-value"},
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1725,6 +1859,135 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 				req: &DeleteAnnotationReq{
 					WorkspaceID:   1,
 					SpanID:        "test-span-id",
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "delete annotation on root span when span_id is empty",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationTypeManualFeedback),
+						},
+					},
+				}, nil)
+
+				// Mock ListSpans call with ParentID filter for root span
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+						// Verify that the filter contains ParentID filter when span_id is empty
+						hasParentIDFilter := false
+						for _, filter := range param.Filters.FilterFields {
+							if filter.FieldName == loop_span.SpanFieldParentID {
+								hasParentIDFilter = true
+								assert.Equal(t, []string{"0", ""}, filter.Values)
+								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
+							}
+						}
+						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
+
+						// Return a root span (ParentID = "0")
+						return &repo.ListSpansResult{
+							Spans: loop_span.SpanList{
+								{
+									TraceID:     "test-trace-id",
+									SpanID:      "root-span-id",
+									ParentID:    "0", // This is a root span
+									WorkspaceID: "1",
+									SystemTagsString: map[string]string{
+										loop_span.SpanFieldTenant: "spans",
+									},
+								},
+							},
+						}, nil
+					},
+				)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "", // Empty span_id to trigger root span search
+					TraceID:       "test-trace-id",
+					AnnotationKey: "test-key",
+					Caller:        "test-caller",
+					QueryDays:     1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "delete annotation when span_id is empty but no root span found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				annoProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"test-caller": {
+							Tenants:        []string{"spans"},
+							AnnotationType: string(loop_span.AnnotationCorrectionTypeManual),
+						},
+					},
+				}, nil)
+
+				// Mock ListSpans call with ParentID filter but return no spans
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+						// Verify that the filter contains ParentID filter when span_id is empty
+						hasParentIDFilter := false
+						for _, filter := range param.Filters.FilterFields {
+							if filter.FieldName == loop_span.SpanFieldParentID {
+								hasParentIDFilter = true
+								assert.Equal(t, []string{"0", ""}, filter.Values)
+								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
+							}
+						}
+						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
+
+						// Return empty result (no root span found)
+						return &repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil
+					},
+				)
+				// Expect annotation to be sent via producer when no span found
+				annoProducerMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				return fields{
+					traceRepo:          repoMock,
+					traceConfig:        confMock,
+					annotationProducer: annoProducerMock,
+					buildHelper:        buildHelper,
+					tenantProvider:     tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &DeleteAnnotationReq{
+					WorkspaceID:   1,
+					SpanID:        "", // Empty span_id to trigger root span search
 					TraceID:       "test-trace-id",
 					AnnotationKey: "test-key",
 					Caller:        "test-caller",
