@@ -44,6 +44,8 @@ type ITaskDao interface {
 	UpdateTask(ctx context.Context, po *model.ObservabilityTask) error
 	DeleteTask(ctx context.Context, id int64, workspaceID int64, userID string) error
 	ListTasks(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error)
+	ListNonFinalTask(ctx context.Context) ([]*model.ObservabilityTask, error)
+	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 }
 
 func NewTaskDaoImpl(db db.Provider) ITaskDao {
@@ -282,4 +284,29 @@ func (d *TaskDaoImpl) order(q *query.Query, orderBy string, asc bool) field.Expr
 		return orderExpr.Asc()
 	}
 	return orderExpr.Desc()
+}
+
+func (v *TaskDaoImpl) ListNonFinalTask(ctx context.Context) ([]*model.ObservabilityTask, error) {
+	q := genquery.Use(v.dbMgr.NewSession(ctx))
+	qd := q.WithContext(ctx).ObservabilityTask
+	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn("success", "disabled"))
+
+	results, err := qd.Limit(500).Find()
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	}
+	return results, nil
+}
+
+func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
+	//todo[xun]: 乐观锁
+	q := genquery.Use(v.dbMgr.NewSession(ctx))
+	qd := q.WithContext(ctx).ObservabilityTask
+	qd = qd.Where(q.ObservabilityTask.ID.Eq(id)).Where(q.ObservabilityTask.WorkspaceID.Eq(workspaceID))
+	info, err := qd.Updates(updateMap)
+	if err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	}
+	logs.CtxInfo(ctx, "%d rows updated", info.RowsAffected)
+	return nil
 }

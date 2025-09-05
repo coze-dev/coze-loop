@@ -1228,12 +1228,12 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 				return resp, err
 			}
+			content := buildContent(value)
 			// 前端传入的是Name，评测集需要的是key，需要做一下mapping
 			if mapping.FieldSchema.Name == "" {
 				logs.CtxInfo(ctx, "Evaluator field name is nil")
 				continue
 			}
-			content := buildContent(value)
 			fieldList = append(fieldList, &dataset.FieldData{
 				Key:     mapping.FieldSchema.Key,
 				Name:    gptr.Of(mapping.FieldSchema.Name),

@@ -65,8 +65,8 @@ struct EffectiveTime {
 
 // TaskConfig
 struct TaskConfig {
-    1: optional list<AutoEvaluateConfig> auto_evaluate_configs                  // 配置的评测规则信息
-    2: optional list<DataReflowConfig> data_reflow_configs                      // 配置的数据回流的数据集信息
+    1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息
+    2: optional list<DataReflowConfig> data_reflow_config                    // 配置的数据回流的数据集信息
 }
 
 struct DataReflowConfig {
@@ -114,7 +114,13 @@ struct TaskRunConfig {
     1: optional AutoEvaluateRunConfig auto_evaluate_run_config               // 自动评测对应的运行配置信息
 }
 struct AutoEvaluateRunConfig {
-    1: required i64 evaluator_version_id
-    2: required i64 evaluator_id
-    3: required list<FieldMapping> field_mappings
+    1: required i64 expt_id
+    2: required i64 expt_run_id
+    3: required i64 eval_id
+    4: required i64 schema_id
+    5: optional string schema
+    6: required i64 end_at
+    7: required i64 cycle_start_at
+    8: required i64 cycle_end_at
+    9: required string status
 }

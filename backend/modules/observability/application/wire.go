@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
@@ -43,6 +44,7 @@ import (
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
@@ -109,6 +111,8 @@ var (
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
 		evaluator.NewEvaluatorRPCProvider,
+		evaluation.NewEvaluationRPCProvider,
+		NewDatasetServiceAdapter,
 		taskDomainSet,
 	)
 )
@@ -233,7 +237,9 @@ func InitTaskApplication(
 	idgen idgen.IIDGenerator,
 	userClient userservice.Client,
 	authClient authservice.Client,
-	evalService evaluatorservice.Client) (ITaskApplication, error) {
+	evalService evaluatorservice.Client,
+	evalSetService evaluationsetservice.Client,
+	exptService experimentservice.Client) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
 }

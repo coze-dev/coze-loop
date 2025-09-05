@@ -2173,7 +2173,7 @@ type TaskConfig struct {
 	// 配置的评测规则信息
 	AutoEvaluateConfigs []*AutoEvaluateConfig `thrift:"auto_evaluate_configs,1,optional" frugal:"1,optional,list<AutoEvaluateConfig>" form:"auto_evaluate_configs" json:"auto_evaluate_configs,omitempty" query:"auto_evaluate_configs"`
 	// 配置的数据回流的数据集信息
-	DataReflowConfigs []*DataReflowConfig `thrift:"data_reflow_configs,2,optional" frugal:"2,optional,list<DataReflowConfig>" form:"data_reflow_configs" json:"data_reflow_configs,omitempty" query:"data_reflow_configs"`
+	DataReflowConfig []*DataReflowConfig `thrift:"data_reflow_config,2,optional" frugal:"2,optional,list<DataReflowConfig>" form:"data_reflow_config" json:"data_reflow_config,omitempty" query:"data_reflow_config"`
 }
 
 func NewTaskConfig() *TaskConfig {
@@ -2195,35 +2195,35 @@ func (p *TaskConfig) GetAutoEvaluateConfigs() (v []*AutoEvaluateConfig) {
 	return p.AutoEvaluateConfigs
 }
 
-var TaskConfig_DataReflowConfigs_DEFAULT []*DataReflowConfig
+var TaskConfig_DataReflowConfig_DEFAULT []*DataReflowConfig
 
-func (p *TaskConfig) GetDataReflowConfigs() (v []*DataReflowConfig) {
+func (p *TaskConfig) GetDataReflowConfig() (v []*DataReflowConfig) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetDataReflowConfigs() {
-		return TaskConfig_DataReflowConfigs_DEFAULT
+	if !p.IsSetDataReflowConfig() {
+		return TaskConfig_DataReflowConfig_DEFAULT
 	}
-	return p.DataReflowConfigs
+	return p.DataReflowConfig
 }
 func (p *TaskConfig) SetAutoEvaluateConfigs(val []*AutoEvaluateConfig) {
 	p.AutoEvaluateConfigs = val
 }
-func (p *TaskConfig) SetDataReflowConfigs(val []*DataReflowConfig) {
-	p.DataReflowConfigs = val
+func (p *TaskConfig) SetDataReflowConfig(val []*DataReflowConfig) {
+	p.DataReflowConfig = val
 }
 
 var fieldIDToName_TaskConfig = map[int16]string{
 	1: "auto_evaluate_configs",
-	2: "data_reflow_configs",
+	2: "data_reflow_config",
 }
 
 func (p *TaskConfig) IsSetAutoEvaluateConfigs() bool {
 	return p.AutoEvaluateConfigs != nil
 }
 
-func (p *TaskConfig) IsSetDataReflowConfigs() bool {
-	return p.DataReflowConfigs != nil
+func (p *TaskConfig) IsSetDataReflowConfig() bool {
+	return p.DataReflowConfig != nil
 }
 
 func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2332,7 +2332,7 @@ func (p *TaskConfig) ReadField2(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.DataReflowConfigs = _field
+	p.DataReflowConfig = _field
 	return nil
 }
 
@@ -2395,14 +2395,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *TaskConfig) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDataReflowConfigs() {
-		if err = oprot.WriteFieldBegin("data_reflow_configs", thrift.LIST, 2); err != nil {
+	if p.IsSetDataReflowConfig() {
+		if err = oprot.WriteFieldBegin("data_reflow_config", thrift.LIST, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DataReflowConfigs)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DataReflowConfig)); err != nil {
 			return err
 		}
-		for _, v := range p.DataReflowConfigs {
+		for _, v := range p.DataReflowConfig {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
@@ -2438,7 +2438,7 @@ func (p *TaskConfig) DeepEqual(ano *TaskConfig) bool {
 	if !p.Field1DeepEqual(ano.AutoEvaluateConfigs) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.DataReflowConfigs) {
+	if !p.Field2DeepEqual(ano.DataReflowConfig) {
 		return false
 	}
 	return true
@@ -2459,10 +2459,10 @@ func (p *TaskConfig) Field1DeepEqual(src []*AutoEvaluateConfig) bool {
 }
 func (p *TaskConfig) Field2DeepEqual(src []*DataReflowConfig) bool {
 
-	if len(p.DataReflowConfigs) != len(src) {
+	if len(p.DataReflowConfig) != len(src) {
 		return false
 	}
-	for i, v := range p.DataReflowConfigs {
+	for i, v := range p.DataReflowConfig {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
@@ -4928,9 +4928,15 @@ func (p *TaskRunConfig) Field1DeepEqual(src *AutoEvaluateRunConfig) bool {
 }
 
 type AutoEvaluateRunConfig struct {
-	EvaluatorVersionID int64           `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" form:"evaluator_version_id,required" json:"evaluator_version_id,required" query:"evaluator_version_id,required"`
-	EvaluatorID        int64           `thrift:"evaluator_id,2,required" frugal:"2,required,i64" form:"evaluator_id,required" json:"evaluator_id,required" query:"evaluator_id,required"`
-	FieldMappings      []*FieldMapping `thrift:"field_mappings,3,required" frugal:"3,required,list<FieldMapping>" form:"field_mappings,required" json:"field_mappings,required" query:"field_mappings,required"`
+	ExptID       int64   `thrift:"expt_id,1,required" frugal:"1,required,i64" form:"expt_id,required" json:"expt_id,required" query:"expt_id,required"`
+	ExptRunID    int64   `thrift:"expt_run_id,2,required" frugal:"2,required,i64" form:"expt_run_id,required" json:"expt_run_id,required" query:"expt_run_id,required"`
+	EvalID       int64   `thrift:"eval_id,3,required" frugal:"3,required,i64" form:"eval_id,required" json:"eval_id,required" query:"eval_id,required"`
+	SchemaID     int64   `thrift:"schema_id,4,required" frugal:"4,required,i64" form:"schema_id,required" json:"schema_id,required" query:"schema_id,required"`
+	Schema       *string `thrift:"schema,5,optional" frugal:"5,optional,string" form:"schema" json:"schema,omitempty" query:"schema"`
+	EndAt        int64   `thrift:"end_at,6,required" frugal:"6,required,i64" form:"end_at,required" json:"end_at,required" query:"end_at,required"`
+	CycleStartAt int64   `thrift:"cycle_start_at,7,required" frugal:"7,required,i64" form:"cycle_start_at,required" json:"cycle_start_at,required" query:"cycle_start_at,required"`
+	CycleEndAt   int64   `thrift:"cycle_end_at,8,required" frugal:"8,required,i64" form:"cycle_end_at,required" json:"cycle_end_at,required" query:"cycle_end_at,required"`
+	Status       string  `thrift:"status,9,required" frugal:"9,required,string" form:"status,required" json:"status,required" query:"status,required"`
 }
 
 func NewAutoEvaluateRunConfig() *AutoEvaluateRunConfig {
@@ -4940,48 +4946,128 @@ func NewAutoEvaluateRunConfig() *AutoEvaluateRunConfig {
 func (p *AutoEvaluateRunConfig) InitDefault() {
 }
 
-func (p *AutoEvaluateRunConfig) GetEvaluatorVersionID() (v int64) {
+func (p *AutoEvaluateRunConfig) GetExptID() (v int64) {
 	if p != nil {
-		return p.EvaluatorVersionID
+		return p.ExptID
 	}
 	return
 }
 
-func (p *AutoEvaluateRunConfig) GetEvaluatorID() (v int64) {
+func (p *AutoEvaluateRunConfig) GetExptRunID() (v int64) {
 	if p != nil {
-		return p.EvaluatorID
+		return p.ExptRunID
 	}
 	return
 }
 
-func (p *AutoEvaluateRunConfig) GetFieldMappings() (v []*FieldMapping) {
+func (p *AutoEvaluateRunConfig) GetEvalID() (v int64) {
 	if p != nil {
-		return p.FieldMappings
+		return p.EvalID
 	}
 	return
 }
-func (p *AutoEvaluateRunConfig) SetEvaluatorVersionID(val int64) {
-	p.EvaluatorVersionID = val
+
+func (p *AutoEvaluateRunConfig) GetSchemaID() (v int64) {
+	if p != nil {
+		return p.SchemaID
+	}
+	return
 }
-func (p *AutoEvaluateRunConfig) SetEvaluatorID(val int64) {
-	p.EvaluatorID = val
+
+var AutoEvaluateRunConfig_Schema_DEFAULT string
+
+func (p *AutoEvaluateRunConfig) GetSchema() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchema() {
+		return AutoEvaluateRunConfig_Schema_DEFAULT
+	}
+	return *p.Schema
 }
-func (p *AutoEvaluateRunConfig) SetFieldMappings(val []*FieldMapping) {
-	p.FieldMappings = val
+
+func (p *AutoEvaluateRunConfig) GetEndAt() (v int64) {
+	if p != nil {
+		return p.EndAt
+	}
+	return
+}
+
+func (p *AutoEvaluateRunConfig) GetCycleStartAt() (v int64) {
+	if p != nil {
+		return p.CycleStartAt
+	}
+	return
+}
+
+func (p *AutoEvaluateRunConfig) GetCycleEndAt() (v int64) {
+	if p != nil {
+		return p.CycleEndAt
+	}
+	return
+}
+
+func (p *AutoEvaluateRunConfig) GetStatus() (v string) {
+	if p != nil {
+		return p.Status
+	}
+	return
+}
+func (p *AutoEvaluateRunConfig) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *AutoEvaluateRunConfig) SetExptRunID(val int64) {
+	p.ExptRunID = val
+}
+func (p *AutoEvaluateRunConfig) SetEvalID(val int64) {
+	p.EvalID = val
+}
+func (p *AutoEvaluateRunConfig) SetSchemaID(val int64) {
+	p.SchemaID = val
+}
+func (p *AutoEvaluateRunConfig) SetSchema(val *string) {
+	p.Schema = val
+}
+func (p *AutoEvaluateRunConfig) SetEndAt(val int64) {
+	p.EndAt = val
+}
+func (p *AutoEvaluateRunConfig) SetCycleStartAt(val int64) {
+	p.CycleStartAt = val
+}
+func (p *AutoEvaluateRunConfig) SetCycleEndAt(val int64) {
+	p.CycleEndAt = val
+}
+func (p *AutoEvaluateRunConfig) SetStatus(val string) {
+	p.Status = val
 }
 
 var fieldIDToName_AutoEvaluateRunConfig = map[int16]string{
-	1: "evaluator_version_id",
-	2: "evaluator_id",
-	3: "field_mappings",
+	1: "expt_id",
+	2: "expt_run_id",
+	3: "eval_id",
+	4: "schema_id",
+	5: "schema",
+	6: "end_at",
+	7: "cycle_start_at",
+	8: "cycle_end_at",
+	9: "status",
+}
+
+func (p *AutoEvaluateRunConfig) IsSetSchema() bool {
+	return p.Schema != nil
 }
 
 func (p *AutoEvaluateRunConfig) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetEvaluatorVersionID bool = false
-	var issetEvaluatorID bool = false
-	var issetFieldMappings bool = false
+	var issetExptID bool = false
+	var issetExptRunID bool = false
+	var issetEvalID bool = false
+	var issetSchemaID bool = false
+	var issetEndAt bool = false
+	var issetCycleStartAt bool = false
+	var issetCycleEndAt bool = false
+	var issetStatus bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -5002,7 +5088,7 @@ func (p *AutoEvaluateRunConfig) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEvaluatorVersionID = true
+				issetExptID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -5011,16 +5097,69 @@ func (p *AutoEvaluateRunConfig) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEvaluatorID = true
+				issetExptRunID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetFieldMappings = true
+				issetEvalID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetSchemaID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEndAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetCycleStartAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetCycleEndAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetStatus = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -5037,18 +5176,43 @@ func (p *AutoEvaluateRunConfig) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetEvaluatorVersionID {
+	if !issetExptID {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetEvaluatorID {
+	if !issetExptRunID {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetFieldMappings {
+	if !issetEvalID {
 		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetSchemaID {
+		fieldId = 4
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEndAt {
+		fieldId = 6
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetCycleStartAt {
+		fieldId = 7
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetCycleEndAt {
+		fieldId = 8
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetStatus {
+		fieldId = 9
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -5077,7 +5241,7 @@ func (p *AutoEvaluateRunConfig) ReadField1(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.EvaluatorVersionID = _field
+	p.ExptID = _field
 	return nil
 }
 func (p *AutoEvaluateRunConfig) ReadField2(iprot thrift.TProtocol) error {
@@ -5088,30 +5252,84 @@ func (p *AutoEvaluateRunConfig) ReadField2(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.EvaluatorID = _field
+	p.ExptRunID = _field
 	return nil
 }
 func (p *AutoEvaluateRunConfig) ReadField3(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]*FieldMapping, 0, size)
-	values := make([]FieldMapping, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
 
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
 		return err
+	} else {
+		_field = v
 	}
-	p.FieldMappings = _field
+	p.EvalID = _field
+	return nil
+}
+func (p *AutoEvaluateRunConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SchemaID = _field
+	return nil
+}
+func (p *AutoEvaluateRunConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Schema = _field
+	return nil
+}
+func (p *AutoEvaluateRunConfig) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EndAt = _field
+	return nil
+}
+func (p *AutoEvaluateRunConfig) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.CycleStartAt = _field
+	return nil
+}
+func (p *AutoEvaluateRunConfig) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.CycleEndAt = _field
+	return nil
+}
+func (p *AutoEvaluateRunConfig) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Status = _field
 	return nil
 }
 
@@ -5133,6 +5351,30 @@ func (p *AutoEvaluateRunConfig) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 3
 			goto WriteFieldError
 		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
 	}
 	if err = oprot.WriteFieldStop(); err != nil {
 		goto WriteFieldStopError
@@ -5152,10 +5394,10 @@ WriteStructEndError:
 }
 
 func (p *AutoEvaluateRunConfig) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.I64, 1); err != nil {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.EvaluatorVersionID); err != nil {
+	if err := oprot.WriteI64(p.ExptID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -5168,10 +5410,10 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *AutoEvaluateRunConfig) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("evaluator_id", thrift.I64, 2); err != nil {
+	if err = oprot.WriteFieldBegin("expt_run_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.EvaluatorID); err != nil {
+	if err := oprot.WriteI64(p.ExptRunID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -5184,18 +5426,10 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *AutoEvaluateRunConfig) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("field_mappings", thrift.LIST, 3); err != nil {
+	if err = oprot.WriteFieldBegin("eval_id", thrift.I64, 3); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldMappings)); err != nil {
-		return err
-	}
-	for _, v := range p.FieldMappings {
-		if err := v.Write(oprot); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteListEnd(); err != nil {
+	if err := oprot.WriteI64(p.EvalID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -5206,6 +5440,104 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *AutoEvaluateRunConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("schema_id", thrift.I64, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.SchemaID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *AutoEvaluateRunConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchema() {
+		if err = oprot.WriteFieldBegin("schema", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Schema); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *AutoEvaluateRunConfig) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("end_at", thrift.I64, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.EndAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *AutoEvaluateRunConfig) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("cycle_start_at", thrift.I64, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.CycleStartAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *AutoEvaluateRunConfig) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("cycle_end_at", thrift.I64, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.CycleEndAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *AutoEvaluateRunConfig) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.STRING, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Status); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
 func (p *AutoEvaluateRunConfig) String() string {
@@ -5222,13 +5554,31 @@ func (p *AutoEvaluateRunConfig) DeepEqual(ano *AutoEvaluateRunConfig) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.EvaluatorVersionID) {
+	if !p.Field1DeepEqual(ano.ExptID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.EvaluatorID) {
+	if !p.Field2DeepEqual(ano.ExptRunID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.FieldMappings) {
+	if !p.Field3DeepEqual(ano.EvalID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.SchemaID) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Schema) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.EndAt) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.CycleStartAt) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.CycleEndAt) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Status) {
 		return false
 	}
 	return true
@@ -5236,28 +5586,69 @@ func (p *AutoEvaluateRunConfig) DeepEqual(ano *AutoEvaluateRunConfig) bool {
 
 func (p *AutoEvaluateRunConfig) Field1DeepEqual(src int64) bool {
 
-	if p.EvaluatorVersionID != src {
+	if p.ExptID != src {
 		return false
 	}
 	return true
 }
 func (p *AutoEvaluateRunConfig) Field2DeepEqual(src int64) bool {
 
-	if p.EvaluatorID != src {
+	if p.ExptRunID != src {
 		return false
 	}
 	return true
 }
-func (p *AutoEvaluateRunConfig) Field3DeepEqual(src []*FieldMapping) bool {
+func (p *AutoEvaluateRunConfig) Field3DeepEqual(src int64) bool {
 
-	if len(p.FieldMappings) != len(src) {
+	if p.EvalID != src {
 		return false
 	}
-	for i, v := range p.FieldMappings {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
+	return true
+}
+func (p *AutoEvaluateRunConfig) Field4DeepEqual(src int64) bool {
+
+	if p.SchemaID != src {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluateRunConfig) Field5DeepEqual(src *string) bool {
+
+	if p.Schema == src {
+		return true
+	} else if p.Schema == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Schema, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluateRunConfig) Field6DeepEqual(src int64) bool {
+
+	if p.EndAt != src {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluateRunConfig) Field7DeepEqual(src int64) bool {
+
+	if p.CycleStartAt != src {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluateRunConfig) Field8DeepEqual(src int64) bool {
+
+	if p.CycleEndAt != src {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluateRunConfig) Field9DeepEqual(src string) bool {
+
+	if strings.Compare(p.Status, src) != 0 {
+		return false
 	}
 	return true
 }

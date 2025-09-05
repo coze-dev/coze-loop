@@ -8,6 +8,8 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
@@ -319,4 +321,18 @@ func CommonContentTypeDO2DTO(contentType ContentType) *common.ContentType {
 	default:
 		return gptr.Of(common.ContentTypeText)
 	}
+}
+
+func EvaluationSetSchemaDT2ODO(dto *eval_set.EvaluationSetSchema) (*entity.EvaluationSetSchema, error) {
+	// 当前数据结构一致，用json转换。以后改成同一个idl
+	bs, err := json.Marshal(dto)
+	if err != nil {
+		return nil, err
+	}
+	var do *entity.EvaluationSetSchema
+	err = json.Unmarshal(bs, &do)
+	if err != nil {
+		return nil, err
+	}
+	return do, nil
 }

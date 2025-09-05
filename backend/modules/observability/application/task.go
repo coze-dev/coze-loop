@@ -12,37 +12,45 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type ITaskQueueConsumer interface {
-	TraceHub(ctx context.Context, event *entity.TaskEvent) error
+	TraceHub(ctx context.Context, event *entity.RawSpan) error
 }
 type ITaskApplication interface {
 	task.TaskService
+	//ITaskQueueConsumer
 }
 
 func NewTaskApplication(
 	taskService service.ITaskService,
 	authService rpc.IAuthProvider,
 	evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter,
 	userService rpc.IUserProvider,
+	tracehubSvc tracehub.ITraceHubService,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
-		taskSvc: taskService,
-		authSvc: authService,
-		evalSvc: evalService,
-		userSvc: userService,
+		taskSvc:       taskService,
+		authSvc:       authService,
+		evalSvc:       evalService,
+		evaluationSvc: evaluationService,
+		userSvc:       userService,
+		tracehubSvc:   tracehubSvc,
 	}, nil
 }
 
 type TaskApplication struct {
-	taskSvc service.ITaskService
-	authSvc rpc.IAuthProvider
-	evalSvc rpc.IEvaluatorRPCAdapter
-	userSvc rpc.IUserProvider
+	taskSvc       service.ITaskService
+	authSvc       rpc.IAuthProvider
+	evalSvc       rpc.IEvaluatorRPCAdapter
+	evaluationSvc rpc.IEvaluationRPCAdapter
+	userSvc       rpc.IUserProvider
+	tracehubSvc   tracehub.ITraceHubService
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -202,4 +210,8 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	resp.Task = sResp.Task
 
 	return resp, nil
+}
+
+func (t *TaskApplication) TraceHub(ctx context.Context, event *entity.RawSpan) error {
+	return t.tracehubSvc.TraceHub(ctx, event)
 }

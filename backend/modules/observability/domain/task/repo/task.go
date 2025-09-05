@@ -17,4 +17,6 @@ type ITaskRepo interface {
 	UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error
 	CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error)
 	DeleteTask(ctx context.Context, id int64, workspaceID int64, userID string) error
+	ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error)
+	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 }

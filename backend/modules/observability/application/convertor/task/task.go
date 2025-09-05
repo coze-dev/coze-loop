@@ -248,6 +248,8 @@ func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *en
 		UpdatedAt:     time.Now(),
 		CreatedBy:     userID,
 		UpdatedBy:     userID,
+		//BackfillTaskDetail: ptr.Of(ToJSONString(ctx, taskDO.GetBackfillTaskDetail())),
+		//BackfillEffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetBackfillEffectiveTime())),
 	}
 }
 func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields, workspaceID int64) *string {

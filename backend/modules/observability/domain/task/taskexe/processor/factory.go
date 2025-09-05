@@ -1,0 +1,36 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package processor
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+)
+
+var (
+	autoEvaluteProc *AutoEvaluteProcessor
+	dataReflowProc  *DataReflowProcessor
+)
+
+func NewProcessor(ctx context.Context, taskType task.TaskType) (taskexe.Processor, error) {
+	switch taskType {
+	case task.TaskTypeAutoEval:
+		if autoEvaluteProc == nil {
+			return nil, errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("nil proc of span_eval"))
+		}
+		return autoEvaluteProc, nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("invalid task_type='%s' when new processor", taskType)))
+	}
+}
+
+func InitProcessor() {
+	autoEvaluteProc = newAutoEvaluteProcessor()
+	dataReflowProc = newDataReflowProcessor()
+}
