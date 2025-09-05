@@ -44,7 +44,11 @@ func (e exptInsightAnalysisFeedbackVoteDAO) Create(ctx context.Context, feedback
 }
 
 func (e exptInsightAnalysisFeedbackVoteDAO) Update(ctx context.Context, feedbackVote *model.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error {
-	if err := e.db.NewSession(ctx, opts...).Model(&model.ExptInsightAnalysisFeedbackVote{}).Where("id = ?", feedbackVote.ID).Updates(feedbackVote).Error; err != nil {
+	if err := e.db.NewSession(ctx, opts...).Model(&model.ExptInsightAnalysisFeedbackVote{}).
+		Where("space_id = ?", feedbackVote.SpaceID).
+		Where("expt_id = ?", feedbackVote.ExptID).
+		Where("analysis_record_id = ?", feedbackVote.AnalysisRecordID).
+		Where("created_by = ?", feedbackVote.CreatedBy).Updates(feedbackVote).Error; err != nil {
 		return errorx.Wrapf(err, "exptInsightAnalysisFeedbackVoteDAO update fail, model: %v", json.Jsonify(feedbackVote))
 	}
 	return nil

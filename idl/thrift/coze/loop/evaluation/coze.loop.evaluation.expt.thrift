@@ -532,7 +532,7 @@ struct FeedbackExptInsightAnalysisReportResponse {
 struct ListExptInsightAnalysisCommentRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    3: required i64 insight_analysis_record_id (api.path = 'export_id', api.js_conv = 'true', go.tag = 'json:"export_id"')
+    3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
     4: optional i32 page_number (api.body='page_number')
     5: optional i32 page_size (api.body='page_size')
 
