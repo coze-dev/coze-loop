@@ -68,6 +68,8 @@ func FeedbackActionType2DO(action domain_expt.FeedbackActionType) (entity.Feedba
 		return entity.FeedbackActionType_CancelDownvote, nil
 	case domain_expt.FeedbackActionTypeCreateComment:
 		return entity.FeedbackActionType_CreateComment, nil
+	case domain_expt.FeedbackActionTypeUpdateComment:
+		return entity.FeedbackActionType_Update_Comment, nil
 	case domain_expt.FeedbackActionTypeDeleteComment:
 		return entity.FeedbackActionType_Delete_Comment, nil
 
