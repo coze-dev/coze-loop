@@ -27,7 +27,9 @@ export function ComplexTooltipContent(props: CustomTooltipProps) {
 
   return (
     <div className="w-[220px] flex flex-col gap-2">
-      <div className="text-sm font-medium">{item.prefix}明细</div>
+      <div className="text-sm font-medium">
+        {I18n.t('placeholder0_details', { placeholder0: item.prefix })}
+      </div>
       <div className="flex items-center gap-2 text-xs">
         <div className="w-2 h-2" style={{ backgroundColor: prefixBgColor }} />
         <span>
@@ -38,7 +40,9 @@ export function ComplexTooltipContent(props: CustomTooltipProps) {
             {item.count ?? '-'}
           </span>
           <span className="text-[var(--coz-fg-secondary)]">
-            条 ({getScorePercentage(item.percentage)})
+            {I18n.t('items_placeholder1', {
+              placeholder1: getScorePercentage(item.percentage),
+            })}
           </span>
         </span>
       </div>

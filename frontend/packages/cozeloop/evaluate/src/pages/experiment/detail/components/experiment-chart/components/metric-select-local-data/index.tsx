@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 
 import cls from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnAnnotation,
   type ColumnEvaluator,
@@ -79,8 +80,8 @@ export function MetricSelectLocalData({
 
   return (
     <Select
-      prefix="指标"
-      placeholder="请选择指标"
+      prefix={I18n.t('indicator')}
+      placeholder={I18n.t('please_select', { field: '' })}
       value={value?.map(v => v.id)}
       onChange={v => {
         const newVal =

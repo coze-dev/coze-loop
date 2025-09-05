@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useRef, useState } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { ModelConfigInfo, TemplateInfo } from '@cozeloop/evaluate-components';
 import { useDemoSpace, useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -126,7 +127,7 @@ function EvaluatorDetailPage() {
       return (
         <div className="flex-1 max-w-[800px] mx-auto">
           <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
-            {'配置信息'}
+            {I18n.t('config_info')}
           </div>
           <ModelConfigInfo
             data={
@@ -214,7 +215,7 @@ function EvaluatorDetailPage() {
         onCancel={() => setSubmitModalVisible(false)}
         onSuccess={(_, newEvaluator) => {
           setSubmitModalVisible(false);
-          Toast.success('版本提交成功');
+          Toast.success(I18n.t('version_submit_success'));
           service.mutate(() => newEvaluator);
           if (versionListVisible) {
             setVersionListRefreshFlag([]);

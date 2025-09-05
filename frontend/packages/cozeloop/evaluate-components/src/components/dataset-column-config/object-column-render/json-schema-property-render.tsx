@@ -1,4 +1,5 @@
 import cs from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   FormInput,
   Tooltip,
@@ -42,7 +43,7 @@ export const JSONSchemaPropertyRender = ({
   const jsonField = useFieldApi(fieldKeyPrefix);
   const jsonValue = jsonField.getValue() as FieldObjectSchema;
   const renderDisabledLabel = (label: string) => (
-    <Tooltip content="已下钻到最小层级，无法再下钻">{label}</Tooltip>
+    <Tooltip content={I18n.t('drilled_to_minimum_level_tips')}>{label}</Tooltip>
   );
   const isObject =
     jsonValue?.type === DataType.ArrayObject ||
@@ -50,7 +51,7 @@ export const JSONSchemaPropertyRender = ({
   return (
     <div className={styles.container}>
       <FormInput
-        label="名称"
+        label={I18n.t('name')}
         fieldClassName="flex-1"
         noLabel
         disabled={disabled}
@@ -58,7 +59,7 @@ export const JSONSchemaPropertyRender = ({
         rules={[
           {
             required: true,
-            message: '请输入列名称',
+            message: I18n.t('please_enter_column_name'),
           },
           {
             validator: columnNameRuleValidator,
@@ -74,7 +75,7 @@ export const JSONSchemaPropertyRender = ({
                 ?.find(data => data.propertyKey === value);
               return !hasSameName;
             },
-            message: '列名称已存在',
+            message: I18n.t('column_name_exists'),
           },
         ]}
       ></FormInput>
@@ -91,7 +92,7 @@ export const JSONSchemaPropertyRender = ({
         }}
         field={`${fieldKeyPrefix}.type`}
         className="w-full"
-        rules={[{ required: true, message: '请选择数据类型' }]}
+        rules={[{ required: true, message: I18n.t('select_data_type') }]}
       ></FormDataTypeSelect>
       <FormRequiredField
         disabled={disabled}

@@ -27,7 +27,7 @@ export default function AddContrastExperiment({
           setVisible(true);
         }}
       >
-        添加对比实验
+        {I18n.t('add_comparison_experiment')}
       </Button>
       {visible ? (
         <ExperimentSelectModal

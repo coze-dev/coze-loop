@@ -1,4 +1,5 @@
 import { useDebounceFn } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { UserSelect } from '@cozeloop/biz-components-adapter';
 import { IconCozMagnifier } from '@coze-arch/coze-design/icons';
@@ -40,7 +41,7 @@ export function EvaluatorListFilter({
           noLabel
           prefix={<IconCozMagnifier />}
           field="search_name"
-          placeholder="搜索名称"
+          placeholder={I18n.t('search_name')}
           fieldClassName="!mr-0 !pr-0"
           className="!w-full"
           autoComplete="off"

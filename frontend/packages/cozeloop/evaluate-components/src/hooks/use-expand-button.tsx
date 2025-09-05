@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozLoose, IconCozTight } from '@coze-arch/coze-design/icons';
 import { Radio, Tooltip } from '@coze-arch/coze-design';
 
 export const useExpandButton = ({
-  shrinkTooltip = '折叠',
-  expandTooltip = '展开',
+  shrinkTooltip = I18n.t('fold'),
+  expandTooltip = I18n.t('expand'),
 }: {
   shrinkTooltip?: string;
   expandTooltip?: string;

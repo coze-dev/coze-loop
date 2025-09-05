@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import {
   type EvalTarget,
@@ -90,7 +91,7 @@ export default function CozeBotEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder="请选择CozeBot"
+      placeholder={I18n.t('please_select', { field: '' })}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

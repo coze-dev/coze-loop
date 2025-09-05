@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
 import { Button, Select, Typography } from '@coze-arch/coze-design';
 
@@ -16,11 +17,11 @@ export const useViewMode = () => {
 
   const getViewModeLabel = (label: ViewMode) => (
     <div className="flex flex-col p-2">
-      {label === ViewMode.SLIM ? '紧凑视图' : '宽松视图'}
+      {label === ViewMode.SLIM ? I18n.t('compact_view') : I18n.t('loose_view')}
       <Typography.Text className="text-[12px] coz-fg-secondary">
         {label === ViewMode.SLIM
-          ? '在最大高度内滚动查看字段内容'
-          : '字段内容不受最大高度限制'}
+          ? I18n.t('scroll_to_view_field_content_within_maximum_height')
+          : I18n.t('field_content_is_not_limited_by_maximum_height')}
       </Typography.Text>
     </div>
   );
@@ -42,7 +43,9 @@ export const useViewMode = () => {
       value={viewMode}
       triggerRender={props => (
         <Button color="secondary" className="text-[13px] !coz-fg-secondary">
-          {viewMode === ViewMode.SLIM ? '紧凑视图' : '宽松视图'}
+          {viewMode === ViewMode.SLIM
+            ? I18n.t('compact_view')
+            : I18n.t('loose_view')}
           <IconCozArrowDown className="ml-1" />
         </Button>
       )}

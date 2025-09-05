@@ -2,6 +2,7 @@
 import React from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { UserProfile } from '@cozeloop/components';
 import {
   ExptRetryMode,
@@ -44,7 +45,7 @@ export function getExperimentColumns({
 }) {
   const columns: ColumnProps<Experiment>[] = [
     {
-      title: '实验名称',
+      title: I18n.t('experiment_name'),
       disableColumnManage: true,
       dataIndex: 'name',
       key: 'name',
@@ -52,7 +53,7 @@ export function getExperimentColumns({
       render: text => <TypographyText>{text}</TypographyText>,
     },
     {
-      title: '评测对象类型',
+      title: I18n.t('evaluation_object_type'),
       dataIndex: 'type',
       key: 'type',
       width: 120,
@@ -65,7 +66,7 @@ export function getExperimentColumns({
       },
     },
     {
-      title: '评测对象',
+      title: I18n.t('evaluation_object'),
       dataIndex: 'eval_target',
       key: 'eval_target',
       width: 240,
@@ -93,7 +94,7 @@ export function getExperimentColumns({
             {record.target_runtime_param?.json_value &&
             record.target_runtime_param?.json_value !== '{}' ? (
               <Tag color="grey" className="shrink-0 hide-in-table-row-hover">
-                动态参数
+                {I18n.t('cozeloop_open_evaluate_dynamic_parameters')}
               </Tag>
             ) : null}
           </div>
@@ -101,7 +102,7 @@ export function getExperimentColumns({
       },
     },
     {
-      title: '关联评测集',
+      title: I18n.t('associated_evaluation_set'),
       dataIndex: 'eval_set',
       key: 'eval_set',
       width: 215,
@@ -114,7 +115,7 @@ export function getExperimentColumns({
       ),
     },
     {
-      title: '状态',
+      title: I18n.t('status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -130,7 +131,7 @@ export function getExperimentColumns({
       ),
     },
     {
-      title: '得分',
+      title: I18n.t('score'),
       dataIndex: 'score',
       key: 'score',
       width: 330,
@@ -145,14 +146,14 @@ export function getExperimentColumns({
       ),
     },
     {
-      title: '描述',
+      title: I18n.t('description'),
       dataIndex: 'desc',
       key: 'desc',
       width: 160,
       render: val => <TypographyText>{val || '-'}</TypographyText>,
     },
     {
-      title: '创建人',
+      title: I18n.t('creator'),
       dataIndex: 'base_info.created_by',
       key: 'create_by',
       width: 160,
@@ -164,7 +165,7 @@ export function getExperimentColumns({
         ),
     },
     {
-      title: '创建时间',
+      title: I18n.t('create_time'),
       dataIndex: 'start_time',
       key: 'start_time',
       width: 180,
@@ -173,7 +174,7 @@ export function getExperimentColumns({
       render: val => formateTime(val),
     },
     {
-      title: '结束时间',
+      title: I18n.t('end_time'),
       dataIndex: 'end_time',
       key: 'end_time',
       width: 180,
@@ -193,15 +194,16 @@ export function handleDelete({
   onRefresh?: () => void;
 }) {
   Modal.confirm({
-    title: '删除实验',
+    title: I18n.t('delete_experiment'),
     content: (
       <>
-        确定要删除<span className="font-medium px-[2px]">{record.name}</span>
-        吗？此修改将不可逆。
+        {I18n.t('cozeloop_open_evaluate_confirm_to_delete')}
+        <span className="font-medium px-[2px]">{record.name}</span>
+        {I18n.t('data_engine_this_change_irreversible')}
       </>
     ),
-    okText: '删除',
-    cancelText: '取消',
+    okText: I18n.t('delete'),
+    cancelText: I18n.t('cancel'),
     okButtonColor: 'red',
     width: 420,
     autoLoading: true,
@@ -227,10 +229,10 @@ export function handleRetry({
   onRefresh?: () => void;
 }) {
   Modal.confirm({
-    title: '重试实验',
-    content: '仅针对执行失败的部分重新评测。',
-    okText: '确认',
-    cancelText: '取消',
+    title: I18n.t('retry_experiment'),
+    content: I18n.t('only_re_evaluate_failed_part'),
+    okText: I18n.t('confirm'),
+    cancelText: I18n.t('cancel'),
     width: 420,
     autoLoading: true,
     async onOk() {
@@ -252,15 +254,16 @@ export function handleCopy({
   onOk: () => void;
 }) {
   Modal.confirm({
-    title: '复制实验配置',
+    title: I18n.t('copy_experiment_config'),
     content: (
       <>
-        复制<span className="font-medium px-[2px]">{record.name}</span>
-        配置，直接或修改配置后发起实验。
+        {I18n.t('evaluate_copy')}
+        <span className="font-medium px-[2px]">{record.name}</span>
+        {I18n.t('cozeloop_open_evaluate_config_and_launch_experiment')}
       </>
     ),
-    okText: '确认',
-    cancelText: '取消',
+    okText: I18n.t('confirm'),
+    cancelText: I18n.t('cancel'),
     width: 420,
     onOk,
   });
@@ -473,16 +476,17 @@ export function handleExport({
   let selectedFormat = 'csv'; // 默认选择CSV格式
 
   Modal.confirm({
-    title: '导出实验明细',
+    title: I18n.t('cozeloop_open_evaluate_export_experiment_details'),
     content: (
       <div className="pt-4">
         <div className="mb-2">
           <label className="text-sm font-medium">
-            导出格式 <span className="text-red-500">*</span>
+            {I18n.t('evaluate_export_format')}
+            <span className="text-red-500">*</span>
           </label>
         </div>
         <Select
-          placeholder="请选择"
+          placeholder={I18n.t('please_select', { field: '' })}
           defaultValue="csv"
           style={{ width: '100%' }}
           onChange={value => {
@@ -494,13 +498,15 @@ export function handleExport({
         </Select>
       </div>
     ),
-    okText: '导出',
-    cancelText: '取消',
+    okText: I18n.t('evaluate_export'),
+    cancelText: I18n.t('global_btn_cancel'),
     width: 420,
     autoLoading: true,
     onOk() {
       if (!selectedFormat) {
-        throw new Error('请选择导出格式');
+        throw new Error(
+          I18n.t('cozeloop_open_evaluate_please_select_export_format'),
+        );
       }
 
       sendEvent(EVENT_NAMES.cozeloop_experiment_export_click, {

@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorPreview,
   uniqueExperimentsEvaluators,
@@ -23,7 +24,7 @@ export function getExperimentContrastLogicFields(
   });
   return [
     {
-      title: '状态',
+      title: I18n.t('status'),
       name: getLogicFieldName(FieldType.TurnRunState, 'turn_status'),
       type: 'options',
       // 禁用等于和不等于操作符

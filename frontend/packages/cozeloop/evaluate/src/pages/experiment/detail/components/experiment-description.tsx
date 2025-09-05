@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorPreview,
   formateTime,
@@ -68,7 +69,7 @@ const ExperimentDescription = ({
 
   const header = (
     <div className="flex items-center gap-2 w-full">
-      <div className="text-sm font-semibold">基础信息</div>
+      <div className="text-sm font-semibold">{I18n.t('basic_info')}</div>
       <IconCozArrowDown
         className={classNames(
           'cursor-pointer text-xxl',
@@ -83,19 +84,19 @@ const ExperimentDescription = ({
     <>
       <div className="flex item-center gap-2 w-full">
         <DescriptionItem
-          label="评测集"
+          label={I18n.t('evaluation_set')}
           content={
             <EvaluationSetPreview evalSet={eval_set} enableLinkJump={true} />
           }
         />
         <DescriptionItem
-          label="评测对象类型"
+          label={I18n.t('evaluation_object_type')}
           content={
             <EvaluateTargetTypePreview type={eval_target?.eval_target_type} />
           }
         />
         <DescriptionItem
-          label="评测对象"
+          label={I18n.t('evaluation_object')}
           content={
             <EvalTargetPreview
               evalSet={eval_set}
@@ -110,7 +111,7 @@ const ExperimentDescription = ({
       <div className="flex item-center gap-2 w-full">
         <DescriptionItem
           contentClassName="pr-10"
-          label="评估器"
+          label={I18n.t('evaluator')}
           content={
             !evaluators?.length ? (
               '-'
@@ -130,27 +131,27 @@ const ExperimentDescription = ({
           }
         />
         <DescriptionItem
-          label="创建人"
+          label={I18n.t('creator')}
           content={<CozeUser user={base_info?.created_by} size="small" />}
         />
         <DescriptionItem
-          label="创建时间"
+          label={I18n.t('create_time')}
           content={formateTime(start_time) || '-'}
         />
       </div>
       <div className="flex item-center gap-2 w-full">
         <DescriptionItem
-          label="结束时间"
+          label={I18n.t('end_time')}
           content={formateTime(end_time) || '-'}
         />
         <DescriptionItem
-          label="描述"
+          label={I18n.t('description')}
           content={<TypographyText>{desc || '-'}</TypographyText>}
         />
         {target_runtime_param?.json_value &&
         target_runtime_param.json_value !== '{}' ? (
           <DescriptionItem
-            label="参数注入"
+            label={I18n.t('parameter_injection')}
             content={
               <DynamicParams
                 evalTarget={eval_target}

@@ -1,6 +1,8 @@
 import { type ReactNode } from 'react';
 
 import { JsonViewer } from '@textea/json-viewer';
+import { I18n } from '@cozeloop/i18n-adapter';
+import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-hooks-adapter';
 import {
   type FieldData,
   type Content,
@@ -111,7 +113,7 @@ export const dataTypeMap = {
   // pe 转换
   placeholder: 'String',
   [DataType.Image]: 'Image',
-  [DataType.MultiPart]: '多模态',
+  [DataType.MultiPart]: I18n.t('multimodal'),
 };
 
 export const contentTypeToDataType = {
@@ -209,15 +211,19 @@ export const MUTABLE_DATA_TYPE_LIST = [
   {
     label: (
       <div className="flex items-center gap-2">
-        多模态
+        {I18n.t('multimodal')}
         <Popover
           content={
             <div className="w-[320px] py-2 px-3">
-              <div>适用于在同个单元格中管理图、文各类模态混排的数据。</div>
               <div>
-                {
-                  '其Array<Object>数据样例如下，常见于多模态场景的Model span中。'
-                }
+                {I18n.t(
+                  'cozeloop_open_evaluate_multi_modal_data_in_cell_usage',
+                )}
+              </div>
+              <div>
+                {I18n.t(
+                  'cozeloop_open_evaluate_array_object_data_sample_multimodal',
+                )}
               </div>
               <div className="whitespace-pre-wrap mt-2 p-2 coz-bg-plus border border-solid border-[var(--coz-stroke-primary)] rounded-[6px]">
                 <JsonViewer
@@ -239,7 +245,7 @@ export const MUTABLE_DATA_TYPE_LIST = [
 export const DATA_TYPE_LIST_WITH_ARRAY = [...DATA_TYPE_LIST, ARRAY_TYPE_LIST];
 export const MUTIPART_DATA_TYPE_LIST_WITH_ARRAY = [
   ...DATA_TYPE_LIST_WITH_ARRAY,
-  ...MUTABLE_DATA_TYPE_LIST,
+  ...(IS_DISABLED_MULTI_MODEL_EVAL ? [] : MUTABLE_DATA_TYPE_LIST),
 ];
 export const getDataTypeListWithArray = (
   disableObj: boolean,

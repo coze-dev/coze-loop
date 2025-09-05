@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { experimentItemRunStatusInfoList } from '@cozeloop/evaluate-components';
 import { type TurnRunState } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
@@ -33,8 +34,8 @@ export default function ExperimentItemRunStatusSelect({
 } & SelectProps) {
   return (
     <Select
-      prefix="状态"
-      placeholder="请选择"
+      prefix={I18n.t('status')}
+      placeholder={I18n.t('please_select', { field: '' })}
       multiple={true}
       showClear={true}
       maxTagCount={2}

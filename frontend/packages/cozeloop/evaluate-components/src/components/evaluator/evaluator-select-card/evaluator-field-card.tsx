@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type Evaluator,
@@ -80,7 +81,10 @@ function FieldMappingCard({
           onClick={e => e.stopPropagation()}
           className="flex flex-row items-center gap-1 invisible group-hover:visible"
         >
-          <Tooltip content={'删除'} theme="dark">
+          <Tooltip
+            content={I18n.t('space_member_role_type_del_btn')}
+            theme="dark"
+          >
             <Button
               color="secondary"
               size="small"
@@ -133,7 +137,7 @@ export const EvaluatorFieldCard = forwardRef<
       prefix,
       content,
       initValues,
-      defaultTitle = '评估器',
+      defaultTitle = I18n.t('evaluator'),
       hasError,
       disabledVersionIds,
       disabled,
@@ -200,11 +204,13 @@ export const EvaluatorFieldCard = forwardRef<
               className="w-full"
               field={`${prefix}.evaluator_id`}
               fieldStyle={{ paddingBottom: 16 }}
-              label="名称"
-              placeholder="请选择评估器"
+              label={I18n.t('name')}
+              placeholder={I18n.t('please_select_evaluator')}
               onChangeWithObject={false}
               disabled={disabled}
-              rules={[{ required: true, message: '请选择评估器' }]}
+              rules={[
+                { required: true, message: I18n.t('please_select_evaluator') },
+              ]}
               onSelect={(_, option) => {
                 setEvaluator(option);
                 handleVersionChange(undefined);
@@ -219,9 +225,14 @@ export const EvaluatorFieldCard = forwardRef<
                 field={`${prefix}.evaluator_version_id`}
                 onChangeWithObject={false}
                 variableRequired={true}
-                label="版本"
-                placeholder="请选择版本号"
-                rules={[{ required: true, message: '请选择版本号' }]}
+                label={I18n.t('version')}
+                placeholder={I18n.t('please_select_a_version_number')}
+                rules={[
+                  {
+                    required: true,
+                    message: I18n.t('please_select_a_version_number'),
+                  },
+                ]}
                 // 这个不能从value里取，响应式更新不及时
                 evaluatorId={fieldState?.value?.evaluator_id}
                 disabledVersionIds={disabledVersionIds}

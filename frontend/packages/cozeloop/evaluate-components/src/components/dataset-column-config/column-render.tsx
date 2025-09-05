@@ -1,5 +1,6 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 import cs from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import {
   IconCozArrowDown,
@@ -71,7 +72,8 @@ export const ColumnRender = ({
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
         <Typography.Text className="text-[14px] !font-semibold">
-          {nameField.getValue() || `列 ${index + 1}`}
+          {nameField.getValue() ||
+            `${I18n.t('data_engine_column_placeholder', { placeholder1: index + 1 })}`}
         </Typography.Text>
         {activeKey.includes(`${index}`) ? (
           <IconCozArrowDown
@@ -89,7 +91,7 @@ export const ColumnRender = ({
       </div>
       <div onClick={e => e.stopPropagation()} className="flex  items-center">
         {AdvanceConfigNode}
-        <Tooltip content="复制" theme="dark" className="mr-[2px]">
+        <Tooltip content={I18n.t('copy')} theme="dark" className="mr-[2px]">
           <Button
             color="secondary"
             size="mini"
@@ -101,20 +103,20 @@ export const ColumnRender = ({
           <Popconfirm
             content={
               <Typography.Text className="break-all text-[12px] !coz-fg-secondary">
-                确认删除{' '}
+                {I18n.t('task_delete_confirm_btn')}{' '}
                 <Typography.Text className="!font-medium">
                   {nameField.getValue()}
-                </Typography.Text>{' '}
-                列，此操作不可逆
+                </Typography.Text>
+                {I18n.t('cozeloop_open_evaluate_column_braces_irreversible')}
               </Typography.Text>
             }
-            title="删除列"
-            okText="删除"
+            title={I18n.t('delete_column')}
+            okText={I18n.t('delete')}
             zIndex={1062}
             okButtonProps={{
               color: 'red',
             }}
-            cancelText="取消"
+            cancelText={I18n.t('cancel')}
             style={{ width: 280 }}
             onConfirm={() => {
               onDelete();
@@ -127,7 +129,7 @@ export const ColumnRender = ({
             ></Button>
           </Popconfirm>
         ) : (
-          <Tooltip content="删除" theme="dark">
+          <Tooltip content={I18n.t('delete')} theme="dark">
             <Button
               icon={<IconCozTrashCan className="w-[14px] h-[14px]" />}
               color="secondary"
@@ -151,15 +153,15 @@ export const ColumnRender = ({
         <div className="flex gap-[12px]">
           <FormInput
             fieldClassName="flex-1"
-            label="名称"
-            placeholder="请输入列名称"
+            label={I18n.t('name')}
+            placeholder={I18n.t('please_enter_column_name')}
             maxLength={50}
             autoComplete=""
             field={`${fieldKey}.${index}.name`}
             rules={[
               {
                 required: true,
-                message: '请输入列名称',
+                message: I18n.t('please_enter_column_name'),
               },
               {
                 validator: columnNameRuleValidator,
@@ -180,19 +182,19 @@ export const ColumnRender = ({
 
                   return !hasSameName;
                 },
-                message: '列名称已存在',
+                message: I18n.t('column_name_exists'),
               },
             ]}
           ></FormInput>
           <TooltipWhenDisabled
             disabled={disabelChangeDatasetType}
-            content="草稿版本存在存量数据项，不支持修改数据类型。"
+            content={I18n.t('draft_has_existing_data_can_not_modifying')}
             theme="dark"
             className="top-9"
           >
             <FormDataTypeSelect
-              label="数据类型"
-              labelWidth={90}
+              label={I18n.t('data_type')}
+              labelWidth={95}
               treeData={MUTIPART_DATA_TYPE_LIST_WITH_ARRAY}
               fieldClassName={'w-[190px]'}
               disabled={disabelChangeDatasetType || isJSON}
@@ -206,12 +208,12 @@ export const ColumnRender = ({
               }}
               field={`${fieldKey}.${index}.type`}
               className="w-full"
-              rules={[{ required: true, message: '请选择数据类型' }]}
+              rules={[{ required: true, message: I18n.t('select_data_type') }]}
             ></FormDataTypeSelect>
           </TooltipWhenDisabled>
           <FormRequiredField
             label={{
-              text: '必填',
+              text: I18n.t('required'),
               required: true,
             }}
             fieldClassName={'w-[60px]'}
@@ -222,7 +224,7 @@ export const ColumnRender = ({
           <FormAdditionalPropertyField
             disabled={disabelChangeDatasetType}
             label={{
-              text: '允许冗余字段',
+              text: I18n.t('redundant_fields_allowed'),
               required: true,
             }}
             fieldClassName={cs(
@@ -235,8 +237,8 @@ export const ColumnRender = ({
         </div>
         <div className="flex-grow-1">
           <FormInput
-            label="描述"
-            placeholder="请输入列描述"
+            label={I18n.t('description')}
+            placeholder={I18n.t('enter_column_description')}
             maxLength={200}
             field={`${fieldKey}.${index}.description`}
             autoComplete="off"

@@ -1,4 +1,5 @@
 import { safeJsonParse } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   getLogicFieldName,
   type LogicField,
@@ -41,8 +42,8 @@ function getEvalSetLogicField(fieldSchema: FieldSchema): LogicField {
   } else if (schemaType === 'boolean') {
     logicField.type = 'options';
     logicField.customOperations = [
-      { label: '等于', value: 'equals' },
-      { label: '不等于', value: 'not-equals' },
+      { label: I18n.t('equal_to'), value: 'equals' },
+      { label: I18n.t('not_equal_to'), value: 'not-equals' },
     ];
     setterProps.multiple = false;
     setterProps.optionList = [
@@ -113,8 +114,8 @@ function getAnnotationLogicField(
       tag_key_id,
     );
     logicField.customOperations = [
-      { label: '等于', value: 'equals' },
-      { label: '不等于', value: 'not-equals' },
+      { label: I18n.t('equal_to'), value: 'equals' },
+      { label: I18n.t('not_equal_to'), value: 'not-equals' },
     ];
     setterProps.multiple = false;
     setterProps.optionList = tag_values?.map(item => ({
@@ -133,13 +134,13 @@ export function getFilterFields(
 ) {
   const fields: LogicField[] = [
     {
-      title: '评估器',
+      title: I18n.t('evaluator'),
       name: 'evaluator',
       type: 'options',
       children: columnEvaluators.map(getEvaluatorLogicField),
     },
     {
-      title: '评测集',
+      title: I18n.t('evaluation_set'),
       name: 'eval_set',
       type: 'options',
       children: fieldSchemas
@@ -147,7 +148,7 @@ export function getFilterFields(
         ?.map(getEvalSetLogicField),
     },
     {
-      title: '人工标注',
+      title: I18n.t('data_engine_manual_annotation'),
       name: 'annotation',
       type: 'options',
       children: columnAnnotations?.map(getAnnotationLogicField),
@@ -159,28 +160,28 @@ export function getFilterFields(
       setter: TextAreaLimitLengthHOC(MAX_SEARCH_LENGTH),
     },
     {
-      title: '是否人工校准得分',
+      title: I18n.t('manual_score_calibration'),
       name: getLogicFieldName(FieldType.EvaluatorScoreCorrected, ''),
       type: 'options',
       customOperations: [
-        { label: '等于', value: 'equals' },
-        { label: '不等于', value: 'not-equals' },
+        { label: I18n.t('equal_to'), value: 'equals' },
+        { label: I18n.t('not_equal_to'), value: 'not-equals' },
       ],
       setterProps: {
         optionList: [
-          { label: '是', value: '1' },
-          { label: '否', value: '0' },
+          { label: I18n.t('yes'), value: '1' },
+          { label: I18n.t('no'), value: '0' },
         ],
       },
     },
     {
-      title: '数据项ID',
+      title: I18n.t('data_item_id'),
       name: getLogicFieldName(FieldType.ItemID, ''),
       type: 'string',
       setter: IDSearchInput,
       customOperations: [
-        { label: '等于', value: 'equals' },
-        { label: '不等于', value: 'not-equals' },
+        { label: I18n.t('equal_to'), value: 'equals' },
+        { label: I18n.t('not_equal_to'), value: 'not-equals' },
       ],
     },
   ];

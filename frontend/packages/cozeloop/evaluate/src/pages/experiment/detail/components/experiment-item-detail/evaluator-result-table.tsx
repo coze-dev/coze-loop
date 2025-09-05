@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { LoopTable } from '@cozeloop/components';
 import {
@@ -37,7 +38,7 @@ export default function EvaluatorResultTable({
     );
     const newColumns: ColumnProps<ColumnEvaluator>[] = [
       {
-        title: '评估器',
+        title: I18n.t('evaluator'),
         dataIndex: 'name',
         key: 'name',
         width: 100,
@@ -48,7 +49,7 @@ export default function EvaluatorResultTable({
         },
       },
       {
-        title: '状态',
+        title: I18n.t('status'),
         dataIndex: 'status',
         key: 'status',
         width: hasEvaluatorError ? 200 : 73,
@@ -78,7 +79,7 @@ export default function EvaluatorResultTable({
         },
       },
       {
-        title: '得分',
+        title: I18n.t('score'),
         dataIndex: 'score',
         key: 'score',
         width: 100,
@@ -98,7 +99,7 @@ export default function EvaluatorResultTable({
         },
       },
       {
-        title: '得分理由',
+        title: I18n.t('score_reason'),
         dataIndex: 'reasoning',
         key: 'reasoning',
         align: 'left',

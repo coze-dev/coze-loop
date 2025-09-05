@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { type FieldMapping } from '@cozeloop/api-schema/data';
@@ -29,7 +30,7 @@ export const ColumnMapField = ({
       <div>
         <ReadonlyItem
           className="w-[276px] overflow-hidden"
-          title={'评测集列'}
+          title={I18n.t('evaluation_set_column')}
           typeText={getTypeText(value?.fieldSchema)}
           value={value?.target}
         />
@@ -42,7 +43,7 @@ export const ColumnMapField = ({
           ellipsis
           className="!coz-fg-secondary ml-3 !w-fit overflow-hidden"
         >
-          导入数据列
+          {I18n.t('data_engine_import_data_columns')}
           {value?.fieldSchema?.isRequired ? (
             <span className="text-red ml-[2px]">*</span>
           ) : (

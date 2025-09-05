@@ -3,6 +3,7 @@ import { forwardRef, useImperativeHandle, useState } from 'react';
 import { cloneDeep } from 'lodash-es';
 import cs from 'classnames';
 import { useUpdateEffect } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
 import {
@@ -32,6 +33,8 @@ export interface DatasetColumnConfigRef {
   addColumn: () => void;
 }
 
+const MAX_COLUMN_NUM = 50;
+
 export const DatasetColumnConfig = forwardRef(
   (
     {
@@ -59,8 +62,10 @@ export const DatasetColumnConfig = forwardRef(
     }, [expand]);
 
     const addColumn = () => {
-      if (fieldSchema?.length >= 50) {
-        Toast.error('最多支持50列');
+      if (fieldSchema?.length >= MAX_COLUMN_NUM) {
+        Toast.error(
+          I18n.t('supports_up_to_{num}_columns', { num: MAX_COLUMN_NUM }),
+        );
         return;
       }
       fieldApi.setValue([...fieldSchema, DEFAULT_COLUMN_SCHEMA]);
@@ -93,7 +98,7 @@ export const DatasetColumnConfig = forwardRef(
                 setActiveKey={setActiveKey}
                 onDelete={() => {
                   if (fieldSchema?.length === 1) {
-                    Toast.error('至少保留一个列');
+                    Toast.error(I18n.t('retain_at_least_one_column'));
                     return;
                   }
                   formApi.validate().catch(err => {
@@ -102,8 +107,12 @@ export const DatasetColumnConfig = forwardRef(
                   fieldApi.setValue(fieldSchema?.filter((_, i) => i !== index));
                 }}
                 onCopy={() => {
-                  if (fieldSchema?.length >= 50) {
-                    Toast.error('最多支持50列');
+                  if (fieldSchema?.length >= MAX_COLUMN_NUM) {
+                    Toast.error(
+                      I18n.t('supports_up_to_{num}_columns', {
+                        num: MAX_COLUMN_NUM,
+                      }),
+                    );
                     return;
                   }
                   //往index+1位置插入一个item
@@ -112,7 +121,7 @@ export const DatasetColumnConfig = forwardRef(
                     {
                       ...cloneDeep(item),
                       key: undefined,
-                      name: `${item.name || ''}_copy`.slice(0, 50),
+                      name: `${item.name || ''}_copy`.slice(0, MAX_COLUMN_NUM),
                       type: item.type,
                       description: item.description,
                       content_type: item.content_type,
@@ -142,18 +151,20 @@ export const DatasetColumnConfig = forwardRef(
         </Collapse>
         {showAddButton ? (
           <TooltipWhenDisabled
-            content="最多支持50列"
+            content={I18n.t('supports_up_to_{num}_columns', {
+              num: MAX_COLUMN_NUM,
+            })}
             theme="dark"
-            disabled={fieldSchema?.length >= 50}
+            disabled={fieldSchema?.length >= MAX_COLUMN_NUM}
           >
             <Button
               className="w-full"
               icon={<IconCozPlus />}
               color="primary"
-              disabled={fieldSchema?.length >= 50}
+              disabled={fieldSchema?.length >= MAX_COLUMN_NUM}
               onClick={addColumn}
             >
-              添加列
+              {I18n.t('add_column')}
             </Button>
           </TooltipWhenDisabled>
         ) : null}

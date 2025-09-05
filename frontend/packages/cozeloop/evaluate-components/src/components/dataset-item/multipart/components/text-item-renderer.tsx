@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
 import { Input, Button } from '@coze-arch/coze-design';
 
@@ -23,7 +24,7 @@ export const TextItemRenderer: React.FC<TextItemRendererProps> = ({
       <Input
         value={item.text || ''}
         onChange={onChange}
-        placeholder="请输入文本内容"
+        placeholder={I18n.t('cozeloop_open_evaluate_enter_text_content')}
         disabled={readonly}
       />
     </div>

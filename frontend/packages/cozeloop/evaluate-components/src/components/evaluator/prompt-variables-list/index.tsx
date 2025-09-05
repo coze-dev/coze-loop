@@ -1,12 +1,8 @@
 import { useMemo } from 'react';
 
 import classNames from 'classnames';
+import { prompt } from '@cozeloop/api-schema/prompt';
 import { OverflowList, Space, Tag, Tooltip } from '@coze-arch/coze-design';
-
-import {
-  PromptVariableType,
-  type PromptVariable,
-} from '@/utils/parse-prompt-variable';
 
 function IconImageVariable() {
   return (
@@ -31,9 +27,9 @@ export function PromptVariablesList({
   variables,
 }: {
   className?: string;
-  variables: PromptVariable[] | string[];
+  variables: string[] | prompt.VariableDef[];
 }) {
-  const renderItem = (item: PromptVariable | undefined, index: number) => (
+  const renderItem = (item: prompt.VariableDef | undefined, index: number) => (
     <>
       <div
         className="flex flex-row items-center h-9 text-xs coz-fg-plus font-bold"
@@ -45,7 +41,7 @@ export function PromptVariablesList({
           </div>
         ) : null}
         <div className="mx-3">
-          {item?.type === PromptVariableType.MultiPartVariable ? (
+          {item?.type === prompt.VariableType.MultiPart ? (
             <Tag
               size="small"
               color="primary"
@@ -64,12 +60,12 @@ export function PromptVariablesList({
     </>
   );
 
-  const renderOverflow = (items: PromptVariable[]) =>
+  const renderOverflow = (items: prompt.VariableDef[]) =>
     items.length ? (
       <Tooltip
         content={
           <Space wrap spacing={3}>
-            {items.map((item: PromptVariable) => (
+            {items.map((item: prompt.VariableDef) => (
               <Tag color="primary" key={item?.key}>
                 {item?.key}
               </Tag>
@@ -83,16 +79,17 @@ export function PromptVariablesList({
       </Tooltip>
     ) : null;
 
-  const promptVariables: PromptVariable[] = useMemo(
+  const promptVariables: prompt.VariableDef[] = useMemo(
     () =>
-      variables.map((item: PromptVariable | string) => {
+      variables.map((item: prompt.VariableDef | string) => {
         if (typeof item === 'string') {
-          return {
+          const variable: prompt.VariableDef = {
             key: item,
-            type: PromptVariableType.String,
-          } satisfies PromptVariable;
+            type: prompt.VariableType.String,
+          };
+          return variable;
         }
-        return item;
+        return item as prompt.VariableDef;
       }),
     [variables],
   );
@@ -105,9 +102,7 @@ export function PromptVariablesList({
     >
       <OverflowList
         items={promptVariables}
-        // @ts-expect-error OverflowList类型过于垃圾
         visibleItemRenderer={renderItem}
-        // @ts-expect-error OverflowList类型过于垃圾
         overflowRenderer={renderOverflow}
       />
     </div>

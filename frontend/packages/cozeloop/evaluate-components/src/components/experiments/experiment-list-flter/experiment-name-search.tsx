@@ -1,4 +1,5 @@
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozMagnifier } from '@coze-arch/coze-design/icons';
 import { Search, type SearchProps } from '@coze-arch/coze-design';
 
@@ -14,7 +15,7 @@ export function ExperimentNameSearch({
   return (
     <div className="w-60">
       <Search
-        placeholder="搜索名称"
+        placeholder={I18n.t('search_name')}
         prefix={<IconCozMagnifier />}
         {...rest}
         className={classNames('!w-full', rest.className)}

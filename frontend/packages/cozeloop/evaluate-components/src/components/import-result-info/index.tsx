@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ItemErrorType } from '@cozeloop/api-schema/data';
 import {
   type DatasetIOJobProgress,
@@ -17,21 +18,21 @@ export const ImportResultInfo = ({
   <div>
     <div className="flex gap-2 items-center">
       <Typography.Text className="flex-1 leading-[16px]">
-        成功
+        {I18n.t('status_success')}
         <Typography.Text className="!font-medium mx-1">
           {progress?.added || 0}
         </Typography.Text>
-        条， 失败
+        {I18n.t('cozeloop_open_evaluate_items_failed')}
         <Typography.Text className="!font-medium mx-1">
           {Number(progress?.processed) - Number(progress?.added) || 0}
         </Typography.Text>
-        条
+        {I18n.t('fornax_tiao')}
       </Typography.Text>
     </div>
     {errors?.length ? (
       <div className="mt-2 rounded-[4px] p-2 coz-mg-secondary border border-solid border-[var(--coz-stroke-primary)]">
         <Typography.Text size="small" className="coz-fg-secondary">
-          存在以下原因导致执行失败，请自行纠正后重试
+          {I18n.t('cozeloop_open_evaluate_execution_failed_reasons')}
         </Typography.Text>
         {errors.map(log => (
           <div className="flex items-center">
@@ -43,7 +44,7 @@ export const ImportResultInfo = ({
                 className="!font-semibold !coz-fg-primary"
               >
                 {log?.error_count && log?.error_count > 0
-                  ? `（${log?.error_count}条）`
+                  ? `${I18n.t('cozeloop_open_evaluate_placeholder1_items_in_brackets', { placeholder1: log?.error_count })}`
                   : ''}
               </Typography.Text>
             </Typography.Text>

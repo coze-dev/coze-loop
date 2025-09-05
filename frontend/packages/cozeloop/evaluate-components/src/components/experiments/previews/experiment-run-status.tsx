@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Experiment, ExptStatus } from '@cozeloop/api-schema/evaluation';
 import { Divider, Popover, Tag, type TagProps } from '@coze-arch/coze-design';
 
@@ -69,21 +70,31 @@ export function ExperimentRunStatus({
           position="top"
           content={
             <div className="px-2 py-1">
-              <div>总条数 {totalCount || 0}</div>
               <div>
-                成功 {success_turn_cnt}
+                {I18n.t('cozeloop_open_evaluate_total_count_placeholder1', {
+                  placeholder1: totalCount || 0,
+                })}
+              </div>
+              <div>
+                {I18n.t('cozeloop_open_evaluate_success_count', {
+                  success_turn_cnt,
+                })}
                 <Divider
                   layout="vertical"
                   style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                 />
-                失败 {fail_turn_cnt}
+                {I18n.t('evaluate_failure_count_fail_turn_cnt', {
+                  fail_turn_cnt,
+                })}
                 <Divider
                   layout="vertical"
                   style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                 />
                 {terminated_turn_cnt ? (
                   <>
-                    中止 {terminated_turn_cnt}
+                    {I18n.t('evaluate_terminated_count_terminated_turn_cnt', {
+                      terminated_turn_cnt,
+                    })}
                     <Divider
                       layout="vertical"
                       style={{ marginLeft: 8, marginRight: 8, height: 12 }}
@@ -92,14 +103,18 @@ export function ExperimentRunStatus({
                 ) : null}
                 {processing_turn_cnt ? (
                   <>
-                    执行中 {processing_turn_cnt}
+                    {I18n.t('evaluate_processing_count_processing_turn_cnt', {
+                      processing_turn_cnt,
+                    })}
                     <Divider
                       layout="vertical"
                       style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                     />
                   </>
                 ) : null}
-                待执行 {pending_turn_cnt}
+                {I18n.t('cozeloop_open_evaluate_pending_count', {
+                  pending_turn_cnt,
+                })}
               </div>
             </div>
           }

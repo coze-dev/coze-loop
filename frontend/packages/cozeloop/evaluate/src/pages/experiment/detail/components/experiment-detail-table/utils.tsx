@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   arrayToMap,
   getFieldColumnConfig,
@@ -142,7 +143,7 @@ const getBaseColumn = (params: {
   {
     title: '',
     // 用来在列管理里面使用的title
-    displayName: '状态',
+    displayName: I18n.t('status'),
     // 不支持列管理
     disableColumnManage: true,
     dataIndex: 'status',
@@ -173,7 +174,7 @@ const getActionColumn = (params: {
   const { onClick } = params;
 
   return {
-    title: '操作',
+    title: I18n.t('operation'),
     disableColumnManage: true,
     dataIndex: 'action',
     key: 'action',
@@ -185,8 +186,8 @@ const getActionColumn = (params: {
         actions={[
           {
             label: (
-              <Tooltip content="查看详情" theme="dark">
-                详情
+              <Tooltip content={I18n.t('detail')} theme="dark">
+                {I18n.t('detail')}
               </Tooltip>
             ),
             onClick: () => onClick(record),

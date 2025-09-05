@@ -1,4 +1,5 @@
 import cls from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
 
@@ -14,8 +15,8 @@ export function EvaluatorSelectLocalData({
 }: SelectProps & { evaluators?: Evaluator[]; showVersion?: boolean }) {
   return (
     <Select
-      prefix="评估器"
-      placeholder="请选择评估器"
+      prefix={I18n.t('evaluator')}
+      placeholder={I18n.t('please_select_evaluator')}
       {...props}
       className={cls(styles['render-selected-item'], className)}
       // semi 导出类型就是 Record<string, any>

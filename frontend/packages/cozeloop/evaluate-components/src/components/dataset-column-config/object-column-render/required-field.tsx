@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Select } from '@coze-arch/coze-design';
 
 interface RequiredFieldProps {
@@ -18,8 +19,8 @@ export const RequiredField = ({
     className={className}
     value={value === true ? 'true' : 'false'}
     optionList={[
-      { label: '是', value: 'true' },
-      { label: '否', value: 'false' },
+      { label: I18n.t('yes'), value: 'true' },
+      { label: I18n.t('no'), value: 'false' },
     ]}
     onChange={newValue => {
       onChange?.(newValue === 'true');

@@ -31,7 +31,9 @@ export function AnnotateChartCard({
         cur[item.tag_value_id ?? ''] = item.tag_value_name || '';
         return cur;
       },
-      { [CHART_MORE_KEY]: '其他' } as unknown as Record<string, string>,
+      {
+        [CHART_MORE_KEY]: I18n.t('fornax_analytics_subtitle_others'),
+      } as unknown as Record<string, string>,
     );
 
     const tagKeyId = annotation.tag_key_id ?? '';

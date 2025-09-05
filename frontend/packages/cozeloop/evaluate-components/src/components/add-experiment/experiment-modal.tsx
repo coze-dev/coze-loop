@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Version } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
@@ -45,7 +46,7 @@ export const ExperimentModal = ({
 
   return (
     <Modal
-      title="确认用于实验的评测集版本"
+      title={I18n.t('confirm_evaluation_set_version')}
       onOk={() => {
         formRef.current?.submitForm();
       }}
@@ -53,8 +54,8 @@ export const ExperimentModal = ({
       width={600}
       height={473}
       onCancel={onCancel}
-      okText="确定"
-      cancelText="取消"
+      okText={I18n.t('confirm')}
+      cancelText={I18n.t('cancel')}
     >
       {loading ? (
         <div className="flex justify-center items-center h-full">
@@ -74,7 +75,7 @@ export const ExperimentModal = ({
           {({ formState }) => (
             <>
               <FormSelect
-                label="版本"
+                label={I18n.t('version')}
                 className="w-full"
                 extraTextPosition="bottom"
                 extraText={
@@ -84,12 +85,12 @@ export const ExperimentModal = ({
                       className="!coz-fg-secondary"
                       size="small"
                     >
-                      当前草稿有修改未提交，已默认选择最新历史版本
+                      {I18n.t('draft_unsubmitted_tip')}
                     </Typography.Text>
                   ) : null
                 }
                 field="version_id"
-                rules={[{ required: true, message: '请选择版本' }]}
+                rules={[{ required: true, message: I18n.t('select_version') }]}
                 optionList={data?.map(item => ({
                   label: item.version,
                   value: item.id,
@@ -97,7 +98,7 @@ export const ExperimentModal = ({
                 fieldStyle={{ paddingBottom: 8 }}
                 filter={true}
               ></FormSelect>
-              <Form.Slot label="版本说明">
+              <Form.Slot label={I18n.t('version_description')}>
                 <Typography.Text className="!coz-fg-primary">
                   {data?.find(item => item.id === formState?.values?.version_id)
                     ?.description || '-'}

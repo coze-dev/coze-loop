@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -248,7 +249,9 @@ export const CategoryLabel = ({
               content={
                 <div>
                   <span className="mr-1">
-                    该标签选项已禁用，若修改将不再允许被选中
+                    {I18n.t(
+                      'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
+                    )}
                   </span>
                   <TagDetailLink tagKey={annotation.tag_key_id} />
                 </div>
@@ -329,7 +332,7 @@ export const CategoryLabel = ({
   return (
     <Select
       className="w-full"
-      placeholder="请选择分类"
+      placeholder={I18n.t('please_select_a_category')}
       optionList={optionList}
       filter={(val, option) => option.tagName?.includes(val)}
       onSearch={handleSearch}
@@ -343,7 +346,7 @@ export const CategoryLabel = ({
             })}
             onClick={handleCreate}
           >
-            <span className="coz-fg-dim mr-1">添加</span>
+            <span className="coz-fg-dim mr-1">{I18n.t('add')}</span>
             <span className="coz-fg-plus">{inputValue}</span>
           </div>
         ) : null
@@ -468,7 +471,7 @@ export function NumberLabel({
         Number.MIN_SAFE_INTEGER
       }
       formatter={numberInputFormatter}
-      placeholder="请输入数值"
+      placeholder={I18n.t('please_enter_a_value')}
       {...inputNumberProps}
     />
   );

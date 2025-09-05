@@ -9,7 +9,7 @@ export function multiModelValidate(
     message => message.content?.content_type === ContentType.MultiPart,
   );
   if (hasMultiModelVar && !model?.ability?.multi_modal) {
-    return '所选模型不支持多模态,请调整变量类型或更换模型';
+    return I18n.t('model_not_support_multimodal');
   }
   return;
 }

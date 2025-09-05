@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ChipSelect } from '@cozeloop/evaluate-components';
 import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 import {
@@ -33,7 +34,10 @@ export default function EvalActualOutputTable({
       <div className="flex items-center justify-between gap-1 mt-2 mb-3 px-5 ">
         <div className="flex gap-1 items-center">
           <div className="font-medium text-xs">actual_output</div>
-          <Tooltip theme="dark" content="评测对象的实际输出">
+          <Tooltip
+            theme="dark"
+            content={I18n.t('evaluation_object_actual_output')}
+          >
             <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
           </Tooltip>
         </div>

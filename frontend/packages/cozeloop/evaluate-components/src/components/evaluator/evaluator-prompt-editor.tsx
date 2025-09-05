@@ -6,13 +6,14 @@ import {
   type PromptEditorProps,
   getMultimodalVariableText,
 } from '@cozeloop/prompt-components';
-import { type ContentPart, prompt } from '@cozeloop/api-schema/prompt';
+import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-hooks-adapter';
 import {
-  type Content,
   ContentType,
   Role,
   type Message,
 } from '@cozeloop/api-schema/evaluation';
+
+import { promptPartsToMultiParts } from '@/utils/parse-prompt-variable';
 
 export type EvaluatorPromptEditorProps = Omit<
   PromptEditorProps<Role>,
@@ -39,23 +40,6 @@ const messageTypeList = [
     value: Role.User,
   },
 ];
-
-function promptPartsToMultiParts(parts: ContentPart[]): Content[] {
-  const multiParts = parts?.map(part => {
-    const typeMap = {
-      [prompt.ContentType.Text]: ContentType.Text,
-      MultiPart: ContentType.MultiPartVariable,
-      multi_part_variable: ContentType.MultiPartVariable,
-    };
-    const multiPart: Content = {
-      content_type:
-        typeMap[part.type as prompt.ContentType] ?? ContentType.Text,
-      text: part.text,
-    };
-    return multiPart;
-  });
-  return multiParts;
-}
 
 /** 把Prompt的Message格式转化为评估器这边定义的Message格式 */
 export function EvaluatorPromptEditor(props: EvaluatorPromptEditorProps) {
@@ -114,7 +98,9 @@ export function EvaluatorPromptEditor(props: EvaluatorPromptEditorProps) {
       messageTypeList={props.messageTypeList ?? messageTypeList}
       message={stringMessage}
       onMessageChange={handleMessageChange}
-      modalVariableBtnHidden={false}
+      modalVariableBtnHidden={
+        stringMessage?.role === Role.System || IS_DISABLED_MULTI_MODEL_EVAL
+      }
     />
   );
 }

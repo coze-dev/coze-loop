@@ -1,4 +1,5 @@
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
@@ -33,7 +34,7 @@ export function AnnotateColumnHeader({
     <div className="group flex items-center max-w-full">
       <TypographyText>{annotation.tag_key_name}</TypographyText>
       <Tag color="grey" size="small" className="ml-1 shrink-0">
-        人工标注
+        {I18n.t('data_engine_manual_annotation')}
       </Tag>
       <Button
         icon={<IconCozTrashCan />}
@@ -42,10 +43,10 @@ export function AnnotateColumnHeader({
         color="secondary"
         onClick={() => {
           Modal.warning({
-            title: '删除此标签',
-            content: '删除此标签将影响已打标的内容',
-            cancelText: '取消',
-            okText: '确认',
+            title: I18n.t('delete_this_tag'),
+            content: I18n.t('deleting_tag_affects_labeled_content'),
+            cancelText: I18n.t('cancel'),
+            okText: I18n.t('confirm'),
             autoLoading: true,
             onOk: async () => {
               await removeTag.runAsync();

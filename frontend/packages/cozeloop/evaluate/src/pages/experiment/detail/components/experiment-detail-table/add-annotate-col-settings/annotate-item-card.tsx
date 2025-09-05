@@ -1,4 +1,5 @@
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import { type tag } from '@cozeloop/api-schema/data';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
@@ -36,25 +37,27 @@ export function AnnotateItemCard({
         data={data}
         actions={
           <Space spacing={20} className="ml-6">
-            <Tooltip content="查看详情" theme="dark">
+            <Tooltip content={I18n.t('detail')} theme="dark">
               <Typography.Text
                 link
                 onClick={() => {
                   window.open(getTagDetailURL(data.tag_key_id || ''));
                 }}
               >
-                详情
+                {I18n.t('detail')}
               </Typography.Text>
             </Tooltip>
-            <Tooltip content="删除标签" theme="dark">
+            <Tooltip content={I18n.t('evaluate_delete_tag')} theme="dark">
               <Typography.Text
                 link
                 onClick={() => {
                   Modal.warning({
-                    title: '删除此标签',
-                    content: '删除此标签将影响已打标的内容',
-                    cancelText: '取消',
-                    okText: '确认',
+                    title: I18n.t('evaluate_delete_this_tag'),
+                    content: I18n.t(
+                      'evaluate_deleting_tag_affects_labeled_content',
+                    ),
+                    cancelText: I18n.t('cancel'),
+                    okText: I18n.t('confirm'),
                     autoLoading: true,
                     onOk: async () => {
                       await removeTag.runAsync(data.tag_key_id || '');
@@ -63,7 +66,7 @@ export function AnnotateItemCard({
                   });
                 }}
               >
-                删除
+                {I18n.t('delete')}
               </Typography.Text>
             </Tooltip>
           </Space>
