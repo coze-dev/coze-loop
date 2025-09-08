@@ -130,6 +130,11 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		return nil, err
 	}
 
+	err = e.notifyAnalysisComplete(ctx, session.UserID)
+	if err != nil {
+		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
+	}
+
 	if analysisRecord.Status != entity.InsightAnalysisStatus_Success {
 		return analysisRecord, nil
 	}
@@ -168,10 +173,10 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		analysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
 	}
 
-	err = e.notifyAnalysisComplete(ctx, session.UserID)
-	if err != nil {
-		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
-	}
+	//err = e.notifyAnalysisComplete(ctx, session.UserID)
+	//if err != nil {
+	//	logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
+	//}
 
 	return analysisRecord, nil
 }
