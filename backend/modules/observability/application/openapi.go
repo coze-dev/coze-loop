@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"io"
 	"strconv"
 	"strings"
@@ -603,7 +604,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}
-	resq.BaseResp = openapi.ListSpansOApiResponse_BaseResp_DEFAULT
+	resq.BaseResp = &base.BaseResp{}
 	return resq, nil
 }
 
