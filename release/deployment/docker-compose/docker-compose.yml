@@ -70,9 +70,9 @@ services:
     healthcheck:
       test: [ "CMD", "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
       interval: 15s
-      timeout: 5s
-      retries: 30
-      start_period: 10s
+      timeout: 10s
+      retries: 50
+      start_period: 30s
 
   redis:
     profiles: [ "redis" ]

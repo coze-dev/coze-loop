@@ -29,22 +29,20 @@ services:
         print_banner "Starting..."
 
         export ROCKETMQ_GO_LOG_LEVEL=error
+        export ROCKETMQ_GO_LOG_LEVEL=error
 
+        # 在debug模式下，等待依赖服务就绪后再启动调试器
         (
           while true; do
             if sh /coze-loop/bootstrap/healthcheck.sh; then
-              print_banner "Completed!"
+              print_banner "Dependencies Ready!"
               break
             else
-              sleep 1
+              echo "等待依赖服务启动中..."
+              sleep 2
             fi
           done
-        )&
+        ) &
 
-        exec dlv \
-          exec /coze-loop/bin/main \
-            --headless \
-            --listen=:40000 \
-            --api-version=2 \
-            --accept-multiclient \
-            --log
+        # 启动主程序而不是调试器，确保8888端口正常监听
+        exec /coze-loop/bin/main
