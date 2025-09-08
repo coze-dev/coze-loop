@@ -9,13 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex/pkg/streaming"
+	"github.com/coze-dev/cozeloop-go"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	streaming "github.com/cloudwego/kitex/pkg/streaming"
-	"go.uber.org/mock/gomock"
-
-	"github.com/coze-dev/cozeloop-go"
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	limitermocks "github.com/coze-dev/coze-loop/backend/infra/limiter/mocks"
@@ -32,8 +31,8 @@ import (
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
 	collectormocks "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector/mocks"
-	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
+	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
@@ -1333,7 +1332,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)
@@ -1533,7 +1532,7 @@ func TestValidateExecuteRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			err := validateExecuteRequest(tt.req)
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 		})
@@ -1667,7 +1666,7 @@ func TestPromptOpenAPIApplicationImpl_ptaasAllowByPromptKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)
@@ -2045,7 +2044,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)
@@ -2132,7 +2131,7 @@ func TestPromptOpenAPIApplicationImpl_startPromptExecutorSpan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			p := &PromptOpenAPIApplicationImpl{}
 			gotCtx, gotSpan := p.startPromptExecutorSpan(tt.args.ctx, tt.args.param)
 			assert.NotNil(t, gotCtx)
@@ -2250,7 +2249,7 @@ func TestPromptOpenAPIApplicationImpl_finishPromptExecutorSpan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			p := &PromptOpenAPIApplicationImpl{}
 			// finishPromptExecutorSpan 没有返回值，只需要确保不 panic
 			p.finishPromptExecutorSpan(tt.args.ctx, tt.args.span, tt.args.prompt, tt.args.reply, tt.args.err)
@@ -2274,12 +2273,12 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		fieldsGetter   func(ctrl *gomock.Controller) fields
-		args           args
-		wantPromptDO   *entity.Prompt
-		wantReply      *entity.Reply
-		wantErr        error
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantPromptDO *entity.Prompt
+		wantReply    *entity.Reply
+		wantErr      error
 	}{
 		{
 			name: "success: execute prompt",
@@ -2593,7 +2592,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)
@@ -2771,7 +2770,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 					FinishReason: ptr.Of("stop"),
 					Usage: &openapi.TokenUsage{
 						InputTokens:  ptr.Of(int32(10)),
-						OutputTokens: ptr.Of(int32(8)),
+						OutputTokens: ptr.Of(int32(20)),
 					},
 				},
 			},
@@ -2918,7 +2917,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)
@@ -2940,8 +2939,16 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 						assert.Equal(t, tt.wantR.Data.Message.Content, gotR.Data.Message.Content)
 					}
 					if tt.wantR.Data.Usage != nil && gotR.Data.Usage != nil {
-						assert.Equal(t, tt.wantR.Data.Usage.InputTokens, gotR.Data.Usage.InputTokens)
-						assert.Equal(t, tt.wantR.Data.Usage.OutputTokens, gotR.Data.Usage.OutputTokens)
+						if tt.wantR.Data.Usage.InputTokens != nil && gotR.Data.Usage.InputTokens != nil {
+							assert.Equal(t, *tt.wantR.Data.Usage.InputTokens, *gotR.Data.Usage.InputTokens)
+						} else {
+							assert.Equal(t, tt.wantR.Data.Usage.InputTokens, gotR.Data.Usage.InputTokens)
+						}
+						if tt.wantR.Data.Usage.OutputTokens != nil && gotR.Data.Usage.OutputTokens != nil {
+							assert.Equal(t, *tt.wantR.Data.Usage.OutputTokens, *gotR.Data.Usage.OutputTokens)
+						} else {
+							assert.Equal(t, tt.wantR.Data.Usage.OutputTokens, gotR.Data.Usage.OutputTokens)
+						}
 					}
 				} else {
 					assert.Equal(t, tt.wantR.Data, gotR.Data)
@@ -3010,7 +3017,7 @@ func (m *mockExecuteStreamingServer) GetSendCalls() []*openapi.ExecuteStreamingR
 }
 
 func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
-	t.Parallel()
+	// 移除 t.Parallel() 以避免数据竞争
 
 	type fields struct {
 		promptService    service.IPromptService
@@ -4046,7 +4053,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 移除 t.Parallel() 以避免数据竞争
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)

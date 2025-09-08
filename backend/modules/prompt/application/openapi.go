@@ -424,8 +424,10 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	// 执行prompt流式调用
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
+	replyResultChan := make(chan *entity.Reply, 1) // 用于接收aggregatedReply，避免数据竞争
 	go func() {
 		var executeErr error
+		var localAggregatedReply *entity.Reply
 		defer func() {
 			e := recover()
 			if e != nil {
@@ -435,11 +437,14 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			close(resultStream)
 			if executeErr != nil {
 				errChan <- executeErr
+			} else {
+				replyResultChan <- localAggregatedReply
 			}
 			close(errChan)
+			close(replyResultChan)
 		}()
 
-		aggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
+		localAggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
 				Prompt:       promptDO,
 				Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
@@ -490,6 +495,9 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			}
 		}
 		return promptDO, aggregatedReply, err
+	case aggregatedReply = <-replyResultChan:
+		logs.CtxInfo(ctx, "execute streaming finished")
+		return promptDO, aggregatedReply, nil
 	}
 }
 
