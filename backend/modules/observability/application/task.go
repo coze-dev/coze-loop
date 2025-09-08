@@ -5,7 +5,6 @@ package application
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
@@ -60,11 +59,11 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskList,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return nil, err
-	}
+	//if err := t.authSvc.CheckWorkspacePermission(ctx,
+	//	rpc.AuthActionTraceTaskList,
+	//	strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+	//	return nil, err
+	//}
 	sResp, err := t.taskSvc.CheckTaskName(ctx, &service.CheckTaskNameReq{
 		WorkspaceID: req.GetWorkspaceID(),
 		Name:        req.GetName(),
@@ -81,11 +80,11 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if err := t.validateCreateTaskReq(ctx, req); err != nil {
 		return resp, err
 	}
-	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskCreate,
-		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10)); err != nil {
-		return resp, err
-	}
+	//if err := t.authSvc.CheckWorkspacePermission(ctx,
+	//	rpc.AuthActionTraceTaskCreate,
+	//	strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10)); err != nil {
+	//	return resp, err
+	//}
 	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: req.GetTask()})
 	if err != nil {
 		return resp, err
@@ -142,12 +141,12 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 	} else if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.authSvc.CheckTaskPermission(ctx,
-		rpc.AuthActionTraceTaskEdit,
-		strconv.FormatInt(req.GetWorkspaceID(), 10),
-		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
-		return nil, err
-	}
+	//if err := t.authSvc.CheckTaskPermission(ctx,
+	//	rpc.AuthActionTraceTaskEdit,
+	//	strconv.FormatInt(req.GetWorkspaceID(), 10),
+	//	strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
+	//	return nil, err
+	//}
 	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
 		TaskID:        req.GetTaskID(),
 		WorkspaceID:   req.GetWorkspaceID(),
@@ -169,11 +168,11 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskList,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return resp, err
-	}
+	//if err := t.authSvc.CheckWorkspacePermission(ctx,
+	//	rpc.AuthActionTraceTaskList,
+	//	strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+	//	return resp, err
+	//}
 	sResp, err := t.taskSvc.ListTasks(ctx, &service.ListTasksReq{
 		WorkspaceID: req.GetWorkspaceID(),
 		TaskFilters: req.GetTaskFilters(),
@@ -195,11 +194,11 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskList,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-		return resp, err
-	}
+	//if err := t.authSvc.CheckWorkspacePermission(ctx,
+	//	rpc.AuthActionTraceTaskList,
+	//	strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+	//	return resp, err
+	//}
 	sResp, err := t.taskSvc.GetTask(ctx, &service.GetTaskReq{
 		TaskID:      req.GetTaskID(),
 		WorkspaceID: req.GetWorkspaceID(),
