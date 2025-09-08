@@ -186,6 +186,7 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 	if err != nil {
 		return err
 	}
+	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfos: %v", userInfos)
 
 	if len(userInfos) != 1 || userInfos[0] == nil {
 		return nil

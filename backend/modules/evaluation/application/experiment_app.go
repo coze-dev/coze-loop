@@ -70,7 +70,7 @@ func NewExperimentApplication(
 	manager service.IExptManager,
 	scheduler service.ExptSchedulerEvent,
 	recordEval service.ExptItemEvalEvent,
-	// tupleSvc service.IExptTupleService,
+// tupleSvc service.IExptTupleService,
 	idgen idgen.IIDGenerator,
 	configer component.IConfiger,
 	auth rpc.IAuthProvider,
@@ -1188,14 +1188,14 @@ func (e *experimentApplication) DeleteExptInsightAnalysisRecord(ctx context.Cont
 
 func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest) (r *expt.GetExptInsightAnalysisRecordResponse, err error) {
 	session := &entity.Session{UserID: strconv.FormatInt(req.GetSession().GetUserID(), 10)}
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
-		SpaceID:       req.WorkspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
-	}
+	//err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	//	ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+	//	SpaceID:       req.WorkspaceID,
+	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
 	record, err := e.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
 	if err != nil {
 		return nil, err
