@@ -71,9 +71,10 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 	if err != nil {
 		return resp, err
 	}
-	resp.Pass = sResp.Pass
 
-	return resp, nil
+	return &task.CheckTaskNameResponse{
+		Pass: sResp.Pass,
+	}, nil
 }
 func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRequest) (*task.CreateTaskResponse, error) {
 	resp := task.NewCreateTaskResponse()
@@ -89,9 +90,8 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if err != nil {
 		return resp, err
 	}
-	resp.TaskID = sResp.TaskID
 
-	return resp, nil
+	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {
@@ -183,9 +183,10 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	if err != nil {
 		return resp, err
 	}
-	resp.Tasks = sResp.Tasks
-	resp.Total = sResp.Total
-	return resp, nil
+	return &task.ListTasksResponse{
+		Tasks: sResp.Tasks,
+		Total: sResp.Total,
+	}, nil
 }
 func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest) (*task.GetTaskResponse, error) {
 	resp := task.NewGetTaskResponse()
@@ -206,9 +207,10 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	if err != nil {
 		return resp, err
 	}
-	resp.Task = sResp.Task
 
-	return resp, nil
+	return &task.GetTaskResponse{
+		Task: sResp.Task,
+	}, nil
 }
 
 func (t *TaskApplication) TraceHub(ctx context.Context, event *entity.RawSpan) error {
