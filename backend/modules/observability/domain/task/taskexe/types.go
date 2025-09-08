@@ -12,8 +12,9 @@ import (
 )
 
 type Trigger struct {
-	Task *task.Task
-	Span *loop_span.Span
+	Task     *task.Task
+	Span     *loop_span.Span
+	IsFinish bool
 }
 
 var (

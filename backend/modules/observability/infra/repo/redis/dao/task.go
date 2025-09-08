@@ -45,9 +45,11 @@ type ITaskDAO interface {
 	SetNonFinalTaskList(ctx context.Context, tasks []*entity.ObservabilityTask, ttl time.Duration) error
 	DeleteNonFinalTaskList(ctx context.Context) error
 
-	GetTaskCount(ctx context.Context, workspaceID int64) (int64, error)
-	SetTaskCount(ctx context.Context, workspaceID int64, count int64, ttl time.Duration) error
-	DeleteTaskCount(ctx context.Context, workspaceID int64) error
+	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
+	SetTaskCount(ctx context.Context, taskID int64, count int64, ttl time.Duration) error
+	DeleteTaskCount(ctx context.Context, taskID int64) error
+
+	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 }
 
 type TaskDAOImpl struct {
@@ -87,8 +89,11 @@ func (q *TaskDAOImpl) makeNonFinalTaskListKey() string {
 	return "task:list:non_final"
 }
 
-func (q *TaskDAOImpl) makeTaskCountCacheKey(workspaceID int64) string {
-	return fmt.Sprintf("task:count:%d", workspaceID)
+func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
+	return fmt.Sprintf("count_%d", taskID)
+}
+func (q *TaskDAOImpl) makeTaskRunCountCacheKey(taskID, taskRunID int64) string {
+	return fmt.Sprintf("count_%d_%d", taskID, taskRunID)
 }
 
 // generateFilterHash 生成过滤条件的 hash
@@ -316,8 +321,8 @@ func (p *TaskDAOImpl) DeleteNonFinalTaskList(ctx context.Context) error {
 }
 
 // GetTaskCount 获取任务计数缓存
-func (p *TaskDAOImpl) GetTaskCount(ctx context.Context, workspaceID int64) (int64, error) {
-	key := p.makeTaskCountCacheKey(workspaceID)
+func (p *TaskDAOImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, error) {
+	key := p.makeTaskCountCacheKey(taskID)
 	got, err := p.cmdable.Get(ctx, key).Int64()
 	if err != nil {
 		if redis.IsNilError(err) {
@@ -346,4 +351,17 @@ func (p *TaskDAOImpl) DeleteTaskCount(ctx context.Context, workspaceID int64) er
 		return errorx.Wrapf(err, "redis delete task count key: %v", key)
 	}
 	return nil
+}
+
+// GetTaskCount 获取任务计数缓存
+func (p *TaskDAOImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
+	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
+	got, err := p.cmdable.Get(ctx, key).Int64()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return -1, nil // 缓存未命中，返回-1表示未缓存
+		}
+		return 0, errorx.Wrapf(err, "redis get task count fail, key: %v", key)
+	}
+	return got, nil
 }

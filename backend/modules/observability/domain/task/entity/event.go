@@ -3,6 +3,10 @@
 
 package entity
 
+import (
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+)
+
 type RawSpan struct {
 	TraceID       string            `json:"_trace_id"`
 	LogID         string            `json:"__logid"`
@@ -79,4 +83,39 @@ func (s *RawSpan) GetServerEnv() *ServerInRawSpan {
 		return nil
 	}
 	return s.ServerEnv
+}
+
+func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
+	if s == nil {
+		return nil
+	}
+
+	result := &loop_span.Span{
+		StartTime:        s.StartTimeInUs / 1000,
+		SpanID:           s.SpanID,
+		ParentID:         s.ParentID,
+		LogID:            s.LogID,
+		TraceID:          s.TraceID,
+		DurationMicros:   s.DurationInUs / 1000,
+		PSM:              "",
+		CallType:         "",
+		WorkspaceID:      "",
+		SpanName:         s.SpanName,
+		SpanType:         s.SpanType,
+		Method:           s.Method,
+		StatusCode:       s.StatusCode,
+		Input:            "",
+		Output:           "",
+		ObjectStorage:    "",
+		SystemTagsString: nil,
+		SystemTagsLong:   nil,
+		SystemTagsDouble: nil,
+		TagsString:       nil,
+		TagsLong:         nil,
+		TagsDouble:       nil,
+		TagsBool:         nil,
+		TagsByte:         nil,
+	}
+
+	return result
 }

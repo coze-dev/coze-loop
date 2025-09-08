@@ -185,6 +185,9 @@ func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context) ([]*entity.Observab
 
 	return resp, nil
 }
+func (v *TaskRepoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) []*entity.ObservabilityTask {
+	return nil
+}
 func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作
 	err := v.TaskDao.UpdateTaskWithOCC(ctx, id, workspaceID, updateMap)
@@ -241,4 +244,31 @@ func (v *TaskRepoImpl) generateFilterHash(param mysql.ListTaskParam) string {
 
 	// 生成简单的 hash（在实际生产环境中可能需要更复杂的 hash 算法）
 	return fmt.Sprintf("%x", len(filterStr))
+}
+
+func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string) {
+	// 先查 Redis 缓存
+	var spaceList, botList []string
+	return spaceList, botList
+}
+
+func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, error) {
+	// 先查 Redis 缓存
+	count, err := v.TaskRedisDao.GetTaskCount(ctx, taskID)
+	if err != nil {
+		logs.CtxWarn(ctx, "failed to get task count from redis cache", "taskID", taskID, "err", err)
+	} else if count != 0 {
+		return count, nil
+	}
+	return count, nil
+}
+func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
+	// 先查 Redis 缓存
+	count, err := v.TaskRedisDao.GetTaskRunCount(ctx, taskID, taskRunID)
+	if err != nil {
+		logs.CtxWarn(ctx, "failed to get task run count from redis cache", "taskID", taskID, "err", err)
+	} else if count != 0 {
+		return count, nil
+	}
+	return count, nil
 }
