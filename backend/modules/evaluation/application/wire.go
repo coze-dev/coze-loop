@@ -9,6 +9,7 @@ package application
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/google/wire"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
@@ -120,6 +121,7 @@ var (
 		foundation.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
 		agent.NewAgentAdapter,
+		notify.NewNotifyRPCAdapter,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		evalSetDomainService,
