@@ -9,7 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+
 	"io"
 	"strconv"
 	"strings"
@@ -17,6 +17,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package application
+
 import (
 	"bytes"
 	"compress/gzip"
@@ -45,6 +46,7 @@ import (
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
+
 func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 	type fields struct {
 		traceService service.ITraceService
@@ -212,7 +214,8 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -258,7 +261,8 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -355,7 +359,8 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -446,7 +451,8 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -541,7 +547,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -599,7 +606,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -657,7 +665,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -711,7 +720,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -760,7 +770,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -801,7 +812,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -847,7 +859,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -893,7 +906,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -939,7 +953,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -985,7 +1000,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1032,7 +1048,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1079,7 +1096,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1132,7 +1150,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1185,7 +1204,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1240,7 +1260,8 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1464,7 +1485,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1528,7 +1550,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1584,7 +1607,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1646,7 +1670,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1706,7 +1731,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1821,7 +1847,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1888,7 +1915,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1943,7 +1971,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -1984,7 +2013,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2038,7 +2068,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2094,7 +2125,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2159,7 +2191,8 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2278,7 +2311,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2344,7 +2378,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2396,7 +2431,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2448,7 +2484,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2501,7 +2538,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2554,7 +2592,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2611,7 +2650,8 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2720,7 +2760,8 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2802,7 +2843,8 @@ func TestOpenAPIApplication_unpackSpace(t *testing.T) {
 							return "workspace1"
 						case "span3":
 							return "workspace2"
-						}					}
+						}
+					}
 					return ""
 				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
@@ -2909,7 +2951,8 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2952,7 +2995,8 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -2995,7 +3039,8 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -3037,7 +3082,8 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
@@ -3080,7 +3126,8 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 						case "span1":
 						case "span2":
 						case "span3":
-							return "workspace2"						}
+							return "workspace2"
+						}
 					}
 					return ""
 				}).AnyTimes()
