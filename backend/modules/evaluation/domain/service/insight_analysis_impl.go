@@ -26,19 +26,25 @@ type ExptInsightAnalysisServiceImpl struct {
 	fileClient              fileserver.ObjectStorage
 	agentAdapter            rpc.IAgentAdapter
 	exptResultExportService IExptResultExportService
+	notifyRPCAdapter        rpc.INotifyRPCAdapter
+	userProvider            rpc.IUserProvider
 }
 
 func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	exptPublisher events.ExptEventPublisher,
 	fileClient fileserver.ObjectStorage,
 	agentAdapter rpc.IAgentAdapter,
-	exptResultExportService IExptResultExportService) IExptInsightAnalysisService {
+	exptResultExportService IExptResultExportService,
+	notifyRPCAdapter rpc.INotifyRPCAdapter,
+	userProvider rpc.IUserProvider) IExptInsightAnalysisService {
 	return &ExptInsightAnalysisServiceImpl{
 		repo:                    repo,
 		exptPublisher:           exptPublisher,
 		fileClient:              fileClient,
 		agentAdapter:            agentAdapter,
 		exptResultExportService: exptResultExportService,
+		notifyRPCAdapter:        notifyRPCAdapter,
+		userProvider:            userProvider,
 	}
 }
 
@@ -162,7 +168,32 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		analysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
 	}
 
+	err = e.notifyAnalysisComplete(ctx, session.UserID)
+	if err != nil {
+		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
+	}
+
 	return analysisRecord, nil
+}
+
+func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Context, userID string) error {
+	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{userID})
+	if err != nil {
+		return err
+	}
+
+	if len(userInfos) != 1 || userInfos[0] == nil {
+		return nil
+	}
+
+	userInfo := userInfos[0]
+	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
+
+	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.Email), "AAq9DvIYd2qHu", map[string]string{
+		"expt_name": "实验名称",
+	})
+
+	return err
 }
 
 func (e ExptInsightAnalysisServiceImpl) ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page, session *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error) {
