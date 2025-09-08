@@ -574,6 +574,7 @@ func (p *PromptOpenAPIApplicationImpl) getPromptByPromptKey(ctx context.Context,
 			extra["prompt_key"] = promptIdentifier.GetPromptKey()
 			bizErr.WithExtra(extra)
 		}
+		return nil, err
 	}
 
 	return promptDOs[param], nil
