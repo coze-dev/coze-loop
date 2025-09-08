@@ -1698,8 +1698,8 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 			},
 			want: []*entity.ToolCall{
 				{
-					Index: 0, // int32默认值转int64
-					ID:    "", // string默认值
+					Index: 0,                       // int32默认值转int64
+					ID:    "",                      // string默认值
 					Type:  entity.ToolTypeFunction, // 默认映射到Function
 				},
 			},
