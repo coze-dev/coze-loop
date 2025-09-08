@@ -1,6 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0		setupMocks  func(ctrl *gomock.Controller) *ExptResultServiceImpl
+// SPDX-License-Identifier: Apache-2.0
 package service
+
 import (
 	"context"
 	"errors"
@@ -36,6 +37,7 @@ func TestExptResultServiceImpl_MGetStats(t *testing.T) {
 		want    []*entity.ExptStats
 		wantErr bool
 	}{
+		{
 			name:    "正常获取多个实验统计",
 			exptIDs: []int64{1, 2},
 			spaceID: 100,
@@ -153,7 +155,8 @@ func TestExptResultServiceImpl_GetStats(t *testing.T) {
 		session *entity.Session
 		setup   func(mockExptStatsRepo *repoMocks.MockIExptStatsRepo)
 		want    *entity.ExptStats
-		wantErr bool	}{
+		wantErr bool
+	}{
 		{
 			name:    "正常获取多个实验统计",
 			exptID:  1,
@@ -2482,13 +2485,15 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:     1,
-						ExptID: 1,
-						ItemID: 1,
-						Status: 1,
+						ID:      1,
+						ExptID:  1,
+						ItemID:  1,
+						Status:  1,
 						ItemIdx: 1,
 					},
-				}, nil).AnyTimes()				// RDS中的分数与ClickHouse不一致
+				}, nil).AnyTimes()
+
+				// RDS中的分数与ClickHouse不一致
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).Return([]*entity.EvaluatorRecord{
 					{
 						ID:                 1,
@@ -2502,7 +2507,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 								Score: ptr.Of(float64(0.9)),
 							},
 						},
-					},				// 设置不同的输出
+					},
+				}, nil).AnyTimes()
+
+				// 设置不同的输出
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(100), gomock.Any()).Return([]*entity.EvalTargetRecord{
 					{
 						ID:      1,
@@ -2582,10 +2590,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:     1,
-						ExptID: 2,
-						ItemID: 1,
-						Status: 1,
+						ID:      1,
+						ExptID:  2,
+						ItemID:  1,
+						Status:  1,
 						ItemIdx: 1,
 					},
 				}, nil).AnyTimes()
@@ -2685,10 +2693,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:     1,
-						ExptID: 3,
-						ItemID: 1,
-						Status: 1,
+						ID:      1,
+						ExptID:  3,
+						ItemID:  1,
+						Status:  1,
 						ItemIdx: 1,
 					},
 				}, nil).AnyTimes()
@@ -2744,9 +2752,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
-				}}, nil).AnyTimes()	}{
-		{
-			name:    "正常获取多个实验统计",
+				}}, nil).AnyTimes()
 				// 模拟获取所有item的调用
 				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(4), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
 					{
@@ -2804,9 +2810,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
-				}}, nil).AnyTimes()		wantErr bool	}{
-		{
-			name:    "正常获取多个实验统计",
+				}}, nil).AnyTimes()
 				// 设置RDS数据存在
 				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(5), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
@@ -2970,10 +2974,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:     1,
-						ExptID: 8,
-						ItemID: 1,
-						Status: 1,
+						ID:      1,
+						ExptID:  8,
+						ItemID:  1,
+						Status:  1,
 						ItemIdx: 1,
 					},
 				}, nil).AnyTimes()
@@ -3072,10 +3076,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:     1,
-						ExptID: 9,
-						ItemID: 1,
-						Status: 1,
+						ID:      1,
+						ExptID:  9,
+						ItemID:  1,
+						Status:  1,
 						ItemIdx: 1,
 					},
 				}, nil).AnyTimes()
@@ -3817,7 +3821,7 @@ func setupUnfinishedTurnService(ctrl *gomock.Controller) *ExptResultServiceImpl 
 	// 实现未完成轮次的mock设置
 	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	startTime := time.Now()
-	
+
 	mockExperimentRepo.EXPECT().
 		MGetByID(gomock.Any(), []int64{100}, int64(1)).
 		Return([]*entity.Experiment{{
@@ -3881,9 +3885,9 @@ func setupNetworkErrorService(ctrl *gomock.Controller, errorType string) *ExptRe
 		AnyTimes()
 
 	return &ExptResultServiceImpl{
-		ExperimentRepo:               mockExperimentRepo,
-		exptTurnResultFilterRepo:     mockExptTurnResultFilterRepo,
-		ExptTurnResultRepo:           mockExptTurnResultRepo,
-		Metric:                       mockMetric,
+		ExperimentRepo:           mockExperimentRepo,
+		exptTurnResultFilterRepo: mockExptTurnResultFilterRepo,
+		ExptTurnResultRepo:       mockExptTurnResultRepo,
+		Metric:                   mockMetric,
 	}
 }
