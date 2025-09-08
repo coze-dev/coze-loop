@@ -603,6 +603,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}
+	resq.BaseResp = openapi.ListSpansOApiResponse_BaseResp_DEFAULT
 	return resq, nil
 }
 
