@@ -49,7 +49,6 @@ func TaskPO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		TaskStatus:  ptr.Of(v.TaskStatus),
 		Rule:        RulePO2DO(ctx, v.SpanFilter, v.EffectiveTime, v.Sampler),
 		TaskConfig:  TaskConfigPO2DO(ctx, v.TaskConfig),
-		TaskDetail:  TaskDetailsPO2DO(ctx, v.TaskDetail),
 		BaseInfo: &common.BaseInfo{
 			CreatedAt: gptr.Of(v.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(v.UpdatedAt.UnixMilli()),
@@ -76,17 +75,7 @@ func UserInfoPO2DO(userInfo *entity_common.UserInfo, userID string) *common.User
 		Email:       ptr.Of(userInfo.Email),
 	}
 }
-func TaskDetailsPO2DO(ctx context.Context, taskDetails *string) *task.TaskDetail {
-	if taskDetails == nil {
-		return nil
-	}
-	var taskDetailsDO *task.TaskDetail
-	if err := sonic.Unmarshal([]byte(*taskDetails), &taskDetailsDO); err != nil {
-		logs.CtxError(ctx, "TaskDetailsPO2DO sonic.Unmarshal err:%v", err)
-		return nil
-	}
-	return taskDetailsDO
-}
+
 func RulePO2DO(ctx context.Context, spanFilter, effectiveTime, sampler *string) *task.Rule {
 	var spanFilterDO *filter.SpanFilterFields
 	if spanFilter != nil {

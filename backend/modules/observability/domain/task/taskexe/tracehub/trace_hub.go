@@ -39,10 +39,10 @@ func NewTraceHubImpl(
 		ticker:   ticker,
 		stopChan: make(chan struct{}),
 	}
-	
+
 	// 立即启动定时任务
 	impl.startScheduledTask()
-	
+
 	return impl, nil
 }
 
@@ -55,14 +55,9 @@ type TraceHubServiceImpl struct {
 	taskRepo repo.ITaskRepo
 }
 
-func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawSpan) error {
-
-	return nil
-}
-
 const TagKeyResult = "tag_key"
 
-func (h *TraceHubServiceImpl) handleMessage(ctx context.Context, rawSpan *entity.RawSpan) error {
+func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawSpan) error {
 	var tags []metrics.T
 	// 1、转换成标准span，并根据space_id初步过滤
 	span := rawSpan.RawSpanConvertToLoopSpan()

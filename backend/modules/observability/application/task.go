@@ -23,7 +23,6 @@ type ITaskQueueConsumer interface {
 }
 type ITaskApplication interface {
 	task.TaskService
-	//ITaskQueueConsumer
 }
 
 func NewTaskApplication(
