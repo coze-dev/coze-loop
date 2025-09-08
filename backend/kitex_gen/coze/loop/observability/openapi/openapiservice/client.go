@@ -15,6 +15,7 @@ type Client interface {
 	OtelIngestTraces(ctx context.Context, req *openapi.OtelIngestTracesRequest, callOptions ...callopt.Option) (r *openapi.OtelIngestTracesResponse, err error)
 	SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceOApiResponse, err error)
 	ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error)
+	ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error)
 	CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error)
 	DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest, callOptions ...callopt.Option) (r *openapi.DeleteAnnotationResponse, err error)
 }
@@ -66,6 +67,11 @@ func (p *kOpenAPIServiceClient) SearchTraceOApi(ctx context.Context, req *openap
 func (p *kOpenAPIServiceClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListSpansOApi(ctx, req)
+}
+
+func (p *kOpenAPIServiceClient) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListTracesOApi(ctx, req)
 }
 
 func (p *kOpenAPIServiceClient) CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error) {

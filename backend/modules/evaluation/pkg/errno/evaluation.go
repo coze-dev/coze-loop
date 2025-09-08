@@ -207,6 +207,10 @@ const (
 	EvaluatorBenefitDenyCode              = 601205026 // evaluator benefit deny
 	evaluatorBenefitDenyMessage           = "evaluator benefit deny"
 	evaluatorBenefitDenyNoAffectStability = true
+
+	AccessingEndpointErrorCode              = 601205027 // Accessing endpoint error
+	accessingEndpointErrorMessage           = "accessing endpoint error"
+	accessingEndpointErrorNoAffectStability = true
 )
 
 func init() {
@@ -509,6 +513,12 @@ func init() {
 		EvaluatorBenefitDenyCode,
 		evaluatorBenefitDenyMessage,
 		code.WithAffectStability(!evaluatorBenefitDenyNoAffectStability),
+	)
+
+	code.Register(
+		AccessingEndpointErrorCode,
+		accessingEndpointErrorMessage,
+		code.WithAffectStability(!accessingEndpointErrorNoAffectStability),
 	)
 
 }

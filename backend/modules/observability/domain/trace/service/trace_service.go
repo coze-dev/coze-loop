@@ -463,7 +463,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 	var (
 		g                errgroup.Group
 		lock             sync.Mutex
-		defaultTimeRange = int64(15 * 60 * 1000) // ms
+		defaultTimeRange = int64(60 * 60 * 1000) // ms
 	)
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
@@ -488,7 +488,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 				Tenants:            tenants,
 				TraceID:            v.TraceID,
 				StartAt:            v.StartTime,
-				EndAt:              v.StartTime + defaultTimeRange,
+				EndAt:              v.EndTime + defaultTimeRange,
 				Limit:              1000,
 				NotQueryAnnotation: true, // no need to query annotation
 				OmitColumns: []string{

@@ -54,3 +54,9 @@ func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// ListTracesOApi .
+// @router /v1/loop/traces/list [POST]
+func ListTracesOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListTracesOApi)
+}

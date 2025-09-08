@@ -23,6 +23,10 @@ const (
 
 	PlatformTypeWorkflow = "coze_workflow"
 
+	PlatformTypeArk = "ark"
+
+	PlatformTypeVeADK = "veadk"
+
 	PlatformTypeLoopAll = "loop_all"
 
 	PlatformTypeInnerCozeloop = "inner_cozeloop"

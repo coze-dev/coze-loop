@@ -1,16 +1,6 @@
-import { RushConfiguration } from '@rushstack/rush-sdk';
-
-const getRushConfiguration = (() => {
-  let rushConfig: RushConfiguration;
-  return () => {
-    if (!rushConfig) {
-      rushConfig = RushConfiguration.loadFromDefaultLocation({});
-    }
-    return rushConfig;
-  };
-})();
-
 import OriginPkgRootWebpackPlugin from '@coze-arch/pkg-root-webpack-plugin-origin';
+
+import { getRushConfiguration } from './utils';
 
 type PkgRootWebpackPluginOptions = Record<string, unknown>;
 
@@ -33,5 +23,3 @@ class PkgRootWebpackPlugin extends OriginPkgRootWebpackPlugin {
 }
 
 export default PkgRootWebpackPlugin;
-
-export { PkgRootWebpackPlugin };
