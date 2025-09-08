@@ -70,7 +70,7 @@ type HTTPFaaSRuntimeAdapter struct {
 func NewHTTPFaaSRuntimeAdapter(languageType entity.LanguageType, config *HTTPFaaSRuntimeConfig, logger *logrus.Logger) (*HTTPFaaSRuntimeAdapter, error) {
 	if config == nil {
 		config = &HTTPFaaSRuntimeConfig{
-			BaseURL:        "http://coze-loop-faas-enhanced:8000", // 默认使用增强版
+			BaseURL:        "http://coze-loop-faas:8000", // 修复为正确的容器名
 			Timeout:        30 * time.Second,
 			MaxRetries:     3,
 			RetryInterval:  1 * time.Second,

@@ -45,8 +45,8 @@ func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (compon
 		// 检查是否使用HTTP FaaS模式
 		faasURL := os.Getenv("COZE_LOOP_FAAS_URL")
 		if faasURL == "" {
-			// 默认使用本地FaaS服务
-			faasURL = "http://localhost:8890"
+			// 默认使用Docker Compose中的FaaS服务
+			faasURL = "http://coze-loop-faas:8000"
 		}
 		
 		// 使用HTTP FaaS运行时
