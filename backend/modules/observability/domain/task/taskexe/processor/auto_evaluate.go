@@ -135,6 +135,7 @@ func (d *DatasetServiceAdaptor) getDatasetProvider(category entity.DatasetCatego
 }
 
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
+	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s", currentTask.GetID(), taskOp)
 	//todo:[xun]加锁
 	session := getSession(ctx, currentTask)
 	var evaluationSetColumns []string

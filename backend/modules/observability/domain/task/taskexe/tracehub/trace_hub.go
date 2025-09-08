@@ -33,6 +33,7 @@ type ITraceHubService interface {
 func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
 ) (ITraceHubService, error) {
+	processor.InitProcessor()
 	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo: tRepo,
@@ -285,13 +286,14 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		return
 	}
 	tasks := tconv.TaskPOs2DOs(ctx, taskPOs, nil)
+	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
 	// 遍历任务
 	for _, taskInfo := range tasks {
 		logID := logs.NewLogID()
 		ctx = logs.SetLogID(ctx, logID)
 
-		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
-		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt()*int64(time.Millisecond))
+		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt())
+		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc, err := processor.NewProcessor(ctx, task.TaskTypeAutoEval)
 		if err != nil {
 			logs.CtxError(ctx, "NewProcessor err:%v", err)
