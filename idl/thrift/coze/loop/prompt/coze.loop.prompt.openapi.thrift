@@ -29,11 +29,11 @@ struct PromptResultData {
 }
 
 struct ExecuteRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional PromptQuery prompt_identifier (api.body="prompt_identifier")
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"') // 工作空间ID
+    2: optional PromptQuery prompt_identifier (api.body="prompt_identifier") // Prompt 标识
 
-    10: optional list<VariableVal> variable_vals (api.body="variable_vals")
-    11: optional list<Message> messages (api.body="messages")
+    10: optional list<VariableVal> variable_vals (api.body="variable_vals") // 变量值
+    11: optional list<Message> messages (api.body="messages") // 消息
 
     255: optional base.Base Base
 }
@@ -47,9 +47,9 @@ struct ExecuteResponse {
 }
 
 struct ExecuteData {
-    1: optional Message message
-    2: optional string finish_reason
-    3: optional TokenUsage usage
+    1: optional Message message // 消息
+    2: optional string finish_reason // 结束原因
+    3: optional TokenUsage usage //  token消耗
 }
 
 struct ExecuteStreamingResponse {
@@ -64,15 +64,15 @@ struct ExecuteStreamingResponse {
 struct ExecuteStreamingData {
     1: optional i32 code
     2: optional string msg
-    3: optional Message message
-    4: optional string finish_reason
-    5: optional TokenUsage usage
+    3: optional Message message // 消息
+    4: optional string finish_reason // 结束原因
+    5: optional TokenUsage usage // token消耗
 }
 
 struct PromptQuery {
-    1: optional string prompt_key
-    2: optional string version
-    3: optional string label
+    1: optional string prompt_key // prompt_key
+    2: optional string version // prompt版本
+    3: optional string label // prompt版本标识（如果version不为空，该字段会被忽略）
 }
 
 struct PromptResult {
@@ -110,12 +110,12 @@ struct ToolCallConfig {
 }
 
 struct Message {
-    1: optional Role role
-    2: optional string content
-    3: optional list<ContentPart> parts
-    4: optional string reasoning_content
-    5: optional string tool_call_id
-    6: optional list<ToolCall> tool_calls
+    1: optional Role role // 角色
+    2: optional string content // 消息内容
+    3: optional list<ContentPart> parts // 多模态内容
+    4: optional string reasoning_content // 推理思考内容
+    5: optional string tool_call_id // tool调用ID（role为tool时有效）
+    6: optional list<ToolCall> tool_calls // tool调用（role为assistant时有效）
 }
 
 struct ContentPart {
@@ -195,13 +195,13 @@ struct LLMConfig {
 }
 
 struct VariableVal {
-    1: optional string key
-    2: optional string value
-    3: optional list<Message> placeholder_messages
-    4: optional list<ContentPart> multi_part_values
+    1: optional string key // 变量key
+    2: optional string value // 普通变量值（非string类型，如boolean、integer、float、object等，序列化后传入）
+    3: optional list<Message> placeholder_messages // placeholder变量值
+    4: optional list<ContentPart> multi_part_values // 多模态变量值
 }
 
 struct TokenUsage {
-    1: optional i32 input_tokens
-    2: optional i32 output_tokens
+    1: optional i32 input_tokens // 输入消耗
+    2: optional i32 output_tokens // 输出消耗
 }
