@@ -506,9 +506,9 @@ func TestOpenAPIContentTypeDO2DTO(t *testing.T) {
 			want: openapi.ContentTypeMultiPartVariable,
 		},
 		{
-			name: "image url content type - should default to text",
+			name: "image url content type",
 			do:   entity.ContentTypeImageURL,
-			want: openapi.ContentTypeText,
+			want: openapi.ContentTypeImageURL,
 		},
 		{
 			name: "unknown content type - should default to text",
@@ -569,7 +569,7 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 			},
 		},
 		{
-			name: "image url content part - type converts to text",
+			name: "image url content part",
 			do: &entity.ContentPart{
 				Type: entity.ContentTypeImageURL,
 				Text: ptr.Of("image description"),
@@ -579,8 +579,9 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				},
 			},
 			want: &openapi.ContentPart{
-				Type: ptr.Of(openapi.ContentTypeText),
+				Type: ptr.Of(openapi.ContentTypeImageURL),
 				Text: ptr.Of("image description"),
+				ImageURL: ptr.Of("https://example.com/image.jpg"),
 			},
 		},
 		{
@@ -685,8 +686,9 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 					Text: ptr.Of("Text content"),
 				},
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(openapi.ContentTypeImageURL),
 					Text: ptr.Of("Image description"),
+					ImageURL: ptr.Of("https://example.com/image.jpg"),
 				},
 				{
 					Type: ptr.Of(openapi.ContentTypeMultiPartVariable),

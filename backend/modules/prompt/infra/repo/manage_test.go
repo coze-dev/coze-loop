@@ -2718,7 +2718,6 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
-				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 0).Return([]int64{}, nil)
 
 				mockDB := dbmocks.NewMockProvider(ctrl)
 				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
