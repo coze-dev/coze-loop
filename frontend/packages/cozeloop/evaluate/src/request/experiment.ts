@@ -12,16 +12,9 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 
-import { wait } from '@/utils/experiment';
-
 export async function submitExperiment(
   params: SubmitExperimentRequest,
 ): Promise<SubmitExperimentResponse> {
-  // if (1) {
-  //   throw new error('rerr');
-  // }
-  // return { experiment: { id: '13221676734' } };
-  await wait(4000);
   return StoneEvaluationApi.SubmitExperiment(params);
 }
 
