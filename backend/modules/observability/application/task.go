@@ -183,6 +183,9 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	if err != nil {
 		return resp, err
 	}
+	if sResp == nil {
+		return resp, nil
+	}
 	return &task.ListTasksResponse{
 		Tasks: sResp.Tasks,
 		Total: sResp.Total,
@@ -206,6 +209,9 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	})
 	if err != nil {
 		return resp, err
+	}
+	if sResp == nil {
+		return resp, nil
 	}
 
 	return &task.GetTaskResponse{
