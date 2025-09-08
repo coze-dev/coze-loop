@@ -2343,6 +2343,18 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		// 设置 ExptAnnotateRepo Mock 避免 PayloadBuilder 构建时的 panic
 		mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
 		mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+		mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
+
+		// 设置通用的GetByID Mock，用于PayloadBuilder中的ExptResultBuilder.build()调用
+		mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, exptID, spaceID int64) (*entity.Experiment, error) {
+			return &entity.Experiment{
+				ID:               exptID,
+				SpaceID:          spaceID,
+				ExptType:         entity.ExptType_Offline,
+				StartAt:          &now,
+				EvalSetVersionID: 101,
+			}, nil
+		}).AnyTimes()
 
 		// 设置基础Mock
 		mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvaluatorRef{
@@ -2763,6 +2775,17 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					},
 				}, int64(1), nil).Times(1)
 
+				// 设置过滤器键映射
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(4)).Return([]*entity.ExptTurnResultFilterKeyMapping{
+					{
+						SpaceID:   100,
+						ExptID:    4,
+						FromField: "1",
+						ToKey:     "key1",
+						FieldType: entity.FieldTypeEvaluator,
+					},
+				}, nil).AnyTimes()
+
 				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "4", gomock.Any(), []string{"10"}).Return([]*entity.ExptTurnResultFilterEntity{
 					{
 						SpaceID: 100,
@@ -2811,6 +2834,13 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
+
+				// 设置过滤器键映射
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(5)).Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil).AnyTimes()
+
+				// 设置ClickHouse数据为空
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "5", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
+
 				// 设置RDS数据存在
 				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(5), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
