@@ -598,9 +598,11 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		spansSize = loop_span.SizeofSpans(sResp.Spans)
 	}
 
-	resq.Data.Spans = tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil)
-	resq.Data.NextPageToken = sResp.NextPageToken
-	resq.Data.HasMore = sResp.HasMore
+	resq.Data = &openapi.ListSpansOApiData{
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+		NextPageToken: sResp.NextPageToken,
+		HasMore:       sResp.HasMore,
+	}
 	return resq, nil
 }
 
