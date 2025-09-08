@@ -1196,6 +1196,7 @@ func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context
 	//if err != nil {
 	//	return nil, err
 	//}
+
 	record, err := e.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
 	if err != nil {
 		return nil, err
