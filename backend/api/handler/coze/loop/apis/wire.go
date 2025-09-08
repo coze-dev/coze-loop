@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/kitex/pkg/endpoint"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/google/wire"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
@@ -208,6 +209,8 @@ func InitObservabilityHandler(
 	tagClient tagservice.Client,
 	limiterFactory limiter.IRateLimiterFactory,
 	datasetClient datasetservice.Client,
+	redis redis.Cmdable,
+	experimentClient experimentservice.Client,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,
