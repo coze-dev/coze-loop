@@ -14,16 +14,19 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -41,8 +44,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ck2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
@@ -56,7 +61,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, userClient userservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, tagService tagservice.Client, datasetService datasetservice.Client) (ITraceApplication, error) {
+func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis2 redis.Cmdable, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, userClient userservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, tagService tagservice.Client, datasetService datasetservice.Client) (ITraceApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -88,7 +93,8 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
+	iTaskDAO := dao.NewTaskDAO(redis2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
@@ -110,7 +116,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, meter metrics.Meter
 	return iTraceApplication, nil
 }
 
-func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter, db2 db.Provider, idgen2 idgen.IIDGenerator, evalService evaluatorservice.Client) (IObservabilityOpenAPIApplication, error) {
+func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter, db2 db.Provider, redis2 redis.Cmdable, idgen2 idgen.IIDGenerator, evalService evaluatorservice.Client) (IObservabilityOpenAPIApplication, error) {
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -142,7 +148,8 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
+	iTaskDAO := dao.NewTaskDAO(redis2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
@@ -183,9 +190,10 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redis.Cmdable, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2)
+	iTaskDAO := dao.NewTaskDAO(redis2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
 	iUserProvider := user.NewUserRPCProvider(userClient)
 	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2)
 	if err != nil {
@@ -193,7 +201,12 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, userClient 
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
-	iTaskApplication, err := NewTaskApplication(iTaskService, iAuthProvider, iEvaluatorRPCAdapter, iUserProvider)
+	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo)
+	if err != nil {
+		return nil, err
+	}
+	iTaskApplication, err := NewTaskApplication(iTaskService, iAuthProvider, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iUserProvider, iTraceHubService)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +216,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, userClient 
 // wire.go:
 
 var (
-	taskDomainSet  = wire.NewSet(service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, mysql.NewTaskRunDaoImpl)
+	taskDomainSet  = wire.NewSet(service2.NewTaskServiceImpl, tracehub.NewTraceHubImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, mysql.NewTaskRunDaoImpl)
 	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
 		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, NewDatasetServiceAdapter, evaluator.NewEvaluatorRPCProvider, taskDomainSet,
 	)
@@ -218,7 +231,8 @@ var (
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider, taskDomainSet,
+		NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider, evaluation.NewEvaluationRPCProvider, NewDatasetServiceAdapter,
+		taskDomainSet,
 	)
 )
 

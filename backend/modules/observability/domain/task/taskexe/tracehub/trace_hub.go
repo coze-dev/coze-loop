@@ -275,10 +275,6 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 	}()
 }
 
-func (h *TraceHubServiceImpl) Start(ctx context.Context, handler entity.RawSpan) error {
-	// 启动消费trace数据
-	return nil
-}
 func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx := context.Background()
 	logs.CtxInfo(ctx, "定时任务开始执行...")

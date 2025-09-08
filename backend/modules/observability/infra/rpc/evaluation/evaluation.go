@@ -19,7 +19,7 @@ type EvaluationProvider struct {
 	client experimentservice.Client
 }
 
-func NewEvaluationRPCProvider(client experimentservice.Client) *EvaluationProvider {
+func NewEvaluationRPCProvider(client experimentservice.Client) rpc.IEvaluationRPCAdapter {
 	return &EvaluationProvider{client: client}
 }
 

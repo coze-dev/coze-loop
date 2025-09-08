@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
@@ -25,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -42,6 +44,7 @@ import (
 	obrepo "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -59,8 +62,10 @@ import (
 var (
 	taskDomainSet = wire.NewSet(
 		taskSvc.NewTaskServiceImpl,
+		tracehub.NewTraceHubImpl,
 		obrepo.NewTaskRepoImpl,
 		mysqldao.NewTaskDaoImpl,
+		tredis.NewTaskDAO,
 		mysqldao.NewTaskRunDaoImpl,
 	)
 	traceDomainSet = wire.NewSet(
@@ -190,6 +195,7 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 func InitTraceApplication(
 	db db.Provider,
 	ckDb ck.Provider,
+	redis redis.Cmdable,
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
@@ -217,6 +223,7 @@ func InitOpenAPIApplication(
 	authClient authservice.Client,
 	meter metrics.Meter,
 	db db.Provider,
+	redis redis.Cmdable,
 	idgen idgen.IIDGenerator,
 	evalService evaluatorservice.Client,
 ) (IObservabilityOpenAPIApplication, error) {
@@ -235,6 +242,7 @@ func InitTraceIngestionApplication(
 func InitTaskApplication(
 	db db.Provider,
 	idgen idgen.IIDGenerator,
+	redis redis.Cmdable,
 	userClient userservice.Client,
 	authClient authservice.Client,
 	evalService evaluatorservice.Client,
