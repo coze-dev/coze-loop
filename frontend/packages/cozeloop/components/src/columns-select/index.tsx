@@ -3,6 +3,7 @@
 import * as sort from 'react-sortable-hoc';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozHandle,
   IconCozTableSetting,
@@ -16,7 +17,6 @@ import {
   Tooltip,
   type ColumnProps,
 } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 // @ts-expect-error react-sortable-hoc ts type issue
 const { sortableContainer, sortableElement, sortableHandle } = sort;
 const { arrayMove } = sort;
@@ -45,7 +45,7 @@ export const ColumnSelector = ({
   defaultColumns = columns,
   onChange,
   buttonText,
-  resetButtonText = '重置为默认',
+  resetButtonText = I18n.t('reset_to_default'),
   className,
   sortable = true,
   itemRender,
