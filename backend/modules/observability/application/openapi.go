@@ -563,7 +563,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	st := time.Now()
 	spansSize := 0
 	errCode := 0
-	resq := openapi.NewListSpansOApiResponse()
+	resp := openapi.NewListSpansOApiResponse()
 	defer func() {
 		if req != nil {
 			o.metrics.EmitListSpansOapi(req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
@@ -599,13 +599,13 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		spansSize = loop_span.SizeofSpans(sResp.Spans)
 	}
 
-	resq.Data = &openapi.ListSpansOApiData{
+	resp.Data = &openapi.ListSpansOApiData{
 		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}
-	resq.BaseResp = &base.BaseResp{}
-	return resq, nil
+	resp.BaseResp = base.NewBaseResp()
+	return resp, nil
 }
 
 func (o *OpenAPIApplication) validateListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest) error {
