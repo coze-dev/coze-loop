@@ -48,13 +48,13 @@ type RunStatus = string
 // Task
 type Task struct {
 	// 任务 id
-	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	// 名称
 	Name string `thrift:"name,2,required" frugal:"2,required,string" form:"name,required" json:"name,required" query:"name,required"`
 	// 描述
 	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	// 所在空间
-	WorkspaceID *int64 `thrift:"workspace_id,4,optional" frugal:"4,optional,i64" form:"workspace_id" json:"workspace_id,string,omitempty" query:"workspace_id"`
+	WorkspaceID *int64 `thrift:"workspace_id,4,optional" frugal:"4,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	// 类型
 	TaskType TaskType `thrift:"task_type,5,required" frugal:"5,required,string" form:"task_type,required" json:"task_type,required" query:"task_type,required"`
 	// 状态
@@ -1340,13 +1340,13 @@ type Sampler struct {
 	// 采样率
 	SampleRate *float64 `thrift:"sample_rate,1,optional" frugal:"1,optional,double" form:"sample_rate" json:"sample_rate,omitempty" query:"sample_rate"`
 	// 采样上限
-	SampleSize *int64 `thrift:"sample_size,2,optional" frugal:"2,optional,i64" form:"sample_size" json:"sample_size,omitempty" query:"sample_size"`
+	SampleSize *int64 `thrift:"sample_size,2,optional" frugal:"2,optional,i64" json:"sample_size" form:"sample_size" query:"sample_size"`
 	// 是否启动任务循环
 	IsCycle *bool `thrift:"is_cycle,3,optional" frugal:"3,optional,bool" form:"is_cycle" json:"is_cycle,omitempty" query:"is_cycle"`
 	// 采样单次上限
-	CycleCount *int64 `thrift:"cycle_count,4,optional" frugal:"4,optional,i64" form:"cycle_count" json:"cycle_count,omitempty" query:"cycle_count"`
+	CycleCount *int64 `thrift:"cycle_count,4,optional" frugal:"4,optional,i64" json:"cycle_count" form:"cycle_count" query:"cycle_count"`
 	// 循环间隔
-	CycleInterval *int64 `thrift:"cycle_interval,5,optional" frugal:"5,optional,i64" form:"cycle_interval" json:"cycle_interval,omitempty" query:"cycle_interval"`
+	CycleInterval *int64 `thrift:"cycle_interval,5,optional" frugal:"5,optional,i64" json:"cycle_interval" form:"cycle_interval" query:"cycle_interval"`
 	// 循环时间单位
 	CycleTimeUnit *TimeUnit `thrift:"cycle_time_unit,6,optional" frugal:"6,optional,string" form:"cycle_time_unit" json:"cycle_time_unit,omitempty" query:"cycle_time_unit"`
 }
@@ -1910,9 +1910,9 @@ func (p *Sampler) Field6DeepEqual(src *TimeUnit) bool {
 
 type EffectiveTime struct {
 	// ms timestamp
-	StartAt *int64 `thrift:"start_at,1,optional" frugal:"1,optional,i64" form:"start_at" json:"start_at,omitempty" query:"start_at"`
+	StartAt *int64 `thrift:"start_at,1,optional" frugal:"1,optional,i64" json:"start_at" form:"start_at" query:"start_at"`
 	// ms timestamp
-	EndAt *int64 `thrift:"end_at,2,optional" frugal:"2,optional,i64" form:"end_at" json:"end_at,omitempty" query:"end_at"`
+	EndAt *int64 `thrift:"end_at,2,optional" frugal:"2,optional,i64" json:"end_at" form:"end_at" query:"end_at"`
 }
 
 func NewEffectiveTime() *EffectiveTime {
@@ -2900,8 +2900,8 @@ func (p *DataReflowConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
 }
 
 type AutoEvaluateConfig struct {
-	EvaluatorVersionID int64           `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" form:"evaluator_version_id,required" json:"evaluator_version_id,required" query:"evaluator_version_id,required"`
-	EvaluatorID        int64           `thrift:"evaluator_id,2,required" frugal:"2,required,i64" form:"evaluator_id,required" json:"evaluator_id,required" query:"evaluator_id,required"`
+	EvaluatorVersionID int64           `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
+	EvaluatorID        int64           `thrift:"evaluator_id,2,required" frugal:"2,required,i64" json:"evaluator_id" form:"evaluator_id,required" query:"evaluator_id,required"`
 	FieldMappings      []*FieldMapping `thrift:"field_mappings,3,required" frugal:"3,required,list<FieldMapping>" form:"field_mappings,required" json:"field_mappings,required" query:"field_mappings,required"`
 }
 
@@ -3236,8 +3236,8 @@ func (p *AutoEvaluateConfig) Field3DeepEqual(src []*FieldMapping) bool {
 
 // RunDetail
 type RunDetail struct {
-	SuccessCount *int64 `thrift:"success_count,1,optional" frugal:"1,optional,i64" form:"success_count" json:"success_count,omitempty" query:"success_count"`
-	FailedCount  *int64 `thrift:"failed_count,2,optional" frugal:"2,optional,i64" form:"failed_count" json:"failed_count,omitempty" query:"failed_count"`
+	SuccessCount *int64 `thrift:"success_count,1,optional" frugal:"1,optional,i64" json:"success_count" form:"success_count" query:"success_count"`
+	FailedCount  *int64 `thrift:"failed_count,2,optional" frugal:"2,optional,i64" json:"failed_count" form:"failed_count" query:"failed_count"`
 }
 
 func NewRunDetail() *RunDetail {
@@ -3889,11 +3889,11 @@ func (p *FieldMapping) Field4DeepEqual(src *string) bool {
 // TaskRun
 type TaskRun struct {
 	// 任务 run id
-	ID int64 `thrift:"id,1,required" frugal:"1,required,i64" form:"id,required" json:"id,required" query:"id,required"`
+	ID int64 `thrift:"id,1,required" frugal:"1,required,i64" json:"id" form:"id,required" query:"id,required"`
 	// 所在空间
-	WorkspaceID int64 `thrift:"workspace_id,2,required" frugal:"2,required,i64" form:"workspace_id,required" json:"workspace_id,required" query:"workspace_id,required"`
+	WorkspaceID int64 `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	// 任务 id
-	TaskID int64 `thrift:"task_id,3,required" frugal:"3,required,i64" form:"task_id,required" json:"task_id,required" query:"task_id,required"`
+	TaskID int64 `thrift:"task_id,3,required" frugal:"3,required,i64" json:"task_id" form:"task_id,required" query:"task_id,required"`
 	// 类型
 	TaskType TaskType `thrift:"task_type,4,required" frugal:"4,required,string" form:"task_type,required" json:"task_type,required" query:"task_type,required"`
 	// 状态
@@ -3902,8 +3902,8 @@ type TaskRun struct {
 	RunDetail *RunDetail `thrift:"run_detail,6,optional" frugal:"6,optional,RunDetail" form:"run_detail" json:"run_detail,omitempty" query:"run_detail"`
 	// 任务历史数据执行详情
 	BackfillRunDetail *RunDetail `thrift:"backfill_run_detail,7,optional" frugal:"7,optional,RunDetail" form:"backfill_run_detail" json:"backfill_run_detail,omitempty" query:"backfill_run_detail"`
-	RunStartAt        int64      `thrift:"run_start_at,8,required" frugal:"8,required,i64" form:"run_start_at,required" json:"run_start_at,required" query:"run_start_at,required"`
-	RunEndAt          int64      `thrift:"run_end_at,9,required" frugal:"9,required,i64" form:"run_end_at,required" json:"run_end_at,required" query:"run_end_at,required"`
+	RunStartAt        int64      `thrift:"run_start_at,8,required" frugal:"8,required,i64" json:"run_start_at" form:"run_start_at,required" query:"run_start_at,required"`
+	RunEndAt          int64      `thrift:"run_end_at,9,required" frugal:"9,required,i64" json:"run_end_at" form:"run_end_at,required" query:"run_end_at,required"`
 	// 配置
 	TaskRunConfig *TaskRunConfig `thrift:"task_run_config,10,optional" frugal:"10,optional,TaskRunConfig" form:"task_run_config" json:"task_run_config,omitempty" query:"task_run_config"`
 	// 基础信息
@@ -4928,14 +4928,14 @@ func (p *TaskRunConfig) Field1DeepEqual(src *AutoEvaluateRunConfig) bool {
 }
 
 type AutoEvaluateRunConfig struct {
-	ExptID       int64   `thrift:"expt_id,1,required" frugal:"1,required,i64" form:"expt_id,required" json:"expt_id,required" query:"expt_id,required"`
-	ExptRunID    int64   `thrift:"expt_run_id,2,required" frugal:"2,required,i64" form:"expt_run_id,required" json:"expt_run_id,required" query:"expt_run_id,required"`
-	EvalID       int64   `thrift:"eval_id,3,required" frugal:"3,required,i64" form:"eval_id,required" json:"eval_id,required" query:"eval_id,required"`
-	SchemaID     int64   `thrift:"schema_id,4,required" frugal:"4,required,i64" form:"schema_id,required" json:"schema_id,required" query:"schema_id,required"`
+	ExptID       int64   `thrift:"expt_id,1,required" frugal:"1,required,i64" json:"expt_id" form:"expt_id,required" query:"expt_id,required"`
+	ExptRunID    int64   `thrift:"expt_run_id,2,required" frugal:"2,required,i64" json:"expt_run_id" form:"expt_run_id,required" query:"expt_run_id,required"`
+	EvalID       int64   `thrift:"eval_id,3,required" frugal:"3,required,i64" json:"eval_id" form:"eval_id,required" query:"eval_id,required"`
+	SchemaID     int64   `thrift:"schema_id,4,required" frugal:"4,required,i64" json:"schema_id" form:"schema_id,required" query:"schema_id,required"`
 	Schema       *string `thrift:"schema,5,optional" frugal:"5,optional,string" form:"schema" json:"schema,omitempty" query:"schema"`
-	EndAt        int64   `thrift:"end_at,6,required" frugal:"6,required,i64" form:"end_at,required" json:"end_at,required" query:"end_at,required"`
-	CycleStartAt int64   `thrift:"cycle_start_at,7,required" frugal:"7,required,i64" form:"cycle_start_at,required" json:"cycle_start_at,required" query:"cycle_start_at,required"`
-	CycleEndAt   int64   `thrift:"cycle_end_at,8,required" frugal:"8,required,i64" form:"cycle_end_at,required" json:"cycle_end_at,required" query:"cycle_end_at,required"`
+	EndAt        int64   `thrift:"end_at,6,required" frugal:"6,required,i64" json:"end_at" form:"end_at,required" query:"end_at,required"`
+	CycleStartAt int64   `thrift:"cycle_start_at,7,required" frugal:"7,required,i64" json:"cycle_start_at" form:"cycle_start_at,required" query:"cycle_start_at,required"`
+	CycleEndAt   int64   `thrift:"cycle_end_at,8,required" frugal:"8,required,i64" json:"cycle_end_at" form:"cycle_end_at,required" query:"cycle_end_at,required"`
 	Status       string  `thrift:"status,9,required" frugal:"9,required,string" form:"status,required" json:"status,required" query:"status,required"`
 }
 

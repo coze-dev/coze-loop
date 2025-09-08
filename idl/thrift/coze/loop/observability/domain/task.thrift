@@ -26,40 +26,40 @@ const RunStatus RunStatus_Done = "done"           // 完成运行
 
 // Task
 struct Task {
-    1: optional i64 id                                             // 任务 id
-    2: required string name                                        // 名称
-    3: optional string description                                 // 描述
-    4: optional i64 workspace_id(api.js_conv='true')               // 所在空间
-    5: required TaskType task_type                                 // 类型
-    6: optional TaskStatus task_status                             // 状态
-    7: optional Rule rule                                          // 规则
-    8: optional TaskConfig task_config                             // 配置
-    9: optional RunDetail task_detail                             // 任务状态详情
-    10: optional RunDetail backfill_task_detail                   // 任务历史数据执行详情
+    1: optional i64 id  (api.js_conv="true", go.tag='json:"id"')                            // 任务 id
+    2: required string name                                                                 // 名称
+    3: optional string description                                                          // 描述
+    4: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')         // 所在空间
+    5: required TaskType task_type                                                          // 类型
+    6: optional TaskStatus task_status                                                      // 状态
+    7: optional Rule rule                                                                   // 规则
+    8: optional TaskConfig task_config                                                      // 配置
+    9: optional RunDetail task_detail                                                       // 任务状态详情
+    10: optional RunDetail backfill_task_detail                                             // 任务历史数据执行详情
 
-    100: optional common.BaseInfo base_info                        // 基础信息
+    100: optional common.BaseInfo base_info                                                 // 基础信息
 }
 
 // Rule
 struct Rule {
-    1: optional filter.SpanFilterFields  span_filters // Span 过滤条件
-    2: optional Sampler sampler                   // 采样配置
-    3: optional EffectiveTime effective_time      // 生效时间窗口
-    4: optional EffectiveTime backfill_effective_time    // 历史数据生效时间窗口
+    1: optional filter.SpanFilterFields  span_filters       // Span 过滤条件
+    2: optional Sampler sampler                             // 采样配置
+    3: optional EffectiveTime effective_time                // 生效时间窗口
+    4: optional EffectiveTime backfill_effective_time       // 历史数据生效时间窗口
 }
 
 struct Sampler {
-    1: optional double sample_rate                     // 采样率
-    2: optional i64 sample_size                        // 采样上限
-    3: optional bool is_cycle                          // 是否启动任务循环
-    4: optional i64 cycle_count                        // 采样单次上限
-    5: optional i64 cycle_interval                     // 循环间隔
-    6: optional TimeUnit cycle_time_unit               // 循环时间单位
+    1: optional double sample_rate                                                          // 采样率
+    2: optional i64 sample_size (api.js_conv="true", go.tag='json:"sample_size"')           // 采样上限
+    3: optional bool is_cycle                                                               // 是否启动任务循环
+    4: optional i64 cycle_count (api.js_conv="true", go.tag='json:"cycle_count"')           // 采样单次上限
+    5: optional i64 cycle_interval (api.js_conv="true", go.tag='json:"cycle_interval"')     // 循环间隔
+    6: optional TimeUnit cycle_time_unit                                                    // 循环时间单位
 }
 
 struct EffectiveTime {
-    1: optional i64 start_at       // ms timestamp
-    2: optional i64 end_at         // ms timestamp
+    1: optional i64 start_at (api.js_conv="true", go.tag='json:"start_at"')      // ms timestamp
+    2: optional i64 end_at (api.js_conv="true", go.tag='json:"end_at"')          // ms timestamp
 }
 
 
@@ -77,15 +77,15 @@ struct DataReflowConfig {
 }
 
 struct AutoEvaluateConfig {
-    1: required i64 evaluator_version_id
-    2: required i64 evaluator_id
+    1: required i64 evaluator_version_id (api.js_conv="true", go.tag='json:"evaluator_version_id"')
+    2: required i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
     3: required list<FieldMapping> field_mappings
 }
 
 // RunDetail
 struct RunDetail {
-    1: optional i64 success_count
-    2: optional i64 failed_count
+    1: optional i64 success_count (api.js_conv="true", go.tag='json:"success_count"')
+    2: optional i64 failed_count (api.js_conv="true", go.tag='json:"failed_count"')
 }
 
 struct FieldMapping {
@@ -97,30 +97,30 @@ struct FieldMapping {
 
 // TaskRun
 struct TaskRun {
-    1: required i64 id                                             // 任务 run id
-    2: required i64 workspace_id                                   // 所在空间
-    3: required i64 task_id                                        // 任务 id
-    4: required TaskType task_type                                 // 类型
-    5: required RunStatus run_status                               // 状态
-    6: optional RunDetail run_detail                               // 任务状态详情
-    7: optional RunDetail backfill_run_detail                      // 任务历史数据执行详情
-    8: required i64 run_start_at
-    9: required i64 run_end_at
-    10: optional TaskRunConfig task_run_config                      // 配置
+    1: required i64 id (api.js_conv="true", go.tag='json:"id"')                                 // 任务 run id
+    2: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')             // 所在空间
+    3: required i64 task_id (api.js_conv="true", go.tag='json:"task_id"')                       // 任务 id
+    4: required TaskType task_type                                                              // 类型
+    5: required RunStatus run_status                                                            // 状态
+    6: optional RunDetail run_detail                                                            // 任务状态详情
+    7: optional RunDetail backfill_run_detail                                                   // 任务历史数据执行详情
+    8: required i64 run_start_at (api.js_conv="true", go.tag='json:"run_start_at"')
+    9: required i64 run_end_at (api.js_conv="true", go.tag='json:"run_end_at"')
+    10: optional TaskRunConfig task_run_config                                                  // 配置
 
-    100: optional common.BaseInfo base_info                         // 基础信息
+    100: optional common.BaseInfo base_info                                                     // 基础信息
 }
 struct TaskRunConfig {
     1: optional AutoEvaluateRunConfig auto_evaluate_run_config               // 自动评测对应的运行配置信息
 }
 struct AutoEvaluateRunConfig {
-    1: required i64 expt_id
-    2: required i64 expt_run_id
-    3: required i64 eval_id
-    4: required i64 schema_id
+    1: required i64 expt_id (api.js_conv="true", go.tag='json:"expt_id"')
+    2: required i64 expt_run_id (api.js_conv="true", go.tag='json:"expt_run_id"')
+    3: required i64 eval_id (api.js_conv="true", go.tag='json:"eval_id"')
+    4: required i64 schema_id (api.js_conv="true", go.tag='json:"schema_id"')
     5: optional string schema
-    6: required i64 end_at
-    7: required i64 cycle_start_at
-    8: required i64 cycle_end_at
+    6: required i64 end_at (api.js_conv="true", go.tag='json:"end_at"')
+    7: required i64 cycle_start_at (api.js_conv="true", go.tag='json:"cycle_start_at"')
+    8: required i64 cycle_end_at (api.js_conv="true", go.tag='json:"cycle_end_at"')
     9: required string status
 }
