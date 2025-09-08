@@ -279,6 +279,8 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx := context.Background()
 	logs.CtxInfo(ctx, "定时任务开始执行...")
+	logID := logs.NewLogID()
+	ctx = logs.SetLogID(ctx, logID)
 	// 读取所有非终态（成功/禁用）任务
 	taskPOs, err := h.taskRepo.ListNonFinalTask(ctx)
 	if err != nil {
@@ -289,9 +291,6 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
 	// 遍历任务
 	for _, taskInfo := range tasks {
-		logID := logs.NewLogID()
-		ctx = logs.SetLogID(ctx, logID)
-
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt())
 		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc, err := processor.NewProcessor(ctx, task.TaskTypeAutoEval)
