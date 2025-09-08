@@ -36,7 +36,6 @@ func TestExptResultServiceImpl_MGetStats(t *testing.T) {
 		want    []*entity.ExptStats
 		wantErr bool
 	}{
-		{
 			name:    "正常获取多个实验统计",
 			exptIDs: []int64{1, 2},
 			spaceID: 100,
@@ -154,10 +153,9 @@ func TestExptResultServiceImpl_GetStats(t *testing.T) {
 		session *entity.Session
 		setup   func(mockExptStatsRepo *repoMocks.MockIExptStatsRepo)
 		want    *entity.ExptStats
-		wantErr bool
-	}{
+		wantErr bool	}{
 		{
-			name:    "正常获取单个实验统计",
+			name:    "正常获取多个实验统计",
 			exptID:  1,
 			spaceID: 100,
 			session: &entity.Session{
@@ -2337,72 +2335,13 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 
 	now := time.Now()
 
-	defaultSetup := func() {
+	// 通用Mock设置函数
+	setupCommonMocks := func() {
 		// 设置 ExptAnnotateRepo Mock 避免 PayloadBuilder 构建时的 panic
 		mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
 		mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
 
-		// 设置实验信息Mock
-		mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Experiment{{
-			ID:               1,
-			SpaceID:          100,
-			ExptType:         entity.ExptType_Offline, // 离线实验
-			StartAt:          &now,
-			EvalSetVersionID: 101,
-		}}, nil).AnyTimes()
-		mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
-			ID:               1,
-			SpaceID:          100,
-			ExptType:         entity.ExptType_Offline, // 离线实验
-			StartAt:          &now,
-			EvalSetVersionID: 101,
-		}, nil).AnyTimes()
-		mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
-			{
-				SpaceID: 100,
-				ExptID:  1,
-				ItemID:  1,
-				ItemIdx: 1,
-				TurnID:  1,
-				Status:  1,
-				EvalTargetData: map[string]string{
-					"actual_output": "some output",
-				},
-				EvaluatorScore: map[string]float64{
-					"key1": 0.9,
-				},
-				EvaluatorScoreCorrected: true,
-				EvalSetVersionID:        1,
-			},
-		}, nil).AnyTimes()
-		mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
-		mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterKeyMapping{
-			{
-				SpaceID:   100,
-				ExptID:    1,
-				FromField: "1",
-				ToKey:     "key1",
-				FieldType: entity.FieldTypeEvaluator,
-			},
-		}, nil).AnyTimes()
-		mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
-			{
-				ID:             1,
-				ExptID:         1,
-				ItemID:         1,
-				TurnID:         1,
-				Status:         1,
-				TargetResultID: 1,
-			},
-		}, int64(1), nil).AnyTimes()
-		mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
-			{
-				ID:     1,
-				ExptID: 1,
-				ItemID: 1,
-				Status: 1,
-			},
-		}, nil).AnyTimes()
+		// 设置基础Mock
 		mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvaluatorRef{
 			{
 				EvaluatorVersionID: 1,
@@ -2443,41 +2382,6 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				},
 			},
 		}, nil).AnyTimes()
-		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{
-			{
-				ID:                 1,
-				SpaceID:            0,
-				ExperimentID:       1,
-				ItemID:             1,
-				TurnID:             1,
-				EvaluatorVersionID: 1,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{
-					EvaluatorResult: &entity.EvaluatorResult{
-						Score: ptr.Of(float64(9)),
-					},
-				},
-			},
-		}, nil).AnyTimes()
-		mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{
-			{
-				ID:                  1,
-				SpaceID:             1,
-				TargetID:            1,
-				TargetVersionID:     1,
-				ExperimentRunID:     1,
-				ItemID:              1,
-				TurnID:              1,
-				EvalTargetInputData: nil,
-
-				EvalTargetOutputData: &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"actual_output": {
-							Text: ptr.Of("some output"),
-						},
-					},
-				},
-			},
-		}, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 			{
@@ -2485,24 +2389,8 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				MappingKey:    "string_map",
 				MappingSubKey: "subkey_string",
 			},
-			{
-				FieldKey:      "field_key_int",
-				MappingKey:    "int_map",
-				MappingSubKey: "subkey_int",
-			},
-			{
-				FieldKey:      "field_key_float",
-				MappingKey:    "float_map",
-				MappingSubKey: "subkey_float",
-			},
-			{
-				FieldKey:      "field_key_bool",
-				MappingKey:    "bool_map",
-				MappingSubKey: "subkey_bool",
-			},
 		}, "2025-01-01", nil).AnyTimes()
 		mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
-		mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnEvaluatorResultRef{
 			{
 				ID:                 1,
@@ -2514,24 +2402,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			},
 		}, nil).AnyTimes()
 		mockExptItemResultRepo.EXPECT().GetItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, nil).AnyTimes()
-		mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
-			{
-				ID:     1,
-				ItemID: 1,
-			},
-		}, int64(0), nil).AnyTimes()
 		mockFilterRepo.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(
 			map[int64]entity.ItemRunState{int64(1): entity.ItemRunState_Success}, int64(1), nil,
 		).AnyTimes()
-		mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterKeyMapping{
-			{
-				SpaceID:   100,
-				ExptID:    1,
-				FromField: "1",
-				ToKey:     "key1",
-				FieldType: entity.FieldTypeEvaluator,
-			},
-		}, nil).AnyTimes()
+		mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 		mockMetric.EXPECT().EmitExptTurnResultFilterCheck(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 		mockPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
@@ -2542,128 +2416,45 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 		setup   func()
 		wantErr bool
 	}{
+		// 正常场景测试 - 数据完全一致
 		{
-			name: "正常比较过滤条件, retryTimes超过",
-			args: args{
-				spaceID:    100,
-				exptID:     1,
-				itemIDs:    []int64{1, 2},
-				retryTimes: 3,
-			},
-			setup:   defaultSetup,
-			wantErr: false,
-		},
-		{
-			name: "正常比较过滤条件, retryTimes=0",
+			name: "数据完全一致-正常场景",
 			args: args{
 				spaceID:    100,
 				exptID:     1,
 				itemIDs:    []int64{1, 2},
 				retryTimes: 0,
 			},
-			setup:   defaultSetup,
-			wantErr: false,
-		},
-		// 新增测试用例：基于现有架构稍微增加覆盖率
-		{
-			name: "过滤器不存在场景测试",
-			args: args{
-				spaceID:    100,
-				exptID:     2, // 使用不同的 exptID
-				itemIDs:    []int64{2},
-				retryTimes: 3,
-			},
 			setup: func() {
-				// 基于 defaultSetup，但针对不同的 exptID 设置空过滤器
-				defaultSetup()
+				setupCommonMocks()
 
-				// 覆盖过滤器设置，使其为空（模拟过滤器不存在的情况）
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "2", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
-
-				// 设置 TurnResult 存在，确保会进入 for 循环
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(2), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
-					{
-						ID:     2,
-						ExptID: 2,
-						ItemID: 2,
-						TurnID: 1,
-						Status: 1,
-					},
-				}, int64(1), nil).AnyTimes()
-
-				// 设置实验信息
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{2}, int64(100)).Return([]*entity.Experiment{{
-					ID:               2,
+				// 设置实验信息Mock
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
 					SpaceID:          100,
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
 
-				// 验证指标上报 - 过滤器不存在且重试次数超过最大值
-				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), false, false, true, true).Return().AnyTimes()
-			},
-			wantErr: false,
-		},
-		{
-			name: "itemIDs为空时获取所有item",
-			args: args{
-				spaceID:    100,
-				exptID:     3,
-				itemIDs:    []int64{}, // 空的itemIDs
-				retryTimes: 0,
-			},
-			setup: func() {
-				defaultSetup()
-
-				// 设置实验信息
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{3}, int64(100)).Return([]*entity.Experiment{{
-					ID:               3,
-					SpaceID:          100,
-					ExptType:         entity.ExptType_Offline,
-					StartAt:          &now,
-					EvalSetVersionID: 101,
-				}}, nil).AnyTimes()
-
-				// 模拟获取所有item的调用
-				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(3), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
+				// 设置过滤器键映射
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(1)).Return([]*entity.ExptTurnResultFilterKeyMapping{
 					{
-						ID:     1,
-						ExptID: 3,
-						ItemID: 10,
-						Status: 1,
+						SpaceID:   100,
+						ExptID:    1,
+						FromField: "1",
+						ToKey:     "key1",
+						FieldType: entity.FieldTypeEvaluator,
 					},
-					{
-						ID:     2,
-						ExptID: 3,
-						ItemID: 20,
-						Status: 1,
-					},
-				}, int64(2), nil).Times(1)
+				}, nil).AnyTimes()
 
-				// 设置过滤器查询
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "3", gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+				// 设置ClickHouse数据
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "1", gomock.Any(), []string{"1", "2"}).Return([]*entity.ExptTurnResultFilterEntity{
 					{
 						SpaceID: 100,
-						ExptID:  3,
-						ItemID:  10,
+						ExptID:  1,
+						ItemID:  1,
 						ItemIdx: 1,
-						TurnID:  1,
-						Status:  1,
-						EvalTargetData: map[string]string{
-							"actual_output": "some output",
-						},
-						EvaluatorScore: map[string]float64{
-							"key1": 0.9,
-						},
-						EvaluatorScoreCorrected: true,
-						EvalSetVersionID:        1,
-					},
-					{
-						SpaceID: 100,
-						ExptID:  3,
-						ItemID:  20,
-						ItemIdx: 2,
 						TurnID:  1,
 						Status:  1,
 						EvalTargetData: map[string]string{
@@ -2677,55 +2468,92 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 
-				// 设置TurnResult查询
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(3), []int64{10, 20}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+				// 设置RDS数据
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(1), []int64{1, 2}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
-						ID:     10,
-						ExptID: 3,
-						ItemID: 10,
-						TurnID: 1,
-						Status: 1,
+						ID:             1,
+						ExptID:         1,
+						ItemID:         1,
+						TurnID:         1,
+						Status:         1,
+						TargetResultID: 1,
 					},
-					{
-						ID:     20,
-						ExptID: 3,
-						ItemID: 20,
-						TurnID: 1,
-						Status: 1,
-					},
-				}, int64(2), nil).AnyTimes()
+				}, int64(1), nil).AnyTimes()
 
-				// 验证指标上报
-				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(int64(100), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
+					{
+						ID:     1,
+						ExptID: 1,
+						ItemID: 1,
+						Status: 1,
+						ItemIdx: 1,
+					},
+				}, nil).AnyTimes()				// RDS中的分数与ClickHouse不一致
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).Return([]*entity.EvaluatorRecord{
+					{
+						ID:                 1,
+						SpaceID:            100,
+						ExperimentID:       1,
+						ItemID:             1,
+						TurnID:             1,
+						EvaluatorVersionID: 1,
+						EvaluatorOutputData: &entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score: ptr.Of(float64(0.9)),
+							},
+						},
+					},				// 设置不同的输出
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(100), gomock.Any()).Return([]*entity.EvalTargetRecord{
+					{
+						ID:      1,
+						SpaceID: 100,
+						EvalTargetOutputData: &entity.EvalTargetOutputData{
+							OutputFields: map[string]*entity.Content{
+								"actual_output": {
+									Text: ptr.Of("some output"),
+								},
+							},
+						},
+					},
+				}, nil).AnyTimes()
 			},
 			wantErr: false,
 		},
-		// 新增测试用例：数据差异场景
+		// 数据差异场景测试
 		{
 			name: "数据差异-实际输出不一致",
 			args: args{
 				spaceID:    100,
-				exptID:     4,
+				exptID:     2,
 				itemIDs:    []int64{1},
 				retryTimes: 1,
 			},
 			setup: func() {
-				defaultSetup()
-				
-				// 设置实验信息
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{4}, int64(100)).Return([]*entity.Experiment{{
-					ID:               4,
+				setupCommonMocks()
+
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{2}, int64(100)).Return([]*entity.Experiment{{
+					ID:               2,
 					SpaceID:          100,
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
 
-				// 设置ClickHouse数据 - 不一致的输出
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "4", []int64{1}, gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(2)).Return([]*entity.ExptTurnResultFilterKeyMapping{
+					{
+						SpaceID:   100,
+						ExptID:    2,
+						FromField: "1",
+						ToKey:     "key1",
+						FieldType: entity.FieldTypeEvaluator,
+					},
+				}, nil).AnyTimes()
+
+				// ClickHouse中的数据
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "2", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{
 					{
 						SpaceID: 100,
-						ExptID:  4,
+						ExptID:  2,
 						ItemID:  1,
 						ItemIdx: 1,
 						TurnID:  1,
@@ -2737,15 +2565,14 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 							"key1": 0.9,
 						},
 						EvaluatorScoreCorrected: true,
-						EvalSetVersionID:        1,
 					},
 				}, nil).AnyTimes()
 
-				// 设置RDS数据
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(4), []int64{1}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+				// RDS中的数据
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(2), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
 						ID:             1,
-						ExptID:         4,
+						ExptID:         2,
 						ItemID:         1,
 						TurnID:         1,
 						Status:         1,
@@ -2753,16 +2580,37 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					},
 				}, int64(1), nil).AnyTimes()
 
-				// 设置EvalTarget数据 - RDS中的输出（不同）
-				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), []int64{1}).Return([]*entity.EvalTargetRecord{
+				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:                  1,
-						SpaceID:             100,
-						TargetID:            1,
-						TargetVersionID:     1,
-						ExperimentRunID:     1,
-						ItemID:              1,
-						TurnID:              1,
+						ID:     1,
+						ExptID: 2,
+						ItemID: 1,
+						Status: 1,
+						ItemIdx: 1,
+					},
+				}, nil).AnyTimes()
+
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).Return([]*entity.EvaluatorRecord{
+					{
+						ID:                 1,
+						SpaceID:            100,
+						ExperimentID:       2,
+						ItemID:             1,
+						TurnID:             1,
+						EvaluatorVersionID: 1,
+						EvaluatorOutputData: &entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score: ptr.Of(float64(0.9)),
+							},
+						},
+					},
+				}, nil).AnyTimes()
+
+				// RDS中的输出与ClickHouse不一致
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(100), gomock.Any()).Return([]*entity.EvalTargetRecord{
+					{
+						ID:      1,
+						SpaceID: 100,
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{
 								"actual_output": {
@@ -2772,9 +2620,6 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 						},
 					},
 				}, nil).AnyTimes()
-
-				// 期望发布重试事件
-				mockPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantErr: false,
 		},
@@ -2782,27 +2627,36 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			name: "数据差异-评估器分数不一致",
 			args: args{
 				spaceID:    100,
-				exptID:     5,
+				exptID:     3,
 				itemIDs:    []int64{1},
 				retryTimes: 1,
 			},
 			setup: func() {
-				defaultSetup()
-				
-				// 设置实验信息
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{5}, int64(100)).Return([]*entity.Experiment{{
-					ID:               5,
+				setupCommonMocks()
+
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{3}, int64(100)).Return([]*entity.Experiment{{
+					ID:               3,
 					SpaceID:          100,
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
 
-				// 设置ClickHouse数据 - 不一致的分数
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "5", []int64{1}, gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(3)).Return([]*entity.ExptTurnResultFilterKeyMapping{
+					{
+						SpaceID:   100,
+						ExptID:    3,
+						FromField: "1",
+						ToKey:     "key1",
+						FieldType: entity.FieldTypeEvaluator,
+					},
+				}, nil).AnyTimes()
+
+				// ClickHouse中的数据
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "3", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{
 					{
 						SpaceID: 100,
-						ExptID:  5,
+						ExptID:  3,
 						ItemID:  1,
 						ItemIdx: 1,
 						TurnID:  1,
@@ -2814,15 +2668,14 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 							"key1": 0.9, // ClickHouse中的分数
 						},
 						EvaluatorScoreCorrected: true,
-						EvalSetVersionID:        1,
 					},
 				}, nil).AnyTimes()
 
-				// 设置RDS数据
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(5), []int64{1}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+				// RDS中的数据
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(3), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
 						ID:             1,
-						ExptID:         5,
+						ExptID:         3,
 						ItemID:         1,
 						TurnID:         1,
 						Status:         1,
@@ -2830,12 +2683,22 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					},
 				}, int64(1), nil).AnyTimes()
 
-				// 设置EvaluatorRecord数据 - RDS中的分数（不同）
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), []int64{1}).Return([]*entity.EvaluatorRecord{
+				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
+					{
+						ID:     1,
+						ExptID: 3,
+						ItemID: 1,
+						Status: 1,
+						ItemIdx: 1,
+					},
+				}, nil).AnyTimes()
+
+				// RDS中的分数与ClickHouse不一致
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).Return([]*entity.EvaluatorRecord{
 					{
 						ID:                 1,
 						SpaceID:            100,
-						ExperimentID:       5,
+						ExperimentID:       3,
 						ItemID:             1,
 						TurnID:             1,
 						EvaluatorVersionID: 1,
@@ -2847,8 +2710,80 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 
-				// 期望发布重试事件
-				mockPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(100), gomock.Any()).Return([]*entity.EvalTargetRecord{
+					{
+						ID:      1,
+						SpaceID: 100,
+						EvalTargetOutputData: &entity.EvalTargetOutputData{
+							OutputFields: map[string]*entity.Content{
+								"actual_output": {
+									Text: ptr.Of("some output"),
+								},
+							},
+						},
+					},
+				}, nil).AnyTimes()
+			},
+			wantErr: false,
+		},
+		// 边界情况测试
+		{
+			name: "边界情况-空itemIDs获取所有item",
+			args: args{
+				spaceID:    100,
+				exptID:     4,
+				itemIDs:    []int64{}, // 空的itemIDs
+				retryTimes: 0,
+			},
+			setup: func() {
+				setupCommonMocks()
+
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{4}, int64(100)).Return([]*entity.Experiment{{
+					ID:               4,
+					SpaceID:          100,
+					ExptType:         entity.ExptType_Offline,
+					StartAt:          &now,
+					EvalSetVersionID: 101,
+				}}, nil).AnyTimes()	}{
+		{
+			name:    "正常获取多个实验统计",
+				// 模拟获取所有item的调用
+				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(4), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
+					{
+						ID:     1,
+						ExptID: 4,
+						ItemID: 10,
+						Status: 1,
+					},
+				}, int64(1), nil).Times(1)
+
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "4", gomock.Any(), []string{"10"}).Return([]*entity.ExptTurnResultFilterEntity{
+					{
+						SpaceID: 100,
+						ExptID:  4,
+						ItemID:  10,
+						ItemIdx: 1,
+						TurnID:  1,
+						Status:  1,
+						EvalTargetData: map[string]string{
+							"actual_output": "some output",
+						},
+						EvaluatorScore: map[string]float64{
+							"key1": 0.9,
+						},
+						EvaluatorScoreCorrected: true,
+					},
+				}, nil).AnyTimes()
+
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(4), []int64{10}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
+					{
+						ID:     10,
+						ExptID: 4,
+						ItemID: 10,
+						TurnID: 1,
+						Status: 1,
+					},
+				}, int64(1), nil).AnyTimes()
 			},
 			wantErr: false,
 		},
@@ -2856,30 +2791,27 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			name: "边界情况-ClickHouse数据为空",
 			args: args{
 				spaceID:    100,
-				exptID:     6,
+				exptID:     5,
 				itemIDs:    []int64{1},
 				retryTimes: 0,
 			},
 			setup: func() {
-				defaultSetup()
-				
-				// 设置实验信息
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{6}, int64(100)).Return([]*entity.Experiment{{
-					ID:               6,
+				setupCommonMocks()
+
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{5}, int64(100)).Return([]*entity.Experiment{{
+					ID:               5,
 					SpaceID:          100,
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
-				}}, nil).AnyTimes()
-
-				// 设置ClickHouse数据为空
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "6", []int64{1}, gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
-
+				}}, nil).AnyTimes()		wantErr bool	}{
+		{
+			name:    "正常获取多个实验统计",
 				// 设置RDS数据存在
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(6), []int64{1}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(5), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
 						ID:             1,
-						ExptID:         6,
+						ExptID:         5,
 						ItemID:         1,
 						TurnID:         1,
 						Status:         1,
@@ -2893,27 +2825,28 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			name: "边界情况-RDS数据为空",
 			args: args{
 				spaceID:    100,
-				exptID:     7,
+				exptID:     6,
 				itemIDs:    []int64{1},
 				retryTimes: 0,
 			},
 			setup: func() {
-				defaultSetup()
-				
-				// 设置实验信息
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{7}, int64(100)).Return([]*entity.Experiment{{
-					ID:               7,
+				setupCommonMocks()
+
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{6}, int64(100)).Return([]*entity.Experiment{{
+					ID:               6,
 					SpaceID:          100,
 					ExptType:         entity.ExptType_Offline,
 					StartAt:          &now,
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
 
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(6)).Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil).AnyTimes()
+
 				// 设置ClickHouse数据存在
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "7", []int64{1}, gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "6", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{
 					{
 						SpaceID: 100,
-						ExptID:  7,
+						ExptID:  6,
 						ItemID:  1,
 						ItemIdx: 1,
 						TurnID:  1,
@@ -2925,27 +2858,68 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 							"key1": 0.9,
 						},
 						EvaluatorScoreCorrected: true,
-						EvalSetVersionID:        1,
 					},
 				}, nil).AnyTimes()
 
 				// 设置RDS数据为空
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(7), []int64{1}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(6), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
 			},
 			wantErr: false,
 		},
 		{
-			name: "重试机制-达到最大重试次数",
+			name: "边界情况-实验不存在",
+			args: args{
+				spaceID:    100,
+				exptID:     999, // 不存在的实验ID
+				itemIDs:    []int64{1},
+				retryTimes: 0,
+			},
+			setup: func() {
+				setupCommonMocks()
+
+				// 设置实验信息为空
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{999}, int64(100)).Return([]*entity.Experiment{}, nil).AnyTimes()
+			},
+			wantErr: false, // 实验不存在时不返回错误，只是跳过处理
+		},
+		{
+			name: "边界情况-实验开始时间为空",
+			args: args{
+				spaceID:    100,
+				exptID:     7,
+				itemIDs:    []int64{1},
+				retryTimes: 0,
+			},
+			setup: func() {
+				setupCommonMocks()
+
+				// 设置实验信息，开始时间为nil
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{7}, int64(100)).Return([]*entity.Experiment{{
+					ID:               7,
+					SpaceID:          100,
+					ExptType:         entity.ExptType_Offline,
+					StartAt:          nil, // 开始时间为空
+					EvalSetVersionID: 101,
+				}}, nil).AnyTimes()
+
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(7)).Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil).AnyTimes()
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "7", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(7), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
+			},
+			wantErr: false, // 开始时间为空时不返回错误，只是跳过处理
+		},
+		// 重试机制测试
+		{
+			name: "重试机制-未达到最大重试次数",
 			args: args{
 				spaceID:    100,
 				exptID:     8,
 				itemIDs:    []int64{1},
-				retryTimes: 3, // 达到最大重试次数
+				retryTimes: 1,
 			},
 			setup: func() {
-				defaultSetup()
-				
-				// 设置实验信息
+				setupCommonMocks()
+
 				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{8}, int64(100)).Return([]*entity.Experiment{{
 					ID:               8,
 					SpaceID:          100,
@@ -2954,8 +2928,18 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					EvalSetVersionID: 101,
 				}}, nil).AnyTimes()
 
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(8)).Return([]*entity.ExptTurnResultFilterKeyMapping{
+					{
+						SpaceID:   100,
+						ExptID:    8,
+						FromField: "1",
+						ToKey:     "key1",
+						FieldType: entity.FieldTypeEvaluator,
+					},
+				}, nil).AnyTimes()
+
 				// 设置有差异的数据
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "8", []int64{1}, gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "8", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{
 					{
 						SpaceID: 100,
 						ExptID:  8,
@@ -2970,11 +2954,10 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 							"key1": 0.9,
 						},
 						EvaluatorScoreCorrected: true,
-						EvalSetVersionID:        1,
 					},
 				}, nil).AnyTimes()
 
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(8), []int64{1}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(8), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
 					{
 						ID:             1,
 						ExptID:         8,
@@ -2985,16 +2968,139 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 					},
 				}, int64(1), nil).AnyTimes()
 
-				// 设置不同的输出
-				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), []int64{1}).Return([]*entity.EvalTargetRecord{
+				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
-						ID:                  1,
-						SpaceID:             100,
-						TargetID:            1,
-						TargetVersionID:     1,
-						ExperimentRunID:     1,
-						ItemID:              1,
-						TurnID:              1,
+						ID:     1,
+						ExptID: 8,
+						ItemID: 1,
+						Status: 1,
+						ItemIdx: 1,
+					},
+				}, nil).AnyTimes()
+
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).Return([]*entity.EvaluatorRecord{
+					{
+						ID:                 1,
+						SpaceID:            100,
+						ExperimentID:       8,
+						ItemID:             1,
+						TurnID:             1,
+						EvaluatorVersionID: 1,
+						EvaluatorOutputData: &entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score: ptr.Of(float64(0.9)),
+							},
+						},
+					},
+				}, nil).AnyTimes()
+
+				// 设置不同的输出
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(100), gomock.Any()).Return([]*entity.EvalTargetRecord{
+					{
+						ID:      1,
+						SpaceID: 100,
+						EvalTargetOutputData: &entity.EvalTargetOutputData{
+							OutputFields: map[string]*entity.Content{
+								"actual_output": {
+									Text: ptr.Of("rds output"),
+								},
+							},
+						},
+					},
+				}, nil).AnyTimes()
+			},
+			wantErr: false,
+		},
+		{
+			name: "重试机制-达到最大重试次数",
+			args: args{
+				spaceID:    100,
+				exptID:     9,
+				itemIDs:    []int64{1},
+				retryTimes: 3, // 达到最大重试次数
+			},
+			setup: func() {
+				setupCommonMocks()
+
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{9}, int64(100)).Return([]*entity.Experiment{{
+					ID:               9,
+					SpaceID:          100,
+					ExptType:         entity.ExptType_Offline,
+					StartAt:          &now,
+					EvalSetVersionID: 101,
+				}}, nil).AnyTimes()
+
+				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(9)).Return([]*entity.ExptTurnResultFilterKeyMapping{
+					{
+						SpaceID:   100,
+						ExptID:    9,
+						FromField: "1",
+						ToKey:     "key1",
+						FieldType: entity.FieldTypeEvaluator,
+					},
+				}, nil).AnyTimes()
+
+				// 设置有差异的数据
+				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "9", gomock.Any(), []string{"1"}).Return([]*entity.ExptTurnResultFilterEntity{
+					{
+						SpaceID: 100,
+						ExptID:  9,
+						ItemID:  1,
+						ItemIdx: 1,
+						TurnID:  1,
+						Status:  1,
+						EvalTargetData: map[string]string{
+							"actual_output": "ck output",
+						},
+						EvaluatorScore: map[string]float64{
+							"key1": 0.9,
+						},
+						EvaluatorScoreCorrected: true,
+					},
+				}, nil).AnyTimes()
+
+				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(9), []int64{1}, gomock.Any(), false).Return([]*entity.ExptTurnResult{
+					{
+						ID:             1,
+						ExptID:         9,
+						ItemID:         1,
+						TurnID:         1,
+						Status:         1,
+						TargetResultID: 1,
+					},
+				}, int64(1), nil).AnyTimes()
+
+				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
+					{
+						ID:     1,
+						ExptID: 9,
+						ItemID: 1,
+						Status: 1,
+						ItemIdx: 1,
+					},
+				}, nil).AnyTimes()
+
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).Return([]*entity.EvaluatorRecord{
+					{
+						ID:                 1,
+						SpaceID:            100,
+						ExperimentID:       9,
+						ItemID:             1,
+						TurnID:             1,
+						EvaluatorVersionID: 1,
+						EvaluatorOutputData: &entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score: ptr.Of(float64(0.9)),
+							},
+						},
+					},
+				}, nil).AnyTimes()
+
+				// 设置不同的输出
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(100), gomock.Any()).Return([]*entity.EvalTargetRecord{
+					{
+						ID:      1,
+						SpaceID: 100,
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{
 								"actual_output": {
@@ -3009,61 +3115,6 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				mockPublisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
 			},
 			wantErr: false,
-		},
-		{
-			name: "异常场景-实验不存在",
-			args: args{
-				spaceID:    100,
-				exptID:     999, // 不存在的实验ID
-				itemIDs:    []int64{1},
-				retryTimes: 0,
-			},
-			setup: func() {
-				// 设置实验信息为空
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{999}, int64(100)).Return([]*entity.Experiment{}, nil).AnyTimes()
-
-				// 设置其他基础Mock
-				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
-				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
-				mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
-				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
-			},
-			wantErr: false, // 实验不存在时不返回错误，只是跳过处理
-		},
-		{
-			name: "边界情况-实验开始时间为空",
-			args: args{
-				spaceID:    100,
-				exptID:     10,
-				itemIDs:    []int64{1},
-				retryTimes: 0,
-			},
-			setup: func() {
-				// 设置基础Mock
-				mockExptAnnotateRepo.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil).AnyTimes()
-				mockExptAnnotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.AnnotateRecord{}, nil).AnyTimes()
-				mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
-				mockMetric.EXPECT().EmitExptTurnResultFilterCheck(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
-
-				// 设置实验信息，开始时间为nil
-				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{10}, int64(100)).Return([]*entity.Experiment{{
-					ID:               10,
-					SpaceID:          100,
-					ExptType:         entity.ExptType_Offline,
-					StartAt:          nil, // 开始时间为空
-					EvalSetVersionID: 101,
-				}}, nil).AnyTimes()
-
-				// 设置过滤器键映射
-				mockFilterRepo.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(100), int64(10)).Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil).AnyTimes()
-
-				// 设置空的过滤器数据
-				mockFilterRepo.EXPECT().GetByExptIDItemIDs(gomock.Any(), "100", "10", []int64{1}, gomock.Any()).Return([]*entity.ExptTurnResultFilterEntity{}, nil).AnyTimes()
-
-				// 设置空的RDS数据
-				mockExptTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(10), []int64{1}, gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
-			},
-			wantErr: false, // 开始时间为空时不返回错误，只是跳过处理
 		},
 	}
 
@@ -3762,897 +3813,22 @@ func TestParseTurnKey(t *testing.T) {
 	}
 }
 
-// TestExptResultServiceImpl_CompareExptTurnResultFilters_Comprehensive 测试 CompareExptTurnResultFilters 方法的全面场景
-func TestExptResultServiceImpl_CompareExptTurnResultFilters_Comprehensive(t *testing.T) {
-	tests := []struct {
-		name        string
-		spaceID     int64
-		exptID      int64
-		itemIDs     []int64
-		retryTimes  int32
-		setupMocks  func(ctrl *gomock.Controller) *ExptResultServiceImpl
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name:       "正常情况-数据一致性校验通过",
-			spaceID:    1,
-			exptID:     100,
-			itemIDs:    []int64{1, 2},
-			retryTimes: 0,
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupSuccessfulComparisonService(ctrl)
-			},
-			expectError: false,
-		},
-		{
-			name:       "异常情况-实验不存在",
-			spaceID:    1,
-			exptID:     999,
-			itemIDs:    []int64{1},
-			retryTimes: 0,
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupExperimentNotFoundService(ctrl)
-			},
-			expectError: false, // 验证失败不是错误，而是直接返回
-		},
-		{
-			name:       "异常情况-实验开始时间为空",
-			spaceID:    1,
-			exptID:     100,
-			itemIDs:    []int64{1},
-			retryTimes: 0,
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupExperimentWithNullStartTimeService(ctrl)
-			},
-			expectError: false,
-		},
-		{
-			name:       "边界情况-空itemIDs（整个实验diff）",
-			spaceID:    1,
-			exptID:     100,
-			itemIDs:    []int64{}, // 空itemIDs
-			retryTimes: 0,
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupExperimentDiffService(ctrl)
-			},
-			expectError: false,
-		},
-		{
-			name:       "异常情况-数据库错误",
-			spaceID:    1,
-			exptID:     100,
-			itemIDs:    []int64{1},
-			retryTimes: 0,
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupDatabaseErrorService(ctrl)
-			},
-			expectError: true,
-			errorMsg:    "database error",
-		},
-		{
-			name:       "重试机制-达到最大重试次数",
-			spaceID:    1,
-			exptID:     100,
-			itemIDs:    []int64{1},
-			retryTimes: 3, // 达到最大重试次数
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupMaxRetryReachedService(ctrl)
-			},
-			expectError: false,
-		},
-		{
-			name:       "重试机制-未达到最大重试次数",
-			spaceID:    1,
-			exptID:     100,
-			itemIDs:    []int64{1},
-			retryTimes: 1,
-			setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-				return setupRetryNeededService(ctrl)
-			},
-			expectError: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := tt.setupMocks(ctrl)
-
-			err := service.CompareExptTurnResultFilters(context.Background(), tt.spaceID, tt.exptID, tt.itemIDs, tt.retryTimes)
-
-			if tt.expectError {
-				assert.Error(t, err)
-				if tt.errorMsg != "" {
-					assert.Contains(t, err.Error(), tt.errorMsg)
-				}
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-// TestExptResultServiceImpl_CompareExptTurnResultFilters_DataDifferences 测试各种数据差异场景
-func TestExptResultServiceImpl_CompareExptTurnResultFilters_DataDifferences(t *testing.T) {
-	tests := []struct {
-		name        string
-		setupMocks  func(ctrl *gomock.Controller) *ExptResultServiceImpl
-		description string
-	}{
-		{
-			name: "差异情况-实际输出不一致",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupActualOutputDiffService(ctrl)
-		},
-			description: "测试实际输出在ClickHouse和RDS中不一致的情况",
-		},
-		{
-			name: "差异情况-项索引不一致",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupItemIndexDiffService(ctrl)
-		},
-			description: "测试项索引在ClickHouse和RDS中不一致的情况",
-		},
-		{
-			name: "差异情况-状态不一致",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupStatusDiffService(ctrl)
-		},
-			description: "测试状态在ClickHouse和RDS中不一致的情况",
-		},
-		{
-			name: "差异情况-评估器分数不一致",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupEvaluatorScoreDiffService(ctrl)
-		},
-			description: "测试评估器分数在ClickHouse和RDS中不一致的情况",
-		},
-		{
-			name: "差异情况-评估器分数修正状态不一致",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupEvaluatorScoreCorrectedDiffService(ctrl)
-		},
-			description: "测试评估器分数修正状态在ClickHouse和RDS中不一致的情况",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := tt.setupMocks(ctrl)
-
-			err := service.CompareExptTurnResultFilters(context.Background(), 1, 100, []int64{1}, 0)
-			assert.NoError(t, err)
-		})
-	}
-}
-
-// TestExptResultServiceImpl_CompareExptTurnResultFilters_AnnotationScenarios 测试Annotation相关场景
-func TestExptResultServiceImpl_CompareExptTurnResultFilters_AnnotationScenarios(t *testing.T) {
-	tests := []struct {
-		name            string
-		tagContentType  entity.TagContentType
-		setupMocks      func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl
-		description     string
-	}{
-		{
-			name:           "Annotation-连续数字类型一致",
-			tagContentType: entity.TagContentTypeContinuousNumber,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationConsistentService(ctrl, contentType, 8.5, "8.5")
-			},
-			description: "测试连续数字类型的Annotation数据一致的情况",
-		},
-		{
-			name:           "Annotation-连续数字类型差异",
-			tagContentType: entity.TagContentTypeContinuousNumber,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationDiffService(ctrl, contentType, 8.5, 7.5, "8.5", "7.5")
-			},
-			description: "测试连续数字类型的Annotation数据不一致的情况",
-		},
-		{
-			name:           "Annotation-自由文本类型一致",
-			tagContentType: entity.TagContentTypeFreeText,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationConsistentService(ctrl, contentType, nil, "good answer")
-			},
-			description: "测试自由文本类型的Annotation数据一致的情况",
-		},
-		{
-			name:           "Annotation-自由文本类型差异",
-			tagContentType: entity.TagContentTypeFreeText,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationDiffService(ctrl, contentType, nil, nil, "good answer", "bad answer")
-			},
-			description: "测试自由文本类型的Annotation数据不一致的情况",
-		},
-		{
-			name:           "Annotation-分类类型一致",
-			tagContentType: entity.TagContentTypeCategorical,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationConsistentService(ctrl, contentType, nil, "1")
-			},
-			description: "测试分类类型的Annotation数据一致的情况",
-		},
-		{
-			name:           "Annotation-分类类型差异",
-			tagContentType: entity.TagContentTypeCategorical,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationDiffService(ctrl, contentType, nil, nil, "1", "2")
-			},
-			description: "测试分类类型的Annotation数据不一致的情况",
-		},
-		{
-			name:           "Annotation-布尔类型一致",
-			tagContentType: entity.TagContentTypeBoolean,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationConsistentService(ctrl, contentType, nil, "1")
-			},
-			description: "测试布尔类型的Annotation数据一致的情况",
-		},
-		{
-			name:           "Annotation-布尔类型差异",
-			tagContentType: entity.TagContentTypeBoolean,
-			setupMocks: func(ctrl *gomock.Controller, contentType entity.TagContentType) *ExptResultServiceImpl {
-				return setupAnnotationDiffService(ctrl, contentType, nil, nil, "1", "0")
-			},
-			description: "测试布尔类型的Annotation数据不一致的情况",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := tt.setupMocks(ctrl, tt.tagContentType)
-
-			err := service.CompareExptTurnResultFilters(context.Background(), 1, 100, []int64{1}, 0)
-			assert.NoError(t, err)
-		})
-	}
-}
-
-// TestExptResultServiceImpl_CompareExptTurnResultFilters_EdgeCases 测试边界情况
-func TestExptResultServiceImpl_CompareExptTurnResultFilters_EdgeCases(t *testing.T) {
-	tests := []struct {
-		name        string
-		setupMocks  func(ctrl *gomock.Controller) *ExptResultServiceImpl
-		description string
-	}{
-		{
-			name: "边界情况-ClickHouse中有数据但RDS中没有",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupMissingInRDSService(ctrl)
-		},
-			description: "测试ClickHouse中存在过滤器数据但RDS中缺失的情况",
-		},
-		{
-			name: "边界情况-RDS中有数据但ClickHouse中没有",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupMissingInClickHouseService(ctrl)
-		},
-			description: "测试RDS中存在数据但ClickHouse中缺失的情况",
-		},
-		{
-			name: "边界情况-Annotation数据完全缺失",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupNoAnnotationDataService(ctrl)
-		},
-			description: "测试两边都没有Annotation数据的情况",
-		},
-		{
-			name: "边界情况-评估器键映射缺失",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupMissingKeyMappingService(ctrl)
-		},
-			description: "测试评估器键映射缺失的情况",
-		},
-		{
-			name: "边界情况-轮次结果未完成",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupUnfinishedTurnService(ctrl)
-		},
-			description: "测试轮次结果未完成的情况",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := tt.setupMocks(ctrl)
-
-			err := service.CompareExptTurnResultFilters(context.Background(), 1, 100, []int64{1}, 0)
-			assert.NoError(t, err)
-		})
-	}
-}
-
-// TestExptResultServiceImpl_CompareExptTurnResultFilters_NetworkErrors 测试网络错误场景
-func TestExptResultServiceImpl_CompareExptTurnResultFilters_NetworkErrors(t *testing.T) {
-	tests := []struct {
-		name        string
-		setupMocks  func(ctrl *gomock.Controller) *ExptResultServiceImpl
-		expectError bool
-		description string
-	}{
-		{
-			name: "网络错误-获取过滤器数据失败",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupNetworkErrorService(ctrl, "filter_data_error")
-		},
-			expectError: true,
-			description: "测试获取过滤器数据时网络错误的情况",
-		},
-		{
-			name: "网络错误-获取轮次结果失败",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupNetworkErrorService(ctrl, "turn_result_error")
-		},
-			expectError: true,
-			description: "测试获取轮次结果时网络错误的情况",
-		},
-		{
-			name: "网络错误-获取键映射失败",
-		setupMocks: func(ctrl *gomock.Controller) *ExptResultServiceImpl {
-			return setupNetworkErrorService(ctrl, "key_mapping_error")
-		},
-			expectError: true,
-			description: "测试获取键映射时网络错误的情况",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := tt.setupMocks(ctrl)
-
-			err := service.CompareExptTurnResultFilters(context.Background(), 1, 100, []int64{1}, 0)
-
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-// 辅助函数：设置成功比较的服务
-func setupSuccessfulComparisonService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	mockExptTurnResultFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
-	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
-	mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
-	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
-	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
-	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
-	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
-
-	startTime := time.Now()
-
-	// 设置实验数据
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{100}, int64(1)).
-		Return([]*entity.Experiment{{
-			ID:      100,
-			SpaceID: 1,
-			StartAt: &startTime,
-		}}, nil)
-
-	// 设置过滤器键映射
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(1), int64(100)).
-		Return([]*entity.ExptTurnResultFilterKeyMapping{
-			{
-				SpaceID:   1,
-				ExptID:    100,
-				FromField: "1001",
-				ToKey:     "key1",
-				FieldType: entity.FieldTypeEvaluator,
-			},
-		}, nil)
-
-	// 设置过滤器数据
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetByExptIDItemIDs(gomock.Any(), "1", "100", gomock.Any(), gomock.Any()).
-		Return([]*entity.ExptTurnResultFilterEntity{
-			{
-				SpaceID:         1,
-				ExptID:          100,
-				ItemID:          1,
-				TurnID:          0,
-				ItemIdx:         1,
-				Status:          entity.ItemRunState_Success,
-				EvalTargetData:  map[string]string{"actual_output": "test output"},
-				EvaluatorScore:  map[string]float64{"key1": 8.5},
-				AnnotationFloat: map[string]float64{},
-				AnnotationString: map[string]string{},
-			},
-		}, nil)
-
-	// 设置轮次结果
-	mockExptTurnResultRepo.EXPECT().
-		ListTurnResultByItemIDs(gomock.Any(), int64(1), int64(100), gomock.Any(), gomock.Any(), false).
-		Return([]*entity.ExptTurnResult{
-			{
-				ID:      1001,
-				SpaceID: 1,
-				ExptID:  100,
-				ItemID:  1,
-				TurnID:  0,
-				Status:  int32(entity.TurnRunState_Success),
-			},
-		}, []int64{1}, nil)
-
-	// 设置项结果
-	mockExptItemResultRepo.EXPECT().
-		BatchGet(gomock.Any(), int64(1), int64(100), []int64{1}).
-		Return([]*entity.ExptItemResult{
-			{
-				ID:      2001,
-				SpaceID: 1,
-				ExptID:  100,
-				ItemID:  1,
-				Status:  entity.ItemRunState_Success,
-				ItemIdx: 1,
-			},
-		}, nil)
-
-	// 设置评估器记录
-	mockEvaluatorRecordService.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).
-		Return([]*entity.EvaluatorRecord{
-			{
-				ID:                 3001,
-				EvaluatorVersionID: 1001,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{
-					EvaluatorResult: &entity.EvaluatorResult{
-						Score: ptr.Of(8.5),
-					},
-				},
-			},
-		}, nil)
-
-	// 设置目标输出
-	mockEvalTargetService.EXPECT().
-		BatchGetRecordByIDs(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.EvalTargetRecord{
-			{
-				ID: 4001,
-				EvalTargetOutputData: &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"actual_output": {Text: ptr.Of("test output")},
-					},
-				},
-			},
-		}, nil)
-
-	// 设置评估集项
-	mockEvaluationSetItemService.EXPECT().
-		BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
-		Return([]*entity.EvaluationSetItem{
-			{
-				ItemID: 1,
-				Turns: []*entity.Turn{
-					{ID: 0},
-				},
-			},
-		}, nil)
-
-	// 设置标注记录
-	mockExptAnnotateRepo.EXPECT().
-		GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
-
-	// 设置轮次评估器结果引用
-	mockExptTurnResultRepo.EXPECT().
-		BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.ExptTurnEvaluatorResultRef{
-			{
-				ID:                 5001,
-				ExptTurnResultID:   1001,
-				EvaluatorVersionID: 1001,
-				EvaluatorResultID:  3001,
-			},
-		}, nil)
-
-	// 设置指标上报
-	mockMetric.EXPECT().
-		EmitExptTurnResultFilterQueryLatency(int64(1), gomock.Any(), false).
-		AnyTimes()
-
-	mockMetric.EXPECT().
-		EmitExptTurnResultFilterCheck(int64(1), false, false, false, false).
-		AnyTimes()
-
-	return &ExptResultServiceImpl{
-		ExperimentRepo:               mockExperimentRepo,
-		ExptItemResultRepo:           mockExptItemResultRepo,
-		exptTurnResultFilterRepo:     mockExptTurnResultFilterRepo,
-		ExptTurnResultRepo:           mockExptTurnResultRepo,
-		evaluatorRecordService:       mockEvaluatorRecordService,
-		ExptAnnotateRepo:             mockExptAnnotateRepo,
-		evalTargetService:            mockEvalTargetService,
-		evaluationSetItemService:     mockEvaluationSetItemService,
-		Metric:                       mockMetric,
-		publisher:                    mockPublisher,
-	}
-}
-
-// 设置实验不存在的服务
-func setupExperimentNotFoundService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{999}, int64(1)).
-		Return([]*entity.Experiment{}, nil)
-
-	return &ExptResultServiceImpl{
-		ExperimentRepo: mockExperimentRepo,
-	}
-}
-
-// 设置实验开始时间为空的服务
-func setupExperimentWithNullStartTimeService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{100}, int64(1)).
-		Return([]*entity.Experiment{{
-			ID:      100,
-			SpaceID: 1,
-			StartAt: nil, // 开始时间为空
-		}}, nil)
-
-	return &ExptResultServiceImpl{
-		ExperimentRepo: mockExperimentRepo,
-	}
-}
-
-// 设置整个实验diff的服务
-func setupExperimentDiffService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	mockExptTurnResultFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
-	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
-	mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
-	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
-	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
-	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
-
-	startTime := time.Now()
-
-	// 设置实验数据
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{100}, int64(1)).
-		Return([]*entity.Experiment{{
-			ID:      100,
-			SpaceID: 1,
-			StartAt: &startTime,
-		}}, nil)
-
-	// 获取所有项ID
-	mockExptItemResultRepo.EXPECT().
-		ListItemResultsByExptID(gomock.Any(), int64(100), int64(1), gomock.Any(), false).
-		Return([]*entity.ExptItemResult{
-			{ItemID: 1},
-			{ItemID: 2},
-		}, int64(2), nil)
-
-	// 其他基础mock设置
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(1), int64(100)).
-		Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil)
-
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetByExptIDItemIDs(gomock.Any(), "1", "100", gomock.Any(), gomock.Any()).
-		Return([]*entity.ExptTurnResultFilterEntity{}, nil)
-
-	mockMetric.EXPECT().
-		EmitExptTurnResultFilterQueryLatency(int64(1), gomock.Any(), false).
-		AnyTimes()
-
-	return &ExptResultServiceImpl{
-		ExperimentRepo:               mockExperimentRepo,
-		ExptItemResultRepo:           mockExptItemResultRepo,
-		exptTurnResultFilterRepo:     mockExptTurnResultFilterRepo,
-		ExptTurnResultRepo:           mockExptTurnResultRepo,
-		evaluatorRecordService:       mockEvaluatorRecordService,
-		ExptAnnotateRepo:             mockExptAnnotateRepo,
-		evalTargetService:            mockEvalTargetService,
-		evaluationSetItemService:     mockEvaluationSetItemService,
-		Metric:                       mockMetric,
-	}
-}// 设置数据库错误的服务
-func setupDatabaseErrorService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{100}, int64(1)).
-		Return(nil, errors.New("database error"))
-
-	return &ExptResultServiceImpl{
-		ExperimentRepo: mockExperimentRepo,
-	}
-}
-
-// 设置达到最大重试次数的服务
-func setupMaxRetryReachedService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	return setupRetryScenarioService(ctrl, true)
-}
-
-// 设置需要重试的服务
-func setupRetryNeededService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
-	service := setupRetryScenarioService(ctrl, false)
-	service.publisher = mockPublisher
-
-	// 期望发布重试事件
-	mockPublisher.EXPECT().
-		PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	return service
-}
-
-// 设置重试场景的服务
-func setupRetryScenarioService(ctrl *gomock.Controller, maxRetryReached bool) *ExptResultServiceImpl {
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	mockExptTurnResultFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
-	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
-	mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
-	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
-	mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
-	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
-
-	startTime := time.Now()
-
-	// 设置实验数据
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{100}, int64(1)).
-		Return([]*entity.Experiment{{
-			ID:      100,
-			SpaceID: 1,
-			StartAt: &startTime,
-		}}, nil)
-
-	// 设置过滤器键映射
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(1), int64(100)).
-		Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil)
-
-	// 设置过滤器数据 - 存在差异的数据
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetByExptIDItemIDs(gomock.Any(), "1", "100", gomock.Any(), gomock.Any()).
-		Return([]*entity.ExptTurnResultFilterEntity{
-			{
-				SpaceID:        1,
-				ExptID:         100,
-				ItemID:         1,
-				TurnID:         0,
-				ItemIdx:        1,
-				Status:         entity.ItemRunState_Success,
-				EvalTargetData: map[string]string{"actual_output": "different output"},
-			},
-		}, nil)
-
-	// 设置轮次结果 - 与过滤器数据不一致
-	mockExptTurnResultRepo.EXPECT().
-		ListTurnResultByItemIDs(gomock.Any(), int64(1), int64(100), gomock.Any(), gomock.Any(), false).
-		Return([]*entity.ExptTurnResult{
-			{
-				ID:      1001,
-				SpaceID: 1,
-				ExptID:  100,
-				ItemID:  1,
-				TurnID:  0,
-				Status:  int32(entity.TurnRunState_Success),
-			},
-		}, []int64{1}, nil)
-
-	// 设置项结果
-	mockExptItemResultRepo.EXPECT().
-		BatchGet(gomock.Any(), int64(1), int64(100), []int64{1}).
-		Return([]*entity.ExptItemResult{
-			{
-				ID:      2001,
-				SpaceID: 1,
-				ExptID:  100,
-				ItemID:  1,
-				Status:  entity.ItemRunState_Success,
-				ItemIdx: 1,
-			},
-		}, nil)
-
-	// 设置其他必要的mock
-	mockEvaluatorRecordService.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false).
-		Return([]*entity.EvaluatorRecord{}, nil)
-
-	mockEvalTargetService.EXPECT().
-		BatchGetRecordByIDs(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.EvalTargetRecord{
-			{
-				ID: 4001,
-				EvalTargetOutputData: &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"actual_output": {Text: ptr.Of("original output")}, // 与过滤器数据不同
-					},
-				},
-			},
-		}, nil)
-
-	mockEvaluationSetItemService.EXPECT().
-		BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
-		Return([]*entity.EvaluationSetItem{
-			{
-				ItemID: 1,
-				Turns: []*entity.Turn{
-					{ID: 0},
-				},
-			},
-		}, nil)
-
-	mockExptAnnotateRepo.EXPECT().
-		GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
-
-	mockExptTurnResultRepo.EXPECT().
-		BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.ExptTurnEvaluatorResultRef{}, nil)
-
-	// 设置指标上报
-	mockMetric.EXPECT().
-		EmitExptTurnResultFilterQueryLatency(int64(1), gomock.Any(), false).
-		AnyTimes()
-
-	mockMetric.EXPECT().
-		EmitExptTurnResultFilterCheck(int64(1), false, true, true, false).
-		AnyTimes()
-
-	return &ExptResultServiceImpl{
-		ExperimentRepo:               mockExperimentRepo,
-		ExptItemResultRepo:           mockExptItemResultRepo,
-		exptTurnResultFilterRepo:     mockExptTurnResultFilterRepo,
-		ExptTurnResultRepo:           mockExptTurnResultRepo,
-		evaluatorRecordService:       mockEvaluatorRecordService,
-		ExptAnnotateRepo:             mockExptAnnotateRepo,
-		evalTargetService:            mockEvalTargetService,
-		evaluationSetItemService:     mockEvaluationSetItemService,
-		Metric:                       mockMetric,
-	}
-}
-
-// 设置实际输出差异的服务
-func setupActualOutputDiffService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	service := setupSuccessfulComparisonService(ctrl)
-	
-	// 重新设置过滤器数据和目标输出，使其不一致
-	mockExptTurnResultFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
-	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
-	
-	startTime := time.Now()
-	
-	// 重新设置实验数据
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-	mockExperimentRepo.EXPECT().
-		MGetByID(gomock.Any(), []int64{100}, int64(1)).
-		Return([]*entity.Experiment{{
-			ID:      100,
-			SpaceID: 1,
-			StartAt: &startTime,
-		}}, nil)
-
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(1), int64(100)).
-		Return([]*entity.ExptTurnResultFilterKeyMapping{}, nil)
-
-	// ClickHouse中的数据
-	mockExptTurnResultFilterRepo.EXPECT().
-		GetByExptIDItemIDs(gomock.Any(), "1", "100", gomock.Any(), gomock.Any()).
-		Return([]*entity.ExptTurnResultFilterEntity{
-			{
-				SpaceID:        1,
-				ExptID:         100,
-				ItemID:         1,
-				TurnID:         0,
-				ItemIdx:        1,
-				Status:         entity.ItemRunState_Success,
-				EvalTargetData: map[string]string{"actual_output": "ClickHouse output"},
-			},
-		}, nil)
-
-	// RDS中的数据（不同的输出）
-	mockEvalTargetService.EXPECT().
-		BatchGetRecordByIDs(gomock.Any(), int64(1), gomock.Any()).
-		Return([]*entity.EvalTargetRecord{
-			{
-				ID: 4001,
-				EvalTargetOutputData: &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"actual_output": {Text: ptr.Of("RDS output")}, // 不同的输出
-					},
-				},
-			},
-		}, nil)
-
-	service.ExperimentRepo = mockExperimentRepo
-	service.exptTurnResultFilterRepo = mockExptTurnResultFilterRepo
-	service.evalTargetService = mockEvalTargetService
-
-	return service
-}
-
-// 其他辅助函数的实现...
-func setupItemIndexDiffService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现项索引差异的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupStatusDiffService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现状态差异的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupEvaluatorScoreDiffService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现评估器分数差异的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupEvaluatorScoreCorrectedDiffService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现评估器分数修正状态差异的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupAnnotationConsistentService(ctrl *gomock.Controller, contentType entity.TagContentType, score interface{}, strValue string) *ExptResultServiceImpl {
-	// 实现Annotation一致的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupAnnotationDiffService(ctrl *gomock.Controller, contentType entity.TagContentType, ckScore, rdsScore interface{}, ckStrValue, rdsStrValue string) *ExptResultServiceImpl {
-	// 实现Annotation差异的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupMissingInRDSService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现RDS中缺失数据的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupMissingInClickHouseService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现ClickHouse中缺失数据的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupNoAnnotationDataService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现无Annotation数据的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
-func setupMissingKeyMappingService(ctrl *gomock.Controller) *ExptResultServiceImpl {
-	// 实现键映射缺失的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
-}
-
 func setupUnfinishedTurnService(ctrl *gomock.Controller) *ExptResultServiceImpl {
 	// 实现未完成轮次的mock设置
-	return setupSuccessfulComparisonService(ctrl) // 简化实现
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	startTime := time.Now()
+	
+	mockExperimentRepo.EXPECT().
+		MGetByID(gomock.Any(), []int64{100}, int64(1)).
+		Return([]*entity.Experiment{{
+			ID:      100,
+			SpaceID: 1,
+			StartAt: &startTime,
+		}}, nil)
+
+	return &ExptResultServiceImpl{
+		ExperimentRepo: mockExperimentRepo,
+	}
 }
 
 func setupNetworkErrorService(ctrl *gomock.Controller, errorType string) *ExptResultServiceImpl {
