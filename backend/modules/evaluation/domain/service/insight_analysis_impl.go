@@ -125,14 +125,14 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 }
 
 func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64, session *entity.Session) (*entity.ExptInsightAnalysisRecord, error) {
+	err := e.notifyAnalysisComplete(ctx, session.UserID)
+	if err != nil {
+		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
+	}
+
 	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
 	if err != nil {
 		return nil, err
-	}
-
-	err = e.notifyAnalysisComplete(ctx, session.UserID)
-	if err != nil {
-		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
 	}
 
 	if analysisRecord.Status != entity.InsightAnalysisStatus_Success {
@@ -195,7 +195,7 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 	userInfo := userInfos[0]
 	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
 
-	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.Email), "AAq9DvIYd2qHu", map[string]string{
+	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.), "AAq9DvIYd2qHu", map[string]string{
 		"expt_name": "实验名称",
 	})
 
