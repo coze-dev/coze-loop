@@ -195,7 +195,7 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 	userInfo := userInfos[0]
 	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
 
-	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.), "AAq9DvIYd2qHu", map[string]string{
+	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.Email), "AAq9DvIYd2qHu", map[string]string{
 		"expt_name": "实验名称",
 	})
 
