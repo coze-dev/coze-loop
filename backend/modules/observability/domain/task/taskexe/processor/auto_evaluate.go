@@ -135,7 +135,7 @@ func (d *DatasetServiceAdaptor) getDatasetProvider(category entity.DatasetCatego
 }
 
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
-	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s", currentTask.GetID(), taskOp)
+	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	//todo:[xun]加锁
 	session := getSession(ctx, currentTask)
 	var evaluationSetColumns []string
@@ -178,6 +178,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	category := getCategory(currentTask.TaskType)
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	// 1、创建评测集
+	logs.CtxInfo(ctx, "[auto_task] CreateDataset")
 	datasetID, err := p.getDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 		0,
 		currentTask.GetWorkspaceID(),
@@ -222,6 +223,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		SourceID:     gptr.Of(strconvh.FormatInt64(currentTask.GetID())),
 		Session:      session,
 	}
+	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
 	if err != nil {
 		return err

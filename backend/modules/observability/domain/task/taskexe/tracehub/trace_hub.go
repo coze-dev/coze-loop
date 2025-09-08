@@ -301,13 +301,14 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		}
 		// 达到任务时间期限
 		// 到任务结束时间就结束
+		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if time.Now().After(endTime) {
 			updateMap := map[string]interface{}{
 				"task_status": task.TaskStatusSuccess,
 			}
 			err = h.taskRepo.UpdateTaskWithOCC(ctx, taskInfo.GetID(), taskInfo.GetWorkspaceID(), updateMap)
 			if err != nil {
-				logs.CtxError(ctx, "[task-debug] UpdateTask err:%v", err)
+				logs.CtxError(ctx, "[auto_task] UpdateTask err:%v", err)
 				continue
 			}
 		}
