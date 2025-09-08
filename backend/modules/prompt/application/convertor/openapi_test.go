@@ -579,8 +579,8 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				},
 			},
 			want: &openapi.ContentPart{
-				Type: ptr.Of(openapi.ContentTypeImageURL),
-				Text: ptr.Of("image description"),
+				Type:     ptr.Of(openapi.ContentTypeImageURL),
+				Text:     ptr.Of("image description"),
 				ImageURL: ptr.Of("https://example.com/image.jpg"),
 			},
 		},
@@ -686,8 +686,8 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 					Text: ptr.Of("Text content"),
 				},
 				{
-					Type: ptr.Of(openapi.ContentTypeImageURL),
-					Text: ptr.Of("Image description"),
+					Type:     ptr.Of(openapi.ContentTypeImageURL),
+					Text:     ptr.Of("Image description"),
 					ImageURL: ptr.Of("https://example.com/image.jpg"),
 				},
 				{

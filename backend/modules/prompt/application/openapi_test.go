@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	streaming "github.com/cloudwego/kitex/pkg/streaming"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/cozeloop-go"
@@ -2765,7 +2768,8 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 						Role:    ptr.Of(prompt.RoleAssistant),
 						Content: ptr.Of("Hello, how can I help you?"),
 					},
-					FinishReason: ptr.Of("stop"),					Usage: &openapi.TokenUsage{
+					FinishReason: ptr.Of("stop"),
+					Usage: &openapi.TokenUsage{
 						InputTokens:  ptr.Of(int32(10)),
 						OutputTokens: ptr.Of(int32(8)),
 					},
@@ -2944,6 +2948,1123 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				}
 			} else {
 				assert.Equal(t, tt.wantR, gotR)
+			}
+		})
+	}
+}
+
+// mockExecuteStreamingServer 用于测试的mock流式服务器
+type mockExecuteStreamingServer struct {
+	ctx        context.Context
+	sendCalls  []*openapi.ExecuteStreamingResponse
+	sendErrors []error
+	sendIndex  int
+}
+
+func newMockExecuteStreamingServer(ctx context.Context) *mockExecuteStreamingServer {
+	return &mockExecuteStreamingServer{
+		ctx:        ctx,
+		sendCalls:  make([]*openapi.ExecuteStreamingResponse, 0),
+		sendErrors: make([]error, 0),
+		sendIndex:  0,
+	}
+}
+
+func (m *mockExecuteStreamingServer) Send(ctx context.Context, resp *openapi.ExecuteStreamingResponse) error {
+	m.sendCalls = append(m.sendCalls, resp)
+	if m.sendIndex < len(m.sendErrors) {
+		err := m.sendErrors[m.sendIndex]
+		m.sendIndex++
+		return err
+	}
+	m.sendIndex++
+	return nil
+}
+
+func (m *mockExecuteStreamingServer) RecvMsg(ctx context.Context, msg interface{}) error {
+	return nil
+}
+
+func (m *mockExecuteStreamingServer) SendMsg(ctx context.Context, msg interface{}) error {
+	return nil
+}
+
+func (m *mockExecuteStreamingServer) SendHeader(header streaming.Header) error {
+	return nil
+}
+
+func (m *mockExecuteStreamingServer) SetHeader(header streaming.Header) error {
+	return nil
+}
+
+func (m *mockExecuteStreamingServer) SetTrailer(trailer streaming.Trailer) error {
+	return nil
+}
+
+func (m *mockExecuteStreamingServer) SetSendErrors(errors ...error) {
+	m.sendErrors = errors
+}
+
+func (m *mockExecuteStreamingServer) GetSendCalls() []*openapi.ExecuteStreamingResponse {
+	return m.sendCalls
+}
+
+func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		promptService    service.IPromptService
+		promptManageRepo repo.IManageRepo
+		config           conf.IConfigProvider
+		auth             rpc.IAuthProvider
+		rateLimiter      limiter.IRateLimiter
+		collector        collector.ICollectorProvider
+	}
+	type args struct {
+		ctx    context.Context
+		req    *openapi.ExecuteRequest
+		stream openapi.PromptOpenAPIService_ExecuteStreamingServer
+	}
+
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		argsGetter   func(ctrl *gomock.Controller) args
+		wantErr      error
+		validateFunc func(t *testing.T, stream *mockExecuteStreamingServer)
+	}{
+		{
+			name: "success: normal streaming execution",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:   "Test Prompt",
+						Description:   "Test Description",
+						LatestVersion: "1.0.0",
+						CreatedBy:     "test_user",
+						UpdatedBy:     "test_user",
+						CreatedAt:     startTime,
+						UpdatedAt:     startTime,
+					},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "",
+							Description: "Initial version",
+							CommittedBy: "test_user",
+							CommittedAt: startTime,
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("You are a helpful assistant."),
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID:     123,
+								Temperature: ptr.Of(0.7),
+							},
+						},
+					},
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				// Mock ExecuteStreaming 返回多个流式响应
+				expectedReply := &entity.Reply{
+					DebugID: 456,
+					Item: &entity.ReplyItem{
+						Message: &entity.Message{
+							Role:    entity.RoleAssistant,
+							Content: ptr.Of("Hello, how can I help you?"),
+						},
+						FinishReason: "stop",
+						TokenUsage: &entity.TokenUsage{
+							InputTokens:  10,
+							OutputTokens: 20,
+						},
+					},
+				}
+				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						// 模拟发送多个流式响应 - 使用同步方式避免竞争条件
+						// 发送第一个chunk
+						param.ResultStream <- &entity.Reply{
+							Item: &entity.ReplyItem{
+								Message: &entity.Message{
+									Role:    entity.RoleAssistant,
+									Content: ptr.Of("Hello"),
+								},
+								FinishReason: "",
+								TokenUsage: &entity.TokenUsage{
+									InputTokens:  5,
+									OutputTokens: 1,
+								},
+							},
+						}
+						// 发送第二个chunk
+						param.ResultStream <- &entity.Reply{
+							Item: &entity.ReplyItem{
+								Message: &entity.Message{
+									Role:    entity.RoleAssistant,
+									Content: ptr.Of(", how can I help you?"),
+								},
+								FinishReason: "stop",
+								TokenUsage: &entity.TokenUsage{
+									InputTokens:  10,
+									OutputTokens: 20,
+								},
+							},
+						}
+						return expectedReply, nil
+					})
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: nil,
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 2)
+				assert.Equal(t, "Hello", calls[0].Data.Message.GetContent())
+				assert.Equal(t, ", how can I help you?", calls[1].Data.Message.GetContent())
+				assert.Equal(t, "stop", calls[1].Data.GetFinishReason())
+			},
+		},
+		{
+			name: "error: workspace_id is empty",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					collector: mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(0)), // 无效的 workspace_id
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"})),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0) // 参数验证失败，不应该发送任何响应
+			},
+		},
+		{
+			name: "error: prompt_key is empty",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					collector: mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of(""), // 空的 prompt_key
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"})),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: invalid URL in message parts",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					collector: mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role: ptr.Of(prompt.RoleUser),
+								Parts: []*openapi.ContentPart{
+									{
+										Type:     ptr.Of(openapi.ContentTypeImageURL),
+										ImageURL: ptr.Of("invalid-url"), // 无效的URL
+									},
+								},
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "invalid-url不是有效的URL"})),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: invalid base64 data",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					collector: mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role: ptr.Of(prompt.RoleUser),
+								Parts: []*openapi.ContentPart{
+									{
+										Type:       ptr.Of(openapi.ContentTypeBase64Data),
+										Base64Data: ptr.Of("invalid-base64"), // 无效的base64
+									},
+								},
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "存在无效的base64数据，数据格式应该符合data:[<mediatype>][;base64],<data>"})),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: rate limit exceeded",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(10, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: false,
+				}, nil)
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					config:      mockConfig,
+					rateLimiter: mockRateLimiter,
+					collector:   mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.NewByCode(prompterr.PTaaSQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded")),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: permission check failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:   "Test Prompt",
+						Description:   "Test Description",
+						LatestVersion: "1.0.0",
+						CreatedBy:     "test_user",
+						UpdatedBy:     "test_user",
+						CreatedAt:     startTime,
+						UpdatedAt:     startTime,
+					},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "",
+							Description: "Initial version",
+							CommittedBy: "test_user",
+							CommittedAt: startTime,
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("You are a helpful assistant."),
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID:     123,
+								Temperature: ptr.Of(0.7),
+							},
+						},
+					},
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(
+					errorx.NewByCode(prompterr.CommonNoPermissionCode))
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonNoPermissionCode),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: get prompt failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(nil, errors.New("database error"))
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService: mockPromptService,
+					config:        mockConfig,
+					rateLimiter:   mockRateLimiter,
+					collector:     mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errors.New("database error"),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: execute service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:   "Test Prompt",
+						Description:   "Test Description",
+						LatestVersion: "1.0.0",
+						CreatedBy:     "test_user",
+						UpdatedBy:     "test_user",
+						CreatedAt:     startTime,
+						UpdatedAt:     startTime,
+					},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "",
+							Description: "Initial version",
+							CommittedBy: "test_user",
+							CommittedAt: startTime,
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("You are a helpful assistant."),
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID:     123,
+								Temperature: ptr.Of(0.7),
+							},
+						},
+					},
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				// Mock ExecuteStreaming 返回错误
+				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						// 不发送任何响应，直接返回错误
+						return nil, errors.New("execute service error")
+					})
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errors.New("execute service error"),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+		},
+		{
+			name: "error: stream send failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:   "Test Prompt",
+						Description:   "Test Description",
+						LatestVersion: "1.0.0",
+						CreatedBy:     "test_user",
+						UpdatedBy:     "test_user",
+						CreatedAt:     startTime,
+						UpdatedAt:     startTime,
+					},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "",
+							Description: "Initial version",
+							CommittedBy: "test_user",
+							CommittedAt: startTime,
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("You are a helpful assistant."),
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID:     123,
+								Temperature: ptr.Of(0.7),
+							},
+						},
+					},
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				// Mock ExecuteStreaming 返回流式响应
+				expectedReply := &entity.Reply{
+					DebugID: 456,
+					Item: &entity.ReplyItem{
+						Message: &entity.Message{
+							Role:    entity.RoleAssistant,
+							Content: ptr.Of("Hello, how can I help you?"),
+						},
+						FinishReason: "stop",
+						TokenUsage: &entity.TokenUsage{
+							InputTokens:  10,
+							OutputTokens: 20,
+						},
+					},
+				}
+				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						// 发送一个响应
+						param.ResultStream <- &entity.Reply{
+							Item: &entity.ReplyItem{
+								Message: &entity.Message{
+									Role:    entity.RoleAssistant,
+									Content: ptr.Of("Hello"),
+								},
+								FinishReason: "",
+								TokenUsage: &entity.TokenUsage{
+									InputTokens:  5,
+									OutputTokens: 1,
+								},
+							},
+						}
+						return expectedReply, nil
+					})
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				// 设置第一次发送失败
+				stream.SetSendErrors(errors.New("send failed"))
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errors.New("send failed"),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 1) // 发送了一次但失败了
+			},
+		},
+		{
+			name: "success: client canceled context",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:   "Test Prompt",
+						Description:   "Test Description",
+						LatestVersion: "1.0.0",
+						CreatedBy:     "test_user",
+						UpdatedBy:     "test_user",
+						CreatedAt:     startTime,
+						UpdatedAt:     startTime,
+					},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "",
+							Description: "Initial version",
+							CommittedBy: "test_user",
+							CommittedAt: startTime,
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("You are a helpful assistant."),
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID:     123,
+								Temperature: ptr.Of(0.7),
+							},
+						},
+					},
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				// Mock ExecuteStreaming 返回流式响应
+				expectedReply := &entity.Reply{
+					DebugID: 456,
+					Item: &entity.ReplyItem{
+						Message: &entity.Message{
+							Role:    entity.RoleAssistant,
+							Content: ptr.Of("Hello, how can I help you?"),
+						},
+						FinishReason: "stop",
+						TokenUsage: &entity.TokenUsage{
+							InputTokens:  10,
+							OutputTokens: 20,
+						},
+					},
+				}
+				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						// 发送一个响应
+						param.ResultStream <- &entity.Reply{
+							Item: &entity.ReplyItem{
+								Message: &entity.Message{
+									Role:    entity.RoleAssistant,
+									Content: ptr.Of("Hello"),
+								},
+								FinishReason: "",
+								TokenUsage: &entity.TokenUsage{
+									InputTokens:  5,
+									OutputTokens: 1,
+								},
+							},
+						}
+						return expectedReply, nil
+					})
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				// 模拟客户端取消
+				stream.SetSendErrors(status.Error(codes.Canceled, "context canceled"))
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: status.Error(codes.Canceled, "context canceled"), // 实际测试显示返回取消错误
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 1)
+			},
+		},
+		{
+			name: "error: goroutine panic recovery",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				startTime := time.Now()
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName:   "Test Prompt",
+						Description:   "Test Description",
+						LatestVersion: "1.0.0",
+						CreatedBy:     "test_user",
+						UpdatedBy:     "test_user",
+						CreatedAt:     startTime,
+						UpdatedAt:     startTime,
+					},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "",
+							Description: "Initial version",
+							CommittedBy: "test_user",
+							CommittedAt: startTime,
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("You are a helpful assistant."),
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID:     123,
+								Temperature: ptr.Of(0.7),
+							},
+						},
+					},
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				// Mock ExecuteStreaming 模拟panic
+				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						// 模拟panic
+						panic("test panic")
+					})
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+						Messages: []*openapi.Message{
+							{
+								Role:    ptr.Of(prompt.RoleUser),
+								Content: ptr.Of("Hello"),
+							},
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errorx.New("panic occurred, reason=test panic"),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0) // panic发生时不应该发送响应
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ttFields := tt.fieldsGetter(ctrl)
+			ttArgs := tt.argsGetter(ctrl)
+			p := &PromptOpenAPIApplicationImpl{
+				promptService:    ttFields.promptService,
+				promptManageRepo: ttFields.promptManageRepo,
+				config:           ttFields.config,
+				auth:             ttFields.auth,
+				rateLimiter:      ttFields.rateLimiter,
+				collector:        ttFields.collector,
+			}
+			err := p.ExecuteStreaming(ttArgs.ctx, ttArgs.req, ttArgs.stream)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if tt.validateFunc != nil {
+				if mockStream, ok := ttArgs.stream.(*mockExecuteStreamingServer); ok {
+					tt.validateFunc(t, mockStream)
+				}
 			}
 		})
 	}
