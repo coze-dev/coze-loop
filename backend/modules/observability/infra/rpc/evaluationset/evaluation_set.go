@@ -76,7 +76,7 @@ func (d *EvaluationSetProvider) CreateDataset(ctx context.Context, dataset *enti
 	}
 	user, ok := session.UserInCtx(ctx)
 	if !ok {
-		logs.CtxError(ctx, "User not found")
+		logs.CtxError(ctx, "[auto_task] User not found")
 	}
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,schema:%+v", user)
 	resp, err := d.client.CreateEvaluationSet(ctx, req)

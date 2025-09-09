@@ -166,7 +166,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
 	user, ok := session.UserInCtx(ctx)
 	if !ok {
-		logs.CtxError(ctx, "User not found")
+		logs.CtxError(ctx, "[auto_task] User not found")
 	}
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,user:%+v", user)
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
