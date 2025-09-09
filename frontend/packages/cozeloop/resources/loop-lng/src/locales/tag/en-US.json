@@ -67,5 +67,9 @@
   "exit": "Exit",
   "confirm_save": "Confirm Save",
   "save_success": "Save successful",
-  "create_success": "Create successful"
+  "create_success": "Create successful",
+  "change_log": "Change Log",
+  "extend": "Expand",
+  "read_only": "Read Only",
+  "updated_by": "Updated By"
 }

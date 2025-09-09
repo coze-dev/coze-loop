@@ -128,7 +128,7 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                       <div className="flex items-center gap-x-2 text-[13px] font-normal leading-5 text-[var(--coz-fg-secondary)]">
                         <span>
                           {I18n.t('tag_number_with_placeholder', {
-                            number: index + 1,
+                            placeholder1: index + 1,
                           })}
                         </span>
                         <Tooltip

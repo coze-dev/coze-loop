@@ -37,7 +37,7 @@
   "category_tag_option_disabled_warning": "该分类标签选项已禁用，若修改将不再展示",
   "disabled_tag_not_searchable": "禁用后该标签无法被搜索添加",
   "confirm_enable_tag": "确定启用该标签吗？",
-  "changes_sync_to_space_tag_management": "修改将会同步至标签管理”。",
+  "changes_sync_to_space_tag_management": "修改将会同步至标签管理。",
   "tag_configuration": "标签配置",
   "enter_tag_name": "请输入标签名称",
   "enter_description": "请输入描述",
@@ -67,5 +67,9 @@
   "exit": "退出",
   "confirm_save": "确认保存",
   "save_success": "保存成功",
-  "create_success": "创建成功"
+  "create_success": "创建成功",
+  "change_log": "变更日志",
+  "extend": "展开",
+  "read_only": "只读",
+  "updated_by": "更新人"
 }
