@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/i18n"
 	cachemw "github.com/coze-dev/coze-loop/backend/infra/middleware/ctxcache"
 	logmw "github.com/coze-dev/coze-loop/backend/infra/middleware/logs"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/validator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
@@ -230,6 +231,7 @@ func defaultKiteXMiddlewares() []endpoint.Middleware {
 	return []endpoint.Middleware{
 		logmw.LogTrafficMW,
 		validator.KiteXValidatorMW,
+		session.NewRequestSessionMW(),
 		cachemw.CtxCacheMW,
 	}
 }
