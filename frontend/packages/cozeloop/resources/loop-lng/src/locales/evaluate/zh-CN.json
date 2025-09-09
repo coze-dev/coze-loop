@@ -658,7 +658,6 @@
   "evaluate_terminated_count_terminated_turn_cnt": "中止 {terminated_turn_cnt}",
   "evaluate_processing_count_processing_turn_cnt": "执行中 {processing_turn_cnt}",
   "cozeloop_open_evaluate_pending_count": "待执行 {pending_turn_cnt}",
-  "please_select": "请选择",
   "cozeloop_open_evaluate_selected_field_type_inconsistent": "所选字段数据类型不一致，请重新选择",
   "cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable": "该标签选项已禁用，若修改将不再允许被选中",
   "cozeloop_open_evaluate_select_previous_eval_set_as_target": "选择上一步配置的评测集作为评测对象，适用于该评测集已包含agent输出的场景。",
