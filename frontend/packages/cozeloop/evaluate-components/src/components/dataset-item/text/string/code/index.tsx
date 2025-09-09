@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import cn from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { CodeEditor, handleCopy } from '@cozeloop/components';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
 import { Button, SemiSelect } from '@coze-arch/coze-design';
@@ -47,7 +48,7 @@ export const CodeDatasetItem = ({
           color="primary"
           size="small"
         >
-          {I18n.t('copy')}
+          {I18n.t('evaluate_copy')}
         </Button>
       </div>
       <div className="flex-1 rounded-[6px] py-3 bg-[#1e1e1e] overflow-hidden">

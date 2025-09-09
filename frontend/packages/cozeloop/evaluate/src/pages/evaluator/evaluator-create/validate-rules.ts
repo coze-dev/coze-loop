@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Model } from '@cozeloop/api-schema/llm-manage';
 import { ContentType, type Message } from '@cozeloop/api-schema/evaluation';
 

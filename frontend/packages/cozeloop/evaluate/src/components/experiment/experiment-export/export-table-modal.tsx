@@ -28,7 +28,7 @@ interface ExportTableModalProps {
 
 const ExportRefreshComp = ({ onRefresh }: { onRefresh: () => void }) => (
   <div className="flex items-center gap-[6px]">
-    <span>{I18n.t('export_records')}</span>
+    <span>{I18n.t('evaluate_export_records')}</span>
     <Button
       color="secondary"
       iconPosition="left"
@@ -39,7 +39,7 @@ const ExportRefreshComp = ({ onRefresh }: { onRefresh: () => void }) => (
       }}
     >
       <span className="text-[var(--coz-fg-secondary)]">
-        {I18n.t('task_refresh')}
+        {I18n.t('refresh')}
       </span>
     </Button>
   </div>

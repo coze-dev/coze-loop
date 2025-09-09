@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { PageLoading } from '@cozeloop/components';
 import { type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
 import { type tag } from '@cozeloop/api-schema/data';

@@ -151,7 +151,7 @@ const ExperimentDescription = ({
         {target_runtime_param?.json_value &&
         target_runtime_param.json_value !== '{}' ? (
           <DescriptionItem
-            label={I18n.t('parameter_injection')}
+            label={I18n.t('evaluate_parameter_injection')}
             content={
               <DynamicParams
                 evalTarget={eval_target}
