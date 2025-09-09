@@ -190,7 +190,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redis.Cmdable, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redis.Cmdable, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
@@ -202,7 +202,8 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redi
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo)
+	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor)
 	if err != nil {
 		return nil, err
 	}

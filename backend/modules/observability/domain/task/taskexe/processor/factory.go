@@ -9,6 +9,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -30,7 +31,7 @@ func NewProcessor(ctx context.Context, taskType task.TaskType) (taskexe.Processo
 	}
 }
 
-func InitProcessor() {
-	autoEvaluteProc = newAutoEvaluteProcessor()
+func InitProcessor(datasetServiceProvider *service.DatasetServiceAdaptor) {
+	autoEvaluteProc = newAutoEvaluteProcessor(datasetServiceProvider)
 	dataReflowProc = newDataReflowProcessor()
 }

@@ -12,18 +12,16 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	config "github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/consumer"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
-	goredis "github.com/redis/go-redis/v9"
 )
 
 type ITraceHubService interface {
@@ -32,8 +30,9 @@ type ITraceHubService interface {
 
 func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
+	datasetServiceProvider *service.DatasetServiceAdaptor,
 ) (ITraceHubService, error) {
-	processor.InitProcessor()
+	processor.InitProcessor(datasetServiceProvider)
 	ticker := time.NewTicker(1 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo: tRepo,
@@ -48,9 +47,6 @@ func NewTraceHubImpl(
 }
 
 type TraceHubServiceImpl struct {
-	c        consumer.Consumer
-	cfg      *config.ConsumerConfig
-	redis    *goredis.Client
 	ticker   *time.Ticker
 	stopChan chan struct{}
 	taskRepo repo.ITaskRepo

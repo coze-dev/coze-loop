@@ -247,7 +247,8 @@ func InitTaskApplication(
 	authClient authservice.Client,
 	evalService evaluatorservice.Client,
 	evalSetService evaluationsetservice.Client,
-	exptService experimentservice.Client) (ITaskApplication, error) {
+	exptService experimentservice.Client,
+	datasetService datasetservice.Client) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
 }

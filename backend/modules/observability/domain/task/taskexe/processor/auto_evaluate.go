@@ -40,8 +40,10 @@ type AutoEvaluteProcessor struct {
 	TaskRepo              repo.ITaskRepo
 }
 
-func newAutoEvaluteProcessor() *AutoEvaluteProcessor {
-	return &AutoEvaluteProcessor{}
+func newAutoEvaluteProcessor(datasetServiceProvider *service.DatasetServiceAdaptor) *AutoEvaluteProcessor {
+	return &AutoEvaluteProcessor{
+		datasetServiceAdaptor: datasetServiceProvider,
+	}
 }
 
 func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any, workspaceID int64) error {
