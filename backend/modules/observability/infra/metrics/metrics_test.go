@@ -266,6 +266,7 @@ func TestTraceMetricsImpl_EmitListSpansOapi(t *testing.T) {
 
 func TestTraceQueryTagNames(t *testing.T) {
 	expected := []string{
+		tagMethod,
 		tagSpaceID,
 		tagPlatformType,
 		tagSpanType,
@@ -274,5 +275,5 @@ func TestTraceQueryTagNames(t *testing.T) {
 	}
 	result := traceQueryTagNames()
 	assert.Equal(t, expected, result)
-	assert.Len(t, result, 5)
+	assert.Len(t, result, 6)
 }
