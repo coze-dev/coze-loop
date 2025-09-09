@@ -11,8 +11,8 @@
   "scripts": {
     "analyze": "BUNDLE_ANALYZE=true rsbuild build",
     "build": "REGION=cn npm run build:prod",
-    "build:prod": "NODE_OPTIONS=--max_old_space_size=16384 rsbuild build",
-    "build:ts": "NODE_OPTIONS=--max-old-space-size=16384 tsc -b tsconfig.build.json",
+    "build:prod": "rsbuild build",
+    "build:ts": "tsc -b tsconfig.build.json",
     "dev": "npm run dev:cn-boe",
     "dev:base": "rsbuild dev",
     "dev:cn": "REGION=cn npm run dev",
@@ -70,4 +70,3 @@
     "vitest": "~3.0.5"
   }
 }
-
