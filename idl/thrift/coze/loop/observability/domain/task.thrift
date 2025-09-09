@@ -7,6 +7,7 @@ include "export_dataset.thrift"
 typedef string TimeUnit (ts.enum="true")
 const TimeUnit TimeUnit_Day = "day"
 const TimeUnit TimeUnit_Week = "week"
+const TimeUnit TimeUnit_Null = "null"
 
 typedef string TaskType (ts.enum="true")
 const TaskType TaskType_AutoEval = "auto_evaluate"          // 自动评测
@@ -50,10 +51,10 @@ struct Rule {
 
 struct Sampler {
     1: optional double sample_rate                                                          // 采样率
-    2: optional i64 sample_size (api.js_conv="true", go.tag='json:"sample_size"')           // 采样上限
+    2: optional i64 sample_size                                                             // 采样上限
     3: optional bool is_cycle                                                               // 是否启动任务循环
-    4: optional i64 cycle_count (api.js_conv="true", go.tag='json:"cycle_count"')           // 采样单次上限
-    5: optional i64 cycle_interval (api.js_conv="true", go.tag='json:"cycle_interval"')     // 循环间隔
+    4: optional i64 cycle_count                                                             // 采样单次上限
+    5: optional i64 cycle_interval                                                          // 循环间隔
     6: optional TimeUnit cycle_time_unit                                                    // 循环时间单位
 }
 
@@ -84,8 +85,8 @@ struct AutoEvaluateConfig {
 
 // RunDetail
 struct RunDetail {
-    1: optional i64 success_count (api.js_conv="true", go.tag='json:"success_count"')
-    2: optional i64 failed_count (api.js_conv="true", go.tag='json:"failed_count"')
+    1: optional i64 success_count
+    2: optional i64 failed_count
 }
 
 struct FieldMapping {

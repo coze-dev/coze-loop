@@ -16,6 +16,8 @@ const (
 
 	TimeUnitWeek = "week"
 
+	TimeUnitNull = "null"
+
 	TaskTypeAutoEval = "auto_evaluate"
 
 	TaskTypeAutoDataReflow = "auto_data_reflow"
@@ -1340,13 +1342,13 @@ type Sampler struct {
 	// 采样率
 	SampleRate *float64 `thrift:"sample_rate,1,optional" frugal:"1,optional,double" form:"sample_rate" json:"sample_rate,omitempty" query:"sample_rate"`
 	// 采样上限
-	SampleSize *int64 `thrift:"sample_size,2,optional" frugal:"2,optional,i64" json:"sample_size" form:"sample_size" query:"sample_size"`
+	SampleSize *int64 `thrift:"sample_size,2,optional" frugal:"2,optional,i64" form:"sample_size" json:"sample_size,omitempty" query:"sample_size"`
 	// 是否启动任务循环
 	IsCycle *bool `thrift:"is_cycle,3,optional" frugal:"3,optional,bool" form:"is_cycle" json:"is_cycle,omitempty" query:"is_cycle"`
 	// 采样单次上限
-	CycleCount *int64 `thrift:"cycle_count,4,optional" frugal:"4,optional,i64" json:"cycle_count" form:"cycle_count" query:"cycle_count"`
+	CycleCount *int64 `thrift:"cycle_count,4,optional" frugal:"4,optional,i64" form:"cycle_count" json:"cycle_count,omitempty" query:"cycle_count"`
 	// 循环间隔
-	CycleInterval *int64 `thrift:"cycle_interval,5,optional" frugal:"5,optional,i64" json:"cycle_interval" form:"cycle_interval" query:"cycle_interval"`
+	CycleInterval *int64 `thrift:"cycle_interval,5,optional" frugal:"5,optional,i64" form:"cycle_interval" json:"cycle_interval,omitempty" query:"cycle_interval"`
 	// 循环时间单位
 	CycleTimeUnit *TimeUnit `thrift:"cycle_time_unit,6,optional" frugal:"6,optional,string" form:"cycle_time_unit" json:"cycle_time_unit,omitempty" query:"cycle_time_unit"`
 }
@@ -3236,8 +3238,8 @@ func (p *AutoEvaluateConfig) Field3DeepEqual(src []*FieldMapping) bool {
 
 // RunDetail
 type RunDetail struct {
-	SuccessCount *int64 `thrift:"success_count,1,optional" frugal:"1,optional,i64" json:"success_count" form:"success_count" query:"success_count"`
-	FailedCount  *int64 `thrift:"failed_count,2,optional" frugal:"2,optional,i64" json:"failed_count" form:"failed_count" query:"failed_count"`
+	SuccessCount *int64 `thrift:"success_count,1,optional" frugal:"1,optional,i64" form:"success_count" json:"success_count,omitempty" query:"success_count"`
+	FailedCount  *int64 `thrift:"failed_count,2,optional" frugal:"2,optional,i64" form:"failed_count" json:"failed_count,omitempty" query:"failed_count"`
 }
 
 func NewRunDetail() *RunDetail {
