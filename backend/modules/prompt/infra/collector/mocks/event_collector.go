@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
+	collector "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -39,6 +40,18 @@ func NewMockICollectorProvider(ctrl *gomock.Controller) *MockICollectorProvider 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockICollectorProvider) EXPECT() *MockICollectorProviderMockRecorder {
 	return m.recorder
+}
+
+// CollectPTaaSEvent mocks base method.
+func (m *MockICollectorProvider) CollectPTaaSEvent(ctx context.Context, executeLog *collector.ExecuteLog) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CollectPTaaSEvent", ctx, executeLog)
+}
+
+// CollectPTaaSEvent indicates an expected call of CollectPTaaSEvent.
+func (mr *MockICollectorProviderMockRecorder) CollectPTaaSEvent(ctx, executeLog any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CollectPTaaSEvent", reflect.TypeOf((*MockICollectorProvider)(nil).CollectPTaaSEvent), ctx, executeLog)
 }
 
 // CollectPromptHubEvent mocks base method.

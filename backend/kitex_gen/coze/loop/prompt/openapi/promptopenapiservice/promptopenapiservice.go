@@ -7,6 +7,7 @@ import (
 	"errors"
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
+	streaming "github.com/cloudwego/kitex/pkg/streaming"
 	openapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 )
 
@@ -19,6 +20,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		newPromptOpenAPIServiceBatchGetPromptByPromptKeyResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"Execute": kitex.NewMethodInfo(
+		executeHandler,
+		newPromptOpenAPIServiceExecuteArgs,
+		newPromptOpenAPIServiceExecuteResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ExecuteStreaming": kitex.NewMethodInfo(
+		executeStreamingHandler,
+		newPromptOpenAPIServiceExecuteStreamingArgs,
+		newPromptOpenAPIServiceExecuteStreamingResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingServer),
 	),
 }
 
@@ -72,6 +87,46 @@ func newPromptOpenAPIServiceBatchGetPromptByPromptKeyResult() interface{} {
 	return openapi.NewPromptOpenAPIServiceBatchGetPromptByPromptKeyResult()
 }
 
+func executeHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceExecuteArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceExecuteResult)
+	success, err := handler.(openapi.PromptOpenAPIService).Execute(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceExecuteArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceExecuteArgs()
+}
+
+func newPromptOpenAPIServiceExecuteResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceExecuteResult()
+}
+
+func executeStreamingHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	st, err := streaming.GetServerStreamFromArg(arg)
+	if err != nil {
+		return err
+	}
+	stream := streaming.NewServerStreamingServer[openapi.ExecuteStreamingResponse](st)
+	req := new(openapi.ExecuteRequest)
+	if err := stream.RecvMsg(ctx, req); err != nil {
+		return err
+	}
+	return handler.(openapi.PromptOpenAPIService).ExecuteStreaming(ctx, req, stream)
+}
+
+func newPromptOpenAPIServiceExecuteStreamingArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceExecuteStreamingArgs()
+}
+
+func newPromptOpenAPIServiceExecuteStreamingResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceExecuteStreamingResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -92,4 +147,29 @@ func (p *kClient) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.Ba
 		return
 	}
 	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) Execute(ctx context.Context, req *openapi.ExecuteRequest) (r *openapi.ExecuteResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceExecuteArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceExecuteResult
+	if err = p.c.Call(ctx, "Execute", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest) (PromptOpenAPIService_ExecuteStreamingClient, error) {
+	st, err := p.sc.StreamX(ctx, "ExecuteStreaming")
+	if err != nil {
+		return nil, err
+	}
+	stream := streaming.NewServerStreamingClient[openapi.ExecuteStreamingResponse](st)
+	if err := stream.SendMsg(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := stream.CloseSend(ctx); err != nil {
+		return nil, err
+	}
+	return stream, nil
 }
