@@ -1,5 +1,6 @@
 import { type FC } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EqualItem,
   ReadonlyItem,

@@ -47,15 +47,13 @@ export function AnnotateItemCard({
                 {I18n.t('detail')}
               </Typography.Text>
             </Tooltip>
-            <Tooltip content={I18n.t('evaluate_delete_tag')} theme="dark">
+            <Tooltip content={I18n.t('delete_tag')} theme="dark">
               <Typography.Text
                 link
                 onClick={() => {
                   Modal.warning({
-                    title: I18n.t('evaluate_delete_this_tag'),
-                    content: I18n.t(
-                      'evaluate_deleting_tag_affects_labeled_content',
-                    ),
+                    title: I18n.t('delete_this_tag'),
+                    content: I18n.t('deleting_tag_affects_labeled_content'),
                     cancelText: I18n.t('cancel'),
                     okText: I18n.t('confirm'),
                     autoLoading: true,

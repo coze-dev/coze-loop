@@ -401,7 +401,7 @@ export default function ({
               className="text-[rgb(var(--coze-up-brand-9))] cursor-pointer"
               onClick={onRefreshPage}
             >
-              {I18n.t('task_refresh')}
+              {I18n.t('refresh')}
             </span>
             {I18n.t('page_view')}
           </>

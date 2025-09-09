@@ -82,7 +82,7 @@ export default function ExperimentItemDetail({
   const header = (
     <div className="flex items-center h-5 gap-2 text-sm font-normal">
       <div className="flex items-center text-[18px] font-medium">
-        {I18n.t('loop_evaluate_view_details')}
+        {I18n.t('loop_view_details')}
         <IDWithCopy
           id={idString}
           prefix={

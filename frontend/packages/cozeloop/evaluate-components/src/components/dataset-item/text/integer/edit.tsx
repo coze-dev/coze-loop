@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Input } from '@coze-arch/coze-design';
 
 import { type DatasetItemProps } from '../../type';

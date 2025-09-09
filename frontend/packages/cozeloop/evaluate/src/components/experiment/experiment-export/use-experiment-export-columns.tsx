@@ -150,7 +150,7 @@ export function getExportExperimentColumns() {
     },
     {
       title: I18n.t('completion_time'),
-      value: I18n.t('data_annotate_end_time'),
+      value: I18n.t('completion_time'),
       dataIndex: 'end_time',
       key: 'end_time',
       width: 200,

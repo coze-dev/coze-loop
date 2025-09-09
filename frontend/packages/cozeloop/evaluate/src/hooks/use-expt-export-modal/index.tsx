@@ -18,7 +18,7 @@ export const useExptExportModal = () => {
 
   // 导出记录的表格列配置
   const exportRecordColumn = {
-    title: I18n.t('export_records'),
+    title: I18n.t('evaluate_export_records'),
     key: 'export_record',
     width: 80,
     render: (_: unknown, record: ExptResultExportRecord) => (
@@ -26,7 +26,7 @@ export const useExptExportModal = () => {
         className="cursor-pointer text-primary hover:text-primary-hover"
         onClick={() => onExportRecordClick(record)}
       >
-        {I18n.t('export_records')}
+        {I18n.t('evaluate_export_records')}
       </span>
     ),
   };

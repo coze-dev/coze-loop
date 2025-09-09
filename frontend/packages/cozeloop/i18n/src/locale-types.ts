@@ -957,6 +957,10 @@ interface I18nTranslateFn {
   (key: 'evaluation_set_field_mapping_tip', fallbackText?: string): string;
   /** 添加评估器 */
   (key: 'add_evaluator', fallbackText?: string): string;
+  /** 请添加评估器 */
+  (key: 'please_add_evaluator', fallbackText?: string): string;
+  /** 参数详情 */
+  (key: 'parameter_details', fallbackText?: string): string;
   /** 提交表单遇到问题 */
   (key: 'submit_form_problems', fallbackText?: string): string;
   /** 更新评分成功 */
@@ -1520,6 +1524,8 @@ interface I18nTranslateFn {
   (key: 'basic_information', fallbackText?: string): string;
   /** 信息未保存 */
   (key: 'information_not_saved', fallbackText?: string): string;
+  /** 离开后信息将不会保存 */
+  (key: 'leave_current_page_information_will_not_be_saved', fallbackText?: string): string;
   /** 切换后当前修改会被覆盖 */
   (key: 'switching_modification_overwritten_tips', fallbackText?: string): string;
   /** 作为输入投递给评测对象 */
@@ -1802,6 +1808,10 @@ interface I18nTranslateFn {
   (key: 'create_new_prompt', fallbackText?: string): string;
   /** 暂无数据 */
   (key: 'no_data_yet', fallbackText?: string): string;
+  /** 评测对象 */
+  (key: 'evaluation_object_target', fallbackText?: string): string;
+  /** 名称已存在 */
+  (key: 'name_already_exists', fallbackText?: string): string;
   /** 正在加载字段映射 */
   (key: 'loading_data_field_mapping', fallbackText?: string): string;
   /** 请输入整数 */
@@ -1822,6 +1832,8 @@ interface I18nTranslateFn {
   (key: 'image_address', fallbackText?: string): string;
   /** 图片预览 */
   (key: 'image_preview', fallbackText?: string): string;
+  /** 确认要移除 */
+  (key: 'confirm_removal', fallbackText?: string): string;
   /** 上传中 */
   (key: 'uploading', fallbackText?: string): string;
   /** 导入已通过图片 */
@@ -1874,6 +1886,10 @@ interface I18nTranslateFn {
   (key: 'view_and_download_files', fallbackText?: string): string;
   /** CSV格式 */
   (key: 'csv_format', fallbackText?: string): string;
+  /** 可选 */
+  (key: 'optional', fallbackText?: string): string;
+  /** 跳过 */
+  (key: 'skip', fallbackText?: string): string;
   /** 请配置字段映射 */
   (key: 'please_configure_field_mapping', fallbackText?: string): string;
   /** 对比{placeholder1}个实验 */
@@ -2091,6 +2107,12 @@ interface I18nTranslateFn {
   (key: 'model_not_support_multimodal', fallbackText?: string): string;
   /** 操作人 */
   (key: 'application_operator', fallbackText?: string): string;
+  /** 这是一个 CozeBot */
+  (key: 'this_is_a_cozebot', fallbackText?: string): string;
+  /** 开始时间 */
+  (key: 'start_time', fallbackText?: string): string;
+  /** 完成时间 */
+  (key: 'completion_time', fallbackText?: string): string;
   /** 完成时间 */
   (key: 'data_annotate_end_time', fallbackText?: string): string;
   /** 覆盖 Prompt 模型配置 */
@@ -2110,17 +2132,17 @@ interface I18nTranslateFn {
   /** Coze 智能体 */
   (key: 'cozeloop_open_evaluate_coze_intelligent_agent', fallbackText?: string): string;
   /** 数据嵌套层数超限 */
-  (key: 'data_engine_data_nesting_exceeds_limit', fallbackText?: string): string;
+  (key: 'data_nesting_exceeds_limit', fallbackText?: string): string;
   /** 数据转换失败 */
-  (key: 'data_engine_data_conversion_failed', fallbackText?: string): string;
+  (key: 'data_conversion_failed', fallbackText?: string): string;
   /** 图片数量超限 */
-  (key: 'data_engine_exceed_max_image_count', fallbackText?: string): string;
+  (key: 'exceed_max_image_count', fallbackText?: string): string;
   /** 图片大小超限 */
-  (key: 'data_engine_exceed_max_image_size', fallbackText?: string): string;
+  (key: 'exceed_max_image_size', fallbackText?: string): string;
   /** 图片获取失败 */
-  (key: 'data_engine_get_image_failed', fallbackText?: string): string;
+  (key: 'get_image_failed', fallbackText?: string): string;
   /** 文件扩展名不合法 */
-  (key: 'data_engine_illegal_extension', fallbackText?: string): string;
+  (key: 'illegal_extension', fallbackText?: string): string;
   /** 上传图片失败 */
   (key: 'cozeloop_open_evaluate_image_upload_failed', fallbackText?: string): string;
   /** 世界上最大的动物是什么 */
@@ -2130,7 +2152,11 @@ interface I18nTranslateFn {
   /** 告诉我一些这个动物的生活习性 */
   (key: 'evaluate_living_habits_animal', fallbackText?: string): string;
   /** 吃鱼 */
-  (key: 'data_engine_eat_fish', fallbackText?: string): string;
+  (key: 'eat_fish', fallbackText?: string): string;
+  /** 导出数据 */
+  (key: 'export_data', fallbackText?: string): string;
+  /** 下载 */
+  (key: 'download', fallbackText?: string): string;
   /** 实验对比最大数量不能超过 {MAX_EXPERIMENT_CONTRAST_COUNT} 个，请重新选择。 */
   (
     key: 'cozeloop_open_evaluate_max_experiment_contrast_limit',
@@ -2146,11 +2172,11 @@ interface I18nTranslateFn {
   /** JSON 格式错误 */
   (key: 'cozeloop_open_evaluate_json_format_error', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文开头 */
-  (key: 'data_engine_support_letter_number_chinese_start', fallbackText?: string): string;
+  (key: 'support_letter_number_chinese_start', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (key: 'data_engine_support_letter_number_chinese_special_char', fallbackText?: string): string;
+  (key: 'support_letter_number_chinese_special_char', fallbackText?: string): string;
   /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (key: 'data_engine_support_letter_number_underscore_start_letter', fallbackText?: string): string;
+  (key: 'support_letter_number_underscore_start_letter', fallbackText?: string): string;
   /** 文件读取失败 */
   (key: 'knowledge_file_read_fail', fallbackText?: string): string;
   /** 文件格式错误 */
@@ -2189,6 +2215,14 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
+  /** 列 {placeholder1} */
+  (
+    key: 'column_placeholder',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
   /** 确认删除 */
   (key: 'task_delete_confirm_btn', fallbackText?: string): string;
   /** { }                 列，此操作不可逆 */
@@ -2197,6 +2231,8 @@ interface I18nTranslateFn {
   (key: 'global_btn_confirm', fallbackText?: string): string;
   /** 取消 */
   (key: 'global_btn_cancel', fallbackText?: string): string;
+  /** 只读 */
+  (key: 'read_only', fallbackText?: string): string;
   /** 导入数据列 */
   (key: 'data_engine_import_data_columns', fallbackText?: string): string;
   /** {placeholder0} 模板 */
@@ -2273,7 +2309,7 @@ interface I18nTranslateFn {
   /** 确定删除评测集 */
   (key: 'cozeloop_open_evaluate_confirm_delete_evaluation_set', fallbackText?: string): string;
   /** 吗？此修改将不可逆。 */
-  (key: 'data_engine_this_change_irreversible', fallbackText?: string): string;
+  (key: 'this_change_irreversible', fallbackText?: string): string;
   /** 删除 */
   (key: 'space_member_role_type_del_btn', fallbackText?: string): string;
   /** {placeholder1} 分 */
@@ -2288,6 +2324,8 @@ interface I18nTranslateFn {
   (key: 'cozeloop_open_evaluate_items_failed', fallbackText?: string): string;
   /** 条 */
   (key: 'tiao', fallbackText?: string): string;
+  /** 条数据 */
+  (key: 'tiao_items', fallbackText?: string): string;
   /** 存在以下原因导致执行失败，请自行纠正后重试 */
   (key: 'cozeloop_open_evaluate_execution_failed_reasons', fallbackText?: string): string;
   /** （{placeholder1}条） */
@@ -2371,6 +2409,14 @@ interface I18nTranslateFn {
   /** (共有{currentColumnNum}/50列) */
   (
     key: 'data_engine_column_count_info',
+    options?: {
+      /** string */ currentColumnNum: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** (共有{currentColumnNum}/50列) */
+  (
+    key: 'column_count_info',
     options?: {
       /** string */ currentColumnNum: ReactNode;
     },
