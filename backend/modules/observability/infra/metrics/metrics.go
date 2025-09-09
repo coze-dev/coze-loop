@@ -16,11 +16,9 @@ import (
 const (
 	traceSpansMetricsName = "trace_spans"
 
-	getTraceSuffix        = "get_trace"
-	listSpansSuffix       = "list_spans"
-	searchTraceOApiSuffix = "search_trace_oapi"
-	listSpansOApiSuffix   = "list_spans_oapi"
-	listTracesOApiSuffix  = "list_traces_oapi"
+	getTraceSuffix  = "get_trace"
+	listSpansSuffix = "list_spans"
+	traceOApiSuffix = "trace_oapi"
 
 	throughputSuffix = ".throughput"
 	latencySuffix    = ".latency"
@@ -28,6 +26,7 @@ const (
 )
 
 const (
+	tagMethod       = "method"
 	tagSpaceID      = "workspace_id"
 	tagPlatformType = "platform_type"
 	tagSpanType     = "span_type"
@@ -37,6 +36,7 @@ const (
 
 func traceQueryTagNames() []string {
 	return []string{
+		tagMethod,
 		tagSpaceID,
 		tagPlatformType,
 		tagSpanType,
@@ -102,21 +102,22 @@ func (t *TraceMetricsImpl) EmitGetTrace(workspaceId int64, start time.Time, isEr
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(getTraceSuffix+latencySuffix)))
 }
 
-func (t *TraceMetricsImpl) EmitListSpansOapi(workspaceId int64, platformType, spanType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platformType, spanType string, spanSize int64, errorCode int, start time.Time, isError bool) {
 	if t.spansMetrics == nil {
 		return
 	}
 	t.spansMetrics.Emit(
 		[]metrics.T{
+			{Name: tagMethod, Value: method},
 			{Name: tagSpaceID, Value: strconv.FormatInt(workspaceId, 10)},
 			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
 			{Name: tagPlatformType, Value: platformType},
 			{Name: tagSpanType, Value: spanType},
 			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
 		},
-		metrics.Counter(1, metrics.WithSuffix(listSpansOApiSuffix+throughputSuffix)),
-		metrics.Counter(spanSize, metrics.WithSuffix(listSpansOApiSuffix+sizeSuffix)),
-		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(listSpansOApiSuffix+latencySuffix)))
+		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
+		metrics.Counter(spanSize, metrics.WithSuffix(traceOApiSuffix+sizeSuffix)),
+		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
 }
 
 func (t *TraceMetricsImpl) EmitSearchTraceOapi(workspaceId int64, platformType string, spanSize int64, errorCode int, start time.Time, isError bool) {
@@ -130,9 +131,9 @@ func (t *TraceMetricsImpl) EmitSearchTraceOapi(workspaceId int64, platformType s
 			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
 			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
 		},
-		metrics.Counter(1, metrics.WithSuffix(searchTraceOApiSuffix+throughputSuffix)),
-		metrics.Counter(spanSize, metrics.WithSuffix(searchTraceOApiSuffix+sizeSuffix)),
-		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(searchTraceOApiSuffix+latencySuffix)))
+		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
+		metrics.Counter(spanSize, metrics.WithSuffix(traceOApiSuffix+sizeSuffix)),
+		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
 }
 
 func (t *TraceMetricsImpl) EmitListTracesOapi(workspaceId int64, errorCode int, start time.Time, isError bool) {
@@ -145,6 +146,6 @@ func (t *TraceMetricsImpl) EmitListTracesOapi(workspaceId int64, errorCode int, 
 			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
 			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
 		},
-		metrics.Counter(1, metrics.WithSuffix(listTracesOApiSuffix+throughputSuffix)),
-		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(listTracesOApiSuffix+latencySuffix)))
+		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
+		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
 }

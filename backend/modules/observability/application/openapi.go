@@ -464,7 +464,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	errCode := 0
 	defer func() {
 		if req != nil {
-			o.metrics.EmitSearchTraceOapi(req.WorkspaceID, req.GetPlatformType(), int64(spansSize), errCode, st, err != nil)
+			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
@@ -566,7 +566,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	resp := openapi.NewListSpansOApiResponse()
 	defer func() {
 		if req != nil {
-			o.metrics.EmitListSpansOapi(req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+			o.metrics.EmitTraceOapi("ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 	if err = o.validateListSpansOApi(ctx, req); err != nil {
@@ -678,7 +678,7 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 	st := time.Now()
 	errCode := 0
 	defer func() {
-		o.metrics.EmitListTracesOapi(req.WorkspaceID, errCode, st, err != nil)
+		o.metrics.EmitTraceOapi("ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
 	}()
 
 	if err = o.validateListTracesOApiReq(ctx, req); err != nil {

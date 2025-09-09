@@ -1495,7 +1495,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListSpansOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListSpansOApi",
 					int64(123),
 					gomock.Any(),
 					gomock.Any(),
@@ -1559,7 +1560,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListSpansOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListSpansOApi",
 					int64(123),
 					gomock.Any(),
 					gomock.Any(),
@@ -1616,7 +1618,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListSpansOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListSpansOApi",
 					int64(123),
 					gomock.Any(),
 					gomock.Any(),
@@ -1675,7 +1678,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
-				metricsMock.EXPECT().EmitListSpansOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListSpansOApi",
 					int64(123),
 					gomock.Any(),
 					gomock.Any(),
@@ -1736,7 +1740,8 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
-				metricsMock.EXPECT().EmitListSpansOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListSpansOApi",
 					int64(123),
 					gomock.Any(),
 					gomock.Any(),
@@ -1852,9 +1857,11 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
-				metricsMock.EXPECT().EmitSearchTraceOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"SearchTraceOApi",
 					int64(123),
 					gomock.Any(),
+					"",
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -1920,9 +1927,11 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
-				metricsMock.EXPECT().EmitSearchTraceOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"SearchTraceOApi",
 					int64(123),
 					gomock.Any(),
+					"",
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2022,9 +2031,11 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitSearchTraceOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"SearchTraceOApi",
 					int64(123),
 					gomock.Any(),
+					"",
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2077,9 +2088,11 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitSearchTraceOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"SearchTraceOApi",
 					int64(123),
 					gomock.Any(),
+					"",
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2134,9 +2147,11 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitSearchTraceOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"SearchTraceOApi",
 					int64(123),
 					gomock.Any(),
+					"",
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2196,9 +2211,11 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
-				metricsMock.EXPECT().EmitSearchTraceOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"SearchTraceOApi",
 					int64(123),
 					gomock.Any(),
+					"",
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2321,8 +2338,12 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
 					int64(123),
+					"",
+					"",
+					int64(0),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2387,7 +2408,11 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
+					int64(0),
+					"",
+					"",
 					int64(0),
 					gomock.Any(),
 					gomock.Any(),
@@ -2440,8 +2465,12 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
 					int64(123),
+					"",
+					"",
+					int64(0),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2493,8 +2522,12 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
 					int64(123),
+					"",
+					"",
+					int64(0),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2547,8 +2580,12 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
 					int64(123),
+					"",
+					"",
+					int64(0),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2602,8 +2639,12 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
 					int64(123),
+					"",
+					"",
+					int64(0),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -2660,8 +2701,12 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				metricsMock.EXPECT().EmitListTracesOapi(
+				metricsMock.EXPECT().EmitTraceOapi(
+					"ListTracesOApi",
 					int64(123),
+					"",
+					"",
+					int64(0),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
