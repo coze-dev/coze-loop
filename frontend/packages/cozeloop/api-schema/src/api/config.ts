@@ -19,13 +19,18 @@ export interface ApiOption {
   headers?: Record<string, string>;
 }
 
+export interface ApiResponse {
+  code?: number;
+  msg?: string;
+}
+
 export function createAPI<
   T extends {},
   K,
   O = ApiOption,
   B extends boolean = false,
 >(meta: IMeta, cancelable?: B) {
-  return apiFactory<T, K, O, B>(meta, cancelable, false, {
+  return apiFactory<T, K & ApiResponse, O, B>(meta, cancelable, false, {
     config: {
       clientFactory: _meta => async (uri, init, options) => {
         const headers = {

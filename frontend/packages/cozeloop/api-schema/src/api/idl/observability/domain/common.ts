@@ -6,6 +6,8 @@ export enum PlatformType {
   CozeBot = "coze_bot",
   Project = "coze_project",
   Workflow = "coze_workflow",
+  Ark = "ark",
+  VeADK = "veadk",
   LoopAll = "loop_all",
   InnerCozeloop = "inner_cozeloop",
   InnerDoubao = "inner_doubao",

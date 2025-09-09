@@ -106,9 +106,9 @@ export interface ContentPart {
   image_url?: ImageURL,
 }
 export enum ContentType {
-  Text = 'text',
-  ImageURL = 'image_url',
-  MultiPartVariable = 'multi_part',
+  Text = "text",
+  ImageURL = "image_url",
+  MultiPartVariable = "multi_part_variable",
 }
 export interface ImageURL {
   uri?: string,
@@ -124,6 +124,9 @@ export interface FunctionCall {
   name?: string,
   arguments?: string,
 }
+export interface Label {
+  key?: string
+}
 export interface VariableDef {
   key?: string,
   desc?: string,
@@ -134,20 +137,21 @@ export interface VariableVal {
   key?: string,
   value?: string,
   placeholder_messages?: Message[],
+  multi_part_values?: ContentPart[],
 }
 export enum VariableType {
-  String = 'string',
-  Boolean = 'boolean',
-  Integer = 'integer',
-  Float = 'float',
-  Object = 'object',
-  Array_String = 'array<string>',
-  Array_Boolean = 'array<boolean>',
-  Array_Integer = 'array<integer>',
-  Array_Float = 'array<float>',
-  Array_Object = 'array<object>',
-  Placeholder = 'placeholder',
-  MultiPart = 'multi_part',
+  String = "string",
+  Boolean = "boolean",
+  Integer = "integer",
+  Float = "float",
+  Object = "object",
+  Array_String = "array<string>",
+  Array_Boolean = "array<boolean>",
+  Array_Integer = "array<integer>",
+  Array_Float = "array<float>",
+  Array_Object = "array<object>",
+  Placeholder = "placeholder",
+  MultiPart = "multi_part",
 }
 export interface TokenUsage {
   input_tokens?: string,
