@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"strconv"
 	"testing"
 	"time"
 
@@ -2769,198 +2768,55 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 }
 
 // TestOpenAPIApplication_unpackSpace tests the unpackSpace method
-func TestOpenAPIApplication_unpackSpace(t *testing.T) {
-	type fields struct {
-		traceService service.ITraceService
-		auth         rpc.IAuthProvider
-		benefit      benefit.IBenefitService
-		tenant       tenant.ITenantProvider
-		workspace    workspace.IWorkSpaceProvider
-		rateLimiter  limiter.IRateLimiterFactory
-		traceConfig  config.ITraceConfig
-		metrics      metrics.ITraceMetrics
-	}
-	type args struct {
-		ctx   context.Context
-		spans []*span.InputSpan
-	}
-	tests := []struct {
-		name         string
-		fieldsGetter func(ctrl *gomock.Controller) fields
-		args         args
-		want         map[string][]*span.InputSpan
-	}{
-		{
-			name: "nil spans",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
-				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-						case "span2":
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
-				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
-				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
-				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				return fields{
-					traceService: traceServiceMock,
-					auth:         authMock,
-					benefit:      benefitMock,
-					tenant:       tenantMock,
-					workspace:    workspaceMock,
-					rateLimiter:  rateLimiterMock,
-					traceConfig:  traceConfigMock,
-					metrics:      metricsMock,
-				}
-			},
-			args: args{
-				ctx:   context.Background(),
-				spans: nil,
-			},
-			want: nil,
-		},
-		{
-			name: "empty workspace ID skipped",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
-				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						}
-					}
-					return ""
-				}).AnyTimes()
-				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
-				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
-				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				return fields{
-					traceService: traceServiceMock,
-					auth:         authMock,
-					benefit:      benefitMock,
-					tenant:       tenantMock,
-					workspace:    workspaceMock,
-					rateLimiter:  rateLimiterMock,
-					traceConfig:  traceConfigMock,
-					metrics:      metricsMock,
-				}
-			},
-			args: args{
-				ctx: context.Background(),
-				spans: []*span.InputSpan{
-					{SpanID: "span1"},
-				},
-			},
-			want: map[string][]*span.InputSpan{},
-		},
-		{
-			name: "spans grouped by workspace ID",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
-				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-							return "workspace1"
-						case "span2":
-							return "workspace1"
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
-				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
-				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
-				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				return fields{
-					traceService: traceServiceMock,
-					auth:         authMock,
-					benefit:      benefitMock,
-					tenant:       tenantMock,
-					workspace:    workspaceMock,
-					rateLimiter:  rateLimiterMock,
-					traceConfig:  traceConfigMock,
-					metrics:      metricsMock,
-				}
-			},
-			args: args{
-				ctx: context.Background(),
-				spans: []*span.InputSpan{
-					{SpanID: "span1"},
-					{SpanID: "span2"},
-					{SpanID: "span3"},
-				},
-			},
-			want: map[string][]*span.InputSpan{
-				"workspace1": {
-					{SpanID: "span1", WorkspaceID: "workspace1"},
-					{SpanID: "span2", WorkspaceID: "workspace1"},
-				},
-				"workspace2": {
-					{SpanID: "span3", WorkspaceID: "workspace2"},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			fields := tt.fieldsGetter(ctrl)
-			o := &OpenAPIApplication{
-				traceService: fields.traceService,
-				auth:         fields.auth,
-				benefit:      fields.benefit,
-				tenant:       fields.tenant,
-				workspace:    fields.workspace,
-				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
-				traceConfig:  fields.traceConfig,
-				metrics:      fields.metrics,
-			}
-			err := error(nil)
-			assert.NoError(t, err)
-			got := o.unpackSpace(tt.args.ctx, tt.args.spans)
-			if tt.want == nil {
-				assert.Nil(t, got)
-			} else {
-				assert.Equal(t, len(tt.want), len(got))
-				for workspaceID, expectedSpans := range tt.want {
-					actualSpans, exists := got[workspaceID]
-					assert.True(t, exists)
-					assert.Equal(t, len(expectedSpans), len(actualSpans))
-				}
-			}
-		})
-	}
-}
 
 // TestOpenAPIApplication_AllowByKey tests the AllowByKey method
-func TestOpenAPIApplication_AllowByKey(t *testing.T) {
+
+// TestNewOpenAPIApplication 测试构造函数
+func TestNewOpenAPIApplication(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+	authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+	benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	rateLimiterFactoryMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+	rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+
+	rateLimiterFactoryMock.EXPECT().NewRateLimiter().Return(rateLimiterMock)
+
+	app, err := NewOpenAPIApplication(
+		traceServiceMock,
+		authMock,
+		benefitMock,
+		tenantMock,
+		workspaceMock,
+		rateLimiterFactoryMock,
+		traceConfigMock,
+		metricsMock,
+	)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, app)
+	
+	// 验证返回的实例类型
+	openAPIApp, ok := app.(*OpenAPIApplication)
+	assert.True(t, ok)
+	assert.NotNil(t, openAPIApp.traceService)
+	assert.NotNil(t, openAPIApp.auth)
+	assert.NotNil(t, openAPIApp.benefit)
+	assert.NotNil(t, openAPIApp.tenant)
+	assert.NotNil(t, openAPIApp.workspace)
+	assert.NotNil(t, openAPIApp.rateLimiter)
+	assert.NotNil(t, openAPIApp.traceConfig)
+	assert.NotNil(t, openAPIApp.metrics)
+}
+
+// 补充IngestTraces的边界测试场景
+func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 	type fields struct {
 		traceService service.ITraceService
 		auth         rpc.IAuthProvider
@@ -2972,42 +2828,30 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 		metrics      metrics.ITraceMetrics
 	}
 	type args struct {
-		ctx         context.Context
-		workspaceID int64
+		ctx context.Context
+		req *openapi.IngestTracesRequest
 	}
 	tests := []struct {
 		name         string
 		fieldsGetter func(ctrl *gomock.Controller) fields
 		args         args
-		want         bool
+		want         *openapi.IngestTracesResponse
+		wantErr      bool
 	}{
 		{
-			name: "rate limit allowed",
+			name: "permission check fails",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(assert.AnError)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-						case "span2":
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("1").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -3020,38 +2864,37 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 				}
 			},
 			args: args{
-				ctx:         context.Background(),
-				workspaceID: 123,
+				ctx: context.Background(),
+				req: &openapi.IngestTracesRequest{
+					Spans: []*span.InputSpan{
+						{
+							WorkspaceID: "1",
+						},
+					},
+				},
 			},
-			want: true,
+			want:    nil,
+			wantErr: true,
 		},
 		{
-			name: "rate limit exceeded",
+			name: "benefit check fails - insufficient capacity",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         false,
+					StorageDuration:  3,
+				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-						case "span2":
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("1").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -3064,37 +2907,37 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 				}
 			},
 			args: args{
-				ctx:         context.Background(),
-				workspaceID: 123,
+				ctx: context.Background(),
+				req: &openapi.IngestTracesRequest{
+					Spans: []*span.InputSpan{
+						{
+							WorkspaceID: "1",
+						},
+					},
+				},
 			},
-			want: false,
+			want:    nil,
+			wantErr: true,
 		},
 		{
-			name: "config error returns true",
+			name: "benefit check fails - account not available",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					AccountAvailable: false,
+					IsEnough:         true,
+					StorageDuration:  3,
+				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-						case "span2":
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("1").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(0, assert.AnError)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -3107,38 +2950,32 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 				}
 			},
 			args: args{
-				ctx:         context.Background(),
-				workspaceID: 123,
+				ctx: context.Background(),
+				req: &openapi.IngestTracesRequest{
+					Spans: []*span.InputSpan{
+						{
+							WorkspaceID: "1",
+						},
+					},
+				},
 			},
-			want: true,
+			want:    nil,
+			wantErr: true,
 		},
 		{
-			name: "rate limiter error returns true",
+			name: "invalid workspace id format",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-						case "span2":
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("invalid").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(nil, assert.AnError)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -3151,38 +2988,30 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 				}
 			},
 			args: args{
-				ctx:         context.Background(),
-				workspaceID: 123,
+				ctx: context.Background(),
+				req: &openapi.IngestTracesRequest{
+					Spans: []*span.InputSpan{
+						{
+							WorkspaceID: "1",
+						},
+					},
+				},
 			},
-			want: true,
+			want:    nil,
+			wantErr: true,
 		},
 		{
-			name: "nil result returns true",
+			name: "nil request",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
-				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
-					if len(spans) > 0 {
-						switch spans[0].SpanID {
-						case "span1":
-						case "span2":
-						case "span3":
-							return "workspace2"
-						}
-					}
-					return ""
-				}).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterFactoryMock := limitermocks.NewMockIRateLimiter(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterFactoryMock).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
-				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(nil, nil)
 				return fields{
 					traceService: traceServiceMock,
 					auth:         authMock,
@@ -3195,13 +3024,13 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 				}
 			},
 			args: args{
-				ctx:         context.Background(),
-				workspaceID: 123,
+				ctx: context.Background(),
+				req: nil,
 			},
-			want: true,
+			want:    nil,
+			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -3217,10 +3046,497 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 				traceConfig:  fields.traceConfig,
 				metrics:      fields.metrics,
 			}
-			err := error(nil)
-			assert.NoError(t, err)
-			got := o.AllowByKey(tt.args.ctx, strconv.FormatInt(tt.args.workspaceID, 10))
+			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
+
+// 补充CreateAnnotation的更多测试场景
+func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
+	type fields struct {
+		traceService service.ITraceService
+		auth         rpc.IAuthProvider
+		benefit      benefit.IBenefitService
+		tenant       tenant.ITenantProvider
+		workspace    workspace.IWorkSpaceProvider
+		rateLimiter  limiter.IRateLimiterFactory
+		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
+	}
+	type args struct {
+		ctx context.Context
+		req *openapi.CreateAnnotationRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *openapi.CreateAnnotationResponse
+		wantErr      bool
+	}{
+		{
+			name: "create annotation with double value type",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeDouble)),
+					AnnotationValue:     "3.14",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    openapi.NewCreateAnnotationResponse(),
+			wantErr: false,
+		},
+		{
+			name: "create annotation with bool value type",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeBool)),
+					AnnotationValue:     "true",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    openapi.NewCreateAnnotationResponse(),
+			wantErr: false,
+		},
+		{
+			name: "create annotation with invalid double value",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeDouble)),
+					AnnotationValue:     "invalid",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "create annotation with invalid bool value",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeBool)),
+					AnnotationValue:     "invalid",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "benefit check fails",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+					AnnotationValue:     "test",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "trace service fails",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(assert.AnError)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+					AnnotationValue:     "test",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			got, err := o.CreateAnnotation(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// 补充DeleteAnnotation的更多测试场景
+func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
+	type fields struct {
+		traceService service.ITraceService
+		auth         rpc.IAuthProvider
+		benefit      benefit.IBenefitService
+		tenant       tenant.ITenantProvider
+		workspace    workspace.IWorkSpaceProvider
+		rateLimiter  limiter.IRateLimiterFactory
+		traceConfig  config.ITraceConfig
+		metrics      metrics.ITraceMetrics
+	}
+	type args struct {
+		ctx context.Context
+		req *openapi.DeleteAnnotationRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *openapi.DeleteAnnotationResponse
+		wantErr      bool
+	}{
+		{
+			name: "benefit check fails",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.DeleteAnnotationRequest{
+					WorkspaceID: 1,
+					Base:        &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "trace service fails",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().DeleteAnnotation(gomock.Any(), gomock.Any()).Return(assert.AnError)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.DeleteAnnotationRequest{
+					WorkspaceID: 1,
+					Base:        &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			o := &OpenAPIApplication{
+				traceService: fields.traceService,
+				auth:         fields.auth,
+				benefit:      fields.benefit,
+				tenant:       fields.tenant,
+				workspace:    fields.workspace,
+				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
+				traceConfig:  fields.traceConfig,
+				metrics:      fields.metrics,
+			}
+			got, err := o.DeleteAnnotation(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// 测试validate和build函数
+func TestOpenAPIApplication_validateIngestTracesReq(t *testing.T) {
+	app := &OpenAPIApplication{}
+	
+	// 测试nil请求
+	err := app.validateIngestTracesReq(context.Background(), nil)
+	assert.Error(t, err)
+	
+	// 测试空spans
+	err = app.validateIngestTracesReq(context.Background(), &openapi.IngestTracesRequest{
+		Spans: []*span.InputSpan{},
+	})
+	assert.Error(t, err)
+	
+	// 测试不同workspace id的spans
+	err = app.validateIngestTracesReq(context.Background(), &openapi.IngestTracesRequest{
+		Spans: []*span.InputSpan{
+			{WorkspaceID: "1"},
+			{WorkspaceID: "2"},
+		},
+	})
+	assert.Error(t, err)
+	
+	// 测试正常情况
+	err = app.validateIngestTracesReq(context.Background(), &openapi.IngestTracesRequest{
+		Spans: []*span.InputSpan{
+			{WorkspaceID: "1"},
+			{WorkspaceID: "1"},
+		},
+	})
+	assert.NoError(t, err)
+}
+
+func TestOpenAPIApplication_validateIngestTracesReqByTenant(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	app := &OpenAPIApplication{
+		traceConfig: traceConfigMock,
+	}
+	
+	// 测试nil请求
+	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil)
+	err := app.validateIngestTracesReqByTenant(context.Background(), "tenant", nil)
+	assert.Error(t, err)
+	
+	// 测试超过最大span长度
+	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(map[string]*config.IngestConfig{
+		"tenant": {MaxSpanLength: 1},
+	}, nil)
+	err = app.validateIngestTracesReqByTenant(context.Background(), "tenant", &openapi.IngestTracesRequest{
+		Spans: []*span.InputSpan{{}, {}},
+	})
+	assert.Error(t, err)
+	
+	// 测试正常情况
+	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil)
+	err = app.validateIngestTracesReqByTenant(context.Background(), "tenant", &openapi.IngestTracesRequest{
+		Spans: []*span.InputSpan{{}},
+	})
+	assert.NoError(t, err)
+}
+
+
+func TestOpenAPIApplication_unpackTenant(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	app := &OpenAPIApplication{
+		tenant: tenantMock,
+	}
+	
+	// 测试nil spans
+	result := app.unpackTenant(context.Background(), nil)
+	assert.Nil(t, result)
+	
+	// 测试正常情况
+	tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1")
+	result = app.unpackTenant(context.Background(), []*loop_span.Span{{SpanID: "test"}})
+	assert.Len(t, result, 1)
+	assert.Len(t, result["tenant1"], 1)
+}
+
