@@ -96,15 +96,15 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 	spanMap := o.unpackSpace(ctx, req.Spans)
 	connectorUid := session.UserIDInCtxOrEmpty(ctx)
 	for workspaceId := range spanMap {
-		// check permission
-		if err := o.auth.CheckIngestPermission(ctx, workspaceId); err != nil {
-			return nil, err
-		}
-		// check benefit
 		workSpaceIdNum, err := strconv.ParseInt(workspaceId, 10, 64)
 		if err != nil {
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 		}
+		// check permission
+		if err = o.auth.CheckIngestPermission(ctx, workspaceId); err != nil {
+			return nil, err
+		}
+		// check benefit
 		benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 			ConnectorUID: connectorUid,
 			SpaceID:      workSpaceIdNum,
@@ -234,12 +234,12 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 	partialFailSpanNumber := 0
 	partialErrMessage := ""
 	for workspaceId, otelSpans := range spansMap {
-		if e := o.auth.CheckIngestPermission(ctx, workspaceId); e != nil {
-			return nil, e
-		}
 		workSpaceIdNum, e := strconv.ParseInt(workspaceId, 10, 64)
 		if e != nil {
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		}
+		if e = o.auth.CheckIngestPermission(ctx, workspaceId); e != nil {
+			return nil, e
 		}
 		connectorUid := session.UserIDInCtxOrEmpty(ctx)
 		benefitRes, e := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{

@@ -2602,7 +2602,6 @@ func TestTraceServiceImpl_ListSpansOApi(t *testing.T) {
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 
 				return fields{
-					
 					buildHelper: buildHelper,
 				}
 			},
@@ -2863,7 +2862,7 @@ func TestTraceServiceImpl_ListSpansOApi(t *testing.T) {
 				},
 			},
 			wantErr: true,
-		},	}
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -2884,25 +2883,25 @@ func TestTraceServiceImpl_ListSpansOApi(t *testing.T) {
 
 func TestTraceFilterProcessorBuilderImpl_BuildListSpansOApiProcessors(t *testing.T) {
 	tests := []struct {
-		name                        string
+		name                            string
 		listSpansOApiProcessorFactories []span_processor.Factory
-		want                        int
-		wantErr                     bool
+		want                            int
+		wantErr                         bool
 	}{
 		{
-			name:                        "build processors successfully with empty factories",
+			name:                            "build processors successfully with empty factories",
 			listSpansOApiProcessorFactories: []span_processor.Factory{},
-			want:                        0,
-			wantErr:                     false,
+			want:                            0,
+			wantErr:                         false,
 		},
 		{
-			name:                        "build processors successfully with multiple factories",
+			name: "build processors successfully with multiple factories",
 			listSpansOApiProcessorFactories: []span_processor.Factory{
 				span_processor.NewCheckProcessorFactory(),
 				span_processor.NewCheckProcessorFactory(),
 			},
-			want:                        2,
-			wantErr:                     false,
+			want:    2,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -2937,24 +2936,24 @@ func TestTraceFilterProcessorBuilderImpl_BuildListSpansOApiProcessors(t *testing
 
 func TestTraceFilterProcessorBuilderImpl_BuildIngestTraceProcessors_ErrorHandling(t *testing.T) {
 	tests := []struct {
-		name                      string
+		name                          string
 		ingestTraceProcessorFactories []span_processor.Factory
-		want                      int
-		wantErr                   bool
+		want                          int
+		wantErr                       bool
 	}{
 		{
-			name:                      "build ingest processors successfully with empty factories",
+			name:                          "build ingest processors successfully with empty factories",
 			ingestTraceProcessorFactories: []span_processor.Factory{},
-			want:                      0,
-			wantErr:                   false,
+			want:                          0,
+			wantErr:                       false,
 		},
 		{
-			name:                      "build ingest processors successfully with multiple factories",
+			name: "build ingest processors successfully with multiple factories",
 			ingestTraceProcessorFactories: []span_processor.Factory{
 				span_processor.NewCheckProcessorFactory(),
 			},
-			want:                      1,
-			wantErr:                   false,
+			want:    1,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -2988,24 +2987,24 @@ func TestTraceFilterProcessorBuilderImpl_BuildIngestTraceProcessors_ErrorHandlin
 
 func TestTraceFilterProcessorBuilderImpl_BuildSearchTraceOApiProcessors_ErrorHandling(t *testing.T) {
 	tests := []struct {
-		name                          string
+		name                              string
 		searchTraceOApiProcessorFactories []span_processor.Factory
-		want                          int
-		wantErr                       bool
+		want                              int
+		wantErr                           bool
 	}{
 		{
-			name:                          "build search trace oapi processors successfully with empty factories",
+			name:                              "build search trace oapi processors successfully with empty factories",
 			searchTraceOApiProcessorFactories: []span_processor.Factory{},
-			want:                          0,
-			wantErr:                       false,
+			want:                              0,
+			wantErr:                           false,
 		},
 		{
-			name:                          "build search trace oapi processors successfully with multiple factories",
+			name: "build search trace oapi processors successfully with multiple factories",
 			searchTraceOApiProcessorFactories: []span_processor.Factory{
 				span_processor.NewCheckProcessorFactory(),
 			},
-			want:                          1,
-			wantErr:                       false,
+			want:    1,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
