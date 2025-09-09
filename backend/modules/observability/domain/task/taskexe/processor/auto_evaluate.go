@@ -167,6 +167,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day()),
 		category,
 		schema,
+		session,
 	))
 	if err != nil {
 		return err

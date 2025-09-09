@@ -57,6 +57,7 @@ type Dataset struct {
 	DatasetVersion DatasetVersion
 	// 评测集属性
 	EvaluationBizCategory *EvaluationBizCategory
+	Seesion               *common.Session
 }
 
 type DatasetVersion struct {
@@ -95,7 +96,7 @@ type FieldSchema struct {
 	DisplayFormat FieldDisplayFormat
 }
 
-func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema) *Dataset {
+func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema, session *common.Session) *Dataset {
 	dataset := &Dataset{
 		ID:          id,
 		WorkspaceID: spaceID,
@@ -104,6 +105,7 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema
 			DatasetSchema: schema,
 		},
 		DatasetCategory: category,
+		Seesion:         session,
 	}
 	return dataset
 }

@@ -42,20 +42,26 @@ func (d *EvaluationSetProvider) CreateDataset(ctx context.Context, dataset *enti
 	if dataset.Name == "" {
 		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("dataset name is required"))
 	}
-
-	userIDStr, _ := session.UserIDInCtx(ctx)
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("userid is required"))
+	var sessionInfo *common.Session
+	if dataset.Seesion == nil {
+		userIDStr, _ := session.UserIDInCtx(ctx)
+		userID, err := strconv.ParseInt(userIDStr, 10, 64)
+		if err != nil {
+			return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("userid is required"))
+		}
+		sessionInfo = &common.Session{
+			UserID: gptr.Of(userID),
+		}
+	} else {
+		sessionInfo = dataset.Seesion
 	}
+
 	// 构造请求
 	req := &eval_set.CreateEvaluationSetRequest{
 		WorkspaceID: dataset.WorkspaceID,
 		Name:        &dataset.Name,
 		Description: &dataset.Description,
-		Session: &common.Session{
-			UserID: lo.ToPtr(userID),
-		},
+		Session:     sessionInfo,
 	}
 
 	// 设置BizCategory
