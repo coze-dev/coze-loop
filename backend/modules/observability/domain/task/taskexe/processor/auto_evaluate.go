@@ -11,6 +11,7 @@ import (
 
 	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -119,6 +120,7 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	//todo:[xun]加锁
+	ctx = session.WithCtxUser(context.Background(), &session.User{ID: currentTask.BaseInfo.CreatedBy.GetUserID()})
 	session := getSession(ctx, currentTask)
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
@@ -171,8 +173,8 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		session,
 	))
 	if err != nil {
-		//return err
-		datasetID = 7548050173629300737
+		return err
+		//datasetID = 7548050173629300737
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
 	// 2、创建实验
