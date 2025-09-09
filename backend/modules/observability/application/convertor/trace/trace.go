@@ -34,8 +34,8 @@ func AdvanceInfoDO2TraceDTO(info *loop_span.TraceAdvanceInfo) *traced.Trace {
 	return &traced.Trace{
 		TraceID: &info.TraceId,
 		Tokens: &traced.TokenCost{
-			Input:  info.InputCost,
-			Output: info.OutputCost,
+			InputToken:  info.InputCost,
+			OutputToken: info.OutputCost,
 		},
 	}
 }
