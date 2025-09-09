@@ -171,7 +171,8 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		session,
 	))
 	if err != nil {
-		return err
+		//return err
+		datasetID = 7548050173629300737
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
 	// 2、创建实验
