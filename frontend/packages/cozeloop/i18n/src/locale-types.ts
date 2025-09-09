@@ -154,8 +154,14 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 请选择 */
-  (key: 'please_select', fallbackText?: string): string;
+  /** 请选择{field} */
+  (
+    key: 'please_select',
+    options?: {
+      /** string */ field: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
   /** 预览 */
   (key: 'preview', fallbackText?: string): string;
   /** 刷新 */
