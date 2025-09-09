@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -28,6 +29,7 @@ type ExptInsightAnalysisServiceImpl struct {
 	exptResultExportService IExptResultExportService
 	notifyRPCAdapter        rpc.INotifyRPCAdapter
 	userProvider            rpc.IUserProvider
+	exptRepo                repo.IExperimentRepo
 }
 
 func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
@@ -36,7 +38,8 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	agentAdapter rpc.IAgentAdapter,
 	exptResultExportService IExptResultExportService,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
-	userProvider rpc.IUserProvider) IExptInsightAnalysisService {
+	userProvider rpc.IUserProvider,
+	exptRepo repo.IExperimentRepo) IExptInsightAnalysisService {
 	return &ExptInsightAnalysisServiceImpl{
 		repo:                    repo,
 		exptPublisher:           exptPublisher,
@@ -45,6 +48,7 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 		exptResultExportService: exptResultExportService,
 		notifyRPCAdapter:        notifyRPCAdapter,
 		userProvider:            userProvider,
+		exptRepo:                exptRepo,
 	}
 }
 
@@ -125,7 +129,8 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 }
 
 func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64, session *entity.Session) (*entity.ExptInsightAnalysisRecord, error) {
-	err := e.notifyAnalysisComplete(ctx, session.UserID)
+	// todo get userID form db
+	err := e.notifyAnalysisComplete(ctx, session.UserID, spaceID, exptID)
 	if err != nil {
 		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
 	}
@@ -181,7 +186,11 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 	return analysisRecord, nil
 }
 
-func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Context, userID string) error {
+func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Context, userID string, spaceID, exptID int64) error {
+	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return err
+	}
 	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{userID})
 	if err != nil {
 		return err
@@ -194,9 +203,11 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 
 	userInfo := userInfos[0]
 	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
-
-	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.Email), "AAq9DvIYd2qHu", map[string]string{
-		"expt_name": "实验名称",
+	const cardID = "AAq9DvIYd2qHu"
+	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.Email), cardID, map[string]string{
+		"expt_name": expt.Name,
+		"space_id":  strconv.FormatInt(spaceID, 10),
+		"expt_id":   strconv.FormatInt(exptID, 10),
 	})
 
 	return err
