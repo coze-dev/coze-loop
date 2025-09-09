@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { isUndefined } from 'lodash-es';
 import { InputSlider } from '@cozeloop/components';
 import { IconCozQuestionMarkCircle } from '@coze-arch/coze-design/icons';

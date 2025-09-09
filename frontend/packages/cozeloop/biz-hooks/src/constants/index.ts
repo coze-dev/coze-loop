@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import DemoSpaceIcon from '../assets/demo-space-icon.svg';
 const BOE_DEMO_SPACE_ID = '7476830560543850540';
 

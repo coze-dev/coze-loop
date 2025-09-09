@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type Result } from 'ahooks/lib/useRequest/src/types';
 import { useRequest } from 'ahooks';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';

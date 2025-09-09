@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
 import { IconCozRefresh } from '@coze-arch/coze-design/icons';
 import { Button, Space, Tooltip, type ButtonProps } from '@coze-arch/coze-design';

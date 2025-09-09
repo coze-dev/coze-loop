@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { isObject } from 'lodash-es';
 import { JsonViewer } from '@textea/json-viewer';
 import { safeJsonParse } from '@cozeloop/toolkit';

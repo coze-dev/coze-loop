@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { createRenderer, option } from '@coze-editor/editor/react';
 import universal from '@coze-editor/editor/preset-universal';
 import { mixLanguages } from '@coze-editor/editor';

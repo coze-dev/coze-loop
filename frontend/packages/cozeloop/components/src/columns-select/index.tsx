@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable @coze-arch/no-batch-import-or-export */
 import * as sort from 'react-sortable-hoc';

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import cn from 'classnames';
 import { CozAvatar, Typography } from '@coze-arch/coze-design';
 

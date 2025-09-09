@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { Tag } from '@coze-arch/coze-design';
 
 import { convertInt64ToNumber } from '@/model-config-editor/model-config-form';

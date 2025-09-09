@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type ModelConfig } from '@cozeloop/api-schema/prompt';
 import { type Model } from '@cozeloop/api-schema/llm-manage';
 
