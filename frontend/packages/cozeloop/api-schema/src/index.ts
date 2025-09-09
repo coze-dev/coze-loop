@@ -7,18 +7,19 @@ export * from './api/idl';
 export { $notification } from './notification';
 
 import {
+  dataDataset,
+  dataTag,
   evaluationEvalSet,
   evaluationEvalTarget,
   evaluationEvaluator,
   evaluationExpt,
-  dataDataset,
-  llmManage,
-  foundationUpload,
-  promptManage,
-  promptDebug,
   foundationAuthn,
-  foundationUser,
   foundationSpace,
+  foundationUpload,
+  foundationUser,
+  llmManage,
+  promptDebug,
+  promptManage,
 } from './api/idl';
 
 export const StoneEvaluationApi = {
@@ -30,6 +31,7 @@ export const StoneEvaluationApi = {
 
 export const DataApi = {
   ...dataDataset,
+  ...dataTag,
 };
 
 export const LlmManageApi = {
