@@ -142,6 +142,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 			}
 			// todo[xun]:原来有历史数据兼容，plain_text 转为 text，需要刷数据，
 			evaluationSetSchema.FieldSchemas = append(evaluationSetSchema.FieldSchemas, &dataset0.FieldSchema{
+				Key:         gptr.Of(fieldMapping.GetEvalSetName()),
 				Name:        gptr.Of(fieldMapping.GetEvalSetName()),
 				Description: gptr.Of(fieldMapping.TraceFieldJsonpath),
 				ContentType: gptr.Of(fieldMapping.GetFieldSchema().GetContentType()),
@@ -299,7 +300,7 @@ func getSession(ctx context.Context, task *task.Task) *common.Session {
 	}
 	return &common.Session{
 		UserID: gptr.Of(userID),
-		AppID:  gptr.Of(int32(717152)),
+		//AppID:  gptr.Of(int32(717152)),
 	}
 }
 func getBasicEvaluationSetSchema(basicColumns []string) (*dataset0.DatasetSchema, []*expt.FieldMapping) {
