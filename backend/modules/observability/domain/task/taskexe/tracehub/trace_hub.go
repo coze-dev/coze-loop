@@ -291,8 +291,8 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
 	// 遍历任务
 	for _, taskInfo := range tasks {
-		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt())
-		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt())
+		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
+		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt()*int64(time.Millisecond))
 		proc, err := processor.NewProcessor(ctx, task.TaskTypeAutoEval)
 		if err != nil {
 			logs.CtxError(ctx, "NewProcessor err:%v", err)
