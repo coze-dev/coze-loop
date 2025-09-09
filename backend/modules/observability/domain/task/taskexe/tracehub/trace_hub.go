@@ -280,6 +280,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "定时任务开始执行...")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
+	context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	// 读取所有非终态（成功/禁用）任务
 	taskPOs, err := h.taskRepo.ListNonFinalTask(ctx)
 	if err != nil {
