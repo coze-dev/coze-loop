@@ -70,19 +70,15 @@ export const TagDetailHeader = ({
             </div>
             <Divider layout="vertical" className="h-[12px] mx-[3px]" />
             <div className="text-[var(--coz-fg-secondary)] whitespace-nowrap">
-              {I18n.t('update_time', {
-                placeholder1: formatTimestampToString(
-                  base_info?.updated_at ?? '',
-                ),
-              })}
+              {`${I18n.t('update_time')}: ${formatTimestampToString(
+                base_info?.updated_at ?? '',
+              )}`}
             </div>
             <Divider layout="vertical" className="h-[12px] mx-[3px]" />
             <div className="text-[var(--coz-fg-secondary)] whitespace-nowrap">
-              {I18n.t('create_time', {
-                placeholder1: formatTimestampToString(
-                  base_info?.created_at ?? '',
-                ),
-              })}
+              {`${I18n.t('create_time')}: ${formatTimestampToString(
+                base_info?.created_at ?? '',
+              )}`}
             </div>
             <Divider layout="vertical" className="h-[12px] mx-[3px]" />
             <div className="flex items-center flex-1 overflow-hidden">
