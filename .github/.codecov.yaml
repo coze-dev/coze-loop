@@ -53,6 +53,8 @@ ignore:
   - "**/wire_gen.go"
   - "**/errno/**"
   - "**/main.go"
+  - "**/repo/mysql/**"
+  - "**/repo/redis/**"
 
 parsers:
   gcov:

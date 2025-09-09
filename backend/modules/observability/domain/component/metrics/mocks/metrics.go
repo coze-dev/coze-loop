@@ -63,3 +63,39 @@ func (mr *MockITraceMetricsMockRecorder) EmitListSpans(workspaceId, spanType, st
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitListSpans", reflect.TypeOf((*MockITraceMetrics)(nil).EmitListSpans), workspaceId, spanType, start, isError)
 }
+
+// EmitListSpansOapi mocks base method.
+func (m *MockITraceMetrics) EmitListSpansOapi(workspaceId int64, platformType, spanType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitListSpansOapi", workspaceId, platformType, spanType, spanSize, errorCode, start, isError)
+}
+
+// EmitListSpansOapi indicates an expected call of EmitListSpansOapi.
+func (mr *MockITraceMetricsMockRecorder) EmitListSpansOapi(workspaceId, platformType, spanType, spanSize, errorCode, start, isError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitListSpansOapi", reflect.TypeOf((*MockITraceMetrics)(nil).EmitListSpansOapi), workspaceId, platformType, spanType, spanSize, errorCode, start, isError)
+}
+
+// EmitListTracesOapi mocks base method.
+func (m *MockITraceMetrics) EmitListTracesOapi(workspaceId int64, errorCode int, start time.Time, isError bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitListTracesOapi", workspaceId, errorCode, start, isError)
+}
+
+// EmitListTracesOapi indicates an expected call of EmitListTracesOapi.
+func (mr *MockITraceMetricsMockRecorder) EmitListTracesOapi(workspaceId, errorCode, start, isError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitListTracesOapi", reflect.TypeOf((*MockITraceMetrics)(nil).EmitListTracesOapi), workspaceId, errorCode, start, isError)
+}
+
+// EmitSearchTraceOapi mocks base method.
+func (m *MockITraceMetrics) EmitSearchTraceOapi(workspaceId int64, platformType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitSearchTraceOapi", workspaceId, platformType, spanSize, errorCode, start, isError)
+}
+
+// EmitSearchTraceOapi indicates an expected call of EmitSearchTraceOapi.
+func (mr *MockITraceMetricsMockRecorder) EmitSearchTraceOapi(workspaceId, platformType, spanSize, errorCode, start, isError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitSearchTraceOapi", reflect.TypeOf((*MockITraceMetrics)(nil).EmitSearchTraceOapi), workspaceId, platformType, spanSize, errorCode, start, isError)
+}

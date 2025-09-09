@@ -23,6 +23,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	traced "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/trace"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -59,6 +63,7 @@ func NewOpenAPIApplication(
 	workspace workspace.IWorkSpaceProvider,
 	rateLimiter limiter.IRateLimiterFactory,
 	traceConfig config.ITraceConfig,
+	metrics metrics.ITraceMetrics,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService: traceService,
@@ -68,6 +73,7 @@ func NewOpenAPIApplication(
 		workspace:    workspace,
 		rateLimiter:  rateLimiter.NewRateLimiter(),
 		traceConfig:  traceConfig,
+		metrics:      metrics,
 	}, nil
 }
 
@@ -79,6 +85,7 @@ type OpenAPIApplication struct {
 	workspace    workspace.IWorkSpaceProvider
 	rateLimiter  limiter.IRateLimiter
 	traceConfig  config.ITraceConfig
+	metrics      metrics.ITraceMetrics
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -150,6 +157,10 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 	spansMap := make(map[string][]*span.InputSpan)
 	for i := range spans {
 		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]})
+		if workspaceID == "" {
+			continue
+		}
+		spans[i].WorkspaceID = workspaceID
 		if spansMap[workspaceID] == nil {
 			spansMap[workspaceID] = make([]*span.InputSpan, 0)
 		}
@@ -447,28 +458,56 @@ func (o *OpenAPIApplication) DeleteAnnotation(ctx context.Context, req *openapi.
 }
 
 func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest) (*openapi.SearchTraceOApiResponse, error) {
-	if err := o.validateSearchOApiTraceReq(ctx, req); err != nil {
+	var err error
+	st := time.Now()
+	spansSize := 0
+	errCode := 0
+	defer func() {
+		if req != nil {
+			o.metrics.EmitSearchTraceOapi(req.WorkspaceID, req.GetPlatformType(), int64(spansSize), errCode, st, err != nil)
+		}
+	}()
+
+	if err = o.validateSearchOApiTraceReq(ctx, req); err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err
 	}
-	if err := o.auth.CheckQueryPermission(ctx,
-		strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
+	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
 		return nil, err
 	}
 	if !o.AllowBySpace(ctx, req.GetWorkspaceID()) {
-		return nil, errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
 	}
 	sReq, err := o.buildSearchTraceReq(ctx, req)
 	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("search trace req is invalid"))
 	}
 	sResp, err := o.traceService.SearchTraceOApi(ctx, sReq)
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
+	inTokens, outTokens, err := sResp.Spans.Stat(ctx)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	if sResp != nil {
+		spansSize = loop_span.SizeofSpans(sResp.Spans)
+		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
+	}
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
 			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+				Tokens: &trace.TokenCost{
+					Input:  inTokens,
+					Output: outTokens,
+				},
+			},
 		},
 	}, nil
 }
@@ -519,26 +558,44 @@ func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *opena
 }
 
 func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest) (*openapi.ListSpansOApiResponse, error) {
-	if err := o.validateListSpansOApi(ctx, req); err != nil {
+	var err error
+	st := time.Now()
+	spansSize := 0
+	errCode := 0
+	defer func() {
+		if req != nil {
+			o.metrics.EmitListSpansOapi(req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+		}
+	}()
+	if err = o.validateListSpansOApi(ctx, req); err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err
 	}
-	if err := o.auth.CheckQueryPermission(ctx,
-		strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
+	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
 		return nil, err
 	}
 
 	if !o.AllowBySpace(ctx, req.GetWorkspaceID()) {
-		return nil, errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
 	}
 	sReq, err := o.buildListSpansOApiReq(ctx, req)
 	if err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
 	}
 	sResp, err := o.traceService.ListSpansOApi(ctx, sReq)
 	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
+	if sResp != nil {
+		logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
+		spansSize = loop_span.SizeofSpans(sResp.Spans)
+	}
 	return &openapi.ListSpansOApiResponse{
 		Data: &openapi.ListSpansOApiData{
 			Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
@@ -610,6 +667,96 @@ func (o *OpenAPIApplication) buildListSpansOApiReq(ctx context.Context, req *ope
 	}
 	ret.Tenants = tenants
 	return ret, nil
+}
+
+func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest) (*openapi.ListTracesOApiResponse, error) {
+	var err error
+	st := time.Now()
+	errCode := 0
+	defer func() {
+		o.metrics.EmitListTracesOapi(req.WorkspaceID, errCode, st, err != nil)
+	}()
+
+	if err = o.validateListTracesOApiReq(ctx, req); err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	}
+	req.WorkspaceID = o.workspace.GetQueryWorkSpaceID(ctx, req.GetWorkspaceID())
+	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
+		return nil, err
+	}
+
+	if !o.AllowBySpace(ctx, req.GetWorkspaceID()) {
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "ListTracesOApi request: %+v", req)
+	sReq := o.buildListTracesOApiReq(req)
+	sResp, err := o.traceService.GetTracesAdvanceInfo(ctx, sReq)
+	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
+		return nil, err
+	}
+	traces := make([]*traced.Trace, 0)
+	for _, info := range sResp.Infos {
+		traces = append(traces, tconv.AdvanceInfoDO2TraceDTO(info))
+	}
+	return &openapi.ListTracesOApiResponse{
+		Data: &openapi.ListTracesData{
+			Traces: traces,
+		},
+	}, nil
+}
+
+func (o *OpenAPIApplication) validateListTracesOApiReq(ctx context.Context, req *openapi.ListTracesOApiRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if len(req.GetTraceIds()) < 1 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid traces"))
+	}
+	for _, id := range req.TraceIds {
+		if id == "" {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+		}
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: 365,
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	logs.CtxInfo(ctx, "newStartTime: %d, newEndTime: %d", newStartTime, newEndTime)
+	if err != nil {
+		return err
+	}
+	req.SetStartTime(newStartTime)
+	req.SetEndTime(newEndTime)
+	return nil
+}
+
+func (o *OpenAPIApplication) buildListTracesOApiReq(req *openapi.ListTracesOApiRequest) *service.GetTracesAdvanceInfoReq {
+	ret := &service.GetTracesAdvanceInfoReq{
+		WorkspaceID: req.GetWorkspaceID(),
+		Traces:      make([]*service.TraceQueryParam, len(req.GetTraceIds())),
+	}
+	for i, id := range req.GetTraceIds() {
+		ret.Traces[i] = &service.TraceQueryParam{
+			TraceID:   id,
+			StartTime: req.GetStartTime(),
+			EndTime:   req.GetEndTime(),
+		}
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	ret.PlatformType = platformType
+	return ret
 }
 
 func (o *OpenAPIApplication) Send(ctx context.Context, event *entity.AnnotationEvent) error {

@@ -82,9 +82,9 @@ func (mr *MockIPromptBasicDAOMockRecorder) Delete(ctx, promptID any, opts ...any
 }
 
 // Get mocks base method.
-func (m *MockIPromptBasicDAO) Get(ctx context.Context, promptID int64, lock bool, opts ...db.Option) (*model.PromptBasic, error) {
+func (m *MockIPromptBasicDAO) Get(ctx context.Context, promptID int64, opts ...db.Option) (*model.PromptBasic, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, promptID, lock}
+	varargs := []any{ctx, promptID}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -95,9 +95,9 @@ func (m *MockIPromptBasicDAO) Get(ctx context.Context, promptID int64, lock bool
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockIPromptBasicDAOMockRecorder) Get(ctx, promptID, lock any, opts ...any) *gomock.Call {
+func (mr *MockIPromptBasicDAOMockRecorder) Get(ctx, promptID any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, promptID, lock}, opts...)
+	varargs := append([]any{ctx, promptID}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIPromptBasicDAO)(nil).Get), varargs...)
 }
 

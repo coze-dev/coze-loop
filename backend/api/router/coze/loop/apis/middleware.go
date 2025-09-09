@@ -1206,21 +1206,6 @@ func _results0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _tasks0Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _checktasknameMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _extractspaninfoMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
 func _exporttracestodatasetMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -1241,47 +1226,37 @@ func _validatedatasetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _changeevaluatorscoreMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _labelsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _listannotationevaluatorsMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _createlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _tasksMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _listlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _createtaskMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _commit_versionMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _listtasksMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _updatecommitlabelsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _gettaskMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _batchgetlabelMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _updatetaskMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _annotationMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _traceMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _listtracesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

@@ -1685,6 +1685,10 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T
 						{
 							Key:   gptr.Of("var1"),
 							Value: gptr.Of("test input"),
+							Content: &entity.Content{
+								ContentType: gptr.Of(entity.ContentTypeText),
+								Text:        gptr.Of("test input"),
+							},
 						},
 					},
 					History:      nil,
@@ -1742,6 +1746,10 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T
 						{
 							Key:   gptr.Of("var1"),
 							Value: gptr.Of("test input"),
+							Content: &entity.Content{
+								ContentType: gptr.Of(entity.ContentTypeText),
+								Text:        gptr.Of("test input"),
+							},
 						},
 					},
 					History:      nil,

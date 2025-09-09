@@ -3,8 +3,10 @@ namespace go coze.loop.observability.openapi
 include "../../../base.thrift"
 include "./domain/annotation.thrift"
 include "./domain/span.thrift"
+include "./domain/trace.thrift"
 include "./domain/common.thrift"
 include "./domain/filter.thrift"
+include "coze.loop.observability.trace.thrift"
 
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
@@ -86,6 +88,7 @@ struct SearchTraceOApiResponse {
 
 struct SearchTraceOApiData {
     1: required list<span.OutputSpan> spans
+    2: optional coze.loop.observability.trace.TraceAdvanceInfo traces_advance_info
 }
 
 struct ListSpansOApiRequest {
@@ -116,11 +119,34 @@ struct ListSpansOApiData {
     3: required bool has_more
 }
 
+struct ListTracesOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
+    2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
+    3: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")  // ms
+    4: required list<string> trace_ids (api.body="trace_ids")
+    8: optional common.PlatformType platform_type (api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct ListTracesOApiResponse {
+    1: optional i32 code (api.body = "code")
+    2: optional string msg  (api.body = "msg")
+    3: optional ListTracesData data (api.body = "data")
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ListTracesData {
+    1: required list<trace.Trace> traces
+}
+
 service OpenAPIService {
     IngestTracesResponse IngestTraces(1: IngestTracesRequest req) (api.post = '/v1/loop/traces/ingest')
     OtelIngestTracesResponse OtelIngestTraces(1: OtelIngestTracesRequest req) (api.post = '/v1/loop/opentelemetry/v1/traces')
     SearchTraceOApiResponse SearchTraceOApi(1: SearchTraceOApiRequest req) (api.post = '/v1/loop/traces/search')
-    ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search')
+    ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search', api.tag="openapi")
+    ListTracesOApiResponse ListTracesOApi(1: ListTracesOApiRequest req) (api.post = '/v1/loop/traces/list')
     CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req)
     DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req)
 }

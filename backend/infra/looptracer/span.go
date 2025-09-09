@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	cozeloop "github.com/coze-dev/cozeloop-go"
+	"github.com/coze-dev/cozeloop-go"
 	"github.com/coze-dev/cozeloop-go/entity"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
@@ -128,9 +128,44 @@ func (s SpanImpl) SetCallType(callType string) {
 	})
 }
 
+func (s SpanImpl) SetServiceName(ctx context.Context, serviceName string) {
+	s.LoopSpan.SetServiceName(ctx, serviceName)
+}
+
+func (s SpanImpl) SetLogID(ctx context.Context, logID string) {
+	s.LoopSpan.SetLogID(ctx, logID)
+}
+
+func (s SpanImpl) SetFinishTime(finishTime time.Time) {
+	s.LoopSpan.SetFinishTime(finishTime)
+}
+
+func (s SpanImpl) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+	s.LoopSpan.SetSystemTags(ctx, systemTags)
+}
+
+func (s SpanImpl) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {
+	s.LoopSpan.SetDeploymentEnv(ctx, deploymentEnv)
+}
+
 var _ Span = (*noopSpan)(nil)
 
 type noopSpan struct{}
+
+func (n noopSpan) SetServiceName(ctx context.Context, serviceName string) {
+}
+
+func (n noopSpan) SetLogID(ctx context.Context, logID string) {
+}
+
+func (n noopSpan) SetFinishTime(finishTime time.Time) {
+}
+
+func (n noopSpan) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+}
+
+func (n noopSpan) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {
+}
 
 func (n noopSpan) GetSpanID() string {
 	return ""

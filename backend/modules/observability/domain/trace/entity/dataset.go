@@ -8,8 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
@@ -122,10 +121,13 @@ type DatasetItem struct {
 	ID          int64
 	WorkspaceID int64
 	DatasetID   int64
+	TraceID     string
 	SpanID      string
 	ItemKey     *string
 	FieldData   []*FieldData
 	Error       []*ItemError
+	SpanType    string
+	SpanName    string
 }
 
 type ItemError struct {
@@ -199,12 +201,18 @@ func (c *Content) GetMultiPart() []*Content {
 	return c.MultiPart
 }
 
-func NewDatasetItem(workspaceID int64, datasetID int64, spanID string) *DatasetItem {
+func NewDatasetItem(workspaceID int64, datasetID int64, span *loop_span.Span) *DatasetItem {
+	if span == nil {
+		return nil
+	}
 	return &DatasetItem{
 		WorkspaceID: workspaceID,
 		DatasetID:   datasetID,
-		SpanID:      spanID,
+		TraceID:     span.TraceID,
+		SpanID:      span.SpanID,
 		FieldData:   make([]*FieldData, 0),
+		SpanType:    span.SpanType,
+		SpanName:    span.SpanName,
 	}
 }
 
@@ -321,18 +329,4 @@ func CommonContentTypeDO2DTO(contentType ContentType) *common.ContentType {
 	default:
 		return gptr.Of(common.ContentTypeText)
 	}
-}
-
-func EvaluationSetSchemaDT2ODO(dto *eval_set.EvaluationSetSchema) (*entity.EvaluationSetSchema, error) {
-	// 当前数据结构一致，用json转换。以后改成同一个idl
-	bs, err := json.Marshal(dto)
-	if err != nil {
-		return nil, err
-	}
-	var do *entity.EvaluationSetSchema
-	err = json.Unmarshal(bs, &do)
-	if err != nil {
-		return nil, err
-	}
-	return do, nil
 }

@@ -29,6 +29,7 @@ struct PromptResultData {
 struct PromptQuery {
     1: optional string prompt_key
     2: optional string version
+    3: optional string label
 }
 
 struct PromptResult {
@@ -68,7 +69,18 @@ struct ToolCallConfig {
 struct Message {
     1: optional Role role
     2: optional string content
+    3: optional list<ContentPart> parts
 }
+
+struct ContentPart {
+    1: optional ContentType type
+    2: optional string text
+}
+
+typedef string ContentType (ts.enum="true")
+
+const ContentType ContentType_Text = "text"
+const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct VariableDef {
      1: optional string key // 变量名字
@@ -88,6 +100,7 @@ const VariableType VariableType_Array_Integer = "array<integer>"
 const VariableType VariableType_Array_Float = "array<float>"
 const VariableType VariableType_Array_Object = "array<object>"
 const VariableType VariableType_Placeholder = "placeholder"
+const VariableType VariableType_MultiPart = "multi_part"
 
 typedef string Role
 const Role Role_System = "system"
