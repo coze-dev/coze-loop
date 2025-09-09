@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -35,7 +36,7 @@ var _ taskexe.Processor = (*AutoEvaluteProcessor)(nil)
 type AutoEvaluteProcessor struct {
 	evalSvc               rpc.IEvaluatorRPCAdapter
 	evaluationSvc         rpc.IEvaluationRPCAdapter
-	datasetServiceAdaptor *DatasetServiceAdaptor
+	datasetServiceAdaptor *service.DatasetServiceAdaptor
 	TaskRepo              repo.ITaskRepo
 }
 
@@ -108,30 +109,7 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	return nil
 }
 func (p *AutoEvaluteProcessor) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
-	return p.datasetServiceAdaptor.getDatasetProvider(category)
-}
-
-type DatasetServiceAdaptor struct {
-	datasetServiceMap map[entity.DatasetCategory]rpc.IDatasetProvider
-}
-
-func NewDatasetServiceAdaptor() *DatasetServiceAdaptor {
-	return &DatasetServiceAdaptor{}
-}
-
-func (d *DatasetServiceAdaptor) Register(category entity.DatasetCategory, provider rpc.IDatasetProvider) {
-	if d.datasetServiceMap == nil {
-		d.datasetServiceMap = make(map[entity.DatasetCategory]rpc.IDatasetProvider)
-	}
-	d.datasetServiceMap[category] = provider
-}
-
-func (d *DatasetServiceAdaptor) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
-	datasetProvider, ok := d.datasetServiceMap[category]
-	if !ok {
-		return rpc.NoopDatasetProvider
-	}
-	return datasetProvider
+	return p.datasetServiceAdaptor.GetDatasetProvider(category)
 }
 
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {

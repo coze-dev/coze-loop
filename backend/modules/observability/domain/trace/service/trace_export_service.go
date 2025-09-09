@@ -488,7 +488,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 }
 
 func (r *TraceExportServiceImpl) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
-	return r.DatasetServiceAdaptor.getDatasetProvider(category)
+	return r.DatasetServiceAdaptor.GetDatasetProvider(category)
 }
 
 type DatasetServiceAdaptor struct {
@@ -506,7 +506,7 @@ func (d *DatasetServiceAdaptor) Register(category entity.DatasetCategory, provid
 	d.datasetServiceMap[category] = provider
 }
 
-func (d *DatasetServiceAdaptor) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
+func (d *DatasetServiceAdaptor) GetDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
 	datasetProvider, ok := d.datasetServiceMap[category]
 	if !ok {
 		return rpc.NoopDatasetProvider
