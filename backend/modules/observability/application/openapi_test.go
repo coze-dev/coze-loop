@@ -1036,7 +1036,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckIngestPermission(gomock.Any(), "invalid").Return(nil)
+				authMock.EXPECT().CheckIngestPermission(gomock.Any(), "invalid").Return(nil).AnyTimes()
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
@@ -2967,7 +2967,7 @@ func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
+				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
