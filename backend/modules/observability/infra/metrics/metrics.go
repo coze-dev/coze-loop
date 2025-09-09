@@ -119,33 +119,3 @@ func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platf
 		metrics.Counter(spanSize, metrics.WithSuffix(traceOApiSuffix+sizeSuffix)),
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
 }
-
-func (t *TraceMetricsImpl) EmitSearchTraceOapi(workspaceId int64, platformType string, spanSize int64, errorCode int, start time.Time, isError bool) {
-	if t.spansMetrics == nil {
-		return
-	}
-	t.spansMetrics.Emit(
-		[]metrics.T{
-			{Name: tagSpaceID, Value: strconv.FormatInt(workspaceId, 10)},
-			{Name: tagPlatformType, Value: platformType},
-			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
-			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
-		},
-		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
-		metrics.Counter(spanSize, metrics.WithSuffix(traceOApiSuffix+sizeSuffix)),
-		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
-}
-
-func (t *TraceMetricsImpl) EmitListTracesOapi(workspaceId int64, errorCode int, start time.Time, isError bool) {
-	if t.spansMetrics == nil {
-		return
-	}
-	t.spansMetrics.Emit(
-		[]metrics.T{
-			{Name: tagSpaceID, Value: strconv.FormatInt(workspaceId, 10)},
-			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
-			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
-		},
-		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
-		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
-}
