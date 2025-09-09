@@ -62,12 +62,12 @@ import (
 var (
 	taskDomainSet = wire.NewSet(
 		taskSvc.NewTaskServiceImpl,
+		NewDatasetServiceAdapter,
 		tracehub.NewTraceHubImpl,
 		obrepo.NewTaskRepoImpl,
 		mysqldao.NewTaskDaoImpl,
 		tredis.NewTaskDAO,
 		mysqldao.NewTaskRunDaoImpl,
-		NewDatasetServiceAdapter,
 	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,

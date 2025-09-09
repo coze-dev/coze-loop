@@ -34,7 +34,7 @@ func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
 ) (ITraceHubService, error) {
 	processor.InitProcessor()
-	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
+	ticker := time.NewTicker(1 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo: tRepo,
 		ticker:   ticker,
