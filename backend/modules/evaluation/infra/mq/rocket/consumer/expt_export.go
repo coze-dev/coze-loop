@@ -56,7 +56,7 @@ func (e *ExptExportConsumer) handleEvent(ctx context.Context, event *entity.Expo
 		err = e.exptInsightAnalysisService.GenAnalysisReport(ctx, event.SpaceID, event.ExperimentID, event.ExportID, event.CreateAt)
 		if err != nil {
 			logs.CtxError(ctx, "ExptExportConsumer GenAnalysisReport fail, expt_id:%v, err: %v", event.ExperimentID, err)
-			return nil
+			return err
 		}
 	default:
 		err = e.exptResultExportService.HandleExportEvent(ctx, event.SpaceID, event.ExperimentID, event.ExportID)

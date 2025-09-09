@@ -97,6 +97,8 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		}
 		if err != nil {
 			record.Status = entity.InsightAnalysisStatus_Failed
+			// 不重试
+			err = nil
 		}
 		err1 := e.repo.UpdateAnalysisRecord(ctx, record)
 		if err1 != nil {
@@ -125,6 +127,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	if err != nil {
 		return err
 	}
+	logs.CtxInfo(ctx, "[GenAnalysisReport] CallTraceAgent success, expt_id=%v, record_id=%v, report_id=%v, csv url=%v", exptID, recordID, reportID, url)
 
 	analysisReportID = reportID
 
