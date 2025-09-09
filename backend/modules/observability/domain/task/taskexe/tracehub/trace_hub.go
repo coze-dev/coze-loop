@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
@@ -31,8 +32,10 @@ type ITraceHubService interface {
 func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
 	datasetServiceProvider *service.DatasetServiceAdaptor,
+	evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter,
 ) (ITraceHubService, error) {
-	processor.InitProcessor(datasetServiceProvider)
+	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService)
 	ticker := time.NewTicker(1 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo: tRepo,

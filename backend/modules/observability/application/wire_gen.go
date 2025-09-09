@@ -203,7 +203,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redi
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter)
 	if err != nil {
 		return nil, err
 	}

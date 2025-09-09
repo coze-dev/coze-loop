@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -31,7 +32,10 @@ func NewProcessor(ctx context.Context, taskType task.TaskType) (taskexe.Processo
 	}
 }
 
-func InitProcessor(datasetServiceProvider *service.DatasetServiceAdaptor) {
-	autoEvaluteProc = newAutoEvaluteProcessor(datasetServiceProvider)
+func InitProcessor(
+	datasetServiceProvider *service.DatasetServiceAdaptor,
+	evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter) {
+	autoEvaluteProc = newAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService)
 	dataReflowProc = newDataReflowProcessor()
 }
