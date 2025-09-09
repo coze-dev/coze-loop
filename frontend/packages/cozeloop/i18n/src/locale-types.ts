@@ -2075,7 +2075,7 @@ interface I18nTranslateFn {
   ): string;
   /** 删除标签 */
   (key: 'delete_tag', fallbackText?: string): string;
-  /** 更新人： */
+  /** 更新人 */
   (key: 'updated_by', fallbackText?: string): string;
   /** 人工标注管理 */
   (key: 'manual_annotation_management', fallbackText?: string): string;
@@ -2939,7 +2939,7 @@ interface I18nTranslateFn {
   (key: 'disabled_tag_not_searchable', fallbackText?: string): string;
   /** 确定启用该标签吗？ */
   (key: 'confirm_enable_tag', fallbackText?: string): string;
-  /** 修改将会同步至标签管理”。 */
+  /** 修改将会同步至标签管理。 */
   (key: 'changes_sync_to_space_tag_management', fallbackText?: string): string;
   /** 标签配置 */
   (key: 'tag_configuration', fallbackText?: string): string;
@@ -2995,6 +2995,12 @@ interface I18nTranslateFn {
   (key: 'exit', fallbackText?: string): string;
   /** 确认保存 */
   (key: 'confirm_save', fallbackText?: string): string;
+  /** 变更日志 */
+  (key: 'change_log', fallbackText?: string): string;
+  /** 展开 */
+  (key: 'extend', fallbackText?: string): string;
+  /** 只读 */
+  (key: 'read_only', fallbackText?: string): string;
 }
 
 /** I18n of Cozeloop */
