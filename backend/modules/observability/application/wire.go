@@ -84,7 +84,6 @@ var (
 		obconfig.NewTraceConfigCenter,
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
-		NewDatasetServiceAdapter,
 		evaluator.NewEvaluatorRPCProvider,
 		taskDomainSet,
 	)

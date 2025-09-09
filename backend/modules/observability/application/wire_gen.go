@@ -216,9 +216,9 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redi
 // wire.go:
 
 var (
-	taskDomainSet  = wire.NewSet(service2.NewTaskServiceImpl, tracehub.NewTraceHubImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, mysql.NewTaskRunDaoImpl)
+	taskDomainSet  = wire.NewSet(service2.NewTaskServiceImpl, NewDatasetServiceAdapter, tracehub.NewTraceHubImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, mysql.NewTaskRunDaoImpl)
 	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, NewDatasetServiceAdapter, evaluator.NewEvaluatorRPCProvider, taskDomainSet,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, evaluator.NewEvaluatorRPCProvider, taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, traceDomainSet,
@@ -231,8 +231,7 @@ var (
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider, evaluation.NewEvaluationRPCProvider, NewDatasetServiceAdapter,
-		taskDomainSet,
+		NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider, evaluation.NewEvaluationRPCProvider, taskDomainSet,
 	)
 )
 
