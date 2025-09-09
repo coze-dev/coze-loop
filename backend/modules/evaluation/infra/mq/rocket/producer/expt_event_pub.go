@@ -167,5 +167,6 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 	}
 
 	logs.CtxInfo(ctx, "expt event batch send success, message_id: %v, offset: %v", resp.MessageID, resp.Offset)
+	logs.CtxWarn(ctx, "expt event batch send success, msg body: %v", json.Jsonify(msgs))
 	return nil
 }
