@@ -1,5 +1,6 @@
 import { get } from 'lodash-es';
 import { type Datum } from '@visactor/vchart/esm/typings';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type CustomTooltipProps } from '@cozeloop/evaluate-components';
 import {
   type OptionDistributionItem,

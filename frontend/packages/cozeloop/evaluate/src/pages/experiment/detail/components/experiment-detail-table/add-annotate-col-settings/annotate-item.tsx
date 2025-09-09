@@ -2,6 +2,7 @@ import React, { type ReactNode } from 'react';
 
 import classNames from 'classnames';
 import { TAG_TYPE_TO_NAME_MAP } from '@cozeloop/tag-components';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
 import { type tag } from '@cozeloop/api-schema/data';
 import {

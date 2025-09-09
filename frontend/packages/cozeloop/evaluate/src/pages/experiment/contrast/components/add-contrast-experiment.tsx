@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ExptStatus, type Experiment } from '@cozeloop/api-schema/evaluation';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
 import { Button } from '@coze-arch/coze-design';

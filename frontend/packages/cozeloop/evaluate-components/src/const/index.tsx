@@ -13,20 +13,12 @@ export const ErrorTypeMap = {
   [ItemErrorType.InternalError]: I18n.t('system_error'),
   [ItemErrorType.IllegalContent]: I18n.t('contains_illegal_content'),
   [ItemErrorType.MissingRequiredField]: I18n.t('missing_required_field'),
-  [ItemErrorType.ExceedMaxNestedDepth]: I18n.t(
-    'data_engine_data_nesting_exceeds_limit',
-  ),
-  [ItemErrorType.TransformItemFailed]: I18n.t(
-    'data_engine_data_conversion_failed',
-  ),
-  [ItemErrorType.ExceedMaxImageCount]: I18n.t(
-    'data_engine_exceed_max_image_count',
-  ),
-  [ItemErrorType.ExceedMaxImageSize]: I18n.t(
-    'data_engine_exceed_max_image_size',
-  ),
-  [ItemErrorType.GetImageFailed]: I18n.t('data_engine_get_image_failed'),
-  [ItemErrorType.IllegalExtension]: I18n.t('data_engine_illegal_extension'),
+  [ItemErrorType.ExceedMaxNestedDepth]: I18n.t('data_nesting_exceeds_limit'),
+  [ItemErrorType.TransformItemFailed]: I18n.t('data_conversion_failed'),
+  [ItemErrorType.ExceedMaxImageCount]: I18n.t('exceed_max_image_count'),
+  [ItemErrorType.ExceedMaxImageSize]: I18n.t('exceed_max_image_size'),
+  [ItemErrorType.GetImageFailed]: I18n.t('get_image_failed'),
+  [ItemErrorType.IllegalExtension]: I18n.t('illegal_extension'),
   [ItemErrorType.UploadImageFailed]: I18n.t(
     'cozeloop_open_evaluate_image_upload_failed',
   ),
