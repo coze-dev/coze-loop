@@ -52,6 +52,8 @@ export interface EvalTargetContent {
   prompt?: EvalPrompt,
   /** EvalTargetType=4 时，传参此字段。 评测对象为 CozeWorkflow 时, 需要设置 CozeWorkflow 信息 */
   coze_workflow?: CozeWorkflow,
+  /** EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息 */
+  volcengine_agent?: VolcengineAgent,
 }
 export enum EvalTargetType {
   /** CozeBot */
@@ -61,6 +63,23 @@ export enum EvalTargetType {
   /** Trace */
   Trace = 3,
   CozeWorkflow = 4,
+  /** 火山智能体 */
+  VolcengineAgent = 5,
+}
+export interface VolcengineAgent {
+  /** 罗盘应用ID */
+  id?: string,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  /** DTO使用，不存数据库 */
+  volcengine_agent_endpoints?: VolcengineAgentEndpoint[],
+  base_info?: common.BaseInfo,
+}
+export interface VolcengineAgentEndpoint {
+  endpoint_id?: string,
+  api_key?: string,
 }
 export interface CozeWorkflow {
   id?: string,

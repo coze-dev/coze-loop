@@ -100,6 +100,46 @@ export const SaveDraft = /*#__PURE__*/createAPI<SaveDraftRequest, SaveDraftRespo
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
   "service": "promptManage"
 });
+/**
+ * --------------- Label管理 --------------- //
+ * Label管理
+*/
+export const CreateLabel = /*#__PURE__*/createAPI<CreateLabelRequest, CreateLabelResponse>({
+  "url": "/api/prompt/v1/labels",
+  "method": "POST",
+  "name": "CreateLabel",
+  "reqType": "CreateLabelRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "label"]
+  },
+  "resType": "CreateLabelResponse",
+  "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
+  "service": "promptManage"
+});
+export const ListLabel = /*#__PURE__*/createAPI<ListLabelRequest, ListLabelResponse>({
+  "url": "/api/prompt/v1/labels/list",
+  "method": "POST",
+  "name": "ListLabel",
+  "reqType": "ListLabelRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "label_key_like", "with_prompt_version_mapping", "prompt_id", "page_size", "page_token"]
+  },
+  "resType": "ListLabelResponse",
+  "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
+  "service": "promptManage"
+});
+export const BatchGetLabel = /*#__PURE__*/createAPI<BatchGetLabelRequest, BatchGetLabelResponse>({
+  "url": "/api/prompt/v1/labels/batch_get",
+  "method": "POST",
+  "name": "BatchGetLabel",
+  "reqType": "BatchGetLabelRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "label_keys"]
+  },
+  "resType": "BatchGetLabelResponse",
+  "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
+  "service": "promptManage"
+});
 /** --------------- Prompt版本管理 --------------- // */
 export const ListCommit = /*#__PURE__*/createAPI<ListCommitRequest, ListCommitResponse>({
   "url": "/api/prompt/v1/prompts/:prompt_id/commits/list",
@@ -121,7 +161,7 @@ export const CommitDraft = /*#__PURE__*/createAPI<CommitDraftRequest, CommitDraf
   "reqType": "CommitDraftRequest",
   "reqMapping": {
     "path": ["prompt_id"],
-    "body": ["commit_version", "commit_description"]
+    "body": ["commit_version", "commit_description", "label_keys"]
   },
   "resType": "CommitDraftResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -137,6 +177,19 @@ export const RevertDraftFromCommit = /*#__PURE__*/createAPI<RevertDraftFromCommi
     "body": ["commit_version_reverting_from"]
   },
   "resType": "RevertDraftFromCommitResponse",
+  "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
+  "service": "promptManage"
+});
+export const UpdateCommitLabels = /*#__PURE__*/createAPI<UpdateCommitLabelsRequest, UpdateCommitLabelsResponse>({
+  "url": "/api/prompt/v1/prompts/:prompt_id/commits/:commit_version/labels_update",
+  "method": "POST",
+  "name": "UpdateCommitLabels",
+  "reqType": "UpdateCommitLabelsRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "label_keys"],
+    "path": ["prompt_id", "commit_version"]
+  },
+  "resType": "UpdateCommitLabelsResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
   "service": "promptManage"
 });
@@ -228,6 +281,7 @@ export interface CommitDraftRequest {
   prompt_id?: string,
   commit_version?: string,
   commit_description?: string,
+  label_keys?: string[],
 }
 export interface CommitDraftResponse {}
 /** 搜索Prompt提交版本 */
@@ -239,6 +293,9 @@ export interface ListCommitRequest {
 }
 export interface ListCommitResponse {
   prompt_commit_infos?: prompt.CommitInfo[],
+  commit_version_label_mapping?: {
+    [key: string | number]: prompt.Label[]
+  },
   users?: user.UserInfoDetail[],
   has_more?: boolean,
   next_page_token?: string,
@@ -248,3 +305,40 @@ export interface RevertDraftFromCommitRequest {
   commit_version_reverting_from?: string,
 }
 export interface RevertDraftFromCommitResponse {}
+/** --------------- Label管理相关结构体 --------------- // */
+export interface CreateLabelRequest {
+  workspace_id?: string,
+  label?: prompt.Label,
+}
+export interface CreateLabelResponse {}
+export interface ListLabelRequest {
+  workspace_id?: string,
+  /** 模糊匹配label key */
+  label_key_like?: string,
+  with_prompt_version_mapping?: boolean,
+  prompt_id?: string,
+  page_size?: number,
+  page_token?: string,
+}
+export interface ListLabelResponse {
+  labels?: prompt.Label[],
+  prompt_version_mapping?: {
+    [key: string | number]: string
+  },
+  has_more?: boolean,
+  next_page_token?: string,
+}
+export interface BatchGetLabelRequest {
+  workspace_id?: string,
+  label_keys?: string[],
+}
+export interface BatchGetLabelResponse {
+  labels?: prompt.Label[]
+}
+export interface UpdateCommitLabelsRequest {
+  workspace_id?: string,
+  prompt_id?: string,
+  commit_version?: string,
+  label_keys?: string[],
+}
+export interface UpdateCommitLabelsResponse {}
