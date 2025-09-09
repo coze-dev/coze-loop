@@ -51,7 +51,10 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../observation/trace-detail/tsconfig.build.json"
+      "path": "../guard/tsconfig.build.json"
+    },
+    {
+      "path": "../observation/trace-detail-open/tsconfig.build.json"
     },
     {
       "path": "../prompt-components/tsconfig.build.json"
