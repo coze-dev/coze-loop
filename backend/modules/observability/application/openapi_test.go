@@ -2801,7 +2801,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, app)
-	
+
 	// 验证返回的实例类型
 	openAPIApp, ok := app.(*OpenAPIApplication)
 	assert.True(t, ok)
@@ -3458,17 +3458,17 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 // 测试validate和build函数
 func TestOpenAPIApplication_validateIngestTracesReq(t *testing.T) {
 	app := &OpenAPIApplication{}
-	
+
 	// 测试nil请求
 	err := app.validateIngestTracesReq(context.Background(), nil)
 	assert.Error(t, err)
-	
+
 	// 测试空spans
 	err = app.validateIngestTracesReq(context.Background(), &openapi.IngestTracesRequest{
 		Spans: []*span.InputSpan{},
 	})
 	assert.Error(t, err)
-	
+
 	// 测试不同workspace id的spans
 	err = app.validateIngestTracesReq(context.Background(), &openapi.IngestTracesRequest{
 		Spans: []*span.InputSpan{
@@ -3477,7 +3477,7 @@ func TestOpenAPIApplication_validateIngestTracesReq(t *testing.T) {
 		},
 	})
 	assert.Error(t, err)
-	
+
 	// 测试正常情况
 	err = app.validateIngestTracesReq(context.Background(), &openapi.IngestTracesRequest{
 		Spans: []*span.InputSpan{
@@ -3491,17 +3491,17 @@ func TestOpenAPIApplication_validateIngestTracesReq(t *testing.T) {
 func TestOpenAPIApplication_validateIngestTracesReqByTenant(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	app := &OpenAPIApplication{
 		traceConfig: traceConfigMock,
 	}
-	
+
 	// 测试nil请求
 	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil)
 	err := app.validateIngestTracesReqByTenant(context.Background(), "tenant", nil)
 	assert.Error(t, err)
-	
+
 	// 测试超过最大span长度
 	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(map[string]*config.IngestConfig{
 		"tenant": {MaxSpanLength: 1},
@@ -3510,7 +3510,7 @@ func TestOpenAPIApplication_validateIngestTracesReqByTenant(t *testing.T) {
 		Spans: []*span.InputSpan{{}, {}},
 	})
 	assert.Error(t, err)
-	
+
 	// 测试正常情况
 	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil)
 	err = app.validateIngestTracesReqByTenant(context.Background(), "tenant", &openapi.IngestTracesRequest{
@@ -3519,24 +3519,22 @@ func TestOpenAPIApplication_validateIngestTracesReqByTenant(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-
 func TestOpenAPIApplication_unpackTenant(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 	app := &OpenAPIApplication{
 		tenant: tenantMock,
 	}
-	
+
 	// 测试nil spans
 	result := app.unpackTenant(context.Background(), nil)
 	assert.Nil(t, result)
-	
+
 	// 测试正常情况
 	tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1")
 	result = app.unpackTenant(context.Background(), []*loop_span.Span{{SpanID: "test"}})
 	assert.Len(t, result, 1)
 	assert.Len(t, result["tenant1"], 1)
 }
-
