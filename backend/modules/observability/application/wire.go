@@ -62,8 +62,6 @@ import (
 var (
 	taskDomainSet = wire.NewSet(
 		taskSvc.NewTaskServiceImpl,
-		NewDatasetServiceAdapter,
-		tracehub.NewTraceHubImpl,
 		obrepo.NewTaskRepoImpl,
 		mysqldao.NewTaskDaoImpl,
 		tredis.NewTaskDAO,
@@ -85,6 +83,7 @@ var (
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
 		evaluator.NewEvaluatorRPCProvider,
+		NewDatasetServiceAdapter,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
@@ -112,6 +111,8 @@ var (
 		traceDomainSet,
 	)
 	taskSet = wire.NewSet(
+		NewDatasetServiceAdapter,
+		tracehub.NewTraceHubImpl,
 		NewTaskApplication,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,

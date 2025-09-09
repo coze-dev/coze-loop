@@ -108,9 +108,6 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	//todo:[xun]根据是否是真的结束实验做处理
 	return nil
 }
-func (p *AutoEvaluteProcessor) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
-	return p.datasetServiceAdaptor.GetDatasetProvider(category)
-}
 
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
@@ -156,8 +153,8 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	category := getCategory(currentTask.TaskType)
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	// 1、创建评测集
-	logs.CtxInfo(ctx, "[auto_task] CreateDataset")
-	datasetID, err := p.getDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
+	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
+	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 		0,
 		currentTask.GetWorkspaceID(),
 		fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day()),
