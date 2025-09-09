@@ -662,7 +662,6 @@
   "evaluate_terminated_count_terminated_turn_cnt": "Terminated {terminated_turn_cnt}",
   "evaluate_processing_count_processing_turn_cnt": "Processing {processing_turn_cnt}",
   "cozeloop_open_evaluate_pending_count": "Pending {pending_turn_cnt}",
-  "please_select": "Please select",
   "cozeloop_open_evaluate_selected_field_type_inconsistent": "Selected field data types are inconsistent, please reselect",
   "cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable": "This tag option has been disabled, if modified it will no longer be selectable",
   "cozeloop_open_evaluate_select_previous_eval_set_as_target": "Select the evaluation set configured in the previous step as the evaluation target, suitable for scenarios where the evaluation set already contains agent output.",

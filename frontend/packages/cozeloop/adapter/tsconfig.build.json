@@ -16,9 +16,6 @@
       "path": "../api-schema/tsconfig.build.json"
     },
     {
-      "path": "../../../apps/fornax/libraries/api/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
