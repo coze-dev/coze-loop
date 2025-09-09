@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { Select } from '@coze-arch/coze-design';

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { useInfiniteScroll } from 'ahooks';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StonePromptApi } from '@cozeloop/api-schema';

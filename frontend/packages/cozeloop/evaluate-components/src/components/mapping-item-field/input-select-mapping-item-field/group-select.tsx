@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable import/order */
 /* eslint-disable @coze-arch/tsx-no-leaked-render */
 /* eslint-disable @coze-arch/max-line-per-function */

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type OrderBy } from '@cozeloop/api-schema/evaluation';
 
 /**

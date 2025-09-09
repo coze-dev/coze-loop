@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 // 评估器
 export { default as EvaluatorListPage } from './pages/evaluator/evaluator-list';
 export { default as EvaluatorDetailPage } from './pages/evaluator/evaluator-detail';

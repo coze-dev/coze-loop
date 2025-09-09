@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export const compareVersions = (version1: string, version2: string): number => {
   const v1Parts = version1.split('.').map(Number);
   const v2Parts = version2.split('.').map(Number);

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /**
  * 树节点数据结构
  * 定义树形组件中每个节点的基本属性

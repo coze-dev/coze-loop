@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { UserProfile } from '@cozeloop/components';
 import { type UserInfo } from '@cozeloop/api-schema/evaluation';
 

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export { ColumnSelector, type ColumnItem } from './columns-select';
 export { TooltipWhenDisabled } from './tooltip-when-disabled';
 export { TooltipWithDisabled } from './tooltip-with-disabled';

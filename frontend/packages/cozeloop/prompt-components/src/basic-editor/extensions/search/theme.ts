@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { EditorView } from '@codemirror/view';
 import { Prec } from '@codemirror/state';
 export const theme = Prec.high(

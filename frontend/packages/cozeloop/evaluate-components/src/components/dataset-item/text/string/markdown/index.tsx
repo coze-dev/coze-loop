@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import cn from 'classnames';
 import { CodeEditor } from '@cozeloop/components';
 import { MdBoxLazy } from '@coze-arch/bot-md-box-adapter/lazy';

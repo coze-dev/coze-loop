@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import cn from 'classnames';
 import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 import { Popover, Tag } from '@coze-arch/coze-design';

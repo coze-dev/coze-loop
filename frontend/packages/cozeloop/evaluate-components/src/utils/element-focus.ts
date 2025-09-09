@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export const elementFocus = (id: string) => {
   setTimeout(() => {
     const element = document.getElementById(id);

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { utils as XLSXUtils, read as XLSXRead } from 'xlsx';
 import Papa from 'papaparse';
 import JSZip from 'jszip';

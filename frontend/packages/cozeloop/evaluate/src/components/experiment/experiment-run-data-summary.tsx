@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type ExperimentTurnPayload } from '@cozeloop/api-schema/evaluation';
 import { IconCozClock, IconCozText } from '@coze-arch/coze-design/icons';
 import { Divider } from '@coze-arch/coze-design';
