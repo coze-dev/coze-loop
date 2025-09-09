@@ -1,3 +1,4 @@
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet, IDRender } from '@cozeloop/components';
 import {
   type Experiment,

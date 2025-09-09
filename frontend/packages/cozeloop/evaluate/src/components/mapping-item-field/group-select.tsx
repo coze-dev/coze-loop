@@ -379,7 +379,7 @@ export default function GroupSelect(props: GroupSelectProps) {
         ))}
         {filteredOptionGroups.length === 0 && searchText && (
           <div className="text-center py-4 text-gray-500">
-            {I18n.t('no_matching_option')}
+            {I18n.t('no_matching_options_found')}
           </div>
         )}
       </div>

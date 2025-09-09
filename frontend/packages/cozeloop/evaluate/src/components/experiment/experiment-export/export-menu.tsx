@@ -101,7 +101,7 @@ const ExportMenu = (props: ExportMenuProps) => {
             </Dropdown.Item>
           </TooltipWhenDisabled>
           <Dropdown.Title className="!pl-2">
-            {I18n.t('export_records')}
+            {I18n.t('evaluate_export_records')}
           </Dropdown.Title>
           <Dropdown.Item className="!pl-2" onClick={onViewDownloadFiles}>
             {I18n.t('view_and_download_files')}
@@ -110,7 +110,7 @@ const ExportMenu = (props: ExportMenuProps) => {
       }
     >
       <Button color="primary" iconPosition="right" icon={<IconCozArrowDown />}>
-        {I18n.t('export')}
+        {I18n.t('evaluate_export')}
       </Button>
     </Dropdown>
   );

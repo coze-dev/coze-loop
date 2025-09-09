@@ -1,6 +1,7 @@
 import { type ComponentType } from 'react';
 
 import { type prompt } from '@cozeloop/api-schema/prompt';
+import { type Model } from '@cozeloop/api-schema/llm-manage';
 import { type RuntimeParam } from '@cozeloop/api-schema/evaluation';
 export interface EvaluateTargetPromptDynamicParamsProps {
   promptID?: string;
@@ -9,6 +10,7 @@ export interface EvaluateTargetPromptDynamicParamsProps {
   disabled?: boolean;
   value?: RuntimeParam;
   onChange?: (val?: RuntimeParam) => void;
+  onModelChange?: (model?: Model) => void;
 }
 
 export interface EvaluateExperimentsAdapters {
