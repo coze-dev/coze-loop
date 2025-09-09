@@ -120,8 +120,8 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	//todo:[xun]加锁
-	ctx = session.WithCtxUser(context.Background(), &session.User{ID: currentTask.BaseInfo.CreatedBy.GetUserID()})
-	session := getSession(ctx, currentTask)
+	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.BaseInfo.CreatedBy.GetUserID()})
+	sessionInfo := getSession(ctx, currentTask)
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
 	var evaluatorFieldMappings []*expt.EvaluatorFieldMapping
@@ -164,13 +164,18 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	// 1、创建评测集
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
+	user, ok := session.UserInCtx(ctx)
+	if !ok {
+		logs.CtxError(ctx, "User not found")
+	}
+	logs.CtxInfo(ctx, "[auto_task] CreateDataset,user:%+v", user)
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 		0,
 		currentTask.GetWorkspaceID(),
 		fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day()),
 		category,
 		schema,
-		session,
+		sessionInfo,
 	))
 	if err != nil {
 		return err
@@ -208,7 +213,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		MaxAliveTime: gptr.Of(maxAliveTime),
 		SourceType:   gptr.Of(expt.SourceType_AutoTask),
 		SourceID:     gptr.Of(strconvh.FormatInt64(currentTask.GetID())),
-		Session:      session,
+		Session:      sessionInfo,
 	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
