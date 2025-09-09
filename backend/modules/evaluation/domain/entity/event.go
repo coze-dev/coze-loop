@@ -120,6 +120,7 @@ type ExportCSVEvent struct {
 	ExperimentID int64
 	SpaceID      int64
 	ExportScene  ExportScene
+	CreateAt     int64
 }
 
 type ExportScene int
