@@ -29,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -228,7 +229,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
-	go func() {
+	goroutine.GoSafe(ctx, func() {
 		var executeErr error
 		defer func() {
 			e := recover()
@@ -278,7 +279,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if executeErr != nil {
 			return
 		}
-	}()
+	})
 	// send result
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {

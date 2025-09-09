@@ -33,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -425,7 +426,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
 	replyResultChan := make(chan *entity.Reply, 1) // 用于接收aggregatedReply，避免数据竞争
-	go func() {
+	goroutine.GoSafe(ctx, func() {
 		var executeErr error
 		var localAggregatedReply *entity.Reply
 		defer func() {
@@ -457,7 +458,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		if executeErr != nil {
 			return
 		}
-	}()
+	})
 	// send result
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {
