@@ -11,7 +11,6 @@ import (
 
 	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -120,7 +119,6 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	//todo:[xun]加锁
-	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.BaseInfo.CreatedBy.GetUserID()})
 	sessionInfo := getSession(ctx, currentTask)
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
@@ -164,11 +162,6 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	// 1、创建评测集
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
-	user, ok := session.UserInCtx(ctx)
-	if !ok {
-		logs.CtxError(ctx, "[auto_task] User not found")
-	}
-	logs.CtxInfo(ctx, "[auto_task] CreateDataset,user:%+v", user)
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 		0,
 		currentTask.GetWorkspaceID(),
