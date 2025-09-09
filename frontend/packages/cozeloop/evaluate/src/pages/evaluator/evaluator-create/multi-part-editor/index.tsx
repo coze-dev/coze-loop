@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { ContentType, DatasetItem } from '@cozeloop/evaluate-components';
 import { type VariableDef } from '@cozeloop/api-schema/prompt';
 import { Collapse } from '@coze-arch/coze-design';

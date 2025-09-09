@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { useState, type ReactNode } from 'react';
 
 import { IconCozMore } from '@coze-arch/coze-design/icons';

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 import { I18n } from '@cozeloop/i18n-adapter';
 import { type EvalTargetType } from '@cozeloop/api-schema/evaluation';

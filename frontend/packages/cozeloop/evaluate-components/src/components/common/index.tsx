@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export { default as NoVersionJumper } from './no-version-jumper';
 export { OpenDetailText } from './open-detail-text';
 export { ColumnsManage, dealColumnsFromStorage } from './columns-manage';

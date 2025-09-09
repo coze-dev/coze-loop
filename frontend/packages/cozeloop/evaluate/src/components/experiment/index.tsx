@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export { default as ExperimentItemDetailTable } from './experiment-item-detail-table';
 export { default as ExperimentItemRunStatus } from './previews/experiment-item-run-status';
 export { default as EvaluatorColumnPreview } from './previews/evaluator-column-preview';

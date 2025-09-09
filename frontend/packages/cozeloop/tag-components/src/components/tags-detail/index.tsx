@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { useParams, useBlocker } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { isFunction } from 'lodash-es';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

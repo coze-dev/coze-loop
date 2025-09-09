@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { IconCozCross } from '@coze-arch/coze-design/icons';
 
 import VersionList, { type VersionListProps } from './version-list';

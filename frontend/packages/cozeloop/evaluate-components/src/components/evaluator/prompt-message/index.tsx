@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type Message } from '@cozeloop/api-schema/evaluation';
 
 import { EvaluatorPromptEditor } from '../evaluator-prompt-editor';

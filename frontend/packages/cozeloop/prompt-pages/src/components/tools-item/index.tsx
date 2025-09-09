@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type Tool } from '@cozeloop/api-schema/prompt';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
 import { IconButton, Popconfirm, Typography } from '@coze-arch/coze-design';

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
 import { PopoverModelConfigEditorQuery } from '@cozeloop/prompt-components';
 import { I18n } from '@cozeloop/i18n-adapter';

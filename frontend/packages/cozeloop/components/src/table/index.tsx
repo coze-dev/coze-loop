@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { IconCozIllusEmpty } from '@coze-arch/coze-design/illustrations';
 import { type TableProps, EmptyState, Table } from '@coze-arch/coze-design';
 

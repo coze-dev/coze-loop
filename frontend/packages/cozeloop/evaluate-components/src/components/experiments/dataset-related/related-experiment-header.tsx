@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type ExptStatus, FieldType } from '@cozeloop/api-schema/evaluation';
 
 import { ExperimentStatusSelect } from '../experiment-list-flter/experiment-status-select';

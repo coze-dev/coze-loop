@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /**
  * @fileoverview 标签组件API统一导出模块
  * @description 提供标签相关的所有API接口和类型定义，方便其他项目使用

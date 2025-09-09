@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 /* eslint-disable @coze-arch/use-error-in-catch */
 import { type JSONSchema7, type JSONSchema7TypeName } from 'json-schema';

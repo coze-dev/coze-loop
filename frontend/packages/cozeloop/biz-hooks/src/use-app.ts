@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { useMatch, useParams } from 'react-router-dom';
 
 export type AppType =
