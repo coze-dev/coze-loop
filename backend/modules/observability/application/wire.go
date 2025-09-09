@@ -67,6 +67,7 @@ var (
 		mysqldao.NewTaskDaoImpl,
 		tredis.NewTaskDAO,
 		mysqldao.NewTaskRunDaoImpl,
+		NewDatasetServiceAdapter,
 	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
@@ -117,7 +118,6 @@ var (
 		user.NewUserRPCProvider,
 		evaluator.NewEvaluatorRPCProvider,
 		evaluation.NewEvaluationRPCProvider,
-		NewDatasetServiceAdapter,
 		taskDomainSet,
 	)
 )
