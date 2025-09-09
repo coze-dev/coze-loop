@@ -182,9 +182,9 @@ struct ListSourceEvalTargetVersionsResponse {
 }
 
 struct SearchCustomEvalTargetRequest {
-    1: optional i64 workspace_id // fornax平台ID
+    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"') // 空间ID
     2: optional string keyword // 透传spi接口
-    3: optional i64 application_id // 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义PSM详情
+    3: optional i64 application_id (api.js_conv="true", go.tag = 'json:"application_id"') // 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义PSM详情
     4: optional eval_target.CustomPSM custom_psm,    // 自定义PSM详情，非必填，应用注册调试时传
     5: optional eval_target.Region region    // 必填
 
@@ -204,7 +204,7 @@ struct SearchCustomEvalTargetResponse {
 }
 
 struct DebugEvalTargetRequest {
-    1: optional i64 workspace_id
+    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional eval_target.EvalTargetType eval_target_type    // 类型
 
     10: optional string param    // 执行参数：如果type=6,则传spi request json序列化结果
@@ -222,7 +222,7 @@ struct DebugEvalTargetResponse {
 }
 
 struct AsyncDebugEvalTargetRequest {
-    1: optional i64 workspace_id
+    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional eval_target.EvalTargetType eval_target_type    // 类型
 
     10: optional common.RuntimeParam target_runtime_param    // 动态参数
@@ -234,14 +234,14 @@ struct AsyncDebugEvalTargetRequest {
 }
 
 struct AsyncDebugEvalTargetResponse {
-    1: required i64 invoke_id
+    1: required i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct PassbackEvalTargetInvokeResultRequest {
-    1: optional i64 workspace_id
-    2: optional i64 invoke_id
+    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
     3: optional string token
 
     10: optional coze.loop.evaluation.spi.InvokeEvalTargetOutput output // 输出
