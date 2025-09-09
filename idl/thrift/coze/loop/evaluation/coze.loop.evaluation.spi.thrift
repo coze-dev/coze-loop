@@ -22,7 +22,6 @@ struct SearchEvalTargetResponse {
     255: base.BaseResp BaseResp (api.none="true")
 }
 
-// fornax会展示在平台，并在运行时透传
 struct CustomEvalTarget {
     1: optional string id // 唯一键，平台不消费，仅做透传
     2: optional string name    // 名称，平台用于展示在对象搜索下拉列表
@@ -79,7 +78,7 @@ struct InvokeEvalTargetUsage {
 }
 
 struct AsyncInvokeEvalTargetRequest {
-    1: optional i64 space_id
+    1: optional i64 workspace_id
     2: optional i64 invoke_id  // 执行id，传递给自定义对象，在回传结果时透传
     3: optional string token    // 根据invoke_id签发的token，在回传结果时透传
     4: optional InvokeEvalTargetInput input  // 执行输入信息
