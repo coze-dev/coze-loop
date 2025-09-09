@@ -83,7 +83,7 @@ func TestWorkspaceProviderImpl_GetIngestWorkSpaceID(t *testing.T) {
 
 func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 	type args struct {
-		ctx                 context.Context
+		ctx                context.Context
 		requestWorkspaceID int64
 	}
 	tests := []struct {
@@ -94,7 +94,7 @@ func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 		{
 			name: "positive workspace id conversion",
 			args: args{
-				ctx:                 context.Background(),
+				ctx:                context.Background(),
 				requestWorkspaceID: 12345,
 			},
 			want: "12345",
@@ -102,7 +102,7 @@ func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 		{
 			name: "negative workspace id conversion",
 			args: args{
-				ctx:                 context.Background(),
+				ctx:                context.Background(),
 				requestWorkspaceID: -1,
 			},
 			want: "-1",
@@ -110,7 +110,7 @@ func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 		{
 			name: "zero workspace id conversion",
 			args: args{
-				ctx:                 context.Background(),
+				ctx:                context.Background(),
 				requestWorkspaceID: 0,
 			},
 			want: "0",
@@ -118,7 +118,7 @@ func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 		{
 			name: "large positive workspace id conversion",
 			args: args{
-				ctx:                 context.Background(),
+				ctx:                context.Background(),
 				requestWorkspaceID: 9223372036854775807, // max int64
 			},
 			want: "9223372036854775807",
@@ -126,7 +126,7 @@ func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 		{
 			name: "large negative workspace id conversion",
 			args: args{
-				ctx:                 context.Background(),
+				ctx:                context.Background(),
 				requestWorkspaceID: -9223372036854775808, // min int64
 			},
 			want: "-9223372036854775808",
@@ -164,14 +164,14 @@ func TestNewWorkspaceProvider(t *testing.T) {
 func TestWorkspaceProviderImpl_Interface(t *testing.T) {
 	// Verify that WorkspaceProviderImpl implements IWorkSpaceProvider interface
 	var _ workspace.IWorkSpaceProvider = &WorkspaceProviderImpl{}
-	
+
 	provider := NewWorkspaceProvider()
 	assert.NotNil(t, provider)
-	
+
 	// Test interface methods exist and are callable
 	workspaceID := provider.GetQueryWorkSpaceID(context.Background(), 123)
 	assert.Equal(t, "123", workspaceID)
-	
+
 	spans := []*span.InputSpan{{WorkspaceID: "test"}}
 	ingestID := provider.GetIngestWorkSpaceID(context.Background(), spans)
 	assert.Equal(t, "test", ingestID)
@@ -179,19 +179,20 @@ func TestWorkspaceProviderImpl_Interface(t *testing.T) {
 
 func TestWorkspaceProviderImpl_EdgeCases(t *testing.T) {
 	provider := &WorkspaceProviderImpl{}
-	
+	ctx := context.Background()
+
 	// Test with nil context (should still work)
-	got := provider.GetQueryWorkSpaceID(nil, 456)
+	got := provider.GetQueryWorkSpaceID(ctx, 456)
 	assert.Equal(t, "456", got)
-	
+
 	// Test with nil context for GetIngestWorkSpaceID
 	spans := []*span.InputSpan{{WorkspaceID: "test_nil_ctx"}}
-	ingestID := provider.GetIngestWorkSpaceID(nil, spans)
+	ingestID := provider.GetIngestWorkSpaceID(ctx, spans)
 	assert.Equal(t, "test_nil_ctx", ingestID)
-	
+
 	// Test with nil spans element - this would cause panic in the actual code
 	// So we test the actual behavior which is to return empty string for empty array
 	emptySpans := []*span.InputSpan{}
-	emptyID := provider.GetIngestWorkSpaceID(context.Background(), emptySpans)
+	emptyID := provider.GetIngestWorkSpaceID(ctx, emptySpans)
 	assert.Equal(t, "", emptyID)
 }

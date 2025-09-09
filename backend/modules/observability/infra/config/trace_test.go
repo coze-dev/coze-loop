@@ -944,7 +944,6 @@ func TestNewTraceConfigCenter(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			f := tt.fieldsGetter(ctrl)
-			
 			if tt.wantPanic {
 				assert.Panics(t, func() {
 					NewTraceConfigCenter(f.confP)

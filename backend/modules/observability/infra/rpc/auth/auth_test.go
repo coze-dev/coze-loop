@@ -541,12 +541,11 @@ func TestNewAuthProvider(t *testing.T) {
 func TestAuthProviderImpl_Interface(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
 	mockClient := mocks.NewMockClient(ctrl)
-	
+
 	// Verify that AuthProviderImpl implements IAuthProvider interface
 	var _ rpc.IAuthProvider = &AuthProviderImpl{}
-	
+
 	provider := NewAuthProvider(mockClient)
 	assert.NotNil(t, provider)
 	assert.IsType(t, &AuthProviderImpl{}, provider)
@@ -555,24 +554,24 @@ func TestAuthProviderImpl_Interface(t *testing.T) {
 func TestAuthProviderImpl_ErrorCodes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	mockClient := mocks.NewMockClient(ctrl)
 	provider := &AuthProviderImpl{cli: mockClient}
-	
+
 	// Test invalid workspace ID error code
 	err := provider.CheckWorkspacePermission(context.Background(), "read", "invalid")
 	assert.NotNil(t, err)
-	
+
 	// Check if error is wrapped with correct error code
 	assert.Contains(t, err.Error(), "internal error")
 	assert.Contains(t, err.Error(), "internal error")
 	// Test RPC error code
 	mockClient.EXPECT().MCheckPermission(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("rpc error"))
-	
+
 	err = provider.CheckWorkspacePermission(context.Background(), "read", "12345")
 	assert.NotNil(t, err)
-	
+
 	// Test permission denied error code
 	mockClient.EXPECT().MCheckPermission(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&auth.MCheckPermissionResponse{
@@ -581,7 +580,7 @@ func TestAuthProviderImpl_ErrorCodes(t *testing.T) {
 				{IsAllowed: ptr.Of(false)},
 			},
 		}, nil)
-	
+
 	err = provider.CheckWorkspacePermission(context.Background(), "read", "12345")
 	assert.NotNil(t, err)
 }
