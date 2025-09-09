@@ -60,7 +60,8 @@ func ExecuteStreaming(ctx context.Context, c *app.RequestContext) {
 				publishErrEvent(ctx, s, err)
 				return
 			}
-			err = publishDataEvent(ctx, s, resp)
+			// for streaming openapi, should get data from resp.GetData()
+			err = publishDataEvent(ctx, s, resp.GetData())
 			if err != nil {
 				publishErrEvent(ctx, s, err)
 				return
