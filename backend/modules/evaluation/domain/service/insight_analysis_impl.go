@@ -63,22 +63,25 @@ func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context
 		ExperimentID: record.ExptID,
 		SpaceID:      record.SpaceID,
 		ExportScene:  entity.ExportSceneInsightAnalysis,
+		CreateAt:     time.Now().Unix(),
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Second*3))
 	if err != nil {
 		return 0, err
 	}
 
-	//time.Sleep(time.Second)
-	//err = e.GenAnalysisReport(ctx, record.SpaceID, record.ExptID, recordID)
-	//if err != nil {
-	//	logs.CtxError(ctx, "GenAnalysisReport err: %v", err)
-	//}
-
 	return recordID, nil
 }
 
-func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID int64) (err error) {
+func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt int64) (err error) {
+	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
+	if err != nil {
+		return err
+	}
+	if analysisRecord.AnalysisReportID != nil {
+		return e.checkAnalysisReportGenStatus(ctx, analysisRecord, CreateAt)
+	}
+
 	var (
 		exptResultFilePath string
 		analysisReportID   int64
@@ -90,7 +93,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 			ExptID:             exptID,
 			ExptResultFilePath: ptr.Of(exptResultFilePath),
 			AnalysisReportID:   ptr.Of(analysisReportID),
-			Status:             entity.InsightAnalysisStatus_Success,
+			Status:             entity.InsightAnalysisStatus_Running,
 		}
 		if err != nil {
 			record.Status = entity.InsightAnalysisStatus_Failed
@@ -125,38 +128,86 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 
 	analysisReportID = reportID
 
+	// 发送时间检查分析报告生成状态
+	exportEvent := &entity.ExportCSVEvent{
+		ExportID:     recordID,
+		ExperimentID: exptID,
+		SpaceID:      spaceID,
+		ExportScene:  entity.ExportSceneInsightAnalysis,
+		CreateAt:     CreateAt,
+	}
+	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*3))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context.Context, record *entity.ExptInsightAnalysisRecord, CreateAt int64) (err error) {
+	_, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
+	if err != nil {
+		return err
+	}
+	if status == entity.ReportStatus_Failed {
+		record.Status = entity.InsightAnalysisStatus_Failed
+		return e.repo.UpdateAnalysisRecord(ctx, record)
+	}
+	if status == entity.ReportStatus_Success {
+		err = e.notifyAnalysisComplete(ctx, record.CreatedBy, record.SpaceID, record.ExptID)
+		if err != nil {
+			logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
+		}
+		record.Status = entity.InsightAnalysisStatus_Success
+		return e.repo.UpdateAnalysisRecord(ctx, record)
+	}
+
+	defaultIntervalSecond := 60 * 60 * 1
+	if time.Now().Unix()-CreateAt >= int64(defaultIntervalSecond) {
+		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, expt_id: %v, record_id: %v", record.ExptID, record.ID)
+		record.Status = entity.InsightAnalysisStatus_Failed
+		return e.repo.UpdateAnalysisRecord(ctx, record)
+	}
+
+	exportEvent := &entity.ExportCSVEvent{
+		ExportID:     record.ID,
+		ExperimentID: record.ExptID,
+		SpaceID:      record.SpaceID,
+		ExportScene:  entity.ExportSceneInsightAnalysis,
+		CreateAt:     CreateAt,
+	}
+	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*1))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64, session *entity.Session) (*entity.ExptInsightAnalysisRecord, error) {
-	// todo get userID form db
-	err := e.notifyAnalysisComplete(ctx, session.UserID, spaceID, exptID)
-	if err != nil {
-		logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
-	}
-
 	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
 	if err != nil {
 		return nil, err
 	}
 
-	if analysisRecord.Status != entity.InsightAnalysisStatus_Success {
+	if analysisRecord.Status == entity.InsightAnalysisStatus_Running ||
+		analysisRecord.Status == entity.InsightAnalysisStatus_Failed {
 		return analysisRecord, nil
 	}
 
-	report, status, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
+	report, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
 	if err != nil {
 		return nil, err
 	}
 	// 聚合报告生成状态
-	if status == entity.ReportStatus_Failed {
-		analysisRecord.Status = entity.InsightAnalysisStatus_Failed
-		return analysisRecord, nil
-	}
-	if status == entity.ReportStatus_Running {
-		analysisRecord.Status = entity.InsightAnalysisStatus_Running
-		return analysisRecord, nil
-	}
+	//if status == entity.ReportStatus_Failed {
+	//	analysisRecord.Status = entity.InsightAnalysisStatus_Failed
+	//	return analysisRecord, nil
+	//}
+	//if status == entity.ReportStatus_Running {
+	//	analysisRecord.Status = entity.InsightAnalysisStatus_Running
+	//	return analysisRecord, nil
+	//}
 	analysisRecord.AnalysisReportContent = report
 
 	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, recordID)
@@ -177,11 +228,6 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 	if curUserFeedbackVote != nil {
 		analysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
 	}
-
-	//err = e.notifyAnalysisComplete(ctx, session.UserID)
-	//if err != nil {
-	//	logs.CtxWarn(ctx, "notifyAnalysisComplete failed, err=%v", err)
-	//}
 
 	return analysisRecord, nil
 }

@@ -11,7 +11,7 @@ import (
 
 type IExptInsightAnalysisService interface {
 	CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session) (int64, error)
-	GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID int64) error
+	GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt int64) error
 	GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64, session *entity.Session) (*entity.ExptInsightAnalysisRecord, error)
 	ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page, session *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error)
 	DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error
