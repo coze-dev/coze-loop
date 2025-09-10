@@ -217,15 +217,16 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
 	// 3、更新任务状态
-	//if currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
-	//	updateMap := map[string]interface{}{
-	//		"task_status": task.TaskStatusRunning,
-	//	}
-	//	err = p.TaskRepo.UpdateTaskWithOCC(ctx, currentTask.GetID(), currentTask.GetWorkspaceID(), updateMap)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	if currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
+		updateMap := map[string]interface{}{
+			"task_status": task.TaskStatusRunning,
+		}
+		logs.CtxInfo(ctx, "currentTask.GetID():%d, currentTask.GetWorkspaceID():%d", currentTask.GetID(), currentTask.GetWorkspaceID())
+		err = p.TaskRepo.UpdateTaskWithOCC(ctx, currentTask.GetID(), currentTask.GetWorkspaceID(), updateMap)
+		if err != nil {
+			return err
+		}
+	}
 	// 4、更新任务配置
 	effectiveTime := currentTask.GetRule().GetEffectiveTime()
 	taskConfig, err := p.TaskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
