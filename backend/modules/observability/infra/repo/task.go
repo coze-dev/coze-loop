@@ -249,7 +249,17 @@ func (v *TaskRepoImpl) generateFilterHash(param mysql.ListTaskParam) string {
 
 func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string) {
 	// 先查 Redis 缓存
-	var spaceList, botList []string
+	spaceList, botList, err := v.TaskRedisDao.GetObjListWithTask(ctx)
+	if err != nil {
+		logs.CtxWarn(ctx, "failed to get obj list with task from redis cache", "err", err)
+		// Redis失败时从MySQL获取
+		spaceList, botList, err = v.TaskDao.GetObjListWithTask(ctx)
+		if err != nil {
+			logs.CtxWarn(ctx, "failed to get obj list with task from mysql", "err", err)
+			return nil, nil
+		}
+	}
+
 	return spaceList, botList
 }
 
