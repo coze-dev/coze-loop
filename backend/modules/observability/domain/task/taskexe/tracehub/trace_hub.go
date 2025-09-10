@@ -63,6 +63,7 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	span := rawSpan.RawSpanConvertToLoopSpan()
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	spaceList, _ := h.taskRepo.GetObjListWithTask(ctx)
+	logs.CtxInfo(ctx, "space list: %v", spaceList)
 	if !gslice.Contains(spaceList, span.WorkspaceID) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
 		logs.CtxInfo(ctx, "no space found for span, %s", logSuffix)
