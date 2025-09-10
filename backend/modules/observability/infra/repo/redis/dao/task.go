@@ -373,7 +373,7 @@ func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 	gotSpaceList, err := p.cmdable.Get(ctx, spaceKey).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
-			return nil, nil, nil // 缓存未命中
+			return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey) // 缓存未命中
 		}
 		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
 	}
@@ -384,7 +384,7 @@ func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 	gotBotList, err := p.cmdable.Get(ctx, botKey).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
-			return nil, nil, nil // 缓存未命中
+			return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey) // 缓存未命中
 		}
 		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
 	}
