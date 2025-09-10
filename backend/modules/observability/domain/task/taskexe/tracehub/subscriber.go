@@ -68,6 +68,9 @@ func (s *spanSubscriber) Creative(ctx context.Context) error {
 
 func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) error {
 	taskConfig, err := s.taskRepo.GetTask(ctx, s.t.GetID(), nil, nil)
+	if err != nil {
+		return err
+	}
 
 	var taskRunConfig *entity.TaskRun
 	if taskConfig != nil {
