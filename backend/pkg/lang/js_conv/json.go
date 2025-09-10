@@ -15,9 +15,18 @@ import (
 )
 
 var (
-	once   sync.Once
-	jsoner jsoniter.API
+	once            sync.Once
+	jsoner          jsoniter.API
+	unescapedJsoner = jsoniter.Config{
+		EscapeHTML:             false,
+		SortMapKeys:            true,
+		ValidateJsonRawMessage: true,
+	}.Froze()
 )
+
+func init() {
+	unescapedJsoner.RegisterExtension(NewJSONIterExtension())
+}
 
 func GetMarshaler() func(v interface{}) ([]byte, error) {
 	once.Do(func() {
@@ -31,6 +40,10 @@ func GetUnmarshaler() func(data []byte, v interface{}) error {
 		initJsonMarshalerWithExtension()
 	})
 	return jsoner.Unmarshal
+}
+
+func UnescapedMarshal(v interface{}) ([]byte, error) {
+	return unescapedJsoner.Marshal(v)
 }
 
 func initJsonMarshalerWithExtension() {

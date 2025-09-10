@@ -140,7 +140,7 @@ func (e ExptAnnotateRepoImpl) GetExptTurnAnnotateRecordRefsByTagKeyID(ctx contex
 	return exptTurnAnnotateRecordRefs, nil
 }
 
-func (e ExptAnnotateRepoImpl) UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) (int32, int32, error) {
+func (e ExptAnnotateRepoImpl) UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error {
 	return e.exptTurnResultTagRefDAO.UpdateCompleteCount(ctx, exptID, spaceID, tagKeyID, opts...)
 }
 

@@ -185,7 +185,7 @@ func (e ExptAnnotateServiceImpl) SaveAnnotateRecord(ctx context.Context, exptID 
 		}
 
 		// calculate aggregate result
-		_, _, err = e.repo.UpdateCompleteCount(ctx, exptID, record.SpaceID, record.TagKeyID, opts...)
+		err := e.repo.UpdateCompleteCount(ctx, exptID, record.SpaceID, record.TagKeyID, opts...)
 		if err != nil {
 			return err
 		}

@@ -119,7 +119,7 @@ type IExptAnnotateRepo interface {
 	GetExptTurnResultTagRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
 	BatchGetExptTurnResultTagRefs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
 	GetTagRefByTagKeyID(ctx context.Context, exptID, spaceID, tagKeyID int64) (*entity.ExptTurnResultTagRef, error)
-	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) (int32, int32, error)
+	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
 	DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
 
 	SaveAnnotateRecord(ctx context.Context, exptTurnResultID int64, record *entity.AnnotateRecord, opts ...db.Option) error
