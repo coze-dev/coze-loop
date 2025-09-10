@@ -89,9 +89,9 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	logger := NewLogger()
 	sandboxConfig := NewSandboxConfig()
 	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
-	runtimeManager := runtime.NewRuntimeManager(iRuntimeFactory)
+	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
-	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, runtimeManager, codeBuilderFactory)
+	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
 	serviceEvaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
 	if err != nil {
@@ -169,9 +169,9 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	logger := NewLogger()
 	sandboxConfig := NewSandboxConfig()
 	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
-	runtimeManager := runtime.NewRuntimeManager(iRuntimeFactory)
+	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
-	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, runtimeManager, codeBuilderFactory)
+	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
 	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
 	if err != nil {
@@ -234,8 +234,9 @@ var (
 		flagSet,
 	)
 
-	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, runtime.NewRuntimeFactory, runtime.NewRuntimeManager, NewSandboxConfig,
-		NewLogger, wire.Bind(new(component.IRuntimeManager), new(*runtime.RuntimeManager)), service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher,
+	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, runtime.NewRuntimeFactory, NewRuntimeManagerFromFactory,
+		NewSandboxConfig,
+		NewLogger, service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher,
 	)
 
 	evaluatorSet = wire.NewSet(
@@ -276,6 +277,11 @@ func NewLogger() *logrus.Logger {
 	logger := logrus.New()
 	logger.SetLevel(logrus.InfoLevel)
 	return logger
+}
+
+// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
+func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return runtime.NewRuntimeManager(factory, logger)
 }
 
 func NewEvaluatorSourceServices(
