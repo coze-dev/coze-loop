@@ -6,6 +6,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -186,7 +187,24 @@ func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context) ([]*entity.Observab
 	return resp, nil
 }
 func (v *TaskRepoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) []*entity.ObservabilityTask {
-	return nil
+	// 先查 Redis 缓存
+	cachedTasks, err := v.TaskRedisDao.GetNonFinalTaskList(ctx)
+	if err != nil {
+		logs.CtxWarn(ctx, "failed to get non final task list from redis cache", "err", err)
+	} else if cachedTasks != nil {
+		return cachedTasks
+	}
+	// 缓存未命中，查询数据库
+	spaceIDInt, _ := strconv.ParseInt(spaceID, 10, 64)
+	results, err := v.TaskDao.ListNonFinalTaskBySpaceID(ctx, spaceIDInt)
+	if err != nil {
+		return nil
+	}
+	resp := make([]*entity.ObservabilityTask, len(results))
+	for i, result := range results {
+		resp[i] = convertor.TaskPO2DO(result)
+	}
+	return resp
 }
 func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作

@@ -47,6 +47,7 @@ type ITaskDao interface {
 	ListNonFinalTask(ctx context.Context) ([]*model.ObservabilityTask, error)
 	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
+	ListNonFinalTaskBySpaceID(ctx context.Context, workspaceID int64) ([]*model.ObservabilityTask, error)
 }
 
 func NewTaskDaoImpl(db db.Provider) ITaskDao {
@@ -299,6 +300,19 @@ func (v *TaskDaoImpl) ListNonFinalTask(ctx context.Context) ([]*model.Observabil
 	return results, nil
 }
 
+func (v *TaskDaoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, workspaceID int64) ([]*model.ObservabilityTask, error) {
+	q := genquery.Use(v.dbMgr.NewSession(ctx))
+	qd := q.WithContext(ctx).ObservabilityTask
+	qd = qd.Where(q.ObservabilityTask.WorkspaceID.Eq(workspaceID))
+	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn("success", "disabled"))
+
+	results, err := qd.Limit(500).Find()
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	}
+	return results, nil
+}
+
 func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	//todo[xun]: 乐观锁
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
@@ -316,24 +330,24 @@ func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspace
 func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx))
 	qd := q.WithContext(ctx).ObservabilityTask
-	
+
 	// 查询非终态任务的workspace_id，使用DISTINCT去重
 	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn("success", "disabled"))
 	qd = qd.Select(q.ObservabilityTask.WorkspaceID).Distinct()
-	
+
 	results, err := qd.Find()
 	if err != nil {
 		return nil, nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
-	
+
 	// 转换为字符串数组
 	var spaceList []string
 	for _, task := range results {
 		spaceList = append(spaceList, strconv.FormatInt(task.WorkspaceID, 10))
 	}
-	
+
 	// botList暂时返回空数组，因为Task表中没有bot_id字段
 	var botList []string
-	
+
 	return spaceList, botList, nil
 }
