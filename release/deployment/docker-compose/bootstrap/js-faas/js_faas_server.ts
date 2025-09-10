@@ -41,7 +41,9 @@ const originalLog = console.log;
 const originalError = console.error;
 let stdout = '';
 let stderr = '';
+let returnValue = '';
 
+// 捕获用户的console.log输出
 console.log = (...args) => {
   stdout += args.join(' ') + '\\n';
   originalLog(...args);
@@ -52,17 +54,20 @@ console.error = (...args) => {
   originalError(...args);
 };
 
+// 实现return_val函数来捕获返回值
+function return_val(value) {
+  returnValue = value;
+}
+
 try {
-  const userFunction = () => {
-    ${code}
-  };
+  // 执行用户代码
+  ${code}
   
-  const result = userFunction();
-  
+  // 输出最终结果给FaaS服务解析
   console.log(JSON.stringify({
     stdout: stdout,
     stderr: stderr,
-    ret_val: JSON.stringify(result)
+    ret_val: returnValue
   }));
 } catch (error) {
   console.error(JSON.stringify({

@@ -19,6 +19,7 @@ class PythonExecutor:
     
     def __init__(self):
         self.execution_count = 0
+        self.return_val_output = None
     
     def execute_python(self, code, timeout=30000):
         """执行Python代码"""
@@ -27,18 +28,20 @@ class PythonExecutor:
         try:
             stdout_capture = io.StringIO()
             stderr_capture = io.StringIO()
+            self.return_val_output = None
             
             # 创建一个新的命名空间执行代码
-            namespace = {}
+            namespace = {
+                'return_val': self._capture_return_val
+            }
             
             with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
                 exec(code, namespace)
-                ret_val = namespace.get('result', None)
             
             return {
                 "stdout": stdout_capture.getvalue(),
                 "stderr": stderr_capture.getvalue(),
-                "returnValue": json.dumps(ret_val) if ret_val is not None else ""
+                "returnValue": self.return_val_output if self.return_val_output is not None else ""
             }
         except Exception as e:
             return {
@@ -46,6 +49,10 @@ class PythonExecutor:
                 "stderr": (stderr_capture.getvalue() if 'stderr_capture' in locals() else "") + str(e),
                 "returnValue": ""
             }
+    
+    def _capture_return_val(self, value):
+        """捕获return_val函数的输出"""
+        self.return_val_output = value
 
 class PythonFaaSHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, executor=None, **kwargs):

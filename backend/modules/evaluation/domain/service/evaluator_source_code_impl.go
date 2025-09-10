@@ -141,7 +141,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 			TimeConsumingMS:   time.Since(startTime).Milliseconds(),
 			Stdout: func() string {
 				if result.Output != nil {
-					return c.cleanStdoutForUser(result.Output.Stdout)
+					return result.Output.Stdout // 直接使用FaaS的stdout
 				}
 				return ""
 			}(),
@@ -159,14 +159,14 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 			TimeConsumingMS: time.Since(startTime).Milliseconds(),
 			Stdout: func() string {
 				if result.Output != nil {
-					return c.cleanStdoutForUser(result.Output.Stdout)
+					return result.Output.Stdout // 直接使用FaaS的stdout
 				}
 				return ""
 			}(),
 		}, entity.EvaluatorRunStatusFail, ""
 	}
 
-	// 构造输出数据
+		// 构造输出数据
 	outputData := &entity.EvaluatorOutputData{
 		EvaluatorResult: evaluatorResult,
 		EvaluatorUsage: &entity.EvaluatorUsage{
@@ -176,7 +176,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 		TimeConsumingMS: time.Since(startTime).Milliseconds(),
 		Stdout: func() string {
 			if result.Output != nil {
-				return c.cleanStdoutForUser(result.Output.Stdout)
+				return result.Output.Stdout // 直接使用FaaS的stdout
 			}
 			return ""
 		}(),
@@ -287,39 +287,10 @@ func (c *EvaluatorSourceCodeServiceImpl) cleanNestedJSON(input string) string {
 	return input
 }
 
-// cleanStdoutForUser 清理stdout输出，仅保留用户代码的print输出
+// cleanStdoutForUser 清理stdout输出，直接使用FaaS返回的stdout字段
 func (c *EvaluatorSourceCodeServiceImpl) cleanStdoutForUser(stdout string) string {
-	if stdout == "" {
-		return ""
-	}
-	
-	// 移除FaaS系统输出的JSON结构
-	lines := strings.Split(stdout, "\n")
-	var userOutput []string
-	
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		
-		// 检查是否是JSON格式的系统输出
-		var testResult map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &testResult); err == nil {
-			// 如果是包含score/reason或stdout/stderr的系统输出，跳过
-			if _, hasScore := testResult["score"]; hasScore {
-				continue
-			}
-			if _, hasStdout := testResult["stdout"]; hasStdout {
-				continue
-			}
-		}
-		
-		// 保留非JSON格式的用户输出
-		userOutput = append(userOutput, line)
-	}
-	
-	return strings.Join(userOutput, "\n")
+	// 直接返回FaaS服务的stdout，不再做复杂解析
+	return stdout
 }
 
 // cleanStdoutForReasoning 清理stdout用作reasoning，移除冗余的系统信息
@@ -648,7 +619,7 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationExecutionResult(result *
 
 	evaluatorResult := &entity.EvaluatorResult{}
 
-	// 优先从RetVal字段解析score和reason
+	// 直接从RetVal字段解析score和reason（简化后的逻辑）
 	if result.Output != nil && result.Output.RetVal != "" {
 		if score, reason, _, parseErr := c.parseEvaluationRetVal(result.Output.RetVal); parseErr == nil {
 			if score != nil {
@@ -659,35 +630,13 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationExecutionResult(result *
 			}
 			return evaluatorResult, nil
 		}
-		// 如果RetVal解析失败，继续使用原有逻辑作为备用方案
 	}
 
-	// 备用方案：如果有结构化输出，尝试解析
-	if len(processed.Output) > 0 {
-		// 解析分数
-		if scoreVal, ok := processed.Output["score"]; ok {
-			if score, ok := scoreVal.(float64); ok {
-				evaluatorResult.Score = &score
-			}
-		}
-
-		// 解析推理过程
-		if reasoningVal, ok := processed.Output["reasoning"]; ok {
-			if reasoning, ok := reasoningVal.(string); ok {
-				evaluatorResult.Reasoning = reasoning
-			}
-		}
-
-		// 如果从结构化输出中解析到了有效数据，返回结果
-		if evaluatorResult.Score != nil || evaluatorResult.Reasoning != "" {
-			return evaluatorResult, nil
-		}
+	// 如果RetVal解析失败，使用stdout作为推理过程
+	if result.Output != nil && result.Output.Stdout != "" {
+		evaluatorResult.Reasoning = result.Output.Stdout
 	}
-
-	// 最后的备用方案：使用标准输出作为推理过程，但要清理冗余信息
-	if stdout, ok := processed.Output["stdout"].(string); ok {
-		evaluatorResult.Reasoning = c.cleanStdoutForReasoning(stdout)
-	}
+	
 	return evaluatorResult, nil
 }
 
