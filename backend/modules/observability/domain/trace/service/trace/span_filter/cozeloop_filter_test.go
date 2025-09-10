@@ -21,7 +21,7 @@ func TestCozeLoopFilter_BuildBasicSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldSpaceId,
@@ -56,7 +56,7 @@ func TestCozeLoopFilter_BuildAllSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: nil,
 		},
 	}
@@ -78,7 +78,7 @@ func TestCozeLoopFilter_BuildRootSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldParentID,
@@ -107,7 +107,7 @@ func TestCozeLoopFilter_BuildLlmSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldSpanType,

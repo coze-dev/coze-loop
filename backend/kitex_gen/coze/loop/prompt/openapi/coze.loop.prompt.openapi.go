@@ -1024,11 +1024,15 @@ func (p *PromptResultData) Field1DeepEqual(src []*PromptResult_) bool {
 }
 
 type ExecuteRequest struct {
-	WorkspaceID      *int64         `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	PromptIdentifier *PromptQuery   `thrift:"prompt_identifier,2,optional" frugal:"2,optional,PromptQuery" form:"prompt_identifier" json:"prompt_identifier,omitempty"`
-	VariableVals     []*VariableVal `thrift:"variable_vals,10,optional" frugal:"10,optional,list<VariableVal>" form:"variable_vals" json:"variable_vals,omitempty"`
-	Messages         []*Message     `thrift:"messages,11,optional" frugal:"11,optional,list<Message>" form:"messages" json:"messages,omitempty"`
-	Base             *base.Base     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 工作空间ID
+	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	// Prompt 标识
+	PromptIdentifier *PromptQuery `thrift:"prompt_identifier,2,optional" frugal:"2,optional,PromptQuery" form:"prompt_identifier" json:"prompt_identifier,omitempty"`
+	// 变量值
+	VariableVals []*VariableVal `thrift:"variable_vals,10,optional" frugal:"10,optional,list<VariableVal>" form:"variable_vals" json:"variable_vals,omitempty"`
+	// 消息
+	Messages []*Message `thrift:"messages,11,optional" frugal:"11,optional,list<Message>" form:"messages" json:"messages,omitempty"`
+	Base     *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -1935,9 +1939,12 @@ func (p *ExecuteResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ExecuteData struct {
-	Message      *Message    `thrift:"message,1,optional" frugal:"1,optional,Message" form:"message" json:"message,omitempty" query:"message"`
-	FinishReason *string     `thrift:"finish_reason,2,optional" frugal:"2,optional,string" form:"finish_reason" json:"finish_reason,omitempty" query:"finish_reason"`
-	Usage        *TokenUsage `thrift:"usage,3,optional" frugal:"3,optional,TokenUsage" form:"usage" json:"usage,omitempty" query:"usage"`
+	// 消息
+	Message *Message `thrift:"message,1,optional" frugal:"1,optional,Message" form:"message" json:"message,omitempty" query:"message"`
+	// 结束原因
+	FinishReason *string `thrift:"finish_reason,2,optional" frugal:"2,optional,string" form:"finish_reason" json:"finish_reason,omitempty" query:"finish_reason"`
+	//  token消耗
+	Usage *TokenUsage `thrift:"usage,3,optional" frugal:"3,optional,TokenUsage" form:"usage" json:"usage,omitempty" query:"usage"`
 }
 
 func NewExecuteData() *ExecuteData {
@@ -2727,11 +2734,14 @@ func (p *ExecuteStreamingResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ExecuteStreamingData struct {
-	Code         *int32      `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
-	Msg          *string     `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
-	Message      *Message    `thrift:"message,3,optional" frugal:"3,optional,Message" form:"message" json:"message,omitempty" query:"message"`
-	FinishReason *string     `thrift:"finish_reason,4,optional" frugal:"4,optional,string" form:"finish_reason" json:"finish_reason,omitempty" query:"finish_reason"`
-	Usage        *TokenUsage `thrift:"usage,5,optional" frugal:"5,optional,TokenUsage" form:"usage" json:"usage,omitempty" query:"usage"`
+	Code *int32  `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
+	Msg  *string `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
+	// 消息
+	Message *Message `thrift:"message,3,optional" frugal:"3,optional,Message" form:"message" json:"message,omitempty" query:"message"`
+	// 结束原因
+	FinishReason *string `thrift:"finish_reason,4,optional" frugal:"4,optional,string" form:"finish_reason" json:"finish_reason,omitempty" query:"finish_reason"`
+	// token消耗
+	Usage *TokenUsage `thrift:"usage,5,optional" frugal:"5,optional,TokenUsage" form:"usage" json:"usage,omitempty" query:"usage"`
 }
 
 func NewExecuteStreamingData() *ExecuteStreamingData {
@@ -3200,9 +3210,12 @@ func (p *ExecuteStreamingData) Field5DeepEqual(src *TokenUsage) bool {
 }
 
 type PromptQuery struct {
+	// prompt_key
 	PromptKey *string `thrift:"prompt_key,1,optional" frugal:"1,optional,string" form:"prompt_key" json:"prompt_key,omitempty" query:"prompt_key"`
-	Version   *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
-	Label     *string `thrift:"label,3,optional" frugal:"3,optional,string" form:"label" json:"label,omitempty" query:"label"`
+	// prompt版本
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	// prompt版本标识（如果version不为空，该字段会被忽略）
+	Label *string `thrift:"label,3,optional" frugal:"3,optional,string" form:"label" json:"label,omitempty" query:"label"`
 }
 
 func NewPromptQuery() *PromptQuery {
@@ -4985,12 +4998,18 @@ func (p *ToolCallConfig) Field1DeepEqual(src *ToolChoiceType) bool {
 }
 
 type Message struct {
-	Role             *Role          `thrift:"role,1,optional" frugal:"1,optional,string" form:"role" json:"role,omitempty" query:"role"`
-	Content          *string        `thrift:"content,2,optional" frugal:"2,optional,string" form:"content" json:"content,omitempty" query:"content"`
-	Parts            []*ContentPart `thrift:"parts,3,optional" frugal:"3,optional,list<ContentPart>" form:"parts" json:"parts,omitempty" query:"parts"`
-	ReasoningContent *string        `thrift:"reasoning_content,4,optional" frugal:"4,optional,string" form:"reasoning_content" json:"reasoning_content,omitempty" query:"reasoning_content"`
-	ToolCallID       *string        `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
-	ToolCalls        []*ToolCall    `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
+	// 角色
+	Role *Role `thrift:"role,1,optional" frugal:"1,optional,string" form:"role" json:"role,omitempty" query:"role"`
+	// 消息内容
+	Content *string `thrift:"content,2,optional" frugal:"2,optional,string" form:"content" json:"content,omitempty" query:"content"`
+	// 多模态内容
+	Parts []*ContentPart `thrift:"parts,3,optional" frugal:"3,optional,list<ContentPart>" form:"parts" json:"parts,omitempty" query:"parts"`
+	// 推理思考内容
+	ReasoningContent *string `thrift:"reasoning_content,4,optional" frugal:"4,optional,string" form:"reasoning_content" json:"reasoning_content,omitempty" query:"reasoning_content"`
+	// tool调用ID（role为tool时有效）
+	ToolCallID *string `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
+	// tool调用（role为assistant时有效）
+	ToolCalls []*ToolCall `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
 }
 
 func NewMessage() *Message {
@@ -8233,10 +8252,14 @@ func (p *LLMConfig) Field7DeepEqual(src *bool) bool {
 }
 
 type VariableVal struct {
-	Key                 *string        `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
-	Value               *string        `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
-	PlaceholderMessages []*Message     `thrift:"placeholder_messages,3,optional" frugal:"3,optional,list<Message>" form:"placeholder_messages" json:"placeholder_messages,omitempty" query:"placeholder_messages"`
-	MultiPartValues     []*ContentPart `thrift:"multi_part_values,4,optional" frugal:"4,optional,list<ContentPart>" form:"multi_part_values" json:"multi_part_values,omitempty" query:"multi_part_values"`
+	// 变量key
+	Key *string `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
+	// 普通变量值（非string类型，如boolean、integer、float、object等，序列化后传入）
+	Value *string `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
+	// placeholder变量值
+	PlaceholderMessages []*Message `thrift:"placeholder_messages,3,optional" frugal:"3,optional,list<Message>" form:"placeholder_messages" json:"placeholder_messages,omitempty" query:"placeholder_messages"`
+	// 多模态变量值
+	MultiPartValues []*ContentPart `thrift:"multi_part_values,4,optional" frugal:"4,optional,list<ContentPart>" form:"multi_part_values" json:"multi_part_values,omitempty" query:"multi_part_values"`
 }
 
 func NewVariableVal() *VariableVal {
@@ -8687,7 +8710,9 @@ func (p *VariableVal) Field4DeepEqual(src []*ContentPart) bool {
 }
 
 type TokenUsage struct {
-	InputTokens  *int32 `thrift:"input_tokens,1,optional" frugal:"1,optional,i32" form:"input_tokens" json:"input_tokens,omitempty" query:"input_tokens"`
+	// 输入消耗
+	InputTokens *int32 `thrift:"input_tokens,1,optional" frugal:"1,optional,i32" form:"input_tokens" json:"input_tokens,omitempty" query:"input_tokens"`
+	// 输出消耗
 	OutputTokens *int32 `thrift:"output_tokens,2,optional" frugal:"2,optional,i32" form:"output_tokens" json:"output_tokens,omitempty" query:"output_tokens"`
 }
 

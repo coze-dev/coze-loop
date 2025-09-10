@@ -65,9 +65,9 @@ func (mr *MockITraceMetricsMockRecorder) EmitListSpans(workspaceId, spanType, st
 }
 
 // EmitTraceOapi mocks base method.
-func (m *MockITraceMetrics) EmitTraceOapi(method string, workspaceId int64, platformType, spanType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+func (m *MockITraceMetrics) EmitTraceOapi(method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitTraceOapi", method, workspaceId, platformType, spanType, spanSize, errorCode, start, isError)
+	m.ctrl.Call(m, "EmitTraceOapi", method, workspaceId, platformType, spanListType, spanSize, errorCode, start, isError)
 }
 
 // EmitTraceOapi indicates an expected call of EmitTraceOapi.

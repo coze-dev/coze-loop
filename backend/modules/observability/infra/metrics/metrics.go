@@ -29,7 +29,7 @@ const (
 	tagMethod       = "method"
 	tagSpaceID      = "workspace_id"
 	tagPlatformType = "platform_type"
-	tagSpanType     = "span_type"
+	tagSpanType     = "span_list_type"
 	tagIsErr        = "is_err"
 	tagErrCode      = "err_code"
 )
@@ -102,7 +102,7 @@ func (t *TraceMetricsImpl) EmitGetTrace(workspaceId int64, start time.Time, isEr
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(getTraceSuffix+latencySuffix)))
 }
 
-func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platformType, spanType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool) {
 	if t.spansMetrics == nil {
 		return
 	}
@@ -112,7 +112,7 @@ func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platf
 			{Name: tagSpaceID, Value: strconv.FormatInt(workspaceId, 10)},
 			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
 			{Name: tagPlatformType, Value: platformType},
-			{Name: tagSpanType, Value: spanType},
+			{Name: tagSpanType, Value: spanListType},
 			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
 		},
 		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),

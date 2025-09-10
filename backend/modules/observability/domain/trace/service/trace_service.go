@@ -926,7 +926,7 @@ func (r *TraceServiceImpl) getAnnotationCallerCfg(ctx context.Context, caller st
 func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
 	filters := make([]*loop_span.FilterField, 0)
 	env := &span_filter.SpanEnv{
-		WorkspaceId:           req.WorkspaceID,
+		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
 	}
 	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
