@@ -35,7 +35,7 @@ func NewTraceHubImpl(
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
 ) (ITraceHubService, error) {
-	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService)
+	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo)
 	ticker := time.NewTicker(1 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo: tRepo,
