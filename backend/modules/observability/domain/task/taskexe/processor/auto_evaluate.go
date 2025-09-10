@@ -127,7 +127,7 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	//todo:[xun]加锁
-	session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
+	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
 	sessionInfo := getSession(ctx, currentTask)
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
