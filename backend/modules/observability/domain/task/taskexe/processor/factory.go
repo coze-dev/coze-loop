@@ -28,6 +28,11 @@ func NewProcessor(ctx context.Context, taskType task.TaskType) (taskexe.Processo
 			return nil, errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("nil proc of span_eval"))
 		}
 		return autoEvaluteProc, nil
+	case task.TaskTypeAutoDataReflow:
+		if dataReflowProc == nil {
+			return nil, errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("nil proc of span_data_reflow"))
+		}
+		return dataReflowProc, nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("invalid task_type='%s' when new processor", taskType)))
 	}

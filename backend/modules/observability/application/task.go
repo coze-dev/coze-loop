@@ -135,6 +135,7 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("evaluatorVersionIDs is invalid, len(evaluators) != len(evaluatorVersionIDs)"))
 		}
 	case "auto_data_reflow":
+		// 检查数据集id是否合法
 	default:
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Invalid parameter. Please check the parameter and try again."))
 	}
