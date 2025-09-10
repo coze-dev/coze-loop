@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
@@ -39,6 +40,10 @@ func (e *ExptExportConsumer) HandleMessage(ctx context.Context, ext *mq.MessageE
 	}
 
 	logs.CtxInfo(ctx, "ExptExportConsumer consume message, event: %v, msg_id: %v", string(body), ext.MsgID)
+
+	if event.Session != nil && len(event.Session.UserID) > 0 { // 链路中调用接口会依赖 ctx userID 鉴权
+		ctx = session.WithCtxUser(ctx, &session.User{ID: event.Session.UserID})
+	}
 
 	return e.handleEvent(ctx, event)
 }

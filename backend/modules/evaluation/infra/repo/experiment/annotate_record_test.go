@@ -723,13 +723,11 @@ func TestExptAnnotateRepoImpl_UpdateCompleteCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-			total, complete, err := repo.UpdateCompleteCount(context.Background(), tt.exptID, tt.spaceID, tt.tagKeyID)
+			err := repo.UpdateCompleteCount(context.Background(), tt.exptID, tt.spaceID, tt.tagKeyID)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.wantTotal, total)
-				assert.Equal(t, tt.wantComplete, complete)
 			}
 		})
 	}
