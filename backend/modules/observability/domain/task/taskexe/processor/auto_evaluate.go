@@ -219,22 +219,23 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
 	// 3、更新任务状态
-	if currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
-		updateMap := map[string]interface{}{
-			"task_status": task.TaskStatusRunning,
-		}
-		logs.CtxInfo(ctx, "currentTask.GetID():%d, currentTask.GetWorkspaceID():%d", currentTask.GetID(), currentTask.GetWorkspaceID())
-		err = p.taskRepo.UpdateTaskWithOCC(ctx, currentTask.GetID(), currentTask.GetWorkspaceID(), updateMap)
-		if err != nil {
-			return err
-		}
-	}
+	//if currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
+	//	updateMap := map[string]interface{}{
+	//		"task_status": task.TaskStatusRunning,
+	//	}
+	//	logs.CtxInfo(ctx, "currentTask.GetID():%d, currentTask.GetWorkspaceID():%d", currentTask.GetID(), currentTask.GetWorkspaceID())
+	//	err = p.taskRepo.UpdateTaskWithOCC(ctx, currentTask.GetID(), currentTask.GetWorkspaceID(), updateMap)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 	// 4、更新任务配置
 	effectiveTime := currentTask.GetRule().GetEffectiveTime()
 	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
 	if err != nil {
 		return err
 	}
+	taskConfig.TaskStatus = task.TaskStatusRunning
 	var cycleStartAt, cycleEndAt int64
 	currentTime := time.Now().UnixMilli()
 
@@ -280,10 +281,10 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	logs.CtxInfo(ctx, "taskConfig:%+v", taskConfig)
 	// 6、更新任务配置
 	// todo:[xun]改task_run?
-	//err = p.taskRepo.UpdateTask(ctx, taskConfig)
-	//if err != nil {
-	//	return err
-	//}
+	err = p.taskRepo.UpdateTask(ctx, taskConfig)
+	if err != nil {
+		return err
+	}
 	return nil
 
 }
