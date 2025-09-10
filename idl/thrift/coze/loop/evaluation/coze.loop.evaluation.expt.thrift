@@ -494,7 +494,7 @@ service ExperimentService {
     ListExperimentStatsResponse ListExperimentStats(1: ListExperimentStatsRequest req)
 
     // 更新报告ck
-    UpsertExptTurnResultFilterResponse UpsertExptTurnResultFilter(1: UpsertExptTurnResultFilterRequest req)
+    UpsertExptTurnResultFilterResponse UpsertExptTurnResultFilter(1: UpsertExptTurnResultFilterRequest req) (api.post = "/api/evaluation/v1/experiments/turn_result_filter")
 
     // 人工标注
     AssociateAnnotationTagResp AssociateAnnotationTag(1: AssociateAnnotationTagReq req) (api.post = "/api/evaluation/v1/experiments/:expt_id/associate_tag")
