@@ -15,19 +15,22 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func NewTaskRepoImpl(TaskDao mysql.ITaskDao, idGenerator idgen.IIDGenerator, taskRedisDao dao.ITaskDAO) repo.ITaskRepo {
+func NewTaskRepoImpl(TaskDao mysql.ITaskDao, idGenerator idgen.IIDGenerator, taskRedisDao dao.ITaskDAO, taskRunDao mysql.ITaskRunDao) repo.ITaskRepo {
 	return &TaskRepoImpl{
 		TaskDao:      TaskDao,
 		idGenerator:  idGenerator,
 		TaskRedisDao: taskRedisDao,
+		TaskRunDao:   taskRunDao,
 	}
 }
 
 type TaskRepoImpl struct {
 	TaskDao      mysql.ITaskDao
+	TaskRunDao   mysql.ITaskRunDao
 	TaskRedisDao dao.ITaskDAO
 	idGenerator  idgen.IIDGenerator
 }
@@ -61,6 +64,19 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 	}
 
 	taskDO := convertor.TaskPO2DO(TaskPo)
+
+	TaskRunPo, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
+		WorkspaceID: ptr.Of(taskDO.WorkspaceID),
+		TaskID:      ptr.Of(taskDO.ID),
+		ReqLimit:    1000,
+		ReqOffset:   0,
+	})
+	for _, tr := range TaskRunPo {
+		taskDO.TaskRuns = append(taskDO.TaskRuns, convertor.TaskRunPO2DO(tr))
+	}
+	if err != nil {
+		return nil, err
+	}
 
 	// 异步缓存到 Redis
 	go func() {
@@ -121,11 +137,18 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 	if err != nil {
 		return err
 	}
+	for _, tr := range do.TaskRuns {
+		TaskRunPo := convertor.TaskRunDO2PO(tr)
+		err = v.TaskRunDao.UpdateTaskRun(ctx, TaskRunPo)
+		if err != nil {
+			return err
+		}
+	}
 
 	// 数据库操作成功后，更新缓存
 	go func() {
 		// 更新单个任务缓存
-		if err := v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
+		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
 			logs.Error("failed to update task cache", "id", do.ID, "err", err)
 		}
 

@@ -278,7 +278,10 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	})
-	logs.CtxInfo(ctx, "taskConfig:%+v", taskConfig)
+	for _, run := range taskConfig.TaskRuns {
+		logs.CtxInfo(ctx, "taskConfig:%+v", &run)
+	}
+
 	// 6、更新任务配置
 	// todo:[xun]改task_run?
 	err = p.taskRepo.UpdateTask(ctx, taskConfig)

@@ -47,3 +47,37 @@ func TaskPO2DO(task *model.ObservabilityTask) *entity.ObservabilityTask {
 		UpdatedBy:     task.UpdatedBy,
 	}
 }
+
+func TaskRunDO2PO(taskRun *entity.TaskRun) *model.ObservabilityTaskRun {
+	return &model.ObservabilityTaskRun{
+		ID:             taskRun.ID,
+		TaskID:         taskRun.TaskID,
+		WorkspaceID:    taskRun.WorkspaceID,
+		TaskType:       taskRun.TaskType,
+		RunStatus:      taskRun.RunStatus,
+		RunDetail:      taskRun.RunDetail,
+		BackfillDetail: taskRun.BackfillDetail,
+		RunStartAt:     taskRun.RunStartAt,
+		RunEndAt:       taskRun.RunEndAt,
+		RunConfig:      taskRun.RunConfig,
+		CreatedAt:      taskRun.CreatedAt,
+		UpdatedAt:      taskRun.UpdatedAt,
+	}
+}
+
+func TaskRunPO2DO(taskRun *model.ObservabilityTaskRun) *entity.TaskRun {
+	return &entity.TaskRun{
+		ID:             taskRun.ID,
+		TaskID:         taskRun.TaskID,
+		WorkspaceID:    taskRun.WorkspaceID,
+		TaskType:       taskRun.TaskType,
+		RunStatus:      taskRun.RunStatus,
+		RunDetail:      taskRun.RunDetail,
+		BackfillDetail: taskRun.BackfillDetail,
+		RunStartAt:     taskRun.RunStartAt,
+		RunEndAt:       taskRun.RunEndAt,
+		RunConfig:      taskRun.RunConfig,
+		CreatedAt:      taskRun.CreatedAt,
+		UpdatedAt:      taskRun.UpdatedAt,
+	}
+}
