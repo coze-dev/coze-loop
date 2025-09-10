@@ -298,7 +298,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	for _, taskInfo := range tasks {
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
 		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt()*int64(time.Millisecond))
-		proc, err := processor.NewProcessor(ctx, task.TaskTypeAutoEval)
+		proc, err := processor.NewProcessor(ctx, taskInfo.TaskType)
 		if err != nil {
 			logs.CtxError(ctx, "NewProcessor err:%v", err)
 			continue
