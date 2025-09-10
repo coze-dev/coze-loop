@@ -5,6 +5,7 @@ package processor
 
 import (
 	"context"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
@@ -16,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -23,14 +25,14 @@ var _ taskexe.Processor = (*DataReflowProcessor)(nil)
 
 type DataReflowProcessor struct {
 	datasetServiceAdaptor *service.DatasetServiceAdaptor
-	TaskRepo              repo.ITaskRepo
+	taskRepo              repo.ITaskRepo
 }
 
 func newDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	taskRepo repo.ITaskRepo) *DataReflowProcessor {
 	return &DataReflowProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
-		TaskRepo:              taskRepo,
+		taskRepo:              taskRepo,
 	}
 }
 
@@ -120,5 +122,44 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
 	}
 
+	// 4、更新任务配置
+	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
+	if err != nil {
+		return err
+	}
+	taskConfig.TaskStatus = task.TaskStatusRunning
+	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
+	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
+	// 5、创建 taskrun
+	taskRunConfig := &task.TaskRunConfig{
+		DataReflowRunConfig: &task.DataReflowRunConfig{
+			DatasetID:    currentTask.GetTaskConfig().GetDataReflowConfig()[0].GetDatasetID(),
+			EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
+			CycleStartAt: cycleStartAt,
+			CycleEndAt:   cycleEndAt,
+			Status:       task.RunStatusRunning,
+		},
+	}
+	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
+		TaskID:      currentTask.GetID(),
+		WorkspaceID: currentTask.GetWorkspaceID(),
+		TaskType:    currentTask.GetTaskType(),
+		RunStatus:   task.RunStatusRunning,
+		RunStartAt:  time.UnixMilli(cycleStartAt),
+		RunEndAt:    time.UnixMilli(cycleEndAt),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
+	})
+	for _, run := range taskConfig.TaskRuns {
+		logs.CtxInfo(ctx, "taskConfig:%+v", &run)
+	}
+
+	// 6、更新任务配置
+	// todo:[xun]改task_run?
+	err = p.taskRepo.UpdateTask(ctx, taskConfig)
+	if err != nil {
+		return err
+	}
 	return nil
 }
