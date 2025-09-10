@@ -88,7 +88,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	if taskRunConfig.RunEndAt.UnixMilli() < time.Now().UnixMilli() || taskRunConfig.RunStartAt.UnixMilli() > time.Now().UnixMilli() {
 		return nil
 	}
-	if Usec2Msec(span.StartTime) < taskRunConfig.RunStartAt.UnixMilli() {
+	if span.StartTime < taskRunConfig.RunStartAt.UnixMilli() {
 		logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 		return nil
 	}
