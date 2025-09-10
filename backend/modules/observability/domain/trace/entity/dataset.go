@@ -5,11 +5,13 @@ package entity
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
@@ -58,6 +60,7 @@ type Dataset struct {
 	// 评测集属性
 	EvaluationBizCategory *EvaluationBizCategory
 	Seesion               *common.Session
+	UserID                *string
 }
 
 type DatasetVersion struct {
@@ -97,6 +100,10 @@ type FieldSchema struct {
 }
 
 func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema, session *common.Session) *Dataset {
+	var userID *string
+	if session != nil {
+		userID = ptr.Of(strconv.FormatInt(*session.UserID, 10))
+	}
 	dataset := &Dataset{
 		ID:          id,
 		WorkspaceID: spaceID,
@@ -106,6 +113,7 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema
 		},
 		DatasetCategory: category,
 		Seesion:         session,
+		UserID:          userID,
 	}
 	return dataset
 }
