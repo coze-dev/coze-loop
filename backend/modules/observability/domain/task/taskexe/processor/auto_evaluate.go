@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/sonic"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 
 	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
@@ -221,6 +223,12 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		return err
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
+
+	evaluationSetConfig, err := p.datasetServiceAdaptor.GetDatasetProvider(category).GetDataset(ctx, currentTask.GetWorkspaceID(), datasetID, category)
+	if err != nil {
+		logs.CtxError(ctx, "[task-debug] GetEvaluationSet err:%v", err)
+		return err
+	}
 	// 3、更新任务状态
 	//if currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
 	//	updateMap := map[string]interface{}{
@@ -268,18 +276,30 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	}
 	logs.CtxInfo(ctx, "Creating taskrun with cycle: startAt=%d, endAt=%d, currentTime=%d", cycleStartAt, cycleEndAt, currentTime)
 	// 5、创建 taskrun
+	taskRunConfig := &task.TaskRunConfig{
+		AutoEvaluateRunConfig: &task.AutoEvaluateRunConfig{
+			ExptID:       exptID,
+			ExptRunID:    exptRunID,
+			EvalID:       datasetID,
+			SchemaID:     evaluationSetConfig.DatasetVersion.DatasetSchema.ID,
+			Schema:       ptr.Of(ToJSONString(ctx, evaluationSetConfig.DatasetVersion.DatasetSchema.FieldSchemas)),
+			EndAt:        effectiveTime.GetEndAt(),
+			CycleStartAt: cycleStartAt,
+			CycleEndAt:   cycleEndAt,
+			Status:       task.TaskStatusRunning,
+		},
+	}
 	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
-		ID:             exptID,
-		TaskID:         currentTask.GetID(),
-		WorkspaceID:    currentTask.GetWorkspaceID(),
-		TaskType:       currentTask.GetTaskType(),
-		RunStatus:      task.RunStatusRunning,
-		RunDetail:      nil,
-		BackfillDetail: nil,
-		RunStartAt:     time.UnixMilli(cycleStartAt),
-		RunEndAt:       time.UnixMilli(cycleEndAt),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:          exptID,
+		TaskID:      currentTask.GetID(),
+		WorkspaceID: currentTask.GetWorkspaceID(),
+		TaskType:    currentTask.GetTaskType(),
+		RunStatus:   task.RunStatusRunning,
+		RunStartAt:  time.UnixMilli(cycleStartAt),
+		RunEndAt:    time.UnixMilli(cycleEndAt),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
 	})
 	for _, run := range taskConfig.TaskRuns {
 		logs.CtxInfo(ctx, "taskConfig:%+v", &run)
@@ -293,6 +313,19 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	}
 	return nil
 
+}
+
+func ToJSONString(ctx context.Context, obj interface{}) string {
+	if obj == nil {
+		return ""
+	}
+	jsonData, err := sonic.Marshal(obj)
+	if err != nil {
+		logs.CtxError(ctx, "JSON marshal error: %v", err)
+		return ""
+	}
+	jsonStr := string(jsonData)
+	return jsonStr
 }
 
 func resetStartTime(currentTime int64, originalStartTime int64, maxAliveTime int64) int64 {
