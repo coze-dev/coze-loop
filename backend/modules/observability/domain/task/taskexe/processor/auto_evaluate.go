@@ -292,6 +292,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		},
 	}
 	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
+		ID:          exptID,
 		TaskID:      currentTask.GetID(),
 		WorkspaceID: currentTask.GetWorkspaceID(),
 		TaskType:    currentTask.GetTaskType(),

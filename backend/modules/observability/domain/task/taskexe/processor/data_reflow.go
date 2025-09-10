@@ -100,15 +100,17 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	session := getSession(ctx, currentTask)
 	category := getCategory(currentTask.TaskType)
 	dataReflowConfigs := currentTask.GetTaskConfig().GetDataReflowConfig()
+	var err error
 	// 1、创建数据集
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
+	var datasetID int64
 	for _, dataReflowConfig := range dataReflowConfigs {
 		if dataReflowConfig.DatasetID != nil {
 			logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", dataReflowConfig.DatasetID)
 			continue
 		}
 		schema := convertDatasetSchemaDTO2DO(dataReflowConfig.GetDatasetSchema())
-		datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
+		datasetID, err = p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 			0,
 			currentTask.GetWorkspaceID(),
 			dataReflowConfig.GetDatasetName(),
@@ -141,6 +143,7 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 		},
 	}
 	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
+		ID:          datasetID,
 		TaskID:      currentTask.GetID(),
 		WorkspaceID: currentTask.GetWorkspaceID(),
 		TaskType:    currentTask.GetTaskType(),
