@@ -45,6 +45,7 @@ type TaskRun struct {
 	BackfillDetail *string   // 历史回溯运行详情
 	RunStartAt     time.Time // run 开始时间
 	RunEndAt       time.Time // run 结束时间
+	RunConfig      *string   // 相关任务的配置信息
 	CreatedAt      time.Time // 创建时间
 	UpdatedAt      time.Time // 更新时间
 }

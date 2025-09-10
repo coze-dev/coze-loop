@@ -35,8 +35,10 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	//if !ok {
 	//	return taskexe.ErrInvalidConfig
 	//}
-	//workspaceID := trigger.Task.GetWorkspaceID()
-	//session := getSession(ctx, trigger.Task)
+	//
+	//ctx = session.WithCtxUser(ctx, &session.User{ID: *cfg.BaseInfo.CreatedBy.UserID})
+	////workspaceID := trigger.Task.GetWorkspaceID()
+	////session := getSession(ctx, trigger.Task)
 	//var mapping []*task.FieldMapping
 	//for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 	//	mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
@@ -46,25 +48,9 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	//	logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, turns is empty")
 	//	return nil
 	//}
-	//_, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
-	//	WorkspaceID:     workspaceID,
-	//	EvaluationSetID: cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
-	//	Items: []*eval_set.EvaluationSetItem{
-	//		{
-	//			WorkspaceID:     gptr.Of(workspaceID),
-	//			EvaluationSetID: gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID()),
-	//			SchemaID:        gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchemaID()),
-	//			Turns:           turns,
-	//			ItemKey:         gptr.Of(trigger.Span.SpanID),
-	//		},
-	//	},
-	//	SkipInvalidItems: gptr.Of(true),
-	//	AllowPartialAdd:  gptr.Of(true),
-	//	ExperimentID:     gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
-	//	ExperimentRunID:  gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
-	//	Ext:              map[string]string{"workspace_id": strconv.FormatInt(workspaceID, 10), "span_id": trigger.Span.SpanID, "start_time": strconvh.FormatInt64(trigger.Span.StartTime), "task_id": strconvh.FormatInt64(trigger.Task.GetID())},
-	//	Session:          session,
-	//})
+	//category := getCategory(cfg.TaskType)
+	//
+	//addSuccess, errorGroups, err := p.datasetServiceAdaptor.GetDatasetProvider(category).AddDatasetItems(ctx, cfg.ID, category, turns)
 	//if err != nil {
 	//	return err
 	//}
