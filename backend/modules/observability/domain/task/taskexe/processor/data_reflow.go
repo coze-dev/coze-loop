@@ -26,8 +26,12 @@ type DataReflowProcessor struct {
 	TaskRepo              repo.ITaskRepo
 }
 
-func newDataReflowProcessor() *DataReflowProcessor {
-	return &DataReflowProcessor{}
+func newDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
+	taskRepo repo.ITaskRepo) *DataReflowProcessor {
+	return &DataReflowProcessor{
+		datasetServiceAdaptor: datasetServiceProvider,
+		TaskRepo:              taskRepo,
+	}
 }
 
 func (p *DataReflowProcessor) ValidateConfig(ctx context.Context, config any, workspaceID int64) error {
