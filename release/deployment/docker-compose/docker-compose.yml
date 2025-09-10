@@ -34,7 +34,9 @@ services:
         condition: service_healthy
       rocketmq-init:
         condition: service_completed_successfully
-      coze-loop-faas:
+      coze-loop-python-faas:
+        condition: service_healthy
+      coze-loop-js-faas:
         condition: service_healthy
     environment:
       # redis
@@ -65,7 +67,8 @@ services:
       COZE_LOOP_RMQ_NAMESRV_DOMAIN: "${COZE_LOOP_RMQ_NAMESRV_DOMAIN}"
       COZE_LOOP_RMQ_NAMESRV_PORT: "${COZE_LOOP_RMQ_NAMESRV_PORT}"
       # faas
-      COZE_LOOP_FAAS_URL: "http://coze-loop-faas:8000"
+      COZE_LOOP_PYTHON_FAAS_URL: "http://coze-loop-python-faas:8000"
+      COZE_LOOP_JS_FAAS_URL: "http://coze-loop-js-faas:8000"
     entrypoint: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
     healthcheck:
       test: [ "CMD", "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
@@ -299,46 +302,73 @@ services:
       retries: 5
       start_period: 10s
 
-  # 统一FaaS服务 - 通过配置控制基础模式和增强模式
-  coze-loop-faas:
+  # Python FaaS服务
+  coze-loop-python-faas:
     profiles: [ "faas", "app" ]
-    container_name: "coze-loop-faas"
+    container_name: "coze-loop-python-faas"
+    image: "python:3.11-slim"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_PYTHON_FAAS_PORT:-8890}:8000"
+    volumes:
+      - python_faas_workspace:/tmp/faas-workspace
+      - ./bootstrap/python-faas:/app/bootstrap
+    environment:
+      FAAS_WORKSPACE: "/tmp/faas-workspace"
+      FAAS_PORT: "8000"
+      FAAS_TIMEOUT: "30000"
+      FAAS_LANGUAGE: "python"
+    working_dir: /app
+    command: ["python3", "/app/bootstrap/python_faas_server.py"]
+    deploy:
+      resources:
+        limits:
+          memory: "${PYTHON_FAAS_MEMORY_LIMIT:-1G}"
+          cpus: "${PYTHON_FAAS_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: "${PYTHON_FAAS_MEMORY_RESERVE:-256M}"
+          cpus: "${PYTHON_FAAS_CPU_RESERVE:-0.25}"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; import json; resp = urllib.request.urlopen('http://localhost:8000/health'); data = json.loads(resp.read().decode()); print('Health:', data['status']); exit(0 if data['status'] == 'healthy' else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # JavaScript FaaS服务
+  coze-loop-js-faas:
+    profiles: [ "faas", "app" ]
+    container_name: "coze-loop-js-faas"
     image: "denoland/deno:1.45.5"
     restart: always
     networks:
       - coze-loop-network
     ports:
-      - "${COZE_LOOP_FAAS_PORT:-8889}:8000"
+      - "${COZE_LOOP_JS_FAAS_PORT:-8891}:8000"
     volumes:
-      - faas_workspace:/tmp/faas-workspace
-      - ./bootstrap/faas:/app/bootstrap
+      - js_faas_workspace:/tmp/faas-workspace
+      - ./bootstrap/js-faas:/app/bootstrap
     environment:
       DENO_DIR: "/tmp/.deno"
       DENO_NO_UPDATE_CHECK: "1"
       FAAS_WORKSPACE: "/tmp/faas-workspace"
       FAAS_PORT: "8000"
       FAAS_TIMEOUT: "30000"
-      # 运行模式配置 (basic/enhanced)
-      FAAS_MODE: "${FAAS_MODE:-enhanced}"
-      # 增强模式配置 (仅在enhanced模式下生效)
-      FAAS_POOL_SIZE: "${FAAS_POOL_SIZE:-10}"
-      FAAS_MAX_INSTANCES: "${FAAS_MAX_INSTANCES:-50}"
-      FAAS_WORKER_COUNT: "${FAAS_WORKER_COUNT:-10}"
-      FAAS_ENABLE_POOL: "${FAAS_ENABLE_POOL:-true}"
-      FAAS_ENABLE_SCHEDULER: "${FAAS_ENABLE_SCHEDULER:-true}"
-      FAAS_ENABLE_METRICS: "${FAAS_ENABLE_METRICS:-true}"
+      FAAS_LANGUAGE: "javascript"
     working_dir: /app
-    command: ["deno", "run", "--allow-all", "/app/bootstrap/faas-server.ts"]
+    command: ["deno", "run", "--allow-all", "/app/bootstrap/js_faas_server.ts"]
     deploy:
       resources:
         limits:
-          memory: "${FAAS_MEMORY_LIMIT:-2G}"
-          cpus: "${FAAS_CPU_LIMIT:-1.0}"
+          memory: "${JS_FAAS_MEMORY_LIMIT:-1G}"
+          cpus: "${JS_FAAS_CPU_LIMIT:-0.5}"
         reservations:
-          memory: "${FAAS_MEMORY_RESERVE:-512M}"
-          cpus: "${FAAS_CPU_RESERVE:-0.5}"
+          memory: "${JS_FAAS_MEMORY_RESERVE:-256M}"
+          cpus: "${JS_FAAS_CPU_RESERVE:-0.25}"
     healthcheck:
-      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status, 'Mode:', data.mode); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
+      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -361,8 +391,10 @@ volumes:
     name: coze-loop_rocketmq_broker_data
   nginx_data:
     name: coze-loop_nginx_data
-  faas_workspace:
-    name: coze-loop_faas_workspace
+  python_faas_workspace:
+    name: coze-loop_python_faas_workspace
+  js_faas_workspace:
+    name: coze-loop_js_faas_workspace
 
 networks:
   coze-loop-network:

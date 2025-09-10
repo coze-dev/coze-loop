@@ -69,8 +69,17 @@ type HTTPFaaSRuntimeAdapter struct {
 // NewHTTPFaaSRuntimeAdapter 创建HTTP FaaS运行时适配器
 func NewHTTPFaaSRuntimeAdapter(languageType entity.LanguageType, config *HTTPFaaSRuntimeConfig, logger *logrus.Logger) (*HTTPFaaSRuntimeAdapter, error) {
 	if config == nil {
+		// 根据语言类型选择对应的FaaS服务
+		baseURL := "http://coze-loop-faas:8000" // 默认值
+		switch languageType {
+		case entity.LanguageTypePython:
+			baseURL = "http://coze-loop-python-faas:8000"
+		case entity.LanguageTypeJS:
+			baseURL = "http://coze-loop-js-faas:8000"
+		}
+		
 		config = &HTTPFaaSRuntimeConfig{
-			BaseURL:        "http://coze-loop-faas:8000", // 修复为正确的容器名
+			BaseURL:        baseURL,
 			Timeout:        30 * time.Second,
 			MaxRetries:     3,
 			RetryInterval:  1 * time.Second,
