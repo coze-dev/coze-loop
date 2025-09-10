@@ -443,6 +443,54 @@ func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*t
 	return turns
 }
 
+func buildDatasetItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []entity.FieldMapping,
+	workspaceID int64, dataset *entity.Dataset,
+) (successItems, failedItems, allItems []*entity.DatasetItem) {
+	successItems = make([]*entity.DatasetItem, 0, len(spans))
+	failedItems = make([]*entity.DatasetItem, 0)
+	allItems = make([]*entity.DatasetItem, 0, len(spans))
+	for i, span := range spans {
+		item := buildDatasetItem(ctx, span, i, fieldMappings, workspaceID, dataset)
+		allItems = append(allItems, item)
+		if len(item.Error) > 0 {
+			failedItems = append(failedItems, item)
+		} else {
+			successItems = append(successItems, item)
+		}
+	}
+
+	return successItems, failedItems, allItems
+}
+
+func buildDatasetItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64,
+	dataset *entity.Dataset,
+) *entity.DatasetItem {
+	item := entity.NewDatasetItem(workspaceID, dataset.ID, span)
+	for _, mapping := range fieldMappings {
+		value, err := span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+		if err != nil {
+			// 非json但使用了jsonpath，也不报错，置空
+			logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
+		}
+
+		content, errCode := entity.GetContentInfo(ctx, mapping.FieldSchema.ContentType, value)
+		if errCode == entity.DatasetErrorType_MismatchSchema {
+			item.AddError("invalid multi part", entity.DatasetErrorType_MismatchSchema, nil)
+			continue
+		}
+
+		// 前端传入的是Name，评测集需要的是key，需要做一下mapping
+		key := dataset.GetFieldSchemaKeyByName(mapping.FieldSchema.Name)
+		if key == "" {
+			logs.CtxInfo(ctx, "Dataset field key is empty, name:%v", mapping.FieldSchema.Name)
+			item.AddError("Dataset field key is empty", entity.DatasetErrorType_InternalError, nil)
+			continue
+		}
+		item.AddFieldData(key, mapping.FieldSchema.Name, content)
+	}
+	return item
+}
+
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.FieldMapping,
 	evaluationSetSchema string) []*eval_set.FieldData {

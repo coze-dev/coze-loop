@@ -139,8 +139,16 @@ func (p *TaskRunConfig) IsValid() error {
 			return fmt.Errorf("field AutoEvaluateRunConfig not valid, %w", err)
 		}
 	}
+	if p.DataReflowRunConfig != nil {
+		if err := p.DataReflowRunConfig.IsValid(); err != nil {
+			return fmt.Errorf("field DataReflowRunConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *AutoEvaluateRunConfig) IsValid() error {
+	return nil
+}
+func (p *DataReflowRunConfig) IsValid() error {
 	return nil
 }

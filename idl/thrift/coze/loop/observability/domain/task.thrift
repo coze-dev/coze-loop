@@ -113,6 +113,7 @@ struct TaskRun {
 }
 struct TaskRunConfig {
     1: optional AutoEvaluateRunConfig auto_evaluate_run_config               // 自动评测对应的运行配置信息
+    2: optional DataReflowRunConfig data_reflow_run_config                         // 数据回流对应的运行配置信息
 }
 struct AutoEvaluateRunConfig {
     1: required i64 expt_id (api.js_conv="true", go.tag='json:"expt_id"')
@@ -124,4 +125,12 @@ struct AutoEvaluateRunConfig {
     7: required i64 cycle_start_at (api.js_conv="true", go.tag='json:"cycle_start_at"')
     8: required i64 cycle_end_at (api.js_conv="true", go.tag='json:"cycle_end_at"')
     9: required string status
+}
+struct DataReflowRunConfig {
+    1: required i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"')
+    2: required i64 dataset_run_id (api.js_conv="true", go.tag='json:"dataset_run_id"')
+    3: required i64 end_at (api.js_conv="true", go.tag='json:"end_at"')
+    4: required i64 cycle_start_at (api.js_conv="true", go.tag='json:"cycle_start_at"')
+    5: required i64 cycle_end_at (api.js_conv="true", go.tag='json:"cycle_end_at"')
+    6: required string status
 }

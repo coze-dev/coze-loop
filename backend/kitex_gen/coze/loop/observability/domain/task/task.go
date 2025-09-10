@@ -4758,6 +4758,8 @@ func (p *TaskRun) Field100DeepEqual(src *common.BaseInfo) bool {
 type TaskRunConfig struct {
 	// 自动评测对应的运行配置信息
 	AutoEvaluateRunConfig *AutoEvaluateRunConfig `thrift:"auto_evaluate_run_config,1,optional" frugal:"1,optional,AutoEvaluateRunConfig" form:"auto_evaluate_run_config" json:"auto_evaluate_run_config,omitempty" query:"auto_evaluate_run_config"`
+	// 数据回流对应的运行配置信息
+	DataReflowRunConfig *DataReflowRunConfig `thrift:"data_reflow_run_config,2,optional" frugal:"2,optional,DataReflowRunConfig" form:"data_reflow_run_config" json:"data_reflow_run_config,omitempty" query:"data_reflow_run_config"`
 }
 
 func NewTaskRunConfig() *TaskRunConfig {
@@ -4778,16 +4780,36 @@ func (p *TaskRunConfig) GetAutoEvaluateRunConfig() (v *AutoEvaluateRunConfig) {
 	}
 	return p.AutoEvaluateRunConfig
 }
+
+var TaskRunConfig_DataReflowRunConfig_DEFAULT *DataReflowRunConfig
+
+func (p *TaskRunConfig) GetDataReflowRunConfig() (v *DataReflowRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDataReflowRunConfig() {
+		return TaskRunConfig_DataReflowRunConfig_DEFAULT
+	}
+	return p.DataReflowRunConfig
+}
 func (p *TaskRunConfig) SetAutoEvaluateRunConfig(val *AutoEvaluateRunConfig) {
 	p.AutoEvaluateRunConfig = val
+}
+func (p *TaskRunConfig) SetDataReflowRunConfig(val *DataReflowRunConfig) {
+	p.DataReflowRunConfig = val
 }
 
 var fieldIDToName_TaskRunConfig = map[int16]string{
 	1: "auto_evaluate_run_config",
+	2: "data_reflow_run_config",
 }
 
 func (p *TaskRunConfig) IsSetAutoEvaluateRunConfig() bool {
 	return p.AutoEvaluateRunConfig != nil
+}
+
+func (p *TaskRunConfig) IsSetDataReflowRunConfig() bool {
+	return p.DataReflowRunConfig != nil
 }
 
 func (p *TaskRunConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -4811,6 +4833,14 @@ func (p *TaskRunConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4853,6 +4883,14 @@ func (p *TaskRunConfig) ReadField1(iprot thrift.TProtocol) error {
 	p.AutoEvaluateRunConfig = _field
 	return nil
 }
+func (p *TaskRunConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewDataReflowRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.DataReflowRunConfig = _field
+	return nil
+}
 
 func (p *TaskRunConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4862,6 +4900,10 @@ func (p *TaskRunConfig) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -4900,6 +4942,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *TaskRunConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDataReflowRunConfig() {
+		if err = oprot.WriteFieldBegin("data_reflow_run_config", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.DataReflowRunConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *TaskRunConfig) String() string {
 	if p == nil {
@@ -4918,12 +4978,22 @@ func (p *TaskRunConfig) DeepEqual(ano *TaskRunConfig) bool {
 	if !p.Field1DeepEqual(ano.AutoEvaluateRunConfig) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.DataReflowRunConfig) {
+		return false
+	}
 	return true
 }
 
 func (p *TaskRunConfig) Field1DeepEqual(src *AutoEvaluateRunConfig) bool {
 
 	if !p.AutoEvaluateRunConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TaskRunConfig) Field2DeepEqual(src *DataReflowRunConfig) bool {
+
+	if !p.DataReflowRunConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -5648,6 +5718,519 @@ func (p *AutoEvaluateRunConfig) Field8DeepEqual(src int64) bool {
 	return true
 }
 func (p *AutoEvaluateRunConfig) Field9DeepEqual(src string) bool {
+
+	if strings.Compare(p.Status, src) != 0 {
+		return false
+	}
+	return true
+}
+
+type DataReflowRunConfig struct {
+	DatasetID    int64  `thrift:"dataset_id,1,required" frugal:"1,required,i64" json:"dataset_id" form:"dataset_id,required" query:"dataset_id,required"`
+	DatasetRunID int64  `thrift:"dataset_run_id,2,required" frugal:"2,required,i64" json:"dataset_run_id" form:"dataset_run_id,required" query:"dataset_run_id,required"`
+	EndAt        int64  `thrift:"end_at,3,required" frugal:"3,required,i64" json:"end_at" form:"end_at,required" query:"end_at,required"`
+	CycleStartAt int64  `thrift:"cycle_start_at,4,required" frugal:"4,required,i64" json:"cycle_start_at" form:"cycle_start_at,required" query:"cycle_start_at,required"`
+	CycleEndAt   int64  `thrift:"cycle_end_at,5,required" frugal:"5,required,i64" json:"cycle_end_at" form:"cycle_end_at,required" query:"cycle_end_at,required"`
+	Status       string `thrift:"status,6,required" frugal:"6,required,string" form:"status,required" json:"status,required" query:"status,required"`
+}
+
+func NewDataReflowRunConfig() *DataReflowRunConfig {
+	return &DataReflowRunConfig{}
+}
+
+func (p *DataReflowRunConfig) InitDefault() {
+}
+
+func (p *DataReflowRunConfig) GetDatasetID() (v int64) {
+	if p != nil {
+		return p.DatasetID
+	}
+	return
+}
+
+func (p *DataReflowRunConfig) GetDatasetRunID() (v int64) {
+	if p != nil {
+		return p.DatasetRunID
+	}
+	return
+}
+
+func (p *DataReflowRunConfig) GetEndAt() (v int64) {
+	if p != nil {
+		return p.EndAt
+	}
+	return
+}
+
+func (p *DataReflowRunConfig) GetCycleStartAt() (v int64) {
+	if p != nil {
+		return p.CycleStartAt
+	}
+	return
+}
+
+func (p *DataReflowRunConfig) GetCycleEndAt() (v int64) {
+	if p != nil {
+		return p.CycleEndAt
+	}
+	return
+}
+
+func (p *DataReflowRunConfig) GetStatus() (v string) {
+	if p != nil {
+		return p.Status
+	}
+	return
+}
+func (p *DataReflowRunConfig) SetDatasetID(val int64) {
+	p.DatasetID = val
+}
+func (p *DataReflowRunConfig) SetDatasetRunID(val int64) {
+	p.DatasetRunID = val
+}
+func (p *DataReflowRunConfig) SetEndAt(val int64) {
+	p.EndAt = val
+}
+func (p *DataReflowRunConfig) SetCycleStartAt(val int64) {
+	p.CycleStartAt = val
+}
+func (p *DataReflowRunConfig) SetCycleEndAt(val int64) {
+	p.CycleEndAt = val
+}
+func (p *DataReflowRunConfig) SetStatus(val string) {
+	p.Status = val
+}
+
+var fieldIDToName_DataReflowRunConfig = map[int16]string{
+	1: "dataset_id",
+	2: "dataset_run_id",
+	3: "end_at",
+	4: "cycle_start_at",
+	5: "cycle_end_at",
+	6: "status",
+}
+
+func (p *DataReflowRunConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetDatasetID bool = false
+	var issetDatasetRunID bool = false
+	var issetEndAt bool = false
+	var issetCycleStartAt bool = false
+	var issetCycleEndAt bool = false
+	var issetStatus bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetDatasetID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetDatasetRunID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEndAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetCycleStartAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetCycleEndAt = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetStatus = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetDatasetID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetDatasetRunID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEndAt {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetCycleStartAt {
+		fieldId = 4
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetCycleEndAt {
+		fieldId = 5
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetStatus {
+		fieldId = 6
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DataReflowRunConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_DataReflowRunConfig[fieldId]))
+}
+
+func (p *DataReflowRunConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.DatasetID = _field
+	return nil
+}
+func (p *DataReflowRunConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.DatasetRunID = _field
+	return nil
+}
+func (p *DataReflowRunConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EndAt = _field
+	return nil
+}
+func (p *DataReflowRunConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.CycleStartAt = _field
+	return nil
+}
+func (p *DataReflowRunConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.CycleEndAt = _field
+	return nil
+}
+func (p *DataReflowRunConfig) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Status = _field
+	return nil
+}
+
+func (p *DataReflowRunConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DataReflowRunConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DataReflowRunConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("dataset_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.DatasetID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *DataReflowRunConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("dataset_run_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.DatasetRunID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *DataReflowRunConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("end_at", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.EndAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *DataReflowRunConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("cycle_start_at", thrift.I64, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.CycleStartAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *DataReflowRunConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("cycle_end_at", thrift.I64, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.CycleEndAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *DataReflowRunConfig) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.STRING, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Status); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *DataReflowRunConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DataReflowRunConfig(%+v)", *p)
+
+}
+
+func (p *DataReflowRunConfig) DeepEqual(ano *DataReflowRunConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DatasetID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.DatasetRunID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.EndAt) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.CycleStartAt) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.CycleEndAt) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Status) {
+		return false
+	}
+	return true
+}
+
+func (p *DataReflowRunConfig) Field1DeepEqual(src int64) bool {
+
+	if p.DatasetID != src {
+		return false
+	}
+	return true
+}
+func (p *DataReflowRunConfig) Field2DeepEqual(src int64) bool {
+
+	if p.DatasetRunID != src {
+		return false
+	}
+	return true
+}
+func (p *DataReflowRunConfig) Field3DeepEqual(src int64) bool {
+
+	if p.EndAt != src {
+		return false
+	}
+	return true
+}
+func (p *DataReflowRunConfig) Field4DeepEqual(src int64) bool {
+
+	if p.CycleStartAt != src {
+		return false
+	}
+	return true
+}
+func (p *DataReflowRunConfig) Field5DeepEqual(src int64) bool {
+
+	if p.CycleEndAt != src {
+		return false
+	}
+	return true
+}
+func (p *DataReflowRunConfig) Field6DeepEqual(src string) bool {
 
 	if strings.Compare(p.Status, src) != 0 {
 		return false
