@@ -300,6 +300,7 @@ func (v *TaskDaoImpl) ListNonFinalTask(ctx context.Context) ([]*model.Observabil
 
 func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	//todo[xun]: 乐观锁
+	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
 	q := genquery.Use(v.dbMgr.NewSession(ctx))
 	qd := q.WithContext(ctx).ObservabilityTask
 	qd = qd.Where(q.ObservabilityTask.ID.Eq(id)).Where(q.ObservabilityTask.WorkspaceID.Eq(workspaceID))

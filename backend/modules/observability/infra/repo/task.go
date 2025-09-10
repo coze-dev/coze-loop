@@ -190,6 +190,7 @@ func (v *TaskRepoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, spaceID st
 }
 func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作
+	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
 	err := v.TaskDao.UpdateTaskWithOCC(ctx, id, workspaceID, updateMap)
 	if err != nil {
 		return err
