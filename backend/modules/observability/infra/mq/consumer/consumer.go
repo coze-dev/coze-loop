@@ -17,5 +17,7 @@ func NewConsumerWorkers(
 	return []mq.IConsumerWorker{
 		newAnnotationConsumer(handler, loader),
 		newTaskConsumer(taskConsumer, loader),
+		newCallbackConsumer(taskConsumer, loader),
+		newCorrectionConsumer(taskConsumer, loader),
 	}, nil
 }

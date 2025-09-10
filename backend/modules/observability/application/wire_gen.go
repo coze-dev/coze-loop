@@ -192,7 +192,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redis.Cmdable, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, redis2 redis.Cmdable, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
@@ -206,7 +206,25 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redi
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter)
+	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iConfigLoader, err := NewTraceConfigLoader(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	if err != nil {
+		return nil, err
+	}
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTraceRepo, iTenantProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -235,9 +253,7 @@ var (
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
-	taskSet = wire.NewSet(
-		NewDatasetServiceAdapter, tracehub.NewTraceHubImpl, NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluator.NewEvaluatorRPCProvider, evaluation.NewEvaluationRPCProvider, taskDomainSet,
-	)
+	taskSet = wire.NewSet(tracehub.NewTraceHubImpl, NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluation.NewEvaluationRPCProvider, traceDomainSet)
 )
 
 func NewTraceProcessorBuilder(

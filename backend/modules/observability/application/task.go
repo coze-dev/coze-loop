@@ -19,6 +19,8 @@ import (
 
 type ITaskQueueConsumer interface {
 	TraceHub(ctx context.Context, event *entity.RawSpan) error
+	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
+	Correction(ctx context.Context, event *entity.CorrectionEvent) error
 }
 type ITaskApplication interface {
 	task.TaskService
@@ -229,4 +231,12 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 
 func (t *TaskApplication) TraceHub(ctx context.Context, event *entity.RawSpan) error {
 	return t.tracehubSvc.TraceHub(ctx, event)
+}
+
+func (t *TaskApplication) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
+	return t.tracehubSvc.CallBack(ctx, event)
+}
+
+func (t *TaskApplication) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
+	return t.tracehubSvc.Correction(ctx, event)
 }

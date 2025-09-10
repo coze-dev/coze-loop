@@ -14,11 +14,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	trace_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/hashicorp/go-multierror"
@@ -27,6 +29,8 @@ import (
 
 type ITraceHubService interface {
 	TraceHub(ctx context.Context, event *entity.RawSpan) error
+	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
+	Correction(ctx context.Context, event *entity.CorrectionEvent) error
 }
 
 func NewTraceHubImpl(
@@ -34,13 +38,17 @@ func NewTraceHubImpl(
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
+	traceRepo trace_repo.ITraceRepo,
+	tenantProvider tenant.ITenantProvider,
 ) (ITraceHubService, error) {
 	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo)
 	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
-		taskRepo: tRepo,
-		ticker:   ticker,
-		stopChan: make(chan struct{}),
+		taskRepo:       tRepo,
+		ticker:         ticker,
+		stopChan:       make(chan struct{}),
+		traceRepo:      traceRepo,
+		tenantProvider: tenantProvider,
 	}
 
 	// 立即启动定时任务
@@ -50,9 +58,11 @@ func NewTraceHubImpl(
 }
 
 type TraceHubServiceImpl struct {
-	ticker   *time.Ticker
-	stopChan chan struct{}
-	taskRepo repo.ITaskRepo
+	ticker         *time.Ticker
+	stopChan       chan struct{}
+	taskRepo       repo.ITaskRepo
+	traceRepo      trace_repo.ITraceRepo
+	tenantProvider tenant.ITenantProvider
 }
 
 const TagKeyResult = "tag_key"

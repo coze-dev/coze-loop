@@ -111,14 +111,14 @@ var (
 		traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		NewDatasetServiceAdapter,
+		//NewDatasetServiceAdapter,
 		tracehub.NewTraceHubImpl,
 		NewTaskApplication,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
-		evaluator.NewEvaluatorRPCProvider,
+		//evaluator.NewEvaluatorRPCProvider,
 		evaluation.NewEvaluationRPCProvider,
-		taskDomainSet,
+		traceDomainSet,
 	)
 )
 
@@ -242,6 +242,8 @@ func InitTraceIngestionApplication(
 func InitTaskApplication(
 	db db.Provider,
 	idgen idgen.IIDGenerator,
+	configFactory conf.IConfigLoaderFactory,
+	ckDb ck.Provider,
 	redis redis.Cmdable,
 	userClient userservice.Client,
 	authClient authservice.Client,

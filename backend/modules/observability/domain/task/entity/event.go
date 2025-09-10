@@ -119,3 +119,60 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 
 	return result
 }
+
+type AutoEvalEvent struct {
+	ExptID          int64                       `json:"expt_id"`
+	TurnEvalResults []*OnlineExptTurnEvalResult `json:"turn_eval_results"`
+}
+type OnlineExptTurnEvalResult struct {
+	EvaluatorVersionID int64              `json:"evaluator_version_id"`
+	EvaluatorRecordID  int64              `json:"evaluator_record_id"`
+	Score              float64            `json:"score"`
+	Reasoning          string             `json:"reasoning"`
+	Status             EvaluatorRunStatus `json:"status"`
+	EvaluatorRunError  *EvaluatorRunError `json:"evaluator_run_error"`
+	Ext                map[string]string  `json:"ext"`
+	BaseInfo           *BaseInfo          `json:"base_info"`
+}
+type BaseInfo struct {
+	UpdatedBy *UserInfo `json:"updated_by"`
+	UpdatedAt int64     `json:"updated_at"`
+	CreatedBy *UserInfo `json:"created_by"`
+	CreatedAt int64     `json:"created_at"`
+}
+type UserInfo struct {
+	UserID string `json:"user_id"`
+}
+type EvaluatorRunStatus int
+
+const (
+	EvaluatorRunStatus_Unknown = 0
+	EvaluatorRunStatus_Success = 1
+	EvaluatorRunStatus_Fail    = 2
+)
+
+type EvaluatorRunError struct {
+	Code    int32  `json:"code"`
+	Message string `json:"message"`
+}
+
+type Correction struct {
+	Score     float64 `json:"score"`
+	Explain   string  `json:"explain"`
+	UpdatedBy string  `json:"updated_by"`
+}
+
+type EvaluatorResult struct {
+	Score      float64     `json:"score"`
+	Correction *Correction `json:"correction"`
+	Reasoning  string      `json:"reasoning"`
+}
+
+type CorrectionEvent struct {
+	EvaluatorResult    *EvaluatorResult  `json:"evaluator_result"`
+	EvaluatorRecordID  int64             `json:"evaluator_record_id"`
+	EvaluatorVersionID int64             `json:"evaluator_version_id"`
+	Ext                map[string]string `json:"ext"`
+	CreatedAt          int64             `json:"created_at"`
+	UpdatedAt          int64             `json:"updated_at"`
+}
