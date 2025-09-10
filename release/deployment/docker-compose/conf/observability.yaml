@@ -87,9 +87,10 @@ trace_tenant_cfg:
     cozeloop:
       365d:
         span_table: "observability_spans"
+        anno_table: "observability_annotations"
   default_ingest_tenant: "cozeloop"
   tenants_support_annotation:
-    cozeloop: false
+    cozeloop: true
 
 trace_field_meta_info:
   available_fields:
@@ -202,6 +203,8 @@ trace_field_meta_info:
         - "not_in"
         - "exist"
         - "not_exist"
+      support_custom: true
+    feedback_manual:
       support_custom: true
   field_metas:
     default:
@@ -407,3 +410,10 @@ task_mq_consumer_config:
   topic: "trace_to_task"
   consumer_group: "trace_to_task_cg"
   worker_num: 4
+
+
+annotation_source_cfg:
+  source_cfg:
+    default:
+      tenant: ["cozeloop"]
+      "annotation_type": "openapi_feedback"
