@@ -44,6 +44,9 @@ func (b *JavaScriptCodeBuilder) BuildCode(input *entity.EvaluatorInputData, code
 	jsCode := templates.JavaScriptTemplate
 
 	// 使用strings.Replace替换占位符
+	// 替换return_val函数占位符
+	jsCode = strings.Replace(jsCode, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	
 	// 替换turn变量占位符
 	jsCode = strings.Replace(jsCode, "{{TURN_DATA}}", turnDataStr, 1)
 
@@ -200,8 +203,11 @@ func (b *JavaScriptCodeBuilder) BuildSyntaxCheckCode(userCode string) string {
 	// 转义用户代码中的特殊字符，确保能正确嵌入到模板字符串中
 	escapedCode := b.escapeCodeForTemplate(userCode)
 	
+	// 替换return_val函数占位符
+	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	
 	// 替换模板中的用户代码占位符
-	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{USER_CODE}}", escapedCode, 1)
+	syntaxCheckCode = strings.Replace(syntaxCheckCode, "{{USER_CODE}}", escapedCode, 1)
 	
 	return syntaxCheckCode
 }
@@ -215,4 +221,18 @@ func (b *JavaScriptCodeBuilder) escapeCodeForTemplate(userCode string) string {
 	// 转义模板字符串中的 ${}
 	escaped = strings.ReplaceAll(escaped, "$", "\\$")
 	return escaped
+}
+
+// getReturnValFunction 获取JavaScript return_val函数实现
+func (b *JavaScriptCodeBuilder) getReturnValFunction() string {
+	return `
+// return_val函数实现
+function return_val(value) {
+    /**
+     * 标准return_val函数实现 - 输出返回值供FaaS服务捕获
+     * @param {string} value - 要返回的值，通常是JSON字符串
+     */
+    console.log(value);
+}
+`
 }

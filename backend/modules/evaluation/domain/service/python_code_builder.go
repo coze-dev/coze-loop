@@ -44,6 +44,9 @@ func (b *PythonCodeBuilder) BuildCode(input *entity.EvaluatorInputData, codeVers
 	pythonCode := templates.PythonTemplate
 
 	// 使用strings.Replace替换占位符
+	// 替换return_val函数占位符
+	pythonCode = strings.Replace(pythonCode, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	
 	// 替换turn变量占位符
 	pythonCode = strings.Replace(pythonCode, "{{TURN_DATA}}", turnDataStr, 1)
 
@@ -90,6 +93,20 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 	return result
 }
 
+// getReturnValFunction 获取Python return_val函数实现
+func (b *PythonCodeBuilder) getReturnValFunction() string {
+	return `
+# return_val函数实现
+def return_val(value):
+    """
+    标准return_val函数实现 - 输出返回值供FaaS服务捕获
+    Args:
+        value: 要返回的值，通常是JSON字符串
+    """
+    print(value, flush=True)
+`
+}
+
 // validateInputData 验证mockInput数据格式
 func (b *PythonCodeBuilder) validateInputData(inputData map[string]interface{}) error {
 	// 验证turn结构的完整性
@@ -119,8 +136,11 @@ func (b *PythonCodeBuilder) BuildSyntaxCheckCode(userCode string) string {
 	escapedCode := strings.ReplaceAll(userCode, "\\", "\\\\")
 	escapedCode = strings.ReplaceAll(escapedCode, `"""`, `\"\"\"`)
 	
+	// 替换return_val函数占位符
+	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	
 	// 替换模板中的用户代码占位符
-	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{USER_CODE}}", escapedCode, 1)
+	syntaxCheckCode = strings.Replace(syntaxCheckCode, "{{USER_CODE}}", escapedCode, 1)
 	
 	return syntaxCheckCode
 }

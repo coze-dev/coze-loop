@@ -10,6 +10,9 @@ import sys
 import asyncio
 from dataclasses import dataclass
 
+{{RETURN_VAL_FUNCTION}}
+
+class Args:
 
 class Args:
     def __init__(self, params):
@@ -57,12 +60,14 @@ except Exception as e:
     sys.exit(1)
 return_val(json.dumps(result))
 `
-
 // PythonSyntaxCheckTemplate Python语法检查模板
 const PythonSyntaxCheckTemplate = `
 import ast
 import json
 
+{{RETURN_VAL_FUNCTION}}
+
+def check_syntax(code):
 def check_syntax(code):
     """
     检查Python代码是否有语法错误
