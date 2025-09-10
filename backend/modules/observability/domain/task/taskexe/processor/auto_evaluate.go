@@ -174,7 +174,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	))
 	if err != nil {
 		logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.GetWorkspaceID(), err)
-		//return err
+		return err
 		//datasetID = 7548288691995672577
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
@@ -215,7 +215,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
 	if err != nil {
 		logs.CtxError(ctx, "SubmitExperiment failed, workspace_id=%d, err=%#v", currentTask.GetWorkspaceID(), err)
-		//return err
+		return err
 	}
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
 	// 3、更新任务状态
