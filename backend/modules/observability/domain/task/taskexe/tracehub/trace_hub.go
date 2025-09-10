@@ -58,6 +58,8 @@ type TraceHubServiceImpl struct {
 const TagKeyResult = "tag_key"
 
 func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawSpan) error {
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	logs.CtxInfo(ctx, "TraceHub start")
 	var tags []metrics.T
 	// 1、转换成标准span，并根据space_id初步过滤
 	span := rawSpan.RawSpanConvertToLoopSpan()

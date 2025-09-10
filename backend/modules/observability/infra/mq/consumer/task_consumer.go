@@ -46,6 +46,8 @@ func (e *TaskConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, err
 }
 
 func (e *TaskConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	logID := logs.NewLogID()
+	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.RawSpan)
 	if err := json.Unmarshal(ext.Body, event); err != nil {
 		logs.CtxError(ctx, "Task msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
