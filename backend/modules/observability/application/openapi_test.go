@@ -206,7 +206,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -253,7 +253,7 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -351,7 +351,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -443,7 +443,7 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -539,7 +539,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -598,7 +598,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -657,7 +657,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -712,7 +712,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -762,7 +762,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -804,7 +804,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -851,7 +851,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -898,7 +898,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -945,7 +945,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -992,7 +992,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1040,7 +1040,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1088,7 +1088,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1142,7 +1142,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1196,7 +1196,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1252,7 +1252,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant")
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1477,7 +1477,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1"})
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1543,7 +1543,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1601,7 +1601,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1665,7 +1665,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1727,7 +1727,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1844,7 +1844,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1914,7 +1914,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -1972,7 +1972,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2014,7 +2014,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2071,7 +2071,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2130,7 +2130,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2198,7 +2198,7 @@ func TestOpenAPIApplication_SearchTraceOApi(t *testing.T) {
 				traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
 				rateLimiterFactoryMock.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2320,7 +2320,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2391,7 +2391,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2448,7 +2448,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2505,7 +2505,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2563,7 +2563,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2621,7 +2621,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -2683,7 +2683,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, spans []*span.InputSpan) string {
 					if len(spans) > 0 {
 						switch spans[0].SpanID {
@@ -3088,7 +3088,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3129,7 +3129,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3166,7 +3166,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3203,7 +3203,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3241,7 +3241,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3282,7 +3282,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3366,7 +3366,7 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
@@ -3405,7 +3405,7 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-				workspaceMock.EXPECT().GetQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
+				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any()).Return("").AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()

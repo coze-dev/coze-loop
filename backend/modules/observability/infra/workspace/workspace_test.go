@@ -135,7 +135,7 @@ func TestWorkspaceProviderImpl_GetQueryWorkSpaceID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &WorkspaceProviderImpl{}
-			got := w.GetQueryWorkSpaceID(tt.args.ctx, tt.args.requestWorkspaceID)
+			got := w.GetThirdPartyQueryWorkSpaceID(tt.args.ctx, tt.args.requestWorkspaceID)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -169,7 +169,7 @@ func TestWorkspaceProviderImpl_Interface(t *testing.T) {
 	assert.NotNil(t, provider)
 
 	// Test interface methods exist and are callable
-	workspaceID := provider.GetQueryWorkSpaceID(context.Background(), 123)
+	workspaceID := provider.GetThirdPartyQueryWorkSpaceID(context.Background(), 123)
 	assert.Equal(t, "123", workspaceID)
 
 	spans := []*span.InputSpan{{WorkspaceID: "test"}}
@@ -182,7 +182,7 @@ func TestWorkspaceProviderImpl_EdgeCases(t *testing.T) {
 	ctx := context.Background()
 
 	// Test with nil context (should still work)
-	got := provider.GetQueryWorkSpaceID(ctx, 456)
+	got := provider.GetThirdPartyQueryWorkSpaceID(ctx, 456)
 	assert.Equal(t, "456", got)
 
 	// Test with nil context for GetIngestWorkSpaceID

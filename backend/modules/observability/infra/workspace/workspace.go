@@ -24,6 +24,6 @@ func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans 
 	return spans[0].WorkspaceID
 }
 
-func (t *WorkspaceProviderImpl) GetQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string {
+func (t *WorkspaceProviderImpl) GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string {
 	return strconv.FormatInt(requestWorkspaceID, 10)
 }

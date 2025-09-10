@@ -542,7 +542,7 @@ func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *opena
 
 	ret := &service.SearchTraceOApiReq{
 		WorkspaceID:           req.WorkspaceID,
-		ThirdPartyWorkspaceID: o.workspace.GetQueryWorkSpaceID(ctx, req.WorkspaceID),
+		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
 		TraceID:               req.GetTraceID(),
 		LogID:                 req.GetLogid(),
@@ -633,7 +633,7 @@ func (o *OpenAPIApplication) validateListSpansOApi(ctx context.Context, req *ope
 func (o *OpenAPIApplication) buildListSpansOApiReq(ctx context.Context, req *openapi.ListSpansOApiRequest) (*service.ListSpansOApiReq, error) {
 	ret := &service.ListSpansOApiReq{
 		WorkspaceID:           req.WorkspaceID,
-		ThirdPartyWorkspaceID: o.workspace.GetQueryWorkSpaceID(ctx, req.WorkspaceID),
+		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		StartTime:             req.GetStartTime(),
 		EndTime:               req.GetEndTime(),
 		Limit:                 QueryLimitDefault,
@@ -746,7 +746,7 @@ func (o *OpenAPIApplication) validateListTracesOApiReq(ctx context.Context, req 
 func (o *OpenAPIApplication) buildListTracesOApiReq(ctx context.Context, req *openapi.ListTracesOApiRequest) *service.GetTracesAdvanceInfoReq {
 	ret := &service.GetTracesAdvanceInfoReq{
 		WorkspaceID:           req.GetWorkspaceID(),
-		ThirdPartyWorkspaceID: o.workspace.GetQueryWorkSpaceID(ctx, req.WorkspaceID),
+		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		Traces:                make([]*service.TraceQueryParam, len(req.GetTraceIds())),
 	}
 	for i, id := range req.GetTraceIds() {
