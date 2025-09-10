@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+
 	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -59,37 +61,38 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any, w
 }
 
 func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *taskexe.Trigger) error {
-	cfg, ok := config.(*task.TaskRun)
+	cfg, ok := config.(*task_entity.TaskRun)
 	if !ok {
 		return taskexe.ErrInvalidConfig
 	}
+	taskRun := tconv.TaskRunPO2DTO(ctx, cfg, nil)
 	workspaceID := trigger.Task.GetWorkspaceID()
 	session := getSession(ctx, trigger.Task)
 	var mapping []*task.FieldMapping
 	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
 	}
-	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema())
+	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema())
 	if len(turns) == 0 {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, turns is empty")
 		return nil
 	}
 	_, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
 		WorkspaceID:     workspaceID,
-		EvaluationSetID: cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
+		EvaluationSetID: taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
 		Items: []*eval_set.EvaluationSetItem{
 			{
 				WorkspaceID:     gptr.Of(workspaceID),
-				EvaluationSetID: gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID()),
-				SchemaID:        gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchemaID()),
+				EvaluationSetID: gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID()),
+				SchemaID:        gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchemaID()),
 				Turns:           turns,
 				ItemKey:         gptr.Of(trigger.Span.SpanID),
 			},
 		},
 		SkipInvalidItems: gptr.Of(true),
 		AllowPartialAdd:  gptr.Of(true),
-		ExperimentID:     gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
-		ExperimentRunID:  gptr.Of(cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
+		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
+		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
 		Ext:              map[string]string{"workspace_id": strconv.FormatInt(workspaceID, 10), "span_id": trigger.Span.SpanID, "start_time": strconvh.FormatInt64(trigger.Span.StartTime), "task_id": strconvh.FormatInt64(trigger.Task.GetID())},
 		Session:          session,
 	})
