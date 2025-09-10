@@ -293,6 +293,311 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 			want:    nil,
 			wantErr: true,
 		},
+		{
+			name: "create annotation with bool value successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeBool)),
+					AnnotationValue:     "true",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    openapi.NewCreateAnnotationResponse(),
+			wantErr: false,
+		},
+		{
+			name: "create annotation with invalid bool value",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeBool)),
+					AnnotationValue:     "invalid_bool",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "create annotation with double value successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeDouble)),
+					AnnotationValue:     "3.14",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    openapi.NewCreateAnnotationResponse(),
+			wantErr: false,
+		},
+		{
+			name: "create annotation with invalid double value",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeDouble)),
+					AnnotationValue:     "invalid_double",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "create annotation with category value successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(nil)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeCategory)),
+					AnnotationValue:     "category_value",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    openapi.NewCreateAnnotationResponse(),
+			wantErr: false,
+		},
+		{
+			name: "create annotation with permission denied",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).
+					Return(assert.AnError)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+					AnnotationValue:     "test",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "create annotation with benefit check failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).
+					Return(nil, assert.AnError)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+					AnnotationValue:     "test",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "create annotation with trace service failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().CreateAnnotation(gomock.Any(), gomock.Any()).Return(assert.AnError)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.CreateAnnotationRequest{
+					WorkspaceID:         1,
+					AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+					AnnotationValue:     "test",
+					Base:                &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -389,6 +694,115 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			},
 			want:    openapi.NewDeleteAnnotationResponse(),
 			wantErr: false,
+		},
+		{
+			name: "delete annotation with permission denied",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).
+					Return(assert.AnError)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.DeleteAnnotationRequest{
+					WorkspaceID: 1,
+					Base:        &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "delete annotation with benefit check failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).
+					Return(nil, assert.AnError)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.DeleteAnnotationRequest{
+					WorkspaceID: 1,
+					Base:        &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "delete annotation with trace service failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+				traceServiceMock.EXPECT().DeleteAnnotation(gomock.Any(), gomock.Any()).Return(assert.AnError)
+				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+					StorageDuration: 3,
+				}, nil)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+				return fields{
+					traceService: traceServiceMock,
+					auth:         authMock,
+					benefit:      benefitMock,
+					tenant:       tenantMock,
+					workspace:    workspaceMock,
+					rateLimiter:  rateLimiterMock,
+					traceConfig:  traceConfigMock,
+					metrics:      metricsMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.DeleteAnnotationRequest{
+					WorkspaceID: 1,
+					Base:        &base.Base{Caller: "test"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
