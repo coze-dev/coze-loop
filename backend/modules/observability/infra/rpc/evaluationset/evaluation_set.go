@@ -74,11 +74,6 @@ func (d *EvaluationSetProvider) CreateDataset(ctx context.Context, dataset *enti
 	if len(dataset.DatasetVersion.DatasetSchema.FieldSchemas) > 0 {
 		req.EvaluationSetSchema = datasetSchemaDO2DTO(&dataset.DatasetVersion.DatasetSchema)
 	}
-	user, ok := session.UserInCtx(ctx)
-	if !ok {
-		logs.CtxError(ctx, "[auto_task] User not found")
-	}
-	logs.CtxInfo(ctx, "[auto_task] CreateDataset,schema:%+v", user)
 	resp, err := d.client.CreateEvaluationSet(ctx, req)
 	if err != nil {
 		logs.CtxError(ctx, "CreateEvaluationSet failed, workspace_id=%d, err=%#v", dataset.WorkspaceID, err)
