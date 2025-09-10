@@ -135,7 +135,7 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	// 5、创建 taskrun
 	taskRunConfig := &task.TaskRunConfig{
 		DataReflowRunConfig: &task.DataReflowRunConfig{
-			DatasetID:    currentTask.GetTaskConfig().GetDataReflowConfig()[0].GetDatasetID(),
+			DatasetID:    datasetID,
 			EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
 			CycleStartAt: cycleStartAt,
 			CycleEndAt:   cycleEndAt,
