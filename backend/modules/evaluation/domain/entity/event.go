@@ -119,4 +119,6 @@ type ExportCSVEvent struct {
 	ExportID     int64
 	ExperimentID int64
 	SpaceID      int64
+
+	Session *Session
 }
