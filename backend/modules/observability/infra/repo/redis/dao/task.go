@@ -50,6 +50,7 @@ type ITaskDAO interface {
 	DeleteTaskCount(ctx context.Context, taskID int64) error
 
 	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
+	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
 }
 
 type TaskDAOImpl struct {
@@ -364,4 +365,32 @@ func (p *TaskDAOImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int
 		return 0, errorx.Wrapf(err, "redis get task count fail, key: %v", key)
 	}
 	return got, nil
+}
+
+func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, error) {
+	spaceKey := "spaceList"
+	botKey := "botList"
+	gotSpaceList, err := p.cmdable.Get(ctx, spaceKey).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil, nil // 缓存未命中
+		}
+		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+	}
+	var spaceList []string
+	if err = json.Unmarshal(conv.UnsafeStringToBytes(gotSpaceList), &spaceList); err != nil {
+		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+	}
+	gotBotList, err := p.cmdable.Get(ctx, botKey).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil, nil // 缓存未命中
+		}
+		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+	}
+	var botList []string
+	if err = json.Unmarshal(conv.UnsafeStringToBytes(gotBotList), &botList); err != nil {
+		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+	}
+	return spaceList, botList, nil
 }
