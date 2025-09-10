@@ -94,7 +94,8 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis2 redis.Cmdabl
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
+	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
@@ -149,7 +150,8 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
+	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
@@ -193,7 +195,8 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, redis2 redis.Cmdable, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO)
+	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao)
 	iUserProvider := user.NewUserRPCProvider(userClient)
 	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2)
 	if err != nil {
