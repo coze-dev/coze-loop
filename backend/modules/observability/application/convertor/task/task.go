@@ -223,22 +223,21 @@ func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *en
 		return nil
 	}
 	return &entity.ObservabilityTask{
-		WorkspaceID:   taskDO.GetWorkspaceID(),
-		Name:          taskDO.GetName(),
-		Description:   ptr.Of(taskDO.GetDescription()),
-		TaskType:      taskDO.GetTaskType(),
-		TaskStatus:    task.TaskStatusUnstarted,
-		TaskDetail:    ptr.Of(ToJSONString(ctx, taskDO.GetTaskDetail())),
-		SpanFilter:    SpanFilterDTO2PO(ctx, taskDO.GetRule().GetSpanFilters(), taskDO.GetWorkspaceID()),
-		EffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetEffectiveTime())),
-		Sampler:       ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetSampler())),
-		TaskConfig:    TaskConfigDTO2PO(ctx, taskDO.GetTaskConfig()),
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		CreatedBy:     userID,
-		UpdatedBy:     userID,
-		//BackfillTaskDetail: ptr.Of(ToJSONString(ctx, taskDO.GetBackfillTaskDetail())),
-		//BackfillEffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetBackfillEffectiveTime())),
+		WorkspaceID:           taskDO.GetWorkspaceID(),
+		Name:                  taskDO.GetName(),
+		Description:           ptr.Of(taskDO.GetDescription()),
+		TaskType:              taskDO.GetTaskType(),
+		TaskStatus:            task.TaskStatusUnstarted,
+		TaskDetail:            ptr.Of(ToJSONString(ctx, taskDO.GetTaskDetail())),
+		SpanFilter:            SpanFilterDTO2PO(ctx, taskDO.GetRule().GetSpanFilters(), taskDO.GetWorkspaceID()),
+		EffectiveTime:         ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetEffectiveTime())),
+		Sampler:               ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetSampler())),
+		TaskConfig:            TaskConfigDTO2PO(ctx, taskDO.GetTaskConfig()),
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
+		CreatedBy:             userID,
+		UpdatedBy:             userID,
+		BackfillEffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetBackfillEffectiveTime())),
 	}
 }
 func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields, workspaceID int64) *string {
