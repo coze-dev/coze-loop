@@ -51,7 +51,7 @@ func TestHTTPFaaSRuntimeConfig_Default(t *testing.T) {
 	adapter, err := NewHTTPFaaSRuntimeAdapter(entity.LanguageTypeJS, nil, logger)
 	assert.NoError(t, err)
 	assert.NotNil(t, adapter)
-	assert.Equal(t, "http://coze-loop-faas:8000", adapter.config.BaseURL)
+	assert.Equal(t, "http://coze-loop-js-faas:8000", adapter.config.BaseURL)
 	assert.Equal(t, 30*time.Second, adapter.config.Timeout)
 	assert.Equal(t, 3, adapter.config.MaxRetries)
 	assert.Equal(t, 1*time.Second, adapter.config.RetryInterval)

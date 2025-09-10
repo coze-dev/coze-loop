@@ -5,8 +5,7 @@ package runtime
 
 import (
 	"fmt"
-	"os"
-	"time"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,18 +13,21 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-// RuntimeFactory 简化的运行时工厂实现
+// RuntimeFactory 统一的运行时工厂实现
 type RuntimeFactory struct {
 	logger        *logrus.Logger
 	sandboxConfig *entity.SandboxConfig
-	runtime       component.IRuntime // 单例运行时实例
+	runtimeCache  map[entity.LanguageType]component.IRuntime
+	mutex         sync.RWMutex
+	runtime component.IRuntime // 单例统一运行时
 }
 
-// NewRuntimeFactory 创建Runtime工厂实例
+// NewRuntimeFactory 创建统一运行时工厂实例
 func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
 	if sandboxConfig == nil {
 		sandboxConfig = entity.DefaultSandboxConfig()
 	}
+	
 	if logger == nil {
 		logger = logrus.New()
 	}
@@ -33,38 +35,43 @@ func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfi
 	return &RuntimeFactory{
 		logger:        logger,
 		sandboxConfig: sandboxConfig,
+		runtimeCache:  make(map[entity.LanguageType]component.IRuntime),
 	}
 }
 
 // CreateRuntime 根据语言类型创建Runtime实例
 func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (component.IRuntime, error) {
-	// 使用单例模式，所有语言类型共享同一个运行时实例
+	// 检查缓存
+	f.mutex.RLock()
+	if runtime, exists := f.runtimeCache[languageType]; exists {
+		f.mutex.RUnlock()
+		return runtime, nil
+	}
+	f.mutex.RUnlock()
+
+	// 双重检查锁
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	
+	if runtime, exists := f.runtimeCache[languageType]; exists {
+		return runtime, nil
+	}
+
+	// 对于统一运行时，我们使用单例模式
+	// 因为统一运行时内部已经可以处理多种语言
 	if f.runtime == nil {
-		var err error
-		
-		// 检查是否使用HTTP FaaS模式
-		faasURL := os.Getenv("COZE_LOOP_FAAS_URL")
-		if faasURL == "" {
-			// 默认使用Docker Compose中的FaaS服务
-			faasURL = "http://coze-loop-faas:8000"
-		}
-		
-		// 使用HTTP FaaS运行时
-		config := &HTTPFaaSRuntimeConfig{
-			BaseURL:        faasURL,
-			Timeout:        30 * time.Second,
-			MaxRetries:     3,
-			RetryInterval:  1 * time.Second,
-			EnableEnhanced: true,
-		}
-		f.runtime, err = NewHTTPFaaSRuntimeAdapter(entity.LanguageTypeJS, config, f.logger)
-		
+		runtime, err := NewRuntime(f.sandboxConfig, f.logger)
 		if err != nil {
-			return nil, fmt.Errorf("创建运行时失败: %w", err)
+			return nil, fmt.Errorf("创建统一运行时失败: %w", err)
 		}
+		f.runtime = runtime
+		
+		f.logger.WithFields(logrus.Fields{
+			"supported_languages": runtime.GetSupportedLanguages(),
+		}).Info("统一运行时创建成功")
 	}
 	
-	// 验证是否支持请求的语言类型
+	// 检查是否支持请求的语言类型
 	supported := false
 	for _, supportedLang := range f.GetSupportedLanguages() {
 		if supportedLang == languageType {
@@ -74,8 +81,11 @@ func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (compon
 	}
 	
 	if !supported {
-		return nil, fmt.Errorf("不支持的语言类型: %s", languageType)
+		return nil, fmt.Errorf("统一运行时不支持语言类型: %s", languageType)
 	}
+	
+	// 缓存运行时实例（所有语言共享同一个实例）
+	f.runtimeCache[languageType] = f.runtime
 	
 	return f.runtime, nil
 }
@@ -86,6 +96,43 @@ func (f *RuntimeFactory) GetSupportedLanguages() []entity.LanguageType {
 		entity.LanguageTypePython,
 		entity.LanguageTypeJS,
 	}
+}
+
+// Cleanup 清理工厂资源
+func (f *RuntimeFactory) Cleanup() error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	
+	if f.runtime != nil {
+		if cleanupRuntime, ok := f.runtime.(interface{ Cleanup() error }); ok {
+			if err := cleanupRuntime.Cleanup(); err != nil {
+				return fmt.Errorf("清理统一运行时失败: %w", err)
+			}
+		}
+		f.runtime = nil
+	}
+	
+	// 清空缓存
+	f.runtimeCache = make(map[entity.LanguageType]component.IRuntime)
+	
+	return nil
+}
+
+// GetHealthStatus 获取工厂健康状态
+func (f *RuntimeFactory) GetHealthStatus() map[string]interface{} {
+	status := map[string]interface{}{
+		"status":             "healthy",
+		"supported_languages": f.GetSupportedLanguages(),
+		"cache_size":         len(f.runtimeCache),
+	}
+	
+	if f.runtime != nil {
+		if healthRuntime, ok := f.runtime.(interface{ GetHealthStatus() map[string]interface{} }); ok {
+			status["runtime_health"] = healthRuntime.GetHealthStatus()
+		}
+	}
+	
+	return status
 }
 
 // 确保RuntimeFactory实现IRuntimeFactory接口

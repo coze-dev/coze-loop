@@ -4,25 +4,20 @@
 
 本次重构整合了 `backend/modules/evaluation/infra/runtime` 目录下的所有运行时代码，实现了统一的运行时架构，提供了更简洁、高效和易维护的代码执行解决方案。
 
-## 架构设计
+## 架构设计1. **Runtime** (`runtime.go`)
+- 统一的运行时实现，专注于HTTP FaaS模式
+- 通过环境变量 `COZE_LOOP_PYTHON_FAAS_URL` 和 `COZE_LOOP_JS_FAAS_URL` 配置FaaS服务
+- 根据语言类型自动路由到对应的FaaS服务
 
-### 核心组件
+2. **RuntimeFactory** (`factory.go`)
+- 统一的运行时工厂实现
+- 使用单例模式管理运行时实例
+- 支持多语言类型的运行时创建
 
-1. **UnifiedRuntime** (`unified_runtime.go`)
-   - 统一的运行时实现，专注于HTTP FaaS模式
-   - 通过环境变量 `COZE_LOOP_PYTHON_FAAS_URL` 和 `COZE_LOOP_JS_FAAS_URL` 配置FaaS服务
-   - 根据语言类型自动路由到对应的FaaS服务
-
-2. **UnifiedRuntimeFactory** (`unified_factory.go`)
-   - 统一的运行时工厂实现
-   - 使用单例模式管理运行时实例
-   - 支持多语言类型的运行时创建
-
-3. **UnifiedRuntimeManager** (`unified_manager.go`)
-   - 统一的运行时管理器
-   - 提供线程安全的实例缓存和管理
-   - 支持健康状态监控和指标收集
-
+3. **RuntimeManager** (`manager.go`)
+- 统一的运行时管理器
+- 提供线程安全的实例缓存和管理
+- 支持运行时的生命周期管理
 ### 运行模式
 
 #### 1. HTTP FaaS 模式
@@ -54,7 +49,7 @@ os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://python-faas:8000")
 os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://js-faas:8000")
 
 // 创建运行时（自动路由到对应FaaS服务）
-runtime, err := NewUnifiedRuntime(config, logger)
+runtime, err := NewRuntime(config, logger)
 ```
 
 ### 3. 资源管理
@@ -80,8 +75,8 @@ import (
 // 创建运行时管理器
 logger := logrus.New()
 config := entity.DefaultSandboxConfig()
-factory := runtime.NewUnifiedRuntimeFactory(logger, config)
-manager := runtime.NewUnifiedRuntimeManager(factory, logger)
+factory := runtime.NewRuntimeFactory(logger, config)
+manager := runtime.NewRuntimeManager(factory, logger)
 
 // 获取JavaScript运行时
 jsRuntime, err := manager.GetRuntime(entity.LanguageTypeJS)
@@ -103,7 +98,7 @@ isValid := jsRuntime.ValidateCode(ctx, "function test() {}", "javascript")
 
 ```go
 // 创建工厂
-factory := runtime.NewUnifiedRuntimeFactory(logger, config)
+factory := runtime.NewRuntimeFactory(logger, config)
 
 // 创建运行时
 pythonRuntime, err := factory.CreateRuntime(entity.LanguageTypePython)
@@ -143,11 +138,9 @@ os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://coze-loop-js-faas:8000")
 1. **替换工厂创建**
 ```go
 // 旧版本
+factory := runtime.NewRuntimeFactory(logger, config)// 新版本
 factory := runtime.NewRuntimeFactory(logger, config)
-
-// 新版本
-factory := runtime.NewUnifiedRuntimeFactory(logger, config)
-manager := runtime.NewUnifiedRuntimeManager(factory, logger)
+manager := runtime.NewRuntimeManager(factory, logger)
 ```
 
 2. **替换管理器创建**
@@ -156,8 +149,8 @@ manager := runtime.NewUnifiedRuntimeManager(factory, logger)
 manager := runtime.NewRuntimeManager(factory)
 
 // 新版本
-factory := runtime.NewUnifiedRuntimeFactory(logger, config)
-manager := runtime.NewUnifiedRuntimeManager(factory, logger)
+factory := runtime.NewRuntimeFactory(logger, config)
+manager := runtime.NewRuntimeManager(factory, logger)
 ```
 
 3. **接口保持兼容**
