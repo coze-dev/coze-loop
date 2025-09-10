@@ -36,7 +36,7 @@ func NewTraceHubImpl(
 	evaluationService rpc.IEvaluationRPCAdapter,
 ) (ITraceHubService, error) {
 	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo)
-	ticker := time.NewTicker(1 * time.Minute) // 每x分钟执行一次定时任务
+	ticker := time.NewTicker(10 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo: tRepo,
 		ticker:   ticker,
@@ -293,7 +293,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	}
 	tasks := tconv.TaskPOs2DOs(ctx, taskPOs, nil)
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
-	
+
 	// 遍历任务
 	for _, taskInfo := range tasks {
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
