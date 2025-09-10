@@ -61,9 +61,10 @@ trace_tenant_cfg:
     cozeloop:
       365d:
         span_table: "observability_spans"
+        anno_table: "observability_annotations"
   default_ingest_tenant: "cozeloop"
   tenants_support_annotation:
-    cozeloop: false
+    cozeloop: true
 
 trace_field_meta_info:
   available_fields:
@@ -177,6 +178,8 @@ trace_field_meta_info:
         - "exist"
         - "not_exist"
       support_custom: true
+    feedback_manual:
+      support_custom: true
   field_metas:
     default:
       root_span:
@@ -230,6 +233,7 @@ trace_field_meta_info:
         - "span_type"
         - "message_id"
         - "user_id"
+        - "feedback_manual"
       all_span:
         - "input"
         - "output"
@@ -245,6 +249,7 @@ trace_field_meta_info:
         - "output_tokens"
         - "prompt_key"
         - "tokens"
+        - "feedback_manual"
       llm_span:
         - "input"
         - "output"
@@ -258,6 +263,7 @@ trace_field_meta_info:
         - "input_tokens"
         - "output_tokens"
         - "tokens"
+        - "feedback_manual"
     prompt:
       root_span:
         - "input"
@@ -270,6 +276,7 @@ trace_field_meta_info:
         - "span_type"
         - "prompt_key"
         - "user_id"
+        - "feedback_manual"
       all_span:
         - "input"
         - "output"
@@ -284,6 +291,7 @@ trace_field_meta_info:
         - "output_tokens"
         - "prompt_key"
         - "tokens"
+        - "feedback_manual"
       llm_span:
         - "input"
         - "output"
@@ -297,6 +305,7 @@ trace_field_meta_info:
         - "output_tokens"
         - "prompt_key"
         - "tokens"
+        - "feedback_manual"
 
 trace_collector_cfg:
   receivers:

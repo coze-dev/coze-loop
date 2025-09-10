@@ -380,13 +380,31 @@ func TestBuildSql(t *testing.T) {
 			},
 			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "manual_feedback_abc",
+						FieldType: loop_span.FieldTypeString,
+						Values:    []string{"123"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+			expectedSql: "SELECT * FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_string IN ('123')) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
 	}
 	for _, tc := range testCases {
-		qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &QueryParam{
-			StartTime: 1,
-			EndTime:   2,
-			Filters:   tc.filter,
-			Limit:     100,
+		qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), &buildSqlParam{
+			spanTable: "observability_spans",
+			annoTable: "observability_annotations",
+			queryParam: &QueryParam{
+				StartTime: 1,
+				EndTime:   2,
+				Filters:   tc.filter,
+				Limit:     100,
+			},
+			db: db,
 		})
 		assert.Nil(t, err)
 		sql := qDb.ToSQL(func(tx *gorm.DB) *gorm.DB {
