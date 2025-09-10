@@ -47,7 +47,7 @@ func TaskPO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		WorkspaceID: ptr.Of(v.WorkspaceID),
 		TaskType:    v.TaskType,
 		TaskStatus:  ptr.Of(v.TaskStatus),
-		Rule:        RulePO2DO(ctx, v.SpanFilter, v.EffectiveTime, v.Sampler),
+		Rule:        RulePO2DO(ctx, v.SpanFilter, v.EffectiveTime, v.Sampler, v.BackfillEffectiveTime),
 		TaskConfig:  TaskConfigPO2DO(ctx, v.TaskConfig),
 		BaseInfo: &common.BaseInfo{
 			CreatedAt: gptr.Of(v.CreatedAt.UnixMilli()),
@@ -76,15 +76,16 @@ func UserInfoPO2DO(userInfo *entity_common.UserInfo, userID string) *common.User
 	}
 }
 
-func RulePO2DO(ctx context.Context, spanFilter, effectiveTime, sampler *string) *task.Rule {
+func RulePO2DO(ctx context.Context, spanFilter, effectiveTime, sampler, backFillEffectiveTime *string) *task.Rule {
 	var spanFilterDO *filter.SpanFilterFields
 	if spanFilter != nil {
 		spanFilterDO = SpanFilterPO2DO(ctx, spanFilter)
 	}
 	rule := &task.Rule{
-		SpanFilters:   spanFilterDO,
-		EffectiveTime: EffectiveTimePO2DO(ctx, effectiveTime),
-		Sampler:       SamplerPO2DO(ctx, sampler),
+		SpanFilters:           spanFilterDO,
+		EffectiveTime:         EffectiveTimePO2DO(ctx, effectiveTime),
+		Sampler:               SamplerPO2DO(ctx, sampler),
+		BackfillEffectiveTime: EffectiveTimePO2DO(ctx, backFillEffectiveTime),
 	}
 	return rule
 }

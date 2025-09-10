@@ -8,6 +8,7 @@ CREATE TABLE `task` (
                         `task_detail` json DEFAULT NULL COMMENT '任务运行状态详情',
                         `span_filter` json DEFAULT NULL COMMENT 'span 过滤条件',
                         `effective_time` json DEFAULT NULL COMMENT '生效时间',
+                        `backfill_effective_time` json DEFAULT NULL COMMENT '历史回溯生效时间',
                         `sampler` json DEFAULT NULL COMMENT '采样器',
                         `task_config` json DEFAULT NULL COMMENT '相关任务的配置信息',
                         `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

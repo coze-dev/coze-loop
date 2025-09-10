@@ -36,6 +36,7 @@ func newObservabilityTask(db *gorm.DB, opts ...gen.DOOption) observabilityTask {
 	_observabilityTask.TaskDetail = field.NewString(tableName, "task_detail")
 	_observabilityTask.SpanFilter = field.NewString(tableName, "span_filter")
 	_observabilityTask.EffectiveTime = field.NewString(tableName, "effective_time")
+	_observabilityTask.BackfillEffectiveTime = field.NewString(tableName, "backfill_effective_time")
 	_observabilityTask.Sampler = field.NewString(tableName, "sampler")
 	_observabilityTask.TaskConfig = field.NewString(tableName, "task_config")
 	_observabilityTask.CreatedAt = field.NewTime(tableName, "created_at")
@@ -52,22 +53,23 @@ func newObservabilityTask(db *gorm.DB, opts ...gen.DOOption) observabilityTask {
 type observabilityTask struct {
 	observabilityTaskDo observabilityTaskDo
 
-	ALL           field.Asterisk
-	ID            field.Int64  // Task ID
-	WorkspaceID   field.Int64  // 空间ID
-	Name          field.String // 任务名称
-	Description   field.String // 任务描述
-	TaskType      field.String // 任务类型
-	TaskStatus    field.String // 任务状态
-	TaskDetail    field.String // 任务运行状态详情
-	SpanFilter    field.String // span 过滤条件
-	EffectiveTime field.String // 生效时间
-	Sampler       field.String // 采样器
-	TaskConfig    field.String // 相关任务的配置信息
-	CreatedAt     field.Time   // 创建时间
-	UpdatedAt     field.Time   // 更新时间
-	CreatedBy     field.String // 创建人
-	UpdatedBy     field.String // 更新人
+	ALL                   field.Asterisk
+	ID                    field.Int64  // Task ID
+	WorkspaceID           field.Int64  // 空间ID
+	Name                  field.String // 任务名称
+	Description           field.String // 任务描述
+	TaskType              field.String // 任务类型
+	TaskStatus            field.String // 任务状态
+	TaskDetail            field.String // 任务运行状态详情
+	SpanFilter            field.String // span 过滤条件
+	EffectiveTime         field.String // 生效时间
+	BackfillEffectiveTime field.String // 历史回溯生效时间
+	Sampler               field.String // 采样器
+	TaskConfig            field.String // 相关任务的配置信息
+	CreatedAt             field.Time   // 创建时间
+	UpdatedAt             field.Time   // 更新时间
+	CreatedBy             field.String // 创建人
+	UpdatedBy             field.String // 更新人
 
 	fieldMap map[string]field.Expr
 }
@@ -93,6 +95,7 @@ func (o *observabilityTask) updateTableName(table string) *observabilityTask {
 	o.TaskDetail = field.NewString(table, "task_detail")
 	o.SpanFilter = field.NewString(table, "span_filter")
 	o.EffectiveTime = field.NewString(table, "effective_time")
+	o.BackfillEffectiveTime = field.NewString(table, "backfill_effective_time")
 	o.Sampler = field.NewString(table, "sampler")
 	o.TaskConfig = field.NewString(table, "task_config")
 	o.CreatedAt = field.NewTime(table, "created_at")
@@ -127,7 +130,7 @@ func (o *observabilityTask) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (o *observabilityTask) fillFieldMap() {
-	o.fieldMap = make(map[string]field.Expr, 15)
+	o.fieldMap = make(map[string]field.Expr, 16)
 	o.fieldMap["id"] = o.ID
 	o.fieldMap["workspace_id"] = o.WorkspaceID
 	o.fieldMap["name"] = o.Name
@@ -137,6 +140,7 @@ func (o *observabilityTask) fillFieldMap() {
 	o.fieldMap["task_detail"] = o.TaskDetail
 	o.fieldMap["span_filter"] = o.SpanFilter
 	o.fieldMap["effective_time"] = o.EffectiveTime
+	o.fieldMap["backfill_effective_time"] = o.BackfillEffectiveTime
 	o.fieldMap["sampler"] = o.Sampler
 	o.fieldMap["task_config"] = o.TaskConfig
 	o.fieldMap["created_at"] = o.CreatedAt

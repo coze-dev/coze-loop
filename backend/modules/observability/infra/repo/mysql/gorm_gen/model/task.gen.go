@@ -12,21 +12,22 @@ const TableNameObservabilityTask = "task"
 
 // ObservabilityTask 任务信息
 type ObservabilityTask struct {
-	ID            int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:Task ID" json:"id"`                                                                                        // Task ID
-	WorkspaceID   int64     `gorm:"column:workspace_id;type:bigint(20) unsigned;not null;index:idx_space_id_status,priority:1;index:idx_space_id_type,priority:1;comment:空间ID" json:"workspace_id"` // 空间ID
-	Name          string    `gorm:"column:name;type:varchar(128);not null;comment:任务名称" json:"name"`                                                                                                // 任务名称
-	Description   *string   `gorm:"column:description;type:varchar(2048);comment:任务描述" json:"description"`                                                                                          // 任务描述
-	TaskType      string    `gorm:"column:task_type;type:varchar(64);not null;index:idx_space_id_type,priority:2;comment:任务类型" json:"task_type"`                                                    // 任务类型
-	TaskStatus    string    `gorm:"column:task_status;type:varchar(64);not null;index:idx_space_id_status,priority:2;comment:任务状态" json:"task_status"`                                              // 任务状态
-	TaskDetail    *string   `gorm:"column:task_detail;type:json;comment:任务运行状态详情" json:"task_detail"`                                                                                               // 任务运行状态详情
-	SpanFilter    *string   `gorm:"column:span_filter;type:json;comment:span 过滤条件" json:"span_filter"`                                                                                              // span 过滤条件
-	EffectiveTime *string   `gorm:"column:effective_time;type:json;comment:生效时间" json:"effective_time"`                                                                                             // 生效时间
-	Sampler       *string   `gorm:"column:sampler;type:json;comment:采样器" json:"sampler"`                                                                                                            // 采样器
-	TaskConfig    *string   `gorm:"column:task_config;type:json;comment:相关任务的配置信息" json:"task_config"`                                                                                              // 相关任务的配置信息
-	CreatedAt     time.Time `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                             // 创建时间
-	UpdatedAt     time.Time `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                             // 更新时间
-	CreatedBy     string    `gorm:"column:created_by;type:varchar(128);not null;comment:创建人" json:"created_by"`                                                                                     // 创建人
-	UpdatedBy     string    `gorm:"column:updated_by;type:varchar(128);not null;comment:更新人" json:"updated_by"`                                                                                     // 更新人
+	ID                    int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:Task ID" json:"id"`                                                                                        // Task ID
+	WorkspaceID           int64     `gorm:"column:workspace_id;type:bigint(20) unsigned;not null;index:idx_space_id_status,priority:1;index:idx_space_id_type,priority:1;comment:空间ID" json:"workspace_id"` // 空间ID
+	Name                  string    `gorm:"column:name;type:varchar(128);not null;comment:任务名称" json:"name"`                                                                                                // 任务名称
+	Description           *string   `gorm:"column:description;type:varchar(2048);comment:任务描述" json:"description"`                                                                                          // 任务描述
+	TaskType              string    `gorm:"column:task_type;type:varchar(64);not null;index:idx_space_id_type,priority:2;comment:任务类型" json:"task_type"`                                                    // 任务类型
+	TaskStatus            string    `gorm:"column:task_status;type:varchar(64);not null;index:idx_space_id_status,priority:2;comment:任务状态" json:"task_status"`                                              // 任务状态
+	TaskDetail            *string   `gorm:"column:task_detail;type:json;comment:任务运行状态详情" json:"task_detail"`                                                                                               // 任务运行状态详情
+	SpanFilter            *string   `gorm:"column:span_filter;type:json;comment:span 过滤条件" json:"span_filter"`                                                                                              // span 过滤条件
+	EffectiveTime         *string   `gorm:"column:effective_time;type:json;comment:生效时间" json:"effective_time"`                                                                                             // 生效时间
+	BackfillEffectiveTime *string   `gorm:"column:backfill_effective_time;type:json;comment:历史回溯生效时间" json:"backfill_effective_time"`                                                                       // 历史回溯生效时间
+	Sampler               *string   `gorm:"column:sampler;type:json;comment:采样器" json:"sampler"`                                                                                                            // 采样器
+	TaskConfig            *string   `gorm:"column:task_config;type:json;comment:相关任务的配置信息" json:"task_config"`                                                                                              // 相关任务的配置信息
+	CreatedAt             time.Time `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                             // 创建时间
+	UpdatedAt             time.Time `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                             // 更新时间
+	CreatedBy             string    `gorm:"column:created_by;type:varchar(128);not null;comment:创建人" json:"created_by"`                                                                                     // 创建人
+	UpdatedBy             string    `gorm:"column:updated_by;type:varchar(128);not null;comment:更新人" json:"updated_by"`                                                                                     // 更新人
 }
 
 // TableName ObservabilityTask's table name
