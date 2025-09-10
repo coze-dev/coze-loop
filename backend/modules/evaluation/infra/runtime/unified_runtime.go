@@ -13,16 +13,14 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime/enhanced"
 )
 
-// UnifiedRuntime 统一的运行时实现，整合所有运行时功能
+// UnifiedRuntime 统一的运行时实现，仅支持HTTP FaaS模式
 type UnifiedRuntime struct {
-	logger           *logrus.Logger
-	config           *entity.SandboxConfig
-	enhancedRuntime  *enhanced.EnhancedRuntime
+	logger             *logrus.Logger
+	config             *entity.SandboxConfig
 	supportedLanguages []entity.LanguageType
-	useHTTPFaaS      bool
+	useHTTPFaaS        bool
 }
 
 // NewUnifiedRuntime 创建统一运行时实例
@@ -45,25 +43,19 @@ func NewUnifiedRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (*Un
 	pythonFaaSURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
 	jsFaaSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
 	
-	if pythonFaaSURL != "" || jsFaaSURL != "" {
-		runtime.useHTTPFaaS = true
-		logger.Info("使用HTTP FaaS模式")
-		
-		if pythonFaaSURL != "" {
-			logger.WithField("python_faas_url", pythonFaaSURL).Info("配置Python FaaS服务")
-		}
-		if jsFaaSURL != "" {
-			logger.WithField("js_faas_url", jsFaaSURL).Info("配置JavaScript FaaS服务")
-		}
-	} else {
-		// 使用本地增强运行时
-		enhancedRuntime, err := enhanced.NewEnhancedRuntime(config, logger)
-		if err != nil {
-			return nil, fmt.Errorf("初始化增强运行时失败: %w", err)
-		}
-		runtime.enhancedRuntime = enhancedRuntime
-		
-		logger.Info("使用本地增强运行时模式")
+	// 只支持HTTP FaaS模式，移除本地增强运行时
+	if pythonFaaSURL == "" && jsFaaSURL == "" {
+		return nil, fmt.Errorf("必须配置FaaS服务URL，请设置COZE_LOOP_PYTHON_FAAS_URL和COZE_LOOP_JS_FAAS_URL环境变量")
+	}
+	
+	runtime.useHTTPFaaS = true
+	logger.Info("使用HTTP FaaS模式")
+	
+	if pythonFaaSURL != "" {
+		logger.WithField("python_faas_url", pythonFaaSURL).Info("配置Python FaaS服务")
+	}
+	if jsFaaSURL != "" {
+		logger.WithField("js_faas_url", jsFaaSURL).Info("配置JavaScript FaaS服务")
 	}
 
 	return runtime, nil
@@ -91,12 +83,8 @@ func (ur *UnifiedRuntime) RunCode(ctx context.Context, code string, language str
 		"use_http_faas": ur.useHTTPFaaS,
 	}).Debug("开始执行代码")
 
-	// 根据配置选择执行方式
-	if ur.useHTTPFaaS {
-		return ur.executeWithHTTPFaaS(ctx, code, language, timeoutMS)
-	} else {
-		return ur.enhancedRuntime.RunCode(ctx, code, language, timeoutMS)
-	}
+	// 使用HTTP FaaS执行代码
+	return ur.executeWithHTTPFaaS(ctx, code, language, timeoutMS)
 }
 
 // executeWithHTTPFaaS 使用HTTP FaaS执行代码
@@ -157,34 +145,13 @@ func (ur *UnifiedRuntime) ValidateCode(ctx context.Context, code string, languag
 		return false
 	}
 
-	// 根据配置选择验证方式
-	if ur.useHTTPFaaS {
-		// HTTP FaaS模式下使用基本语法验证
-		return basicSyntaxValidation(code)
-	} else {
-		return ur.enhancedRuntime.ValidateCode(ctx, code, language)
-	}
+	// HTTP FaaS模式下使用基本语法验证
+	return basicSyntaxValidation(code)
 }
 
 // Cleanup 清理资源
 func (ur *UnifiedRuntime) Cleanup() error {
-	ur.logger.Info("开始清理统一运行时资源...")
-	
-	var errors []error
-
-	// 清理增强运行时
-	if ur.enhancedRuntime != nil {
-		if err := ur.enhancedRuntime.Cleanup(); err != nil {
-			errors = append(errors, fmt.Errorf("清理增强运行时失败: %w", err))
-		}
-	}
-
-	if len(errors) > 0 {
-		ur.logger.WithField("errors", errors).Error("清理过程中出现错误")
-		return fmt.Errorf("清理过程中出现 %d 个错误: %v", len(errors), errors)
-	}
-
-	ur.logger.Info("统一运行时资源清理完成")
+	ur.logger.Info("HTTP FaaS运行时无需特殊清理")
 	return nil
 }
 
@@ -214,42 +181,21 @@ func (ur *UnifiedRuntime) GetHealthStatus() map[string]interface{} {
 		"use_http_faas":      ur.useHTTPFaaS,
 	}
 
-	if ur.useHTTPFaaS {
-		status["mode"] = "http_faas"
-		status["python_faas_url"] = os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-		status["js_faas_url"] = os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	} else if ur.enhancedRuntime != nil {
-		status["mode"] = "enhanced_local"
-		// 如果增强运行时有健康状态方法，可以添加详细信息
-		if healthStatus := ur.enhancedRuntime.GetHealthStatus(); healthStatus != nil {
-			status["enhanced_details"] = healthStatus
-		}
-	}
+	status["mode"] = "http_faas"
+	status["python_faas_url"] = os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
+	status["js_faas_url"] = os.Getenv("COZE_LOOP_JS_FAAS_URL")
 
 	return status
 }
 
 // GetMetrics 获取运行时指标
 func (ur *UnifiedRuntime) GetMetrics() map[string]interface{} {
-	metrics := map[string]interface{}{
-		"mode": "unified",
+	return map[string]interface{}{
+		"mode":         "http_faas",
+		"runtime_type": "http_faas",
+		"python_faas_configured": os.Getenv("COZE_LOOP_PYTHON_FAAS_URL") != "",
+		"js_faas_configured":     os.Getenv("COZE_LOOP_JS_FAAS_URL") != "",
 	}
-
-	if ur.useHTTPFaaS {
-		metrics["runtime_type"] = "http_faas"
-	} else if ur.enhancedRuntime != nil {
-		metrics["runtime_type"] = "enhanced_local"
-		
-		// 添加增强运行时的指标
-		if poolMetrics := ur.enhancedRuntime.GetPoolMetrics(); poolMetrics != nil {
-			metrics["pool_metrics"] = poolMetrics
-		}
-		if schedulerMetrics := ur.enhancedRuntime.GetSchedulerMetrics(); schedulerMetrics != nil {
-			metrics["scheduler_metrics"] = schedulerMetrics
-		}
-	}
-
-	return metrics
 }
 
 // 确保UnifiedRuntime实现IRuntime接口

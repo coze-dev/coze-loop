@@ -9,9 +9,9 @@
 ### 核心组件
 
 1. **UnifiedRuntime** (`unified_runtime.go`)
-   - 统一的运行时实现，整合了所有运行时功能
-   - 支持自动切换本地增强运行时和HTTP FaaS模式
-   - 通过环境变量 `COZE_LOOP_FAAS_URL` 控制运行模式
+   - 统一的运行时实现，专注于HTTP FaaS模式
+   - 通过环境变量 `COZE_LOOP_PYTHON_FAAS_URL` 和 `COZE_LOOP_JS_FAAS_URL` 配置FaaS服务
+   - 根据语言类型自动路由到对应的FaaS服务
 
 2. **UnifiedRuntimeFactory** (`unified_factory.go`)
    - 统一的运行时工厂实现
@@ -30,10 +30,10 @@
 - 通过HTTP调用远程FaaS服务执行代码
 - 适用于生产环境和分布式部署
 
-#### 2. 本地增强模式
-- 当未设置 `COZE_LOOP_FAAS_URL` 时使用
-- 使用本地增强运行时（沙箱池 + 任务调度器）
-- 适用于开发环境和单机部署
+#### 2. 精简架构
+- 移除了本地增强运行时模式
+- 仅支持HTTP FaaS模式，简化了架构复杂度
+- 专注于Python和JavaScript的FaaS执行
 
 ## 支持的语言
 
@@ -47,12 +47,13 @@
 - 统一的代码执行和验证接口
 - 一致的错误处理和结果格式
 
-### 2. 自动模式切换
+### 2. FaaS服务配置
 ```go
-// 设置环境变量启用HTTP FaaS模式
-os.Setenv("COZE_LOOP_FAAS_URL", "http://faas-service:8000")
+// 设置环境变量配置FaaS服务
+os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://python-faas:8000")
+os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://js-faas:8000")
 
-// 创建运行时（自动选择模式）
+// 创建运行时（自动路由到对应FaaS服务）
 runtime, err := NewUnifiedRuntime(config, logger)
 ```
 
@@ -79,7 +80,8 @@ import (
 // 创建运行时管理器
 logger := logrus.New()
 config := entity.DefaultSandboxConfig()
-manager := runtime.NewDefaultRuntimeManager(logger, config)
+factory := runtime.NewUnifiedRuntimeFactory(logger, config)
+manager := runtime.NewUnifiedRuntimeManager(factory, logger)
 
 // 获取JavaScript运行时
 jsRuntime, err := manager.GetRuntime(entity.LanguageTypeJS)
@@ -130,7 +132,8 @@ config := &entity.SandboxConfig{
 
 ```go
 // 通过环境变量配置
-os.Setenv("COZE_LOOP_FAAS_URL", "http://coze-loop-faas-enhanced:8000")
+os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://coze-loop-python-faas:8000")
+os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://coze-loop-js-faas:8000")
 ```
 
 ## 迁移指南
@@ -142,10 +145,9 @@ os.Setenv("COZE_LOOP_FAAS_URL", "http://coze-loop-faas-enhanced:8000")
 // 旧版本
 factory := runtime.NewRuntimeFactory(logger, config)
 
-// 新版本（自动使用统一工厂）
-factory := runtime.NewRuntimeFactory(logger, config)
-// 或者直接使用
-manager := runtime.NewDefaultRuntimeManager(logger, config)
+// 新版本
+factory := runtime.NewUnifiedRuntimeFactory(logger, config)
+manager := runtime.NewUnifiedRuntimeManager(factory, logger)
 ```
 
 2. **替换管理器创建**
@@ -154,7 +156,8 @@ manager := runtime.NewDefaultRuntimeManager(logger, config)
 manager := runtime.NewRuntimeManager(factory)
 
 // 新版本
-manager := runtime.NewDefaultRuntimeManager(logger, config)
+factory := runtime.NewUnifiedRuntimeFactory(logger, config)
+manager := runtime.NewUnifiedRuntimeManager(factory, logger)
 ```
 
 3. **接口保持兼容**
@@ -184,24 +187,26 @@ go test -v ./...
 - 错误处理测试
 - 资源清理测试
 
-## 清理的文件
+## 精简后的架构
 
-以下文件已被删除，功能已整合到统一运行时中：
+本次精简重构删除了以下文件和目录：
 
-- `deno_javascript_runtime.go` - JavaScript运行时适配器
-- `deno_python_runtime.go` - Python运行时适配器  
-- `enhanced_factory.go` - 增强运行时工厂
-- `enhanced_manager.go` - 增强运行时管理器
-- 相关测试文件
-
-## 保留的文件
-
-以下文件保留用于特定场景：
-
-- `http_faas_runtime.go` - HTTP FaaS适配器（被统一运行时使用）
-- `enhanced/` 目录 - 增强运行时实现（被统一运行时使用）
+### 删除的本地执行相关代码
+- `enhanced/` 目录 - 增强运行时实现（沙箱池、任务调度器等）
 - `deno/` 目录 - Deno客户端实现
 - `pyodide/` 目录 - Pyodide运行时实现
+- `simple_faas_server.py` - 本地FaaS服务器
+- `simple_runtime.go` - 简单运行时实现
+- `factory.go` - 旧版运行时工厂
+- `manager.go` - 旧版运行时管理器
+- 相关测试文件
+
+### 保留的核心文件
+- `unified_runtime.go` - 统一运行时（仅支持HTTP FaaS）
+- `unified_factory.go` - 统一运行时工厂
+- `unified_manager.go` - 统一运行时管理器
+- `http_faas_runtime.go` - HTTP FaaS适配器
+- 相关测试文件
 
 ## 未来扩展
 

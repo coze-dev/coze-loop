@@ -260,7 +260,8 @@ func TestUnifiedRuntimeManager_Basic(t *testing.T) {
 	
 	config := entity.DefaultSandboxConfig()
 	
-	manager := NewDefaultRuntimeManager(logger, config)
+	factory := NewUnifiedRuntimeFactory(logger, config)
+	manager := NewUnifiedRuntimeManager(factory, logger)
 	require.NotNil(t, manager)
 	
 	// 测试支持的语言
@@ -279,11 +280,9 @@ func TestUnifiedRuntimeManager_Basic(t *testing.T) {
 	assert.Equal(t, jsRuntime, jsRuntime2)
 	
 	// 测试健康状态
-	if healthManager, ok := manager.(*UnifiedRuntimeManager); ok {
-		healthStatus := healthManager.GetHealthStatus()
-		assert.Equal(t, "healthy", healthStatus["status"])
-		assert.Equal(t, 1, healthStatus["cached_runtimes"]) // 应该有一个缓存的运行时
-	}
+	healthStatus := manager.GetHealthStatus()
+	assert.Equal(t, "healthy", healthStatus["status"])
+	assert.Equal(t, 1, healthStatus["cached_runtimes"]) // 应该有一个缓存的运行时
 	
 	// 简化清理：只清空缓存，不进行复杂的资源清理
 	manager.ClearCache()
