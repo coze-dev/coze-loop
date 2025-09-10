@@ -293,6 +293,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	}
 	tasks := tconv.TaskPOs2DOs(ctx, taskPOs, nil)
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
+	
 	// 遍历任务
 	for _, taskInfo := range tasks {
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
