@@ -32,11 +32,12 @@ class PythonExecutor:
             
             # 创建一个新的命名空间执行代码
             namespace = {
+                '__builtins__': __builtins__,
                 'return_val': self._capture_return_val
             }
             
             with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
-                exec(code, namespace)
+                exec(code, namespace, namespace)
             
             return {
                 "stdout": stdout_capture.getvalue(),
