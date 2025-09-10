@@ -113,25 +113,32 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("The start time must be earlier than the end time."))
 		}
 	}
-	var evaluatorVersionIDs []int64
-	for _, autoEvaluateConfig := range req.GetTask().GetTaskConfig().GetAutoEvaluateConfigs() {
-		evaluatorVersionIDs = append(evaluatorVersionIDs, autoEvaluateConfig.GetEvaluatorVersionID())
-	}
-	if len(evaluatorVersionIDs) == 0 {
+	switch req.GetTask().GetTaskType() {
+	case "auto_evaluate":
+		var evaluatorVersionIDs []int64
+		for _, autoEvaluateConfig := range req.GetTask().GetTaskConfig().GetAutoEvaluateConfigs() {
+			evaluatorVersionIDs = append(evaluatorVersionIDs, autoEvaluateConfig.GetEvaluatorVersionID())
+		}
+		if len(evaluatorVersionIDs) == 0 {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Invalid parameter. Please check the parameter and try again."))
+		}
+		// 检查评估器版本是否合法
+		evaluators, _, err := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         req.GetTask().GetWorkspaceID(),
+			EvaluatorVersionIds: evaluatorVersionIDs,
+		})
+		if err != nil {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithMsgParam("evaluatorVersionIDs is invalid, BatchGetEvaluators err: %v", err.Error()))
+		}
+		if len(evaluators) != len(evaluatorVersionIDs) {
+			logs.CtxError(ctx, "evaluators len: %d, evaluatorVersionIDs len: %d", len(evaluators), len(evaluatorVersionIDs))
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("evaluatorVersionIDs is invalid, len(evaluators) != len(evaluatorVersionIDs)"))
+		}
+	case "auto_data_reflow":
+	default:
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Invalid parameter. Please check the parameter and try again."))
 	}
-	// 检查评估器版本是否合法
-	evaluators, _, err := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
-		WorkspaceID:         req.GetTask().GetWorkspaceID(),
-		EvaluatorVersionIds: evaluatorVersionIDs,
-	})
-	if err != nil {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithMsgParam("evaluatorVersionIDs is invalid, BatchGetEvaluators err: %v", err.Error()))
-	}
-	if len(evaluators) != len(evaluatorVersionIDs) {
-		logs.CtxError(ctx, "evaluators len: %d, evaluatorVersionIDs len: %d", len(evaluators), len(evaluatorVersionIDs))
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("evaluatorVersionIDs is invalid, len(evaluators) != len(evaluatorVersionIDs)"))
-	}
+
 	return nil
 }
 func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRequest) (*task.UpdateTaskResponse, error) {
