@@ -141,7 +141,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 			TimeConsumingMS:   time.Since(startTime).Milliseconds(),
 			Stdout: func() string {
 				if result.Output != nil {
-					return result.Output.Stdout
+					return c.cleanStdoutForUser(result.Output.Stdout)
 				}
 				return ""
 			}(),
@@ -159,7 +159,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 			TimeConsumingMS: time.Since(startTime).Milliseconds(),
 			Stdout: func() string {
 				if result.Output != nil {
-					return result.Output.Stdout
+					return c.cleanStdoutForUser(result.Output.Stdout)
 				}
 				return ""
 			}(),
@@ -176,7 +176,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 		TimeConsumingMS: time.Since(startTime).Milliseconds(),
 		Stdout: func() string {
 			if result.Output != nil {
-				return result.Output.Stdout
+				return c.cleanStdoutForUser(result.Output.Stdout)
 			}
 			return ""
 		}(),
@@ -254,6 +254,101 @@ func (c *EvaluatorSourceCodeServiceImpl) decodeUnicodeEscapes(s string) string {
 		result.WriteByte(s[i])
 	}
 	return result.String()
+}
+
+// cleanNestedJSON 清理嵌套的JSON结构，提取最内层的JSON
+func (c *EvaluatorSourceCodeServiceImpl) cleanNestedJSON(input string) string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return input
+	}
+	
+	// 检查是否包含嵌套的JSON结构（如问题中的情况）
+	// 寻找形如 {"score":0,"reason":"..."}\n{"stdout":"...", "stderr":""}的结构
+	lines := strings.Split(input, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// 尝试解析每一行，找到包含score和reason的JSON
+		var testResult map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &testResult); err == nil {
+			// 检查是否包含score和reason字段（评估结果的标志）
+			if _, hasScore := testResult["score"]; hasScore {
+				if _, hasReason := testResult["reason"]; hasReason {
+					return line
+				}
+			}
+		}
+	}
+	
+	return input
+}
+
+// cleanStdoutForUser 清理stdout输出，仅保留用户代码的print输出
+func (c *EvaluatorSourceCodeServiceImpl) cleanStdoutForUser(stdout string) string {
+	if stdout == "" {
+		return ""
+	}
+	
+	// 移除FaaS系统输出的JSON结构
+	lines := strings.Split(stdout, "\n")
+	var userOutput []string
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// 检查是否是JSON格式的系统输出
+		var testResult map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &testResult); err == nil {
+			// 如果是包含score/reason或stdout/stderr的系统输出，跳过
+			if _, hasScore := testResult["score"]; hasScore {
+				continue
+			}
+			if _, hasStdout := testResult["stdout"]; hasStdout {
+				continue
+			}
+		}
+		
+		// 保留非JSON格式的用户输出
+		userOutput = append(userOutput, line)
+	}
+	
+	return strings.Join(userOutput, "\n")
+}
+
+// cleanStdoutForReasoning 清理stdout用作reasoning，移除冗余的系统信息
+func (c *EvaluatorSourceCodeServiceImpl) cleanStdoutForReasoning(stdout string) string {
+	if stdout == "" {
+		return ""
+	}
+	
+	// 首先尝试从stdout中提取评估结果JSON
+	lines := strings.Split(stdout, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// 尝试解析每一行，找到包含reason的JSON
+		var testResult map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &testResult); err == nil {
+			if reasonVal, hasReason := testResult["reason"]; hasReason {
+				if reasonStr, ok := reasonVal.(string); ok && reasonStr != "" {
+					return reasonStr
+				}
+			}
+		}
+	}
+	
+	// 如果没有找到JSON格式的reason，返回清理后的用户输出
+	return c.cleanStdoutForUser(stdout)
 }
 
 // parseSyntaxValidationStdoutJSON 解析语法校验stdout中的JSON内容（语法校验链路）
@@ -489,12 +584,15 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationRetVal(retVal string) (s
 		return nil, "", "", nil
 	}
 
+	// 处理可能存在的嵌套JSON结构
+	cleanedRetVal := c.cleanNestedJSON(retVal)
+	
 	var result map[string]interface{}
 	
 	// 首先尝试标准 JSON 解析
-	if err := json.Unmarshal([]byte(retVal), &result); err != nil {
+	if err := json.Unmarshal([]byte(cleanedRetVal), &result); err != nil {
 		// 如果 JSON 解析失败，尝试 Python 字典格式
-		jsonStr, convertErr := c.convertPythonDictToJSON(retVal)
+		jsonStr, convertErr := c.convertPythonDictToJSON(cleanedRetVal)
 		if convertErr != nil {
 			return nil, "", "", fmt.Errorf("failed to parse RetVal: %v", err)
 		}
@@ -586,9 +684,9 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationExecutionResult(result *
 		}
 	}
 
-	// 最后的备用方案：使用标准输出作为推理过程
+	// 最后的备用方案：使用标准输出作为推理过程，但要清理冗余信息
 	if stdout, ok := processed.Output["stdout"].(string); ok {
-		evaluatorResult.Reasoning = stdout
+		evaluatorResult.Reasoning = c.cleanStdoutForReasoning(stdout)
 	}
 	return evaluatorResult, nil
 }
