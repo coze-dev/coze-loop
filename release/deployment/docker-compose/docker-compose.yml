@@ -8,7 +8,7 @@ services:
     networks:
       - coze-loop-network
     ports:
-      - "${COZE_LOOP_APP_OPENAPI_PORT}:8888"
+      - "${COZE_LOOP_APP_OPENAPI_PORT}:8880"
     volumes:
       - nginx_data:/coze-loop/resources
       - ./bootstrap/app:/coze-loop/bootstrap
