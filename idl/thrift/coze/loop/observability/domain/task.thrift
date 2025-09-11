@@ -74,7 +74,7 @@ struct DataReflowConfig {
     1: optional i64    dataset_id (api.js_conv="true", go.tag='json:"dataset_id"')   // 数据集id，新增数据集时可为空
     2: optional string dataset_name                                                  // 数据集名称
     3: optional export_dataset.DatasetSchema dataset_schema (vt.not_nil="true")      // 数据集列数据schema
-    4: optional list<export_dataset.FieldMapping> field_mappings (api.body="field_mappings", vt.min_size="1", vt.max_size="100")
+    4: optional list<export_dataset.FieldMapping> field_mappings (vt.min_size="1", vt.max_size="100")
 }
 
 struct AutoEvaluateConfig {

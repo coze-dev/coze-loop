@@ -2480,7 +2480,7 @@ type DataReflowConfig struct {
 	DatasetName *string `thrift:"dataset_name,2,optional" frugal:"2,optional,string" form:"dataset_name" json:"dataset_name,omitempty" query:"dataset_name"`
 	// 数据集列数据schema
 	DatasetSchema *dataset.DatasetSchema  `thrift:"dataset_schema,3,optional" frugal:"3,optional,dataset.DatasetSchema" form:"dataset_schema" json:"dataset_schema,omitempty" query:"dataset_schema"`
-	FieldMappings []*dataset.FieldMapping `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty"`
+	FieldMappings []*dataset.FieldMapping `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
 }
 
 func NewDataReflowConfig() *DataReflowConfig {
