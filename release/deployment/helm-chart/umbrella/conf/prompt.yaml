@@ -3,6 +3,18 @@ prompt_hub_rate_limit_config:
   space_max_qps:
     123456: 1000
 
+# PTaaS限流配置
+ptaas_rate_limit_config:
+  default_max_qps: 100  # 默认最大QPS，当没有为特定space_id和prompt_key配置时使用
+  prompt_key_max_qps:
+    # 按space_id -> prompt_key -> qps的三层map配置
+    # 示例配置（取消注释并修改以启用）：
+    # "12345":  # space_id
+    #   "my_special_prompt": 200      # prompt_key及其对应的最大QPS
+    #   "high_priority_prompt": 500
+    # "67890":  # 另一个space_id
+    #   "batch_prompt": 300
+
 # 预置标签配置
 preset_labels:
   - production

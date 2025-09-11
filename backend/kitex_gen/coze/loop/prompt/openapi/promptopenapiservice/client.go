@@ -6,18 +6,27 @@ import (
 	"context"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
+	streamcall "github.com/cloudwego/kitex/client/callopt/streamcall"
+	streaming "github.com/cloudwego/kitex/pkg/streaming"
+	transport "github.com/cloudwego/kitex/transport"
 	openapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest, callOptions ...callopt.Option) (r *openapi.BatchGetPromptByPromptKeyResponse, err error)
+	Execute(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...callopt.Option) (r *openapi.ExecuteResponse, err error)
+	ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...streamcall.Option) (stream PromptOpenAPIService_ExecuteStreamingClient, err error)
 }
+
+type PromptOpenAPIService_ExecuteStreamingClient streaming.ServerStreamingClient[openapi.ExecuteStreamingResponse]
 
 // NewClient creates a client for the service defined in IDL.
 func NewClient(destService string, opts ...client.Option) (Client, error) {
 	var options []client.Option
 	options = append(options, client.WithDestService(destService))
+
+	options = append(options, client.WithTransportProtocol(transport.TTHeaderStreaming))
 
 	options = append(options, opts...)
 
@@ -46,4 +55,14 @@ type kPromptOpenAPIServiceClient struct {
 func (p *kPromptOpenAPIServiceClient) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest, callOptions ...callopt.Option) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetPromptByPromptKey(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) Execute(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...callopt.Option) (r *openapi.ExecuteResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.Execute(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...streamcall.Option) (stream PromptOpenAPIService_ExecuteStreamingClient, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, streamcall.GetCallOptions(callOptions))
+	return p.kClient.ExecuteStreaming(ctx, req)
 }
