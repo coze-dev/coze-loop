@@ -3,16 +3,13 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/naming-convention */
-import { AnnotationPanel } from '@cozeloop/tag-components';
 import {
   TraceDetailPanel as TraceDetailPanelInner,
   type TraceDetailPanelProps,
   type TraceDetailContext,
-  tabs,
   TraceDetail as TraceDetailInner,
   type TraceDetailProps,
 } from '@cozeloop/observation-component';
-import { type span } from '@cozeloop/api-schema/observation';
 
 interface TraceDetailOpenPanelProps {
   forceOverwrite?: boolean;
@@ -44,20 +41,12 @@ export const TraceDetailWrapper = <
 
     const traceDetailOpenPanelProps = forceOverwrite
       ? {
-          extraSpanDetailTabs: tabs,
-          spanDetailHeaderSlot: (
-            span: span.OutputSpan,
-            platform: string | number,
-          ) => <AnnotationPanel span={span} platformType={platform} />,
+          extraSpanDetailTabs: [],
           ...props,
         }
       : {
           ...props,
-          extraSpanDetailTabs: tabs,
-          spanDetailHeaderSlot: (
-            span: span.OutputSpan,
-            platform: string | number,
-          ) => <AnnotationPanel span={span} platformType={platform} />,
+          extraSpanDetailTabs: [],
         };
 
     return <Component {...(traceDetailOpenPanelProps as any)} />;

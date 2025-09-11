@@ -18,7 +18,7 @@ import { type ConvertSpan } from '@/typings/span';
 import { type SizedColumn } from '@/typings/index';
 import { useTraceStore } from '@/stores/trace';
 import { useCustomView } from '@/hooks/use-custom-view';
-import { calcPresetTime, MAX_DAY_COUNT, PresetRange } from '@/consts/time';
+import { calcPresetTime, PresetRange } from '@/consts/time';
 import {
   PreselectedDatePicker,
   type PreselectedDatePickerRef,
@@ -168,7 +168,6 @@ export const QueryFilterBar = forwardRef<
                 endTime,
               }}
               datePickerOptions={datePickerOptions}
-              maxPastDateRange={MAX_DAY_COUNT}
               onPresetChange={(preset, timeStamp) => {
                 if (timeStamp) {
                   handleTimeStampChange({
