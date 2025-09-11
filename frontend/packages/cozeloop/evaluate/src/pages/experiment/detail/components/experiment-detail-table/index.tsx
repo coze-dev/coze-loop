@@ -11,6 +11,7 @@ import {
   type LogicField,
   type SemiTableSort,
 } from '@cozeloop/evaluate-components';
+import { IS_HIDDEN_EXPERIMENT_DETAIL_FILTER } from '@cozeloop/biz-hooks-adapter';
 import {
   type Experiment,
   FieldType,
@@ -422,7 +423,12 @@ export default function ({
       <TableForExperiment<ExperimentItem>
         service={service as Service}
         heightFull={true}
-        header={<TableHeader actions={actions} filters={filters} />}
+        header={
+          <TableHeader
+            actions={actions}
+            filters={IS_HIDDEN_EXPERIMENT_DETAIL_FILTER ? null : filters}
+          />
+        }
         pageSizeStorageKey="experiment_detail_page_size"
         empty={tableEmpty}
         tableProps={tableProps}
