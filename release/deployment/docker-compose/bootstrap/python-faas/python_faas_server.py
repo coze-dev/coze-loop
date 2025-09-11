@@ -26,11 +26,20 @@ class PythonExecutor:
         self.execution_count += 1
         
         try:
+            # 1. 预执行语法检查
+            syntax_valid, syntax_error = self._check_syntax(code)
+            if not syntax_valid:
+                return {
+                    "stdout": "",
+                    "stderr": f"python syntax error: {syntax_error}",
+                    "returnValue": ""
+                }
+            
             stdout_capture = io.StringIO()
             stderr_capture = io.StringIO()
             self.return_val_output = None
             
-            # 创建一个新的命名空间执行代码
+            # 2. 创建一个新的命名空间执行代码
             namespace = {
                 '__builtins__': __builtins__,
                 'return_val': self._capture_return_val
@@ -50,6 +59,18 @@ class PythonExecutor:
                 "stderr": (stderr_capture.getvalue() if 'stderr_capture' in locals() else "") + str(e),
                 "returnValue": ""
             }
+    
+    def _check_syntax(self, code):
+        """检查Python代码语法"""
+        import ast
+        try:
+            ast.parse(code)
+            return True, None
+        except SyntaxError as e:
+            error_msg = f"{e.msg} ({e.filename if e.filename else '<string>'}, line {e.lineno})"
+            return False, error_msg
+        except Exception as e:
+            return False, str(e)
     
     def _capture_return_val(self, value):
         """捕获return_val函数的输出"""
@@ -139,11 +160,15 @@ class PythonFaaSHandler(BaseHTTPRequestHandler):
                 return
             
             print(f"执行Python代码，超时: {timeout}ms")
+            print(f"代码预览: {code[:200]}...")  # 添加代码预览日志
             
             # 执行Python代码
             start_time = time.time()
             result = self.executor.execute_python(code, timeout)
             duration = int((time.time() - start_time) * 1000)
+            
+            # 添加详细的执行日志
+            print(f"执行完成 - stdout长度: {len(result['stdout'])}, stderr长度: {len(result['stderr'])}, ret_val长度: {len(result['returnValue'])}")
             
             # 返回结果
             response = {
