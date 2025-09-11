@@ -31,15 +31,16 @@ import (
 )
 
 type ListSpansReq struct {
-	WorkspaceID     int64
-	StartTime       int64 // ms
-	EndTime         int64 // ms
-	Filters         *loop_span.FilterFields
-	Limit           int32
-	DescByStartTime bool
-	PageToken       string
-	PlatformType    loop_span.PlatformType
-	SpanListType    loop_span.SpanListType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	StartTime             int64 // ms
+	EndTime               int64 // ms
+	Filters               *loop_span.FilterFields
+	Limit                 int32
+	DescByStartTime       bool
+	PageToken             string
+	PlatformType          loop_span.PlatformType
+	SpanListType          loop_span.SpanListType
 }
 
 type ListSpansResp struct {
@@ -64,14 +65,15 @@ type GetTraceResp struct {
 }
 
 type SearchTraceOApiReq struct {
-	WorkspaceID  int64
-	Tenants      []string
-	TraceID      string
-	LogID        string
-	StartTime    int64 // ms
-	EndTime      int64 // ms
-	Limit        int32
-	PlatformType loop_span.PlatformType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Tenants               []string
+	TraceID               string
+	LogID                 string
+	StartTime             int64 // ms
+	EndTime               int64 // ms
+	Limit                 int32
+	PlatformType          loop_span.PlatformType
 }
 
 type SearchTraceOApiResp struct {
@@ -79,16 +81,17 @@ type SearchTraceOApiResp struct {
 }
 
 type ListSpansOApiReq struct {
-	WorkspaceID     int64
-	Tenants         []string
-	StartTime       int64 // ms
-	EndTime         int64 // ms
-	Filters         *loop_span.FilterFields
-	Limit           int32
-	DescByStartTime bool
-	PageToken       string
-	PlatformType    loop_span.PlatformType
-	SpanListType    loop_span.SpanListType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Tenants               []string
+	StartTime             int64 // ms
+	EndTime               int64 // ms
+	Filters               *loop_span.FilterFields
+	Limit                 int32
+	DescByStartTime       bool
+	PageToken             string
+	PlatformType          loop_span.PlatformType
+	SpanListType          loop_span.SpanListType
 }
 
 type ListSpansOApiResp struct {
@@ -104,9 +107,10 @@ type TraceQueryParam struct {
 }
 
 type GetTracesAdvanceInfoReq struct {
-	WorkspaceID  int64
-	Traces       []*TraceQueryParam
-	PlatformType loop_span.PlatformType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Traces                []*TraceQueryParam
+	PlatformType          loop_span.PlatformType
 }
 
 type GetTracesAdvanceInfoResp struct {
@@ -354,10 +358,11 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		return nil, err
 	}
 	processors, err := r.buildHelper.BuildSearchTraceOApiProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		QueryStartTime: req.StartTime,
-		QueryEndTime:   req.EndTime,
-		PlatformType:   req.PlatformType,
+		WorkspaceId:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		QueryStartTime:        req.StartTime,
+		QueryEndTime:          req.EndTime,
+		PlatformType:          req.PlatformType,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -383,8 +388,9 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 		return nil, err
 	}
 	builtinFilter, err := r.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
-		WorkspaceID:  req.WorkspaceID,
-		SpanListType: req.SpanListType,
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		SpanListType:          req.SpanListType,
 	})
 	if err != nil {
 		return nil, err
@@ -920,7 +926,8 @@ func (r *TraceServiceImpl) getAnnotationCallerCfg(ctx context.Context, caller st
 func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
 	filters := make([]*loop_span.FilterField, 0)
 	env := &span_filter.SpanEnv{
-		WorkspaceId: req.WorkspaceID,
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
 	}
 	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
 	if err != nil {

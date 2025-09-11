@@ -259,8 +259,8 @@ func (p *Trace) Field2DeepEqual(src *TokenCost) bool {
 }
 
 type TokenCost struct {
-	Input  int64 `thrift:"input,1,required" frugal:"1,required,i64" json:"input" form:"input,required" query:"input,required"`
-	Output int64 `thrift:"output,2,required" frugal:"2,required,i64" json:"output" form:"output,required" query:"output,required"`
+	InputToken  int64 `thrift:"input_token,1,required" frugal:"1,required,i64" json:"input_token" form:"input_token,required" query:"input_token,required"`
+	OutputToken int64 `thrift:"output_token,2,required" frugal:"2,required,i64" json:"output_token" form:"output_token,required" query:"output_token,required"`
 }
 
 func NewTokenCost() *TokenCost {
@@ -270,36 +270,36 @@ func NewTokenCost() *TokenCost {
 func (p *TokenCost) InitDefault() {
 }
 
-func (p *TokenCost) GetInput() (v int64) {
+func (p *TokenCost) GetInputToken() (v int64) {
 	if p != nil {
-		return p.Input
+		return p.InputToken
 	}
 	return
 }
 
-func (p *TokenCost) GetOutput() (v int64) {
+func (p *TokenCost) GetOutputToken() (v int64) {
 	if p != nil {
-		return p.Output
+		return p.OutputToken
 	}
 	return
 }
-func (p *TokenCost) SetInput(val int64) {
-	p.Input = val
+func (p *TokenCost) SetInputToken(val int64) {
+	p.InputToken = val
 }
-func (p *TokenCost) SetOutput(val int64) {
-	p.Output = val
+func (p *TokenCost) SetOutputToken(val int64) {
+	p.OutputToken = val
 }
 
 var fieldIDToName_TokenCost = map[int16]string{
-	1: "input",
-	2: "output",
+	1: "input_token",
+	2: "output_token",
 }
 
 func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetInput bool = false
-	var issetOutput bool = false
+	var issetInputToken bool = false
+	var issetOutputToken bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -320,7 +320,7 @@ func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetInput = true
+				issetInputToken = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -329,7 +329,7 @@ func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetOutput = true
+				issetOutputToken = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -346,12 +346,12 @@ func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetInput {
+	if !issetInputToken {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetOutput {
+	if !issetOutputToken {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
@@ -381,7 +381,7 @@ func (p *TokenCost) ReadField1(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.Input = _field
+	p.InputToken = _field
 	return nil
 }
 func (p *TokenCost) ReadField2(iprot thrift.TProtocol) error {
@@ -392,7 +392,7 @@ func (p *TokenCost) ReadField2(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.Output = _field
+	p.OutputToken = _field
 	return nil
 }
 
@@ -429,10 +429,10 @@ WriteStructEndError:
 }
 
 func (p *TokenCost) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("input", thrift.I64, 1); err != nil {
+	if err = oprot.WriteFieldBegin("input_token", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.Input); err != nil {
+	if err := oprot.WriteI64(p.InputToken); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -445,10 +445,10 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *TokenCost) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("output", thrift.I64, 2); err != nil {
+	if err = oprot.WriteFieldBegin("output_token", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.Output); err != nil {
+	if err := oprot.WriteI64(p.OutputToken); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -475,10 +475,10 @@ func (p *TokenCost) DeepEqual(ano *TokenCost) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.Input) {
+	if !p.Field1DeepEqual(ano.InputToken) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Output) {
+	if !p.Field2DeepEqual(ano.OutputToken) {
 		return false
 	}
 	return true
@@ -486,14 +486,14 @@ func (p *TokenCost) DeepEqual(ano *TokenCost) bool {
 
 func (p *TokenCost) Field1DeepEqual(src int64) bool {
 
-	if p.Input != src {
+	if p.InputToken != src {
 		return false
 	}
 	return true
 }
 func (p *TokenCost) Field2DeepEqual(src int64) bool {
 
-	if p.Output != src {
+	if p.OutputToken != src {
 		return false
 	}
 	return true

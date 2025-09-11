@@ -21,7 +21,7 @@ func TestEvalTargetFilter_BuildBasicSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldSpaceId,
@@ -56,7 +56,7 @@ func TestEvalTargetFilter_BuildRootSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldParentID,
@@ -85,7 +85,7 @@ func TestEvalTargetFilter_BuildLLMSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldSpanType,
@@ -114,7 +114,7 @@ func TestEvalTargetFilter_BuildALLSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: nil,
 		},
 	}

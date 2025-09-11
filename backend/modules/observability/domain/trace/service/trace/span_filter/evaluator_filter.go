@@ -18,7 +18,7 @@ func (e *EvaluatorFilter) BuildBasicSpanFilter(ctx context.Context, env *SpanEnv
 		{
 			FieldName: loop_span.SpanFieldSpaceId,
 			FieldType: loop_span.FieldTypeString,
-			Values:    []string{strconv.FormatInt(env.WorkspaceId, 10)},
+			Values:    []string{strconv.FormatInt(env.WorkspaceID, 10)},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 		{
