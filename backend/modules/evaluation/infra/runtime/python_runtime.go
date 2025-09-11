@@ -121,5 +121,22 @@ func (pr *PythonRuntime) GetMetrics() map[string]interface{} {
 	}
 }
 
+// GetReturnValFunction 获取Python return_val函数实现
+func (pr *PythonRuntime) GetReturnValFunction() string {
+	return `
+# return_val函数实现
+def return_val(value):
+    """
+    标准return_val函数实现 - 设置返回值到ret_val字段
+    Args:
+        value: 要返回的值，通常是JSON字符串
+    """
+    # 这里不使用print，而是设置一个全局变量
+    # 该变量会被FaaS服务器捕获到ret_val字段
+    global _return_val_output
+    _return_val_output = value
+`
+}
+
 // 确保PythonRuntime实现IRuntime接口
 var _ component.IRuntime = (*PythonRuntime)(nil)

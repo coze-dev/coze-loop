@@ -309,6 +309,9 @@ func NewEvaluatorSourceServices(
 	runtimeManager component.IRuntimeManager,
 	codeBuilderFactory service.CodeBuilderFactory,
 ) map[entity.EvaluatorType]domainservice.EvaluatorSourceService {
+	// 设置codeBuilderFactory的runtimeManager依赖
+	codeBuilderFactory.SetRuntimeManager(runtimeManager)
+	
 	services := []domainservice.EvaluatorSourceService{
 		domainservice.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config),
 		domainservice.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric),

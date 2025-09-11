@@ -8,16 +8,24 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/templates"
 )
 
 // PythonCodeBuilder Python代码构建器
-type PythonCodeBuilder struct{}
+type PythonCodeBuilder struct{
+	runtime component.IRuntime // 运行时实例，用于获取return_val函数
+}
 
 // NewPythonCodeBuilder 创建Python代码构建器实例
 func NewPythonCodeBuilder() *PythonCodeBuilder {
 	return &PythonCodeBuilder{}
+}
+
+// SetRuntime 设置运行时实例
+func (b *PythonCodeBuilder) SetRuntime(runtime component.IRuntime) {
+	b.runtime = runtime
 }
 
 // GetLanguageType 获取支持的语言类型
@@ -44,8 +52,8 @@ func (b *PythonCodeBuilder) BuildCode(input *entity.EvaluatorInputData, codeVers
 	pythonCode := templates.PythonTemplate
 
 	// 使用strings.Replace替换占位符
-	// 替换return_val函数占位符
-	pythonCode = strings.Replace(pythonCode, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	// 替换return_val函数占位符 - 现在从runtime获取
+	pythonCode = strings.Replace(pythonCode, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunctionFromRuntime(), 1)
 	
 	// 替换turn变量占位符
 	pythonCode = strings.Replace(pythonCode, "{{TURN_DATA}}", turnDataStr, 1)
@@ -93,8 +101,20 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 	return result
 }
 
-// getReturnValFunction 获取Python return_val函数实现
+// getReturnValFunction 获取Python return_val函数实现 - 已废弃，使用getReturnValFunctionFromRuntime
 func (b *PythonCodeBuilder) getReturnValFunction() string {
+	// 为了向后兼容保留此方法，但建议使用getReturnValFunctionFromRuntime
+	return b.getReturnValFunctionFromRuntime()
+}
+
+// getReturnValFunctionFromRuntime 从runtime获取Python return_val函数实现
+func (b *PythonCodeBuilder) getReturnValFunctionFromRuntime() string {
+	// 如果有runtime实例，优先使用runtime提供的实现
+	if b.runtime != nil {
+		return b.runtime.GetReturnValFunction()
+	}
+	
+	// 如果没有runtime实例，使用默认实现保持向后兼容
 	return `
 # return_val函数实现
 def return_val(value):
@@ -139,8 +159,8 @@ func (b *PythonCodeBuilder) BuildSyntaxCheckCode(userCode string) string {
 	escapedCode := strings.ReplaceAll(userCode, "\\", "\\\\")
 	escapedCode = strings.ReplaceAll(escapedCode, `"""`, `\"\"\"`)
 	
-	// 替换return_val函数占位符
-	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	// 替换return_val函数占位符 - 现在从runtime获取
+	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunctionFromRuntime(), 1)
 	
 	// 替换模板中的用户代码占位符
 	syntaxCheckCode = strings.Replace(syntaxCheckCode, "{{USER_CODE}}", escapedCode, 1)

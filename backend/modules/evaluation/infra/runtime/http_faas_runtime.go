@@ -105,6 +105,41 @@ func (adapter *HTTPFaaSRuntimeAdapter) GetLanguageType() entity.LanguageType {
 	return adapter.languageType
 }
 
+// GetReturnValFunction 获取return_val函数实现
+func (adapter *HTTPFaaSRuntimeAdapter) GetReturnValFunction() string {
+	// HTTPFaaSRuntimeAdapter 作为通用适配器，不提供语言特定的return_val函数
+	// 应该由具体的语言运行时（PythonRuntime、JavaScriptRuntime）来实现
+	switch adapter.languageType {
+	case entity.LanguageTypePython:
+		return `
+# return_val函数实现
+def return_val(value):
+    """
+    标准return_val函数实现 - 设置返回值到ret_val字段
+    Args:
+        value: 要返回的值，通常是JSON字符串
+    """
+    # 这里不使用print，而是设置一个全局变量
+    # 该变量会被FaaS服务器捕获到ret_val字段
+    global _return_val_output
+    _return_val_output = value
+`
+	case entity.LanguageTypeJS:
+		return `
+// return_val函数实现
+function return_val(value) {
+    /**
+     * 标准return_val函数实现 - 输出返回值供FaaS服务捕获
+     * @param {string} value - 要返回的值，通常是JSON字符串
+     */
+    console.log(value);
+}
+`
+	default:
+		return ""
+	}
+}
+
 // RunCode 通过HTTP调用FaaS服务执行代码
 func (adapter *HTTPFaaSRuntimeAdapter) RunCode(ctx context.Context, code string, language string, timeoutMS int64) (*entity.ExecutionResult, error) {
 	if code == "" {

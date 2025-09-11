@@ -121,5 +121,19 @@ func (jr *JavaScriptRuntime) GetMetrics() map[string]interface{} {
 	}
 }
 
+// GetReturnValFunction 获取JavaScript return_val函数实现
+func (jr *JavaScriptRuntime) GetReturnValFunction() string {
+	return `
+// return_val函数实现
+function return_val(value) {
+    /**
+     * 标准return_val函数实现 - 输出返回值供FaaS服务捕获
+     * @param {string} value - 要返回的值，通常是JSON字符串
+     */
+    console.log(value);
+}
+`
+}
+
 // 确保JavaScriptRuntime实现IRuntime接口
 var _ component.IRuntime = (*JavaScriptRuntime)(nil)

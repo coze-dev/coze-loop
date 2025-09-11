@@ -8,16 +8,24 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/templates"
 )
 
 // JavaScriptCodeBuilder JavaScript代码构建器
-type JavaScriptCodeBuilder struct{}
+type JavaScriptCodeBuilder struct{
+	runtime component.IRuntime // 运行时实例，用于获取return_val函数
+}
 
 // NewJavaScriptCodeBuilder 创建JavaScript代码构建器实例
 func NewJavaScriptCodeBuilder() *JavaScriptCodeBuilder {
 	return &JavaScriptCodeBuilder{}
+}
+
+// SetRuntime 设置运行时实例
+func (b *JavaScriptCodeBuilder) SetRuntime(runtime component.IRuntime) {
+	b.runtime = runtime
 }
 
 // GetLanguageType 获取支持的语言类型
@@ -44,8 +52,8 @@ func (b *JavaScriptCodeBuilder) BuildCode(input *entity.EvaluatorInputData, code
 	jsCode := templates.JavaScriptTemplate
 
 	// 使用strings.Replace替换占位符
-	// 替换return_val函数占位符
-	jsCode = strings.Replace(jsCode, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	// 替换return_val函数占位符 - 现在从runtime获取
+	jsCode = strings.Replace(jsCode, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunctionFromRuntime(), 1)
 	
 	// 替换turn变量占位符
 	jsCode = strings.Replace(jsCode, "{{TURN_DATA}}", turnDataStr, 1)
@@ -203,8 +211,8 @@ func (b *JavaScriptCodeBuilder) BuildSyntaxCheckCode(userCode string) string {
 	// 转义用户代码中的特殊字符，确保能正确嵌入到模板字符串中
 	escapedCode := b.escapeCodeForTemplate(userCode)
 	
-	// 替换return_val函数占位符
-	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunction(), 1)
+	// 替换return_val函数占位符 - 现在从runtime获取
+	syntaxCheckCode := strings.Replace(syntaxCheckTemplate, "{{RETURN_VAL_FUNCTION}}", b.getReturnValFunctionFromRuntime(), 1)
 	
 	// 替换模板中的用户代码占位符
 	syntaxCheckCode = strings.Replace(syntaxCheckCode, "{{USER_CODE}}", escapedCode, 1)
@@ -223,8 +231,20 @@ func (b *JavaScriptCodeBuilder) escapeCodeForTemplate(userCode string) string {
 	return escaped
 }
 
-// getReturnValFunction 获取JavaScript return_val函数实现
+// getReturnValFunction 获取JavaScript return_val函数实现 - 已废弃，使用getReturnValFunctionFromRuntime
 func (b *JavaScriptCodeBuilder) getReturnValFunction() string {
+	// 为了向后兼容保留此方法，但建议使用getReturnValFunctionFromRuntime
+	return b.getReturnValFunctionFromRuntime()
+}
+
+// getReturnValFunctionFromRuntime 从runtime获取JavaScript return_val函数实现
+func (b *JavaScriptCodeBuilder) getReturnValFunctionFromRuntime() string {
+	// 如果有runtime实例，优先使用runtime提供的实现
+	if b.runtime != nil {
+		return b.runtime.GetReturnValFunction()
+	}
+	
+	// 如果没有runtime实例，使用默认实现保持向后兼容
 	return `
 // return_val函数实现
 function return_val(value) {
