@@ -15,31 +15,39 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-func TestRuntime_Basic(t *testing.T) {
+func TestPythonRuntime_Creation(t *testing.T) {
 	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
-	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
+	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
-	runtime, err := NewRuntime(config, logger)
+	runtime, err := NewPythonRuntime(config, logger)
+	require.NoError(t, err)
+	require.NotNil(t, runtime)
+	
+	defer func() {
+		err := runtime.Cleanup()
+		assert.NoError(t, err)
+	}()
+	
+	// 测试基本属性
+	assert.Equal(t, entity.LanguageTypePython, runtime.GetLanguageType())
+	assert.Equal(t, []entity.LanguageType{entity.LanguageTypePython}, runtime.GetSupportedLanguages())
+}
+
+func TestJavaScriptRuntime_Creation(t *testing.T) {
+	// 设置测试环境变量
+	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
+	
+	runtime, err := NewJavaScriptRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
@@ -50,37 +58,87 @@ func TestRuntime_Basic(t *testing.T) {
 	
 	// 测试基本属性
 	assert.Equal(t, entity.LanguageTypeJS, runtime.GetLanguageType())
-	
-	supportedLanguages := runtime.GetSupportedLanguages()
-	assert.Contains(t, supportedLanguages, entity.LanguageTypeJS)
-	assert.Contains(t, supportedLanguages, entity.LanguageTypePython)
+	assert.Equal(t, []entity.LanguageType{entity.LanguageTypeJS}, runtime.GetSupportedLanguages())
 }
 
-func TestRuntime_ValidateCode(t *testing.T) {
+func TestRuntimeFactory_CreatePythonRuntime(t *testing.T) {
 	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
-	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
+	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
-	runtime, err := NewRuntime(config, logger)
+	factory := NewRuntimeFactory(logger, config).(*RuntimeFactory)
+	require.NotNil(t, factory)
+	
+	runtime, err := factory.CreateRuntime(entity.LanguageTypePython)
+	require.NoError(t, err)
+	require.NotNil(t, runtime)
+	
+	// 测试缓存功能
+	runtime2, err := factory.CreateRuntime(entity.LanguageTypePython)
+	require.NoError(t, err)
+	assert.Equal(t, runtime, runtime2) // 应该返回同一个实例
+	
+	defer func() {
+		err := factory.Cleanup()
+		assert.NoError(t, err)
+	}()
+}
+
+func TestRuntimeFactory_CreateJavaScriptRuntime(t *testing.T) {
+	// 设置测试环境变量
+	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
+	
+	factory := NewRuntimeFactory(logger, config).(*RuntimeFactory)
+	require.NotNil(t, factory)
+	
+	runtime, err := factory.CreateRuntime(entity.LanguageTypeJS)
+	require.NoError(t, err)
+	require.NotNil(t, runtime)
+	
+	// 测试缓存功能
+	runtime2, err := factory.CreateRuntime(entity.LanguageTypeJS)
+	require.NoError(t, err)
+	assert.Equal(t, runtime, runtime2) // 应该返回同一个实例
+	
+	defer func() {
+		err := factory.Cleanup()
+		assert.NoError(t, err)
+	}()
+}
+
+func TestRuntimeFactory_UnsupportedLanguage(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
+	
+	factory := NewRuntimeFactory(logger, config)
+	require.NotNil(t, factory)
+	
+	runtime, err := factory.CreateRuntime("unsupported")
+	assert.Error(t, err)
+	assert.Nil(t, runtime)
+	assert.Contains(t, err.Error(), "不支持的语言类型")
+}
+
+func TestPythonRuntime_ValidateCode(t *testing.T) {
+	// 设置测试环境变量
+	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
+	
+	runtime, err := NewPythonRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
@@ -91,70 +149,56 @@ func TestRuntime_ValidateCode(t *testing.T) {
 	
 	ctx := context.Background()
 	
-	// 测试JavaScript代码验证
-	t.Run("ValidJavaScript", func(t *testing.T) {
-		validJS := `
-			function add(a, b) {
-				return a + b;
-			}
-			console.log(add(1, 2));
-		`
-		assert.True(t, runtime.ValidateCode(ctx, validJS, "javascript"))
-	})
+	// 测试空代码
+	assert.False(t, runtime.ValidateCode(ctx, "", "python"))
 	
-	// 测试Python代码验证
-	t.Run("ValidPython", func(t *testing.T) {
-		validPython := `
-def add(a, b):
-    return a + b
+	// 测试简单有效代码
+	assert.True(t, runtime.ValidateCode(ctx, "print('hello')", "python"))
+	
+	// 测试括号不匹配的代码
+	assert.False(t, runtime.ValidateCode(ctx, "print('hello'", "python"))
+}
 
-print(add(1, 2))
-		`
-		assert.True(t, runtime.ValidateCode(ctx, validPython, "python"))
-	})
+func TestJavaScriptRuntime_ValidateCode(t *testing.T) {
+	// 设置测试环境变量
+	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
 	
-	// 测试无效代码
-	t.Run("InvalidCode", func(t *testing.T) {
-		invalidCode := `function test() { console.log("unclosed`
-		assert.False(t, runtime.ValidateCode(ctx, invalidCode, "javascript"))
-	})
+	runtime, err := NewJavaScriptRuntime(config, logger)
+	require.NoError(t, err)
+	require.NotNil(t, runtime)
+	
+	defer func() {
+		err := runtime.Cleanup()
+		assert.NoError(t, err)
+	}()
+	
+	ctx := context.Background()
 	
 	// 测试空代码
-	t.Run("EmptyCode", func(t *testing.T) {
-		assert.False(t, runtime.ValidateCode(ctx, "", "javascript"))
-	})
+	assert.False(t, runtime.ValidateCode(ctx, "", "javascript"))
 	
-	// 测试不支持的语言
-	t.Run("UnsupportedLanguage", func(t *testing.T) {
-		assert.False(t, runtime.ValidateCode(ctx, "print('test')", "unsupported"))
-	})
+	// 测试简单有效代码
+	assert.True(t, runtime.ValidateCode(ctx, "console.log('hello');", "javascript"))
+	
+	// 测试括号不匹配的代码
+	assert.False(t, runtime.ValidateCode(ctx, "console.log('hello'", "javascript"))
 }
 
-func TestRuntime_HTTPFaaSMode(t *testing.T) {
+func TestPythonRuntime_RunCode_EmptyCode(t *testing.T) {
 	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
-	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
+	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
-	runtime, err := NewRuntime(config, logger)
+	runtime, err := NewPythonRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
@@ -163,68 +207,25 @@ func TestRuntime_HTTPFaaSMode(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 	
-	// 验证HTTP FaaS模式
-	healthStatus := runtime.GetHealthStatus()
-	assert.Equal(t, true, healthStatus["use_http_faas"])
-	assert.Equal(t, "http_faas", healthStatus["mode"])
+	ctx := context.Background()
+	
+	// 测试空代码
+	result, err := runtime.RunCode(ctx, "", "python", 5000)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "代码不能为空")
 }
 
-func TestRuntime_EnhancedMode(t *testing.T) {
-	// 测试没有设置环境变量的情况
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-	os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-	defer func() {
-		if originalPythonURL != "" {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL != "" {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
-	config := entity.DefaultSandboxConfig()
-	
-	// 应该返回错误，因为没有配置FaaS服务
-	runtime, err := NewRuntime(config, logger)
-	require.Error(t, err)
-	require.Nil(t, runtime)
-	assert.Contains(t, err.Error(), "必须配置FaaS服务URL")
-	
-	return // 跳过后续测试，因为runtime创建失败
-	
-
-}
-
-func TestRuntime_HealthStatus(t *testing.T) {
+func TestJavaScriptRuntime_RunCode_EmptyCode(t *testing.T) {
 	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
-	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
+	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
-	runtime, err := NewRuntime(config, logger)
+	runtime, err := NewJavaScriptRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
@@ -233,37 +234,25 @@ func TestRuntime_HealthStatus(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 	
-	healthStatus := runtime.GetHealthStatus()
-	assert.Equal(t, "healthy", healthStatus["status"])
-	assert.NotNil(t, healthStatus["supported_languages"])
-	assert.NotNil(t, healthStatus["use_http_faas"])
+	ctx := context.Background()
+	
+	// 测试空代码
+	result, err := runtime.RunCode(ctx, "", "javascript", 5000)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "代码不能为空")
 }
 
-func TestRuntime_Metrics(t *testing.T) {
+func TestPythonRuntime_HealthStatus(t *testing.T) {
 	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
-	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
+	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
-	runtime, err := NewRuntime(config, logger)
+	runtime, err := NewPythonRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
@@ -272,134 +261,103 @@ func TestRuntime_Metrics(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 	
-	metrics := runtime.GetMetrics()
-	assert.Equal(t, "http_faas", metrics["mode"])
-	assert.NotNil(t, metrics["runtime_type"])
+	status := runtime.GetHealthStatus()
+	assert.NotNil(t, status)
+	assert.Equal(t, "healthy", status["status"])
+	assert.Equal(t, "python", status["language"])
 }
 
-func TestRuntime_LanguageNormalization(t *testing.T) {
-	testCases := []struct {
-		input    string
-		expected string
-	}{
-		{"javascript", "js"},
-		{"js", "js"},
-		{"typescript", "js"},
-		{"ts", "js"},
-		{"python", "python"},
-		{"py", "python"},
-		{"unknown", "unknown"},
-	}
-	
-	for _, tc := range testCases {
-		t.Run(tc.input, func(t *testing.T) {
-			result := normalizeLanguage(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
-func TestRuntimeFactory_Basic(t *testing.T) {
+func TestJavaScriptRuntime_HealthStatus(t *testing.T) {
 	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
+	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
+	
+	runtime, err := NewJavaScriptRuntime(config, logger)
+	require.NoError(t, err)
+	require.NotNil(t, runtime)
+	
 	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
+		err := runtime.Cleanup()
+		assert.NoError(t, err)
 	}()
 	
+	status := runtime.GetHealthStatus()
+	assert.NotNil(t, status)
+	assert.Equal(t, "healthy", status["status"])
+	assert.Equal(t, "javascript", status["language"])
+}
+
+func TestRuntimeFactory_GetSupportedLanguages(t *testing.T) {
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
 	factory := NewRuntimeFactory(logger, config)
 	require.NotNil(t, factory)
 	
-	defer func() {
-		if cleanupFactory, ok := factory.(*RuntimeFactory); ok {
-			err := cleanupFactory.Cleanup()
-			assert.NoError(t, err)
-		}
-	}()
-	
-	// 测试支持的语言
-	supportedLanguages := factory.GetSupportedLanguages()
-	assert.Contains(t, supportedLanguages, entity.LanguageTypeJS)
-	assert.Contains(t, supportedLanguages, entity.LanguageTypePython)
-	
-	// 测试创建JavaScript运行时
-	jsRuntime, err := factory.CreateRuntime(entity.LanguageTypeJS)
-	assert.NoError(t, err)
-	assert.NotNil(t, jsRuntime)
-	
-	// 测试创建Python运行时（应该返回同一个实例）
-	pythonRuntime, err := factory.CreateRuntime(entity.LanguageTypePython)
-	assert.NoError(t, err)
-	assert.NotNil(t, pythonRuntime)
-	
-	// 验证是同一个实例（统一运行时）
-	assert.Equal(t, jsRuntime, pythonRuntime)
+	languages := factory.GetSupportedLanguages()
+	assert.Len(t, languages, 2)
+	assert.Contains(t, languages, entity.LanguageTypePython)
+	assert.Contains(t, languages, entity.LanguageTypeJS)
 }
 
-func TestRuntimeManager_Basic(t *testing.T) {
-	// 设置测试环境变量
-	originalPythonURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
-	originalJSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8890")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8891")
-	defer func() {
-		if originalPythonURL == "" {
-			os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", originalPythonURL)
-		}
-		if originalJSURL == "" {
-			os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
-		} else {
-			os.Setenv("COZE_LOOP_JS_FAAS_URL", originalJSURL)
-		}
-	}()
-	
+func TestRuntimeFactory_HealthStatus(t *testing.T) {
 	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	
+	logger.SetLevel(logrus.WarnLevel)
 	config := entity.DefaultSandboxConfig()
 	
-	factory := NewRuntimeFactory(logger, config)
-	manager := NewRuntimeManager(factory, logger)
-	require.NotNil(t, manager)
+	factory := NewRuntimeFactory(logger, config).(*RuntimeFactory)
+	require.NotNil(t, factory)
 	
-	// 测试支持的语言
-	supportedLanguages := manager.GetSupportedLanguages()
-	assert.Contains(t, supportedLanguages, entity.LanguageTypeJS)
-	assert.Contains(t, supportedLanguages, entity.LanguageTypePython)
+	status := factory.GetHealthStatus()
+	assert.NotNil(t, status)
+	assert.Equal(t, "healthy", status["status"])
+	assert.Equal(t, 0, status["cache_size"])
+}
+
+func TestRuntimeFactory_Metrics(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
 	
-	// 测试获取运行时
-	jsRuntime, err := manager.GetRuntime(entity.LanguageTypeJS)
-	assert.NoError(t, err)
-	assert.NotNil(t, jsRuntime)
+	factory := NewRuntimeFactory(logger, config).(*RuntimeFactory)
+	require.NotNil(t, factory)
 	
-	// 测试缓存（第二次获取应该返回相同实例）
-	jsRuntime2, err := manager.GetRuntime(entity.LanguageTypeJS)
-	assert.NoError(t, err)
-	assert.Equal(t, jsRuntime, jsRuntime2)
+	metrics := factory.GetMetrics()
+	assert.NotNil(t, metrics)
+	assert.Equal(t, "language_specific", metrics["factory_type"])
+	assert.Equal(t, 0, metrics["cache_size"])
+	assert.Equal(t, 2, metrics["supported_languages"])
+}
+
+func TestPythonRuntime_MissingEnvironmentVariable(t *testing.T) {
+	// 确保环境变量不存在
+	os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
 	
-	// 测试健康状态
-	healthStatus := manager.GetHealthStatus()
-	assert.Equal(t, "healthy", healthStatus["status"])
-	assert.Equal(t, 1, healthStatus["cached_runtimes"]) // 应该有一个缓存的运行时
+	runtime, err := NewPythonRuntime(config, logger)
+	assert.Error(t, err)
+	assert.Nil(t, runtime)
+	assert.Contains(t, err.Error(), "必须配置Python FaaS服务URL")
+}
+
+func TestJavaScriptRuntime_MissingEnvironmentVariable(t *testing.T) {
+	// 确保环境变量不存在
+	os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	config := entity.DefaultSandboxConfig()
 	
-	// 简化清理：只清空缓存，不进行复杂的资源清理
-	manager.ClearCache()
+	runtime, err := NewJavaScriptRuntime(config, logger)
+	assert.Error(t, err)
+	assert.Nil(t, runtime)
+	assert.Contains(t, err.Error(), "必须配置JavaScript FaaS服务URL")
 }

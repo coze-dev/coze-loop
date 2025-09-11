@@ -19,7 +19,6 @@ type RuntimeFactory struct {
 	sandboxConfig *entity.SandboxConfig
 	runtimeCache  map[entity.LanguageType]component.IRuntime
 	mutex         sync.RWMutex
-	runtime component.IRuntime // 单例统一运行时
 }
 
 // NewRuntimeFactory 创建统一运行时工厂实例
@@ -57,37 +56,33 @@ func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (compon
 		return runtime, nil
 	}
 
-	// 对于统一运行时，我们使用单例模式
-	// 因为统一运行时内部已经可以处理多种语言
-	if f.runtime == nil {
-		runtime, err := NewRuntime(f.sandboxConfig, f.logger)
+	// 根据语言类型创建对应的Runtime实例
+	var runtime component.IRuntime
+	var err error
+
+	switch languageType {
+	case entity.LanguageTypePython:
+		runtime, err = NewPythonRuntime(f.sandboxConfig, f.logger)
 		if err != nil {
-			return nil, fmt.Errorf("创建统一运行时失败: %w", err)
+			return nil, fmt.Errorf("创建Python运行时失败: %w", err)
 		}
-		f.runtime = runtime
-		
-		f.logger.WithFields(logrus.Fields{
-			"supported_languages": runtime.GetSupportedLanguages(),
-		}).Info("统一运行时创建成功")
-	}
-	
-	// 检查是否支持请求的语言类型
-	supported := false
-	for _, supportedLang := range f.GetSupportedLanguages() {
-		if supportedLang == languageType {
-			supported = true
-			break
+		f.logger.Info("Python运行时创建成功")
+
+	case entity.LanguageTypeJS:
+		runtime, err = NewJavaScriptRuntime(f.sandboxConfig, f.logger)
+		if err != nil {
+			return nil, fmt.Errorf("创建JavaScript运行时失败: %w", err)
 		}
+		f.logger.Info("JavaScript运行时创建成功")
+
+	default:
+		return nil, fmt.Errorf("不支持的语言类型: %s", languageType)
 	}
 	
-	if !supported {
-		return nil, fmt.Errorf("统一运行时不支持语言类型: %s", languageType)
-	}
+	// 缓存运行时实例
+	f.runtimeCache[languageType] = runtime
 	
-	// 缓存运行时实例（所有语言共享同一个实例）
-	f.runtimeCache[languageType] = f.runtime
-	
-	return f.runtime, nil
+	return runtime, nil
 }
 
 // GetSupportedLanguages 获取支持的语言类型列表
@@ -103,36 +98,75 @@ func (f *RuntimeFactory) Cleanup() error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 	
-	if f.runtime != nil {
-		if cleanupRuntime, ok := f.runtime.(interface{ Cleanup() error }); ok {
+	// 清理所有缓存的运行时实例
+	for languageType, runtime := range f.runtimeCache {
+		if cleanupRuntime, ok := runtime.(interface{ Cleanup() error }); ok {
 			if err := cleanupRuntime.Cleanup(); err != nil {
-				return fmt.Errorf("清理统一运行时失败: %w", err)
+				f.logger.WithError(err).WithField("language_type", languageType).Error("清理运行时失败")
+				return fmt.Errorf("清理%s运行时失败: %w", languageType, err)
 			}
 		}
-		f.runtime = nil
 	}
 	
 	// 清空缓存
 	f.runtimeCache = make(map[entity.LanguageType]component.IRuntime)
 	
+	f.logger.Info("运行时工厂清理完成")
 	return nil
 }
 
 // GetHealthStatus 获取工厂健康状态
 func (f *RuntimeFactory) GetHealthStatus() map[string]interface{} {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+	
 	status := map[string]interface{}{
 		"status":             "healthy",
 		"supported_languages": f.GetSupportedLanguages(),
 		"cache_size":         len(f.runtimeCache),
 	}
 	
-	if f.runtime != nil {
-		if healthRuntime, ok := f.runtime.(interface{ GetHealthStatus() map[string]interface{} }); ok {
-			status["runtime_health"] = healthRuntime.GetHealthStatus()
+	// 添加缓存的运行时健康状态
+	runtimeHealth := make(map[string]interface{})
+	for languageType, runtime := range f.runtimeCache {
+		if healthRuntime, ok := runtime.(interface{ GetHealthStatus() map[string]interface{} }); ok {
+			runtimeHealth[string(languageType)] = healthRuntime.GetHealthStatus()
+		} else {
+			runtimeHealth[string(languageType)] = map[string]interface{}{
+				"status": "cached",
+			}
 		}
+	}
+	if len(runtimeHealth) > 0 {
+		status["runtime_health"] = runtimeHealth
 	}
 	
 	return status
+}
+
+// GetMetrics 获取工厂指标
+func (f *RuntimeFactory) GetMetrics() map[string]interface{} {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+	
+	metrics := map[string]interface{}{
+		"factory_type":       "language_specific",
+		"cache_size":         len(f.runtimeCache),
+		"supported_languages": len(f.GetSupportedLanguages()),
+	}
+	
+	// 添加运行时指标
+	runtimeMetrics := make(map[string]interface{})
+	for languageType, runtime := range f.runtimeCache {
+		if metricsRuntime, ok := runtime.(interface{ GetMetrics() map[string]interface{} }); ok {
+			runtimeMetrics[string(languageType)] = metricsRuntime.GetMetrics()
+		}
+	}
+	if len(runtimeMetrics) > 0 {
+		metrics["runtime_metrics"] = runtimeMetrics
+	}
+	
+	return metrics
 }
 
 // 确保RuntimeFactory实现IRuntimeFactory接口
