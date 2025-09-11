@@ -121,7 +121,8 @@ export const usePrompt = ({
             res.prompt?.prompt_commit || { detail: res.default_config };
 
           setTemplateType(
-            currentPromptDetail?.detail?.prompt_template?.template_type,
+            currentPromptDetail?.detail?.prompt_template?.template_type ||
+              TemplateType.Normal,
           );
 
           const messageList =

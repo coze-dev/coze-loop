@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-/* eslint-disable max-lines-per-function */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable security/detect-non-literal-regexp */
 /* eslint-disable @coze-arch/max-line-per-function */
@@ -341,28 +341,6 @@ export const PromptEditor = forwardRef(
                 borderless
                 disabled={readonly}
                 style={{ border: 0, borderRadius: 0 }}
-                onInput={event => {
-                  // 获取当前输入的值
-                  const target = event.target as HTMLInputElement;
-                  if (target) {
-                    let { value } = target;
-                    // 如果输入为空，不做处理
-                    if (value === '') {
-                      return;
-                    }
-                    // 确保首字母是字母
-                    if (!/^[A-Za-z]/.test(value)) {
-                      // 如果首字母不是字母，去掉首字母
-                      value = value.slice(1);
-                    }
-
-                    // 确保其余部分只包含字母、数字和下划线
-                    value = value.replace(/[^A-Za-z0-9_]/g, '');
-
-                    // 更新输入框的值
-                    target.value = value;
-                  }
-                }}
                 maxLength={VARIABLE_MAX_LEN}
                 max={50}
                 className="!pl-3 font-sm"

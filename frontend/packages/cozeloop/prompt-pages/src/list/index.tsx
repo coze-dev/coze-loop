@@ -1,7 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable max-len */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useRef, useState } from 'react';
