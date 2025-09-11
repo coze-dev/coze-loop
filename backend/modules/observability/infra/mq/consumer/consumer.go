@@ -19,5 +19,6 @@ func NewConsumerWorkers(
 		newTaskConsumer(taskConsumer, loader),
 		newCallbackConsumer(taskConsumer, loader),
 		newCorrectionConsumer(taskConsumer, loader),
+		newBackFillConsumer(taskConsumer, loader),
 	}, nil
 }
