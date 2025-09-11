@@ -13,7 +13,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
 )
 
 var localExptSvc experimentservice.Client
@@ -167,47 +166,11 @@ func ExportExptResult(ctx context.Context, c *app.RequestContext) {
 // ListExptResultExportRecord .
 // @router /api/evaluation/v1/experiments/:expt_id/export_records/list [POST]
 func ListExptResultExportRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.ListExptResultExportRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp, err := localExptSvc.ListExptResultExportRecord(ctx, &req)
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	if noescaped, err := js_conv.UnescapedMarshal(resp); err == nil {
-		c.Data(consts.StatusOK, "application/json", noescaped)
-	} else {
-		c.JSON(consts.StatusOK, resp)
-	}
+	invokeAndRender(ctx, c, localExptSvc.ListExptResultExportRecord)
 }
 
 // GetExptResultExportRecord .
 // @router /api/evaluation/v1/experiments/:expt_id/export_records/:export_id [POST]
 func GetExptResultExportRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.GetExptResultExportRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp, err := localExptSvc.GetExptResultExportRecord(ctx, &req)
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	if noescaped, err := js_conv.UnescapedMarshal(resp); err == nil {
-		c.Data(consts.StatusOK, "application/json", noescaped)
-	} else {
-		c.JSON(consts.StatusOK, resp)
-	}
+	invokeAndRender(ctx, c, localExptSvc.GetExptResultExportRecord)
 }
