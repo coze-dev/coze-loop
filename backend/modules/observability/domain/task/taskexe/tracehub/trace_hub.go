@@ -6,6 +6,7 @@ package tracehub
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -73,6 +74,9 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	var tags []metrics.T
 	// 1、转换成标准span，并根据space_id初步过滤
 	span := rawSpan.RawSpanConvertToLoopSpan()
+	if slices.Contains([]string{"Evaluator"}, span.CallType) {
+		return nil
+	}
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	spaceList, _ := h.taskRepo.GetObjListWithTask(ctx)
 	logs.CtxInfo(ctx, "space list: %v", spaceList)

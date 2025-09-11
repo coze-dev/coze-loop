@@ -89,6 +89,33 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	if s == nil {
 		return nil
 	}
+	systemTagsString := make(map[string]string)
+	systemTagsLong := make(map[string]int64)
+	systemTagsDouble := make(map[string]float64)
+	tagsString := make(map[string]string)
+	tagsLong := make(map[string]int64)
+	tagsDouble := make(map[string]float64)
+	tagsBool := make(map[string]bool)
+	tagsByte := make(map[string]string)
+	for k, v := range s.Tags {
+		switch v.(type) {
+		case string:
+			tagsString[k] = v.(string)
+		case int64:
+			tagsLong[k] = v.(int64)
+		case float64:
+			tagsDouble[k] = v.(float64)
+		case bool:
+			tagsBool[k] = v.(bool)
+		case []byte:
+			tagsByte[k] = string(v.([]byte))
+		default:
+			tagsString[k] = ""
+		}
+	}
+	tagsLong["input_tokens"] = s.SensitiveTags.InputTokens
+	tagsLong["output_tokens"] = s.SensitiveTags.OutputTokens
+	tagsLong["tokens"] = s.SensitiveTags.Tokens
 
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs / 1000,
@@ -98,7 +125,7 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		TraceID:          s.TraceID,
 		DurationMicros:   s.DurationInUs / 1000,
 		PSM:              s.ServerEnv.PSM,
-		CallType:         "",
+		CallType:         s.Tags["call_type"].(string),
 		WorkspaceID:      s.Tags["fornax_space_id"].(string),
 		SpanName:         s.SpanName,
 		SpanType:         s.SpanType,
@@ -106,15 +133,14 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		StatusCode:       s.StatusCode,
 		Input:            s.SensitiveTags.Input,
 		Output:           s.SensitiveTags.Output,
-		ObjectStorage:    "",
-		SystemTagsString: nil,
-		SystemTagsLong:   nil,
-		SystemTagsDouble: nil,
-		TagsString:       nil,
-		TagsLong:         nil,
-		TagsDouble:       nil,
-		TagsBool:         nil,
-		TagsByte:         nil,
+		SystemTagsString: systemTagsString,
+		SystemTagsLong:   systemTagsLong,
+		SystemTagsDouble: systemTagsDouble,
+		TagsString:       tagsString,
+		TagsLong:         tagsLong,
+		TagsDouble:       tagsDouble,
+		TagsBool:         tagsBool,
+		TagsByte:         tagsByte,
 	}
 
 	return result
