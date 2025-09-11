@@ -385,6 +385,9 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 		result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
 		for i, fs := range fieldSchemas {
 			key := fs.GetKey()
+			if key == "" {
+				key = fs.GetName()
+			}
 			name := fs.GetName()
 			description := fs.GetDescription()
 			textSchema := fs.GetTextSchema()
