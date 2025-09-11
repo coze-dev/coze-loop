@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { safeParseJson } from '@cozeloop/toolkit';
+import { SchemaEditor } from '@cozeloop/prompt-components';
 import { handleCopy, TooltipWhenDisabled } from '@cozeloop/components';
 import { ToolType } from '@cozeloop/api-schema/prompt';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
@@ -19,7 +20,6 @@ import {
   Toast,
   Typography,
 } from '@coze-arch/coze-design';
-import { SchemaEditor } from '@cozeloop/prompt-components';
 
 import { type ToolWithMock } from '.';
 interface ToolModalProps {
@@ -33,16 +33,6 @@ interface ToolModalProps {
     oldData?: ToolWithMock,
   ) => void;
   onClose?: () => void;
-}
-
-interface SchemaEditorProps {
-  value?: string;
-  readOnly?: boolean;
-  onChange?: (value?: string) => void;
-  language?: string;
-  placeholder?: string;
-  showLineNumbs?: boolean;
-  className?: string;
 }
 
 const TEMPLATE_DATA = `{

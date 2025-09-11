@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnItem,
   ColumnSelector,
   dealColumnsWithStorage,
   setColumnsManageStorage,
 } from '@cozeloop/components';
-import { Tooltip, type ColumnProps } from '@coze-arch/coze-design';
+import { type ColumnProps } from '@coze-arch/coze-design';
 
 type CustomColumnItem = ColumnItem & {
   column: ColumnProps;
