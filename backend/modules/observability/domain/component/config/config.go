@@ -115,7 +115,7 @@ type ITraceConfig interface {
 	GetTraceDataMaxDurationDay(ctx context.Context, platformType *string) int64
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
-	GetQueryMaxQPSBySpace(ctx context.Context, workspaceID int64) (int, error)
+	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
 
 	conf.IConfigLoader
 }

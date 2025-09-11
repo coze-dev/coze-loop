@@ -130,19 +130,19 @@ func (mr *MockITraceConfigMockRecorder) GetPlatformTenants(ctx any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformTenants", reflect.TypeOf((*MockITraceConfig)(nil).GetPlatformTenants), ctx)
 }
 
-// GetQueryMaxQPSBySpace mocks base method.
-func (m *MockITraceConfig) GetQueryMaxQPSBySpace(ctx context.Context, workspaceID int64) (int, error) {
+// GetQueryMaxQPS mocks base method.
+func (m *MockITraceConfig) GetQueryMaxQPS(ctx context.Context, key string) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetQueryMaxQPSBySpace", ctx, workspaceID)
+	ret := m.ctrl.Call(m, "GetQueryMaxQPS", ctx, key)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetQueryMaxQPSBySpace indicates an expected call of GetQueryMaxQPSBySpace.
-func (mr *MockITraceConfigMockRecorder) GetQueryMaxQPSBySpace(ctx, workspaceID any) *gomock.Call {
+// GetQueryMaxQPS indicates an expected call of GetQueryMaxQPS.
+func (mr *MockITraceConfigMockRecorder) GetQueryMaxQPS(ctx, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryMaxQPSBySpace", reflect.TypeOf((*MockITraceConfig)(nil).GetQueryMaxQPSBySpace), ctx, workspaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetQueryMaxQPS), ctx, key)
 }
 
 // GetSystemViews mocks base method.

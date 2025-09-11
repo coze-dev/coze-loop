@@ -8,6 +8,7 @@ import "context"
 const (
 	AuthActionTraceRead          = "readLoopTrace"
 	AuthActionTraceIngest        = "ingestLoopTrace"
+	AuthActionTraceList          = "listLoopTrace"
 	AuthActionTraceViewCreate    = "createLoopTraceView"
 	AuthActionTraceViewList      = "listLoopTraceView"
 	AuthActionTraceViewEdit      = "edit"

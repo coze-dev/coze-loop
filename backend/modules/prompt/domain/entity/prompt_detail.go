@@ -66,9 +66,10 @@ const (
 )
 
 type ContentPart struct {
-	Type     ContentType `json:"type"`
-	Text     *string     `json:"text,omitempty"`
-	ImageURL *ImageURL   `json:"image_url,omitempty"`
+	Type       ContentType `json:"type"`
+	Text       *string     `json:"text,omitempty"`
+	ImageURL   *ImageURL   `json:"image_url,omitempty"`
+	Base64Data *string     `json:"base64_data,omitempty"`
 }
 
 type ContentType string
@@ -76,6 +77,7 @@ type ContentType string
 const (
 	ContentTypeText              ContentType = "text"
 	ContentTypeImageURL          ContentType = "image_url"
+	ContentTypeBase64Data        ContentType = "base64_data"
 	ContentTypeMultiPartVariable ContentType = "multi_part_variable"
 )
 

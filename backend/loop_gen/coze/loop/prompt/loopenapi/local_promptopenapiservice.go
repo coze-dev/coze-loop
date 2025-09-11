@@ -3,11 +3,15 @@ package loopenapi // import github.com/coze-dev/coze-loop/backend/loopenapi
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/client/callopt/streamcall"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi/promptopenapiservice"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/infra/kitex/localstream"
 )
 
 type LocalPromptOpenAPIService struct {
@@ -41,6 +45,49 @@ func (l *LocalPromptOpenAPIService) BatchGetPromptByPromptKey(ctx context.Contex
 		return nil, err
 	}
 	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) Execute(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...callopt.Option) (*openapi.ExecuteResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceExecuteArgs)
+		result := out.(*openapi.PromptOpenAPIServiceExecuteResult)
+		resp, err := l.impl.Execute(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceExecuteArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceExecuteResult{}
+	ctx = l.injectRPCInfo(ctx, "Execute")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...streamcall.Option) (stream promptopenapiservice.PromptOpenAPIService_ExecuteStreamingClient, err error) {
+	ctx = l.injectRPCInfo(ctx, "ExecuteStreaming")
+	errCh := make(chan error)
+	msgCh := make(chan *openapi.ExecuteStreamingResponse)
+	ls := localstream.NewInMemStream(ctx, msgCh, errCh)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				errCh <- fmt.Errorf("panic recovered: %v", r)
+			}
+		}()
+		defer func() { _ = ls.CloseSend(ctx) }()
+
+		if err := l.impl.ExecuteStreaming(ctx, req, ls); err != nil {
+			errCh <- err
+		}
+	}()
+
+	return ls, nil
 }
 
 func (l *LocalPromptOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {

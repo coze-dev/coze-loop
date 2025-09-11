@@ -11,11 +11,12 @@ import (
 
 type Settings struct {
 	// query parameters
-	WorkspaceId    int64
-	PlatformType   loop_span.PlatformType
-	QueryStartTime int64 // ms
-	QueryEndTime   int64 // ms
-	Tenant         string
+	WorkspaceId           int64
+	ThirdPartyWorkspaceID string
+	PlatformType          loop_span.PlatformType
+	QueryStartTime        int64 // ms
+	QueryEndTime          int64 // ms
+	Tenant                string
 }
 
 type Factory interface {
