@@ -37,43 +37,50 @@ class JavaScriptExecutor {
     this.executionCount++;
     
     const wrappedCode = `
-const originalLog = console.log;
-const originalError = console.error;
-let stdout = '';
-let stderr = '';
+let userStdout = '';
+let userStderr = '';
 let returnValue = '';
 
-// 捕获用户的console.log输出
+// 重定向console输出
+const originalLog = console.log;
+const originalError = console.error;
+
 console.log = (...args) => {
-  stdout += args.join(' ') + '\\n';
-  originalLog(...args);
+  userStdout += args.join(' ') + '\\n';
 };
 
 console.error = (...args) => {
-  stderr += args.join(' ') + '\\n';
-  originalError(...args);
+  userStderr += args.join(' ') + '\\n';
 };
 
-// 实现return_val函数来捕获返回值
+// 保留return_val函数以兼容现有代码
 function return_val(value) {
-  returnValue = value;
+  returnValue = typeof value === 'string' ? value : JSON.stringify(value);
 }
 
 try {
-  // 执行用户代码
-  ${code}
+  // 将用户代码包装在函数中，获取返回值
+  const userFunction = new Function(\`
+    \${${JSON.stringify(code)}}
+  \`);
   
-  // 输出最终结果给FaaS服务解析
-  console.log(JSON.stringify({
-    stdout: stdout,
-    stderr: stderr,
-    ret_val: returnValue
+  const result = userFunction();
+  
+  // 如果用户调用了return_val函数，优先使用其值
+  // 否则使用代码执行的返回值
+  const finalRetVal = returnValue || (result !== undefined ? JSON.stringify(result) : '');
+  
+  // 使用原始console.log输出结果
+  originalLog(JSON.stringify({
+    stdout: userStdout,
+    stderr: userStderr,
+    ret_val: finalRetVal
   }));
 } catch (error) {
-  console.error(JSON.stringify({
-    stdout: stdout,
-    stderr: stderr + error.message,
-    ret_val: null
+  originalLog(JSON.stringify({
+    stdout: userStdout,
+    stderr: userStderr + error.message + '\\n',
+    ret_val: ''
   }));
 }
     `;
@@ -114,27 +121,31 @@ try {
       const stderrText = new TextDecoder().decode(stderr);
       
       if (exitCode === 0 && stdoutText.trim()) {
-        try {
-          const result = JSON.parse(stdoutText.trim());
-          return {
-            stdout: result.stdout || "",
-            stderr: result.stderr || stderrText,
-            returnValue: result.ret_val || ""
-          };
-        } catch {
-          return {
-            stdout: stdoutText,
-            stderr: stderrText,
-            returnValue: ""
-          };
+        // 按行分割，找到最后一个有效的JSON行
+        const lines = stdoutText.trim().split('\n');
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith('{') && line.endsWith('}')) {
+            try {
+              const result = JSON.parse(line);
+              return {
+                stdout: result.stdout || "",
+                stderr: result.stderr || stderrText,
+                returnValue: result.ret_val || ""
+              };
+            } catch {
+              continue; // 尝试上一行
+            }
+          }
         }
-      } else {
-        return {
-          stdout: stdoutText,
-          stderr: stderrText,
-          returnValue: ""
-        };
       }
+      
+      // 回退逻辑：直接返回所有输出
+      return {
+        stdout: stdoutText,
+        stderr: stderrText,
+        returnValue: ""
+      };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(`Code execution timeout after ${timeout}ms`);

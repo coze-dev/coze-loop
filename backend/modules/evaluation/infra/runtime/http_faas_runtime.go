@@ -244,6 +244,21 @@ func (adapter *HTTPFaaSRuntimeAdapter) executeHTTPRequest(ctx context.Context, r
 		return nil, fmt.Errorf("解析响应失败: %w", err)
 	}
 
+	// 添加详细的调试日志
+	codePreview := request.Code
+	if len(codePreview) > 100 {
+		codePreview = codePreview[:100] + "..."
+	}
+	
+	adapter.logger.WithFields(logrus.Fields{
+		"request_code":      codePreview,
+		"response_stdout":   response.Output.Stdout,
+		"response_stderr":   response.Output.Stderr,
+		"response_ret_val":  response.Output.RetVal,
+		"response_error":    response.Error,
+		"response_details":  response.Details,
+	}).Debug("FaaS执行详细信息")
+
 	return &response, nil
 }
 
