@@ -17,8 +17,6 @@ type IRuntime interface {
 	RunCode(ctx context.Context, code string, language string, timeoutMS int64) (*entity.ExecutionResult, error)
 	// GetLanguageType 获取支持的语言类型
 	GetLanguageType() entity.LanguageType
-	// Cleanup 清理资源
-	Cleanup() error
 }
 
 // IRuntimeManager Runtime管理器接口

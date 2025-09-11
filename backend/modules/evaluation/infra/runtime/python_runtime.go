@@ -94,14 +94,6 @@ func (pr *PythonRuntime) ValidateCode(ctx context.Context, code string, language
 	return basicSyntaxValidation(code)
 }
 
-// Cleanup 清理资源
-func (pr *PythonRuntime) Cleanup() error {
-	pr.logger.Info("Python运行时清理完成")
-	if pr.httpFaaSAdapter != nil {
-		return pr.httpFaaSAdapter.Cleanup()
-	}
-	return nil
-}
 
 // GetSupportedLanguages 获取支持的语言类型列表
 func (pr *PythonRuntime) GetSupportedLanguages() []entity.LanguageType {

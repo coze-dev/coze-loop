@@ -94,14 +94,6 @@ func (jr *JavaScriptRuntime) ValidateCode(ctx context.Context, code string, lang
 	return basicSyntaxValidation(code)
 }
 
-// Cleanup 清理资源
-func (jr *JavaScriptRuntime) Cleanup() error {
-	jr.logger.Info("JavaScript运行时清理完成")
-	if jr.httpFaaSAdapter != nil {
-		return jr.httpFaaSAdapter.Cleanup()
-	}
-	return nil
-}
 
 // GetSupportedLanguages 获取支持的语言类型列表
 func (jr *JavaScriptRuntime) GetSupportedLanguages() []entity.LanguageType {

@@ -76,37 +76,11 @@ func (m *RuntimeManager) ClearCache() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	
-	// 先清理现有的运行时实例
-	for languageType, runtime := range m.cache {
-		if cleanupRuntime, ok := runtime.(interface{ Cleanup() error }); ok {
-			if err := cleanupRuntime.Cleanup(); err != nil {
-				m.logger.WithError(err).WithField("language_type", languageType).Error("清理运行时实例失败")
-			}
-		}
-	}
-	
 	m.cache = make(map[entity.LanguageType]component.IRuntime)
 	m.logger.Info("运行时缓存已清空")
 }
 
-// Cleanup 清理管理器资源
-func (m *RuntimeManager) Cleanup() error {
-	m.logger.Info("开始清理统一运行时管理器...")
-	
-	// 清空缓存（包含清理运行时实例）
-	m.ClearCache()
-	
-	// 清理工厂资源
-	if cleanupFactory, ok := m.factory.(interface{ Cleanup() error }); ok {
-		if err := cleanupFactory.Cleanup(); err != nil {
-			m.logger.WithError(err).Error("清理运行时工厂失败")
-			return err
-		}
-	}
-	
-	m.logger.Info("统一运行时管理器清理完成")
-	return nil
-}
+
 
 // GetHealthStatus 获取管理器健康状态
 func (m *RuntimeManager) GetHealthStatus() map[string]interface{} {

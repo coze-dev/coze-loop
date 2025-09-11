@@ -28,10 +28,6 @@ func TestPythonRuntime_Creation(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
 	
 	// 测试基本属性
 	assert.Equal(t, entity.LanguageTypePython, runtime.GetLanguageType())
@@ -51,10 +47,6 @@ func TestJavaScriptRuntime_Creation(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
 	
 	// 测试基本属性
 	assert.Equal(t, entity.LanguageTypeJS, runtime.GetLanguageType())
@@ -82,10 +74,7 @@ func TestRuntimeFactory_CreatePythonRuntime(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, runtime, runtime2) // 应该返回同一个实例
 	
-	defer func() {
-		err := factory.Cleanup()
-		assert.NoError(t, err)
-	}()
+
 }
 
 func TestRuntimeFactory_CreateJavaScriptRuntime(t *testing.T) {
@@ -109,10 +98,7 @@ func TestRuntimeFactory_CreateJavaScriptRuntime(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, runtime, runtime2) // 应该返回同一个实例
 	
-	defer func() {
-		err := factory.Cleanup()
-		assert.NoError(t, err)
-	}()
+
 }
 
 func TestRuntimeFactory_UnsupportedLanguage(t *testing.T) {
@@ -142,11 +128,6 @@ func TestPythonRuntime_ValidateCode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
-	
 	ctx := context.Background()
 	
 	// 测试空代码
@@ -171,11 +152,6 @@ func TestJavaScriptRuntime_ValidateCode(t *testing.T) {
 	runtime, err := NewJavaScriptRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
-	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
 	
 	ctx := context.Background()
 	
@@ -202,11 +178,6 @@ func TestPythonRuntime_RunCode_EmptyCode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
-	
 	ctx := context.Background()
 	
 	// 测试空代码
@@ -228,11 +199,6 @@ func TestJavaScriptRuntime_RunCode_EmptyCode(t *testing.T) {
 	runtime, err := NewJavaScriptRuntime(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
-	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
 	
 	ctx := context.Background()
 	
@@ -256,10 +222,7 @@ func TestPythonRuntime_HealthStatus(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
+
 	
 	status := runtime.GetHealthStatus()
 	assert.NotNil(t, status)
@@ -280,10 +243,7 @@ func TestJavaScriptRuntime_HealthStatus(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, runtime)
 	
-	defer func() {
-		err := runtime.Cleanup()
-		assert.NoError(t, err)
-	}()
+
 	
 	status := runtime.GetHealthStatus()
 	assert.NotNil(t, status)

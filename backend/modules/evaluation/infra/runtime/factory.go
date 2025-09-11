@@ -93,27 +93,6 @@ func (f *RuntimeFactory) GetSupportedLanguages() []entity.LanguageType {
 	}
 }
 
-// Cleanup 清理工厂资源
-func (f *RuntimeFactory) Cleanup() error {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-	
-	// 清理所有缓存的运行时实例
-	for languageType, runtime := range f.runtimeCache {
-		if cleanupRuntime, ok := runtime.(interface{ Cleanup() error }); ok {
-			if err := cleanupRuntime.Cleanup(); err != nil {
-				f.logger.WithError(err).WithField("language_type", languageType).Error("清理运行时失败")
-				return fmt.Errorf("清理%s运行时失败: %w", languageType, err)
-			}
-		}
-	}
-	
-	// 清空缓存
-	f.runtimeCache = make(map[entity.LanguageType]component.IRuntime)
-	
-	f.logger.Info("运行时工厂清理完成")
-	return nil
-}
 
 // GetHealthStatus 获取工厂健康状态
 func (f *RuntimeFactory) GetHealthStatus() map[string]interface{} {
