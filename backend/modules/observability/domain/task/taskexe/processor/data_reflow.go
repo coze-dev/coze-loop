@@ -62,7 +62,7 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 		DatasetCategory: category,
 		Seesion:         sessionInfo,
 	})
-	_, _, err := p.datasetServiceAdaptor.GetDatasetProvider(category).AddDatasetItems(ctx, cfg.ID, category, successItems)
+	_, _, err := p.datasetServiceAdaptor.GetDatasetProvider(category).AddDatasetItems(ctx, taskRun.TaskRunConfig.DataReflowRunConfig.DatasetID, category, successItems)
 	if err != nil {
 		return err
 	}
