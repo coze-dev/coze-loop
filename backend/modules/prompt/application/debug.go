@@ -294,9 +294,12 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		}
 		err = stream.Send(ctx, chunk)
 		if err != nil {
-			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "debug streaming canceled")
+			} else if errors.Is(err, context.DeadlineExceeded) {
+				err = nil
+				logs.CtxWarn(ctx, "debug streaming ctx deadline exceeded")
 			} else {
 				logs.CtxError(ctx, "send chunk failed, err=%v", err)
 			}
@@ -308,9 +311,12 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if !ok {
 			logs.CtxInfo(ctx, "debug streaming finished")
 		} else {
-			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "debug streaming canceled")
+			} else if errors.Is(err, context.DeadlineExceeded) {
+				err = nil
+				logs.CtxWarn(ctx, "debug streaming ctx deadline exceeded")
 			} else {
 				logs.CtxError(ctx, "debug streaming failed, err=%v", err)
 			}
