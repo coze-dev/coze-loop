@@ -29,20 +29,17 @@ services:
         print_banner "Starting..."
 
         export ROCKETMQ_GO_LOG_LEVEL=error
-        export ROCKETMQ_GO_LOG_LEVEL=error
 
-        # 在debug模式下，等待依赖服务就绪后再启动调试器
-        (
-          while true; do
-            if sh /coze-loop/bootstrap/healthcheck.sh; then
-              print_banner "Dependencies Ready!"
-              break
-            else
-              echo "等待依赖服务启动中..."
-              sleep 2
-            fi
-          done
-        ) &
-
-        # 启动主程序而不是调试器，确保8888端口正常监听
-        exec /coze-loop/bin/main
+        print_banner "Starting Go Remote Debug Server..."
+        echo "调试服务将在端口40000上监听"
+        echo "IDE连接地址: localhost:40000"
+        
+        # 不等待healthcheck，直接启动调试器
+        # 因为healthcheck检查的是8888端口，但调试模式下我们使用40000端口
+        
+        exec dlv exec /coze-loop/bin/main \
+          --headless \
+          --listen=0.0.0.0:40000 \
+          --api-version=2 \
+          --accept-multiclient \
+          --log
