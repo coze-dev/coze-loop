@@ -30,7 +30,7 @@ func newBackFillConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLo
 }
 
 func (e *BackFillConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
-	const key = "BackFill_mq_consumer_config"
+	const key = "backfill_mq_consumer_config"
 	cfg := &config.MqConsumerCfg{}
 	if err := e.UnmarshalKey(ctx, key, cfg); err != nil {
 		return nil, err
