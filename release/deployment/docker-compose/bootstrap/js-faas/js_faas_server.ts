@@ -53,28 +53,26 @@ console.error = (...args) => {
   userStderr += args.join(' ') + '\\n';
 };
 
-// 保留return_val函数以兼容现有代码
-function return_val(value) {
-  returnValue = typeof value === 'string' ? value : JSON.stringify(value);
-}
-
 try {
-  // 将用户代码包装在函数中，获取返回值
-  const userFunction = new Function(\`
+  // 先执行用户代码，然后重新定义return_val函数并重新执行调用
+  eval(\`
+    // 执行用户代码
     \${${JSON.stringify(code)}}
+    
+    // 重新定义return_val函数来捕获返回值
+    function return_val(value) {
+      returnValue = typeof value === 'string' ? value : JSON.stringify(value);
+    }
+    
+    // 重新执行return_val调用以捕获值
+    \${${JSON.stringify(this.extractReturnValCalls(code))}}
   \`);
-  
-  const result = userFunction();
-  
-  // 如果用户调用了return_val函数，优先使用其值
-  // 否则使用代码执行的返回值
-  const finalRetVal = returnValue || (result !== undefined ? JSON.stringify(result) : '');
   
   // 使用原始console.log输出结果
   originalLog(JSON.stringify({
     stdout: userStdout,
     stderr: userStderr,
-    ret_val: finalRetVal
+    ret_val: returnValue
   }));
 } catch (error) {
   originalLog(JSON.stringify({
@@ -154,6 +152,50 @@ try {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private preprocessUserCode(code: string): string {
+    // 简化方案：在用户代码执行环境中直接重定义return_val函数
+    const processedCode = `
+// 先定义我们的捕获函数
+let _systemReturnValue = '';
+function _captureReturnVal(value) {
+  _systemReturnValue = typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+// 执行用户代码
+${code}
+
+// 重新定义return_val并重新执行相关调用
+const originalReturnVal = globalThis.return_val;
+globalThis.return_val = _captureReturnVal;
+
+// 重新执行return_val调用以捕获值
+try {
+  ${this.extractReturnValCalls(code)}
+} catch (e) {
+  // 忽略重新执行的错误
+}
+
+// 将捕获的值赋给全局returnValue
+if (typeof returnValue !== 'undefined' && _systemReturnValue) {
+  returnValue = _systemReturnValue;
+}
+`;
+    
+    return processedCode;
+  }
+  
+  private extractReturnValCalls(code: string): string {
+    // 提取代码中的return_val调用
+    const lines = code.split('\n');
+    const returnValCalls = lines.filter(line => 
+      line.trim().includes('return_val(') && 
+      !line.trim().startsWith('function') &&
+      !line.trim().startsWith('//')
+    );
+    
+    return returnValCalls.join('\n');
   }
 
   private async cleanup(tempFile: string): Promise<void> {
