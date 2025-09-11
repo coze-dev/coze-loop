@@ -32,6 +32,7 @@ type ITraceHubService interface {
 	TraceHub(ctx context.Context, event *entity.RawSpan) error
 	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
 	Correction(ctx context.Context, event *entity.CorrectionEvent) error
+	BackFill(ctx context.Context, event *entity.BackFillEvent) error
 }
 
 func NewTraceHubImpl(
