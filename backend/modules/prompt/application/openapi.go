@@ -424,8 +424,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 	// 执行prompt流式调用
 	resultStream := make(chan *entity.Reply)
-	errChan := make(chan error)
-	replyResultChan := make(chan *entity.Reply, 1) // 用于接收aggregatedReply，避免数据竞争
+	type replyResult struct {
+		Reply *entity.Reply
+		Err   error
+	}
+	replyResultChan := make(chan replyResult) // 用于接收aggregatedReply, error，避免数据竞争
 	goroutine.GoSafe(ctx, func() {
 		var executeErr error
 		var localAggregatedReply *entity.Reply
@@ -436,12 +439,10 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			}
 			// 确保errChan和resultStream被关闭
 			close(resultStream)
-			if executeErr != nil {
-				errChan <- executeErr
-			} else {
-				replyResultChan <- localAggregatedReply
+			replyResultChan <- replyResult{
+				Reply: localAggregatedReply,
+				Err:   executeErr,
 			}
-			close(errChan)
 			close(replyResultChan)
 		}()
 
@@ -482,23 +483,19 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			return promptDO, nil, err
 		}
 	}
-	var ok bool
 	select { //nolint:staticcheck
-	case err, ok = <-errChan:
-		if !ok {
+	case result := <-replyResultChan:
+		if result.Err == nil {
 			logs.CtxInfo(ctx, "execute streaming finished")
+			return promptDO, result.Reply, nil
 		} else {
-			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
-				err = nil
+			if st, ok := status.FromError(result.Err); ok && st.Code() == codes.Canceled {
 				logs.CtxWarn(ctx, "execute streaming canceled")
 			} else {
-				logs.CtxError(ctx, "execute streaming failed, err=%v", err)
+				logs.CtxError(ctx, "execute streaming failed, err=%v", result.Err)
 			}
+			return promptDO, nil, result.Err
 		}
-		return promptDO, aggregatedReply, err
-	case aggregatedReply = <-replyResultChan:
-		logs.CtxInfo(ctx, "execute streaming finished")
-		return promptDO, aggregatedReply, nil
 	}
 }
 
