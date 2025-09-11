@@ -57,11 +57,14 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	}
 
 	category := getCategory(cfg.TaskType)
-	successItems, _, _ := buildDatasetItems(ctx, []*loop_span.Span{trigger.Span}, mapping, workspaceID, &entity.Dataset{
-		ID:              taskRun.TaskRunConfig.GetDataReflowRunConfig().GetDatasetID(),
-		DatasetCategory: category,
-		Seesion:         sessionInfo,
-	})
+	successItems, _, _ := buildDatasetItems(ctx, []*loop_span.Span{trigger.Span}, mapping, workspaceID, entity.NewDataset(
+		taskRun.TaskRunConfig.GetDataReflowRunConfig().GetDatasetID(),
+		workspaceID,
+		"",
+		category,
+		convertDatasetSchemaDTO2DO(trigger.Task.TaskConfig.DataReflowConfig[0].GetDatasetSchema()),
+		sessionInfo,
+	))
 	_, _, err := p.datasetServiceAdaptor.GetDatasetProvider(category).AddDatasetItems(ctx, taskRun.TaskRunConfig.DataReflowRunConfig.DatasetID, category, successItems)
 	if err != nil {
 		return err
