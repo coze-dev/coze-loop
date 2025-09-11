@@ -311,7 +311,6 @@ volumes:
   rmq_broker_data:
     name: coze-loop_rocketmq_broker_data
   nginx_data:
-    name: coze-loop_nginx_data
 
 networks:
   coze-loop-network:

@@ -20,11 +20,32 @@ COPY ./backend/ /coze-loop/src/backend/
 RUN mkdir -p ./bin && \
     go -C /coze-loop/src/backend build -gcflags="all=-N -l" -buildvcs=false -o /coze-loop/bin/main "./cmd"
 
+# Minimal Node.js image (with Node.js + npm), additionally installs Rush to build frontend artifacts
+FROM node:20.13.1-alpine AS frontend_builder
+
+# 1. Install basic tools (curl, bash, etc.) for alpine
+RUN apk add --no-cache bash
+
+# 2. Install pnpm and Rush
+RUN corepack enable && \
+    corepack prepare pnpm@8.15.8 --activate && \
+    npm install -g @microsoft/rush@5.147.1
+
+WORKDIR /coze-loop
+
+# 3. Build frontend
+COPY ./frontend/ /coze-loop/src/frontend/
+COPY ./common/ /coze-loop/src/common/
+COPY ./rush.json /coze-loop/src/rush.json
+RUN mkdir -p /coze-loop/resources && \
+    sh /coze-loop/src/frontend/apps/cozeloop/build-artifact.sh /coze-loop/resources
+
 # Final minimal image (coze-loop)
-FROM ${COZE_LOOP_APP_IMAGE_REGISTRY:-docker.io}/${COZE_LOOP_APP_IMAGE_REPOSITORY:-cozedev}/${COZE_LOOP_APP_IMAGE_NAME:-coze-loop}:${COZE_LOOP_APP_IMAGE_TAG:-latest}
+FROM alpine:3.22.0
 
 WORKDIR /coze-loop
 
 # Copy build artifacts
 COPY --from=backend_builder /coze-loop/bin/main /coze-loop/bin/main
 COPY --from=backend_builder /go/bin/dlv /usr/local/bin/dlv
+COPY --from=frontend_builder /coze-loop/resources/ /coze-loop/resources/
