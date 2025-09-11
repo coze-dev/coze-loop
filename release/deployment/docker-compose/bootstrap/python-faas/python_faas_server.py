@@ -42,16 +42,22 @@ class PythonExecutor:
             # 2. 创建一个新的命名空间执行代码
             namespace = {
                 '__builtins__': __builtins__,
-                'return_val': self._capture_return_val
+                'return_val': self._capture_return_val,
+                '_return_val_output': None  # 初始化全局变量
             }
             
             with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
                 exec(code, namespace, namespace)
             
+            # 检查是否通过全局变量设置了返回值
+            return_value = namespace.get('_return_val_output')
+            if return_value is None:
+                return_value = self.return_val_output
+            
             return {
                 "stdout": stdout_capture.getvalue(),
                 "stderr": stderr_capture.getvalue(),
-                "returnValue": self.return_val_output if self.return_val_output is not None else ""
+                "returnValue": return_value if return_value is not None else ""
             }
         except Exception as e:
             return {

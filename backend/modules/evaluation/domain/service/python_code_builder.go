@@ -99,11 +99,14 @@ func (b *PythonCodeBuilder) getReturnValFunction() string {
 # return_val函数实现
 def return_val(value):
     """
-    标准return_val函数实现 - 输出返回值供FaaS服务捕获
+    标准return_val函数实现 - 设置返回值到ret_val字段
     Args:
         value: 要返回的值，通常是JSON字符串
     """
-    print(value, flush=True)
+    # 这里不使用print，而是设置一个全局变量
+    # 该变量会被FaaS服务器捕获到ret_val字段
+    global _return_val_output
+    _return_val_output = value
 `
 }
 
