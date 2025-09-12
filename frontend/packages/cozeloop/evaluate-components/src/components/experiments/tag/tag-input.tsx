@@ -240,7 +240,7 @@ export const CategoryLabel = ({
 
   const optionList = useMemo(
     () =>
-      (annotation.tag_values || [])
+      [...(annotation.tag_values || [])]
         .sort(a => (a.status === tag.TagStatus.Inactive ? 1 : -1))
         .map(item => ({
           value: item.tag_value_id,
