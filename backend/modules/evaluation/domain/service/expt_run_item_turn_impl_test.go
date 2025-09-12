@@ -117,7 +117,7 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 						Session: &entity.Session{UserID: "1"},
 					},
 					Expt: &entity.Experiment{
-						ExptType:       entity.ExptType_Offline,
+						ExptType:        entity.ExptType_Offline,
 						TargetVersionID: 1,
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
@@ -294,7 +294,7 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					Expt: &entity.Experiment{
-						ExptType:       entity.ExptType_Offline,
+						ExptType:        entity.ExptType_Offline,
 						TargetVersionID: 1,
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
@@ -326,7 +326,7 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					Expt: &entity.Experiment{
-						ExptType:       entity.ExptType_Offline,
+						ExptType:        entity.ExptType_Offline,
 						TargetVersionID: 1,
 						Target: &entity.EvalTarget{
 							ID:                1,

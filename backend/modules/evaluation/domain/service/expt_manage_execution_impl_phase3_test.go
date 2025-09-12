@@ -33,9 +33,9 @@ func TestExptMangerImpl_checkTargetConnector_WithRuntimeParam(t *testing.T) {
 		{
 			name: "valid_runtime_param_success",
 			expt: &entity.Experiment{
-				ID:             1,
+				ID:              1,
 				TargetVersionID: 1,
-				TargetType:     entity.EvalTargetTypeLoopPrompt,
+				TargetType:      entity.EvalTargetTypeLoopPrompt,
 				Target: &entity.EvalTarget{
 					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
@@ -96,9 +96,9 @@ func TestExptMangerImpl_checkTargetConnector_WithRuntimeParam(t *testing.T) {
 		{
 			name: "invalid_runtime_param_format_error",
 			expt: &entity.Experiment{
-				ID:             1,
+				ID:              1,
 				TargetVersionID: 1,
-				TargetType:     entity.EvalTargetTypeLoopPrompt,
+				TargetType:      entity.EvalTargetTypeLoopPrompt,
 				Target: &entity.EvalTarget{
 					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
