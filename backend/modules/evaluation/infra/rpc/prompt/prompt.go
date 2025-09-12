@@ -26,10 +26,6 @@ type PromptRPCAdapter struct {
 	executeClient promptexecuteservice.Client
 }
 
-func (p PromptRPCAdapter) BatchCheckOptimizeTaskFree(ctx context.Context, spaceID int64, arkTaskIDs []string) (map[string]bool, error) {
-	return nil, nil // 商业化专有逻辑
-}
-
 func NewPromptRPCAdapter(client promptmanageservice.Client, executeClient promptexecuteservice.Client) rpc.IPromptRPCAdapter {
 	return &PromptRPCAdapter{
 		client:        client,
