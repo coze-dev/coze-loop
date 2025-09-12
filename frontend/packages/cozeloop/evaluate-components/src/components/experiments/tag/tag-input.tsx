@@ -239,55 +239,63 @@ export const CategoryLabel = ({
   const { getTagDetailURL } = useResourcePageJump();
 
   const optionList = useMemo(
-    () =>
-      [...(annotation.tag_values || [])]
-        .sort(a => (a.status === tag.TagStatus.Inactive ? 1 : -1))
-        .map(item => ({
-          value: item.tag_value_id,
-          disabled: item.status === tag.TagStatus.Inactive,
-          tagName: item.tag_value_name,
-          label: (
-            <TooltipWhenDisabled
-              content={
-                <div>
-                  <span className="mr-1">
-                    {I18n.t(
-                      'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
-                    )}
-                  </span>
-                  <TagDetailLink tagKey={annotation.tag_key_id} />
-                </div>
-              }
-              spacing={40}
-              position="left"
-              theme="dark"
-              disabled={
-                item.status !== tag.TagStatus.Active &&
-                selectProps.value === item.tag_value_id
-              }
-            >
-              <div className="group flex items-center w-full h-8 overflow-hidden px-2">
-                <div className="flex-1 min-w-0">
-                  <TypographyText
-                    className={classNames('max-w-full overflow-hidden', {
-                      '!coz-fg-dim': item.status !== tag.TagStatus.Active,
-                    })}
-                  >
-                    {item.tag_value_name}
-                  </TypographyText>
-                </div>
-
-                <IconCozLongArrowTopRight
-                  className="ml-1 text-brand-9 shrink-0 cursor-pointer invisible group-hover:visible"
-                  onClick={e => {
-                    e.stopPropagation();
-                    window.open(getTagDetailURL(annotation.tag_key_id || ''));
-                  }}
-                />
+    () => {
+      // 禁用的放后面
+      const arr = [
+        ...(annotation.tag_values || []).filter(
+          e => e.status !== tag.TagStatus.Inactive,
+        ),
+        ...(annotation.tag_values || []).filter(
+          e => e.status === tag.TagStatus.Inactive,
+        ),
+      ];
+      return arr.map(item => ({
+        value: item.tag_value_id,
+        disabled: item.status === tag.TagStatus.Inactive,
+        tagName: item.tag_value_name,
+        label: (
+          <TooltipWhenDisabled
+            content={
+              <div>
+                <span className="mr-1">
+                  {I18n.t(
+                    'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
+                  )}
+                </span>
+                <TagDetailLink tagKey={annotation.tag_key_id} />
               </div>
-            </TooltipWhenDisabled>
-          ),
-        })),
+            }
+            spacing={40}
+            position="left"
+            theme="dark"
+            disabled={
+              item.status !== tag.TagStatus.Active &&
+              selectProps.value === item.tag_value_id
+            }
+          >
+            <div className="group flex items-center w-full h-8 overflow-hidden px-2">
+              <div className="flex-1 min-w-0">
+                <TypographyText
+                  className={classNames('max-w-full overflow-hidden', {
+                    '!coz-fg-dim': item.status !== tag.TagStatus.Active,
+                  })}
+                >
+                  {item.tag_value_name}
+                </TypographyText>
+              </div>
+
+              <IconCozLongArrowTopRight
+                className="ml-1 text-brand-9 shrink-0 cursor-pointer invisible group-hover:visible"
+                onClick={e => {
+                  e.stopPropagation();
+                  window.open(getTagDetailURL(annotation.tag_key_id || ''));
+                }}
+              />
+            </div>
+          </TooltipWhenDisabled>
+        ),
+      }));
+    },
     [annotation, selectProps.value],
   );
 
