@@ -32,6 +32,7 @@ header:
     - 'backend/modules/observability/domain/trace/entity/collector/**/*.go'
     - 'backend/modules/observability/domain/trace/service/collector/processor/queueprocessor/queue_processor.go'
     - 'frontend/packages/cozeloop/api-schema/src/api/idl'
+    - 'frontend/packages/cozeloop/api-schema/src/base.ts'
 
   comment: on-failure
 
