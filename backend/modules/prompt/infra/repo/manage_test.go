@@ -842,7 +842,7 @@ func TestManageRepoImpl_GetPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("Get with commit, but it's not found, prompt id = 1, commit version = 1.0.0"),
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("Get with commit, but it's not found, prompt id = 1, commit version = 1.0.0")),
 		},
 		{
 			name: "basic prompt only",
@@ -1531,7 +1531,7 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errorx.New("Draft's base prompt commit is not found, prompt id = 1, base commit version = 1.0.0"),
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("Draft's base prompt commit is not found, prompt id = 1, base commit version = 1.0.0")),
 		},
 		{
 			name: "create new draft",
@@ -2465,7 +2465,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 					CommitVersion: "1.0.0",
 				},
 			},
-			wantErr: errorx.New("Prompt is not found, prompt id = 1"),
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("Prompt is not found, prompt id = 1")),
 		},
 		{
 			name: "draft not found",
@@ -2503,7 +2503,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 					CommitVersion: "1.0.0",
 				},
 			},
-			wantErr: errorx.New("Prompt draft is not found, prompt id = 1, user id = test_user"),
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("Prompt draft is not found, prompt id = 1, user id = test_user")),
 		},
 		{
 			name: "commit dao error",
