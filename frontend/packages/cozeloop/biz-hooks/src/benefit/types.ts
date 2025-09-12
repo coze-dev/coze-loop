@@ -5,6 +5,7 @@ export enum EnterpriseRoleType {
   super_admin = 'SuperAdmin',
   admin = 'Admin',
   member = 'Member',
+  guest = 'Guest',
 }
 
 export enum UserLevel {

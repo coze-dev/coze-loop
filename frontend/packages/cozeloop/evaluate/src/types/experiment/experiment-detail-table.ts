@@ -5,12 +5,12 @@ import {
   type LogicFilter,
   type SemiTableSort,
 } from '@cozeloop/evaluate-components';
-import { type TurnRunState } from '@cozeloop/api-schema/evaluation';
+import { type ItemRunState } from '@cozeloop/api-schema/evaluation';
 
 import { type ExperimentItem } from './experiment-detail';
 
 export interface Filter {
-  status?: TurnRunState[];
+  status?: ItemRunState[];
 }
 
 export interface RequestParams {

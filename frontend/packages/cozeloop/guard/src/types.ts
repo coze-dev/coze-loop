@@ -28,6 +28,7 @@ export enum GuardPoint {
   'base.navbar.auth' = 'base.navbar.auth',
   'base.navbar.account_setting' = 'base.navbar.account_setting',
   'base.navbar.space_manage' = 'base.navbar.space_manage',
+  'base.navbar.auto_task' = 'base.navbar.auto_task',
   'pe.prompts.create' = 'pe.prompts.create',
   'pe.prompts.delete' = 'pe.prompts.delete',
   'pe.prompts.history' = 'pe.prompts.history',
@@ -79,6 +80,7 @@ export enum GuardPoint {
   'eval.experiment.compare' = 'eval.experiment.compare',
   'eval.experiment.edit_result' = 'eval.experiment.edit_result',
   'ob.trace.custom_view' = 'ob.trace.custom_view',
+  'ob.trace.annotation' = 'ob.trace.annotation',
   'ob.auto_task.create' = 'ob.auto_task.create',
   'ob.auto_task.evaluator_debug' = 'ob.auto_task.evaluator_debug',
   'ob.auto_task.submit_task_form' = 'ob.auto_task.submit_task_form',
@@ -89,6 +91,8 @@ export enum GuardPoint {
   'eval.datasets.search_by_creator' = 'eval.datasets.search_by_creator',
   'eval.evaluators.search_by_creator' = 'eval.evaluators.search_by_creator',
   'eval.experiments.search_by_creator' = 'eval.experiments.search_by_creator',
+  'data.label.create' = 'data.label.create',
+  'data.label.edit' = 'data.label.edit',
 }
 
 /**

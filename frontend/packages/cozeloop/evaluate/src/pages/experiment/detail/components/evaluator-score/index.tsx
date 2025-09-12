@@ -122,16 +122,18 @@ export default function EvaluatorScore({
           </EvaluatorManualScore>
         ) : null}
         {traceID ? (
-          <Tooltip theme="dark" content={I18n.t('view_evaluator_trace')}>
-            <div className="h-5" onClick={report}>
-              <TraceTrigger
-                traceID={traceID}
-                platformType={traceEvaluatorPlatformType}
-                startTime={experiment?.start_time}
-                endTime={experiment?.end_time}
-              />
-            </div>
-          </Tooltip>
+          <div className="h-5" onClick={report}>
+            <TraceTrigger
+              traceID={traceID}
+              platformType={traceEvaluatorPlatformType}
+              startTime={experiment?.start_time}
+              endTime={experiment?.end_time}
+              tooltipProps={{
+                content: I18n.t('view_evaluator_trace'),
+                theme: 'dark',
+              }}
+            />
+          </div>
         ) : null}
       </div>
     </div>

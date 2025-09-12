@@ -8,10 +8,7 @@ import { checkExperimentName } from '@/request/experiment';
 
 export const baseInfoValidators: Record<string, any[]> = {
   name: [
-    {
-      required: true,
-      message: I18n.t('please_input', { field: I18n.t('name') }),
-    },
+    { required: true, message: I18n.t('please_input_name') },
     { validator: sourceNameRuleValidator },
     {
       asyncValidator: async (_, value: string, spaceID: string) => {
@@ -23,9 +20,7 @@ export const baseInfoValidators: Record<string, any[]> = {
               name: value,
             });
             if (!result.pass) {
-              err = new Error(
-                I18n.t('field_exists', { field: I18n.t('name') }),
-              );
+              err = new Error(I18n.t('name_already_exists'));
             }
           } catch (e) {
             console.error(I18n.t('interface_problem'), e);

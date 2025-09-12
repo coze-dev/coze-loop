@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import Sortable from 'sortablejs';
 import { type PromptMessage } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { Role } from '@cozeloop/api-schema/prompt';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
 import { Button, Modal } from '@coze-arch/coze-design';
@@ -19,8 +18,8 @@ import { LoopPromptEditor } from '../loop-prompt-editor';
 interface PlaceholderModalProps {
   variableKey: string;
   visible: boolean;
-  data?: PromptMessage[];
-  onOk: (v: PromptMessage[]) => void;
+  data?: PromptMessage<string>[];
+  onOk: (v: PromptMessage<string>[]) => void;
   onCancel: () => void;
 }
 
@@ -39,7 +38,7 @@ export function PlaceholderModal({
     })),
   );
 
-  const [messageList, setMessageList] = useState<Array<PromptMessage>>(
+  const [messageList, setMessageList] = useState<Array<PromptMessage<string>>>(
     data || [],
   );
   const [isDrag, setIsDrag] = useState(false);
@@ -117,12 +116,12 @@ export function PlaceholderModal({
 
   return (
     <Modal
-      title={I18n.t('mock_message_group', { key: variableKey })}
+      title={`模拟消息组-${variableKey}`}
       visible={visible}
       onCancel={onCancel}
       width={920}
-      cancelText={I18n.t('Cancel')}
-      okText={I18n.t('confirm')}
+      cancelText="取消"
+      okText="确定"
       onOk={handleOk}
     >
       <div className="flex flex-col gap-2 h-[500px] overflow-y-auto">
@@ -164,20 +163,20 @@ export function PlaceholderModal({
               maxHeight={240}
               forbidJinjaHighlight
               forbidVariables
-              placeholder={I18n.t('please_input', {
-                field: I18n.t('mock_message'),
-              })}
+              placeholder="请输入模拟消息"
+              optimizeBtnHidden
+              modalVariableBtnHidden
             />
           ))}
         </div>
         <Button
-          className="flex-shrink-0 w-[fit-content]"
+          className="flex-shrink-0 w-[100px]"
           icon={<IconCozPlus />}
           onClick={addMessage}
           disabled={streaming || readonly}
           color="primary"
         >
-          {I18n.t('add_message')}
+          添加消息
         </Button>
       </div>
     </Modal>

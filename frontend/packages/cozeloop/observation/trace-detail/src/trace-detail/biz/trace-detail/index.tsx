@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useImperativeHandle, useState } from 'react';
 
 import { useUpdateEffect } from 'ahooks';
@@ -10,6 +11,7 @@ import {
   changeSpanNodeCollapseStatus,
   getNodeConfig,
 } from '@/trace-detail/utils/span';
+import { traceDetailContext } from '@/trace-detail/hooks/use-trace-detail-context';
 import { useTeaDuration } from '@/trace-detail/hooks/use-tea-duration';
 import { useFetchSpans } from '@/trace-detail/hooks/use-fetch-spans';
 import { INVALIDATE_CODE } from '@/trace-detail/consts/code';
@@ -37,6 +39,9 @@ export const TraceDetail = (props: TraceDetailProps) => {
     onReady,
     switchConfig,
     hideTraceDetailHeader = false,
+    defaultActiveTabKey,
+    spanDetailHeaderSlot,
+    extraSpanDetailTabs,
   } = props;
   const [selectedSpanId, setSelectedSpanId] = useState<string>('');
   const [rootNodes, setRootNodes] = useState<SpanNode[] | undefined>(undefined);
@@ -48,7 +53,7 @@ export const TraceDetail = (props: TraceDetailProps) => {
       spaceName,
       endTime,
       moduleName,
-      platformType,
+      platformType: platformType.toString(),
       startTime,
       options: {
         dataSource,
@@ -61,7 +66,7 @@ export const TraceDetail = (props: TraceDetailProps) => {
       space_id: spaceID,
       space_name: spaceName,
       search_type: searchType,
-      platform_type: platformType,
+      platform_type: platformType.toString(),
       module_name: moduleName,
     },
   );
@@ -157,16 +162,27 @@ export const TraceDetail = (props: TraceDetailProps) => {
       searchType,
       defaultSpanID,
       endTime,
-      platformType,
+      platformType: platformType.toString(),
       startTime,
     },
     hideTraceDetailHeader,
     ...props,
   };
 
-  return layout === 'vertical' ? (
-    <VerticalTraceDetail {...commonProps} />
-  ) : (
-    <HorizontalTraceDetail {...commonProps} switchConfig={switchConfig} />
+  return (
+    <traceDetailContext.Provider
+      value={{
+        defaultActiveTabKey,
+        spanDetailHeaderSlot,
+        extraSpanDetailTabs,
+        platformType: props.platformType,
+      }}
+    >
+      {layout === 'vertical' ? (
+        <VerticalTraceDetail {...commonProps} />
+      ) : (
+        <HorizontalTraceDetail {...commonProps} switchConfig={switchConfig} />
+      )}
+    </traceDetailContext.Provider>
   );
 };

@@ -222,7 +222,7 @@ func TestExptAnnotateServiceImpl_SaveAnnotateRecord(t *testing.T) {
 						return fn(nil)
 					}).Times(1)
 				svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().SaveAnnotateRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().UpdateCompleteCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int32(1), int32(1), nil).Times(1)
+				svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().UpdateCompleteCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 				tagRef := &entity.ExptTurnResultTagRef{
 					TotalCnt:    10,

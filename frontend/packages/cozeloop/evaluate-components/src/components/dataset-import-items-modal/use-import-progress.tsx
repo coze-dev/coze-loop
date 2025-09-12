@@ -59,9 +59,7 @@ export const useDatasetImportProgress = (onImportSuccess: () => void) => {
       title={
         <div className="flex items-center">
           <span>
-            {isFinish
-              ? I18n.t('execution_result')
-              : I18n.t('execution_in_progress')}
+            {isFinish ? I18n.t('execution_result') : I18n.t('status_running')}
           </span>
         </div>
       }

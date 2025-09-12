@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
-import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   EvalTargetType,
   type EvalTargetVersion,
@@ -13,7 +14,6 @@ import { type FormSelect } from '@coze-arch/coze-design';
 
 import { NoVersionJumper } from '../../common';
 import { getPromptEvalTargetVersionOption } from './utils';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 const PromptEvalTargetVersionSelect = ({
   promptId,
@@ -22,7 +22,7 @@ const PromptEvalTargetVersionSelect = ({
   promptId?: string;
 }) => {
   const { spaceID } = useSpace();
-  const { baseURL } = useBaseURL();
+  const { getPromptDetailURL } = useResourcePageJump();
 
   const service = useRequest(
     async () => {
@@ -41,11 +41,10 @@ const PromptEvalTargetVersionSelect = ({
 
       // 如果是 prompt 类型, 如果没有版本, 也需要提示去提交
       if (!res?.versions?.length) {
+        const promptUrl = getPromptDetailURL(promptId);
         result?.unshift({
           value: '__UNCOMMITTED__',
-          label: (
-            <NoVersionJumper targetUrl={`${baseURL}/pe/prompts/${promptId}`} />
-          ),
+          label: <NoVersionJumper targetUrl={promptUrl} />,
           disabled: true,
         });
       }
@@ -65,8 +64,8 @@ const PromptEvalTargetVersionSelect = ({
   return (
     <BaseSearchSelect
       loading={service.loading}
-      emptyContent={I18n.t('no_data')}
-      placeholder={I18n.t('please_select', { field: I18n.t('version') })}
+      emptyContent={I18n.t('no_data_yet')}
+      placeholder={I18n.t('select_version')}
       showRefreshBtn={true}
       onClickRefresh={() => service.run()}
       optionList={service.data}

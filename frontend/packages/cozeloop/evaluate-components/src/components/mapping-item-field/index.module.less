@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable no-duplicate-selectors */
+/* stylelint-disable declaration-no-important */
 .select {
   flex: 1;
 
@@ -9,5 +11,13 @@
     min-width: 56px;
 
     @apply coz-fg-secondary;
+  }
+
+  :global(.semi-select-selection) {
+    margin-right: 10px !important;
+  }
+
+  :global(.semi-select-selection) {
+    margin-left: 0 !important;
   }
 }

@@ -66,7 +66,7 @@ export default function EvalTargetCascadeTreeSelect({
           });
         }}
         optionList={[
-          { label: I18n.t('prompt'), value: EvalTargetType.CozeLoopPrompt },
+          { label: 'Prompt', value: EvalTargetType.CozeLoopPrompt },
           { label: I18n.t('coze_agent'), value: EvalTargetType.CozeBot },
         ]}
       />

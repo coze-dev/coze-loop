@@ -81,7 +81,8 @@ export function EvaluatorSelect(props: SelectProps) {
     <BaseSearchSelect
       filter
       remote
-      placeholder={I18n.t('please_select', { field: I18n.t('evaluator') })}
+      emptyContent={I18n.t('no_data_yet')}
+      placeholder={I18n.t('please_select_evaluator')}
       loading={service.loading}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       {...props}
@@ -98,7 +99,7 @@ export function EvaluatorSelect(props: SelectProps) {
         >
           <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
           <div className="text-sm font-medium text-brand-9">
-            {I18n.t('new_evaluator')}
+            {I18n.t('create_evaluator')}
           </div>
         </div>
       }

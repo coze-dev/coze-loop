@@ -11,10 +11,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
 import { isEqual } from 'lodash-es';
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { TemplateType } from '@cozeloop/api-schema/prompt';
-import { promptDebug, promptManage } from '@cozeloop/api-schema';
+import {
+  type GetPromptResponse,
+  TemplateType,
+} from '@cozeloop/api-schema/prompt';
+import { type ApiResponse, StonePromptApi } from '@cozeloop/api-schema';
 
 import { messageId } from '@/utils/prompt';
 import { type PromptState, usePromptStore } from '@/store/use-prompt-store';
@@ -27,13 +29,20 @@ import { useBasicStore } from '@/store/use-basic-store';
 
 interface UsePromptProps {
   promptID?: string;
-  registerSub?: boolean;
+  regiesterSub?: boolean;
 }
 
 export const usePrompt = ({
   promptID,
-  registerSub = false,
-}: UsePromptProps) => {
+  regiesterSub = false,
+}: UsePromptProps): {
+  getPromptLoading: boolean;
+  getPromptByVersion: (
+    version?: string | undefined,
+    withCommit?: boolean | undefined,
+    onlyGetData?: boolean | undefined,
+  ) => Promise<GetPromptResponse & ApiResponse>;
+} => {
   const { spaceID } = useSpace();
 
   const { setReadonly, setSaveLock } = useBasicStore(
@@ -50,6 +59,8 @@ export const usePrompt = ({
     setModelConfig,
     setToolCallConfig,
     setTools,
+    setTemplateType,
+    setVariables,
   } = usePromptStore(
     useShallow(state => ({
       promptInfo: state.promptInfo,
@@ -59,6 +70,7 @@ export const usePrompt = ({
       setToolCallConfig: state.setToolCallConfig,
       setTools: state.setTools,
       setVariables: state.setVariables,
+      setTemplateType: state.setTemplateType,
     })),
   );
   const { setAutoSaving } = useBasicStore(
@@ -82,7 +94,7 @@ export const usePrompt = ({
 
   const { runAsync: getMockData } = useRequest(
     () =>
-      promptDebug.GetDebugContext({
+      StonePromptApi.GetDebugContext({
         workspace_id: spaceID,
         prompt_id: promptID!,
       }),
@@ -96,44 +108,67 @@ export const usePrompt = ({
     useRequest(
       (version?: string, withCommit?: boolean, onlyGetData?: boolean) => {
         setSaveLock(true);
-        return promptManage
-          .GetPrompt({
-            prompt_id: promptID!,
-            with_draft: !version,
-            commit_version: version,
-            with_commit: withCommit,
-          })
-          .then(async res => {
-            if (onlyGetData) {
-              return res;
-            }
-            setPromptInfo(res.prompt);
-            const currentPromptDetail =
-              res.prompt?.prompt_draft || res.prompt?.prompt_commit;
+        return StonePromptApi.GetPrompt({
+          prompt_id: promptID!,
+          with_draft: !version,
+          with_default_config: !version,
+          commit_version: version,
+          with_commit: withCommit,
+          workspace_id: spaceID!,
+        }).then(async res => {
+          setPromptInfo(res.prompt);
+          const currentPromptDetail = res.prompt?.prompt_draft ||
+            res.prompt?.prompt_commit || { detail: res.default_config };
 
-            const messageList =
-              currentPromptDetail?.detail?.prompt_template?.messages || [];
-            setMessageList(
-              messageList.map(item => ({ ...item, key: nanoid() })),
-            );
+          setTemplateType(
+            currentPromptDetail?.detail?.prompt_template?.template_type ||
+              TemplateType.Normal,
+          );
 
-            setModelConfig(currentPromptDetail?.detail?.model_config);
-            setToolCallConfig(currentPromptDetail?.detail?.tool_call_config);
-            setTools(currentPromptDetail?.detail?.tools);
-            setReadonly(Boolean(version));
+          const messageList =
+            currentPromptDetail?.detail?.prompt_template?.messages || [];
+          setMessageList(messageList.map(item => ({ ...item, key: nanoid() })));
 
-            if (res.prompt) {
-              const mockRes = await getMockData();
-              const historicMessage: DebugMessage[] = (
-                mockRes.debug_context?.debug_core?.mock_contexts || []
-              )?.map((it: DebugMessage) => {
-                const id = messageId();
+          setModelConfig(currentPromptDetail?.detail?.model_config);
+          setToolCallConfig(currentPromptDetail?.detail?.tool_call_config);
+          setTools(currentPromptDetail?.detail?.tools);
+
+          setReadonly(Boolean(version));
+
+          if (res.prompt && !onlyGetData) {
+            const mockRes = await getMockData();
+            const historicMessage: DebugMessage[] = (
+              mockRes.debug_context?.debug_core?.mock_contexts || []
+            )?.map((it: DebugMessage) => {
+              const id = messageId();
+              return {
+                id,
+                ...it,
+              };
+            });
+            setHistoricMessage(historicMessage);
+
+            if (
+              currentPromptDetail?.detail?.prompt_template?.template_type ===
+              TemplateType.Jinja2
+            ) {
+              const variablesDefs =
+                currentPromptDetail?.detail?.prompt_template?.variable_defs ||
+                [];
+              setVariables(variablesDefs);
+
+              const mockVariables = (variablesDefs || []).map(it => {
+                const mock = (
+                  mockRes.debug_context?.debug_core?.mock_variables || []
+                ).find(v => v.key === it.key);
                 return {
-                  id,
                   ...it,
+                  ...mock,
                 };
               });
-              setHistoricMessage(historicMessage);
+
+              setMockVariables(mockVariables);
+            } else {
               setMockVariables(array =>
                 array.map(it => {
                   const mock = (
@@ -142,23 +177,27 @@ export const usePrompt = ({
                   return {
                     ...it,
                     value: mock?.value,
+                    multi_part_values: mock?.multi_part_values,
+                    placeholder_messages: mock?.placeholder_messages,
                   };
                 }),
               );
-              const mockTools =
-                mockRes.debug_context?.debug_core?.mock_tools || [];
-              setMockTools(mockTools);
-              const userDebugConfig = mockRes.debug_context?.debug_config || {};
-              setUserDebugConfig(userDebugConfig);
-              setCompareConfig(mockRes.debug_context?.compare_config);
             }
 
-            setTimeout(() => {
-              setSaveLock(false);
-            }, 500);
+            const mockTools =
+              mockRes.debug_context?.debug_core?.mock_tools || [];
+            setMockTools(mockTools);
+            const userDebugConfig = mockRes.debug_context?.debug_config || {};
+            setUserDebugConfig(userDebugConfig);
+            setCompareConfig(mockRes.debug_context?.compare_config);
+          }
 
-            return res;
-          });
+          setTimeout(() => {
+            setSaveLock(false);
+          }, 500);
+
+          return res;
+        });
       },
       {
         ready: Boolean(promptID && spaceID),
@@ -172,12 +211,12 @@ export const usePrompt = ({
 
   const { runAsync: runSavePrompt, loading: savePromptLoading } = useRequest(
     (params: PromptState & { mergeVersion?: string }) =>
-      promptManage.SaveDraft({
+      StonePromptApi.SaveDraft({
         prompt_id: promptID!,
         prompt_draft: {
           detail: {
             prompt_template: {
-              template_type: TemplateType.Normal,
+              template_type: params.templateType ?? TemplateType.Normal,
               messages: params.messageList || [],
               variable_defs: params.variables,
             },
@@ -215,7 +254,7 @@ export const usePrompt = ({
 
   const { run: runSaveMockInfo, loading: mockLoading } = useRequest(
     (params: PromptMockDataState) =>
-      promptDebug.SaveDebugContext({
+      StonePromptApi.SaveDebugContext({
         workspace_id: spaceID!,
         prompt_id: promptID!,
         debug_context: {
@@ -239,7 +278,7 @@ export const usePrompt = ({
   useEffect(() => {
     let dataSub: () => void;
     let mockSub: () => void;
-    if (registerSub && promptID) {
+    if (regiesterSub && promptID) {
       dataSub = usePromptStore.subscribe(
         state => ({
           toolCallConfig: state.toolCallConfig,
@@ -247,6 +286,7 @@ export const usePrompt = ({
           modelConfig: state.modelConfig,
           tools: state.tools,
           messageList: state.messageList,
+          templateType: state.templateType,
         }),
         val => {
           const { readonly, saveLock } = useBasicStore.getState();
@@ -256,7 +296,7 @@ export const usePrompt = ({
             runSavePrompt({ ...val, promptInfo: currentPromptInfo });
           }
           if (currentPromptInfo?.id && currentPromptInfo.id !== promptID) {
-            console.error(I18n.t('prompt_id_inconsistent'));
+            console.error('promptID 不一致');
           }
         },
         {
@@ -298,7 +338,7 @@ export const usePrompt = ({
       dataSub?.();
       mockSub?.();
     };
-  }, [registerSub, promptID]);
+  }, [regiesterSub, promptID]);
 
   useEffect(() => {
     setAutoSaving(savePromptLoading || mockLoading);

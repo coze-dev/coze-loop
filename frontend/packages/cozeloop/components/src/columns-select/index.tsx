@@ -66,7 +66,7 @@ export const ColumnSelector = ({
   const DragHandle = sortableHandle(() => (
     <IconCozHandle
       className="cursor-grab"
-      aria-label={I18n.t('drag_to_sort')}
+      aria-label="拖动排序"
       role="button"
     />
   ));
@@ -117,7 +117,7 @@ export const ColumnSelector = ({
           <Checkbox
             disabled={disabledKeys.includes(value.key ?? '') || value.disabled}
             checked={selectedKeys.includes(value.key ?? '')}
-            aria-label={I18n.t('select_x', { field: value.value })}
+            aria-label={`选择${value.value}`}
           />
           <Typography.Text
             ellipsis={{

@@ -5,15 +5,15 @@ import { CodeEditor } from '@cozeloop/components';
 import { MdBoxLazy } from '@coze-arch/bot-md-box-adapter/lazy';
 
 import styles from '../index.module.less';
-import { useEditorLoading } from '../code/use-editor-loading';
 import { codeOptionsConfig } from '../code/config';
+import { useEditorLoading } from '../../../use-editor-loading';
 import { type DatasetItemProps } from '../../../type';
 
 export const MarkdownDatasetItem = (props: DatasetItemProps) => {
   const { isEdit, fieldContent, onChange, className } = props;
-  const { LoadingNode, onMount } = useEditorLoading();
+  const { LoadingNode, onEditorMount } = useEditorLoading();
   return isEdit ? (
-    <div className={cn(styles['code-container'], className)}>
+    <div className={cn(styles['object-container'], className)}>
       {LoadingNode}
       <CodeEditor
         language={'markdown'}
@@ -29,7 +29,7 @@ export const MarkdownDatasetItem = (props: DatasetItemProps) => {
             text: value,
           });
         }}
-        onMount={onMount}
+        onMount={onEditorMount}
       />
     </div>
   ) : (

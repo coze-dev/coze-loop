@@ -329,10 +329,30 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 			wantCustomConf: nil,
 		},
 		{
-			name: "mapping为nil",
+			name: "mapping为nil但有运行时参数",
 			request: &expt.CreateExperimentRequest{
 				TargetFieldMapping: nil,
 				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"test":"value"}`)},
+				EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
+					{
+						EvaluatorVersionID: 456,
+					},
+				},
+			},
+			wantCustomConf: &entity.FieldAdapter{
+				FieldConfs: []*entity.FieldConf{
+					{
+						FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+						Value:     `{"test":"value"}`,
+					},
+				},
+			},
+		},
+		{
+			name: "mapping和运行时参数都为nil",
+			request: &expt.CreateExperimentRequest{
+				TargetFieldMapping: nil,
+				TargetRuntimeParam: nil,
 				EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
 					{
 						EvaluatorVersionID: 456,
@@ -350,18 +370,19 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 			result, err := converter.ConvertToEntity(tt.request)
 			assert.NoError(t, err)
 
-			if tt.request.TargetFieldMapping == nil {
-				if result.ConnectorConf.TargetConf != nil {
-					assert.Nil(t, result.ConnectorConf.TargetConf.IngressConf)
-				}
-				return
-			}
-
 			assert.NotNil(t, result)
 			assert.NotNil(t, result.ConnectorConf.TargetConf)
 			assert.NotNil(t, result.ConnectorConf.TargetConf.IngressConf)
 			assert.NotNil(t, result.ConnectorConf.TargetConf.IngressConf.EvalSetAdapter)
 
+			// 检查EvalSetAdapter的FieldConfs
+			if tt.request.TargetFieldMapping == nil {
+				assert.Empty(t, result.ConnectorConf.TargetConf.IngressConf.EvalSetAdapter.FieldConfs)
+			} else {
+				assert.NotEmpty(t, result.ConnectorConf.TargetConf.IngressConf.EvalSetAdapter.FieldConfs)
+			}
+
+			// 检查CustomConf
 			if tt.wantCustomConf == nil {
 				assert.Nil(t, result.ConnectorConf.TargetConf.IngressConf.CustomConf)
 			} else {

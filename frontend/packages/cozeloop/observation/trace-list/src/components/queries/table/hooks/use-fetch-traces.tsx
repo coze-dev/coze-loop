@@ -1,20 +1,23 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @coze-arch/max-line-per-function */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { isEmpty, keyBy, keys } from 'lodash-es';
 import { useInfiniteScroll } from 'ahooks';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type PlatformType,
   type SpanListType,
   type ListSpansRequest,
   type QueryType,
   QueryRelation,
+  FieldType,
 } from '@cozeloop/api-schema/observation';
+import { tag } from '@cozeloop/api-schema/data';
 import { observabilityTrace } from '@cozeloop/api-schema';
 import { logger } from '@coze-arch/logger';
 import { Toast } from '@coze-arch/coze-design';
@@ -22,8 +25,46 @@ import { Toast } from '@coze-arch/coze-design';
 import { type ConvertSpan } from '@/typings/span';
 import { useTraceStore } from '@/stores/trace';
 import { usePerformance } from '@/hooks/use-performance';
+import {
+  AUTO_EVAL_FEEDBACK,
+  AUTO_EVAL_FEEDBACK_PREFIX,
+  MANUAL_FEEDBACK,
+  MANUAL_FEEDBACK_PREFIX,
+} from '@/components/logic-expr/const';
 
 import { TRACE_EXPIRED_CODE } from '..';
+
+const TAG_CONTENT_MAPPDING_TYPE = {
+  [tag.TagContentType.Categorical]: FieldType.Long,
+  [tag.TagContentType.Boolean]: FieldType.Long,
+  [tag.TagContentType.FreeText]: FieldType.String,
+  [tag.TagContentType.ContinuousNumber]: FieldType.Double,
+};
+
+const getFieldType = (
+  fieldName: string,
+  fieldMetas?: Record<string, any>,
+  item?: any,
+) => {
+  if (item?.extraInfo) {
+    const { content_type } = item.extraInfo ?? {};
+
+    return TAG_CONTENT_MAPPDING_TYPE[content_type] ?? FieldType.String;
+  }
+  if (!fieldMetas) {
+    return FieldType.String;
+  }
+
+  let filedKey = fieldName;
+  if (fieldName.startsWith(AUTO_EVAL_FEEDBACK_PREFIX)) {
+    filedKey = AUTO_EVAL_FEEDBACK;
+  }
+
+  if (fieldName.startsWith(MANUAL_FEEDBACK_PREFIX)) {
+    filedKey = MANUAL_FEEDBACK;
+  }
+  return fieldMetas?.[filedKey]?.value_type ?? FieldType.String;
+};
 
 export const useFetchTraces = () => {
   const { spaceID } = useSpace();
@@ -47,7 +88,7 @@ export const useFetchTraces = () => {
       filter_fields:
         applyFilters?.filter_fields?.map(item => ({
           field_name: item.field_name,
-          field_type: fieldMetas?.[item.field_name]?.value_type,
+          field_type: getFieldType(item.field_name, fieldMetas, item),
           values: item.values,
           query_type: item.query_type as QueryType,
           query_and_or: (applyFilters?.query_and_or ??
@@ -141,6 +182,16 @@ export const useFetchTraces = () => {
         end_time: endTime,
         filters: JSON.stringify(keys(standardFilters)),
       });
+
+      if (
+        keys(standardFilters).some(key =>
+          key.startsWith(AUTO_EVAL_FEEDBACK_PREFIX),
+        )
+      ) {
+        sendEvent(EVENT_NAMES.trace_filter_by_evaluator, {
+          space_id: spaceID,
+        });
+      }
 
       if (requestId === latestCountRef.current) {
         const convertSpans: ConvertSpan[] = spans.map(span => ({

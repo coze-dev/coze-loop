@@ -49,7 +49,7 @@ export const DatasetAddItems = ({
   const onDelete = (index: number) => {
     const newItems = evaSetItems?.filter((_, i) => i !== index);
     if (newItems.length === 0) {
-      Toast.error(I18n.t('retain_one_data_item'));
+      Toast.error(I18n.t('keep_at_least_one_data_item'));
       return;
     }
     evalsetItemsField.setValue(newItems);
@@ -64,7 +64,7 @@ export const DatasetAddItems = ({
   }, [expand]);
   const onCopy = (index: number) => {
     if (evaSetItems?.length >= 10) {
-      Toast.error(I18n.t('single_max_add_data_items', { num: 10 }));
+      Toast.error(I18n.t('cozeloop_open_evaluate_max_10_data_items_per_add'));
       return;
     }
     const newItems = [
@@ -104,7 +104,7 @@ export const DatasetAddItems = ({
                 <div className="flex w-full justify-between items-center">
                   <div className="flex items-center gap-[4px]">
                     <Typography.Text className="!font-semibold">
-                      {I18n.t('data_item_index', { index: index + 1 })}
+                      {I18n.t('data_item')} {index + 1}
                     </Typography.Text>
                     {activeKey.includes(`${index}`) ? (
                       <IconCozArrowDown
@@ -124,16 +124,16 @@ export const DatasetAddItems = ({
                   </div>
                   <div onClick={e => e.stopPropagation()}>
                     <Button
-                      icon={<IconCozTrashCan />}
-                      color="secondary"
-                      size="small"
-                      onClick={() => onDelete(index)}
-                    ></Button>
-                    <Button
                       color="secondary"
                       size="small"
                       icon={<IconCozCopy />}
                       onClick={() => onCopy(index)}
+                    ></Button>
+                    <Button
+                      icon={<IconCozTrashCan />}
+                      color="secondary"
+                      size="small"
+                      onClick={() => onDelete(index)}
                     ></Button>
                   </div>
                 </div>
@@ -154,7 +154,7 @@ export const DatasetAddItems = ({
       </Collapse>
       <TooltipWhenDisabled
         theme="dark"
-        content={I18n.t('single_max_add_data_items', { num: 10 })}
+        content={I18n.t('cozeloop_open_evaluate_max_10_data_items_per_add')}
         disabled={evaSetItems?.length >= 10}
       >
         <div>

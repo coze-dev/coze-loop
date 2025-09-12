@@ -121,7 +121,7 @@ interface Part {
 
 export interface RawMessage {
   role: string;
-  content?: string | object;
+  content?: string | object | null;
   tool_calls?: ToolCall[];
   parts?: Part[];
   reasoning_content?: string;

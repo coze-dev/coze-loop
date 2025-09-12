@@ -52,13 +52,16 @@
       "path": "../../i18n/tsconfig.build.json"
     },
     {
+      "path": "../../tag-components/tsconfig.build.json"
+    },
+    {
       "path": "../../tea/tsconfig.build.json"
     },
     {
       "path": "../../toolkit/tsconfig.build.json"
     },
     {
-      "path": "../trace-detail/tsconfig.build.json"
+      "path": "../trace-detail-open/tsconfig.build.json"
     }
   ]
 }

@@ -2,19 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
-import { isEmpty } from 'lodash-es';
+import { isEmpty, isFunction } from 'lodash-es';
 import cs from 'classnames';
-import { IconCozIllusEmpty } from '@coze-arch/coze-design/illustrations';
-import { Col, Empty, Row, Tabs } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceStructData,
   SpanContentContainer,
   RawContent,
   getSpanContentField,
 } from '@cozeloop/trace-struct-data';
+import { I18n } from '@cozeloop/i18n-adapter';
+import { PlatformType } from '@cozeloop/api-schema/observation';
+import { IconCozIllusEmpty } from '@coze-arch/coze-design/illustrations';
+import { Col, Empty, Row, Tabs } from '@coze-arch/coze-design';
 
 import type { Span } from '@/trace-detail/typings/params';
+import { useTraceDetailContext } from '@/trace-detail/hooks/use-trace-detail-context';
 
 import { SpanFieldList } from '../span-detail-list';
 import { SpanDetailHeader } from './span-header';
@@ -32,6 +34,11 @@ interface SpanDetailProps {
   moduleName?: string;
 }
 
+enum TabKey {
+  Run = 'run',
+  Metadata = 'metadata',
+}
+
 export const SpanDetail = ({
   span,
   baseInfoPosition = 'right',
@@ -45,11 +52,28 @@ export const SpanDetail = ({
   const { runtime, ...otherTags } = custom_tags || {};
   const overviewFields = useMemo(() => geSpanOverviewField(span), [span]);
   const spanContentList = useMemo(() => getSpanContentField(span), [span]);
+  const { extraSpanDetailTabs, defaultActiveTabKey, platformType } =
+    useTraceDetailContext();
+
+  const actualDefaultActiveTabKey = useMemo(() => {
+    const targetTabs = extraSpanDetailTabs?.find(
+      tab => tab.tabKey === defaultActiveTabKey,
+    );
+    if (
+      !targetTabs ||
+      (!isFunction(targetTabs.visible) && !targetTabs.visible) ||
+      (isFunction(targetTabs.visible) && !targetTabs.visible(span))
+    ) {
+      return TabKey.Run;
+    }
+    return defaultActiveTabKey;
+  }, [defaultActiveTabKey, extraSpanDetailTabs]);
+
   return (
     <div className={cs(className, styles.container)}>
       <SpanDetailHeader span={span} moduleName={moduleName} />
-      <Tabs className={styles.tab}>
-        <Tabs.TabPane tab={I18n.t('analytics_trace_run')} itemKey="1">
+      <Tabs className={styles.tab} defaultActiveKey={actualDefaultActiveTabKey}>
+        <Tabs.TabPane tab={I18n.t('analytics_trace_run')} itemKey={TabKey.Run}>
           <Row className={styles['tab-content']}>
             <Col span={baseInfoPosition === 'top' ? 24 : 19}>
               {spanContentList?.length > 0 ? (
@@ -91,7 +115,7 @@ export const SpanDetail = ({
           </Row>
         </Tabs.TabPane>
         {showTags ? (
-          <Tabs.TabPane tab={'Metadata'} itemKey="2">
+          <Tabs.TabPane tab={'Metadata'} itemKey={TabKey.Metadata}>
             {!isEmpty(otherTags) && (
               <>
                 <SpanContentContainer
@@ -126,6 +150,22 @@ export const SpanDetail = ({
             ) : null}
           </Tabs.TabPane>
         ) : null}
+
+        {extraSpanDetailTabs
+          ?.filter(tab =>
+            isFunction(tab.visible) ? tab.visible(span) : (tab.visible ?? true),
+          )
+          ?.map(extraTab => (
+            <Tabs.TabPane
+              tab={extraTab.label}
+              itemKey={extraTab.tabKey}
+              key={extraTab.tabKey}
+            >
+              <div className="w-full h-full px-5 py-4">
+                {extraTab.render(span, platformType ?? PlatformType.Cozeloop)}
+              </div>
+            </Tabs.TabPane>
+          ))}
       </Tabs>
     </div>
   );

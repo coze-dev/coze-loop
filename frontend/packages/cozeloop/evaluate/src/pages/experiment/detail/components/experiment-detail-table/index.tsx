@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-lines-per-function */
 import { useEffect, useMemo, useState } from 'react';
 
 import { I18n } from '@cozeloop/i18n-adapter';
@@ -7,42 +8,49 @@ import {
   ColumnsManage,
   dealColumnsFromStorage,
   LogicEditor,
-  getLogicFieldName,
   type LogicField,
   type SemiTableSort,
 } from '@cozeloop/evaluate-components';
+import { IS_HIDDEN_EXPERIMENT_DETAIL_FILTER } from '@cozeloop/biz-hooks-adapter';
 import {
   type Experiment,
   FieldType,
   type ColumnEvaluator,
   type FieldSchema,
-  type TurnRunState,
   type BatchGetExperimentResultResponse,
   ExptStatus,
+  type FilterOperatorType,
+  type ItemRunState,
+  type KeywordSearch,
+  type FilterField,
+  type ColumnAnnotation,
 } from '@cozeloop/api-schema/evaluation';
 import { IconCozIllusAdd } from '@coze-arch/coze-design/illustrations';
-import { EmptyState, type ColumnProps } from '@coze-arch/coze-design';
-
 import {
-  getActualOutputColumn,
-  getDatasetColumns,
-  isTraceTargetExpr,
-} from '@/utils/experiment';
+  Divider,
+  EmptyState,
+  Radio,
+  RadioGroup,
+  TextArea,
+  Toast,
+} from '@coze-arch/coze-design';
+
+import { getActualOutputColumn, isTraceTargetExpr } from '@/utils/experiment';
 import {
   type Filter,
   type Service,
 } from '@/types/experiment/experiment-detail-table';
-import { type ExperimentItem } from '@/types/experiment/experiment-detail';
+import {
+  type ExperimentDetailColumn,
+  type ExperimentItem,
+} from '@/types/experiment/experiment-detail';
 import styles from '@/styles/table-row-hover-show-icon.module.less';
 import { useExperimentDetailStore } from '@/hooks/use-experiment-detail-store';
 import { useExperimentDetailActiveItem } from '@/hooks/use-experiment-detail-active-item';
 import TableForExperiment, {
   TableHeader,
 } from '@/components/table-for-experiment';
-import {
-  ExperimentItemRunStatusSelect,
-  EvaluatorColumnPreview,
-} from '@/components/experiment';
+import { ExprGroupItemRunStatusSelect } from '@/components/experiment';
 import TableCellExpand from '@/components/common/table-cell-expand';
 
 import ExperimentItemDetail from '../experiment-item-detail';
@@ -51,13 +59,23 @@ import {
   getActionColumn,
   getEvaluatorColumns,
   getBaseColumn,
+  getExprDetailDatasetColumns,
+  getAnnotationColumns,
 } from './utils';
 import { TraceTargetTraceDetailPanel } from './trace-target-trace-detail-panel';
+import { getFilterFields, MAX_SEARCH_LENGTH } from './logic-filter-fields';
+import { AddAnnotateColumn } from './add-annotate-col-settings';
 
-const filterFields: { key: keyof Filter; type: FieldType }[] = [
+import filterStyles from './filter.module.less';
+
+const filterFields: {
+  key: keyof Filter;
+  type: FieldType;
+  operator?: FilterOperatorType;
+}[] = [
   {
     key: 'status',
-    type: FieldType.TurnRunState,
+    type: FieldType.ItemRunState,
   },
 ];
 
@@ -82,29 +100,41 @@ export default function ({
   experiment: Experiment | undefined;
   onRefreshPage: () => void;
 }) {
-  const [columns, setColumns] = useState<ColumnProps[]>([]);
-  const [defaultColumns, setDefaultColumns] = useState<ColumnProps[]>([]);
+  const [columns, setColumns] = useState<ExperimentDetailColumn[]>([]);
+  const [defaultColumns, setDefaultColumns] = useState<
+    ExperimentDetailColumn[]
+  >([]);
   const [fieldSchemas, setFieldSchemas] = useState<FieldSchema[]>([]);
+  const [columnAnnotations, setColumnAnnotations] = useState<
+    ColumnAnnotation[]
+  >([]);
   const [columnEvaluators, setColumnEvaluators] = useState<ColumnEvaluator[]>(
     [],
   );
   const [itemTraceVisible, setTraceVisible] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  // 标注模式
+  const [mode, setMode] = useState<'default' | 'quick_annotate'>('default');
 
-  const logicFields: LogicField[] = useMemo(() => {
-    const fields = columnEvaluators.map(evaluator => {
-      const { evaluator_version_id: versionId = '' } = evaluator ?? {};
-      const field: LogicField = {
-        title: <EvaluatorColumnPreview evaluator={evaluator} />,
-        name: getLogicFieldName(FieldType.EvaluatorScore, versionId),
-        type: 'number',
-        setterProps: { step: 0.1 },
-      };
-      return field;
-    });
-    return fields;
-  }, [columnEvaluators]);
+  const logicFields: LogicField[] = useMemo(
+    () => getFilterFields(columnEvaluators, fieldSchemas, columnAnnotations),
+    [columnEvaluators, fieldSchemas, columnAnnotations],
+  );
 
   const experimentIds = useMemo(() => [experimentID], [experimentID]);
+
+  const keywordSearch = useMemo(() => {
+    if (!keyword) {
+      return undefined;
+    }
+    const newKeywordSearch: KeywordSearch = {
+      keyword,
+      filter_fields: columns
+        .map(column => (column.hidden ? undefined : column.filterField))
+        .filter(Boolean) as FilterField[],
+    };
+    return newKeywordSearch;
+  }, [keyword, columns]);
 
   const {
     service,
@@ -123,6 +153,7 @@ export default function ({
     pageSizeStorageKey: 'experiment_detail_page_size',
     filterFields,
     refreshKey,
+    keywordSearch,
   });
 
   const activeItemStore = useExperimentDetailActiveItem({
@@ -130,7 +161,9 @@ export default function ({
     filter,
     logicFilter,
     filterFields,
+    keywordSearch,
     experimentResultToRecordItems,
+    defaultTotal: service.data?.total ?? 0,
   });
   const {
     activeItem,
@@ -145,16 +178,28 @@ export default function ({
   useEffect(() => {
     const res = service.data?.result;
     setFieldSchemas(res?.column_eval_set_fields ?? []);
-    setColumnEvaluators(res?.column_evaluators ?? []);
-  }, [service.data?.result]);
+    setColumnEvaluators(
+      res?.expt_column_evaluators?.filter(
+        item => item.experiment_id === experimentID,
+      )?.[0]?.column_evaluators ?? [],
+    );
+    setColumnAnnotations(
+      res?.expt_column_annotations?.filter(
+        item => item.experiment_id === experimentID,
+      )?.[0]?.column_annotations ?? [],
+    );
+  }, [service.data?.result, experimentID]);
 
   const handleRefresh = () => {
     service.refresh();
   };
 
   useEffect(() => {
-    const { column_evaluators = [], column_eval_set_fields = [] } =
-      service.data?.result ?? {};
+    const {
+      column_evaluators = [],
+      column_eval_set_fields = [],
+      expt_column_annotations = [],
+    } = service.data?.result ?? {};
     const isTraceTarget = isTraceTargetExpr(experiment);
     const actualOutputColumns = isTraceTarget
       ? []
@@ -163,19 +208,34 @@ export default function ({
             expand,
             traceIdPath: 'evalTargetTraceID',
             experiment,
+            column: {
+              filterField: {
+                field_type: FieldType.ActualOutput,
+                field_key: 'actual_output',
+              },
+            },
           }),
         ];
     // 评估器列
-    const evaluatorColumns: ColumnProps<ExperimentItem>[] = getEvaluatorColumns(
-      {
-        columnEvaluators: column_evaluators,
-        spaceID,
-        experiment,
-        handleRefresh,
-      },
-    );
+    const evaluatorColumns: ExperimentDetailColumn[] = getEvaluatorColumns({
+      columnEvaluators: column_evaluators,
+      spaceID,
+      experiment,
+      handleRefresh,
+    });
+    // 标注列
+    const annotationColumns = getAnnotationColumns({
+      spaceID,
+      experimentID,
+      annotations:
+        expt_column_annotations.filter(
+          item => item.experiment_id === experimentID,
+        )?.[0]?.column_annotations ?? [],
+      mode,
+      handleRefresh,
+    });
     // 操作列
-    const actionColumn: ColumnProps<ExperimentItem> = getActionColumn({
+    const actionColumn: ExperimentDetailColumn = getActionColumn({
       onClick: (record: ExperimentItem) => {
         setActiveItem(record);
         if (isTraceTarget) {
@@ -186,31 +246,60 @@ export default function ({
       },
     });
     // 列配置
-    const newColumns: ColumnProps<ExperimentItem>[] = [
-      ...getBaseColumn(),
-      ...getDatasetColumns(column_eval_set_fields, {
+    const newColumns: ExperimentDetailColumn[] = [
+      ...getBaseColumn({ fixed: mode === 'quick_annotate' }),
+      ...getExprDetailDatasetColumns(column_eval_set_fields, {
         prefix: 'datasetRow.',
         expand,
       }),
       ...actualOutputColumns,
       ...evaluatorColumns,
+      ...annotationColumns,
     ];
+
     setColumns([
       ...dealColumnsFromStorage(newColumns, columnManageStorageKey),
       actionColumn,
     ]);
     setDefaultColumns([...newColumns, actionColumn]);
-  }, [service.data, spaceID, expand, experiment]);
+  }, [service.data, spaceID, expand, experiment, mode]);
 
   const filters = (
     <>
-      <ExperimentItemRunStatusSelect
+      <div className="w-60">
+        <TextArea
+          placeholder={`${I18n.t('enter_keyword_search_max_length', { MAX_SEARCH_LENGTH })}`}
+          rows={1}
+          showClear={true}
+          value={keyword}
+          onChange={val => {
+            if (val && val.length > MAX_SEARCH_LENGTH) {
+              Toast.warning(
+                `${I18n.t('keyword_search_length_limited_truncated', { MAX_SEARCH_LENGTH })}`,
+              );
+            }
+            const newVal = val?.slice(0, MAX_SEARCH_LENGTH);
+            setKeyword(newVal);
+            onFilterDebounceChange();
+          }}
+          onKeyDown={event => {
+            // 阻止默认的换行行为，使用 Shift + Enter 换行的多行输入框
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+            }
+          }}
+          onEnterPress={() => {
+            onFilterDebounceChange();
+          }}
+        />
+      </div>
+      <ExprGroupItemRunStatusSelect
         style={{ minWidth: 170 }}
         value={filter?.status}
         onChange={val => {
           setFilter(oldState => ({
             ...oldState,
-            status: val as TurnRunState[],
+            status: val as ItemRunState[],
           }));
           onFilterDebounceChange();
         }}
@@ -218,6 +307,8 @@ export default function ({
       <LogicEditor
         fields={logicFields}
         value={logicFilter}
+        enableCascadeMode={true}
+        popoverProps={{ contentClassName: filterStyles['logic-filter-style'] }}
         onConfirm={newVal => {
           setLogicFilter(newVal ?? {});
           onLogicFilterChange(newVal);
@@ -228,11 +319,40 @@ export default function ({
   // 操作
   const actions = (
     <>
-      <TableCellExpand
-        className="ml-auto"
-        expand={expand}
-        onChange={setExpand}
+      {columnAnnotations.length ? (
+        <>
+          <RadioGroup
+            value={mode}
+            onChange={e => {
+              setMode(e.target.value as 'default' | 'quick_annotate');
+              setExpand(e.target.value === 'quick_annotate');
+            }}
+          >
+            <Radio value="default">{I18n.t('prompt_compare_normal')}</Radio>
+            <Radio value="quick_annotate">
+              {I18n.t('quick_annotation_mode')}
+            </Radio>
+          </RadioGroup>
+          <Divider margin={16} layout="vertical" />
+        </>
+      ) : null}
+      <AddAnnotateColumn
+        spaceID={spaceID}
+        experimentID={experimentID}
+        data={columnAnnotations}
+        onAnnotateAdd={() => {
+          handleRefresh();
+          setMode('quick_annotate');
+          setExpand(true);
+        }}
+        onAnnotateDelete={() => {
+          handleRefresh();
+          if (columnAnnotations.length <= 1) {
+            setMode('default');
+          }
+        }}
       />
+      <TableCellExpand expand={expand} onChange={setExpand} />
       <ColumnsManage
         columns={columns}
         defaultColumns={defaultColumns}
@@ -249,8 +369,8 @@ export default function ({
     columns,
     onRow: record => ({
       onClick: () => {
-        // 如果当前有选中的文本，不触发点击事件
-        if (!window.getSelection()?.isCollapsed) {
+        // 如果当前有选中的文本，或者处在快速标注模式，不触发点击事件
+        if (!window.getSelection()?.isCollapsed || mode === 'quick_annotate') {
           return;
         }
         setActiveItem(record);
@@ -259,6 +379,7 @@ export default function ({
           setTraceVisible(true);
         } else {
           setItemDetailVisible(true);
+          setMode('default');
         }
       },
     }),
@@ -276,16 +397,18 @@ export default function ({
         size="full_screen"
         icon={<IconCozIllusAdd />}
         title={I18n.t('experiment_initializing')}
-        description={I18n.t('wait_and_refresh_page', {
-          refresh: (
+        description={
+          <>
+            {I18n.t('wait_a_few_seconds')}
             <span
               className="text-[rgb(var(--coze-up-brand-9))] cursor-pointer"
               onClick={onRefreshPage}
             >
               {I18n.t('refresh')}
             </span>
-          ),
-        })}
+            {I18n.t('page_view')}
+          </>
+        }
       />
     ) : (
       <EmptyState
@@ -300,7 +423,12 @@ export default function ({
       <TableForExperiment<ExperimentItem>
         service={service as Service}
         heightFull={true}
-        header={<TableHeader actions={actions} filters={filters} />}
+        header={
+          <TableHeader
+            actions={actions}
+            filters={IS_HIDDEN_EXPERIMENT_DETAIL_FILTER ? null : filters}
+          />
+        }
         pageSizeStorageKey="experiment_detail_page_size"
         empty={tableEmpty}
         tableProps={tableProps}
@@ -311,8 +439,14 @@ export default function ({
           activeItemStore={activeItemStore}
           fieldSchemas={fieldSchemas}
           columnEvaluators={columnEvaluators}
-          onClose={() => setItemDetailVisible(false)}
+          columnAnnotations={columnAnnotations}
+          onClose={() => {
+            setItemDetailVisible(false);
+            handleRefresh();
+          }}
           onStepChange={onItemStepChange}
+          // onAnnotateChange={handleRefresh}
+          // onCreateOption={handleRefresh}
         />
       ) : null}
 

@@ -44,7 +44,7 @@ export const DatasetDetailEditModal = ({
       evaluation_set_id: datasetDetail?.id as string,
       workspace_id: spaceID,
     });
-    Toast.success(I18n.t('update_success'));
+    Toast.success(I18n.t('prompt_block_update_success'));
     onSuccess();
     setVisible(false);
   };
@@ -67,7 +67,7 @@ export const DatasetDetailEditModal = ({
           formRef?.current?.submitForm();
         }}
         okText={I18n.t('save')}
-        cancelText={I18n.t('Cancel')}
+        cancelText={I18n.t('cancel')}
       >
         <Form<FormValues>
           getFormApi={formApi => {
@@ -88,9 +88,7 @@ export const DatasetDetailEditModal = ({
             rules={[
               {
                 required: true,
-                message: I18n.t('please_input', {
-                  field: I18n.t('evaluation_set_name'),
-                }),
+                message: I18n.t('enter_evaluation_name'),
               },
               {
                 validator: sourceNameRuleValidator,

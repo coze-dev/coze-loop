@@ -13,8 +13,7 @@ import {
   type Experiment,
   type FieldSchema,
 } from '@cozeloop/api-schema/evaluation';
-import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
-import { Tooltip, type ColumnProps } from '@coze-arch/coze-design';
+import { Tag, Tooltip, type ColumnProps } from '@coze-arch/coze-design';
 
 import { ActualOutputWithTrace } from '@/components/experiment';
 
@@ -85,7 +84,6 @@ export function getActualOutputColumn(params?: {
     experiment,
   } = params ?? {};
   const newColumn: ColumnProps = {
-    // title: 'actual_output',
     title: (
       <div className="flex items-center gap-1">
         <div>actual_output</div>
@@ -93,7 +91,10 @@ export function getActualOutputColumn(params?: {
           theme="dark"
           content={I18n.t('evaluation_object_actual_output')}
         >
-          <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
+          <Tag color="primary" className="text-[12px] font-semibold">
+            {I18n.t('actual_output')}
+          </Tag>
+          {/* <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" /> */}
         </Tooltip>
       </div>
     ),

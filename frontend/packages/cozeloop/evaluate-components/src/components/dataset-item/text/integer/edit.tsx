@@ -11,7 +11,7 @@ export const IntegerDatasetItemEdit = ({
 }: DatasetItemProps) => (
   <>
     <Input
-      placeholder={I18n.t('please_input', { field: I18n.t('integer') })}
+      placeholder={I18n.t('cozeloop_open_evaluate_enter_integer')}
       className="rounded-[6px]"
       value={fieldContent?.text}
       onChange={value => {

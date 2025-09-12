@@ -78,17 +78,20 @@ export function EvaluatorManualScore({
         className="w-full"
         step={0.1}
         rules={[
-          { required: true, message: I18n.t('the_field_required') },
+          {
+            required: true,
+            message: I18n.t('evaluate_dataset_input_required'),
+          },
           {
             validator: (_rule, value) => value >= 0 && value <= 1,
-            message: I18n.t('input_number_between_0_and_1'),
+            message: I18n.t('cozeloop_open_evaluate_enter_number_between_0_1'),
           },
           {
             validator: (_rule, value) => {
               const precision = String(value).split('.')[1];
               return !precision || precision.length <= 4;
             },
-            message: I18n.t('keep_precision_num', { num: 4 }),
+            message: I18n.t('cozeloop_open_evaluate_max_four_decimal_places'),
           },
         ]}
         autoComplete="off"
@@ -96,7 +99,7 @@ export function EvaluatorManualScore({
       <Form.TextArea
         field="reasoning"
         label={I18n.t('reason')}
-        placeholder={I18n.t('please_input', { field: I18n.t('reason') })}
+        placeholder={I18n.t('please_enter_the_reason')}
         maxCount={500}
         maxLength={500}
         autoComplete="off"
@@ -109,11 +112,11 @@ export function EvaluatorManualScore({
   const footer = (
     <div className="flex items-center justify-end gap-2">
       <Button color="primary" onClick={() => onVisibleChange?.(false)}>
-        {I18n.t('Cancel')}
+        {I18n.t('cancel')}
       </Button>
       <Guard point={GuardPoint['eval.experiment.edit_result']}>
         <Button loading={loading} onClick={() => formRef.current?.submitForm()}>
-          {I18n.t('update')}
+          {I18n.t('cozeloop_open_evaluate_update')}
         </Button>
       </Guard>
     </div>

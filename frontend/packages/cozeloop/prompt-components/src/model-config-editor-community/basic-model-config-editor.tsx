@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useLatest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type Model } from '@cozeloop/api-schema/llm-manage';
 import {
   Form,
@@ -13,18 +12,20 @@ import {
   Typography,
 } from '@coze-arch/coze-design';
 
+import { ModelSelectWithObject } from '@/model-select';
+
 import { convertModelToModelConfig, type ModelConfigWithName } from './utils';
-import { ModelSelectWithObject } from './model-select';
 import { ModelConfigFormCommunity } from './model-config-form-community';
 
 export interface BasicModelConfigPopoverProps {
   models?: Model[] | undefined;
   value?: ModelConfigWithName;
   disabled?: boolean;
-  modelSelectProps?: SelectProps;
+  modelSelectProps?: SelectProps & { optionClassName?: string };
   defaultActiveFirstModel?: boolean;
   onChange?: (value?: ModelConfigWithName) => void;
   onModelChange?: (value?: Model) => void;
+  extra?: React.ReactNode;
 }
 
 export function BasicModelConfigEditor({
@@ -35,6 +36,7 @@ export function BasicModelConfigEditor({
   defaultActiveFirstModel = false,
   models = [],
   onModelChange,
+  extra,
 }: BasicModelConfigPopoverProps) {
   const formApi = useRef<FormApi<ModelConfigWithName>>();
   const [initValues, setInitValues] = useState<ModelConfigWithName>();
@@ -47,13 +49,14 @@ export function BasicModelConfigEditor({
     // 通过条件：设置了默认选中第一个模型，并且没有传入value，models不为空，没有加载过
     if (
       !defaultActiveFirstModel ||
-      value ||
+      Object.keys(value || {}).length > 0 ||
       loadedRef.current ||
       !models?.length
     ) {
       return;
     }
     const model = models[0];
+
     // 默认选中第一个模型
     if (model) {
       setSelectModel?.(model);
@@ -65,7 +68,7 @@ export function BasicModelConfigEditor({
       onModelChange?.(model);
     }
     loadedRef.current = true;
-  }, [value, models]);
+  }, [value, models, defaultActiveFirstModel]);
 
   // 处理初始加载时已传入值预览模型的逻辑
   useEffect(() => {
@@ -108,9 +111,9 @@ export function BasicModelConfigEditor({
     >
       <ModelSelectWithObject
         {...modelSelectProps}
-        className={classNames('grow', modelSelectProps?.className)}
+        className={classNames('grow mt-2', modelSelectProps?.className)}
         value={selectModel}
-        disabled={disabled}
+        disabled={disabled || modelSelectProps?.disabled}
         onChange={newModel => {
           setSelectModel(newModel);
           const modelConfig = newModel
@@ -125,10 +128,18 @@ export function BasicModelConfigEditor({
         modelList={models}
       />
 
-      <Typography.Title heading={6} style={{ marginTop: 12, marginBottom: 12 }}>
-        {I18n.t('parameter_config')}
-      </Typography.Title>
+      <Typography.Text
+        style={{
+          marginTop: 16,
+          marginBottom: 8,
+          fontWeight: 500,
+          display: 'block',
+        }}
+      >
+        参数配置
+      </Typography.Text>
       <ModelConfigFormCommunity model={selectModel} />
+      {extra}
     </Form>
   );
 }

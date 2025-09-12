@@ -11,6 +11,7 @@ import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type FieldType,
   type BatchGetExperimentResultResponse,
+  type KeywordSearch,
 } from '@cozeloop/api-schema/evaluation';
 
 import { DetailItemStepSwitch } from '@/types';
@@ -39,18 +40,23 @@ export function useExperimentDetailActiveItem<
   experimentResultToRecordItems,
   experimentIds,
   filter,
+  keywordSearch,
   logicFilter,
   filterFields,
   // sort,
+  defaultTotal,
 }: {
   experimentIds: string[] | undefined;
   logicFilter?: LogicFilter;
   filter?: Filter;
+  /** 关键词搜索 */
+  keywordSearch?: KeywordSearch;
   sort?: SemiTableSort;
   filterFields?: { key: keyof Filter; type: FieldType }[];
   experimentResultToRecordItems: (
     result: BatchGetExperimentResultResponse,
   ) => RecordItem[];
+  defaultTotal: number;
 }): ExperimentDetailActiveItemStore<RecordItem> {
   const { spaceID } = useSpace();
   const [activeItem, setActiveItem] = useState<RecordItem | undefined>();
@@ -58,7 +64,7 @@ export function useExperimentDetailActiveItem<
   const [itemDetailVisible, setItemDetailVisible] = useState(false);
   const [isFirst, setIsFirst] = useState(false);
   const [isLast, setIsLast] = useState(false);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState<number | undefined>(undefined);
 
   const fetchRecordItemByIndex = useCallback(
     async (pageIndex: number) => {
@@ -71,9 +77,15 @@ export function useExperimentDetailActiveItem<
         workspace_id: spaceID,
         experiment_ids: experimentIds ?? [],
         baseline_experiment_id: experimentIds?.[0] ?? '',
-        filters: { [experimentIds?.[0] ?? '']: { filters } },
+        filters: {
+          [experimentIds?.[0] ?? '']: {
+            filters,
+            keyword_search: keywordSearch,
+          },
+        },
         page_number: pageIndex + 1,
         page_size: 1,
+        use_accelerator: true,
       });
       const list = experimentResultToRecordItems(res);
       return {
@@ -81,7 +93,7 @@ export function useExperimentDetailActiveItem<
         total: Number(res.total) || 0,
       };
     },
-    [spaceID, experimentIds, filter, logicFilter],
+    [spaceID, experimentIds, filter, logicFilter, keywordSearch],
   );
 
   const onItemStepChange = async (step: DetailItemStepSwitch) => {
@@ -106,8 +118,8 @@ export function useExperimentDetailActiveItem<
 
   useEffect(() => {
     setIsFirst(activeItem?.groupIndex === 0);
-    setIsLast(activeItem?.groupIndex === total - 1);
-  }, [activeItem, total]);
+    setIsLast(activeItem?.groupIndex === (total || defaultTotal) - 1);
+  }, [activeItem, total, defaultTotal]);
 
   return {
     activeItem,

@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -21,7 +20,7 @@ import (
 //go:generate mockgen -destination=mocks/expt_turn_result_tag_ref.go -package=mocks . IExptTurnResultTagRefDAO
 type IExptTurnResultTagRefDAO interface {
 	Create(ctx context.Context, refs []*model.ExptTurnResultTagRef) error
-	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) (int32, int32, error)
+	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
 	Delete(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64, opts ...db.Option) error
 
 	GetByExptID(ctx context.Context, exptID int64, spaceID int64) ([]*model.ExptTurnResultTagRef, error)
@@ -55,21 +54,20 @@ func (e exptTurnResultTagRefDAO) GetByTagKeyID(ctx context.Context, exptID int64
 	return found, nil
 }
 
-func (e exptTurnResultTagRefDAO) UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) (int32, int32, error) {
+func (e exptTurnResultTagRefDAO) UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error {
 	po := &model.ExptTurnResultTagRef{}
 	db := e.db.NewSession(ctx, opts...)
 	err := db.Model(po).
-		Clauses(clause.Returning{Columns: []clause.Column{{Name: "complete_cnt"}, {Name: "total_cnt"}}}).
 		Where("space_id = ? AND expt_id = ?  AND tag_key_id = ?", spaceID, exptID, tagKeyID).
 		Where("complete_cnt < total_cnt").
 		Updates(map[string]interface{}{
 			"complete_cnt": gorm.Expr("complete_cnt + ?", 1),
 		}).Error
 	if err != nil {
-		return 0, 0, err
+		return err
 	}
 
-	return po.CompleteCnt, po.TotalCnt, nil
+	return nil
 }
 
 func (e exptTurnResultTagRefDAO) Create(ctx context.Context, refs []*model.ExptTurnResultTagRef) error {

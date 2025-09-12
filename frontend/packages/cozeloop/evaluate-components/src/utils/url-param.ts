@@ -8,3 +8,8 @@ export const getUrlParamWithDelete = (key: string) => {
   window.history.pushState({}, '', urlParams.toString());
   return value;
 };
+
+export const getUrlParam = (key: string) => {
+  const searchParams = new URLSearchParams(window.location.search);
+  return searchParams.get(key);
+};

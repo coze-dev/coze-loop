@@ -8,18 +8,24 @@ import {
   DatePicker,
   Input,
   Select,
+  TextArea,
 } from '@coze-arch/coze-design';
 
-interface LogicOperation {
+export interface LogicOperation {
   label: string;
   value: string;
 }
+
+export type LogicFilterLeft = string | string[];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type LogicFilter = ExprGroup<string, string, any>;
+export type LogicFilter = ExprGroup<LogicFilterLeft, string, any>;
 
 export interface RenderProps {
   disabled?: boolean;
   fields: LogicField[];
+  /** 开启级联模式，佐治会变成数组 */
+  enableCascadeMode?: boolean;
 }
 
 /** 逻辑编辑器的字段 */
@@ -36,6 +42,12 @@ export interface LogicField {
   setter?: LogicSetter;
   /** 禁用操作符列表 */
   disabledOperations?: string[];
+  /** operator 自定义属性 */
+  operatorProps?: Record<string, unknown>;
+  /** 自定义操作符列表，会覆盖原有列表 */
+  customOperations?: LogicOperation[];
+  /** 子字段 */
+  children?: LogicField[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,14 +69,6 @@ export interface LogicDataType {
 
 const baseOperations: LogicOperation[] = [
   {
-    label: I18n.t('equal_to'),
-    value: 'equals',
-  },
-  {
-    label: I18n.t('not_equal_to'),
-    value: 'not-equals',
-  },
-  {
     label: I18n.t('contain'),
     value: 'contains',
   },
@@ -72,9 +76,35 @@ const baseOperations: LogicOperation[] = [
     label: I18n.t('not_contain'),
     value: 'not-contains',
   },
+  {
+    label: I18n.t('equal_to'),
+    value: 'equals',
+  },
+  {
+    label: I18n.t('not_equal_to'),
+    value: 'not-equals',
+  },
 ];
 
-const stringOperations: LogicOperation[] = [...baseOperations];
+const stringOperations: LogicOperation[] = [
+  // 注意：字符串类型的包含不包含和选项类的包含不包含枚举值不同，需要like模式
+  {
+    label: I18n.t('contain'),
+    value: 'like',
+  },
+  {
+    label: I18n.t('not_contain'),
+    value: 'not-like',
+  },
+  {
+    label: I18n.t('equal_to'),
+    value: 'equals',
+  },
+  {
+    label: I18n.t('not_equal_to'),
+    value: 'not-equals',
+  },
+];
 
 const numberOperations: LogicOperation[] = [
   {
@@ -135,9 +165,22 @@ const selectOperations: LogicOperation[] = [
 
 const userOperations: LogicOperation[] = [...baseOperations];
 
-function StringSetter(props: DataTypeSetterProps<string>) {
+function StringSetter({
+  /** 默认为多行文本模式 */
+  textAreaMode = true,
+  ...props
+}: DataTypeSetterProps<string> & { textAreaMode?: boolean }) {
+  if (textAreaMode === false) {
+    return (
+      <Input placeholder={I18n.t('please_input', { field: '' })} {...props} />
+    );
+  }
   return (
-    <Input placeholder={I18n.t('please_input', { field: '' })} {...props} />
+    <TextArea
+      placeholder={I18n.t('please_input', { field: '' })}
+      rows={1}
+      {...props}
+    />
   );
 }
 
@@ -148,7 +191,7 @@ function NumberSetter(props: DataTypeSetterProps<number>) {
       placeholder={I18n.t('please_input', { field: '' })}
       {...rest}
       className={`w-full ${(props as { className?: string }).className ?? ''}`}
-      value={value}
+      value={value ?? ''}
       onChange={onChange as (val: number | string) => void}
     />
   );

@@ -3,8 +3,8 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useRef, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { ResizeSidesheet } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -115,12 +115,7 @@ export const useDatasetColumnEdit = ({
             <div className="flex items-center gap-2">
               {I18n.t('edit_column')}
               <Typography.Text className="!coz-fg-secondary">
-                (
-                {I18n.t('total_of_columns', {
-                  num: currentColumnNum,
-                  total: 50,
-                })}
-                )
+                {I18n.t('column_count_info', { currentColumnNum })}
               </Typography.Text>
             </div>
             {ExpandNode}
@@ -138,7 +133,7 @@ export const useDatasetColumnEdit = ({
               {I18n.t('save')}
             </Button>
             <Button color="primary" onClick={() => setVisible(false)}>
-              {I18n.t('Cancel')}
+              {I18n.t('cancel')}
             </Button>
             <Divider layout="vertical" className="h-[12px] mx-[9px]" />
             <Button
@@ -162,6 +157,7 @@ export const useDatasetColumnEdit = ({
               fieldSchemas?.map(item => convertSchemaToDataType(item)) || [],
           }}
           onValueChange={values => {
+            console.log('values', values);
             setCurrentColumnNum(values?.columns?.length || 0);
           }}
         >
@@ -194,7 +190,7 @@ export const useDatasetColumnEdit = ({
                       <Anchor.Link
                         key={index}
                         href={`#column-${index}`}
-                        title={`${item.name || `列 ${index + 1}`}`}
+                        title={`${item.name || `${I18n.t('column_placeholder', { placeholder1: index + 1 })}`}`}
                       />
                     ))}
                   </LoopAnchor>

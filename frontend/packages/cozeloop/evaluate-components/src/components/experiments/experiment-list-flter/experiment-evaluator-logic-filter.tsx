@@ -35,9 +35,7 @@ function EvalTargetCascadeSelectSetter(props: SelectProps) {
         maxTagCount: 1,
         onlyShowOptionName: true,
         filter: true,
-        placeholder: I18n.t('please_select', {
-          field: I18n.t('evaluation_object'),
-        }),
+        placeholder: I18n.t('please_select_evaluate_target'),
       }}
     />
   );
@@ -61,7 +59,7 @@ export function ExperimentEvaluatorLogicFilter({
   const { getEvalTargetDefinitionList } = useEvalTargetDefinition();
 
   const evalTargetInfoList = getEvalTargetDefinitionList()
-    ?.filter(item => item.targetInfo)
+    ?.filter(item => !item.disableListFilter && item.targetInfo)
     .map(it => ({
       ...it.targetInfo,
       name: it.name,
@@ -89,7 +87,7 @@ export function ExperimentEvaluatorLogicFilter({
         setter: EvalTargetCascadeSelectSetter,
       },
       {
-        title: I18n.t('evaluation_object_type'),
+        title: I18n.t('evaluate_target_type'),
         name: getLogicFieldName(FieldType.TargetType, 'eval_target_type'),
         type: 'options',
         setterProps: {
@@ -97,6 +95,7 @@ export function ExperimentEvaluatorLogicFilter({
             label: name,
             value: type,
           })),
+          multiple: true,
         },
       },
       {

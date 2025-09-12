@@ -4,26 +4,24 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable complexity */
-
-import { useNavigate } from 'react-router-dom';
 import React, { useMemo } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
+import { nanoid } from 'nanoid';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import {
   getPlaceholderErrorContent,
   PromptCreate,
 } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
+import { GuardPoint, useGuard } from '@cozeloop/guard';
 import {
   EditIconButton,
-  getBaseUrl,
   TextWithCopy,
   TooltipWhenDisabled,
 } from '@cozeloop/components';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { useModalData } from '@cozeloop/base-hooks';
-import { Role, TemplateType, type Prompt } from '@cozeloop/api-schema/prompt';
+import { ContentType, Role, type Prompt } from '@cozeloop/api-schema/prompt';
 import {
   IconCozLoading,
   IconCozBrace,
@@ -32,6 +30,7 @@ import {
   IconCozMore,
   IconCozExit,
   IconCozBattle,
+  IconCozPlug,
 } from '@coze-arch/coze-design/icons';
 import {
   Button,
@@ -42,7 +41,7 @@ import {
   Typography,
 } from '@coze-arch/coze-design';
 
-import { convertDisplayTime } from '@/utils/prompt';
+import { convertDisplayTime, nextVersion } from '@/utils/prompt';
 import { usePromptStore } from '@/store/use-prompt-store';
 import {
   type CompareGroupLoop,
@@ -56,9 +55,8 @@ import { PromptSubmit } from '../prompt-submit';
 import { PromptDelete } from '../prompt-delete';
 
 export function PromptHeader() {
-  const { spaceID } = useSpace();
-  const baseURL = getBaseUrl(spaceID);
-  const navigate = useNavigate();
+  const globalDisabled = useGuard({ point: GuardPoint['pe.prompt.global'] });
+  const navigate = useNavigateModule();
 
   const submitModal = useModalData();
   const deleteModal = useModalData<Prompt>();
@@ -75,6 +73,7 @@ export function PromptHeader() {
     setVersionChangeLoading,
     setExecuteHistoryVisible,
     readonly,
+    setBasicReadonly,
   } = useBasicStore(
     useShallow(state => ({
       autoSaving: state.autoSaving,
@@ -84,6 +83,7 @@ export function PromptHeader() {
       setVersionChangeLoading: state.setVersionChangeLoading,
       setExecuteHistoryVisible: state.setExecuteHistoryVisible,
       readonly: state.readonly,
+      setBasicReadonly: state.setReadonly,
     })),
   );
 
@@ -96,6 +96,7 @@ export function PromptHeader() {
     currentModel,
     tools,
     toolCallConfig,
+    templateType,
   } = usePromptStore(
     useShallow(state => ({
       promptInfo: state.promptInfo,
@@ -106,6 +107,7 @@ export function PromptHeader() {
       currentModel: state.currentModel,
       tools: state.tools,
       toolCallConfig: state.toolCallConfig,
+      templateType: state.templateType,
     })),
   );
 
@@ -147,9 +149,11 @@ export function PromptHeader() {
     getPromptByVersion('', true)
       .then(() => {
         setVersionChangeLoading(false);
+        setBasicReadonly(false);
       })
       .catch(() => {
         setVersionChangeLoading(false);
+        setBasicReadonly(false);
       });
   };
 
@@ -167,19 +171,45 @@ export function PromptHeader() {
     [messageList, variables],
   );
 
+  const isMultiModalModel = currentModel?.ability?.multi_modal;
+  const multiModalError = messageList?.some(message => {
+    if (
+      message.parts?.some(
+        part => part.type === ContentType.MultiPartVariable,
+      ) &&
+      !isMultiModalModel
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  const submitErrorTip = useMemo(() => {
+    if (multiModalError) {
+      return '所选模型不支持多模态，请调整变量类型或更换模型';
+    }
+    if (hasPlaceholderError) {
+      return 'Placeholder 变量不存在或命名错误';
+    }
+    if (!hasPeDraft) {
+      return '当前无草稿变更';
+    }
+    return '';
+  }, [multiModalError, hasPlaceholderError, hasPeDraft]);
+
   const renderSubmitBtn = () => {
     if (!promptInfo?.prompt_key) {
       return null;
     }
-    if (!versionChangeVisible && readonly) {
+    if (!versionChangeVisible && readonly && !globalDisabled.data.readonly) {
       return (
         <Button
           color="brand"
           onClick={handleBackToDraft}
           loading={versionChangeLoading}
-          disabled={streaming}
+          disabled={globalDisabled.data.readonly || streaming}
         >
-          {I18n.t('revert_draft_version')}
+          返回草稿版本
         </Button>
       );
     }
@@ -190,12 +220,8 @@ export function PromptHeader() {
 
     return (
       <TooltipWhenDisabled
-        content={
-          !hasPeDraft
-            ? I18n.t('no_draft_change')
-            : I18n.t('placeholder_var_create_error')
-        }
-        disabled={hasPlaceholderError || !hasPeDraft}
+        content={submitErrorTip}
+        disabled={hasPlaceholderError || !hasPeDraft || multiModalError}
         theme="dark"
       >
         <Button
@@ -205,25 +231,27 @@ export function PromptHeader() {
             streaming ||
             hasPlaceholderError ||
             versionChangeLoading ||
-            !hasPeDraft
+            !hasPeDraft ||
+            multiModalError ||
+            globalDisabled.data.readonly
           }
         >
-          {I18n.t('submit_new_version')}
+          提交新版本
         </Button>
       </TooltipWhenDisabled>
     );
   };
 
   const handleBack = () => {
-    navigate(`${getBaseUrl(spaceID)}/pe/prompts`);
+    navigate('pe/prompts');
   };
 
   const handleAddNewComparePrompt = () => {
     const newComparePrompt: CompareGroupLoop = {
       prompt_detail: {
         prompt_template: {
-          template_type: TemplateType.Normal,
-          messages: messageList,
+          template_type: templateType,
+          messages: messageList?.map(it => ({ ...it, key: nanoid() })),
           variable_defs: variables,
         },
         model_config: modelConfig,
@@ -266,11 +294,11 @@ export function PromptHeader() {
               className="!py-0.5"
               prefixIcon={<IconCozLoading spin />}
             >
-              {I18n.t('draft_saving')}
+              草稿保存中...
             </Tag>
           ) : (
             <Tag color="primary">
-              {I18n.t('draft_auto_saved_in')}
+              草稿已自动保存于
               {promptInfo?.prompt_draft?.draft_info?.updated_at
                 ? convertDisplayTime(
                     promptInfo?.prompt_draft?.draft_info?.updated_at,
@@ -318,10 +346,27 @@ export function PromptHeader() {
               <TextWithCopy
                 content={promptInfo.prompt_key}
                 maxWidth={200}
-                copyTooltipText={I18n.t('copy_prompt_key')}
+                copyTooltipText="复制 Prompt Key"
                 textClassName="!text-xs"
                 textType="tertiary"
               />
+              <Divider
+                layout="vertical"
+                style={{ height: 12, margin: '0 8px' }}
+              />
+              <Tag
+                color="primary"
+                className="!py-0.5 cursor-pointer"
+                prefixIcon={<IconCozPlug />}
+                onClick={() => {
+                  sendEvent(EVENT_NAMES.prompt_click_view_code, {
+                    prompt_id: `${promptInfo?.id || 'playground'}`,
+                  });
+                  window.open('https://loop.coze.cn/open/docs/cozeloop/sdk');
+                }}
+              >
+                使用 SDK
+              </Tag>
               <Divider
                 layout="vertical"
                 style={{ height: 12, margin: '0 8px' }}
@@ -331,29 +376,20 @@ export function PromptHeader() {
                   color={isDraftEdit ? 'yellow' : 'brand'}
                   className="!py-0.5"
                 >
-                  {isDraftEdit
-                    ? I18n.t('changes_not_submitted')
-                    : I18n.t('submitted')}
+                  {isDraftEdit ? '修改未提交' : '已提交'}
                 </Tag>
-              ) : (
-                <Tag
-                  color={isDraftEdit ? 'yellow' : 'brand'}
-                  className="!py-0.5"
-                >
-                  {I18n.t('changes_not_submitted')}
-                </Tag>
-              )}
+              ) : null}
               {autoSaving ? (
                 <Tag
                   color="primary"
                   className="!py-0.5"
                   prefixIcon={<IconCozLoading spin />}
                 >
-                  {I18n.t('draft_saving')}
+                  草稿保存中...
                 </Tag>
               ) : isDraftEdit ? (
                 <Tag color="primary" className="!py-0.5">
-                  {I18n.t('draft_auto_saved_in')}
+                  草稿已自动保存于
                   {promptInfo?.prompt_draft?.draft_info?.updated_at ||
                   promptInfo?.prompt_commit?.commit_info?.committed_at
                     ? convertDisplayTime(
@@ -387,9 +423,14 @@ export function PromptHeader() {
                 });
               }}
               icon={<IconCozBattle />}
-              disabled={streaming || versionChangeLoading || readonly}
+              disabled={
+                streaming ||
+                versionChangeLoading ||
+                readonly ||
+                globalDisabled.data.readonly
+              }
             >
-              {I18n.t('enter_free_comparison_mode')}
+              进入自由对比模式
             </Button>
             {promptInfo?.prompt_key ? (
               <Button
@@ -397,13 +438,17 @@ export function PromptHeader() {
                 onClick={() => setVersionChangeVisible(v => Boolean(!v))}
                 disabled={streaming}
               >
-                {I18n.t('version_record')}
+                版本记录
               </Button>
             ) : null}
             {promptInfo?.prompt_key ? null : (
               <TooltipWhenDisabled
-                content={I18n.t('placeholder_var_create_error')}
-                disabled={hasPlaceholderError}
+                content={
+                  !modelConfig?.model_id
+                    ? '请选择一个模型'
+                    : 'Placeholder 变量名不存在或命名错误，无法创建'
+                }
+                disabled={hasPlaceholderError || !modelConfig?.model_id}
                 theme="dark"
               >
                 <Button
@@ -415,7 +460,7 @@ export function PromptHeader() {
                         prompt_commit: {
                           detail: {
                             prompt_template: {
-                              template_type: TemplateType.Normal,
+                              template_type: templateType,
                               messages: messageList,
                               variable_defs: variables,
                             },
@@ -427,9 +472,11 @@ export function PromptHeader() {
                       },
                     });
                   }}
-                  disabled={hasPlaceholderError || streaming}
+                  disabled={
+                    hasPlaceholderError || streaming || !modelConfig?.model_id
+                  }
                 >
-                  {I18n.t('quick_create')}
+                  快捷创建
                 </Button>
               </TooltipWhenDisabled>
             )}
@@ -446,7 +493,7 @@ export function PromptHeader() {
                       className="!px-2"
                       onClick={() => setExecuteHistoryVisible(true)}
                     >
-                      {I18n.t('debug_history')}
+                      调试历史
                     </Dropdown.Item>
                     {readonly ? (
                       <Dropdown.Item
@@ -460,7 +507,7 @@ export function PromptHeader() {
                         }
                         disabled={streaming || versionChangeLoading}
                       >
-                        {I18n.t('create_copy')}
+                        创建副本
                       </Dropdown.Item>
                     ) : null}
                     <Dropdown.Item
@@ -468,9 +515,7 @@ export function PromptHeader() {
                       onClick={() => onDeletePrompt(promptInfo)}
                       disabled={streaming}
                     >
-                      <Typography.Text type="danger">
-                        {I18n.t('delete')}
-                      </Typography.Text>
+                      <Typography.Text type="danger">删除</Typography.Text>
                     </Dropdown.Item>
                   </Dropdown.Menu>
                 }
@@ -490,7 +535,7 @@ export function PromptHeader() {
               icon={<IconCozExit />}
               disabled={streaming}
             >
-              {I18n.t('exit_free_comparison_mode')}
+              退出自由对比模式
             </Button>
             <Button
               color="primary"
@@ -498,7 +543,7 @@ export function PromptHeader() {
               disabled={(compareConfig?.groups || []).length >= 3 || streaming}
               onClick={handleAddNewComparePrompt}
             >
-              {I18n.t('add_control_group')}
+              增加对照组
             </Button>
           </>
         )}
@@ -511,14 +556,14 @@ export function PromptHeader() {
         isEdit={promptInfoModal.data?.isEdit}
         onOk={res => {
           if (promptInfoModal.data?.isCopy) {
-            window.open(`${baseURL}/pe/prompts/${res.cloned_prompt_id}`);
+            window.open(`pe/prompts/${res.cloned_prompt_id}`);
           } else if (promptInfoModal.data?.isEdit) {
             setPromptInfo(v => ({
               ...v,
               prompt_basic: res?.prompt_basic,
             }));
           } else {
-            navigate(`${baseURL}/pe/prompts/${res.id}`);
+            navigate(`pe/prompts/${res.id}`);
           }
 
           promptInfoModal.close();
@@ -531,6 +576,7 @@ export function PromptHeader() {
           submitModal.close();
           handleBackToDraft();
         }}
+        initVersion={nextVersion(promptInfo?.prompt_basic?.latest_version)}
       />
       <PromptDelete
         data={deleteModal.data}
@@ -538,7 +584,7 @@ export function PromptHeader() {
         onCacnel={deleteModal.close}
         onOk={() => {
           deleteModal.close();
-          navigate(`${baseURL}/pe/prompts`);
+          navigate('pe/prompts');
         }}
       />
     </div>

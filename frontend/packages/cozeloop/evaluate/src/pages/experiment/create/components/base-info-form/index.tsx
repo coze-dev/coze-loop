@@ -25,7 +25,7 @@ export const BaseInfoForm = () => {
       <FormInput
         field="name"
         label={I18n.t('name')}
-        placeholder={I18n.t('please_input', { field: I18n.t('name') })}
+        placeholder={I18n.t('please_input_name')}
         required
         maxLength={50}
         trigger="blur"
@@ -42,7 +42,7 @@ export const BaseInfoForm = () => {
       <FormTextArea
         label={I18n.t('description')}
         field="desc"
-        placeholder={I18n.t('please_input', { field: I18n.t('description') })}
+        placeholder={I18n.t('please_input_description')}
         maxCount={200}
         maxLength={200}
         rules={baseInfoValidators.desc}

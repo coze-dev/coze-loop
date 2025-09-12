@@ -3,8 +3,8 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 import { Fragment, type ReactNode } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnItem,
   ColumnSelector,
@@ -73,7 +73,7 @@ export const TableHeader = ({
   });
   const ADD_DATA_TYPE_LIST = [
     {
-      label: I18n.t('add_manually'),
+      label: I18n.t('app_client_add_env'),
       onClick: () => {
         setAddItemsVisible(true);
         sendEvent(EVENT_NAMES.cozeloop_dataset_add_data, {
@@ -82,7 +82,7 @@ export const TableHeader = ({
       },
     },
     {
-      label: I18n.t('import_from_local'),
+      label: I18n.t('local_import'),
       onClick: () => {
         setImportModalVisible(true);
         sendEvent(EVENT_NAMES.cozeloop_dataset_add_data, {

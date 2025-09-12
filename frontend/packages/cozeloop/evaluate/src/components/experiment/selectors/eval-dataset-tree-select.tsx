@@ -3,8 +3,9 @@
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TypographyText } from '@cozeloop/evaluate-components';
+import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluationSetVersion,
   type EvaluationSet,
@@ -13,7 +14,6 @@ import { Tag, type TreeNodeData, TreeSelect } from '@coze-arch/coze-design';
 
 import { updateTreeData } from './utils';
 import { listEvaluationSets, listEvaluationSetVersions } from './requery';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 type TreeNode = TreeNodeData & {
   evalSet?: EvaluationSet;
@@ -90,7 +90,7 @@ export default function EvalDatasetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={I18n.t('please_select', { field: I18n.t('evaluation_set') })}
+      placeholder={I18n.t('please_select', { field: '' })}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

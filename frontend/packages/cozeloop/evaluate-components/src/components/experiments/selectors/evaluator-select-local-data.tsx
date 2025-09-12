@@ -18,7 +18,7 @@ export function EvaluatorSelectLocalData({
   return (
     <Select
       prefix={I18n.t('evaluator')}
-      placeholder={I18n.t('please_select', { field: I18n.t('evaluator') })}
+      placeholder={I18n.t('please_select_evaluator')}
       {...props}
       className={cls(styles['render-selected-item'], className)}
       // semi 导出类型就是 Record<string, any>

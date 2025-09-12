@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable no-descending-specificity */
 /* stylelint-disable declaration-no-important */
 .collapse {
   width: 100%;
@@ -7,6 +8,8 @@
   :global {
     .semi-collapse-content {
       padding: 8px 16px;
+      background-color: white;
+      border-radius: 6px;
     }
 
     .semi-form-field{
@@ -41,4 +44,29 @@
 
 .small{
   width: 100%;
+}
+
+
+
+.object-collapse{
+  :global{
+    .semi-collapse-item{
+      border: none;
+    }
+
+    .semi-collapse-header{
+      height: 38px;
+      padding: 0;
+      background: transparent;
+
+      &:hover{
+        background: transparent !important;
+      }
+    }
+
+    .semi-collapse-content{
+      padding: 0;
+    }
+
+  }
 }

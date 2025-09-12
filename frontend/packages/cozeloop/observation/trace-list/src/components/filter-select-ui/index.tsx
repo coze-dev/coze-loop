@@ -35,12 +35,13 @@ import {
 
 import { NumberDot } from '../number-dot';
 import { checkFilterHasEmpty } from '../logic-expr/utils';
-import { type CustomRightRenderMap } from '../logic-expr/logic-expr';
-import type { View } from '../filter-bar/custom-view';
 import {
-  AnalyticsLogicExpr,
   type LogicValue,
-} from '../../components/logic-expr';
+  type CustomRightRenderMap,
+  AnalyticsLogicExpr,
+} from '../logic-expr/logic-expr';
+import { AUTO_EVAL_FEEDBACK, MANUAL_FEEDBACK } from '../logic-expr/const';
+import type { View } from '../filter-bar/custom-view';
 
 import styles from './index.module.less';
 
@@ -59,6 +60,7 @@ export interface FilterSelectUIProps {
     filters: LogicValue,
     viewMethod: string | number,
     dataSource: string | number,
+    metaInfo?: Record<string, any>,
   ) => void;
   onViewNameValidate?: (name: string) => { isValid: boolean; message: string };
   triggerRender?: React.ReactNode;
@@ -89,8 +91,37 @@ export interface FilterSelectUIProps {
   selectedView?: View;
   platformEnumOptionList: { label: string; value: string | number }[];
   customRightRenderMap?: CustomRightRenderMap;
+  customLeftRenderMap?: CustomRightRenderMap;
   spanTabOptionList: { label: string; value: string | number }[];
+  ignoreKeys?: string[];
+  readonly?: boolean;
+  disabled?: boolean;
+  hideSaveToViewButton?: boolean;
 }
+
+const filterFiltersWithIgnoreKeys: (
+  filters: LogicValue,
+  ignoreKeys?: string[],
+) => LogicValue = (filters: LogicValue, ignoreKeys?: string[]) => {
+  if (!ignoreKeys || isEmpty(ignoreKeys)) {
+    return filters;
+  }
+
+  const { query_and_or, filter_fields, sub_filter } = filters;
+
+  return {
+    query_and_or,
+    filter_fields: filter_fields?.filter(
+      fieldFilter =>
+        !ignoreKeys.includes(
+          fieldFilter.logic_field_name_type ?? fieldFilter.field_name,
+        ),
+    ),
+    sub_filter: sub_filter?.map(spanFilter =>
+      filterFiltersWithIgnoreKeys(spanFilter, ignoreKeys),
+    ),
+  };
+};
 
 export const FilterSelectUI = (props: FilterSelectUIProps) => {
   const {
@@ -112,6 +143,11 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
     platformEnumOptionList,
     spanTabOptionList,
     customRightRenderMap,
+    customLeftRenderMap,
+    ignoreKeys = [],
+    readonly = false,
+    disabled = false,
+    hideSaveToViewButton = false,
   } = props;
 
   const [filterVisible, setFilterVisible] = useState(propsVisible || false);
@@ -120,7 +156,9 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
   const [saveViewNameVisible, setSaveViewNameVisible] = useState(false);
   const { spaceID } = useSpace();
 
-  const [localFilters, setLocalFilters] = useState<LogicValue>(filters);
+  const [localFilters, setLocalFilters] = useState<LogicValue>(
+    filterFiltersWithIgnoreKeys(filters, ignoreKeys || []),
+  );
   const [localViewMethod, setLocalViewMethod] = useState(initViewMethod);
   const [localDataSource, setLocalDataSource] = useState(initDataSource);
   const [saveViewNameMessage, setSaveViewNameMessage] = useState('');
@@ -132,8 +170,11 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
   const disableApply = checkFilterHasEmpty(localFilters);
   const guard = useGuard({ point: GuardPoint['ob.trace.custom_view'] });
 
-  const { data: fieldMetas } = useRequest(
+  const { data: fieldMetasInner } = useRequest(
     async () => {
+      if (readonly || disabled) {
+        return props.fieldMetas || {};
+      }
       const result = await observabilityTrace.GetTracesMetaInfo(
         {
           platform_type: localDataSource as PlatformType,
@@ -158,21 +199,40 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
     },
   );
 
+  const fieldMetas = useMemo(() => {
+    if (readonly || disabled) {
+      return props.fieldMetas;
+    }
+
+    return fieldMetasInner;
+  }, [readonly, disabled, fieldMetasInner, props.fieldMetas]);
+
   const invalidateExprs = useMemo(() => {
     if (!fieldMetas) {
       return new Set() as Set<string>;
     }
+
     const currentInvalidateExpr = localFilters?.filter_fields
       ?.filter(
         filedFilter =>
-          !(keys(fieldMetas) ?? []).includes(filedFilter.field_name),
+          !(keys(fieldMetas) ?? []).includes(filedFilter.field_name) &&
+          filedFilter.logic_field_name_type !== AUTO_EVAL_FEEDBACK &&
+          filedFilter.logic_field_name_type !== MANUAL_FEEDBACK,
       )
       .map(filedFilter => filedFilter.field_name);
+
     return new Set(currentInvalidateExpr);
   }, [localFilters?.filter_fields, fieldMetas]);
 
+  const shouldHideAndLine = readonly && isEmpty(filters.filter_fields);
+
   const handleApply = () => {
-    onApplyFilters?.(localFilters, localViewMethod, localDataSource);
+    onApplyFilters?.(
+      localFilters,
+      localViewMethod,
+      localDataSource,
+      fieldMetas,
+    );
     setFilterVisible(false);
   };
 
@@ -187,44 +247,46 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
     <>
       <div className="box-border h-[32px] flex items-center gap-x-2 justify-between">
         <Select
-          value="viewing_method"
+          value={I18n.t('viewing_method')}
           disabled
-          className="!outline-none !h-[32px] !w-[160px] box-border"
+          className="!outline-none !h-[32px] !w-[280px] box-border"
           showArrow={false}
         />
         <Select
-          defaultValue="belong_to"
+          defaultValue={I18n.t('belong_to')}
           className="w-[80px] box-border !h-[32px]"
           disabled
         />
         <Select
           value={localViewMethod}
           optionList={spanTabOptionList}
-          className="min-w-[270px] box-border flex-1 !h-[32px]"
+          className="min-w-[124px] box-border flex-1 !h-[32px]"
           onChange={value => {
             setLocalViewMethod(value as string);
           }}
+          disabled={readonly || disabled}
         />
       </div>
       <div className="box-border h-[32px] flex items-center gap-x-2 justify-between">
         <Select
-          value="data_source"
+          value={I18n.t('data_source')}
           disabled
-          className="!outline-none !h-[32px] !w-[160px] box-border"
+          className="!outline-none !h-[32px] !w-[280px] box-border"
           showArrow={false}
         />
         <Select
-          defaultValue="belong_to"
+          defaultValue={I18n.t('belong_to')}
           className="w-[80px] box-border !h-[32px]"
           disabled
         />
         <Select
           value={localDataSource}
           optionList={platformEnumOptionList}
-          className="min-w-[270px] box-border flex-1 !h-[32px]"
+          className="min-w-[124px] box-border flex-1 !h-[32px]"
           onChange={value => {
             setLocalDataSource(value as string);
           }}
+          disabled={readonly || disabled}
         />
       </div>
     </>
@@ -300,9 +362,9 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
           setLocalDataSource(initDataSource);
           setSaveViewName('');
           setSaveViewNameMessage('');
-          setLocalFilters({});
+          setLocalFilters({} as unknown as LogicValue);
         } else {
-          setLocalFilters(filters);
+          setLocalFilters(filterFiltersWithIgnoreKeys(filters, ignoreKeys));
           setLocalViewMethod(initViewMethod);
           setLocalDataSource(initDataSource);
         }
@@ -318,7 +380,7 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
       zIndex={1000}
       render={
         <div
-          className="min-w-[616px] max-w-[616px] w-[616px] min-h-[256px] py-3 box-border flex gap-y-3 flex-col"
+          className="min-w-[656px] max-w-[656x] w-[656px] min-h-[256px] py-3 box-border flex gap-y-3 flex-col"
           onClick={e => {
             e.stopPropagation();
             e.preventDefault();
@@ -337,117 +399,181 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
                 <IconCozInfoCircle />
               </Tooltip>
             </div>
-            <span
-              className="text-[12px] leading-[16px] font-medium text-[var(--coz-fg-secondary)] flex items-center hover:text-[rgb(var(--coze-up-brand-9))] cursor-pointer"
-              onClick={() => {
-                onClearFilters?.();
-                setLocalFilters({});
-              }}
-            >
-              {I18n.t('clear')}
-            </span>
+            {!readonly && !disabled && (
+              <span
+                className="text-[12px] leading-[16px] font-medium text-[var(--coz-fg-secondary)] flex items-center hover:text-[rgb(var(--coze-up-brand-9))] cursor-pointer"
+                onClick={() => {
+                  onClearFilters?.();
+                  setLocalFilters({} as unknown as LogicValue);
+                }}
+              >
+                {I18n.t('clear')}
+              </span>
+            )}
           </div>
           <div
-            className="pl-[54px] box-border relative pr-4"
+            className={classNames(
+              'pl-[54px] box-border relative pr-4',
+              shouldHideAndLine && '!pl-4',
+            )}
             ref={filterWrapperRef}
           >
+            {!shouldHideAndLine && (
+              <div
+                className="absolute w-[32px] h-[28px] bg-white left-[17px] z-[101] flex items-center text-[var(--coz-fg-secondary)] text-[13px]"
+                style={{
+                  bottom:
+                    'calc((100% - ((100% - 80px) / 2) - 16px) / 2 + (100% - 80px) / 2 - 14px)',
+                }}
+              >
+                {I18n.t('observation_and')}
+              </div>
+            )}
+
             <div
-              className="absolute w-[32px] h-[28px] bg-white left-[17px] z-[101] flex items-center text-[var(--coz-fg-secondary)] text-[13px]"
-              style={{
-                bottom:
-                  'calc((100% - ((100% - 80px) / 2) - 16px) / 2 + (100% - 80px) / 2 - 14px)',
-              }}
-            >
-              {I18n.t('observation_and')}
-            </div>
-            <div className={styles.fixedSelect}>
-              <FixedSelect />
-            </div>
-            <div
-              ref={sizeSelectRef}
-              className={classNames(styles.sizedSelect, {
-                [styles.empty]: isEmpty(localFilters),
+              className={classNames(styles.fixedSelect, {
+                [styles['hide-line']]: shouldHideAndLine,
               })}
             >
+              <FixedSelect />
+            </div>
+            {!shouldHideAndLine && (
               <div
-                className={classNames(styles['logic-expr-wrapper'], {
-                  [styles['logic-expr-wrapper-empty']]: isEmpty(localFilters),
+                ref={sizeSelectRef}
+                className={classNames(styles.sizedSelect, {
+                  [styles.empty]: isEmpty(localFilters),
                 })}
               >
-                {fieldMetas ? (
-                  <AnalyticsLogicExpr
-                    customRightRenderMap={customRightRenderMap}
-                    invalidateExpr={invalidateExprs}
-                    allowLogicOperators={['and', 'or']}
-                    tagFilterRecord={fieldMetas}
-                    value={localFilters}
-                    disableDuplicateSelect={true}
-                    defaultImmutableKeys={undefined}
-                    onChange={value => {
-                      setLocalFilters(value ?? {});
-                    }}
-                  />
-                ) : null}
+                <div
+                  className={classNames(styles['logic-expr-wrapper'], {
+                    [styles['logic-expr-wrapper-empty']]: isEmpty(localFilters),
+                  })}
+                >
+                  {fieldMetas ? (
+                    <AnalyticsLogicExpr
+                      customRightRenderMap={customRightRenderMap}
+                      customLeftRenderMap={customLeftRenderMap}
+                      invalidateExpr={invalidateExprs}
+                      allowLogicOperators={['and', 'or']}
+                      tagFilterRecord={fieldMetas}
+                      value={localFilters}
+                      disableDuplicateSelect={true}
+                      defaultImmutableKeys={undefined}
+                      onChange={value => {
+                        setLocalFilters(value ?? {});
+                      }}
+                      ignoreKeys={ignoreKeys}
+                      disabled={readonly || disabled}
+                    />
+                  ) : null}
+                </div>
               </div>
-            </div>
+            )}
           </div>
-          <div className="border-0 border-t border-solid border-[var(--coz-stroke-primary)] flex items-center justify-end gap-x-2 pt-3 px-4">
-            {customFooter ? (
-              customFooter({
-                onCancel: () => {
-                  setFilterVisible(false);
-                },
-                onSave: () => {
-                  setFilterVisible(false);
-                },
-                currentFilter: {
-                  filters: localFilters,
-                  viewMethod: localViewMethod.toString(),
-                  dataSource: localDataSource.toString(),
-                },
-              })
-            ) : (
-              <>
-                <div>
-                  {selectedView ? (
-                    <Dropdown
-                      trigger="custom"
-                      visible={saveViewVisible}
-                      preventScroll
-                      position="bottomRight"
-                      onClickOutSide={() => {
-                        if (saveViewNameVisible) {
-                          return;
-                        }
-                        setSaveViewVisible(false);
-                      }}
-                      onVisibleChange={visible => {
-                        setSaveViewVisible(visible);
-                      }}
-                      render={
-                        <Dropdown.Menu className="!min-w-[140px] !max-w-[140px] !w-[140px] !box-border">
-                          <Dropdown.Item
-                            disabled={!allowSaveToCurrentView}
-                            type="primary"
-                            className={styles['dropdown-item']}
-                            onClick={() => {
+          {
+            <div className="border-0 border-t border-solid border-[var(--coz-stroke-primary)] flex items-center justify-end gap-x-2 pt-3 px-4">
+              {customFooter ? (
+                customFooter({
+                  onCancel: () => {
+                    setFilterVisible(false);
+                  },
+                  onSave: () => {
+                    setFilterVisible(false);
+                  },
+                  currentFilter: {
+                    filters: localFilters,
+                    viewMethod: localViewMethod.toString(),
+                    dataSource: localDataSource.toString(),
+                  },
+                })
+              ) : (
+                <>
+                  <>
+                    {!hideSaveToViewButton && (
+                      <div>
+                        {selectedView ? (
+                          <Dropdown
+                            trigger="custom"
+                            visible={saveViewVisible}
+                            preventScroll
+                            position="bottomRight"
+                            onClickOutSide={() => {
+                              if (saveViewNameVisible) {
+                                return;
+                              }
                               setSaveViewVisible(false);
-                              onSaveToCurrentView?.({
-                                filters: localFilters,
-                                viewMethod: localViewMethod.toString(),
-                                dataSource: localDataSource.toString(),
-                              });
                             }}
-                          >
-                            {I18n.t('save_to_current_view')}
-                          </Dropdown.Item>
+                            onVisibleChange={visible => {
+                              setSaveViewVisible(visible);
+                            }}
+                            render={
+                              <Dropdown.Menu className="!min-w-[140px] !max-w-[140px] !w-[140px] !box-border">
+                                <Dropdown.Item
+                                  disabled={!allowSaveToCurrentView}
+                                  type="primary"
+                                  className={styles['dropdown-item']}
+                                  onClick={() => {
+                                    setSaveViewVisible(false);
+                                    onSaveToCurrentView?.({
+                                      filters: localFilters,
+                                      viewMethod: localViewMethod.toString(),
+                                      dataSource: localDataSource.toString(),
+                                    });
+                                  }}
+                                >
+                                  {I18n.t('save_to_current_view')}
+                                </Dropdown.Item>
 
+                                <Popover
+                                  visible={saveViewNameVisible}
+                                  showArrow
+                                  zIndex={9999}
+                                  trigger="click"
+                                  position="right"
+                                  onVisibleChange={visible => {
+                                    setSaveViewNameVisible(visible);
+                                    if (!visible) {
+                                      setSaveViewVisible(false);
+                                    }
+                                  }}
+                                  content={renderSaveView()}
+                                >
+                                  <Dropdown.Item
+                                    type="primary"
+                                    className="!py-0 !px-2 !box-border"
+                                    onClick={() => {
+                                      setSaveViewNameVisible(true);
+                                    }}
+                                  >
+                                    {I18n.t('save_as_view')}
+                                  </Dropdown.Item>
+                                </Popover>
+                              </Dropdown.Menu>
+                            }
+                          >
+                            <Button
+                              type="primary"
+                              color="primary"
+                              disabled={guard.data.readonly || disableApply}
+                              className={`${allowSaveToCurrentView ? '' : '!text-[var(--coz-fg-dim)] !bg-[rgba(var(--coze-bg-5), var(--coze-bg-5-alpha))'}`}
+                              onClick={event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setSaveViewVisible(true);
+                              }}
+                            >
+                              <div className="flex items-center gap-x-2">
+                                <span>{I18n.t('save_view')}</span>
+                                <IconCozArrowDown />
+                              </div>
+                            </Button>
+                          </Dropdown>
+                        ) : (
                           <Popover
                             visible={saveViewNameVisible}
                             showArrow
-                            zIndex={9999}
-                            trigger="click"
-                            position="right"
+                            trigger="custom"
+                            position="bottom"
                             onVisibleChange={visible => {
                               setSaveViewNameVisible(visible);
                               if (!visible) {
@@ -456,75 +582,34 @@ export const FilterSelectUI = (props: FilterSelectUIProps) => {
                             }}
                             content={renderSaveView()}
                           >
-                            <Dropdown.Item
+                            <Button
                               type="primary"
-                              className="!py-0 !px-2 !box-border"
+                              color="primary"
+                              disabled={guard.data.readonly || disableApply}
                               onClick={() => {
                                 setSaveViewNameVisible(true);
                               }}
                             >
-                              {I18n.t('save_as_view')}
-                            </Dropdown.Item>
+                              {I18n.t('save_view')}
+                            </Button>
                           </Popover>
-                        </Dropdown.Menu>
-                      }
-                    >
-                      <Button
-                        type="primary"
-                        color="primary"
-                        disabled={guard.data.readonly || disableApply}
-                        className={`${allowSaveToCurrentView ? '' : '!text-[var(--coz-fg-dim)] !bg-[rgba(var(--coze-bg-5), var(--coze-bg-5-alpha))'}`}
-                        onClick={event => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          setSaveViewVisible(true);
-                        }}
-                      >
-                        <div className="flex items-center gap-x-2">
-                          <span>{I18n.t('save_view')}</span>
-                          <IconCozArrowDown />
-                        </div>
-                      </Button>
-                    </Dropdown>
-                  ) : (
-                    <Popover
-                      visible={saveViewNameVisible}
-                      showArrow
-                      trigger="custom"
-                      position="bottom"
-                      onVisibleChange={visible => {
-                        setSaveViewNameVisible(visible);
-                        if (!visible) {
-                          setSaveViewVisible(false);
-                        }
-                      }}
-                      content={renderSaveView()}
-                    >
-                      <Button
-                        type="primary"
-                        color="primary"
-                        disabled={guard.data.readonly || disableApply}
-                        onClick={() => {
-                          setSaveViewNameVisible(true);
-                        }}
-                      >
-                        {I18n.t('save_view')}
-                      </Button>
-                    </Popover>
-                  )}
-                </div>
+                        )}
+                      </div>
+                    )}
+                  </>
 
-                <Button
-                  type="primary"
-                  color="brand"
-                  onClick={handleApply}
-                  disabled={disableApply}
-                >
-                  {I18n.t('apply')}
-                </Button>
-              </>
-            )}
-          </div>
+                  <Button
+                    type="primary"
+                    color="brand"
+                    onClick={handleApply}
+                    disabled={disableApply}
+                  >
+                    {I18n.t('apply')}
+                  </Button>
+                </>
+              )}
+            </div>
+          }
         </div>
       }
     >

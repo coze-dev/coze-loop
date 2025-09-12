@@ -57,7 +57,7 @@ export const ExperimentModal = ({
       height={473}
       onCancel={onCancel}
       okText={I18n.t('confirm')}
-      cancelText={I18n.t('Cancel')}
+      cancelText={I18n.t('cancel')}
     >
       {loading ? (
         <div className="flex justify-center items-center h-full">
@@ -92,14 +92,7 @@ export const ExperimentModal = ({
                   ) : null
                 }
                 field="version_id"
-                rules={[
-                  {
-                    required: true,
-                    message: I18n.t('please_select', {
-                      field: I18n.t('version'),
-                    }),
-                  },
-                ]}
+                rules={[{ required: true, message: I18n.t('select_version') }]}
                 optionList={data?.map(item => ({
                   label: item.version,
                   value: item.id,

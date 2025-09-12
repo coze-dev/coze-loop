@@ -29,7 +29,9 @@ export const fillTurnData = ({
         fieldData = {
           key: schema.key,
           name: schema.name,
-          content: {},
+          content: {
+            content_type: schema?.content_type,
+          },
         };
       }
       return fieldData;

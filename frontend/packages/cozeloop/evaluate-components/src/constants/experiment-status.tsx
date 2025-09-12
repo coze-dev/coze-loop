@@ -1,7 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
-import { ExptStatus, TurnRunState } from '@cozeloop/api-schema/evaluation';
+import {
+  ExptStatus,
+  TurnRunState,
+  ItemRunState,
+} from '@cozeloop/api-schema/evaluation';
 import {
   IconCozCheckMarkCircleFill,
   IconCozClockFill,
@@ -39,7 +43,7 @@ export const experimentRunStatusInfoList: ExperimentRunStatusInfo[] = [
     icon: <IconCozCrossCircleFill />,
   },
   // {
-  //   name: '失败',
+  //   name: I18n.t('status_failed'),
   //   status: ExptStatus.SystemTerminated,
   //   color: 'red',
   //   tagColor: 'red',
@@ -117,6 +121,53 @@ export const experimentItemRunStatusInfoList: ExperimentItemRunStatusInfo[] = [
   {
     name: I18n.t('abort'),
     status: TurnRunState.Terminal,
+    color: 'orange',
+    tagColor: 'yellow',
+    icon: <IconCozWarningCircleFill />,
+  },
+];
+
+/** 实验对话组运行状态信息 */
+export interface ExprGroupItemRunStatusInfo {
+  name: string;
+  status: ItemRunState;
+  color: string;
+  tagColor: CozeTagColor;
+  icon?: React.ReactNode;
+}
+/** 实验对话组运行状态信息列表 */
+export const exprGroupItemRunStatusInfoList: ExprGroupItemRunStatusInfo[] = [
+  {
+    name: I18n.t('success'),
+    status: ItemRunState.Success,
+    color: 'green',
+    tagColor: 'green',
+    icon: <IconCozCheckMarkCircleFill />,
+  },
+  {
+    name: I18n.t('failure'),
+    status: ItemRunState.Fail,
+    color: 'red',
+    tagColor: 'red',
+    icon: <IconCozCrossCircleFill />,
+  },
+  {
+    name: I18n.t('in_progress'),
+    status: ItemRunState.Processing,
+    color: 'blue',
+    tagColor: 'blue',
+    icon: <IconCozLoading />,
+  },
+  {
+    name: I18n.t('to_be_executed'),
+    status: ItemRunState.Queueing,
+    color: 'grey',
+    tagColor: 'primary',
+    icon: <IconCozClockFill />,
+  },
+  {
+    name: I18n.t('abort'),
+    status: ItemRunState.Terminal,
     color: 'orange',
     tagColor: 'yellow',
     icon: <IconCozWarningCircleFill />,

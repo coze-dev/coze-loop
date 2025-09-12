@@ -38,10 +38,17 @@ func DefaultExptExportWhiteList() *ExptExportWhiteList {
 }
 
 type ExptExportWhiteList struct {
-	UserIDs []int64 `json:"user_ids" mapstructure:"user_ids"`
+	UserIDs  []int64 `json:"user_ids" mapstructure:"user_ids"`
+	AllowAll bool    `json:"allow_all" mapstructure:"allow_all"`
 }
 
 func (e *ExptExportWhiteList) IsUserIDInWhiteList(userID string) bool {
+	if e == nil {
+		return false
+	}
+	if e.AllowAll {
+		return true
+	}
 	uid, err := strconv.ParseInt(userID, 10, 64)
 	if err != nil {
 		return false

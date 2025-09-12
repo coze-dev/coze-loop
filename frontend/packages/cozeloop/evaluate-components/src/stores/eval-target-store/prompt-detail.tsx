@@ -14,8 +14,7 @@ import { EmptyState, Loading } from '@coze-arch/coze-design';
 import { useExptCreateFormCtx } from '@/context/expt-create-form-ctx';
 import { PromptVariablesList } from '@/components/evaluator/prompt-variables-list';
 import { PromptMessage } from '@/components/evaluator/prompt-message';
-
-import { useGlobalEvalConfig } from '../eval-global-config';
+import { EvaluateModelConfigEditor } from '@/components/evaluate-model-config-editor';
 
 import emptyStyles from './empty-state.module.less';
 
@@ -27,7 +26,6 @@ export function PromptDetail(props: {
   const { setLoading, promptId, version } = props;
   const [open, setOpen] = useState(false);
   const [promptDetail, setPromptDetail] = useState<promptDomain.Prompt>();
-  const { modelConfigEditor: ModelConfigComponent } = useGlobalEvalConfig();
 
   // EvaluateTargetMappingField 需要消费
   const { setCreateExperimentValues } = useExptCreateFormCtx();
@@ -108,7 +106,7 @@ export function PromptDetail(props: {
         className="h-5 flex flex-row items-center cursor-pointer text-sm coz-fg-primary font-semibold"
         onClick={() => setOpen(pre => !pre)}
       >
-        {I18n.t('prompt_detail')}
+        {I18n.t('prompt_details')}
         <IconCozArrowRight
           className={classNames(
             'h-4 w-4 ml-2 coz-fg-plus transition-transform',
@@ -125,12 +123,14 @@ export function PromptDetail(props: {
               icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
               title={I18n.t('no_data')}
               className={emptyStyles['empty-state']}
-              description={I18n.t('select_prompt_key_and_version_to_view')}
+              description={I18n.t(
+                'cozeloop_open_evaluate_select_prompt_key_version_before_view',
+              )}
             />
           </div>
         ) : (
           <div className="mt-4">
-            <ModelConfigComponent
+            <EvaluateModelConfigEditor
               value={commitDetail?.model_config}
               disabled={true}
             />
