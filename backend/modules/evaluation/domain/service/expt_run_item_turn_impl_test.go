@@ -64,7 +64,7 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 			},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-					Event: &entity.ExptItemEvalEvent{SpaceID: 1},
+					Event: &entity.ExptItemEvalEvent{SpaceID: 1, Session: &entity.Session{UserID: "1"}},
 					Expt: &entity.Experiment{
 						ExptType: entity.ExptType_Online,
 						EvalConf: &entity.EvaluationConfiguration{
@@ -88,7 +88,7 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 			},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-					Event: &entity.ExptItemEvalEvent{SpaceID: 1},
+					Event: &entity.ExptItemEvalEvent{SpaceID: 1, Session: &entity.Session{UserID: "1"}},
 					Expt: &entity.Experiment{
 						ExptType: entity.ExptType_Offline,
 						EvalConf: &entity.EvaluationConfiguration{
@@ -107,11 +107,18 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecEval(gomock.Any(), gomock.Any())
 				mockMetric.EXPECT().EmitTurnExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock benefit error"))
 			},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-					Event: &entity.ExptItemEvalEvent{SpaceID: 1},
+					Event: &entity.ExptItemEvalEvent{
+						ExptID:  1,
+						SpaceID: 1,
+						Session: &entity.Session{UserID: "1"},
+					},
 					Expt: &entity.Experiment{
+						ExptType:       entity.ExptType_Offline,
+						TargetVersionID: 1,
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
 								TargetConf: &entity.TargetConf{
@@ -287,6 +294,8 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					Expt: &entity.Experiment{
+						ExptType:       entity.ExptType_Offline,
+						TargetVersionID: 1,
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
 								TargetConf: &entity.TargetConf{
@@ -296,6 +305,8 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 						},
 					},
 					Event: &entity.ExptItemEvalEvent{
+						ExptID:  1,
+						SpaceID: 2,
 						Session: &entity.Session{
 							UserID: "test_user",
 						},
@@ -315,7 +326,8 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					Expt: &entity.Experiment{
-						ExptType: entity.ExptType_Offline,
+						ExptType:       entity.ExptType_Offline,
+						TargetVersionID: 1,
 						Target: &entity.EvalTarget{
 							ID:                1,
 							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},

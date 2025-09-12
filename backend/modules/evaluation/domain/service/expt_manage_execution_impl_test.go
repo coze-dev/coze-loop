@@ -1102,6 +1102,8 @@ func TestExptMangerImpl_CheckConnector(t *testing.T) {
 						},
 					},
 				},
+				TargetVersionID: 1,
+				TargetID:        1,
 				Target: &entity.EvalTarget{
 					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{

@@ -469,8 +469,9 @@ func TestExptMangerImpl_CheckRun_RemovedCheckers(t *testing.T) {
 		{
 			name: "check_run_should_not_include_removed_checkers",
 			expt: &entity.Experiment{
-				ExptType:        entity.ExptType_Offline,
-				TargetVersionID: 123,
+				ExptType:         entity.ExptType_Offline,
+				EvalSetVersionID: 456,
+				TargetVersionID:  123,
 				Target: &entity.EvalTarget{
 					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 				},
