@@ -16,18 +16,19 @@ import (
 	auditMocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks")
+	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+)
 
 type testExptManager = ExptMangerImpl
 
 func TestExptMangerImpl_checkTargetConnector_VersionIDValidation(t *testing.T) {
 	tests := []struct {
-		name                string
-		expt                *entity.Experiment
-		setupMocks          func(mgr *testExptManager)
-		expectedError       bool
-		expectedErrorCode   string
-		expectedErrorMsg    string
+		name              string
+		expt              *entity.Experiment
+		setupMocks        func(mgr *testExptManager)
+		expectedError     bool
+		expectedErrorCode string
+		expectedErrorMsg  string
 	}{
 		{
 			name: "target_version_id_mismatch_should_return_error",
@@ -68,7 +69,7 @@ func TestExptMangerImpl_checkTargetConnector_VersionIDValidation(t *testing.T) {
 				// No mocks needed for this test case
 			},
 			expectedError:     true,
-			expectedErrorCode:   "601204001",
+			expectedErrorCode: "601204001",
 			expectedErrorMsg:  "target config's version id not match",
 		},
 		{
@@ -202,7 +203,7 @@ func TestExptMangerImpl_checkTargetConnector_VersionIDValidation(t *testing.T) {
 					Return(errors.New("invalid JSON format"))
 			},
 			expectedError:     true,
-			expectedErrorCode:     "601204001",
+			expectedErrorCode: "601204001",
 			expectedErrorMsg:  "invalid runtime param",
 		},
 	}

@@ -109,10 +109,10 @@ func TestEvaluatorsConf_Valid_NilCheck(t *testing.T) {
 
 func TestEvaluatorConf_Valid_NewValidation(t *testing.T) {
 	tests := []struct {
-		name           string
-		evaluatorConf  *EvaluatorConf
-		expectedError  bool
-		errorContains  string
+		name          string
+		evaluatorConf *EvaluatorConf
+		expectedError bool
+		errorContains string
 	}{
 		{
 			name:          "nil_evaluator_conf_should_return_error",
