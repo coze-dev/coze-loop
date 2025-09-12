@@ -22,6 +22,8 @@ interface ModalVariableDisplayProps {
   dataInfo?: ModalVariableDataInfo;
   readonly?: boolean;
   isMultimodal?: boolean;
+  disabled?: boolean;
+  disabledTip?: string;
   onDelete?: () => void;
 }
 
@@ -30,15 +32,19 @@ const ModalVariableDisplay: React.FC<ModalVariableDisplayProps> = ({
   readonly,
   isMultimodal,
   onDelete,
+  disabled,
+  disabledTip = '当前 Message 不支持多模态，请调整变量类型或更换 Message 类型',
 }) => (
   <TooltipWhenDisabled
-    content="所选模型不支持多模态，请调整变量类型或更换模型"
+    content={
+      disabled ? disabledTip : '所选模型不支持多模态，请调整变量类型或更换模型'
+    }
     theme="dark"
-    disabled={!isMultimodal}
+    disabled={!isMultimodal || disabled}
   >
     <div
       className={classNames(styles['modal-variable-widget'], {
-        [styles['modal-variable-widget-disabled']]: !isMultimodal,
+        [styles['modal-variable-widget-disabled']]: !isMultimodal || disabled,
       })}
     >
       <Icon svg={<ModalVariableIcon fontSize={13} />} size="extra-small" />
@@ -70,10 +76,12 @@ export class ModalVariableWidget extends WidgetType {
     const { root, dom } = renderDom<ModalVariableDisplayProps>(
       ModalVariableDisplay,
       {
+        disabled: this.options.disabled,
         dataInfo: this.options.dataInfo,
         readonly: this.options.readonly,
         onDelete: this.options.onDelete,
         isMultimodal: this.options.isMultimodal,
+        disabledTip: this.options.disabledTip,
       },
     );
 

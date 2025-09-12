@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable security/detect-non-literal-regexp */
 /* eslint-disable @coze-arch/max-line-per-function */
@@ -36,12 +37,12 @@ import {
 import { VARIABLE_MAX_LEN } from '@/consts';
 import { ReactComponent as ModalVariableIcon } from '@/assets/modal-variable.svg';
 
+import ModalVariableCompletion from './widgets/modal-variable';
 import {
   PromptBasicEditor,
   type PromptBasicEditorRef,
   type PromptBasicEditorProps,
 } from '../basic-editor';
-import ModalVariableCompletion from './widgets/modal-variable';
 import { MessageTypeSelect } from './message-type-select';
 
 import styles from './index.module.less';
@@ -167,7 +168,11 @@ export const PromptEditor = forwardRef(
       if (editor?.$view) {
         updateRegexpDecorations(editor.$view);
       }
-    }, [modalVariableEnable]);
+    }, [
+      modalVariableEnable,
+      modalVariableBtnHidden,
+      JSON.stringify(variables),
+    ]);
 
     return (
       <>
@@ -211,8 +216,12 @@ export const PromptEditor = forwardRef(
                 !modalVariableBtnHidden &&
                 message?.role !== placeholderRoleValue ? (
                   <TooltipWhenDisabled
-                    disabled={!modalVariableEnable}
-                    content="所选模型不支持多模态，请调整变量类型或更换模型"
+                    disabled={!modalVariableVisible}
+                    content={
+                      modalVariableEnable
+                        ? '多模态变量'
+                        : '所选模型不支持多模态，请调整变量类型或更换模型'
+                    }
                     theme="dark"
                   >
                     <span>
@@ -252,6 +261,16 @@ export const PromptEditor = forwardRef(
                                     );
 
                                     if (value) {
+                                      // 检查是否包含换行符
+                                      if (
+                                        value.includes('\n') ||
+                                        value.includes('\r')
+                                      ) {
+                                        callback(
+                                          '只能包含字母、数字或下划线，并且以字母开头',
+                                        );
+                                        return false;
+                                      }
                                       if (regex.test(value)) {
                                         if (
                                           variables?.some(v => v.key === value)
@@ -274,6 +293,7 @@ export const PromptEditor = forwardRef(
                               rows={2}
                               showCounter
                               fieldClassName="!p-0"
+                              autoFocus
                             />
                           </Form>
                         }
@@ -321,28 +341,6 @@ export const PromptEditor = forwardRef(
                 borderless
                 disabled={readonly}
                 style={{ border: 0, borderRadius: 0 }}
-                onInput={event => {
-                  // 获取当前输入的值
-                  const target = event.target as HTMLInputElement;
-                  if (target) {
-                    let { value } = target;
-                    // 如果输入为空，不做处理
-                    if (value === '') {
-                      return;
-                    }
-                    // 确保首字母是字母
-                    if (!/^[A-Za-z]/.test(value)) {
-                      // 如果首字母不是字母，去掉首字母
-                      value = value.slice(1);
-                    }
-
-                    // 确保其余部分只包含字母、数字和下划线
-                    value = value.replace(/[^A-Za-z0-9_]/g, '');
-
-                    // 更新输入框的值
-                    target.value = value;
-                  }
-                }}
                 maxLength={VARIABLE_MAX_LEN}
                 max={50}
                 className="!pl-3 font-sm"
@@ -368,7 +366,11 @@ export const PromptEditor = forwardRef(
                 onBlur={() => setEditorActive(false)}
                 ref={editorRef}
               >
-                <ModalVariableCompletion isMultimodal={modalVariableEnable} />
+                <ModalVariableCompletion
+                  isMultimodal={modalVariableEnable}
+                  variableKeys={variables?.map(it => it.key || '')}
+                  disabled={modalVariableBtnHidden}
+                />
                 {children}
               </PromptBasicEditor>
             )}

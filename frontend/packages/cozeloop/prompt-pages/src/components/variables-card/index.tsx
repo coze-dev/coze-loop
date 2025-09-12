@@ -110,17 +110,19 @@ export function VariablesCard({ uid, defaultVisible }: VariablesCardProps) {
                   }
                   return part;
                 });
+              const onlyTextPart = newParts.every(
+                part => part.type === ContentType.Text,
+              );
               return {
                 ...it,
                 key:
                   needNewKey || newParts.length !== it.parts.length
                     ? nanoid()
                     : it.key,
-                parts: newParts,
-                content:
-                  newParts.length === 1
-                    ? newParts.map(part => part.text).join('')
-                    : undefined,
+                parts: onlyTextPart ? [] : newParts,
+                content: onlyTextPart
+                  ? newParts.map(part => part.text).join('')
+                  : undefined,
               };
             }
             return it;

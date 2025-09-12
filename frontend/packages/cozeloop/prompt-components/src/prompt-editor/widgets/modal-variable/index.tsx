@@ -13,8 +13,12 @@ import { ModalVariableWidget } from './widget';
 
 export default function ModalVariableCompletion({
   isMultimodal,
+  variableKeys,
+  disabled,
 }: {
   isMultimodal?: boolean;
+  variableKeys?: string[];
+  disabled?: boolean;
 }) {
   const editor = useEditor<EditorAPI>();
   const injector = useInjector();
@@ -23,6 +27,9 @@ export default function ModalVariableCompletion({
     '<multimodal-variable>(.*?)</multimodal-variable>',
     'gm',
   );
+  const isMultimodalRef = useLatest(isMultimodal);
+  const variableKeysRef = useLatest(variableKeys);
+  const disabledRef = useLatest(disabled);
 
   useLayoutEffect(
     () =>
@@ -48,8 +55,10 @@ export default function ModalVariableCompletion({
             //     stateType = 'add';
             //   }
             // }
-            console.log('isMultimodal', isMultimodal);
             const matchText = matches[1];
+            const disabledKey = variableKeysRef.current?.some(
+              key => key === matchText,
+            );
 
             add(
               from,
@@ -64,7 +73,9 @@ export default function ModalVariableCompletion({
                     editorRef.current?.replaceText({ from, to, text: '' });
                   },
                   readonly: view.state.readOnly,
-                  isMultimodal,
+                  isMultimodal: isMultimodalRef.current,
+                  disabled: disabledRef.current || disabledKey,
+                  disabledTip: disabledKey ? '多模态变量名冲突' : undefined,
                   from,
                   to,
                 }),
@@ -74,7 +85,7 @@ export default function ModalVariableCompletion({
           },
         }),
       ]),
-    [isMultimodal],
+    [],
   );
 
   return null;

@@ -48,7 +48,18 @@ export const columns: ColumnProps<Prompt & { user?: UserInfoDetail }>[] = [
     width: 220,
     render: (text: string) => (
       <Typography.Text
-        ellipsis={{ showTooltip: { opts: { theme: 'dark' } } }}
+        ellipsis={{
+          showTooltip: {
+            opts: {
+              theme: 'dark',
+              content: (
+                <div className="w-full overflow-y-auto max-h-[400px]">
+                  {text || '-'}
+                </div>
+              ),
+            },
+          },
+        }}
         style={{
           fontSize: 'inherit',
         }}
