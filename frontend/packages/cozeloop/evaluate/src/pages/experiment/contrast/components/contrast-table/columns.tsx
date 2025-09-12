@@ -36,9 +36,9 @@ function ExperimentColumnHeader({
           title={I18n.t('remove_experimental_group')}
           content={
             <>
-              {I18n.t('confirm_removal')}
-              <span className="font-medium">{experiment.name}</span>
-              {I18n.t('confirm_placeholder_question')}
+              {I18n.t('confirm_removal', {
+                field: <span className="font-medium">{experiment.name}</span>,
+              })}
             </>
           }
           okText={I18n.t('remove')}

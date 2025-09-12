@@ -1832,8 +1832,14 @@ interface I18nTranslateFn {
   (key: 'image_address', fallbackText?: string): string;
   /** 图片预览 */
   (key: 'image_preview', fallbackText?: string): string;
-  /** 确认要移除 */
-  (key: 'confirm_removal', fallbackText?: string): string;
+  /** 确认要移除{field}吗？ */
+  (
+    key: 'confirm_removal',
+    options?: {
+      /** string */ field: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
   /** 上传中 */
   (key: 'uploading', fallbackText?: string): string;
   /** 导入已通过图片 */
@@ -1953,8 +1959,6 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** { }               吗？ */
-  (key: 'confirm_placeholder_question', fallbackText?: string): string;
   /** - 评测集 */
   (key: 'minus_evaluation_dataset', fallbackText?: string): string;
   /** 对比实验详情 */
@@ -3045,8 +3049,6 @@ interface I18nTranslateFn {
   (key: 'change_log', fallbackText?: string): string;
   /** 展开 */
   (key: 'extend', fallbackText?: string): string;
-  /** 只读 */
-  (key: 'read_only', fallbackText?: string): string;
 }
 
 /** I18n of Cozeloop */
