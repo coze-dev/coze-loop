@@ -16,7 +16,6 @@ type IPromptRPCAdapter interface {
 	ListPrompt(ctx context.Context, param *ListPromptParam) (prompts []*LoopPrompt, total *int32, err error)
 	ListPromptVersion(ctx context.Context, param *ListPromptVersionParam) (prompts []*CommitInfo, nextCursor string, err error)
 	ExecutePrompt(ctx context.Context, spaceID int64, param *ExecutePromptParam) (result *ExecutePromptResult, err error)
-	BatchCheckOptimizeTaskFree(ctx context.Context, spaceID int64, arkTaskIDs []string) (map[string]bool, error)
 }
 
 type ExecutePromptParam struct {
