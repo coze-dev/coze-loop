@@ -16,7 +16,7 @@ import (
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/coze-dev/cozeloop-go"
 	goredis "github.com/redis/go-redis/v9"
-
+	
 	"github.com/coze-dev/coze-loop/backend/api"
 	"github.com/coze-dev/coze-loop/backend/api/handler/coze/loop/apis"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
@@ -61,7 +61,8 @@ func main() {
 		panic(err)
 	}
 
-	if err := registry.NewConsumerRegistry(c.mqFactory).Register(mustInitConsumerWorkers(c.cfgFactory, handler, handler, handler)).StartAll(ctx); err != nil {
+	consumerRegistry := registry.NewConsumerRegistry(c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler))
+	if err := consumerRegistry.StartAll(ctx); err != nil {
 		panic(err)
 	}
 

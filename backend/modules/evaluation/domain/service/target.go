@@ -21,4 +21,5 @@ type IEvalTargetService interface {
 	GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
 	BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
 	ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error
+	GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error)
 }

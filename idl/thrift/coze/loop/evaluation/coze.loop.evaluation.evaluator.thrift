@@ -184,6 +184,7 @@ struct ListTemplatesResponse {
 struct GetTemplateInfoRequest {
     1: required evaluator.TemplateType builtin_template_type (api.query='builtin_template_type')
     2: required string builtin_template_key (api.query='builtin_template_key')
+    3: optional evaluator.LanguageType language_type (api.query='language_type') // code评估器默认python
 
     255: optional base.Base Base
 }
@@ -225,6 +226,21 @@ struct DebugEvaluatorRequest {
 
 struct DebugEvaluatorResponse {
     1: optional evaluator.EvaluatorOutputData evaluator_output_data (api.body='evaluator_output_data') // 输出数据
+
+    255: base.BaseResp BaseResp
+}
+
+struct BatchDebugEvaluatorRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
+    2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')                     // 待调试评估器内容
+    3: required list<evaluator.EvaluatorInputData> input_data (api.body='input_data')         // 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
+    4: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
+
+    255: optional base.Base Base
+}
+
+struct BatchDebugEvaluatorResponse {
+    1: optional list<evaluator.EvaluatorOutputData> evaluator_output_data (api.body='evaluator_output_data') // 输出数据
 
     255: base.BaseResp BaseResp
 }
@@ -320,6 +336,23 @@ struct GetDefaultPromptEvaluatorToolsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct ValidateEvaluatorRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')
+    3: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
+    4: optional evaluator.EvaluatorInputData input_data (api.body='input_data')
+
+    255: optional base.Base Base
+}
+
+struct ValidateEvaluatorResponse {
+    1: optional bool valid (api.body='valid')
+    2: optional string error_message (api.body='error_message')
+    3: optional evaluator.EvaluatorOutputData evaluator_output_data (api.body='evaluator_output_data')
+
+    255: base.BaseResp BaseResp
+}
+
 service EvaluatorService {
     // 评估器
     ListEvaluatorsResponse ListEvaluators(1: ListEvaluatorsRequest request)           (api.post=  "/api/evaluation/v1/evaluators/list")      // 按查询条件查询evaluator
@@ -345,10 +378,14 @@ service EvaluatorService {
     // 评估器执行
     RunEvaluatorResponse RunEvaluator(1: RunEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/run")// evaluator 运行
     DebugEvaluatorResponse DebugEvaluator(1: DebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug")// evaluator 调试
+    BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/batch_debug")// evaluator 调试
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 修正evaluator运行分数
     GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
     BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
+    
+    // 评估器验证
+    ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (api.post="/api/evaluation/v1/evaluators/validate")
 
 } (api.js_conv="true" )

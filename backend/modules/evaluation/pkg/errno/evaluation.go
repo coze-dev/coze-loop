@@ -211,6 +211,34 @@ const (
 	AccessingEndpointErrorCode              = 601205027 // Accessing endpoint error
 	accessingEndpointErrorMessage           = "accessing endpoint error"
 	accessingEndpointErrorNoAffectStability = true
+
+	InvalidEvaluatorTypeCode              = 601205028 // invalid evaluator type
+	invalidEvaluatorTypeMessage           = "invalid evaluator type"
+	invalidEvaluatorTypeNoAffectStability = true
+
+	InvalidInputDataCode              = 601205029 // invalid input data
+	invalidInputDataMessage           = "invalid input data"
+	invalidInputDataNoAffectStability = true
+
+	InvalidCodeContentCode              = 601205030 // invalid code content
+	invalidCodeContentMessage           = "invalid code content"
+	invalidCodeContentNoAffectStability = true
+
+	InvalidLanguageTypeCode              = 601205031 // invalid language type
+	invalidLanguageTypeMessage           = "invalid language type"
+	invalidLanguageTypeNoAffectStability = true
+
+	CodeExecutionFailedCode              = 601205032 // code execution failed
+	codeExecutionFailedMessage           = "code execution failed"
+	codeExecutionFailedNoAffectStability = true
+
+	CodeValidationFailedCode              = 601205033 // code validation failed
+	codeValidationFailedMessage           = "code validation failed"
+	codeValidationFailedNoAffectStability = true
+
+	ResultParseFailedCode              = 601205034 // result parse failed
+	resultParseFailedMessage           = "result parse failed"
+	resultParseFailedNoAffectStability = true
 )
 
 func init() {
@@ -519,6 +547,48 @@ func init() {
 		AccessingEndpointErrorCode,
 		accessingEndpointErrorMessage,
 		code.WithAffectStability(!accessingEndpointErrorNoAffectStability),
+	)
+
+	code.Register(
+		InvalidEvaluatorTypeCode,
+		invalidEvaluatorTypeMessage,
+		code.WithAffectStability(!invalidEvaluatorTypeNoAffectStability),
+	)
+
+	code.Register(
+		InvalidInputDataCode,
+		invalidInputDataMessage,
+		code.WithAffectStability(!invalidInputDataNoAffectStability),
+	)
+
+	code.Register(
+		InvalidCodeContentCode,
+		invalidCodeContentMessage,
+		code.WithAffectStability(!invalidCodeContentNoAffectStability),
+	)
+
+	code.Register(
+		InvalidLanguageTypeCode,
+		invalidLanguageTypeMessage,
+		code.WithAffectStability(!invalidLanguageTypeNoAffectStability),
+	)
+
+	code.Register(
+		CodeExecutionFailedCode,
+		codeExecutionFailedMessage,
+		code.WithAffectStability(!codeExecutionFailedNoAffectStability),
+	)
+
+	code.Register(
+		CodeValidationFailedCode,
+		codeValidationFailedMessage,
+		code.WithAffectStability(!codeValidationFailedNoAffectStability),
+	)
+
+	code.Register(
+		ResultParseFailedCode,
+		resultParseFailedMessage,
+		code.WithAffectStability(!resultParseFailedNoAffectStability),
 	)
 
 }
