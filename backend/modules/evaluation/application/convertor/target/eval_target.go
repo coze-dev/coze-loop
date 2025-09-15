@@ -186,6 +186,28 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
 			}
 		}
+	case do.EvalTargetType_CustomPSM:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.CustomPsm != nil {
+			targetVersionDTO.EvalTargetContent.CustomPsm = &dto.CustomPSM{
+				ID:                  targetVersionDO.CustomPsm.ID,
+				Name:                targetVersionDO.CustomPsm.Name,
+				Description:         targetVersionDO.CustomPsm.Description,
+				Psm:                 targetVersionDO.CustomPsm.Psm,
+				AccessProtocol:      targetVersionDO.CustomPsm.AccessProtocol,
+				Regions:             targetVersionDO.CustomPsm.Regions,
+				Cluster:             targetVersionDO.CustomPsm.Cluster,
+				InvokeHTTPInfo:      targetVersionDO.CustomPsm.InvokeHTTPInfo,
+				AsyncInvokeHTTPInfo: targetVersionDO.CustomPsm.AsyncInvokeHTTPInfo,
+				NeedSearchTarget:    targetVersionDO.CustomPsm.NeedSearchTarget,
+				SearchHTTPInfo:      targetVersionDO.CustomPsm.SearchHTTPInfo,
+				CustomEvalTarget:    targetVersionDO.CustomPsm.CustomEvalTarget,
+				IsAsync:             targetVersionDO.CustomPsm.IsAsync,
+			}
+		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
