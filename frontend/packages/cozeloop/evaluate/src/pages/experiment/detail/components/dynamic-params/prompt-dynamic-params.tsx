@@ -1,15 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import {
-  EvaluateTargetPromptDynamicParams as EvaluateTargetPromptDynamicParamsBase,
-  usePromptDetail,
-} from '@cozeloop/evaluate-components';
+import { usePromptDetail } from '@cozeloop/evaluate-components';
+import { EvaluateTargetPromptDynamicParams } from '@cozeloop/evaluate-adapter';
 import {
   EvalTargetType,
   type EvalTarget,
   type RuntimeParam,
 } from '@cozeloop/api-schema/evaluation';
-import { useAdapter } from '@cozeloop/adapter';
 
 interface Props {
   data: RuntimeParam;
@@ -17,10 +14,6 @@ interface Props {
 }
 
 export function PromptDynamicParams({ data, evalTarget }: Props) {
-  const EvaluateTargetPromptDynamicParams =
-    useAdapter('eval.experiments', 'EvaluateTargetPromptDynamicParams') ||
-    EvaluateTargetPromptDynamicParamsBase;
-
   const targetPrompt =
     evalTarget?.eval_target_version?.eval_target_content?.prompt;
 

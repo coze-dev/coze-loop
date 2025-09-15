@@ -1,13 +1,10 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
 import { BasicModelConfigEditor } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { BasicCard } from '@cozeloop/components';
 import { useModelList, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type PromptRuntimeParam } from '@cozeloop/api-schema/evaluation';
-import { type EvaluateTargetPromptDynamicParamsProps } from '@cozeloop/adapter/interfaces';
+import { type EvaluateTargetPromptDynamicParamsProps } from '@cozeloop/adapter-interfaces/evaluate';
 import { Switch } from '@coze-arch/coze-design';
 
 export function EvaluateTargetPromptDynamicParams(
@@ -50,7 +47,7 @@ export function EvaluateTargetPromptDynamicParams(
       className="mt-4"
       title={
         <div>
-          {I18n.t('dataset_ai_annotation_prompt_config_override')}{' '}
+          覆盖 Prompt 模型配置{' '}
           <Switch
             size="small"
             checked={!!props.value}
