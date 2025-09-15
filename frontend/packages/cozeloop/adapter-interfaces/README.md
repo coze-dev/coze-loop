@@ -1,10 +1,10 @@
-# @cozeloop/account
+# @cozeloop/adapter-interfaces
 
-CozeLoop account
+CozeLoop adapter interfaces
 
 ## Overview
 
-This package is part of the Coze Loop monorepo and provides authentication functionality. It includes hook, store, service.
+This package is part of the Coze Loop monorepo and provides adapter interfaces definition.
 
 ## Getting Started
 
@@ -15,7 +15,7 @@ Add this package to your `package.json`:
 ```json
 {
   "dependencies": {
-    "@cozeloop/account": "workspace:*"
+    "@cozeloop/adapter-interfaces": "workspace:*"
   }
 }
 ```
@@ -29,37 +29,15 @@ rush update
 ### Usage
 
 ```typescript
-import { /* exported functions/components */ } from '@cozeloop/account';
+import { /* exported type */ } from '@cozeloop/adapter-interfaces';
+
+// or
+
+import { /* exported type */ } from '@cozeloop/adapter-interfaces/evaluate';
 
 // Example usage
 // TODO: Add specific usage examples
 ```
-
-## Features
-
-- Hook
-- Store
-- Service
-
-## API Reference
-
-### Exports
-
-- `useUserStore, setUserInfo`
-- `useSpaceStore,
-  setSpace,
-  PERSONAL_ENTERPRISE_ID,`
-- `useLogin`
-- `useRegister`
-- `useLoginStatus`
-- `useLogout`
-- `useCheckLogin`
-- `userService`
-- `authnService`
-- `spaceService`
-
-
-For detailed API documentation, please refer to the TypeScript definitions.
 
 ## Development
 
