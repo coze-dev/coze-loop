@@ -118,6 +118,7 @@ var (
 		user.NewUserRPCProvider,
 		//evaluator.NewEvaluatorRPCProvider,
 		evaluation.NewEvaluationRPCProvider,
+		mq2.NewBackfillProducerImpl,
 		traceDomainSet,
 	)
 )

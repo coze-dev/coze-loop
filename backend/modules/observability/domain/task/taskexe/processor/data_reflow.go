@@ -57,7 +57,7 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	}
 
 	category := getCategory(cfg.TaskType)
-	successItems, _, _ := buildDatasetItems(ctx, []*loop_span.Span{trigger.Span}, mapping, workspaceID, entity.NewDataset(
+	successItems, _, _ := buildDatasetItems(ctx, []*loop_span.Span{trigger.Span}, mapping, workspaceID, *trigger.Task.ID, entity.NewDataset(
 		taskRun.TaskRunConfig.GetDataReflowRunConfig().GetDatasetID(),
 		workspaceID,
 		"",

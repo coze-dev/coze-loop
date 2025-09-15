@@ -447,13 +447,13 @@ func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*t
 }
 
 func buildDatasetItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []entity.FieldMapping,
-	workspaceID int64, dataset *entity.Dataset,
+	workspaceID, taskID int64, dataset *entity.Dataset,
 ) (successItems, failedItems, allItems []*entity.DatasetItem) {
 	successItems = make([]*entity.DatasetItem, 0, len(spans))
 	failedItems = make([]*entity.DatasetItem, 0)
 	allItems = make([]*entity.DatasetItem, 0, len(spans))
 	for i, span := range spans {
-		item := buildDatasetItem(ctx, span, i, fieldMappings, workspaceID, dataset)
+		item := buildDatasetItem(ctx, span, i, fieldMappings, workspaceID, taskID, dataset)
 		allItems = append(allItems, item)
 		if len(item.Error) > 0 {
 			failedItems = append(failedItems, item)
@@ -465,7 +465,7 @@ func buildDatasetItems(ctx context.Context, spans []*loop_span.Span, fieldMappin
 	return successItems, failedItems, allItems
 }
 
-func buildDatasetItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64,
+func buildDatasetItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID, taskID int64,
 	dataset *entity.Dataset,
 ) *entity.DatasetItem {
 	item := entity.NewDatasetItem(workspaceID, dataset.ID, span)
@@ -490,6 +490,7 @@ func buildDatasetItem(ctx context.Context, span *loop_span.Span, i int, fieldMap
 			continue
 		}
 		item.AddFieldData(key, mapping.FieldSchema.Name, content)
+		item.ItemKey = gptr.Of(fmt.Sprintf("%s_%s_%s", taskID, span.TraceID, span.SpanID))
 	}
 	return item
 }
