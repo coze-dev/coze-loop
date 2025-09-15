@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS `prompt_commit_label_mapping`
     `id`                 bigint unsigned                   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `space_id`           bigint unsigned                   NOT NULL COMMENT '空间ID',
     `prompt_id`          bigint unsigned                   NOT NULL COMMENT 'Prompt ID',
+    `prompt_key`          varchar(128) COLLATE utf8mb4_bin  NOT NULL COMMENT 'Prompt Key',
     `label_key`          varchar(128) COLLATE utf8mb4_bin  NOT NULL COMMENT 'Label唯一标识',
     `prompt_version`     varchar(128) COLLATE utf8mb4_bin  NOT NULL COMMENT 'Prompt版本',
     `created_by`         varchar(128) COLLATE utf8mb4_bin  NOT NULL DEFAULT '' COMMENT '创建人',
