@@ -183,8 +183,8 @@
       "tags": ["team-devops", "level-3"]
     },
     {
-      "packageName": "@cozeloop/adapter",
-      "projectFolder": "frontend/packages/cozeloop/adapter",
+      "packageName": "@cozeloop/adapter-interfaces",
+      "projectFolder": "frontend/packages/cozeloop/adapter-interfaces",
       "tags": ["team-devops", "level-3"]
     },
     {
@@ -330,6 +330,11 @@
     {
       "packageName": "@cozeloop/intl",
       "projectFolder": "frontend/packages/cozeloop/intl",
+      "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/evaluate-adapter",
+      "projectFolder": "frontend/packages/cozeloop/evaluate-adapter",
       "tags": ["level-3"]
     }
   ]

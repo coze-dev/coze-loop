@@ -105,7 +105,6 @@ export {
   BaseTargetPreview,
 } from './stores/eval-target-store';
 
-export { EvaluateTargetPromptDynamicParams } from './adapter';
 export {
   useGlobalEvalConfig,
   type FetchPromptDetailParams,

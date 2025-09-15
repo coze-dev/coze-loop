@@ -1334,7 +1334,7 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
 
-  ../../../frontend/packages/cozeloop/adapter:
+  ../../../frontend/packages/cozeloop/adapter-interfaces:
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*
@@ -1759,9 +1759,6 @@ importers:
       '@coze-arch/coze-design':
         specifier: 0.0.6-alpha.101d0c
         version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
-      '@cozeloop/adapter':
-        specifier: workspace:*
-        version: link:../adapter
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
@@ -1780,6 +1777,9 @@ importers:
       '@cozeloop/components':
         specifier: workspace:*
         version: link:../components
+      '@cozeloop/evaluate-adapter':
+        specifier: workspace:*
+        version: link:../evaluate-adapter
       '@cozeloop/evaluate-components':
         specifier: workspace:*
         version: link:../evaluate-components
@@ -1884,6 +1884,79 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@15.11.7)
 
+  ../../../frontend/packages/cozeloop/evaluate-adapter:
+    dependencies:
+      '@coze-arch/coze-design':
+        specifier: 0.0.6-alpha.101d0c
+        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/adapter-interfaces':
+        specifier: workspace:*
+        version: link:../adapter-interfaces
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/biz-hooks-adapter':
+        specifier: workspace:*
+        version: link:../biz-hooks
+      '@cozeloop/components':
+        specifier: workspace:*
+        version: link:../components
+      '@cozeloop/prompt-components':
+        specifier: workspace:*
+        version: link:../prompt-components
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/stylelint-config':
+        specifier: workspace:*
+        version: link:../../../config/stylelint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@cozeloop/tailwind-config':
+        specifier: workspace:*
+        version: link:../tailwind-config
+      '@testing-library/jest-dom':
+        specifier: ^6.1.5
+        version: 6.6.3
+      '@testing-library/react':
+        specifier: ^14.1.2
+        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
+      '@testing-library/react-hooks':
+        specifier: ^8.0.1
+        version: 8.0.1(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      stylelint:
+        specifier: ^15.11.0
+        version: 15.11.0(typescript@5.8.2)
+      vite:
+        specifier: ^4.3.9
+        version: 4.5.14(@types/node@18.18.9)
+      vite-plugin-svgr:
+        specifier: ~3.3.0
+        version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+
   ../../../frontend/packages/cozeloop/evaluate-components:
     dependencies:
       '@coze-arch/bot-md-box-adapter':
@@ -1892,9 +1965,6 @@ importers:
       '@coze-arch/coze-design':
         specifier: 0.0.6-alpha.101d0c
         version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
-      '@cozeloop/adapter':
-        specifier: workspace:*
-        version: link:../adapter
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
@@ -1913,6 +1983,9 @@ importers:
       '@cozeloop/env-adapter':
         specifier: workspace:*
         version: link:../env
+      '@cozeloop/evaluate-adapter':
+        specifier: workspace:*
+        version: link:../evaluate-adapter
       '@cozeloop/guard':
         specifier: workspace:*
         version: link:../guard

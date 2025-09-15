@@ -18,9 +18,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../adapter/tsconfig.build.json"
-    },
-    {
       "path": "../api-schema/tsconfig.build.json"
     },
     {
@@ -52,6 +49,9 @@
     },
     {
       "path": "../../../config/vitest-config/tsconfig.build.json"
+    },
+    {
+      "path": "../evaluate-adapter/tsconfig.build.json"
     },
     {
       "path": "../evaluate-components/tsconfig.build.json"
