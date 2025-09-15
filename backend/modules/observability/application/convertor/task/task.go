@@ -249,7 +249,9 @@ func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields, wor
 	filterDO := entity.SpanFilter{
 		PlatformType: filters.GetPlatformType(),
 		SpanListType: filters.GetSpanListType(),
-		Filters:      *filtersDO,
+	}
+	if filtersDO != nil {
+		filterDO.Filters = *filtersDO
 	}
 
 	//todo[xun]:coze数据处理

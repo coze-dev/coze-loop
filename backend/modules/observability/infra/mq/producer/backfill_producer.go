@@ -12,7 +12,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var (
@@ -23,6 +28,21 @@ var (
 type BackfillProducerImpl struct {
 	topic      string
 	mqProducer mq.IProducer
+}
+
+func (b *BackfillProducerImpl) SendBackfill(ctx context.Context, message *entity.BackFillEvent) error {
+	bytes, err := json.Marshal(message)
+	if err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	msg := mq.NewDeferMessage(b.topic, 10*time.Second, bytes)
+	_, err = b.mqProducer.Send(ctx, msg)
+	if err != nil {
+		logs.CtxWarn(ctx, "send annotation msg err: %v", err)
+		return errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	logs.CtxInfo(ctx, "send annotation msg %s successfully", string(bytes))
+	return nil
 }
 
 func NewBackfillProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory) (mq2.IBackfillProducer, error) {

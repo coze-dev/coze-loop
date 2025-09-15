@@ -3,5 +3,12 @@
 
 package mq
 
+import (
+	"context"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+)
+
 type IBackfillProducer interface {
+	SendBackfill(ctx context.Context, message *entity.BackFillEvent) error
 }
