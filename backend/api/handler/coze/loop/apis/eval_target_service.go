@@ -106,3 +106,67 @@ func BatchGetEvalTargetRecords(ctx context.Context, c *app.RequestContext) {
 func BatchGetSourceEvalTargets(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalTargetSvc.BatchGetSourceEvalTargets)
 }
+
+// SearchCustomEvalTarget .
+// @router /api/evaluation/v1/eval_targets/search_custom [POST]
+func SearchCustomEvalTarget(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_target.SearchCustomEvalTargetRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_target.SearchCustomEvalTargetResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// DebugEvalTarget .
+// @router /api/evaluation/v1/eval_targets/debug [POST]
+func DebugEvalTarget(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_target.DebugEvalTargetRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_target.DebugEvalTargetResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// AsyncDebugEvalTarget .
+// @router /api/evaluation/v1/eval_targets/async_debug [POST]
+func AsyncDebugEvalTarget(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_target.AsyncDebugEvalTargetRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_target.AsyncDebugEvalTargetResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// PassbackEvalTargetInvokeResult .
+// @router /api/evaluation/v1/eval_targets/passback_result [POST]
+func PassbackEvalTargetInvokeResult(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_target.PassbackEvalTargetInvokeResultRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_target.PassbackEvalTargetInvokeResultResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

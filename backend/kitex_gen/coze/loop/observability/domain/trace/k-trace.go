@@ -203,8 +203,8 @@ func (p *TokenCost) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetInput bool = false
-	var issetOutput bool = false
+	var issetInputToken bool = false
+	var issetOutputToken bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -222,7 +222,7 @@ func (p *TokenCost) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetInput = true
+				issetInputToken = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -237,7 +237,7 @@ func (p *TokenCost) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetOutput = true
+				issetOutputToken = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -254,12 +254,12 @@ func (p *TokenCost) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetInput {
+	if !issetInputToken {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetOutput {
+	if !issetOutputToken {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
@@ -284,7 +284,7 @@ func (p *TokenCost) FastReadField1(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.Input = _field
+	p.InputToken = _field
 	return offset, nil
 }
 
@@ -298,7 +298,7 @@ func (p *TokenCost) FastReadField2(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.Output = _field
+	p.OutputToken = _field
 	return offset, nil
 }
 
@@ -329,14 +329,14 @@ func (p *TokenCost) BLength() int {
 func (p *TokenCost) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.Input)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.InputToken)
 	return offset
 }
 
 func (p *TokenCost) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.Output)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.OutputToken)
 	return offset
 }
 
@@ -360,9 +360,9 @@ func (p *TokenCost) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	p.Input = src.Input
+	p.InputToken = src.InputToken
 
-	p.Output = src.Output
+	p.OutputToken = src.OutputToken
 
 	return nil
 }

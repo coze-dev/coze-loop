@@ -52,7 +52,7 @@ enum EvalTargetType {
     Trace = 3 // Trace
     CozeWorkflow = 4
     VolcengineAgent = 5 // 火山智能体
-    CustomPSM = 6 // 自定义psm for内场
+    CustomPSM = 6 // 自定义psm服务 for内场
 }
 
 struct CustomPSM {

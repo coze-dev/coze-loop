@@ -396,3 +396,23 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 		EvalTargets: dtos,
 	}, nil
 }
+
+func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, req *eval_target.SearchCustomEvalTargetRequest) (r *eval_target.SearchCustomEvalTargetResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e EvalTargetApplicationImpl) PassbackEvalTargetInvokeResult_(ctx context.Context, req *eval_target.PassbackEvalTargetInvokeResultRequest) (r *eval_target.PassbackEvalTargetInvokeResultResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}

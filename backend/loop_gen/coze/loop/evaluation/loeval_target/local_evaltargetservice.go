@@ -181,6 +181,29 @@ func (l *LocalEvalTargetService) BatchGetSourceEvalTargets(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// SearchCustomEvalTarget
+// 搜索自定义评测对象
+func (l *LocalEvalTargetService) SearchCustomEvalTarget(ctx context.Context, req *eval_target.SearchCustomEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.SearchCustomEvalTargetResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceSearchCustomEvalTargetArgs)
+		result := out.(*eval_target.EvalTargetServiceSearchCustomEvalTargetResult)
+		resp, err := l.impl.SearchCustomEvalTarget(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceSearchCustomEvalTargetArgs{Req: req}
+	result := &eval_target.EvalTargetServiceSearchCustomEvalTargetResult{}
+	ctx = l.injectRPCInfo(ctx, "SearchCustomEvalTarget")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ExecuteEvalTarget
 // 执行
 func (l *LocalEvalTargetService) ExecuteEvalTarget(ctx context.Context, request *eval_target.ExecuteEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.ExecuteEvalTargetResponse, error) {
@@ -240,6 +263,73 @@ func (l *LocalEvalTargetService) BatchGetEvalTargetRecords(ctx context.Context, 
 	arg := &eval_target.EvalTargetServiceBatchGetEvalTargetRecordsArgs{Request: request}
 	result := &eval_target.EvalTargetServiceBatchGetEvalTargetRecordsResult{}
 	ctx = l.injectRPCInfo(ctx, "BatchGetEvalTargetRecords")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// DebugEvalTarget
+// debug
+func (l *LocalEvalTargetService) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.DebugEvalTargetResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceDebugEvalTargetArgs)
+		result := out.(*eval_target.EvalTargetServiceDebugEvalTargetResult)
+		resp, err := l.impl.DebugEvalTarget(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceDebugEvalTargetArgs{Request: request}
+	result := &eval_target.EvalTargetServiceDebugEvalTargetResult{}
+	ctx = l.injectRPCInfo(ctx, "DebugEvalTarget")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvalTargetService) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.AsyncDebugEvalTargetResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceAsyncDebugEvalTargetArgs)
+		result := out.(*eval_target.EvalTargetServiceAsyncDebugEvalTargetResult)
+		resp, err := l.impl.AsyncDebugEvalTarget(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceAsyncDebugEvalTargetArgs{Request: request}
+	result := &eval_target.EvalTargetServiceAsyncDebugEvalTargetResult{}
+	ctx = l.injectRPCInfo(ctx, "AsyncDebugEvalTarget")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// PassbackEvalTargetInvokeResult_
+// 回传执行结果
+func (l *LocalEvalTargetService) PassbackEvalTargetInvokeResult_(ctx context.Context, req *eval_target.PassbackEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (*eval_target.PassbackEvalTargetInvokeResultResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServicePassbackEvalTargetInvokeResultArgs)
+		result := out.(*eval_target.EvalTargetServicePassbackEvalTargetInvokeResultResult)
+		resp, err := l.impl.PassbackEvalTargetInvokeResult_(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServicePassbackEvalTargetInvokeResultArgs{Req: req}
+	result := &eval_target.EvalTargetServicePassbackEvalTargetInvokeResultResult{}
+	ctx = l.injectRPCInfo(ctx, "PassbackEvalTargetInvokeResult_")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

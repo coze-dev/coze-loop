@@ -11,6 +11,26 @@ import (
 	"strings"
 )
 
+const (
+	RegionBOE = "boe"
+
+	RegionCN = "cn"
+
+	RegionI18N = "i18n"
+
+	AccessProtocolRPC = "rpc"
+
+	AccessProtocolRPCOld = "rpc_old"
+
+	AccessProtocolBytefaasHTTP = "bytefaas_http"
+
+	AccessProtocolBytefaasHTTPOld = "bytefaas_http_old"
+
+	HttpMethodGet = "get"
+
+	HttpMethodPost = "post"
+)
+
 type EvalTargetType int64
 
 const (
@@ -23,6 +43,8 @@ const (
 	EvalTargetType_CozeWorkflow EvalTargetType = 4
 	// 火山智能体
 	EvalTargetType_VolcengineAgent EvalTargetType = 5
+	// 自定义psm服务 for内场
+	EvalTargetType_CustomPSM EvalTargetType = 6
 )
 
 func (p EvalTargetType) String() string {
@@ -37,6 +59,8 @@ func (p EvalTargetType) String() string {
 		return "CozeWorkflow"
 	case EvalTargetType_VolcengineAgent:
 		return "VolcengineAgent"
+	case EvalTargetType_CustomPSM:
+		return "CustomPSM"
 	}
 	return "<UNSET>"
 }
@@ -53,6 +77,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_CozeWorkflow, nil
 	case "VolcengineAgent":
 		return EvalTargetType_VolcengineAgent, nil
+	case "CustomPSM":
+		return EvalTargetType_CustomPSM, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }
@@ -258,6 +284,12 @@ func (p *EvalTargetRunStatus) Value() (driver.Value, error) {
 	}
 	return int64(*p), nil
 }
+
+type Region = string
+
+type AccessProtocol = string
+
+type HttpMethod = string
 
 type EvalTarget struct {
 	// 基本信息
@@ -1387,6 +1419,8 @@ type EvalTargetContent struct {
 	CozeWorkflow *CozeWorkflow `thrift:"coze_workflow,103,optional" frugal:"103,optional,CozeWorkflow" form:"coze_workflow" json:"coze_workflow,omitempty" query:"coze_workflow"`
 	// EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息
 	VolcengineAgent *VolcengineAgent `thrift:"volcengine_agent,104,optional" frugal:"104,optional,VolcengineAgent" form:"volcengine_agent" json:"volcengine_agent,omitempty" query:"volcengine_agent"`
+	// EvalTargetType=6 时，传参此字段。 评测对象为 CustomPSM 时, 需要设置 CustomPSM 信息
+	CustomPsm *CustomPSM `thrift:"custom_psm,105,optional" frugal:"105,optional,CustomPSM" form:"custom_psm" json:"custom_psm,omitempty" query:"custom_psm"`
 }
 
 func NewEvalTargetContent() *EvalTargetContent {
@@ -1479,6 +1513,18 @@ func (p *EvalTargetContent) GetVolcengineAgent() (v *VolcengineAgent) {
 	}
 	return p.VolcengineAgent
 }
+
+var EvalTargetContent_CustomPsm_DEFAULT *CustomPSM
+
+func (p *EvalTargetContent) GetCustomPsm() (v *CustomPSM) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomPsm() {
+		return EvalTargetContent_CustomPsm_DEFAULT
+	}
+	return p.CustomPsm
+}
 func (p *EvalTargetContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
 }
@@ -1500,6 +1546,9 @@ func (p *EvalTargetContent) SetCozeWorkflow(val *CozeWorkflow) {
 func (p *EvalTargetContent) SetVolcengineAgent(val *VolcengineAgent) {
 	p.VolcengineAgent = val
 }
+func (p *EvalTargetContent) SetCustomPsm(val *CustomPSM) {
+	p.CustomPsm = val
+}
 
 var fieldIDToName_EvalTargetContent = map[int16]string{
 	1:   "input_schemas",
@@ -1509,6 +1558,7 @@ var fieldIDToName_EvalTargetContent = map[int16]string{
 	102: "prompt",
 	103: "coze_workflow",
 	104: "volcengine_agent",
+	105: "custom_psm",
 }
 
 func (p *EvalTargetContent) IsSetInputSchemas() bool {
@@ -1537,6 +1587,10 @@ func (p *EvalTargetContent) IsSetCozeWorkflow() bool {
 
 func (p *EvalTargetContent) IsSetVolcengineAgent() bool {
 	return p.VolcengineAgent != nil
+}
+
+func (p *EvalTargetContent) IsSetCustomPsm() bool {
+	return p.CustomPsm != nil
 }
 
 func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
@@ -1608,6 +1662,14 @@ func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
 		case 104:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField104(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 105:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField105(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1731,6 +1793,14 @@ func (p *EvalTargetContent) ReadField104(iprot thrift.TProtocol) error {
 	p.VolcengineAgent = _field
 	return nil
 }
+func (p *EvalTargetContent) ReadField105(iprot thrift.TProtocol) error {
+	_field := NewCustomPSM()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomPsm = _field
+	return nil
+}
 
 func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1764,6 +1834,10 @@ func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField104(oprot); err != nil {
 			fieldId = 104
+			goto WriteFieldError
+		}
+		if err = p.writeField105(oprot); err != nil {
+			fieldId = 105
 			goto WriteFieldError
 		}
 	}
@@ -1926,6 +2000,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
 }
+func (p *EvalTargetContent) writeField105(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomPsm() {
+		if err = oprot.WriteFieldBegin("custom_psm", thrift.STRUCT, 105); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomPsm.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 105 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 105 end error: ", p), err)
+}
 
 func (p *EvalTargetContent) String() string {
 	if p == nil {
@@ -1960,6 +2052,9 @@ func (p *EvalTargetContent) DeepEqual(ano *EvalTargetContent) bool {
 		return false
 	}
 	if !p.Field104DeepEqual(ano.VolcengineAgent) {
+		return false
+	}
+	if !p.Field105DeepEqual(ano.CustomPsm) {
 		return false
 	}
 	return true
@@ -2027,6 +2122,1900 @@ func (p *EvalTargetContent) Field103DeepEqual(src *CozeWorkflow) bool {
 func (p *EvalTargetContent) Field104DeepEqual(src *VolcengineAgent) bool {
 
 	if !p.VolcengineAgent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetContent) Field105DeepEqual(src *CustomPSM) bool {
+
+	if !p.CustomPsm.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type CustomPSM struct {
+	// 应用ID
+	ID *string `thrift:"id,1,optional" frugal:"1,optional,string" form:"id" json:"id,omitempty" query:"id"`
+	// DTO使用，不存数据库
+	Name *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// DTO使用，不存数据库
+	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	// 注意以下信息会存储到DB，也就是说实验创建时以下内容就确定了，运行时直接从评测DB中获取，而不是实时从app模块拉
+	Psm *string `thrift:"psm,10,optional" frugal:"10,optional,string" form:"psm" json:"psm,omitempty" query:"psm"`
+	// 接入协议
+	AccessProtocol *AccessProtocol `thrift:"access_protocol,11,optional" frugal:"11,optional,string" form:"access_protocol" json:"access_protocol,omitempty" query:"access_protocol"`
+	Regions        []Region        `thrift:"regions,12,optional" frugal:"12,optional,list<string>" form:"regions" json:"regions,omitempty" query:"regions"`
+	Cluster        *string         `thrift:"cluster,13,optional" frugal:"13,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
+	// 执行http信息
+	InvokeHTTPInfo *HttpInfo `thrift:"invoke_http_info,14,optional" frugal:"14,optional,HttpInfo" form:"invoke_http_info" json:"invoke_http_info,omitempty" query:"invoke_http_info"`
+	// 异步执行http信息，如果用户选了异步就传入这个字段
+	AsyncInvokeHTTPInfo *HttpInfo `thrift:"async_invoke_http_info,15,optional" frugal:"15,optional,HttpInfo" form:"async_invoke_http_info" json:"async_invoke_http_info,omitempty" query:"async_invoke_http_info"`
+	// 是否需要搜索对象
+	NeedSearchTarget *bool `thrift:"need_search_target,16,optional" frugal:"16,optional,bool" form:"need_search_target" json:"need_search_target,omitempty" query:"need_search_target"`
+	// 搜索对象http信息
+	SearchHTTPInfo *HttpInfo `thrift:"search_http_info,17,optional" frugal:"17,optional,HttpInfo" form:"search_http_info" json:"search_http_info,omitempty" query:"search_http_info"`
+	// 搜索对象返回的信息
+	CustomEvalTarget *CustomEvalTarget `thrift:"custom_eval_target,18,optional" frugal:"18,optional,CustomEvalTarget" form:"custom_eval_target" json:"custom_eval_target,omitempty" query:"custom_eval_target"`
+	// 是否异步
+	IsAsync *bool `thrift:"is_async,19,optional" frugal:"19,optional,bool" form:"is_async" json:"is_async,omitempty" query:"is_async"`
+}
+
+func NewCustomPSM() *CustomPSM {
+	return &CustomPSM{}
+}
+
+func (p *CustomPSM) InitDefault() {
+}
+
+var CustomPSM_ID_DEFAULT string
+
+func (p *CustomPSM) GetID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return CustomPSM_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var CustomPSM_Name_DEFAULT string
+
+func (p *CustomPSM) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return CustomPSM_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var CustomPSM_Description_DEFAULT string
+
+func (p *CustomPSM) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return CustomPSM_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var CustomPSM_Psm_DEFAULT string
+
+func (p *CustomPSM) GetPsm() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPsm() {
+		return CustomPSM_Psm_DEFAULT
+	}
+	return *p.Psm
+}
+
+var CustomPSM_AccessProtocol_DEFAULT AccessProtocol
+
+func (p *CustomPSM) GetAccessProtocol() (v AccessProtocol) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAccessProtocol() {
+		return CustomPSM_AccessProtocol_DEFAULT
+	}
+	return *p.AccessProtocol
+}
+
+var CustomPSM_Regions_DEFAULT []Region
+
+func (p *CustomPSM) GetRegions() (v []Region) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRegions() {
+		return CustomPSM_Regions_DEFAULT
+	}
+	return p.Regions
+}
+
+var CustomPSM_Cluster_DEFAULT string
+
+func (p *CustomPSM) GetCluster() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCluster() {
+		return CustomPSM_Cluster_DEFAULT
+	}
+	return *p.Cluster
+}
+
+var CustomPSM_InvokeHTTPInfo_DEFAULT *HttpInfo
+
+func (p *CustomPSM) GetInvokeHTTPInfo() (v *HttpInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeHTTPInfo() {
+		return CustomPSM_InvokeHTTPInfo_DEFAULT
+	}
+	return p.InvokeHTTPInfo
+}
+
+var CustomPSM_AsyncInvokeHTTPInfo_DEFAULT *HttpInfo
+
+func (p *CustomPSM) GetAsyncInvokeHTTPInfo() (v *HttpInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAsyncInvokeHTTPInfo() {
+		return CustomPSM_AsyncInvokeHTTPInfo_DEFAULT
+	}
+	return p.AsyncInvokeHTTPInfo
+}
+
+var CustomPSM_NeedSearchTarget_DEFAULT bool
+
+func (p *CustomPSM) GetNeedSearchTarget() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNeedSearchTarget() {
+		return CustomPSM_NeedSearchTarget_DEFAULT
+	}
+	return *p.NeedSearchTarget
+}
+
+var CustomPSM_SearchHTTPInfo_DEFAULT *HttpInfo
+
+func (p *CustomPSM) GetSearchHTTPInfo() (v *HttpInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSearchHTTPInfo() {
+		return CustomPSM_SearchHTTPInfo_DEFAULT
+	}
+	return p.SearchHTTPInfo
+}
+
+var CustomPSM_CustomEvalTarget_DEFAULT *CustomEvalTarget
+
+func (p *CustomPSM) GetCustomEvalTarget() (v *CustomEvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomEvalTarget() {
+		return CustomPSM_CustomEvalTarget_DEFAULT
+	}
+	return p.CustomEvalTarget
+}
+
+var CustomPSM_IsAsync_DEFAULT bool
+
+func (p *CustomPSM) GetIsAsync() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsAsync() {
+		return CustomPSM_IsAsync_DEFAULT
+	}
+	return *p.IsAsync
+}
+func (p *CustomPSM) SetID(val *string) {
+	p.ID = val
+}
+func (p *CustomPSM) SetName(val *string) {
+	p.Name = val
+}
+func (p *CustomPSM) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *CustomPSM) SetPsm(val *string) {
+	p.Psm = val
+}
+func (p *CustomPSM) SetAccessProtocol(val *AccessProtocol) {
+	p.AccessProtocol = val
+}
+func (p *CustomPSM) SetRegions(val []Region) {
+	p.Regions = val
+}
+func (p *CustomPSM) SetCluster(val *string) {
+	p.Cluster = val
+}
+func (p *CustomPSM) SetInvokeHTTPInfo(val *HttpInfo) {
+	p.InvokeHTTPInfo = val
+}
+func (p *CustomPSM) SetAsyncInvokeHTTPInfo(val *HttpInfo) {
+	p.AsyncInvokeHTTPInfo = val
+}
+func (p *CustomPSM) SetNeedSearchTarget(val *bool) {
+	p.NeedSearchTarget = val
+}
+func (p *CustomPSM) SetSearchHTTPInfo(val *HttpInfo) {
+	p.SearchHTTPInfo = val
+}
+func (p *CustomPSM) SetCustomEvalTarget(val *CustomEvalTarget) {
+	p.CustomEvalTarget = val
+}
+func (p *CustomPSM) SetIsAsync(val *bool) {
+	p.IsAsync = val
+}
+
+var fieldIDToName_CustomPSM = map[int16]string{
+	1:  "id",
+	2:  "name",
+	3:  "description",
+	10: "psm",
+	11: "access_protocol",
+	12: "regions",
+	13: "cluster",
+	14: "invoke_http_info",
+	15: "async_invoke_http_info",
+	16: "need_search_target",
+	17: "search_http_info",
+	18: "custom_eval_target",
+	19: "is_async",
+}
+
+func (p *CustomPSM) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *CustomPSM) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *CustomPSM) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *CustomPSM) IsSetPsm() bool {
+	return p.Psm != nil
+}
+
+func (p *CustomPSM) IsSetAccessProtocol() bool {
+	return p.AccessProtocol != nil
+}
+
+func (p *CustomPSM) IsSetRegions() bool {
+	return p.Regions != nil
+}
+
+func (p *CustomPSM) IsSetCluster() bool {
+	return p.Cluster != nil
+}
+
+func (p *CustomPSM) IsSetInvokeHTTPInfo() bool {
+	return p.InvokeHTTPInfo != nil
+}
+
+func (p *CustomPSM) IsSetAsyncInvokeHTTPInfo() bool {
+	return p.AsyncInvokeHTTPInfo != nil
+}
+
+func (p *CustomPSM) IsSetNeedSearchTarget() bool {
+	return p.NeedSearchTarget != nil
+}
+
+func (p *CustomPSM) IsSetSearchHTTPInfo() bool {
+	return p.SearchHTTPInfo != nil
+}
+
+func (p *CustomPSM) IsSetCustomEvalTarget() bool {
+	return p.CustomEvalTarget != nil
+}
+
+func (p *CustomPSM) IsSetIsAsync() bool {
+	return p.IsAsync != nil
+}
+
+func (p *CustomPSM) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField19(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomPSM[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CustomPSM) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *CustomPSM) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *CustomPSM) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *CustomPSM) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Psm = _field
+	return nil
+}
+func (p *CustomPSM) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *AccessProtocol
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AccessProtocol = _field
+	return nil
+}
+func (p *CustomPSM) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]Region, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem Region
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Regions = _field
+	return nil
+}
+func (p *CustomPSM) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cluster = _field
+	return nil
+}
+func (p *CustomPSM) ReadField14(iprot thrift.TProtocol) error {
+	_field := NewHttpInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.InvokeHTTPInfo = _field
+	return nil
+}
+func (p *CustomPSM) ReadField15(iprot thrift.TProtocol) error {
+	_field := NewHttpInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.AsyncInvokeHTTPInfo = _field
+	return nil
+}
+func (p *CustomPSM) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NeedSearchTarget = _field
+	return nil
+}
+func (p *CustomPSM) ReadField17(iprot thrift.TProtocol) error {
+	_field := NewHttpInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SearchHTTPInfo = _field
+	return nil
+}
+func (p *CustomPSM) ReadField18(iprot thrift.TProtocol) error {
+	_field := NewCustomEvalTarget()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomEvalTarget = _field
+	return nil
+}
+func (p *CustomPSM) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsAsync = _field
+	return nil
+}
+
+func (p *CustomPSM) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CustomPSM"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CustomPSM) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CustomPSM) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CustomPSM) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CustomPSM) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPsm() {
+		if err = oprot.WriteFieldBegin("psm", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Psm); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *CustomPSM) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAccessProtocol() {
+		if err = oprot.WriteFieldBegin("access_protocol", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AccessProtocol); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *CustomPSM) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRegions() {
+		if err = oprot.WriteFieldBegin("regions", thrift.LIST, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.Regions)); err != nil {
+			return err
+		}
+		for _, v := range p.Regions {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+func (p *CustomPSM) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCluster() {
+		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cluster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+func (p *CustomPSM) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeHTTPInfo() {
+		if err = oprot.WriteFieldBegin("invoke_http_info", thrift.STRUCT, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.InvokeHTTPInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+func (p *CustomPSM) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAsyncInvokeHTTPInfo() {
+		if err = oprot.WriteFieldBegin("async_invoke_http_info", thrift.STRUCT, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.AsyncInvokeHTTPInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+func (p *CustomPSM) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNeedSearchTarget() {
+		if err = oprot.WriteFieldBegin("need_search_target", thrift.BOOL, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.NeedSearchTarget); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+func (p *CustomPSM) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSearchHTTPInfo() {
+		if err = oprot.WriteFieldBegin("search_http_info", thrift.STRUCT, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SearchHTTPInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+func (p *CustomPSM) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomEvalTarget() {
+		if err = oprot.WriteFieldBegin("custom_eval_target", thrift.STRUCT, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomEvalTarget.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
+func (p *CustomPSM) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsAsync() {
+		if err = oprot.WriteFieldBegin("is_async", thrift.BOOL, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsAsync); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+
+func (p *CustomPSM) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CustomPSM(%+v)", *p)
+
+}
+
+func (p *CustomPSM) DeepEqual(ano *CustomPSM) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Psm) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.AccessProtocol) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.Regions) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.Cluster) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.InvokeHTTPInfo) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.AsyncInvokeHTTPInfo) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.NeedSearchTarget) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.SearchHTTPInfo) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.CustomEvalTarget) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.IsAsync) {
+		return false
+	}
+	return true
+}
+
+func (p *CustomPSM) Field1DeepEqual(src *string) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field2DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field3DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field10DeepEqual(src *string) bool {
+
+	if p.Psm == src {
+		return true
+	} else if p.Psm == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Psm, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field11DeepEqual(src *AccessProtocol) bool {
+
+	if p.AccessProtocol == src {
+		return true
+	} else if p.AccessProtocol == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AccessProtocol, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field12DeepEqual(src []Region) bool {
+
+	if len(p.Regions) != len(src) {
+		return false
+	}
+	for i, v := range p.Regions {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *CustomPSM) Field13DeepEqual(src *string) bool {
+
+	if p.Cluster == src {
+		return true
+	} else if p.Cluster == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cluster, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field14DeepEqual(src *HttpInfo) bool {
+
+	if !p.InvokeHTTPInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field15DeepEqual(src *HttpInfo) bool {
+
+	if !p.AsyncInvokeHTTPInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field16DeepEqual(src *bool) bool {
+
+	if p.NeedSearchTarget == src {
+		return true
+	} else if p.NeedSearchTarget == nil || src == nil {
+		return false
+	}
+	if *p.NeedSearchTarget != *src {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field17DeepEqual(src *HttpInfo) bool {
+
+	if !p.SearchHTTPInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field18DeepEqual(src *CustomEvalTarget) bool {
+
+	if !p.CustomEvalTarget.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CustomPSM) Field19DeepEqual(src *bool) bool {
+
+	if p.IsAsync == src {
+		return true
+	} else if p.IsAsync == nil || src == nil {
+		return false
+	}
+	if *p.IsAsync != *src {
+		return false
+	}
+	return true
+}
+
+type CustomEvalTarget struct {
+	// 唯一键，平台不消费，仅做透传
+	ID *string `thrift:"id,1,optional" frugal:"1,optional,string" form:"id" json:"id,omitempty" query:"id"`
+	// 名称，平台用于展示在对象搜索下拉列表
+	Name *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// 头像url，平台用于展示在对象搜索下拉列表
+	AvatarURL *string `thrift:"avatar_url,3,optional" frugal:"3,optional,string" form:"avatar_url" json:"avatar_url,omitempty" query:"avatar_url"`
+	// 扩展字段，目前主要存储旧版协议response中的额外字段：object_type(旧版ID)、object_meta、space_id
+	Ext map[string]string `thrift:"ext,10,optional" frugal:"10,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+}
+
+func NewCustomEvalTarget() *CustomEvalTarget {
+	return &CustomEvalTarget{}
+}
+
+func (p *CustomEvalTarget) InitDefault() {
+}
+
+var CustomEvalTarget_ID_DEFAULT string
+
+func (p *CustomEvalTarget) GetID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return CustomEvalTarget_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var CustomEvalTarget_Name_DEFAULT string
+
+func (p *CustomEvalTarget) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return CustomEvalTarget_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var CustomEvalTarget_AvatarURL_DEFAULT string
+
+func (p *CustomEvalTarget) GetAvatarURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAvatarURL() {
+		return CustomEvalTarget_AvatarURL_DEFAULT
+	}
+	return *p.AvatarURL
+}
+
+var CustomEvalTarget_Ext_DEFAULT map[string]string
+
+func (p *CustomEvalTarget) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return CustomEvalTarget_Ext_DEFAULT
+	}
+	return p.Ext
+}
+func (p *CustomEvalTarget) SetID(val *string) {
+	p.ID = val
+}
+func (p *CustomEvalTarget) SetName(val *string) {
+	p.Name = val
+}
+func (p *CustomEvalTarget) SetAvatarURL(val *string) {
+	p.AvatarURL = val
+}
+func (p *CustomEvalTarget) SetExt(val map[string]string) {
+	p.Ext = val
+}
+
+var fieldIDToName_CustomEvalTarget = map[int16]string{
+	1:  "id",
+	2:  "name",
+	3:  "avatar_url",
+	10: "ext",
+}
+
+func (p *CustomEvalTarget) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *CustomEvalTarget) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *CustomEvalTarget) IsSetAvatarURL() bool {
+	return p.AvatarURL != nil
+}
+
+func (p *CustomEvalTarget) IsSetExt() bool {
+	return p.Ext != nil
+}
+
+func (p *CustomEvalTarget) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomEvalTarget[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CustomEvalTarget) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *CustomEvalTarget) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *CustomEvalTarget) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AvatarURL = _field
+	return nil
+}
+func (p *CustomEvalTarget) ReadField10(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
+
+func (p *CustomEvalTarget) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CustomEvalTarget"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CustomEvalTarget) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CustomEvalTarget) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CustomEvalTarget) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAvatarURL() {
+		if err = oprot.WriteFieldBegin("avatar_url", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AvatarURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CustomEvalTarget) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *CustomEvalTarget) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CustomEvalTarget(%+v)", *p)
+
+}
+
+func (p *CustomEvalTarget) DeepEqual(ano *CustomEvalTarget) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.AvatarURL) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Ext) {
+		return false
+	}
+	return true
+}
+
+func (p *CustomEvalTarget) Field1DeepEqual(src *string) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomEvalTarget) Field2DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomEvalTarget) Field3DeepEqual(src *string) bool {
+
+	if p.AvatarURL == src {
+		return true
+	} else if p.AvatarURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AvatarURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomEvalTarget) Field10DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+type HttpInfo struct {
+	Method *HttpMethod `thrift:"method,1,optional" frugal:"1,optional,string" form:"method" json:"method,omitempty" query:"method"`
+	Path   *string     `thrift:"path,2,optional" frugal:"2,optional,string" form:"path" json:"path,omitempty" query:"path"`
+	// ms，默认5000，最大800,000
+	Timeout *int64 `thrift:"timeout,4,optional" frugal:"4,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
+}
+
+func NewHttpInfo() *HttpInfo {
+	return &HttpInfo{}
+}
+
+func (p *HttpInfo) InitDefault() {
+}
+
+var HttpInfo_Method_DEFAULT HttpMethod
+
+func (p *HttpInfo) GetMethod() (v HttpMethod) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMethod() {
+		return HttpInfo_Method_DEFAULT
+	}
+	return *p.Method
+}
+
+var HttpInfo_Path_DEFAULT string
+
+func (p *HttpInfo) GetPath() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPath() {
+		return HttpInfo_Path_DEFAULT
+	}
+	return *p.Path
+}
+
+var HttpInfo_Timeout_DEFAULT int64
+
+func (p *HttpInfo) GetTimeout() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeout() {
+		return HttpInfo_Timeout_DEFAULT
+	}
+	return *p.Timeout
+}
+func (p *HttpInfo) SetMethod(val *HttpMethod) {
+	p.Method = val
+}
+func (p *HttpInfo) SetPath(val *string) {
+	p.Path = val
+}
+func (p *HttpInfo) SetTimeout(val *int64) {
+	p.Timeout = val
+}
+
+var fieldIDToName_HttpInfo = map[int16]string{
+	1: "method",
+	2: "path",
+	4: "timeout",
+}
+
+func (p *HttpInfo) IsSetMethod() bool {
+	return p.Method != nil
+}
+
+func (p *HttpInfo) IsSetPath() bool {
+	return p.Path != nil
+}
+
+func (p *HttpInfo) IsSetTimeout() bool {
+	return p.Timeout != nil
+}
+
+func (p *HttpInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_HttpInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *HttpInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *HttpMethod
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Method = _field
+	return nil
+}
+func (p *HttpInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Path = _field
+	return nil
+}
+func (p *HttpInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Timeout = _field
+	return nil
+}
+
+func (p *HttpInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("HttpInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *HttpInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMethod() {
+		if err = oprot.WriteFieldBegin("method", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Method); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *HttpInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPath() {
+		if err = oprot.WriteFieldBegin("path", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Path); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *HttpInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeout() {
+		if err = oprot.WriteFieldBegin("timeout", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Timeout); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *HttpInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("HttpInfo(%+v)", *p)
+
+}
+
+func (p *HttpInfo) DeepEqual(ano *HttpInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Method) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Path) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Timeout) {
+		return false
+	}
+	return true
+}
+
+func (p *HttpInfo) Field1DeepEqual(src *HttpMethod) bool {
+
+	if p.Method == src {
+		return true
+	} else if p.Method == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Method, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *HttpInfo) Field2DeepEqual(src *string) bool {
+
+	if p.Path == src {
+		return true
+	} else if p.Path == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Path, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *HttpInfo) Field4DeepEqual(src *int64) bool {
+
+	if p.Timeout == src {
+		return true
+	} else if p.Timeout == nil || src == nil {
+		return false
+	}
+	if *p.Timeout != *src {
 		return false
 	}
 	return true
