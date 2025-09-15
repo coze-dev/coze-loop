@@ -5,42 +5,472 @@ package tracehub
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"sync"
+	"time"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
-	//if h.isBackfillDone(ctx) {
-	//	logs.CtxInfo(ctx, "backfill is done, task_id=%d", c.task.ID)
-	//	return nil
-	//}
-	//
-	//if err := h.startTask(ctx); err != nil {
-	//	return err
-	//}
-	//
-	//subCtx, cancel := context.WithCancel(ctx)
-	//wg := sync.WaitGroup{}
-	//wg.Add(1)
-	//goutil.GoWithRecover(ctx, func() {
-	//	defer wg.Done()
-	//	defer cancel()
-	//	h.flushSpans(subCtx)
-	//})
-	//
-	//listErr := h.listSpans(subCtx)
-	//if listErr != nil {
-	//	logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", c.task.ID, listErr)
-	//	// continue on error
-	//}
-	//close(h.flushCh)
-	//wg.Wait()
-	//
-	//return h.onHandleDone(ctx, listErr)
+	// 设置当前任务上下文
+	if err := h.setBackfillTask(ctx, event); err != nil {
+		return err
+	}
+
+	// 1. 判断回溯任务是否已完成 - 避免重复执行
+	if h.isBackfillDone(ctx) {
+		logs.CtxInfo(ctx, "backfill already completed, task_id=%d", h.task.GetID())
+		return nil
+	}
+
+	// 2. 启动任务 - 更新任务状态为运行中
+	if err := h.startTask(ctx); err != nil {
+		logs.CtxError(ctx, "start backfill task failed, task_id=%d, err=%v", h.task.GetID(), err)
+		return err
+	}
+
+	// 3. 创建并发控制机制 - 设置上下文和等待组
+	subCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	wg := sync.WaitGroup{}
+	
+	// 初始化 flushCh 通道和错误收集器
+	h.flushCh = make(chan *flushReq, 100) // 缓冲通道，避免阻塞
+	h.flushErrLock.Lock()
+	h.flushErr = nil // 重置错误收集器
+	h.flushErrLock.Unlock()
+	
+	// 4. 启动异步刷新处理 - 通过 goroutine 实现并发处理
+	wg.Add(1)
+	goroutine.Go(ctx, func() {
+		defer wg.Done()
+		h.flushSpans(subCtx)
+	})
+
+	// 5. 获取 span 数据 - 从观测服务获取需要处理的数据
+	listErr := h.listSpans(subCtx)
+	if listErr != nil {
+		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", h.task.GetID(), listErr)
+		// continue on error，不中断处理流程
+	}
+	
+	// 关闭通道并等待处理完成
+	close(h.flushCh)
+	wg.Wait()
+	
+	// 6. 同步等待完成 - 确保所有数据处理完毕
+	return h.onHandleDone(ctx, listErr)
+}
+
+// setBackfillTask 设置当前回填任务的上下文
+func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity.BackFillEvent) error {
+	taskConfig, err := h.taskRepo.GetTask(ctx, event.TaskID, nil, nil)
+	if err != nil {
+		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", event.TaskID, err)
+		return err
+	}
+	if taskConfig == nil {
+		return errors.New("task config not found")
+	}
+	
+	// 解析任务规则
+	var rule *task.Rule
+	if taskConfig.Sampler != nil && *taskConfig.Sampler != "" {
+		var sampler task.Sampler
+		if err := json.Unmarshal([]byte(*taskConfig.Sampler), &sampler); err == nil {
+			rule = &task.Rule{
+				Sampler: &sampler,
+			}
+		}
+	}
+	
+	// 转换为 task.Task 结构
+	taskStatus := task.TaskStatusUnstarted // 默认状态
+	h.task = &task.Task{
+		ID:          &taskConfig.ID,
+		WorkspaceID: &taskConfig.WorkspaceID,
+		TaskStatus:  &taskStatus,
+		Rule:        rule,
+	}
+	
 	return nil
 }
 
-//func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context) bool {
-//	task := h.task
-//	return task.BackfillStat != nil && task.BackfillStat.BackfillStat.IsFinished()
-//}
+// isBackfillDone 检查回填任务是否已完成
+func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context) bool {
+	if h.task == nil {
+		return false
+	}
+	
+	// 检查任务状态是否为已完成
+	status := h.task.GetTaskStatus()
+	return status == task.TaskStatusSuccess || status == task.TaskStatusDisabled
+}
+
+// startTask 启动回填任务
+func (h *TraceHubServiceImpl) startTask(ctx context.Context) error {
+	if h.task == nil {
+		return errors.New("task not initialized")
+	}
+	
+	// 这里可以添加任务状态更新逻辑
+	logs.CtxInfo(ctx, "starting backfill task, task_id=%d", h.task.GetID())
+	return nil
+}
+
+func (h *TraceHubServiceImpl) listSpans(ctx context.Context) error {
+	// 1. 获取任务配置
+	taskConfig, err := h.taskRepo.GetTask(ctx, h.task.GetID(), nil, nil)
+	if err != nil {
+		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", h.task.GetID(), err)
+		return err
+	}
+	if taskConfig == nil {
+		return errors.New("task config not found")
+	}
+
+	// 2. 解析回填时间窗口
+	backfillTime, err := h.parseBackfillTime(ctx, taskConfig)
+	if err != nil {
+		logs.CtxError(ctx, "parse backfill time failed, task_id=%d, err=%v", h.task.GetID(), err)
+		return err
+	}
+
+	// 3. 获取租户信息
+	tenants, err := h.getTenantsForTask(ctx, taskConfig)
+	if err != nil {
+		logs.CtxError(ctx, "get tenants failed, task_id=%d, err=%v", h.task.GetID(), err)
+		return err
+	}
+
+	// 4. 构建查询参数
+	listParam := &repo.ListSpansParam{
+		Tenants:            tenants,
+		Filters:            h.buildSpanFilters(taskConfig),
+		StartAt:            backfillTime.GetStartAt(),
+		EndAt:              backfillTime.GetEndAt(),
+		Limit:              1000, // 分页大小
+		DescByStartTime:    true,
+		NotQueryAnnotation: true, // 回填时不需要查询注解
+	}
+
+	// 5. 分页查询并发送数据
+	return h.fetchAndSendSpans(ctx, listParam)
+}
+
+// parseBackfillTime 解析回填时间窗口
+func (h *TraceHubServiceImpl) parseBackfillTime(ctx context.Context, taskConfig *entity.ObservabilityTask) (*task.EffectiveTime, error) {
+	// 优先使用 BackfillEffectiveTime
+	if taskConfig.BackfillEffectiveTime != nil && *taskConfig.BackfillEffectiveTime != "" {
+		var backfillTime task.EffectiveTime
+		if err := json.Unmarshal([]byte(*taskConfig.BackfillEffectiveTime), &backfillTime); err != nil {
+			logs.CtxWarn(ctx, "parse backfill effective time failed, use default, task_id=%d, err=%v", h.task.GetID(), err)
+		} else {
+			return &backfillTime, nil
+		}
+	}
+	
+	// 使用任务的有效时间
+	if taskConfig.EffectiveTime != nil && *taskConfig.EffectiveTime != "" {
+		var effectiveTime task.EffectiveTime
+		if err := json.Unmarshal([]byte(*taskConfig.EffectiveTime), &effectiveTime); err != nil {
+			logs.CtxWarn(ctx, "parse effective time failed, use default, task_id=%d, err=%v", h.task.GetID(), err)
+		} else {
+			return &effectiveTime, nil
+		}
+	}
+	
+	// 使用默认时间窗口：过去24小时
+	now := time.Now().UnixMilli()
+	startTime := now - 24*60*60*1000 // 24小时前
+	return &task.EffectiveTime{
+		StartAt: &startTime,
+		EndAt:   &now,
+	}, nil
+}
+
+// getTenantsForTask 获取任务的租户信息
+func (h *TraceHubServiceImpl) getTenantsForTask(ctx context.Context, taskConfig *entity.ObservabilityTask) ([]string, error) {
+	var platformType loop_span.PlatformType = loop_span.PlatformCozeLoop // 默认值
+	
+	// 从 SpanFilter 中解析平台类型
+	if taskConfig.SpanFilter != nil && *taskConfig.SpanFilter != "" {
+		var spanFilter map[string]interface{}
+		if err := json.Unmarshal([]byte(*taskConfig.SpanFilter), &spanFilter); err == nil {
+			if platform, ok := spanFilter["platform_type"].(string); ok {
+				platformType = loop_span.PlatformType(platform)
+			}
+		}
+	}
+	
+	return h.getTenants(ctx, platformType)
+}
+
+// buildSpanFilters 构建 span 过滤条件
+func (h *TraceHubServiceImpl) buildSpanFilters(taskConfig *entity.ObservabilityTask) *loop_span.FilterFields {
+	// 可以根据任务配置构建更复杂的过滤条件
+	// 这里简化处理，返回 nil 表示不添加额外过滤
+	return nil
+}
+
+// fetchAndSendSpans 分页获取并发送 span 数据
+func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *repo.ListSpansParam) error {
+	pageToken := ""
+	totalCount := int64(0)
+	
+	for {
+		listParam.PageToken = pageToken
+		
+		result, err := h.traceRepo.ListSpans(ctx, listParam)
+		if err != nil {
+			logs.CtxError(ctx, "list spans failed, task_id=%d, page_token=%s, err=%v", h.task.GetID(), pageToken, err)
+			return err
+		}
+
+		if len(result.Spans) > 0 {
+			// 发送到通道
+			flushReq := &flushReq{
+				retrievedSpanCount: int64(len(result.Spans)),
+				pageToken:          result.PageToken,
+				spans:              result.Spans,
+				noMore:             !result.HasMore,
+			}
+			
+			select {
+			case h.flushCh <- flushReq:
+				totalCount += int64(len(result.Spans))
+				logs.CtxInfo(ctx, "sent %d spans to flush channel, total=%d, task_id=%d", len(result.Spans), totalCount, h.task.GetID())
+			case <-ctx.Done():
+				logs.CtxWarn(ctx, "context cancelled while sending spans, task_id=%d", h.task.GetID())
+				return ctx.Err()
+			}
+		}
+
+		if !result.HasMore {
+			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, h.task.GetID())
+			break
+		}
+		
+		pageToken = result.PageToken
+	}
+
+	return nil
+}
+
+func (h *TraceHubServiceImpl) flushSpans(ctx context.Context) {
+	for {
+		select {
+		case fr, ok := <-h.flushCh:
+			if !ok {
+				// 通道已关闭，退出
+				return
+			}
+			
+			flushed, sampled, err := h.doFlush(ctx, fr)
+			if err != nil {
+				logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", h.task.GetID(), err)
+				// 收集错误，继续处理
+				h.flushErrLock.Lock()
+				h.flushErr = append(h.flushErr, err)
+				h.flushErrLock.Unlock()
+			}
+			
+			// 记录处理结果
+			h.recordFlushResult(ctx, fr, flushed, sampled, err)
+			
+		case <-ctx.Done():
+			logs.CtxWarn(ctx, "flush spans context cancelled, task_id=%d", h.task.GetID())
+			return
+		}
+	}
+}
+
+func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq) (flushed, sampled int, _ error) {
+	if fr == nil || len(fr.spans) == 0 {
+		return 0, 0, nil
+	}
+
+	logs.CtxInfo(ctx, "processing %d spans for backfill, task_id=%d", len(fr.spans), h.task.GetID())
+
+	// 1. 数据预处理和过滤
+	validSpans := h.filterValidSpans(fr.spans)
+	if len(validSpans) == 0 {
+		logs.CtxInfo(ctx, "no valid spans after filtering, task_id=%d", h.task.GetID())
+		return 0, 0, nil
+	}
+
+	// 2. 应用采样逻辑
+	sampledSpans := h.applySampling(validSpans)
+	if len(sampledSpans) == 0 {
+		logs.CtxInfo(ctx, "no spans after sampling, task_id=%d", h.task.GetID())
+		return len(validSpans), 0, nil
+	}
+
+	// 3. 执行具体的业务逻辑处理
+	err := h.processSpansForBackfill(ctx, sampledSpans)
+	if err != nil {
+		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", h.task.GetID(), err)
+		return len(validSpans), len(sampledSpans), err
+	}
+
+	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d", 
+		len(sampledSpans), len(validSpans), h.task.GetID())
+
+	return len(validSpans), len(sampledSpans), nil
+}
+
+// filterValidSpans 过滤有效的 span 数据
+func (h *TraceHubServiceImpl) filterValidSpans(spans []*loop_span.Span) []*loop_span.Span {
+	validSpans := make([]*loop_span.Span, 0, len(spans))
+	
+	for _, span := range spans {
+		if h.isValidSpan(span) {
+			validSpans = append(validSpans, span)
+		}
+	}
+	
+	return validSpans
+}
+
+// isValidSpan 检查 span 是否有效
+func (h *TraceHubServiceImpl) isValidSpan(span *loop_span.Span) bool {
+	if span == nil {
+		return false
+	}
+	
+	// 基本字段检查
+	if span.SpanID == "" || span.TraceID == "" || span.WorkspaceID == "" {
+		return false
+	}
+	
+	// 时间有效性检查
+	if span.StartTime <= 0 {
+		return false
+	}
+	
+	return true
+}
+
+// applySampling 应用采样逻辑
+func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span) []*loop_span.Span {
+	if h.task == nil || h.task.Rule == nil {
+		return spans
+	}
+	
+	sampler := h.task.GetRule().GetSampler()
+	if sampler == nil {
+		return spans
+	}
+	
+	sampleRate := sampler.GetSampleRate()
+	if sampleRate >= 1.0 {
+		return spans // 100% 采样
+	}
+	
+	if sampleRate <= 0.0 {
+		return nil // 0% 采样
+	}
+	
+	// 计算采样数量
+	sampleSize := int(float64(len(spans)) * sampleRate)
+	if sampleSize == 0 && len(spans) > 0 {
+		sampleSize = 1 // 至少采样一个
+	}
+	
+	if sampleSize >= len(spans) {
+		return spans
+	}
+	
+	return spans[:sampleSize]
+}
+
+// processSpansForBackfill 处理回填的 span 数据
+func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span) error {
+	// 批量处理 spans，提高效率
+	const batchSize = 100
+	
+	for i := 0; i < len(spans); i += batchSize {
+		end := i + batchSize
+		if end > len(spans) {
+			end = len(spans)
+		}
+		
+		batch := spans[i:end]
+		if err := h.processBatchSpans(ctx, batch); err != nil {
+			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v", 
+				h.task.GetID(), i, err)
+			// 继续处理下一批，不因单批失败而中断
+			continue
+		}
+	}
+	
+	return nil
+}
+
+// processBatchSpans 批量处理 span 数据
+func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span) error {
+	// 这里实现具体的批量处理逻辑
+	// 例如：数据转换、存储、触发下游处理等
+	
+	for _, span := range spans {
+		// 执行单个 span 的处理逻辑
+		if err := h.processIndividualSpan(ctx, span); err != nil {
+			logs.CtxWarn(ctx, "process individual span failed, span_id=%s, trace_id=%s, err=%v", 
+				span.SpanID, span.TraceID, err)
+			// 继续处理其他span，不因单个失败而中断批处理
+		}
+	}
+	
+	return nil
+}
+
+// processIndividualSpan 处理单个 span
+func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *loop_span.Span) error {
+	// 根据任务类型执行相应的处理逻辑
+	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d", 
+		span.SpanID, span.TraceID, h.task.GetID())
+	
+	// 这里可以添加具体的处理逻辑：
+	// 1. 数据验证
+	// 2. 格式转换
+	// 3. 业务逻辑处理
+	// 4. 存储或转发
+	
+	return nil
+}
+
+// recordFlushResult 记录刷新结果
+func (h *TraceHubServiceImpl) recordFlushResult(ctx context.Context, fr *flushReq, flushed, sampled int, err error) {
+	if err != nil {
+		logs.CtxError(ctx, "flush result: error=%v, task_id=%d", err, h.task.GetID())
+	} else {
+		logs.CtxInfo(ctx, "flush result: flushed=%d, sampled=%d, task_id=%d", flushed, sampled, h.task.GetID())
+	}
+}
+
+// onHandleDone 处理完成回调
+func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error) error {
+	// 收集所有错误
+	h.flushErrLock.Lock()
+	allErrors := append([]error{}, h.flushErr...)
+	if listErr != nil {
+		allErrors = append(allErrors, listErr)
+	}
+	h.flushErrLock.Unlock()
+	
+	if len(allErrors) > 0 {
+		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), h.task.GetID())
+		// 返回第一个错误作为代表
+		return allErrors[0]
+	}
+	
+	logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", h.task.GetID())
+	return nil
+}

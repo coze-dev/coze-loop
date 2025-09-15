@@ -65,6 +65,18 @@ type TraceHubServiceImpl struct {
 	taskRepo       repo.ITaskRepo
 	traceRepo      trace_repo.ITraceRepo
 	tenantProvider tenant.ITenantProvider
+
+	task         *task.Task
+	flushCh      chan *flushReq
+	flushErrLock sync.Mutex
+	flushErr     []error
+}
+
+type flushReq struct {
+	retrievedSpanCount int64
+	pageToken          string
+	spans              []*loop_span.Span
+	noMore             bool
 }
 
 const TagKeyResult = "tag_key"
