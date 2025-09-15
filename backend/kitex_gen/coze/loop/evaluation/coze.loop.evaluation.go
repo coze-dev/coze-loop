@@ -8,6 +8,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
 
 type EvaluationSetService interface {
@@ -114,6 +115,32 @@ func NewEvalTargetServiceClient(c thrift.TClient) *EvalTargetServiceClient {
 	}
 }
 
+type EvalOpenAPIService interface {
+	openapi.EvaluationOpenAPIService
+}
+
+type EvalOpenAPIServiceClient struct {
+	*openapi.EvaluationOpenAPIServiceClient
+}
+
+func NewEvalOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi.NewEvaluationOpenAPIServiceClientFactory(t, f),
+	}
+}
+
+func NewEvalOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi.NewEvaluationOpenAPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewEvalOpenAPIServiceClient(c thrift.TClient) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi.NewEvaluationOpenAPIServiceClient(c),
+	}
+}
+
 type EvaluationSetServiceProcessor struct {
 	*eval_set.EvaluationSetServiceProcessor
 }
@@ -147,5 +174,14 @@ type EvalTargetServiceProcessor struct {
 
 func NewEvalTargetServiceProcessor(handler EvalTargetService) *EvalTargetServiceProcessor {
 	self := &EvalTargetServiceProcessor{eval_target.NewEvalTargetServiceProcessor(handler)}
+	return self
+}
+
+type EvalOpenAPIServiceProcessor struct {
+	*openapi.EvaluationOpenAPIServiceProcessor
+}
+
+func NewEvalOpenAPIServiceProcessor(handler EvalOpenAPIService) *EvalOpenAPIServiceProcessor {
+	self := &EvalOpenAPIServiceProcessor{openapi.NewEvaluationOpenAPIServiceProcessor(handler)}
 	return self
 }

@@ -134,3 +134,8 @@ type IExptResultExportRecordRepo interface {
 	List(ctx context.Context, spaceID, exptID int64, page entity.Page, csvExportStatus *int32) ([]*entity.ExptResultExportRecord, int64, error)
 	Get(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)
 }
+
+type IExptItemTurnEvalAsyncRepo interface {
+	GetAsyncCtx(ctx context.Context, invokeID string) (*entity.ExptItemTurnEvalAsyncCtx, error)
+	SetAsyncCtx(ctx context.Context, invokeID string, actx *entity.ExptItemTurnEvalAsyncCtx) error
+}

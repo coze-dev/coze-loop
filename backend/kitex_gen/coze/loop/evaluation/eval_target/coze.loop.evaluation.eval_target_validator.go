@@ -313,29 +313,3 @@ func (p *AsyncDebugEvalTargetResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *PassbackEvalTargetInvokeResultRequest) IsValid() error {
-	if p.Output != nil {
-		if err := p.Output.IsValid(); err != nil {
-			return fmt.Errorf("field Output not valid, %w", err)
-		}
-	}
-	if p.Usage != nil {
-		if err := p.Usage.IsValid(); err != nil {
-			return fmt.Errorf("field Usage not valid, %w", err)
-		}
-	}
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *PassbackEvalTargetInvokeResultResponse) IsValid() error {
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}

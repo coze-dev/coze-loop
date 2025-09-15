@@ -7,6 +7,7 @@
 package application
 
 import (
+	"context"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -55,7 +56,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
-	"context"
 	"github.com/google/wire"
 )
 
@@ -208,6 +208,26 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService
 }
 
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter) (IEvalOpenAPIApplication, error) {
+	iExptItemTurnEvalAsyncDAO := dao.NewExptItemTurnEvalAsyncDAO(cmdable)
+	iExptItemTurnEvalAsyncRepo := experiment.NewExptItemTurnEvalAsyncRepo(iExptItemTurnEvalAsyncDAO)
+	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
+	if err != nil {
+		return nil, err
+	}
+	evalTargetDAO := mysql3.NewEvalTargetDAO(db2)
+	evalTargetVersionDAO := mysql3.NewEvalTargetVersionDAO(db2)
+	evalTargetRecordDAO := mysql3.NewEvalTargetRecordDAO(db2)
+	iLatestWriteTracker := platestwrite.NewLatestWriteTracker(cmdable)
+	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, iLatestWriteTracker)
+	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
+	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
+	v := NewSourceTargetOperators(iPromptRPCAdapter)
+	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v)
+	v2 := NewEvalOpenAPIApplication(iExptItemTurnEvalAsyncRepo, exptEventPublisher, iEvalTargetService)
+	return v2, nil
+}
+
 // wire.go:
 
 var (
@@ -240,6 +260,11 @@ var (
 	evalTargetSet = wire.NewSet(
 		NewEvalTargetHandlerImpl, metrics3.NewEvalTargetMetrics, foundation.NewAuthRPCProvider, targetDomainService,
 		flagSet,
+	)
+
+	evalOpenAPISet = wire.NewSet(
+		NewEvalOpenAPIApplication,
+		targetDomainService, metrics3.NewEvalTargetMetrics, flagSet, producer.NewExptEventPublisher, experiment.NewExptItemTurnEvalAsyncRepo, dao.NewExptItemTurnEvalAsyncDAO,
 	)
 )
 

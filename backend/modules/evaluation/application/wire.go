@@ -187,6 +187,16 @@ var (
 		targetDomainService,
 		flagSet,
 	)
+
+	evalOpenAPISet = wire.NewSet(
+		NewEvalOpenAPIApplication,
+		targetDomainService,
+		evaltargetmtr.NewEvalTargetMetrics,
+		flagSet,
+		rmqproducer.NewExptEventPublisher,
+		experiment.NewExptItemTurnEvalAsyncRepo,
+		exptredis.NewExptItemTurnEvalAsyncDAO,
+	)
 )
 
 func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter) map[entity.EvalTargetType]service.ISourceEvalTargetOperateService {
@@ -280,4 +290,22 @@ func NewEvaluatorSourceServices(llmProvider componentrpc.ILLMProvider, metric mt
 	return []domainservice.EvaluatorSourceService{
 		domainservice.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config),
 	}
+}
+
+func InitEvalOpenAPIApplication(
+	ctx context.Context,
+	configFactory conf.IConfigLoaderFactory,
+	rmqFactory mq.IFactory,
+	cmdable redis.Cmdable,
+	idgen idgen.IIDGenerator,
+	db db.Provider,
+	client promptmanageservice.Client,
+	executeClient promptexecuteservice.Client,
+	authClient authservice.Client,
+	meter metrics.Meter,
+) (IEvalOpenAPIApplication, error) {
+	wire.Build(
+		evalOpenAPISet,
+	)
+	return nil, nil
 }

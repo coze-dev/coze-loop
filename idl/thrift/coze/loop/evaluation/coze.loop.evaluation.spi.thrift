@@ -37,8 +37,13 @@ struct InvokeEvalTargetRequest {
 }
 
 struct InvokeEvalTargetResponse {
-    1: optional InvokeEvalTargetOutput output // 输出
-    2: optional InvokeEvalTargetUsage usage // 消耗
+    1: optional InvokeEvalTargetStatus status
+    // set output if status=SUCCESS
+    2: optional InvokeEvalTargetOutput output
+    // set usage if status=SUCCESS
+    3: optional InvokeEvalTargetUsage usage
+    // set error_message if status=FAILED
+    10: optional string error_message
 
     255: base.BaseResp BaseResp (api.none="true")
 }
@@ -49,9 +54,15 @@ struct InvokeEvalTargetInput {
     20: optional map<string, string> ext   // 扩展字段，动态参数会通过ext字段传递
 }
 
+enum InvokeEvalTargetStatus {
+    UNKNOWN = 0
+    SUCCESS = 1
+    FAILED = 2
+}
+
 // 新增
 struct InvokeEvalTargetOutput {
-    1: optional Content actual_output    // 实际输出
+    1: optional Content actual_output
 
     20: optional map<string, string> ext     // 扩展字段，用户如果想返回一些额外信息可以塞在这个字段
 }
@@ -80,7 +91,6 @@ struct InvokeEvalTargetUsage {
 struct AsyncInvokeEvalTargetRequest {
     1: optional i64 workspace_id
     2: optional i64 invoke_id  // 执行id，传递给自定义对象，在回传结果时透传
-    3: optional string token    // 根据invoke_id签发的token，在回传结果时透传
     4: optional InvokeEvalTargetInput input  // 执行输入信息
     5: optional CustomEvalTarget custom_eval_target    // 如果创建实验时选了二级对象，则会透传二级对象信息
 
@@ -90,7 +100,6 @@ struct AsyncInvokeEvalTargetRequest {
 struct AsyncInvokeEvalTargetResponse {
     255: base.BaseResp BaseResp (api.none="true")
 }
-
 
 service EvaluationSPIService {
     SearchEvalTargetResponse SearchEvalTarget(1: SearchEvalTargetRequest req)   // 搜索评测对象

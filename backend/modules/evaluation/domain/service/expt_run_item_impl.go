@@ -103,7 +103,8 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
 
-	time.Sleep(time.Second * 1) // 确保日志落库
+	time.Sleep(time.Second * 1)
+
 	return nil
 }
 

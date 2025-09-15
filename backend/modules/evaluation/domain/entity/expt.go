@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -123,6 +124,18 @@ func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
 		})
 	}
 	return refs
+}
+
+func (e *Experiment) AsyncExec() bool {
+	return e.AsyncCallTarget() || e.AsyncCallEvaluators()
+}
+
+func (e *Experiment) AsyncCallTarget() bool {
+	return gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync)
+}
+
+func (e *Experiment) AsyncCallEvaluators() bool {
+	return false
 }
 
 type ExptEvaluatorVersionRef struct {

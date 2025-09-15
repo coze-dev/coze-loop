@@ -33,6 +33,10 @@ type PromptSourceEvalTargetServiceImpl struct {
 	promptRPCAdapter rpc.IPromptRPCAdapter
 }
 
+func (t *PromptSourceEvalTargetServiceImpl) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) error {
+	return errorx.New("async execute not supported")
+}
+
 func (t *PromptSourceEvalTargetServiceImpl) RuntimeParam() entity.IRuntimeParam {
 	return entity.NewPromptRuntimeParam(nil)
 }

@@ -313,29 +313,6 @@ func (l *LocalEvalTargetService) AsyncDebugEvalTarget(ctx context.Context, reque
 	return result.GetSuccess(), nil
 }
 
-// PassbackEvalTargetInvokeResult_
-// 回传执行结果
-func (l *LocalEvalTargetService) PassbackEvalTargetInvokeResult_(ctx context.Context, req *eval_target.PassbackEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (*eval_target.PassbackEvalTargetInvokeResultResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*eval_target.EvalTargetServicePassbackEvalTargetInvokeResultArgs)
-		result := out.(*eval_target.EvalTargetServicePassbackEvalTargetInvokeResultResult)
-		resp, err := l.impl.PassbackEvalTargetInvokeResult_(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &eval_target.EvalTargetServicePassbackEvalTargetInvokeResultArgs{Req: req}
-	result := &eval_target.EvalTargetServicePassbackEvalTargetInvokeResultResult{}
-	ctx = l.injectRPCInfo(ctx, "PassbackEvalTargetInvokeResult_")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 func (l *LocalEvalTargetService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

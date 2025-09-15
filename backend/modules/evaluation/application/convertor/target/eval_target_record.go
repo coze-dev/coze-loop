@@ -8,8 +8,12 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	commonconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 func EvalTargetRecordDO2DTO(src *entity.EvalTargetRecord) *eval_target.EvalTargetRecord {
@@ -262,4 +266,95 @@ func getInt32Value(ptr *int32) int32 {
 		return *ptr
 	}
 	return 0
+}
+
+func toSPIContentDO(spiContent *spi.Content) *entity.Content {
+	if spiContent == nil {
+		return nil
+	}
+
+	var contentType *entity.ContentType
+	if spiContent.ContentType != nil {
+		ct := toSPIContentTypeDO(*spiContent.ContentType)
+		contentType = &ct
+	}
+
+	var image *entity.Image
+	if spiContent.Image != nil {
+		image = &entity.Image{
+			URL: spiContent.Image.URL,
+		}
+	}
+
+	var multiPart []*entity.Content
+	if spiContent.MultiPart != nil {
+		multiPart = make([]*entity.Content, 0, len(spiContent.MultiPart))
+		for _, part := range spiContent.MultiPart {
+			multiPart = append(multiPart, toSPIContentDO(part))
+		}
+	}
+
+	return &entity.Content{
+		ContentType: contentType,
+		Text:        spiContent.Text,
+		Image:       image,
+		MultiPart:   multiPart,
+	}
+}
+
+func toSPIContentTypeDO(spiContentType spi.ContentType) entity.ContentType {
+	switch spiContentType {
+	case spi.ContentTypeText:
+		return entity.ContentTypeText
+	case spi.ContentTypeImage:
+		return entity.ContentTypeImage
+	case spi.ContentTypeMultiPart:
+		return entity.ContentTypeMultipart
+	default:
+		return entity.ContentTypeText
+	}
+}
+
+func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *entity.EvalTargetOutputData {
+	switch req.GetStatus() {
+	case spi.InvokeEvalTargetStatus_SUCCESS:
+		output := req.GetOutput()
+		usage := req.GetUsage()
+
+		outputFields := make(map[string]*entity.Content)
+		if output.ActualOutput != nil {
+			outputFields[consts.OutputSchemaKey] = toSPIContentDO(output.ActualOutput)
+		}
+
+		var evalTargetUsage *entity.EvalTargetUsage
+		if usage.InputTokens != nil || usage.OutputTokens != nil {
+			evalTargetUsage = &entity.EvalTargetUsage{
+				InputTokens:  getInt64Value(usage.InputTokens),
+				OutputTokens: getInt64Value(usage.OutputTokens),
+			}
+		}
+
+		return &entity.EvalTargetOutputData{
+			OutputFields:       outputFields,
+			EvalTargetUsage:    evalTargetUsage,
+			EvalTargetRunError: nil,
+		}
+
+	case spi.InvokeEvalTargetStatus_FAILED:
+		errorMessage := req.GetErrorMessage()
+		var evalTargetRunError *entity.EvalTargetRunError
+		if errorMessage != "" {
+			evalTargetRunError = &entity.EvalTargetRunError{
+				Code:    errno.CustomEvalTargetInvokeFailCode,
+				Message: errorMessage,
+			}
+		}
+		return &entity.EvalTargetOutputData{
+			EvalTargetRunError: evalTargetRunError,
+		}
+
+	default:
+		return nil
+	}
+
 }

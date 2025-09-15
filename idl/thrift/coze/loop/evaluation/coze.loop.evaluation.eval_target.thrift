@@ -244,21 +244,6 @@ struct AsyncDebugEvalTargetResponse {
     255: base.BaseResp BaseResp
 }
 
-struct PassbackEvalTargetInvokeResultRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
-    2: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
-    3: optional string token
-
-    10: optional coze.loop.evaluation.spi.InvokeEvalTargetOutput output // 输出
-    11: optional coze.loop.evaluation.spi.InvokeEvalTargetUsage usage // 消耗
-
-    255: optional base.Base Base (api.none="true");
-}
-
-struct PassbackEvalTargetInvokeResultResponse {
-    255: base.BaseResp BaseResp (api.none="true")
-}
-
 service EvalTargetService {
     // 创建评测对象
     CreateEvalTargetResponse CreateEvalTarget(1: CreateEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets")
@@ -284,8 +269,4 @@ service EvalTargetService {
     // debug
     DebugEvalTargetResponse DebugEvalTarget(1: DebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/debug")
     AsyncDebugEvalTargetResponse AsyncDebugEvalTarget(1: AsyncDebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/async_debug")
-
-    // 回传执行结果
-    PassbackEvalTargetInvokeResultResponse PassbackEvalTargetInvokeResult(1: PassbackEvalTargetInvokeResultRequest req) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/passback_result")
-
 } (api.js_conv="true" )

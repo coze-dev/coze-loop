@@ -105,13 +105,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"PassbackEvalTargetInvokeResult": kitex.NewMethodInfo(
-		passbackEvalTargetInvokeResult_Handler,
-		newEvalTargetServicePassbackEvalTargetInvokeResultArgs,
-		newEvalTargetServicePassbackEvalTargetInvokeResultResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 }
 
 var (
@@ -392,25 +385,6 @@ func newEvalTargetServiceAsyncDebugEvalTargetResult() interface{} {
 	return eval_target.NewEvalTargetServiceAsyncDebugEvalTargetResult()
 }
 
-func passbackEvalTargetInvokeResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*eval_target.EvalTargetServicePassbackEvalTargetInvokeResultArgs)
-	realResult := result.(*eval_target.EvalTargetServicePassbackEvalTargetInvokeResultResult)
-	success, err := handler.(eval_target.EvalTargetService).PassbackEvalTargetInvokeResult_(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvalTargetServicePassbackEvalTargetInvokeResultArgs() interface{} {
-	return eval_target.NewEvalTargetServicePassbackEvalTargetInvokeResultArgs()
-}
-
-func newEvalTargetServicePassbackEvalTargetInvokeResultResult() interface{} {
-	return eval_target.NewEvalTargetServicePassbackEvalTargetInvokeResultResult()
-}
-
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -548,16 +522,6 @@ func (p *kClient) AsyncDebugEvalTarget(ctx context.Context, request *eval_target
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceAsyncDebugEvalTargetResult
 	if err = p.c.Call(ctx, "AsyncDebugEvalTarget", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) PassbackEvalTargetInvokeResult_(ctx context.Context, req *eval_target.PassbackEvalTargetInvokeResultRequest) (r *eval_target.PassbackEvalTargetInvokeResultResponse, err error) {
-	var _args eval_target.EvalTargetServicePassbackEvalTargetInvokeResultArgs
-	_args.Req = req
-	var _result eval_target.EvalTargetServicePassbackEvalTargetInvokeResultResult
-	if err = p.c.Call(ctx, "PassbackEvalTargetInvokeResult", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

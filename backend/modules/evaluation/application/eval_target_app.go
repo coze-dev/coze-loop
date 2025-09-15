@@ -462,8 +462,3 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 	// TODO implement me
 	panic("implement me")
 }
-
-func (e EvalTargetApplicationImpl) PassbackEvalTargetInvokeResult_(ctx context.Context, req *eval_target.PassbackEvalTargetInvokeResultRequest) (r *eval_target.PassbackEvalTargetInvokeResultResponse, err error) {
-	// TODO implement me
-	panic("implement me")
-}

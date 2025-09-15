@@ -41,6 +41,20 @@ func (m *MockISourceEvalTargetOperateService) EXPECT() *MockISourceEvalTargetOpe
 	return m.recorder
 }
 
+// AsyncExecute mocks base method.
+func (m *MockISourceEvalTargetOperateService) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncExecute", ctx, spaceID, param)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AsyncExecute indicates an expected call of AsyncExecute.
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) AsyncExecute(ctx, spaceID, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncExecute", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).AsyncExecute), ctx, spaceID, param)
+}
+
 // BatchGetSource mocks base method.
 func (m *MockISourceEvalTargetOperateService) BatchGetSource(ctx context.Context, spaceID int64, ids []string) ([]*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()

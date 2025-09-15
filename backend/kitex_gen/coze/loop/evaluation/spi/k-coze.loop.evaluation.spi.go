@@ -1302,7 +1302,7 @@ func (p *InvokeEvalTargetResponse) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1318,6 +1318,34 @@ func (p *InvokeEvalTargetResponse) FastRead(buf []byte) (int, error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1363,6 +1391,22 @@ SkipFieldError:
 
 func (p *InvokeEvalTargetResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
+
+	var _field *InvokeEvalTargetStatus
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := InvokeEvalTargetStatus(v)
+		_field = &tmp
+	}
+	p.Status = _field
+	return offset, nil
+}
+
+func (p *InvokeEvalTargetResponse) FastReadField2(buf []byte) (int, error) {
+	offset := 0
 	_field := NewInvokeEvalTargetOutput()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
@@ -1373,7 +1417,7 @@ func (p *InvokeEvalTargetResponse) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *InvokeEvalTargetResponse) FastReadField2(buf []byte) (int, error) {
+func (p *InvokeEvalTargetResponse) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 	_field := NewInvokeEvalTargetUsage()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1382,6 +1426,20 @@ func (p *InvokeEvalTargetResponse) FastReadField2(buf []byte) (int, error) {
 		offset += l
 	}
 	p.Usage = _field
+	return offset, nil
+}
+
+func (p *InvokeEvalTargetResponse) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ErrorMessage = _field
 	return offset, nil
 }
 
@@ -1406,6 +1464,8 @@ func (p *InvokeEvalTargetResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1417,6 +1477,8 @@ func (p *InvokeEvalTargetResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field10Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1425,18 +1487,36 @@ func (p *InvokeEvalTargetResponse) BLength() int {
 
 func (p *InvokeEvalTargetResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetOutput() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-		offset += p.Output.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetStatus() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Status))
 	}
 	return offset
 }
 
 func (p *InvokeEvalTargetResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetUsage() {
+	if p.IsSetOutput() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.Output.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *InvokeEvalTargetResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetUsage() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
 		offset += p.Usage.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *InvokeEvalTargetResponse) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetErrorMessage() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ErrorMessage)
 	}
 	return offset
 }
@@ -1450,6 +1530,15 @@ func (p *InvokeEvalTargetResponse) fastWriteField255(buf []byte, w thrift.Nocopy
 
 func (p *InvokeEvalTargetResponse) field1Length() int {
 	l := 0
+	if p.IsSetStatus() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *InvokeEvalTargetResponse) field2Length() int {
+	l := 0
 	if p.IsSetOutput() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.Output.BLength()
@@ -1457,11 +1546,20 @@ func (p *InvokeEvalTargetResponse) field1Length() int {
 	return l
 }
 
-func (p *InvokeEvalTargetResponse) field2Length() int {
+func (p *InvokeEvalTargetResponse) field3Length() int {
 	l := 0
 	if p.IsSetUsage() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.Usage.BLength()
+	}
+	return l
+}
+
+func (p *InvokeEvalTargetResponse) field10Length() int {
+	l := 0
+	if p.IsSetErrorMessage() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ErrorMessage)
 	}
 	return l
 }
@@ -1477,6 +1575,11 @@ func (p *InvokeEvalTargetResponse) DeepCopy(s interface{}) error {
 	src, ok := s.(*InvokeEvalTargetResponse)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Status != nil {
+		tmp := *src.Status
+		p.Status = &tmp
 	}
 
 	var _output *InvokeEvalTargetOutput
@@ -1496,6 +1599,14 @@ func (p *InvokeEvalTargetResponse) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Usage = _usage
+
+	if src.ErrorMessage != nil {
+		var tmp string
+		if *src.ErrorMessage != "" {
+			tmp = kutils.StringDeepCopy(*src.ErrorMessage)
+		}
+		p.ErrorMessage = &tmp
+	}
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
@@ -2635,20 +2746,6 @@ func (p *AsyncInvokeEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField3(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField4(buf[offset:])
@@ -2737,20 +2834,6 @@ func (p *AsyncInvokeEvalTargetRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *AsyncInvokeEvalTargetRequest) FastReadField3(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.Token = _field
-	return offset, nil
-}
-
 func (p *AsyncInvokeEvalTargetRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 	_field := NewInvokeEvalTargetInput()
@@ -2796,7 +2879,6 @@ func (p *AsyncInvokeEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.Noco
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -2810,7 +2892,6 @@ func (p *AsyncInvokeEvalTargetRequest) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
-		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field255Length()
@@ -2833,15 +2914,6 @@ func (p *AsyncInvokeEvalTargetRequest) fastWriteField2(buf []byte, w thrift.Noco
 	if p.IsSetInvokeID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.InvokeID)
-	}
-	return offset
-}
-
-func (p *AsyncInvokeEvalTargetRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetToken() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Token)
 	}
 	return offset
 }
@@ -2891,15 +2963,6 @@ func (p *AsyncInvokeEvalTargetRequest) field2Length() int {
 	return l
 }
 
-func (p *AsyncInvokeEvalTargetRequest) field3Length() int {
-	l := 0
-	if p.IsSetToken() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Token)
-	}
-	return l
-}
-
 func (p *AsyncInvokeEvalTargetRequest) field4Length() int {
 	l := 0
 	if p.IsSetInput() {
@@ -2941,14 +3004,6 @@ func (p *AsyncInvokeEvalTargetRequest) DeepCopy(s interface{}) error {
 	if src.InvokeID != nil {
 		tmp := *src.InvokeID
 		p.InvokeID = &tmp
-	}
-
-	if src.Token != nil {
-		var tmp string
-		if *src.Token != "" {
-			tmp = kutils.StringDeepCopy(*src.Token)
-		}
-		p.Token = &tmp
 	}
 
 	var _input *InvokeEvalTargetInput

@@ -107,7 +107,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets.POST("/debug", append(_debugevaltargetMw(handler), apis.DebugEvalTarget)...)
 				_eval_targets.POST("/list_source", append(_listsourceevaltargetsMw(handler), apis.ListSourceEvalTargets)...)
 				_eval_targets.POST("/list_source_version", append(_listsourceevaltargetversionsMw(handler), apis.ListSourceEvalTargetVersions)...)
-				_eval_targets.POST("/passback_result", append(_passbackevaltargetinvokeresultMw(handler), apis.PassbackEvalTargetInvokeResult)...)
 				_eval_targets.POST("/search_custom", append(_searchcustomevaltargetMw(handler), apis.SearchCustomEvalTarget)...)
 				{
 					_eval_target_id := _eval_targets.Group("/:eval_target_id", _eval_target_idMw(handler)...)
@@ -341,6 +340,13 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 		_v16 := root.Group("/v1", _v16Mw(handler)...)
 		{
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
+			{
+				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)
+				{
+					_eval_targets0 := _evaluation0.Group("/eval_targets", _eval_targets0Mw(handler)...)
+					_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
+				}
+			}
 			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)

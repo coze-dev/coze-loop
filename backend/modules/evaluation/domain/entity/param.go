@@ -289,3 +289,11 @@ type SearchCustomEvalTargetParam struct {
 	PageSize        *int32
 	PageToken       *string
 }
+
+type ReportTargetRecordParam struct {
+	SpaceID    int64
+	RecordID   int64
+	OutputData *EvalTargetOutputData
+
+	Session *Session
+}

@@ -9,9 +9,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaltargetservice"
 )
 
@@ -56,49 +54,19 @@ func ListSourceEvalTargetVersions(ctx context.Context, c *app.RequestContext) {
 // ExecuteEvalTarget .
 // @router /api/evaluation/v2/eval_targets/execute [POST]
 func ExecuteEvalTarget(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.ExecuteEvalTargetRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.ExecuteEvalTargetResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalTargetSvc.ExecuteEvalTarget)
 }
 
 // GetEvalTargetRecord .
 // @router /api/evaluation/v2/eval_targets/records/:eval_target_record_id [GET]
 func GetEvalTargetRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.GetEvalTargetRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.GetEvalTargetRecordResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalTargetSvc.GetEvalTargetRecord)
 }
 
 // BatchGetEvalTargetRecords
 // @router /api/evaluation/v2/eval_targets/records/batch_get [POST]
 func BatchGetEvalTargetRecords(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.BatchGetEvalTargetRecordsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.BatchGetEvalTargetRecordsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalTargetSvc.BatchGetEvalTargetRecords)
 }
 
 // BatchGetSourceEvalTargets .
@@ -110,63 +78,17 @@ func BatchGetSourceEvalTargets(ctx context.Context, c *app.RequestContext) {
 // SearchCustomEvalTarget .
 // @router /api/evaluation/v1/eval_targets/search_custom [POST]
 func SearchCustomEvalTarget(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.SearchCustomEvalTargetRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.SearchCustomEvalTargetResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalTargetSvc.SearchCustomEvalTarget)
 }
 
 // DebugEvalTarget .
 // @router /api/evaluation/v1/eval_targets/debug [POST]
 func DebugEvalTarget(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.DebugEvalTargetRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.DebugEvalTargetResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalTargetSvc.DebugEvalTarget)
 }
 
 // AsyncDebugEvalTarget .
 // @router /api/evaluation/v1/eval_targets/async_debug [POST]
 func AsyncDebugEvalTarget(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.AsyncDebugEvalTargetRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.AsyncDebugEvalTargetResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// PassbackEvalTargetInvokeResult .
-// @router /api/evaluation/v1/eval_targets/passback_result [POST]
-func PassbackEvalTargetInvokeResult(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_target.PassbackEvalTargetInvokeResultRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_target.PassbackEvalTargetInvokeResultResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalTargetSvc.AsyncDebugEvalTarget)
 }

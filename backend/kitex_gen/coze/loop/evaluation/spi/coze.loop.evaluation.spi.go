@@ -4,6 +4,8 @@ package spi
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
@@ -17,6 +19,53 @@ const (
 
 	ContentTypeMultiPart = "multi_part"
 )
+
+type InvokeEvalTargetStatus int64
+
+const (
+	InvokeEvalTargetStatus_UNKNOWN InvokeEvalTargetStatus = 0
+	InvokeEvalTargetStatus_SUCCESS InvokeEvalTargetStatus = 1
+	InvokeEvalTargetStatus_FAILED  InvokeEvalTargetStatus = 2
+)
+
+func (p InvokeEvalTargetStatus) String() string {
+	switch p {
+	case InvokeEvalTargetStatus_UNKNOWN:
+		return "UNKNOWN"
+	case InvokeEvalTargetStatus_SUCCESS:
+		return "SUCCESS"
+	case InvokeEvalTargetStatus_FAILED:
+		return "FAILED"
+	}
+	return "<UNSET>"
+}
+
+func InvokeEvalTargetStatusFromString(s string) (InvokeEvalTargetStatus, error) {
+	switch s {
+	case "UNKNOWN":
+		return InvokeEvalTargetStatus_UNKNOWN, nil
+	case "SUCCESS":
+		return InvokeEvalTargetStatus_SUCCESS, nil
+	case "FAILED":
+		return InvokeEvalTargetStatus_FAILED, nil
+	}
+	return InvokeEvalTargetStatus(0), fmt.Errorf("not a valid InvokeEvalTargetStatus string")
+}
+
+func InvokeEvalTargetStatusPtr(v InvokeEvalTargetStatus) *InvokeEvalTargetStatus { return &v }
+func (p *InvokeEvalTargetStatus) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = InvokeEvalTargetStatus(result.Int64)
+	return
+}
+
+func (p *InvokeEvalTargetStatus) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
 
 type ContentType = string
 
@@ -1764,11 +1813,14 @@ func (p *InvokeEvalTargetRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type InvokeEvalTargetResponse struct {
-	// 输出
-	Output *InvokeEvalTargetOutput `thrift:"output,1,optional" frugal:"1,optional,InvokeEvalTargetOutput" form:"output" json:"output,omitempty" query:"output"`
-	// 消耗
-	Usage    *InvokeEvalTargetUsage `thrift:"usage,2,optional" frugal:"2,optional,InvokeEvalTargetUsage" form:"usage" json:"usage,omitempty" query:"usage"`
-	BaseResp *base.BaseResp         `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"-" json:"-" query:"-"`
+	Status *InvokeEvalTargetStatus `thrift:"status,1,optional" frugal:"1,optional,InvokeEvalTargetStatus" form:"status" json:"status,omitempty" query:"status"`
+	// set output if status=SUCCESS
+	Output *InvokeEvalTargetOutput `thrift:"output,2,optional" frugal:"2,optional,InvokeEvalTargetOutput" form:"output" json:"output,omitempty" query:"output"`
+	// set usage if status=SUCCESS
+	Usage *InvokeEvalTargetUsage `thrift:"usage,3,optional" frugal:"3,optional,InvokeEvalTargetUsage" form:"usage" json:"usage,omitempty" query:"usage"`
+	// set error_message if status=FAILED
+	ErrorMessage *string        `thrift:"error_message,10,optional" frugal:"10,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
+	BaseResp     *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"-" json:"-" query:"-"`
 }
 
 func NewInvokeEvalTargetResponse() *InvokeEvalTargetResponse {
@@ -1776,6 +1828,18 @@ func NewInvokeEvalTargetResponse() *InvokeEvalTargetResponse {
 }
 
 func (p *InvokeEvalTargetResponse) InitDefault() {
+}
+
+var InvokeEvalTargetResponse_Status_DEFAULT InvokeEvalTargetStatus
+
+func (p *InvokeEvalTargetResponse) GetStatus() (v InvokeEvalTargetStatus) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return InvokeEvalTargetResponse_Status_DEFAULT
+	}
+	return *p.Status
 }
 
 var InvokeEvalTargetResponse_Output_DEFAULT *InvokeEvalTargetOutput
@@ -1802,6 +1866,18 @@ func (p *InvokeEvalTargetResponse) GetUsage() (v *InvokeEvalTargetUsage) {
 	return p.Usage
 }
 
+var InvokeEvalTargetResponse_ErrorMessage_DEFAULT string
+
+func (p *InvokeEvalTargetResponse) GetErrorMessage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrorMessage() {
+		return InvokeEvalTargetResponse_ErrorMessage_DEFAULT
+	}
+	return *p.ErrorMessage
+}
+
 var InvokeEvalTargetResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *InvokeEvalTargetResponse) GetBaseResp() (v *base.BaseResp) {
@@ -1813,20 +1889,32 @@ func (p *InvokeEvalTargetResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
+func (p *InvokeEvalTargetResponse) SetStatus(val *InvokeEvalTargetStatus) {
+	p.Status = val
+}
 func (p *InvokeEvalTargetResponse) SetOutput(val *InvokeEvalTargetOutput) {
 	p.Output = val
 }
 func (p *InvokeEvalTargetResponse) SetUsage(val *InvokeEvalTargetUsage) {
 	p.Usage = val
 }
+func (p *InvokeEvalTargetResponse) SetErrorMessage(val *string) {
+	p.ErrorMessage = val
+}
 func (p *InvokeEvalTargetResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_InvokeEvalTargetResponse = map[int16]string{
-	1:   "output",
-	2:   "usage",
+	1:   "status",
+	2:   "output",
+	3:   "usage",
+	10:  "error_message",
 	255: "BaseResp",
+}
+
+func (p *InvokeEvalTargetResponse) IsSetStatus() bool {
+	return p.Status != nil
 }
 
 func (p *InvokeEvalTargetResponse) IsSetOutput() bool {
@@ -1835,6 +1923,10 @@ func (p *InvokeEvalTargetResponse) IsSetOutput() bool {
 
 func (p *InvokeEvalTargetResponse) IsSetUsage() bool {
 	return p.Usage != nil
+}
+
+func (p *InvokeEvalTargetResponse) IsSetErrorMessage() bool {
+	return p.ErrorMessage != nil
 }
 
 func (p *InvokeEvalTargetResponse) IsSetBaseResp() bool {
@@ -1860,7 +1952,7 @@ func (p *InvokeEvalTargetResponse) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -1870,6 +1962,22 @@ func (p *InvokeEvalTargetResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1913,6 +2021,18 @@ ReadStructEndError:
 }
 
 func (p *InvokeEvalTargetResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *InvokeEvalTargetStatus
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := InvokeEvalTargetStatus(v)
+		_field = &tmp
+	}
+	p.Status = _field
+	return nil
+}
+func (p *InvokeEvalTargetResponse) ReadField2(iprot thrift.TProtocol) error {
 	_field := NewInvokeEvalTargetOutput()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -1920,12 +2040,23 @@ func (p *InvokeEvalTargetResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.Output = _field
 	return nil
 }
-func (p *InvokeEvalTargetResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *InvokeEvalTargetResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewInvokeEvalTargetUsage()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
 	p.Usage = _field
+	return nil
+}
+func (p *InvokeEvalTargetResponse) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorMessage = _field
 	return nil
 }
 func (p *InvokeEvalTargetResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -1951,6 +2082,14 @@ func (p *InvokeEvalTargetResponse) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 2
 			goto WriteFieldError
 		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
 		if err = p.writeField255(oprot); err != nil {
 			fieldId = 255
 			goto WriteFieldError
@@ -1974,11 +2113,11 @@ WriteStructEndError:
 }
 
 func (p *InvokeEvalTargetResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOutput() {
-		if err = oprot.WriteFieldBegin("output", thrift.STRUCT, 1); err != nil {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.Output.Write(oprot); err != nil {
+		if err := oprot.WriteI32(int32(*p.Status)); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -1992,11 +2131,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *InvokeEvalTargetResponse) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetUsage() {
-		if err = oprot.WriteFieldBegin("usage", thrift.STRUCT, 2); err != nil {
+	if p.IsSetOutput() {
+		if err = oprot.WriteFieldBegin("output", thrift.STRUCT, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.Usage.Write(oprot); err != nil {
+		if err := p.Output.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2008,6 +2147,42 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *InvokeEvalTargetResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUsage() {
+		if err = oprot.WriteFieldBegin("usage", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Usage.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *InvokeEvalTargetResponse) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrorMessage() {
+		if err = oprot.WriteFieldBegin("error_message", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ErrorMessage); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 func (p *InvokeEvalTargetResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
@@ -2040,10 +2215,16 @@ func (p *InvokeEvalTargetResponse) DeepEqual(ano *InvokeEvalTargetResponse) bool
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.Output) {
+	if !p.Field1DeepEqual(ano.Status) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Usage) {
+	if !p.Field2DeepEqual(ano.Output) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Usage) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.ErrorMessage) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -2052,16 +2233,40 @@ func (p *InvokeEvalTargetResponse) DeepEqual(ano *InvokeEvalTargetResponse) bool
 	return true
 }
 
-func (p *InvokeEvalTargetResponse) Field1DeepEqual(src *InvokeEvalTargetOutput) bool {
+func (p *InvokeEvalTargetResponse) Field1DeepEqual(src *InvokeEvalTargetStatus) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if *p.Status != *src {
+		return false
+	}
+	return true
+}
+func (p *InvokeEvalTargetResponse) Field2DeepEqual(src *InvokeEvalTargetOutput) bool {
 
 	if !p.Output.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *InvokeEvalTargetResponse) Field2DeepEqual(src *InvokeEvalTargetUsage) bool {
+func (p *InvokeEvalTargetResponse) Field3DeepEqual(src *InvokeEvalTargetUsage) bool {
 
 	if !p.Usage.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *InvokeEvalTargetResponse) Field10DeepEqual(src *string) bool {
+
+	if p.ErrorMessage == src {
+		return true
+	} else if p.ErrorMessage == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ErrorMessage, *src) != 0 {
 		return false
 	}
 	return true
@@ -2396,7 +2601,6 @@ func (p *InvokeEvalTargetInput) Field20DeepEqual(src map[string]string) bool {
 
 // 新增
 type InvokeEvalTargetOutput struct {
-	// 实际输出
 	ActualOutput *Content `thrift:"actual_output,1,optional" frugal:"1,optional,Content" form:"actual_output" json:"actual_output,omitempty" query:"actual_output"`
 	// 扩展字段，用户如果想返回一些额外信息可以塞在这个字段
 	Ext map[string]string `thrift:"ext,20,optional" frugal:"20,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
@@ -3551,8 +3755,6 @@ type AsyncInvokeEvalTargetRequest struct {
 	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" form:"workspace_id" json:"workspace_id,omitempty" query:"workspace_id"`
 	// 执行id，传递给自定义对象，在回传结果时透传
 	InvokeID *int64 `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" form:"invoke_id" json:"invoke_id,omitempty" query:"invoke_id"`
-	// 根据invoke_id签发的token，在回传结果时透传
-	Token *string `thrift:"token,3,optional" frugal:"3,optional,string" form:"token" json:"token,omitempty" query:"token"`
 	// 执行输入信息
 	Input *InvokeEvalTargetInput `thrift:"input,4,optional" frugal:"4,optional,InvokeEvalTargetInput" form:"input" json:"input,omitempty" query:"input"`
 	// 如果创建实验时选了二级对象，则会透传二级对象信息
@@ -3589,18 +3791,6 @@ func (p *AsyncInvokeEvalTargetRequest) GetInvokeID() (v int64) {
 		return AsyncInvokeEvalTargetRequest_InvokeID_DEFAULT
 	}
 	return *p.InvokeID
-}
-
-var AsyncInvokeEvalTargetRequest_Token_DEFAULT string
-
-func (p *AsyncInvokeEvalTargetRequest) GetToken() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetToken() {
-		return AsyncInvokeEvalTargetRequest_Token_DEFAULT
-	}
-	return *p.Token
 }
 
 var AsyncInvokeEvalTargetRequest_Input_DEFAULT *InvokeEvalTargetInput
@@ -3644,9 +3834,6 @@ func (p *AsyncInvokeEvalTargetRequest) SetWorkspaceID(val *int64) {
 func (p *AsyncInvokeEvalTargetRequest) SetInvokeID(val *int64) {
 	p.InvokeID = val
 }
-func (p *AsyncInvokeEvalTargetRequest) SetToken(val *string) {
-	p.Token = val
-}
 func (p *AsyncInvokeEvalTargetRequest) SetInput(val *InvokeEvalTargetInput) {
 	p.Input = val
 }
@@ -3660,7 +3847,6 @@ func (p *AsyncInvokeEvalTargetRequest) SetBase(val *base.Base) {
 var fieldIDToName_AsyncInvokeEvalTargetRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "invoke_id",
-	3:   "token",
 	4:   "input",
 	5:   "custom_eval_target",
 	255: "Base",
@@ -3672,10 +3858,6 @@ func (p *AsyncInvokeEvalTargetRequest) IsSetWorkspaceID() bool {
 
 func (p *AsyncInvokeEvalTargetRequest) IsSetInvokeID() bool {
 	return p.InvokeID != nil
-}
-
-func (p *AsyncInvokeEvalTargetRequest) IsSetToken() bool {
-	return p.Token != nil
 }
 
 func (p *AsyncInvokeEvalTargetRequest) IsSetInput() bool {
@@ -3719,14 +3901,6 @@ func (p *AsyncInvokeEvalTargetRequest) Read(iprot thrift.TProtocol) (err error) 
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3807,17 +3981,6 @@ func (p *AsyncInvokeEvalTargetRequest) ReadField2(iprot thrift.TProtocol) error 
 	p.InvokeID = _field
 	return nil
 }
-func (p *AsyncInvokeEvalTargetRequest) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Token = _field
-	return nil
-}
 func (p *AsyncInvokeEvalTargetRequest) ReadField4(iprot thrift.TProtocol) error {
 	_field := NewInvokeEvalTargetInput()
 	if err := _field.Read(iprot); err != nil {
@@ -3855,10 +4018,6 @@ func (p *AsyncInvokeEvalTargetRequest) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField4(oprot); err != nil {
@@ -3926,24 +4085,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-func (p *AsyncInvokeEvalTargetRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetToken() {
-		if err = oprot.WriteFieldBegin("token", thrift.STRING, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.Token); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *AsyncInvokeEvalTargetRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetInput() {
@@ -4020,9 +4161,6 @@ func (p *AsyncInvokeEvalTargetRequest) DeepEqual(ano *AsyncInvokeEvalTargetReque
 	if !p.Field2DeepEqual(ano.InvokeID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.Token) {
-		return false
-	}
 	if !p.Field4DeepEqual(ano.Input) {
 		return false
 	}
@@ -4055,18 +4193,6 @@ func (p *AsyncInvokeEvalTargetRequest) Field2DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.InvokeID != *src {
-		return false
-	}
-	return true
-}
-func (p *AsyncInvokeEvalTargetRequest) Field3DeepEqual(src *string) bool {
-
-	if p.Token == src {
-		return true
-	} else if p.Token == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Token, *src) != 0 {
 		return false
 	}
 	return true
