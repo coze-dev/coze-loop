@@ -193,18 +193,18 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		}
 		if targetVersionDO.CustomPsm != nil {
 			targetVersionDTO.EvalTargetContent.CustomPsm = &dto.CustomPSM{
-				ID:                  targetVersionDO.CustomPsm.ID,
-				Name:                targetVersionDO.CustomPsm.Name,
-				Description:         targetVersionDO.CustomPsm.Description,
-				Psm:                 targetVersionDO.CustomPsm.Psm,
-				AccessProtocol:      targetVersionDO.CustomPsm.AccessProtocol,
+				ID:                  &targetVersionDO.CustomPsm.ID,
+				Name:                &targetVersionDO.CustomPsm.Name,
+				Description:         &targetVersionDO.CustomPsm.Description,
+				Psm:                 &targetVersionDO.CustomPsm.Psm,
+				AccessProtocol:      &targetVersionDO.CustomPsm.AccessProtocol,
 				Regions:             targetVersionDO.CustomPsm.Regions,
-				Cluster:             targetVersionDO.CustomPsm.Cluster,
-				InvokeHTTPInfo:      targetVersionDO.CustomPsm.InvokeHTTPInfo,
-				AsyncInvokeHTTPInfo: targetVersionDO.CustomPsm.AsyncInvokeHTTPInfo,
+				Cluster:             &targetVersionDO.CustomPsm.Cluster,
+				InvokeHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomPsm.InvokeHTTPInfo),
+				AsyncInvokeHTTPInfo: HttpInfoDO2DTO(targetVersionDO.CustomPsm.AsyncInvokeHTTPInfo),
 				NeedSearchTarget:    targetVersionDO.CustomPsm.NeedSearchTarget,
-				SearchHTTPInfo:      targetVersionDO.CustomPsm.SearchHTTPInfo,
-				CustomEvalTarget:    targetVersionDO.CustomPsm.CustomEvalTarget,
+				SearchHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomPsm.SearchHTTPInfo),
+				CustomEvalTarget:    CustomEvalTargetDO2DTO(targetVersionDO.CustomPsm.CustomEvalTarget),
 				IsAsync:             targetVersionDO.CustomPsm.IsAsync,
 			}
 		}
@@ -223,4 +223,27 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 	targetVersionDTO.BaseInfo = commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.BaseInfo)
 
 	return targetVersionDTO
+}
+
+func HttpInfoDO2DTO(httpInfoDO *do.HttpInfo) (httpInfoDTO *dto.HttpInfo) {
+	if httpInfoDO == nil {
+		return nil
+	}
+	return &dto.HttpInfo{
+		Method:  gptr.Of(httpInfoDO.Method),
+		Path:    gptr.Of(httpInfoDO.Path),
+		Timeout: httpInfoDO.Timeout,
+	}
+}
+
+func CustomEvalTargetDO2DTO(customEvalTargetDO *do.CustomEvalTarget) (customEvalTargetDTO *dto.CustomEvalTarget) {
+	if customEvalTargetDO == nil {
+		return nil
+	}
+	return &dto.CustomEvalTarget{
+		ID:        customEvalTargetDO.ID,
+		Name:      customEvalTargetDO.Name,
+		AvatarURL: customEvalTargetDO.AvatarURL,
+		Ext:       customEvalTargetDO.Ext,
+	}
 }

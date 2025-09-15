@@ -5,17 +5,17 @@ package entity
 
 type CustomPSM struct {
 	// 应用ID
-	ID *string
+	ID string
 	// DTO使用，不存数据库
-	Name *string `json:"-"`
+	Name string `json:"-"`
 	// DTO使用，不存数据库
-	Description *string `json:"-"`
+	Description string `json:"-"`
 	// 注意以下信息会存储到DB，也就是说实验创建时以下内容就确定了，运行时直接从评测DB中获取，而不是实时从app模块拉
-	Psm *string
+	Psm string
 	// 接入协议
-	AccessProtocol *AccessProtocol
+	AccessProtocol AccessProtocol
 	Regions        []Region
-	Cluster        *string
+	Cluster        string
 	// 执行http信息
 	InvokeHTTPInfo *HttpInfo
 	// 异步执行http信息，如果用户选了异步就传入这个字段
@@ -31,8 +31,8 @@ type CustomPSM struct {
 }
 
 type HttpInfo struct {
-	Method *HttpMethod
-	Path   *string
+	Method HttpMethod
+	Path   string
 	// ms，默认5000，最大800,000
 	Timeout *int64
 }
