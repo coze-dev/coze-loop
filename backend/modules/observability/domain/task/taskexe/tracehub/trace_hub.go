@@ -42,6 +42,7 @@ func NewTraceHubImpl(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	traceRepo trace_repo.ITraceRepo,
 	tenantProvider tenant.ITenantProvider,
+	buildHelper service.TraceFilterProcessorBuilder,
 ) (ITraceHubService, error) {
 	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo)
 	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
@@ -51,6 +52,7 @@ func NewTraceHubImpl(
 		stopChan:       make(chan struct{}),
 		traceRepo:      traceRepo,
 		tenantProvider: tenantProvider,
+		buildHelper:    buildHelper,
 	}
 
 	// 立即启动定时任务
