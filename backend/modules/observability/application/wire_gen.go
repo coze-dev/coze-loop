@@ -192,7 +192,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, redis2 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, redis2 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client, benefit2 benefit.IBenefitService, fileClient fileservice.Client) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
@@ -230,7 +230,9 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTraceRepo, iTenantProvider)
+	iFileProvider := file.NewFileRPCProvider(fileClient)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}

@@ -254,7 +254,9 @@ func InitTaskApplication(
 	evalService evaluatorservice.Client,
 	evalSetService evaluationsetservice.Client,
 	exptService experimentservice.Client,
-	datasetService datasetservice.Client) (ITaskApplication, error) {
+	datasetService datasetservice.Client,
+	benefit benefit.IBenefitService,
+	fileClient fileservice.Client) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
 }
