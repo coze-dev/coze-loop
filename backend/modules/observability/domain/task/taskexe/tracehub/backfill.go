@@ -238,18 +238,18 @@ func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *
 	// 可以根据任务配置构建更复杂的过滤条件
 	// 这里简化处理，返回 nil 表示不添加额外过滤
 
-	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(*taskConfig.Rule.SpanFilters.PlatformType))
+	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(taskConfig.GetRule().GetSpanFilters().GetPlatformType()))
 	if err != nil {
 		return nil
 	}
 	builtinFilter, err := h.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
 		WorkspaceID:  taskConfig.GetWorkspaceID(),
-		SpanListType: loop_span.SpanListType(*taskConfig.Rule.SpanFilters.SpanListType),
+		SpanListType: loop_span.SpanListType(taskConfig.GetRule().GetSpanFilters().GetSpanListType()),
 	})
 	if err != nil {
 		return nil
 	}
-	filters := h.combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.Rule.SpanFilters.Filters))
+	filters := h.combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
 
 	return filters
 }
