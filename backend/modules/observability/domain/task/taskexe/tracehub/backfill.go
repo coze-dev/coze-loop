@@ -11,10 +11,16 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -40,13 +46,13 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	subCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	wg := sync.WaitGroup{}
-	
+
 	// 初始化 flushCh 通道和错误收集器
 	h.flushCh = make(chan *flushReq, 100) // 缓冲通道，避免阻塞
 	h.flushErrLock.Lock()
 	h.flushErr = nil // 重置错误收集器
 	h.flushErrLock.Unlock()
-	
+
 	// 4. 启动异步刷新处理 - 通过 goroutine 实现并发处理
 	wg.Add(1)
 	goroutine.Go(ctx, func() {
@@ -60,11 +66,11 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", h.task.GetID(), listErr)
 		// continue on error，不中断处理流程
 	}
-	
+
 	// 关闭通道并等待处理完成
 	close(h.flushCh)
 	wg.Wait()
-	
+
 	// 6. 同步等待完成 - 确保所有数据处理完毕
 	return h.onHandleDone(ctx, listErr)
 }
@@ -79,7 +85,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 	if taskConfig == nil {
 		return errors.New("task config not found")
 	}
-	
+
 	// 解析任务规则
 	var rule *task.Rule
 	if taskConfig.Sampler != nil && *taskConfig.Sampler != "" {
@@ -90,7 +96,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 			}
 		}
 	}
-	
+
 	// 转换为 task.Task 结构
 	taskStatus := task.TaskStatusUnstarted // 默认状态
 	h.task = &task.Task{
@@ -99,7 +105,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		TaskStatus:  &taskStatus,
 		Rule:        rule,
 	}
-	
+
 	return nil
 }
 
@@ -108,7 +114,7 @@ func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context) bool {
 	if h.task == nil {
 		return false
 	}
-	
+
 	// 检查任务状态是否为已完成
 	status := h.task.GetTaskStatus()
 	return status == task.TaskStatusSuccess || status == task.TaskStatusDisabled
@@ -119,7 +125,7 @@ func (h *TraceHubServiceImpl) startTask(ctx context.Context) error {
 	if h.task == nil {
 		return errors.New("task not initialized")
 	}
-	
+
 	// 这里可以添加任务状态更新逻辑
 	logs.CtxInfo(ctx, "starting backfill task, task_id=%d", h.task.GetID())
 	return nil
@@ -127,24 +133,25 @@ func (h *TraceHubServiceImpl) startTask(ctx context.Context) error {
 
 func (h *TraceHubServiceImpl) listSpans(ctx context.Context) error {
 	// 1. 获取任务配置
-	taskConfig, err := h.taskRepo.GetTask(ctx, h.task.GetID(), nil, nil)
+	task, err := h.taskRepo.GetTask(ctx, h.task.GetID(), nil, nil)
 	if err != nil {
 		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", h.task.GetID(), err)
 		return err
 	}
-	if taskConfig == nil {
+	if task == nil {
 		return errors.New("task config not found")
 	}
+	taskConfig := tconv.TaskPO2DTO(ctx, task, nil)
 
 	// 2. 解析回填时间窗口
-	backfillTime, err := h.parseBackfillTime(ctx, taskConfig)
+	backfillTime, err := h.parseBackfillTime(ctx, task)
 	if err != nil {
 		logs.CtxError(ctx, "parse backfill time failed, task_id=%d, err=%v", h.task.GetID(), err)
 		return err
 	}
 
 	// 3. 获取租户信息
-	tenants, err := h.getTenantsForTask(ctx, taskConfig)
+	tenants, err := h.getTenantsForTask(ctx, task)
 	if err != nil {
 		logs.CtxError(ctx, "get tenants failed, task_id=%d, err=%v", h.task.GetID(), err)
 		return err
@@ -153,7 +160,7 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context) error {
 	// 4. 构建查询参数
 	listParam := &repo.ListSpansParam{
 		Tenants:            tenants,
-		Filters:            h.buildSpanFilters(taskConfig),
+		Filters:            h.buildSpanFilters(ctx, taskConfig),
 		StartAt:            backfillTime.GetStartAt(),
 		EndAt:              backfillTime.GetEndAt(),
 		Limit:              1000, // 分页大小
@@ -176,7 +183,7 @@ func (h *TraceHubServiceImpl) parseBackfillTime(ctx context.Context, taskConfig 
 			return &backfillTime, nil
 		}
 	}
-	
+
 	// 使用任务的有效时间
 	if taskConfig.EffectiveTime != nil && *taskConfig.EffectiveTime != "" {
 		var effectiveTime task.EffectiveTime
@@ -186,7 +193,7 @@ func (h *TraceHubServiceImpl) parseBackfillTime(ctx context.Context, taskConfig 
 			return &effectiveTime, nil
 		}
 	}
-	
+
 	// 使用默认时间窗口：过去24小时
 	now := time.Now().UnixMilli()
 	startTime := now - 24*60*60*1000 // 24小时前
@@ -199,7 +206,7 @@ func (h *TraceHubServiceImpl) parseBackfillTime(ctx context.Context, taskConfig 
 // getTenantsForTask 获取任务的租户信息
 func (h *TraceHubServiceImpl) getTenantsForTask(ctx context.Context, taskConfig *entity.ObservabilityTask) ([]string, error) {
 	var platformType loop_span.PlatformType = loop_span.PlatformCozeLoop // 默认值
-	
+
 	// 从 SpanFilter 中解析平台类型
 	if taskConfig.SpanFilter != nil && *taskConfig.SpanFilter != "" {
 		var spanFilter map[string]interface{}
@@ -209,25 +216,110 @@ func (h *TraceHubServiceImpl) getTenantsForTask(ctx context.Context, taskConfig 
 			}
 		}
 	}
-	
+
 	return h.getTenants(ctx, platformType)
 }
 
+type ListSpansReq struct {
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	StartTime             int64 // ms
+	EndTime               int64 // ms
+	Filters               *loop_span.FilterFields
+	Limit                 int32
+	DescByStartTime       bool
+	PageToken             string
+	PlatformType          loop_span.PlatformType
+	SpanListType          loop_span.SpanListType
+}
+
 // buildSpanFilters 构建 span 过滤条件
-func (h *TraceHubServiceImpl) buildSpanFilters(taskConfig *entity.ObservabilityTask) *loop_span.FilterFields {
+func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
 	// 可以根据任务配置构建更复杂的过滤条件
 	// 这里简化处理，返回 nil 表示不添加额外过滤
-	return nil
+
+	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(*taskConfig.Rule.SpanFilters.PlatformType))
+	if err != nil {
+		return nil
+	}
+	builtinFilter, err := h.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+		WorkspaceID:  taskConfig.GetWorkspaceID(),
+		SpanListType: loop_span.SpanListType(*taskConfig.Rule.SpanFilters.SpanListType),
+	})
+	if err != nil {
+		return nil
+	}
+	filters := h.combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.Rule.SpanFilters.Filters))
+
+	return filters
+}
+
+func (h *TraceHubServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
+	filters := make([]*loop_span.FilterField, 0)
+	env := &span_filter.SpanEnv{
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+	}
+	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
+	if err != nil {
+		return nil, err
+	} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
+		return nil, nil
+	}
+	filters = append(filters, basicFilter...)
+	switch req.SpanListType {
+	case loop_span.SpanListTypeRootSpan:
+		subFilter, err := f.BuildRootSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, subFilter...)
+	case loop_span.SpanListTypeLLMSpan:
+		subFilter, err := f.BuildLLMSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, subFilter...)
+	case loop_span.SpanListTypeAllSpan:
+		subFilter, err := f.BuildALLSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, subFilter...)
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span list type: %s"))
+	}
+	filterAggr := &loop_span.FilterFields{
+		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+		FilterFields: filters,
+	}
+	return filterAggr, nil
+}
+
+func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields) *loop_span.FilterFields {
+	filterAggr := &loop_span.FilterFields{
+		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+	}
+	for _, f := range filters {
+		if f == nil {
+			continue
+		}
+		filterAggr.FilterFields = append(filterAggr.FilterFields, &loop_span.FilterField{
+			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+			SubFilter:  f,
+		})
+	}
+	return filterAggr
 }
 
 // fetchAndSendSpans 分页获取并发送 span 数据
 func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *repo.ListSpansParam) error {
 	pageToken := ""
 	totalCount := int64(0)
-	
+
 	for {
 		listParam.PageToken = pageToken
-		
+
 		result, err := h.traceRepo.ListSpans(ctx, listParam)
 		if err != nil {
 			logs.CtxError(ctx, "list spans failed, task_id=%d, page_token=%s, err=%v", h.task.GetID(), pageToken, err)
@@ -242,7 +334,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 				spans:              result.Spans,
 				noMore:             !result.HasMore,
 			}
-			
+
 			select {
 			case h.flushCh <- flushReq:
 				totalCount += int64(len(result.Spans))
@@ -257,7 +349,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, h.task.GetID())
 			break
 		}
-		
+
 		pageToken = result.PageToken
 	}
 
@@ -272,7 +364,7 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context) {
 				// 通道已关闭，退出
 				return
 			}
-			
+
 			flushed, sampled, err := h.doFlush(ctx, fr)
 			if err != nil {
 				logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", h.task.GetID(), err)
@@ -281,10 +373,10 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context) {
 				h.flushErr = append(h.flushErr, err)
 				h.flushErrLock.Unlock()
 			}
-			
+
 			// 记录处理结果
 			h.recordFlushResult(ctx, fr, flushed, sampled, err)
-			
+
 		case <-ctx.Done():
 			logs.CtxWarn(ctx, "flush spans context cancelled, task_id=%d", h.task.GetID())
 			return
@@ -320,7 +412,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq) (flushe
 		return len(validSpans), len(sampledSpans), err
 	}
 
-	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d", 
+	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
 		len(sampledSpans), len(validSpans), h.task.GetID())
 
 	return len(validSpans), len(sampledSpans), nil
@@ -329,13 +421,13 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq) (flushe
 // filterValidSpans 过滤有效的 span 数据
 func (h *TraceHubServiceImpl) filterValidSpans(spans []*loop_span.Span) []*loop_span.Span {
 	validSpans := make([]*loop_span.Span, 0, len(spans))
-	
+
 	for _, span := range spans {
 		if h.isValidSpan(span) {
 			validSpans = append(validSpans, span)
 		}
 	}
-	
+
 	return validSpans
 }
 
@@ -344,17 +436,17 @@ func (h *TraceHubServiceImpl) isValidSpan(span *loop_span.Span) bool {
 	if span == nil {
 		return false
 	}
-	
+
 	// 基本字段检查
 	if span.SpanID == "" || span.TraceID == "" || span.WorkspaceID == "" {
 		return false
 	}
-	
+
 	// 时间有效性检查
 	if span.StartTime <= 0 {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -363,31 +455,31 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span) []*loop_spa
 	if h.task == nil || h.task.Rule == nil {
 		return spans
 	}
-	
+
 	sampler := h.task.GetRule().GetSampler()
 	if sampler == nil {
 		return spans
 	}
-	
+
 	sampleRate := sampler.GetSampleRate()
 	if sampleRate >= 1.0 {
 		return spans // 100% 采样
 	}
-	
+
 	if sampleRate <= 0.0 {
 		return nil // 0% 采样
 	}
-	
+
 	// 计算采样数量
 	sampleSize := int(float64(len(spans)) * sampleRate)
 	if sampleSize == 0 && len(spans) > 0 {
 		sampleSize = 1 // 至少采样一个
 	}
-	
+
 	if sampleSize >= len(spans) {
 		return spans
 	}
-	
+
 	return spans[:sampleSize]
 }
 
@@ -395,22 +487,22 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span) []*loop_spa
 func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span) error {
 	// 批量处理 spans，提高效率
 	const batchSize = 100
-	
+
 	for i := 0; i < len(spans); i += batchSize {
 		end := i + batchSize
 		if end > len(spans) {
 			end = len(spans)
 		}
-		
+
 		batch := spans[i:end]
 		if err := h.processBatchSpans(ctx, batch); err != nil {
-			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v", 
+			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
 				h.task.GetID(), i, err)
 			// 继续处理下一批，不因单批失败而中断
 			continue
 		}
 	}
-	
+
 	return nil
 }
 
@@ -418,31 +510,31 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span) error {
 	// 这里实现具体的批量处理逻辑
 	// 例如：数据转换、存储、触发下游处理等
-	
+
 	for _, span := range spans {
 		// 执行单个 span 的处理逻辑
 		if err := h.processIndividualSpan(ctx, span); err != nil {
-			logs.CtxWarn(ctx, "process individual span failed, span_id=%s, trace_id=%s, err=%v", 
+			logs.CtxWarn(ctx, "process individual span failed, span_id=%s, trace_id=%s, err=%v",
 				span.SpanID, span.TraceID, err)
 			// 继续处理其他span，不因单个失败而中断批处理
 		}
 	}
-	
+
 	return nil
 }
 
 // processIndividualSpan 处理单个 span
 func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *loop_span.Span) error {
 	// 根据任务类型执行相应的处理逻辑
-	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d", 
+	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 		span.SpanID, span.TraceID, h.task.GetID())
-	
+
 	// 这里可以添加具体的处理逻辑：
 	// 1. 数据验证
 	// 2. 格式转换
 	// 3. 业务逻辑处理
 	// 4. 存储或转发
-	
+
 	return nil
 }
 
@@ -464,13 +556,13 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error) e
 		allErrors = append(allErrors, listErr)
 	}
 	h.flushErrLock.Unlock()
-	
+
 	if len(allErrors) > 0 {
 		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), h.task.GetID())
 		// 返回第一个错误作为代表
 		return allErrors[0]
 	}
-	
+
 	logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", h.task.GetID())
 	return nil
 }

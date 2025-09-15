@@ -115,13 +115,26 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
+	// 数据回流任务——创建/更新输出数据集
+	if t.shouldCreateTaskRun(req.Task) {
+		if err = t.upsertDatasetForTask(ctx, req.Task); err != nil {
+			return nil, err
+		}
+	}
+	// 创建task
 	taskPO := tconv.CreateTaskDTO2PO(ctx, req.Task, userID)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO 1: 历史回溯数据发MQ
+	// 创建taskrun
+	if t.shouldCreateTaskRun(req.Task) {
+		if err := t.createInitialTaskRun(ctx, id, req.Task, userID); err != nil {
+			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
+			// 根据业务需求，TaskRun创建失败不影响任务创建，只记录错误日志
+		}
+	}
+	// TODO: 历史回溯数据发MQ
 	if t.shouldTriggerBackfill(req.Task) {
 		backfillEvent := &entity.BackFillEvent{
 			SpaceID: req.Task.GetWorkspaceID(),
@@ -134,14 +147,6 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 				logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", id, err)
 			}
 		}()
-	}
-
-	// TODO 2: 数据回流任务创建taskrun
-	if t.shouldCreateTaskRun(req.Task) {
-		if err := t.createInitialTaskRun(ctx, id, req.Task, userID); err != nil {
-			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
-			// 根据业务需求，TaskRun创建失败不影响任务创建，只记录错误日志
-		}
 	}
 
 	return &CreateTaskResp{TaskID: &id}, nil
@@ -291,6 +296,9 @@ func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *task.Task) bool {
 	return backfillTime.GetStartAt() > 0 &&
 		backfillTime.GetEndAt() > 0 &&
 		backfillTime.GetStartAt() < backfillTime.GetEndAt()
+}
+func (t *TaskServiceImpl) upsertDatasetForTask(ctx context.Context, task *task.Task) error {
+	return nil
 }
 
 // shouldCreateTaskRun 判断是否需要创建TaskRun

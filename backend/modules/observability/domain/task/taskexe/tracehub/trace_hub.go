@@ -66,6 +66,7 @@ type TraceHubServiceImpl struct {
 	traceRepo      trace_repo.ITraceRepo
 	tenantProvider tenant.ITenantProvider
 
+	buildHelper  service.TraceFilterProcessorBuilder
 	task         *task.Task
 	flushCh      chan *flushReq
 	flushErrLock sync.Mutex
