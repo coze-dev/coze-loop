@@ -70,8 +70,9 @@ struct CustomPSM {
     15: optional HttpInfo async_invoke_http_info // 异步执行http信息，如果用户选了异步就传入这个字段
     16: optional bool need_search_target // 是否需要搜索对象
     17: optional HttpInfo search_http_info  // 搜索对象http信息
-    18: optional bool is_async    // 是否异步
-    19: optional CustomEvalTarget custom_eval_target   // 搜索对象返回的信息
+    18: optional CustomEvalTarget custom_eval_target   // 搜索对象返回的信息
+    19: optional bool is_async    // 是否异步
+
 }
 
 struct CustomEvalTarget {
