@@ -63,9 +63,12 @@ var (
 	taskDomainSet = wire.NewSet(
 		taskSvc.NewTaskServiceImpl,
 		obrepo.NewTaskRepoImpl,
+		obrepo.NewTaskRunRepoImpl,
 		mysqldao.NewTaskDaoImpl,
 		tredis.NewTaskDAO,
+		tredis.NewTaskRunDAO,
 		mysqldao.NewTaskRunDaoImpl,
+		mq2.NewBackfillProducerImpl,
 	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
@@ -118,7 +121,6 @@ var (
 		user.NewUserRPCProvider,
 		//evaluator.NewEvaluatorRPCProvider,
 		evaluation.NewEvaluationRPCProvider,
-		mq2.NewBackfillProducerImpl,
 		traceDomainSet,
 	)
 )
@@ -246,6 +248,7 @@ func InitTaskApplication(
 	configFactory conf.IConfigLoaderFactory,
 	ckDb ck.Provider,
 	redis redis.Cmdable,
+	mqFactory mq.IFactory,
 	userClient userservice.Client,
 	authClient authservice.Client,
 	evalService evaluatorservice.Client,

@@ -58,7 +58,7 @@ func newAutoEvaluteProcessor(
 	}
 }
 
-func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any, workspaceID int64) error {
+func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) error {
 
 	return nil
 }

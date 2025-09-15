@@ -36,7 +36,7 @@ func newDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdapto
 	}
 }
 
-func (p *DataReflowProcessor) ValidateConfig(ctx context.Context, config any, workspaceID int64) error {
+func (p *DataReflowProcessor) ValidateConfig(ctx context.Context, config any) error {
 
 	return nil
 }
