@@ -14,7 +14,6 @@ export interface UseFormDataOptions {
   copyExperimentID?: string;
   evaluationSetID?: string;
   evaluationSetVersionID?: string;
-
   initialData: CreateExperimentValues;
 }
 
@@ -43,12 +42,14 @@ export const useFormData = ({
       // 渲染数据存放全量
       setFormData(newData as CreateExperimentValues);
       // 仅获取表单所需的字段
-      formRef.current?.formApi?.setValues(
-        omit(newData, 'evaluationSetVersionDetail'),
-        {
-          isOverride: true,
-        },
-      );
+      const formValues = omit(newData, [
+        'evaluationSetVersionDetail',
+        'evalTargetVersionDetail',
+        'evaluationSetDetail',
+      ]);
+      formRef.current?.formApi?.setValues(formValues, {
+        isOverride: true,
+      });
     },
   });
 

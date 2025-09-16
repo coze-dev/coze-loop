@@ -73,7 +73,7 @@ export async function listSourceEvalTarget(
           eval_target_content: {
             coze_bot: {
               bot_name: `CozeBot ${params.name ?? ''} ${index + 1}`,
-              description: I18n.t('this_is_a_coze_bot'),
+              description: I18n.t('this_is_a_cozebot'),
             },
             prompt: {
               name: `Prompt ${params.name ?? ''} ${index + 1}`,
@@ -99,12 +99,12 @@ export async function listEvaluationSets(
   const targets = new Array(10).fill(1).map((_, index) => {
     const item: EvaluationSet = {
       id: createId(),
-      name: I18n.t('pedia_dataset', { index }),
+      name: I18n.t('pedia_dataset'),
       base_info: {
         created_at: new Date().toLocaleString(),
         created_by: {
           user_id: 'xxx',
-          name: '张三',
+          name: I18n.t('user_zhangsan'),
         },
       },
       evaluation_set_version: {

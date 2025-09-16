@@ -1,12 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { forwardRef } from 'react';
 
 import { I18n } from '@cozeloop/i18n-adapter';
 import { ColumnSelector, type ColumnItem } from '@cozeloop/components';
 import { PlatformType, SpanListType } from '@cozeloop/api-schema/observation';
+import { tag } from '@cozeloop/api-schema/data';
 import { IconCozRefresh } from '@coze-arch/coze-design/icons';
 import {
   Button,
@@ -18,18 +18,23 @@ import { type ConvertSpan } from '@/typings/span';
 import { type SizedColumn } from '@/typings/index';
 import { useTraceStore } from '@/stores/trace';
 import { useCustomView } from '@/hooks/use-custom-view';
-import { calcPresetTime, MAX_DAY_COUNT, PresetRange } from '@/consts/time';
+import { calcPresetTime, PresetRange } from '@/consts/time';
 import {
   PreselectedDatePicker,
   type PreselectedDatePickerRef,
 } from '@/components/date-picker';
 
 import { type CustomRightRenderMap } from '../logic-expr/logic-expr';
+import { MANUAL_FEEDBACK } from '../logic-expr/const';
+import { LeftManualExpr, type LeftManualExprProps } from '../left-manual-expr';
 import { SpanTypeSelect } from './trace-list';
-import { PromptSelect } from './prompt-select';
 import { FilterSelect } from './filter-select';
 import { PlatformSelect } from './data-source';
 import { CustomView, type View } from './custom-view';
+import {
+  CategoricalSelect,
+  type CategoricalSelectProps,
+} from './categorical-select';
 
 interface QueryFilterProps {
   slot?: React.ReactNode;
@@ -42,6 +47,7 @@ interface QueryFilterProps {
   platformEnumOptionList: { label: string; value: string | number }[];
   spanListTypeEnumOptionList: { label: string; value: string | number }[];
   customRightRenderMap?: CustomRightRenderMap;
+  customLeftRenderMap?: CustomRightRenderMap;
   tooltipContent?: Record<string, string>;
 }
 
@@ -116,8 +122,17 @@ export const QueryFilterBar = forwardRef<
   };
 
   const customRightRenderMap: CustomRightRenderMap = {
-    prompt_key: v => <PromptSelect {...v} />,
+    [tag.TagContentType.Categorical]: v => (
+      <CategoricalSelect {...(v as CategoricalSelectProps)} />
+    ),
+    [tag.TagContentType.Boolean]: v => (
+      <CategoricalSelect {...(v as CategoricalSelectProps)} />
+    ),
     ...(props.customRightRenderMap ?? {}),
+  };
+  const customLeftRenderMap: CustomRightRenderMap = {
+    [MANUAL_FEEDBACK]: v => <LeftManualExpr {...(v as LeftManualExprProps)} />,
+    ...(props.customLeftRenderMap ?? {}),
   };
 
   return (
@@ -126,6 +141,7 @@ export const QueryFilterBar = forwardRef<
         <div className="flex  gap-x-2 gap-y-2 items-center flex-nowrap">
           <FilterSelect
             customRightRenderMap={customRightRenderMap}
+            customLeftRenderMap={customLeftRenderMap}
             platformEnumOptionList={platformEnumOptionList}
             spanListTypeEnumOptionList={spanListTypeEnumOptionList}
             viewList={viewList as unknown as View[]}
@@ -152,7 +168,6 @@ export const QueryFilterBar = forwardRef<
                 endTime,
               }}
               datePickerOptions={datePickerOptions}
-              maxPastDateRange={MAX_DAY_COUNT}
               onPresetChange={(preset, timeStamp) => {
                 if (timeStamp) {
                   handleTimeStampChange({
@@ -199,6 +214,7 @@ export const QueryFilterBar = forwardRef<
           <div className="flex items-center gap-x-2">
             <CustomView
               customRightRenderMap={customRightRenderMap}
+              customLeftRenderMap={customLeftRenderMap}
               platformEnumOptionList={platformEnumOptionList}
               spanListTypeEnumOptionList={spanListTypeEnumOptionList}
               activeViewKey={activeViewKey}

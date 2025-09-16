@@ -15,12 +15,12 @@ export function ExperimentListEmptyState({
       icon={<IconCozIllusAdd />}
       title={
         hasFilterCondition
-          ? I18n.t('failed_to_find_related_results')
-          : I18n.t('no_experiment')
+          ? I18n.t('no_results_found')
+          : I18n.t('no_experiment_yet')
       }
       description={
         hasFilterCondition
-          ? I18n.t('try_other_keywords_or_modify_filter_options')
+          ? I18n.t('try_other_keywords')
           : I18n.t('click_to_create_experiment')
       }
     />

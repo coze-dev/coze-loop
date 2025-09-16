@@ -22,8 +22,6 @@
   "submit": "Submit",
   "version": "Version",
   "select_x": "Select {field}",
-  "submit_time": "Submission time",
-  "submitter": "Submitter",
   "version_description": "Version description",
   "version_record": "Version records"
 }

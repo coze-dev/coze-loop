@@ -130,6 +130,7 @@ export function DatasetRelatedExperiment({
     filterFields,
     columnsOptions,
     pullExperiments,
+    source: sourceName,
   });
 
   const experiments = service.data?.list;
@@ -206,9 +207,7 @@ export function DatasetRelatedExperiment({
           </Radio.Group>
           <Select
             prefix={I18n.t('indicator')}
-            placeholder={I18n.t('please_select', {
-              field: I18n.t('indicator'),
-            })}
+            placeholder={I18n.t('please_select', { field: '' })}
             style={{ minWidth: 200 }}
             multiple={true}
             maxTagCount={1}
@@ -311,7 +310,7 @@ export function DatasetRelatedExperiment({
         ) : null}
       </div>
       <div className="text-sm font-semibold mt-5 mb-3">
-        {I18n.t('experiment_list')}
+        {I18n.t('experiments_list')}
       </div>
       <TableWithPagination<Experiment>
         service={service}

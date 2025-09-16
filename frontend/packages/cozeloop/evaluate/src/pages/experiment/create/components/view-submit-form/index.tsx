@@ -7,10 +7,7 @@ import {
   DEFAULT_TEXT_STRING_SCHEMA,
 } from '@cozeloop/evaluate-components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
-import {
-  type EvaluationSetVersion,
-  type EvalTargetType,
-} from '@cozeloop/api-schema/evaluation';
+import { type EvaluationSetVersion } from '@cozeloop/api-schema/evaluation';
 import { Tag, useFormState } from '@coze-arch/coze-design';
 
 import { type CreateExperimentValues } from '@/types/experiment/experiment-create';
@@ -31,19 +28,28 @@ export interface ViewSubmitFormProps {
 
 // 渲染评测对象部分
 const RenderEvalTarget = ({
-  evalTargetType,
   renderValues,
   formValues,
+  currentEvalTargetDefinition,
 }: {
-  evalTargetType?: EvalTargetType | string | number;
   renderValues: CreateExperimentValues;
   formValues: CreateExperimentValues;
+  currentEvalTargetDefinition?: EvalTargetDefinition;
 }) => {
-  const { getEvalTargetDefinition } = useEvalTargetDefinition();
-
-  const currentEvalTargetDefinition = getEvalTargetDefinition(
-    evalTargetType as number,
-  );
+  // 没有选择评测对象, 就是使用了评测集作为评测对象, 返回提示(公共逻辑
+  if (!formValues?.evalTargetType) {
+    return (
+      <>
+        <div className="text-[16px] leading-[22px] font-medium coz-fg-primary mb-5">
+          {I18n.t('evaluation_object')}
+        </div>
+        <div className="text-[14px] font-normal coz-fg-primary">
+          {I18n.t('this_step_skipped')}
+        </div>
+        <div className="h-10" />
+      </>
+    );
+  }
 
   const { evalTargetView: EvalTargetView } = (currentEvalTargetDefinition ||
     {}) as EvalTargetDefinition;
@@ -104,7 +110,10 @@ const RenderEvaluationSet = ({
           <div className="text-sm font-normal coz-fg-primary">
             {evaluationSetDetail?.name || '-'}
           </div>
-          <Tag color="primary" className="!h-5 !px-2 !py-[2px] rounded-[3px]">
+          <Tag
+            color="primary"
+            className="!h-5 !px-2 !py-[2px] rounded-[3px] min-w-[32px]"
+          >
             {evaluationSetVersionDetail?.version || '-'}
           </Tag>
           <OpenDetailButton
@@ -142,6 +151,15 @@ export const ViewSubmitForm = (props: {
   const { evalTargetType, evalTargetMapping, evaluatorProList } =
     formValues || {};
 
+  const { getEvalTargetDefinition } = useEvalTargetDefinition();
+
+  const currentEvalTargetDefinition = getEvalTargetDefinition(
+    evalTargetType as number,
+  );
+
+  const { viewSubmitFieldMappingPreview: ViewSubmitFieldMappingPreview } =
+    (currentEvalTargetDefinition || {}) as EvalTargetDefinition;
+
   return (
     <div className="flex flex-col pt-3">
       <RenderBasicInfo name={values.name} desc={values.desc} />
@@ -156,40 +174,66 @@ export const ViewSubmitForm = (props: {
 
       <div className="h-10" />
 
-      <RenderEvalTarget
-        evalTargetType={evalTargetType}
-        renderValues={createExperimentValues}
-        formValues={formValues}
-      />
-
-      <div>
-        <div className="text-sm font-medium coz-fg-primary mb-2">
-          {I18n.t('field_mapping')}
+      {createExperimentValues.evalTargetType ? (
+        <RenderEvalTarget
+          renderValues={createExperimentValues}
+          currentEvalTargetDefinition={currentEvalTargetDefinition}
+          formValues={formValues}
+        />
+      ) : (
+        <div>
+          <div className="text-[16px] leading-[22px] font-medium coz-fg-primary mb-5">
+            {I18n.t('evaluation_object')}
+          </div>
+          <div className="coz-fg-primary">
+            {I18n.t('this_step_skipped_period')}
+          </div>
+          <div className="h-10" />
         </div>
-        <div className="flex flex-col gap-3">
-          {Object.entries(evalTargetMapping || {}).map(([k, v]) => (
-            <ReadonlyMappingItem
-              key={k}
-              keyTitle={I18n.t('evaluation_object')}
-              keySchema={{
-                name: k,
-                ...DEFAULT_TEXT_STRING_SCHEMA,
-              }}
-              optionSchema={v}
+      )}
+
+      {evalTargetMapping ? (
+        <div>
+          <div className="text-sm font-medium coz-fg-primary mb-2">
+            {I18n.t('field_mapping')}
+          </div>
+          {ViewSubmitFieldMappingPreview ? (
+            <ViewSubmitFieldMappingPreview
+              createExperimentValues={createExperimentValues}
             />
-          ))}
+          ) : (
+            <div className="flex flex-col gap-3">
+              {Object.entries(evalTargetMapping || {}).map(([k, v]) => (
+                <ReadonlyMappingItem
+                  key={k}
+                  keyTitle={I18n.t('evaluation_object')}
+                  keySchema={{
+                    name: k,
+                    ...DEFAULT_TEXT_STRING_SCHEMA,
+                  }}
+                  optionSchema={v}
+                />
+              ))}
+            </div>
+          )}
+          <div className="h-10" />
         </div>
-      </div>
-
-      <div className="h-10" />
+      ) : null}
 
       <div className="text-[16px] leading-[22px] font-medium coz-fg-primary mb-5">
         {I18n.t('evaluator')}
       </div>
+
       <div className="flex flex-col gap-5">
-        {evaluatorProList?.map((evaluatorPro, index) => (
-          <EvaluateItemRender key={index} evaluatorPro={evaluatorPro} />
-        ))}
+        {evaluatorProList?.filter(item => item.evaluator).length ? (
+          evaluatorProList.map((evaluatorPro, index) => (
+            <EvaluateItemRender key={index} evaluatorPro={evaluatorPro} />
+          ))
+        ) : (
+          <div className="coz-fg-primary">
+            {I18n.t('this_step_skipped_period')}
+          </div>
+        )}
       </div>
     </div>
   );

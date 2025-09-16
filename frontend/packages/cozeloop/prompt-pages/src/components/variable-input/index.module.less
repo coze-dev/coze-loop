@@ -29,6 +29,11 @@
   :global{
     .semi-input-textarea{
       padding: 0 !important;
+      font-size: 13px;
+    }
+
+    .semi-input{
+      font-size: 13px;
     }
   }
 }
@@ -56,11 +61,32 @@
 
     box-sizing: border-box;
     width: 100%;
-    height: 36px;
-    padding: 12px 8px;
+    height: 28px;
+    padding: 0px 8px;
 
     font-size: 12px;
+    background: var(--Mg-COZ-mg-secondary, rgba(90, 108, 167, 0.04));
 
     border-bottom: 1px solid var(--Stroke-COZ-stroke-primary, rgba(82, 100, 154, 13%));
+  }
+}
+
+.loop-variable-input{
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  :global{
+    .semi-input-wrapper{
+      border: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      .semi-input{
+        padding: 0 !important;
+      }
+    }
+  }
+
+  input::placeholder {
+    color:var(--coz-fg-dim);
   }
 }

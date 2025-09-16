@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useRequest } from 'ahooks';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Version, VersionSwitchPanel } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
@@ -71,7 +71,7 @@ export const useVersionManage = ({
       version: '0.0.0',
       description: I18n.t('current_draft'),
       submitTime: datasetDetail?.base_info?.updated_at,
-      draftSubmitText: I18n.t('update_time'),
+      draftSubmitText: I18n.t('prompt_prompt_update_time'),
       isDraft: true,
     }),
     [datasetDetail?.base_info?.updated_at],

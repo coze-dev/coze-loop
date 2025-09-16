@@ -87,7 +87,7 @@ export default function PromptEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={I18n.t('please_select', { field: I18n.t('prompt') })}
+      placeholder={`${I18n.t('please_select', { field: '' })}`}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

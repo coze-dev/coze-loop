@@ -17,5 +17,9 @@ export default createTailwindcssConfig({
     '@cozeloop/trace-struct-data',
     '@cozeloop/trace-list',
     '@cozeloop/observation-component-adapter',
+    '@cozeloop/tag-pages',
+    '@cozeloop/observation-component',
+    '@cozeloop/tag-components',
+    '@cozeloop/prompt-components',
   ],
 }) as TailwindConfig;

@@ -116,7 +116,7 @@ interface PromptMockDataAction {
     index: number,
     model: SetStateAction<Model | undefined>,
   ) => void;
-  clearMockDataStore: () => void;
+  clearMockdataStore: () => void;
 }
 
 const normalUpdateFunc = (
@@ -435,7 +435,7 @@ export const usePromptMockDataStore = create<
           group.currentModel = newValue;
         }),
       ),
-    clearMockDataStore: () =>
+    clearMockdataStore: () =>
       set(
         produce((state: PromptMockDataState) => {
           state.historicMessage = [];

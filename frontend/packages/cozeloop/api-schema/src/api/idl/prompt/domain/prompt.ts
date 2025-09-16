@@ -43,6 +43,9 @@ export interface PromptDetail {
   tools?: Tool[],
   tool_call_config?: ToolCallConfig,
   model_config?: ModelConfig,
+  ext_infos?: {
+    [key: string | number]: string
+  },
 }
 export interface PromptTemplate {
   template_type?: TemplateType,
@@ -51,6 +54,7 @@ export interface PromptTemplate {
 }
 export enum TemplateType {
   Normal = "normal",
+  Jinja2 = "jinja2",
 }
 export interface Tool {
   type?: ToolType,
@@ -104,6 +108,7 @@ export interface ContentPart {
 export enum ContentType {
   Text = "text",
   ImageURL = "image_url",
+  MultiPartVariable = "multi_part_variable",
 }
 export interface ImageURL {
   uri?: string,
@@ -119,19 +124,34 @@ export interface FunctionCall {
   name?: string,
   arguments?: string,
 }
+export interface Label {
+  key?: string
+}
 export interface VariableDef {
   key?: string,
   desc?: string,
   type?: VariableType,
+  type_tags?: string[],
 }
 export interface VariableVal {
   key?: string,
   value?: string,
   placeholder_messages?: Message[],
+  multi_part_values?: ContentPart[],
 }
 export enum VariableType {
   String = "string",
+  Boolean = "boolean",
+  Integer = "integer",
+  Float = "float",
+  Object = "object",
+  Array_String = "array<string>",
+  Array_Boolean = "array<boolean>",
+  Array_Integer = "array<integer>",
+  Array_Float = "array<float>",
+  Array_Object = "array<object>",
   Placeholder = "placeholder",
+  MultiPart = "multi_part",
 }
 export interface TokenUsage {
   input_tokens?: string,
@@ -197,4 +217,7 @@ export interface DebugLog {
 export enum Scenario {
   Default = "default",
   EvalTarget = "eval_target",
+}
+export interface OverridePromptParams {
+  model_config?: ModelConfig
 }

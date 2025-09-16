@@ -474,9 +474,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		}
 		err = stream.Send(ctx, chunk)
 		if err != nil {
-			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "execute streaming canceled")
+			} else if errors.Is(err, context.DeadlineExceeded) {
+				err = nil
+				logs.CtxWarn(ctx, "execute streaming ctx deadline exceeded")
 			} else {
 				logs.CtxError(ctx, "send chunk failed, err=%v", err)
 			}
@@ -489,8 +492,10 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			logs.CtxInfo(ctx, "execute streaming finished")
 			return promptDO, result.Reply, nil
 		} else {
-			if st, ok := status.FromError(result.Err); ok && st.Code() == codes.Canceled {
+			if st, ok := status.FromError(result.Err); (ok && st.Code() == codes.Canceled) || errors.Is(result.Err, context.Canceled) {
 				logs.CtxWarn(ctx, "execute streaming canceled")
+			} else if errors.Is(result.Err, context.DeadlineExceeded) {
+				logs.CtxWarn(ctx, "execute streaming ctx deadline exceeded")
 			} else {
 				logs.CtxError(ctx, "execute streaming failed, err=%v", result.Err)
 			}

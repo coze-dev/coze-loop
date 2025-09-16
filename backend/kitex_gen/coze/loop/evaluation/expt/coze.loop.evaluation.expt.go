@@ -21250,7 +21250,7 @@ func (p *GetExptResultExportRecordRequest) Field255DeepEqual(src *base.Base) boo
 }
 
 type GetExptResultExportRecordResponse struct {
-	ExptResultExportRecord *expt.ExptResultExportRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_record" json:"expt_result_export_record,omitempty" query:"expt_result_export_record"`
+	ExptResultExportRecord *expt.ExptResultExportRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_records" json:"expt_result_export_records,omitempty"`
 	BaseResp               *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 

@@ -93,7 +93,7 @@ export default function CozeBotEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={I18n.t('please_select', { field: I18n.t('coze_bot') })}
+      placeholder={I18n.t('please_select', { field: '' })}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}

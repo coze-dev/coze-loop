@@ -29,14 +29,16 @@ export function ExperimentRowSelectionActions({
       actions={
         <>
           <div className="text-xs">
-            {I18n.t('x_data_item_selected', { num: experiments.length })}
+            {I18n.t('cozeloop_open_evaluate_selected_data_count', {
+              placeholder1: experiments.length,
+            })}{' '}
             <span
               className="ml-1 text-[rgb(var(--coze-up-brand-9))] cursor-pointer"
               onClick={() => {
                 onCancelSelect?.();
               }}
             >
-              {I18n.t('unselect')}
+              {I18n.t('cancel_selection')}
             </span>
           </div>
           <Button
@@ -54,7 +56,7 @@ export function ExperimentRowSelectionActions({
               }
             }}
           >
-            {I18n.t('experiment_comparison')}
+            {I18n.t('experimental_comparison')}
           </Button>
 
           <Guard point={GuardPoint['eval.experiments.batch_delete']}>
@@ -71,7 +73,7 @@ export function ExperimentRowSelectionActions({
                     num: experiments.length,
                   }),
                   okText: I18n.t('delete'),
-                  cancelText: I18n.t('Cancel'),
+                  cancelText: I18n.t('cancel'),
                   okButtonColor: 'red',
                   width: 420,
                   autoLoading: true,

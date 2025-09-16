@@ -1,10 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { Select, type SelectProps } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export default function EvalDatasetVersionSelect(
   props: { datasetId: string } & SelectProps,
@@ -29,9 +29,7 @@ export default function EvalDatasetVersionSelect(
 
   return (
     <Select
-      placeholder={I18n.t('please_select', {
-        field: I18n.t('evaluation_set_version'),
-      })}
+      placeholder={I18n.t('please_select', { field: '' })}
       filter={true}
       searchPosition="dropdown"
       searchPlaceholder={I18n.t('please_input', { field: '' })}

@@ -10,7 +10,6 @@ import { Descriptions, Tag, Typography } from '@coze-arch/coze-design';
 import { UserProfile } from '../user-profile';
 
 import styles from './index.module.less';
-
 export type Integer64 = string;
 
 export interface Version {

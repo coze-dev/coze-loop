@@ -3,8 +3,8 @@
 /* eslint-disable complexity */
 import { Fragment } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { RouteBackAction, UserProfile } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
@@ -21,15 +21,19 @@ export const DatasetDetailHeader = ({
 }) => {
   const navigate = useNavigateModule();
   const detail = [
-    `${I18n.t('description')}：${datasetDetail?.description || '-'}`,
-    `${I18n.t('update_time')}：${formatTimestampToString(
-      datasetDetail?.base_info?.updated_at || '',
-      'YYYY-MM-DD HH:mm:ss',
-    )}`,
-    `${I18n.t('create_time')}：${formatTimestampToString(
-      datasetDetail?.base_info?.created_at || '',
-      'YYYY-MM-DD HH:mm:ss',
-    )}`,
+    `${I18n.t('description_{placeholder1}', { placeholder1: datasetDetail?.description || '-' })}`,
+    `${I18n.t('cozeloop_open_evaluate_update_time_placeholder1', {
+      placeholder1: formatTimestampToString(
+        datasetDetail?.base_info?.updated_at || '',
+        'YYYY-MM-DD HH:mm:ss',
+      ),
+    })}`,
+    `${I18n.t('cozeloop_open_evaluate_creation_time_placeholder1', {
+      placeholder1: formatTimestampToString(
+        datasetDetail?.base_info?.created_at || '',
+        'YYYY-MM-DD HH:mm:ss',
+      ),
+    })}`,
   ]?.filter(Boolean);
 
   return (
@@ -88,7 +92,7 @@ export const DatasetDetailHeader = ({
                   size="small"
                   className="!coz-fg-secondary !leading-[16px] !text-[12px]"
                 >
-                  {I18n.t('creator')}：
+                  {I18n.t('evaluate_dataset_info_creator')}
                 </Typography.Text>
                 <UserProfile
                   className="flex-1 !coz-fg-secondary !leading-[16px] !text-[12px]"

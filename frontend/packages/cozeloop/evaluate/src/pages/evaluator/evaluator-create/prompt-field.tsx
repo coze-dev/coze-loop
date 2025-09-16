@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import cls from 'classnames';
 import { useDebounceFn } from 'ahooks';
-import {
-  PromptEditor,
-  type PromptEditorProps,
-} from '@cozeloop/prompt-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   PromptVariablesList,
-  extractDoubleBraceFields,
+  parseMessagesVariables,
+  EvaluatorPromptEditor,
+  type EvaluatorPromptEditorProps,
 } from '@cozeloop/evaluate-components';
+import { type VariableDef, VariableType } from '@cozeloop/api-schema/prompt';
 import {
   type EvaluatorContent,
   Role,
@@ -22,6 +21,7 @@ import {
   PromptSourceType,
   type Message,
   ContentType,
+  type common,
 } from '@cozeloop/api-schema/evaluation';
 import {
   IconCozPlus,
@@ -56,9 +56,11 @@ const messageTypeList = [
 export function PromptField({
   refreshEditorKey = 0,
   disabled,
+  multiModalVariableEnable,
 }: {
   refreshEditorKey?: number;
   disabled?: boolean;
+  multiModalVariableEnable?: boolean;
 }) {
   const [templateVisible, setTemplateVisible] = useState(false);
   const [refreshEditorKey2, setRefreshEditorKey2] = useState(0);
@@ -72,27 +74,136 @@ export function PromptField({
 
   const promptEvaluator: PromptEvaluator = promptEvaluatorFieldState.value;
 
-  const [variables, setVariables] = useState<string[]>([]);
+  const [variables, setVariables] = useState<VariableDef[]>([]);
 
   const calcVariables = useDebounceFn(
     () => {
-      const messageList = promptEvaluator?.message_list;
-      const strSet = new Set<string>();
-      messageList?.forEach(message => {
-        const str = message?.content?.text;
-        if (str) {
-          extractDoubleBraceFields(str).forEach(item => strSet.add(item));
-        }
-      });
-      const strList = Array.from(strSet);
-      setVariables(strList);
+      const messages = promptEvaluator?.message_list ?? [];
+      const newVariables = parseMessagesVariables(messages);
+      setVariables(newVariables);
     },
     { wait: 500 },
+  );
+
+  const systemMsg = useMemo(
+    () => ({
+      role: Role.System,
+      content: promptEvaluator?.message_list?.[0]?.content,
+    }),
+    [promptEvaluator?.message_list?.[0]?.content],
+  );
+  const userMsg = useMemo(
+    () => ({
+      role: Role.User,
+      content: promptEvaluator?.message_list?.[1]?.content,
+    }),
+    [promptEvaluator?.message_list?.[1]?.content],
   );
 
   useEffect(() => {
     calcVariables.run();
   }, [promptEvaluator?.message_list]);
+
+  const systemMessage = (
+    <FormPromptEditor
+      fieldClassName="!pt-0"
+      refreshEditorKey={refreshEditorKey + refreshEditorKey2}
+      field={
+        'current_version.evaluator_content.prompt_evaluator.message_list[0]'
+      }
+      disabled={disabled}
+      noLabel
+      rules={[{ required: true, message: I18n.t('system_prompt_not_empty') }]}
+      minHeight={300}
+      maxHeight={500}
+      dragBtnHidden
+      modalVariableEnable={multiModalVariableEnable}
+      messageTypeDisabled={true}
+      messageTypeList={messageTypeList}
+      message={systemMsg}
+      onMessageChange={m => {
+        const messageList = [...(promptEvaluator?.message_list || [])];
+        messageList[0] = m;
+        promptEvaluatorFieldApi.setValue({
+          ...promptEvaluator,
+          message_list: messageList,
+        });
+      }}
+    />
+  );
+
+  const userMessage = promptEvaluator?.message_list?.[1] ? (
+    <FormPromptEditor
+      fieldClassName="!pt-0"
+      refreshEditorKey={refreshEditorKey + refreshEditorKey2}
+      field={
+        'current_version.evaluator_content.prompt_evaluator.message_list[1]'
+      }
+      noLabel
+      disabled={disabled}
+      rules={[{ required: true, message: I18n.t('user_prompt_required') }]}
+      maxHeight={500}
+      dragBtnHidden
+      modalVariableEnable={multiModalVariableEnable}
+      messageTypeDisabled={true}
+      messageTypeList={messageTypeList}
+      message={userMsg}
+      onMessageChange={m => {
+        const messageList = promptEvaluator?.message_list || [];
+        messageList[1] = m;
+        promptEvaluatorFieldApi.setValue({
+          ...promptEvaluator,
+          message_list: messageList,
+        });
+      }}
+      rightActionBtns={
+        <Popconfirm
+          title={I18n.t('delete_user_prompt')}
+          content={I18n.t('confirm_delete_user_prompt')}
+          okText={I18n.t('confirm')}
+          cancelText={I18n.t('cancel')}
+          okButtonProps={{ color: 'red' }}
+          onConfirm={() => {
+            const messageList = promptEvaluator?.message_list || [];
+            promptEvaluatorFieldApi.setValue({
+              ...promptEvaluator,
+              message_list: messageList.slice(0, 1),
+            });
+          }}
+        >
+          <Button
+            color="secondary"
+            size="mini"
+            disabled={disabled}
+            icon={<IconCozTrashCan />}
+          />
+        </Popconfirm>
+      }
+    />
+  ) : (
+    <Button
+      color="primary"
+      className="!w-full mb-3"
+      onClick={() => {
+        const messageList = promptEvaluator?.message_list || [];
+        messageList[1] = {
+          role: Role.User,
+          content: {
+            content_type: ContentType.Text,
+            text: '',
+          },
+        };
+        promptEvaluatorFieldApi.setValue({
+          ...promptEvaluator,
+          message_list: messageList,
+        });
+      }}
+      disabled={disabled}
+      icon={<IconCozPlus />}
+    >
+      {I18n.t('add_user_prompt')}
+    </Button>
+  );
 
   return (
     <>
@@ -109,11 +220,10 @@ export function PromptField({
               icon={<IconCozTemplate />}
               onClick={() => setTemplateVisible(true)}
             >
-              {`${I18n.t('select_template')}${
-                promptEvaluator?.prompt_template_name
-                  ? `(${promptEvaluator.prompt_template_name})`
-                  : ''
-              }`}
+              {I18n.t('select_template')}
+              {promptEvaluator?.prompt_template_name
+                ? `(${promptEvaluator.prompt_template_name})`
+                : ''}
             </Button>
 
             <Divider layout="vertical" className="h-3 mx-2" />
@@ -131,7 +241,7 @@ export function PromptField({
             ) : (
               <Popconfirm
                 title={I18n.t('confirm_clear_prompt')}
-                cancelText={I18n.t('Cancel')}
+                cancelText={I18n.t('cancel')}
                 okText={I18n.t('clear')}
                 okButtonProps={{ color: 'red' }}
                 onConfirm={() => {
@@ -163,125 +273,8 @@ export function PromptField({
             )}
           </div>
         </div>
-
-        <FormPromptEditor
-          fieldClassName="!pt-0"
-          refreshEditorKey={refreshEditorKey + refreshEditorKey2}
-          field={
-            'current_version.evaluator_content.prompt_evaluator.message_list[0].content.text'
-          }
-          disabled={disabled}
-          noLabel
-          rules={[
-            { required: true, message: I18n.t('system_prompt_not_empty') },
-          ]}
-          minHeight={300}
-          maxHeight={500}
-          dragBtnHidden
-          messageTypeDisabled={true}
-          messageTypeList={messageTypeList}
-          message={{
-            role: Role.System,
-            content: promptEvaluator?.message_list?.[0]?.content?.text,
-          }}
-          onMessageChange={m => {
-            const messageList = promptEvaluator?.message_list || [];
-            messageList[0] = {
-              role: Role.System,
-              content: {
-                content_type: ContentType.Text,
-                text: m.content,
-              },
-            };
-
-            promptEvaluatorFieldApi.setValue({
-              ...promptEvaluator,
-              message_list: messageList,
-            });
-          }}
-        />
-        {promptEvaluator?.message_list?.[1] ? (
-          <FormPromptEditor
-            fieldClassName="!pt-0"
-            refreshEditorKey={refreshEditorKey + refreshEditorKey2}
-            field={
-              'current_version.evaluator_content.prompt_evaluator.message_list[1].content.text'
-            }
-            noLabel
-            disabled={disabled}
-            rules={[
-              { required: true, message: I18n.t('user_prompt_not_empty') },
-            ]}
-            maxHeight={500}
-            messageTypeDisabled={true}
-            messageTypeList={messageTypeList}
-            message={{
-              role: Role.User,
-              content: promptEvaluator?.message_list?.[1]?.content?.text,
-            }}
-            onMessageChange={m => {
-              const messageList = promptEvaluator?.message_list || [];
-              messageList[1] = {
-                role: Role.User,
-                content: {
-                  content_type: ContentType.Text,
-                  text: m.content,
-                },
-              };
-              promptEvaluatorFieldApi.setValue({
-                ...promptEvaluator,
-                message_list: messageList,
-              });
-            }}
-            rightActionBtns={
-              <Popconfirm
-                title={I18n.t('delete_user_prompt')}
-                content={I18n.t('confirm_delete_user_prompt')}
-                okText={I18n.t('confirm')}
-                cancelText={I18n.t('Cancel')}
-                okButtonProps={{ color: 'red' }}
-                onConfirm={() => {
-                  const messageList = promptEvaluator?.message_list || [];
-                  promptEvaluatorFieldApi.setValue({
-                    ...promptEvaluator,
-                    message_list: messageList.slice(0, 1),
-                  });
-                }}
-              >
-                <Button
-                  color="secondary"
-                  size="mini"
-                  disabled={disabled}
-                  icon={<IconCozTrashCan />}
-                />
-              </Popconfirm>
-            }
-          />
-        ) : (
-          <Button
-            color="primary"
-            className="!w-full mb-3"
-            onClick={() => {
-              const messageList = promptEvaluator?.message_list || [];
-              messageList[1] = {
-                role: Role.User,
-                content: {
-                  content_type: ContentType.Text,
-                  text: '',
-                },
-              };
-              promptEvaluatorFieldApi.setValue({
-                ...promptEvaluator,
-                message_list: messageList,
-              });
-            }}
-            disabled={disabled}
-            icon={<IconCozPlus />}
-          >
-            {I18n.t('add_user_prompt')}
-          </Button>
-        )}
-
+        {systemMessage}
+        {userMessage}
         {variables?.length ? (
           <PromptVariablesList variables={variables} />
         ) : null}
@@ -310,28 +303,27 @@ export function PromptField({
 
 const FormPromptEditor = withField(
   (
-    props: PromptEditorProps<Role> & {
+    props: EvaluatorPromptEditorProps & {
       refreshEditorKey?: number;
     },
-  ) => <PromptEditor<Role> {...props} key={props.refreshEditorKey} />,
+  ) => <EvaluatorPromptEditor {...props} key={props.refreshEditorKey} />,
 );
 
 /* 提交表单时再获取 inputSchema */
 export function generateInputSchemas(messageList?: Message[]) {
-  const strSet = new Set<string>();
-  messageList?.forEach(message => {
-    const str = message?.content?.text;
-    if (str) {
-      extractDoubleBraceFields(str).forEach(item => strSet.add(item));
+  const variables = parseMessagesVariables(messageList ?? []);
+  const inputSchema = variables.map(variable => {
+    const schema: common.ArgsSchema = {
+      key: variable.key,
+    };
+    if (variable.type === VariableType.String) {
+      schema.support_content_types = [ContentType.Text];
+      schema.json_schema = '{"type": "string"}';
+    } else if (variable.type === VariableType.MultiPart) {
+      schema.support_content_types = [ContentType.MultiPart];
     }
+    return schema;
   });
-  const strList = Array.from(strSet);
-
-  const inputSchema: EvaluatorContent['input_schemas'] = strList.map(v => ({
-    key: v,
-    support_content_types: [ContentType.Text],
-    json_schema: '{"type": "string"}',
-  }));
 
   return inputSchema;
 }

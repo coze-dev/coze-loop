@@ -11,18 +11,17 @@ import {
   EvaluatorVersionDetail,
   EvaluatorSelect,
   EvaluatorVersionSelect,
-  DEFAULT_TEXT_STRING_SCHEMA,
 } from '@cozeloop/evaluate-components';
 import { useSpace, useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import {
   IconCozArrowRight,
-  IconCozPlusFill,
   IconCozTrashCan,
   IconCozInfoCircle,
 } from '@coze-arch/coze-design/icons';
 import {
   Button,
+  type RuleItem,
   Tag,
   Tooltip,
   useFieldApi,
@@ -47,26 +46,20 @@ interface EvaluatorFieldItemProps {
     remove: () => void;
   };
   index: number;
-  disableDelete?: boolean;
   evaluationSetSchemas?: FieldSchema[];
   evaluateTargetSchemas?: FieldSchema[];
   selectedVersionIds?: string[];
-  disableAdd?: boolean;
-  isLast?: boolean;
-  onAdd?: () => void;
+  getEvaluatorMappingFieldRules?: (k: FieldSchema) => RuleItem[];
 }
 
 export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
   const {
     arrayField,
     index,
-    disableDelete,
     evaluationSetSchemas,
     evaluateTargetSchemas,
     selectedVersionIds,
-    disableAdd,
-    isLast,
-    onAdd,
+    getEvaluatorMappingFieldRules,
   } = props;
 
   const { spaceID } = useSpace();
@@ -112,7 +105,8 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
     if (inputSchemas) {
       return inputSchemas.map(item => ({
         name: item.key,
-        ...DEFAULT_TEXT_STRING_SCHEMA,
+        content_type: item.support_content_types?.[0],
+        text_schema: item.json_schema,
       }));
     }
   }, [evaluatorPro?.evaluatorVersionDetail]);
@@ -131,7 +125,8 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
           onClick={() => setOpen(pre => !pre)}
         >
           <div className="flex flex-row items-center flex-1 text-sm font-semibold coz-fg-plus">
-            {evaluatorPro?.evaluator?.name || `评估器 ${index + 1}`}
+            {evaluatorPro?.evaluator?.name ||
+              `${I18n.t('evaluator_placeholder1', { placeholder1: index + 1 })}`}
             {evaluatorPro?.evaluatorVersion?.version ? (
               <Tag
                 color="primary"
@@ -159,7 +154,6 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                 size="small"
                 className="!h-6"
                 icon={<IconCozTrashCan className="h-4 w-4" />}
-                disabled={disableDelete}
                 onClick={e => {
                   e.stopPropagation();
                   arrayField.remove();
@@ -176,16 +170,12 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                 field={`${arrayField.field}.evaluator`}
                 fieldStyle={{ paddingBottom: 16 }}
                 label={I18n.t('name')}
-                placeholder={I18n.t('please_select', {
-                  field: I18n.t('evaluator'),
-                })}
+                placeholder={I18n.t('please_select', { field: '' })}
                 onChangeWithObject
                 rules={[
                   {
                     required: true,
-                    message: I18n.t('please_select', {
-                      field: I18n.t('evaluator'),
-                    }),
+                    message: I18n.t('please_select', { field: '' }),
                   },
                 ]}
                 onChange={v => {
@@ -219,15 +209,11 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                       </>
                     ),
                   }}
-                  placeholder={I18n.t('please_select', {
-                    field: I18n.t('version_number'),
-                  })}
+                  placeholder={I18n.t('please_select', { field: '' })}
                   rules={[
                     {
                       required: true,
-                      message: I18n.t('please_select', {
-                        field: I18n.t('version_number'),
-                      }),
+                      message: I18n.t('please_select', { field: '' }),
                     },
                   ]}
                   evaluatorId={evaluatorPro?.evaluator?.evaluator_id}
@@ -259,16 +245,13 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
             keySchemas={keySchemas}
             evaluationSetSchemas={evaluationSetSchemas}
             evaluateTargetSchemas={evaluateTargetSchemas}
+            getEvaluatorMappingFieldRules={getEvaluatorMappingFieldRules}
             rules={[
               {
                 required: true,
                 validator: (_, value) => {
                   if (versionDetailService.loading && !value) {
-                    return new Error(
-                      I18n.t('please_configure', {
-                        field: I18n.t('field_mapping'),
-                      }),
-                    );
+                    return new Error(I18n.t('please_configure_field_mapping'));
                   }
                   return true;
                 },
@@ -277,21 +260,6 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
           />
         </div>
       </div>
-
-      {isLast ? (
-        <Button
-          block
-          icon={<IconCozPlusFill />}
-          color="primary"
-          onClick={() => {
-            onAdd?.();
-            setOpen(false);
-          }}
-          disabled={disableAdd}
-        >
-          {I18n.t('add_evaluator')}
-        </Button>
-      ) : null}
     </>
   );
 }

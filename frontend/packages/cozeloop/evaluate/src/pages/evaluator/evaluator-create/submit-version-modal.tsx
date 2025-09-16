@@ -5,9 +5,9 @@ import { useEffect, useRef } from 'react';
 
 import { nanoid } from 'nanoid';
 import { merge } from 'lodash-es';
+import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
@@ -35,7 +35,6 @@ export function SubmitVersionModal({
   onSuccess?: (evaluatorID?: Int64, newEvaluator?: Evaluator) => void;
 }) {
   const { spaceID } = useSpace();
-
   const formRef = useRef<Form>(null);
   const isAppend = type === 'append';
 
@@ -105,7 +104,7 @@ export function SubmitVersionModal({
         isAppend ? I18n.t('submit_new_version') : I18n.t('create_evaluator')
       }
       visible={visible}
-      cancelText={I18n.t('Cancel')}
+      cancelText={I18n.t('cancel')}
       onCancel={onCancel}
       okText={isAppend ? I18n.t('submit') : I18n.t('confirm')}
       onOk={handleOK}
@@ -123,14 +122,12 @@ export function SubmitVersionModal({
             ),
           }}
           field="current_version.version"
-          placeholder={I18n.t('please_input', { field: I18n.t('version') })}
+          placeholder={I18n.t('please_input_version_number')}
           rules={[
             {
               validator: (_rule, value) => {
                 if (!value) {
-                  return new Error(
-                    I18n.t('please_input', { field: I18n.t('version') }),
-                  );
+                  return new Error(I18n.t('please_input_version_number'));
                 }
                 const reg = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
                 if (!reg.test(value)) {
@@ -142,11 +139,7 @@ export function SubmitVersionModal({
                     latestVersion &&
                     compareVersions(value, latestVersion) <= 0
                   ) {
-                    return new Error(
-                      I18n.t('version_number_gt_current', {
-                        version: latestVersion,
-                      }),
-                    );
+                    return new Error(I18n.t('version_number_gt_current'));
                   }
                 }
 
@@ -158,9 +151,7 @@ export function SubmitVersionModal({
         <FormTextArea
           label={I18n.t('version_description')}
           field="current_version.description"
-          placeholder={I18n.t('please_input', {
-            field: I18n.t('version_description'),
-          })}
+          placeholder={I18n.t('version_description')}
           maxCount={200}
           maxLength={200}
         />

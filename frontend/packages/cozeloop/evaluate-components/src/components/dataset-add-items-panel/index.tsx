@@ -76,7 +76,9 @@ export const DatasetAddItemsPanel = ({
           okText: I18n.t('known'),
         });
       } else {
-        Toast.success(I18n.t('add_x_data_item_success', { num: successCount }));
+        Toast.success(
+          `${I18n.t('cozeloop_open_evaluate_successfully_added_data_count', { successCount })}`,
+        );
         onOK();
       }
     } catch (error) {
@@ -104,23 +106,27 @@ export const DatasetAddItemsPanel = ({
                 color="hgltplus"
                 loading={loading}
                 onClick={() => {
+                  // formApiRef.current?.validate().finally(data => {
+                  //   console.log('data', data);
+                  // });
                   formApiRef.current?.submitForm();
                 }}
                 disabled={loading}
               >
-                {I18n.t('add_data')}
+                {I18n.t('add')}
               </Button>
             </Guard>
             <Button color="primary" onClick={onCancel}>
-              {I18n.t('Cancel')}
+              {I18n.t('cancel')}
             </Button>
           </div>
         }
         visible={true}
         title={
           <div className="flex items-center justify-between gap-2">
-            {I18n.t('add_data')}
-            {ExpandNode}
+            {I18n.t('cozeloop_open_evaluate_add_data_expandnode', {
+              ExpandNode,
+            })}
           </div>
         }
       >
@@ -160,7 +166,7 @@ export const DatasetAddItemsPanel = ({
                       <Anchor.Link
                         key={index}
                         href={`#${DATASET_ADD_ITEM_PREFIX}-${index}`}
-                        title={I18n.t('data_item_index', { index: index + 1 })}
+                        title={`${I18n.t('cozeloop_open_evaluate_data_item_placeholder1', { placeholder1: index + 1 })}`}
                       />
                     ))}
                   </LoopAnchor>

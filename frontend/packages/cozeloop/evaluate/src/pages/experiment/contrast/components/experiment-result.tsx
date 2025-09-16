@@ -6,18 +6,27 @@ import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import {
   AutoOverflowList,
   EvaluatorNameScore,
+  AnnotationNameScore,
 } from '@cozeloop/evaluate-components';
 import {
-  type Evaluator,
   type Experiment,
   type ExperimentTurnPayload,
   type EvaluatorRecord,
+  type ColumnEvaluator,
+  type ColumnAnnotation,
+  type AnnotateRecord,
 } from '@cozeloop/api-schema/evaluation';
 
+import {
+  type ColumnInfo,
+  type ColumnRecord,
+} from '@/types/experiment/experiment-contrast';
 import {
   ActualOutputWithTrace,
   ExperimentRunDataSummary,
 } from '@/components/experiment';
+
+import { getColumnRecords } from '../utils/tools';
 
 export interface ExperimentContrastResultProps {
   result: ExperimentTurnPayload | undefined;
@@ -26,10 +35,7 @@ export interface ExperimentContrastResultProps {
   hiddenFieldMap?: Record<string, boolean>;
   spaceID?: Int64;
   onRefresh?: () => void;
-}
-
-interface Item extends Evaluator {
-  evaluatorRecord: EvaluatorRecord | undefined;
+  columnInfos?: ColumnInfo[];
 }
 
 export default function ExperimentResult({
@@ -39,18 +45,13 @@ export default function ExperimentResult({
   spaceID,
   hiddenFieldMap = {},
   onRefresh,
+  columnInfos,
 }: ExperimentContrastResultProps) {
   const items = useMemo(
-    () =>
-      experiment?.evaluators?.map(evaluator => {
-        const evaluatorRecord =
-          result?.evaluator_output?.evaluator_records?.[
-            evaluator.current_version?.id ?? ''
-          ];
-        return { ...evaluator, evaluatorRecord };
-      }) ?? [],
-    [experiment?.evaluators, result],
+    () => getColumnRecords(columnInfos ?? [], result),
+    [columnInfos, result],
   );
+
   const actualOutput =
     result?.target_output?.eval_target_record?.eval_target_output_data
       ?.output_fields?.actual_output;
@@ -74,33 +75,48 @@ export default function ExperimentResult({
         startTime={experiment?.start_time}
         endTime={experiment?.end_time}
       />
-      <AutoOverflowList<Item>
+      <AutoOverflowList<ColumnRecord>
         itemKey={'current_version.id'}
         items={items}
         itemRender={({ item, inOverflowPopover }) => {
-          const { evaluatorRecord } = item;
-          const evaluatorResult =
-            evaluatorRecord?.evaluator_output_data?.evaluator_result;
-          return (
-            <EvaluatorNameScore
-              key={item.current_version?.id}
-              evaluator={item}
-              evaluatorResult={evaluatorResult}
-              experiment={experiment}
-              updateUser={evaluatorRecord?.base_info?.updated_by}
-              spaceID={spaceID}
-              traceID={evaluatorRecord?.trace_id}
-              evaluatorRecordID={evaluatorRecord?.id}
-              enablePopover={!inOverflowPopover}
-              enableEditScore={false}
-              border={!inOverflowPopover}
-              showVersion={true}
-              defaultShowAction={inOverflowPopover}
-              onEditScoreSuccess={onRefresh}
-              onReportCalibration={onReportCalibration}
-              onReportEvaluatorTrace={onReportEvaluatorTrace}
-            />
-          );
+          if (item.type === 'evaluator') {
+            const evaluatorRecord = (item.data as EvaluatorRecord) ?? {};
+            const evaluatorResult =
+              evaluatorRecord.evaluator_output_data?.evaluator_result;
+
+            return (
+              <EvaluatorNameScore
+                key={item.columnInfo.key}
+                evaluator={item.columnInfo.data as ColumnEvaluator}
+                evaluatorResult={evaluatorResult}
+                experiment={experiment}
+                updateUser={evaluatorRecord.base_info?.updated_by}
+                spaceID={spaceID}
+                traceID={evaluatorRecord.trace_id}
+                evaluatorRecordID={evaluatorRecord.id}
+                enablePopover={!inOverflowPopover}
+                enableEditScore={false}
+                border={!inOverflowPopover}
+                showVersion={true}
+                defaultShowAction={inOverflowPopover}
+                onEditScoreSuccess={onRefresh}
+                onReportCalibration={onReportCalibration}
+                onReportEvaluatorTrace={onReportEvaluatorTrace}
+              />
+            );
+          } else if (item.type === 'annotation') {
+            return (
+              <AnnotationNameScore
+                key={item.columnInfo.key}
+                annotation={item.columnInfo.data as ColumnAnnotation}
+                annotationResult={item.data as AnnotateRecord}
+                enablePopover={!inOverflowPopover}
+                border={!inOverflowPopover}
+                defaultShowAction={inOverflowPopover}
+              />
+            );
+          }
+          return <>-</>;
         }}
       />
       <ExperimentRunDataSummary

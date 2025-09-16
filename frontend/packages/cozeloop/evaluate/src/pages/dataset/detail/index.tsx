@@ -3,6 +3,7 @@
 // import { useParams } from 'react-router-dom';
 import { useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   useFetchDatasetDetail,
   DatasetItemList,
@@ -14,8 +15,10 @@ import { LoopTabs } from '@cozeloop/components';
 import { type Version } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
+import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { Layout, Loading, Tabs } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
+
+import ExportTableModal from '@/components/experiment/experiment-export/export-table-modal';
 
 enum TabKey {
   EVAL = 'eval',
@@ -27,11 +30,21 @@ export default function EvaluateSetDetailPage() {
   const { datasetDetail, refreshDataset, loading } = useFetchDatasetDetail();
   const [version, setCurrentVersion] = useState<Version>();
   const [activeTab, setActiveTab] = useState<TabKey>(TabKey.EVAL);
+
+  // 导出记录弹窗状态
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [selectedExperiment, setSelectedExperiment] = useState<Experiment>();
+
+  // 处理导出记录弹窗打开
+  const handleOpenExportModal = (experiment: Experiment) => {
+    setSelectedExperiment(experiment);
+    setExportModalVisible(true);
+  };
   useBreadcrumb({
     text: datasetDetail?.name || '',
   });
   return (
-    <Layout.Content className="w-full h-full overflow-hidden flex flex-col items-center justify-center">
+    <Layout.Content className="w-full h-full overflow-hidden flex flex-col items-center justify-center !px-0">
       {loading ? (
         <Loading loading={true} />
       ) : (
@@ -80,9 +93,20 @@ export default function EvaluateSetDetailPage() {
                 className="pl-6 pr-[18px] h-full overflow-auto styled-scrollbar"
                 sourceName="related_dataset"
                 sourcePath={`evaluation/datasets/${datasetDetail?.id}`}
+                experimentsColumnsOptions={{
+                  onOpenExportModal: handleOpenExportModal,
+                }}
               />
             </Tabs.TabPane>
           </LoopTabs>
+
+          {/* 导出记录弹窗 */}
+          <ExportTableModal
+            visible={exportModalVisible}
+            setVisible={setExportModalVisible}
+            experiment={selectedExperiment}
+            source="related_dataset"
+          />
         </>
       )}
     </Layout.Content>

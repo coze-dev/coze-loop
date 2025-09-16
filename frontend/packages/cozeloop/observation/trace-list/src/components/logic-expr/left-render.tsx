@@ -1,35 +1,45 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
-import { type OptionProps, Select } from '@coze-arch/coze-design';
+import { Select, type OptionProps } from '@coze-arch/coze-design';
+
+import { type Left, type CustomRightRenderMap } from './logic-expr';
 
 import styles from './index.module.less';
 
 interface LeftRendererProps {
   expr: {
-    left?: string;
+    left?: Left;
   };
   onExprChange?: (value: {
-    left?: string;
+    left?: Left;
     operator?: number;
     right?: string | number | string[] | number[];
   }) => void;
   tagLeftOption: OptionProps[];
   disabled?: boolean;
   defaultImmutableKeys?: string[];
-  checkIsInvalidateExpr: (expr: string) => boolean;
+  checkIsInvalidateExpr: (expr: Left | undefined) => boolean;
+  customLeftRenderMap: CustomRightRenderMap;
 }
 
-export const LeftRenderer = ({
-  expr,
-  onExprChange,
-  tagLeftOption,
-  disabled,
-  defaultImmutableKeys,
-  checkIsInvalidateExpr,
-}: LeftRendererProps) => {
+export const LeftRenderer = (props: LeftRendererProps) => {
+  const {
+    expr,
+    onExprChange,
+    tagLeftOption,
+    disabled,
+    defaultImmutableKeys,
+    checkIsInvalidateExpr,
+    customLeftRenderMap,
+  } = props;
   const { left } = expr;
-  const isInvalidateExpr = checkIsInvalidateExpr(left ?? '');
+  const isInvalidateExpr = checkIsInvalidateExpr(left);
+  const CustomLeftRender = customLeftRenderMap[left?.type ?? ''];
+
+  if (CustomLeftRender) {
+    return <CustomLeftRender {...props} />;
+  }
 
   return (
     <div
@@ -41,13 +51,13 @@ export const LeftRenderer = ({
         dropdownClassName={styles['render-select']}
         filter
         style={{ width: '100%' }}
-        defaultOpen={!left}
-        disabled={disabled || defaultImmutableKeys?.includes(left ?? '')}
-        value={left}
+        defaultOpen={!left?.type}
+        disabled={disabled || defaultImmutableKeys?.includes(left?.type ?? '')}
+        value={left?.type ?? ''}
         onChange={v => {
           const typedValue = v as string;
           onExprChange?.({
-            left: typedValue,
+            left: { type: typedValue, value: undefined },
             operator: undefined,
             right: undefined,
           });

@@ -9,6 +9,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -27,8 +28,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+	"github.com/coze-dev/coze-loop/backend/pkg/localos"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -120,6 +123,7 @@ func (e ExptResultExportService) ExportCSV(ctx context.Context, spaceID, exptID 
 		ExportID:     exportID,
 		ExperimentID: exptID,
 		SpaceID:      spaceID,
+		Session:      session,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, nil)
 	if err != nil {
@@ -140,12 +144,26 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		var ttl int64 = 24 * 60 * 60
 		signOpt := fileserver.SignWithTTL(time.Duration(ttl) * time.Second)
 
-		url, _, err := e.fileClient.SignDownloadReq(ctx, exportRecord.FilePath, signOpt)
+		signURL, _, err := e.fileClient.SignDownloadReq(ctx, exportRecord.FilePath, signOpt)
 		if err != nil {
 			return nil, err
 		}
 
-		exportRecord.URL = ptr.Of(url)
+		unescaped, err := url.QueryUnescape(conv.UnescapeUnicode(signURL))
+		if err != nil {
+			logs.CtxWarn(ctx, "QueryUnescape fail, raw: %v", signURL)
+		} else {
+			signURL = unescaped
+		}
+
+		parsedURL, err := url.Parse(signURL)
+		if err == nil {
+			if parsedURL.Host == localos.GetLocalOSHost() {
+				signURL = fmt.Sprintf("%s?%s", parsedURL.Path, parsedURL.RawQuery)
+			}
+		}
+
+		exportRecord.URL = ptr.Of(signURL)
 	}
 
 	exportRecord.Expired = isExportRecordExpired(exportRecord.StartAt)

@@ -28,8 +28,11 @@ const getValidFilterFields = (value?: LogicFilter) => {
     };
   }
 
-  const isEmpty = (val: string | undefined | null) =>
-    val === undefined || val === '' || val === null;
+  const isEmpty = (val: string | undefined | null | string[]) =>
+    val === undefined ||
+    val === '' ||
+    val === null ||
+    (Array.isArray(val) && val.length === 0);
 
   // 左中右 三元都存在才有效
   const validArray = value.exprs.filter(
@@ -42,6 +45,7 @@ const getValidFilterFields = (value?: LogicFilter) => {
   };
 };
 /** 逻辑筛选器 */
+// eslint-disable-next-line @coze-arch/max-line-per-function, complexity
 export default function LogicEditor({
   fields = [],
   disabled = false,
@@ -49,6 +53,7 @@ export default function LogicEditor({
   popoverProps = {},
   tooltip,
   clearEmptyCondition = true,
+  enableCascadeMode = false,
   onChange,
   onConfirm,
   onClose,
@@ -60,6 +65,8 @@ export default function LogicEditor({
   tooltip?: React.ReactNode;
   /** 是否过滤空条件 */
   clearEmptyCondition?: boolean;
+  /** 字段选择开启级联模式 */
+  enableCascadeMode?: boolean;
   onChange?: (val?: LogicFilter) => void;
   onConfirm?: (val?: LogicFilter) => void;
   onClose?: () => void;
@@ -86,13 +93,28 @@ export default function LogicEditor({
         onChange?.(val);
       }}
       leftRender={renderProps => (
-        <LeftRender {...renderProps} fields={fields} disabled={disabled} />
+        <LeftRender
+          {...renderProps}
+          fields={fields}
+          disabled={disabled}
+          enableCascadeMode={enableCascadeMode}
+        />
       )}
       operatorRender={renderProps => (
-        <OperatorRender {...renderProps} fields={fields} disabled={disabled} />
+        <OperatorRender
+          {...renderProps}
+          fields={fields}
+          disabled={disabled}
+          enableCascadeMode={enableCascadeMode}
+        />
       )}
       rightRender={renderProps => (
-        <RightRender {...renderProps} fields={fields} disabled={disabled} />
+        <RightRender
+          {...renderProps}
+          fields={fields}
+          disabled={disabled}
+          enableCascadeMode={enableCascadeMode}
+        />
       )}
       allowLogicOperators={['and']}
       logicToggleReadonly={true}
@@ -104,12 +126,13 @@ export default function LogicEditor({
   const popoverContentConatienr = (
     <div
       className={classNames(
-        'flex flex-col py-3 gap-3 text-[13px] w-[620px]',
+        'flex flex-col py-3 gap-3 text-[13px]',
+        enableCascadeMode ? 'w-[640px]' : 'w-[620px]',
         styles['expr-logic-editor'],
       )}
     >
       <div className="flex items-center px-4">
-        <div className="font-medium">{I18n.t('filter')}</div>
+        <div className="font-medium">{I18n.t('data_filter')}</div>
         {tooltip ? (
           <Tooltip theme="dark" content={tooltip}>
             <IconCozInfoCircle className="ml-1 text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
@@ -122,7 +145,7 @@ export default function LogicEditor({
             onChange?.(undefined);
           }}
         >
-          {I18n.t('clear')}
+          {I18n.t('clear_filter')}
         </div>
       </div>
       <div className={hasMultiExpr ? '' : 'pl-3 pr-2'}>
@@ -143,7 +166,7 @@ export default function LogicEditor({
             onClose?.();
           }}
         >
-          {I18n.t('apply')}
+          {I18n.t('application')}
         </Button>
       </div>
     </div>
@@ -167,7 +190,7 @@ export default function LogicEditor({
       }}
     >
       <Button icon={<IconCozFilter />} color="primary">
-        {I18n.t('filter')}
+        {I18n.t('data_filter')}
         {count ? (
           <div className="flex items-center justify-center w-5 h-5 rounded-[50%] text-brand-9 bg-brand-4 ml-1 text-[13px]">
             {count}

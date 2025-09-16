@@ -156,7 +156,7 @@ export function TemplateModal({
           </div>
           <div className="flex flex-row justify-end gap-2 px-6 pt-2 pb-6">
             <Button color="primary" onClick={onCancel}>
-              {I18n.t('Cancel')}
+              {I18n.t('cancel')}
             </Button>
             <Button
               color="brand"

@@ -20,7 +20,7 @@ import { ErrorMsgRender } from './error-msg-render';
 import styles from './index.module.less';
 
 type LogicExprTypes = [
-  string | undefined,
+  Left | undefined,
   number | undefined | string,
   string | number | string[] | number[] | undefined,
 ];
@@ -32,7 +32,7 @@ export type CustomRightRenderMap = Record<
 >;
 
 export interface LogicValue {
-  filter_fields?: LogicItem[];
+  filter_fields: LogicItem[];
   query_and_or?: string;
   sub_filter?: Array<LogicValue>;
 }
@@ -41,6 +41,8 @@ export interface LogicItem {
   field_name: string;
   query_type: string;
   values: string[];
+  logic_field_name_type?: string;
+  extraInfo?: Record<string, any>;
 }
 
 export interface AnalyticsLogicExprProps {
@@ -54,6 +56,8 @@ export interface AnalyticsLogicExprProps {
   invalidateExpr?: Set<string>;
   // 新增的自定义渲染器
   customRightRenderMap?: CustomRightRenderMap;
+  customLeftRenderMap?: CustomRightRenderMap;
+  ignoreKeys?: string[];
 }
 
 // Helper function to sort strings by first character (letters first)
@@ -68,6 +72,12 @@ const sortByFirstChar = (a: string, b: string): number => {
   return aIsLetter ? -1 : bIsLetter ? 1 : 0;
 };
 
+export interface Left {
+  type: string | undefined;
+  value: string | undefined;
+  extraInfo?: Record<string, any>;
+}
+
 export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
   const {
     value,
@@ -79,6 +89,8 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
     allowLogicOperators = ['and'],
     invalidateExpr = new Set(),
     customRightRenderMap = {},
+    customLeftRenderMap = {},
+    ignoreKeys = [],
   } = props;
 
   const exprValue = useMemo(
@@ -87,11 +99,13 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
         value,
         tagFilterRecord,
         defaultImmutableKeys,
+        ignoreKeys,
       ),
-    [value, defaultImmutableKeys, tagFilterRecord],
+    [value, defaultImmutableKeys, tagFilterRecord, ignoreKeys],
   );
 
-  const checkIsInvalidateExpr = (expr: string) => invalidateExpr.has(expr);
+  const checkIsInvalidateExpr = (expr: Left | undefined) =>
+    expr ? invalidateExpr.has(expr.value ?? '') : false;
   const [valueChangeMap, setValueChangeMap] = useState<Record<string, boolean>>(
     {},
   );
@@ -99,9 +113,11 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
   const { tagLeftOption } = useMemo<{
     tagLeftOption: OptionProps[];
   }>(() => {
-    const selectedItemKeyList = exprValue?.exprs?.map((item: any) => item.left);
+    const selectedItemKeyList =
+      exprValue?.exprs?.map((item: any) => item.left?.type) || [];
     return {
       tagLeftOption: Object.keys(tagFilterRecord)
+        .filter(key => !ignoreKeys.includes(key))
         .sort((a, b) => sortByFirstChar(a, b))
         .map(key => ({
           label: getKeyCopywriting(key),
@@ -110,7 +126,7 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
             disableDuplicateSelect && selectedItemKeyList?.includes(key),
         })),
     };
-  }, [exprValue, disableDuplicateSelect]);
+  }, [exprValue, disableDuplicateSelect, ignoreKeys, tagFilterRecord]);
 
   const handleValueChangeStatus = (fieldName: string, changed: boolean) => {
     setValueChangeMap(prev => ({
@@ -127,7 +143,7 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
       onDeleteExpr={key => {
         setValueChangeMap(prev => ({
           ...prev,
-          [key as string]: false,
+          [key?.value as string]: false,
         }));
       }}
       exprGroupRenderContentItemsClassName={
@@ -141,6 +157,7 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
           disabled={disabled}
           defaultImmutableKeys={defaultImmutableKeys}
           checkIsInvalidateExpr={checkIsInvalidateExpr}
+          customLeftRenderMap={customLeftRenderMap}
         />
       )}
       operatorRender={operatorRenderProps => (
@@ -155,7 +172,7 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
       )}
       rightRender={rightRenderProps => {
         const {
-          expr: { left = '', operator, right },
+          expr: { left, operator, right },
           onChange: onRightValueChange,
         } = rightRenderProps;
 
@@ -169,7 +186,7 @@ export const AnalyticsLogicExpr = (props: AnalyticsLogicExprProps) => {
             disabled={disabled}
             defaultImmutableKeys={defaultImmutableKeys}
             isInvalidateExpr={isInvalidateExpr}
-            valueChanged={valueChangeMap[left]}
+            valueChanged={valueChangeMap[left?.value ?? '']}
             tagFilterRecord={tagFilterRecord}
             onRightValueChange={onRightValueChange}
             onValueChangeStatus={handleValueChangeStatus}

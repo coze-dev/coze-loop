@@ -73,22 +73,30 @@ export function ExperimentRunStatus({
           content={
             <div className="px-2 py-1">
               <div>
-                {I18n.t('total')} {totalCount || 0}
+                {I18n.t('cozeloop_open_evaluate_total_count_placeholder1', {
+                  placeholder1: totalCount || 0,
+                })}
               </div>
               <div>
-                {I18n.t('success')} {success_turn_cnt}
+                {I18n.t('cozeloop_open_evaluate_success_count', {
+                  success_turn_cnt,
+                })}
                 <Divider
                   layout="vertical"
                   style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                 />
-                {I18n.t('failure')} {fail_turn_cnt}
+                {I18n.t('evaluate_failure_count_fail_turn_cnt', {
+                  fail_turn_cnt,
+                })}
                 <Divider
                   layout="vertical"
                   style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                 />
                 {terminated_turn_cnt ? (
                   <>
-                    {I18n.t('abort')} {terminated_turn_cnt}
+                    {I18n.t('evaluate_terminated_count_terminated_turn_cnt', {
+                      terminated_turn_cnt,
+                    })}
                     <Divider
                       layout="vertical"
                       style={{ marginLeft: 8, marginRight: 8, height: 12 }}
@@ -97,14 +105,18 @@ export function ExperimentRunStatus({
                 ) : null}
                 {processing_turn_cnt ? (
                   <>
-                    {I18n.t('execution_in_progress')} {processing_turn_cnt}
+                    {I18n.t('evaluate_processing_count_processing_turn_cnt', {
+                      processing_turn_cnt,
+                    })}
                     <Divider
                       layout="vertical"
                       style={{ marginLeft: 8, marginRight: 8, height: 12 }}
                     />
                   </>
                 ) : null}
-                {I18n.t('to_be_executed')} {pending_turn_cnt}
+                {I18n.t('cozeloop_open_evaluate_pending_count', {
+                  pending_turn_cnt,
+                })}
               </div>
             </div>
           }

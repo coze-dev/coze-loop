@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { get } from 'lodash-es';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type Evaluator,
   type Experiment,
@@ -10,7 +11,6 @@ import {
 import { Modal } from '@coze-arch/coze-design';
 
 import { MAX_EXPERIMENT_CONTRAST_COUNT } from '../constants/experiment';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 /**
  * 提取实验列表中所有评估器并按照评估器唯一版本去重
@@ -41,9 +41,7 @@ export function verifyContrastExperiment(experiments: Experiment[]) {
   if (!hasSameDataset(experiments)) {
     warnText = I18n.t('experiments_compared_tip');
   } else if (experiments.length > MAX_EXPERIMENT_CONTRAST_COUNT) {
-    warnText = I18n.t('experiment_comparison_max_number', {
-      num: MAX_EXPERIMENT_CONTRAST_COUNT,
-    });
+    warnText = `${I18n.t('cozeloop_open_evaluate_max_experiment_contrast_limit', { MAX_EXPERIMENT_CONTRAST_COUNT })}`;
   } else if (!checkExperimentsStatus(experiments)) {
     warnText = I18n.t('only_completed_experiments_can_be_compared');
   }

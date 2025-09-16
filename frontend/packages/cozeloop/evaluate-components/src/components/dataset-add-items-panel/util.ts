@@ -15,7 +15,9 @@ export const getDefaultEvaSetItem = (
     schema?.field_schemas?.map(field => ({
       key: field.key,
       name: field.name,
-      content: {},
+      content: {
+        content_type: field.content_type,
+      },
     })) || [];
   return {
     workspace_id: spaceID,
