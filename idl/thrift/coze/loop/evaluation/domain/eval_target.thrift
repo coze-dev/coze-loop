@@ -56,7 +56,7 @@ enum EvalTargetType {
 }
 
 struct CustomPSM {
-    1: optional string id    // 应用ID
+    1: optional i64 id    // 应用ID
 
     2: optional string name    // DTO使用，不存数据库
     3: optional string description // DTO使用，不存数据库

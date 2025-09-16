@@ -1390,7 +1390,7 @@ func (p *CustomPSM) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1592,8 +1592,8 @@ SkipFieldError:
 func (p *CustomPSM) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -1780,9 +1780,9 @@ func (p *CustomPSM) FastWrite(buf []byte) int {
 func (p *CustomPSM) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField16(buf[offset:], w)
 		offset += p.fastWriteField19(buf[offset:], w)
-		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -1822,8 +1822,8 @@ func (p *CustomPSM) BLength() int {
 func (p *CustomPSM) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ID)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ID)
 	}
 	return offset
 }
@@ -1947,7 +1947,7 @@ func (p *CustomPSM) field1Length() int {
 	l := 0
 	if p.IsSetID() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ID)
+		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -2071,10 +2071,7 @@ func (p *CustomPSM) DeepCopy(s interface{}) error {
 	}
 
 	if src.ID != nil {
-		var tmp string
-		if *src.ID != "" {
-			tmp = kutils.StringDeepCopy(*src.ID)
-		}
+		tmp := *src.ID
 		p.ID = &tmp
 	}
 

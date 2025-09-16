@@ -2136,7 +2136,7 @@ func (p *EvalTargetContent) Field105DeepEqual(src *CustomPSM) bool {
 
 type CustomPSM struct {
 	// 应用ID
-	ID *string `thrift:"id,1,optional" frugal:"1,optional,string" form:"id" json:"id,omitempty" query:"id"`
+	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
 	// DTO使用，不存数据库
 	Name *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	// DTO使用，不存数据库
@@ -2168,9 +2168,9 @@ func NewCustomPSM() *CustomPSM {
 func (p *CustomPSM) InitDefault() {
 }
 
-var CustomPSM_ID_DEFAULT string
+var CustomPSM_ID_DEFAULT int64
 
-func (p *CustomPSM) GetID() (v string) {
+func (p *CustomPSM) GetID() (v int64) {
 	if p == nil {
 		return
 	}
@@ -2323,7 +2323,7 @@ func (p *CustomPSM) GetIsAsync() (v bool) {
 	}
 	return *p.IsAsync
 }
-func (p *CustomPSM) SetID(val *string) {
+func (p *CustomPSM) SetID(val *int64) {
 	p.ID = val
 }
 func (p *CustomPSM) SetName(val *string) {
@@ -2450,7 +2450,7 @@ func (p *CustomPSM) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2584,8 +2584,8 @@ ReadStructEndError:
 
 func (p *CustomPSM) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -2804,10 +2804,10 @@ WriteStructEndError:
 
 func (p *CustomPSM) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetID() {
-		if err = oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.ID); err != nil {
+		if err := oprot.WriteI64(*p.ID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3101,14 +3101,14 @@ func (p *CustomPSM) DeepEqual(ano *CustomPSM) bool {
 	return true
 }
 
-func (p *CustomPSM) Field1DeepEqual(src *string) bool {
+func (p *CustomPSM) Field1DeepEqual(src *int64) bool {
 
 	if p.ID == src {
 		return true
 	} else if p.ID == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.ID, *src) != 0 {
+	if *p.ID != *src {
 		return false
 	}
 	return true

@@ -5,7 +5,7 @@ package entity
 
 type CustomPSM struct {
 	// 应用ID
-	ID string
+	ID int64
 	// DTO使用，不存数据库
 	Name string `json:"-"`
 	// DTO使用，不存数据库
