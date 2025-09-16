@@ -6255,6 +6255,20 @@ func (p *SearchCustomEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField100(buf[offset:])
@@ -6383,6 +6397,20 @@ func (p *SearchCustomEvalTargetRequest) FastReadField5(buf []byte) (int, error) 
 	return offset, nil
 }
 
+func (p *SearchCustomEvalTargetRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Env = _field
+	return offset, nil
+}
+
 func (p *SearchCustomEvalTargetRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -6436,6 +6464,7 @@ func (p *SearchCustomEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -6451,6 +6480,7 @@ func (p *SearchCustomEvalTargetRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field255Length()
@@ -6500,6 +6530,15 @@ func (p *SearchCustomEvalTargetRequest) fastWriteField5(buf []byte, w thrift.Noc
 	if p.IsSetRegion() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Region)
+	}
+	return offset
+}
+
+func (p *SearchCustomEvalTargetRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnv() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
 	}
 	return offset
 }
@@ -6576,6 +6615,15 @@ func (p *SearchCustomEvalTargetRequest) field5Length() int {
 	return l
 }
 
+func (p *SearchCustomEvalTargetRequest) field6Length() int {
+	l := 0
+	if p.IsSetEnv() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Env)
+	}
+	return l
+}
+
 func (p *SearchCustomEvalTargetRequest) field100Length() int {
 	l := 0
 	if p.IsSetPageSize() {
@@ -6639,6 +6687,14 @@ func (p *SearchCustomEvalTargetRequest) DeepCopy(s interface{}) error {
 	if src.Region != nil {
 		tmp := *src.Region
 		p.Region = &tmp
+	}
+
+	if src.Env != nil {
+		var tmp string
+		if *src.Env != "" {
+			tmp = kutils.StringDeepCopy(*src.Env)
+		}
+		p.Env = &tmp
 	}
 
 	if src.PageSize != nil {
@@ -7044,6 +7100,20 @@ func (p *DebugEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -7146,6 +7216,20 @@ func (p *DebugEvalTargetRequest) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *DebugEvalTargetRequest) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Env = _field
+	return offset, nil
+}
+
 func (p *DebugEvalTargetRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := eval_target.NewCustomRPCServer()
@@ -7181,6 +7265,7 @@ func (p *DebugEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7195,6 +7280,7 @@ func (p *DebugEvalTargetRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field50Length()
 		l += p.field255Length()
 	}
@@ -7234,6 +7320,15 @@ func (p *DebugEvalTargetRequest) fastWriteField11(buf []byte, w thrift.NocopyWri
 	if p.IsSetTargetRuntimeParam() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
 		offset += p.TargetRuntimeParam.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *DebugEvalTargetRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnv() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
 	}
 	return offset
 }
@@ -7292,6 +7387,15 @@ func (p *DebugEvalTargetRequest) field11Length() int {
 	return l
 }
 
+func (p *DebugEvalTargetRequest) field12Length() int {
+	l := 0
+	if p.IsSetEnv() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Env)
+	}
+	return l
+}
+
 func (p *DebugEvalTargetRequest) field50Length() int {
 	l := 0
 	if p.IsSetCustomRPCServer() {
@@ -7342,6 +7446,14 @@ func (p *DebugEvalTargetRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.TargetRuntimeParam = _targetRuntimeParam
+
+	if src.Env != nil {
+		var tmp string
+		if *src.Env != "" {
+			tmp = kutils.StringDeepCopy(*src.Env)
+		}
+		p.Env = &tmp
+	}
 
 	var _customRPCServer *eval_target.CustomRPCServer
 	if src.CustomRPCServer != nil {
@@ -7607,6 +7719,20 @@ func (p *AsyncDebugEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -7709,6 +7835,20 @@ func (p *AsyncDebugEvalTargetRequest) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *AsyncDebugEvalTargetRequest) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Env = _field
+	return offset, nil
+}
+
 func (p *AsyncDebugEvalTargetRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := eval_target.NewCustomRPCServer()
@@ -7744,6 +7884,7 @@ func (p *AsyncDebugEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7758,6 +7899,7 @@ func (p *AsyncDebugEvalTargetRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field50Length()
 		l += p.field255Length()
 	}
@@ -7797,6 +7939,15 @@ func (p *AsyncDebugEvalTargetRequest) fastWriteField11(buf []byte, w thrift.Noco
 	if p.IsSetTargetRuntimeParam() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
 		offset += p.TargetRuntimeParam.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *AsyncDebugEvalTargetRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnv() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
 	}
 	return offset
 }
@@ -7855,6 +8006,15 @@ func (p *AsyncDebugEvalTargetRequest) field11Length() int {
 	return l
 }
 
+func (p *AsyncDebugEvalTargetRequest) field12Length() int {
+	l := 0
+	if p.IsSetEnv() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Env)
+	}
+	return l
+}
+
 func (p *AsyncDebugEvalTargetRequest) field50Length() int {
 	l := 0
 	if p.IsSetCustomRPCServer() {
@@ -7905,6 +8065,14 @@ func (p *AsyncDebugEvalTargetRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.TargetRuntimeParam = _targetRuntimeParam
+
+	if src.Env != nil {
+		var tmp string
+		if *src.Env != "" {
+			tmp = kutils.StringDeepCopy(*src.Env)
+		}
+		p.Env = &tmp
+	}
 
 	var _customRPCServer *eval_target.CustomRPCServer
 	if src.CustomRPCServer != nil {

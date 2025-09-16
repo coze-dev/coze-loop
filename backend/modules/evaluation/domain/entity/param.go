@@ -273,6 +273,7 @@ type SearchCustomEvalTargetParam struct {
 	ApplicationID   *int64
 	CustomRPCServer *eval_target.CustomRPCServer
 	Region          *eval_target.Region
+	Env             *string
 	PageSize        *int32
 	PageToken       *string
 }
