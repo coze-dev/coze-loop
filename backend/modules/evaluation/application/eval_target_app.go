@@ -71,10 +71,19 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 	if err != nil {
 		return nil, err
 	}
-	id, versionID, err := e.evalTargetService.CreateEvalTarget(ctx, request.WorkspaceID, request.Param.GetSourceTargetID(), request.Param.GetSourceTargetVersion(),
-		entity.EvalTargetType(request.Param.GetEvalTargetType()),
-		entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
+	opts := make([]entity.Option, 0)
+	opts = append(opts, entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
 		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())))
+	if request.GetParam().GetCustomEvalTarget() != nil {
+		opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
+			ID:        request.GetParam().GetCustomEvalTarget().ID,
+			Name:      request.GetParam().GetCustomEvalTarget().Name,
+			AvatarURL: request.GetParam().GetCustomEvalTarget().AvatarURL,
+			Ext:       request.GetParam().GetCustomEvalTarget().Ext,
+		}))
+	}
+	id, versionID, err := e.evalTargetService.CreateEvalTarget(ctx, request.WorkspaceID, request.Param.GetSourceTargetID(), request.Param.GetSourceTargetVersion(),
+		entity.EvalTargetType(request.Param.GetEvalTargetType()), opts...)
 	if err != nil {
 		return nil, err
 	}

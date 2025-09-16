@@ -173,9 +173,9 @@ type EvaluatorsConf struct {
 }
 
 func (e *EvaluatorsConf) Valid(ctx context.Context) error {
-	//if e == nil || len(e.EvaluatorConf) == 0 {
+	// if e == nil || len(e.EvaluatorConf) == 0 {
 	//	return fmt.Errorf("invalid EvaluatorConf: %v", json.Jsonify(e))
-	//}
+	// }
 	for _, conf := range e.EvaluatorConf {
 		if err := conf.Valid(ctx); err != nil {
 			return err
@@ -295,6 +295,7 @@ type CreateEvalTargetParam struct {
 	EvalTargetType      *EvalTargetType
 	BotInfoType         *CozeBotInfoType
 	BotPublishVersion   *string
+	CustomEvalTarget    *CustomEvalTarget // 搜索对象返回的信息
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {

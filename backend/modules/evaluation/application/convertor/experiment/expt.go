@@ -283,7 +283,14 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	if param.BotInfoType != nil {
 		res.BotInfoType = gptr.Of(entity.CozeBotInfoType(*param.BotInfoType))
 	}
-
+	if param.CustomEvalTarget != nil {
+		res.CustomEvalTarget = &entity.CustomEvalTarget{
+			ID:        param.CustomEvalTarget.ID,
+			Name:      param.CustomEvalTarget.Name,
+			AvatarURL: param.CustomEvalTarget.AvatarURL,
+			Ext:       param.CustomEvalTarget.Ext,
+		}
+	}
 	return res
 }
 
