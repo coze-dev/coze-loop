@@ -52,7 +52,7 @@ const (
 	// 火山智能体
 	EvalTargetTypeVolcengineAgent EvalTargetType = 5
 	// 自定义psm服务 for内场
-	EvalTargetType_CustomPSM EvalTargetType = 6
+	EvalTargetTypeCustomPSM EvalTargetType = 6
 )
 
 func (p EvalTargetType) String() string {
@@ -67,7 +67,7 @@ func (p EvalTargetType) String() string {
 		return "CozeWorkflow"
 	case EvalTargetTypeVolcengineAgent:
 		return "VolcengineAgent"
-	case EvalTargetType_CustomPSM:
+	case EvalTargetTypeCustomPSM:
 		return "CustomPSM"
 	}
 	return "<UNSET>"

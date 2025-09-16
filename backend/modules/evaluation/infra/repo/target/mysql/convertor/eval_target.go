@@ -63,7 +63,7 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
-	case entity.EvalTargetType_CustomPSM:
+	case entity.EvalTargetTypeCustomPSM:
 		meta, err = json.Marshal(do.CustomPsm)
 		if err != nil {
 			return nil, err
@@ -205,7 +205,7 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.VolcengineAgent = meta
 			}
-		case entity.EvalTargetType_CustomPSM:
+		case entity.EvalTargetTypeCustomPSM:
 			meta := &entity.CustomPSM{}
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.CustomPsm = meta

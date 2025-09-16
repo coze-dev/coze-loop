@@ -186,7 +186,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
 			}
 		}
-	case do.EvalTargetType_CustomPSM:
+	case do.EvalTargetTypeCustomPSM:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
