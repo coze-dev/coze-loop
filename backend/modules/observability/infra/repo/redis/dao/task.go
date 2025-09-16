@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
+	foundationEntity "github.com/coze-dev/coze-loop/backend/modules/foundation/domain/user/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
@@ -49,6 +50,11 @@ type ITaskDAO interface {
 	DeleteTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
 
 	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
+
+	// SpaceListWithTask相关
+	GetSpaceListWithTask(ctx context.Context) ([]*foundationEntity.Space, error)
+	SetSpaceListWithTask(ctx context.Context, spaces []*foundationEntity.Space, ttl time.Duration) error
+	DeleteSpaceListWithTask(ctx context.Context) error
 }
 
 type TaskDAOImpl struct {
@@ -352,4 +358,49 @@ func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
 	}
 	return spaceList, botList, nil
+}
+
+// GetSpaceListWithTask 获取包含任务的空间列表缓存
+func (p *TaskDAOImpl) GetSpaceListWithTask(ctx context.Context) ([]*foundationEntity.Space, error) {
+	key := p.makeSpaceListWithTaskKey()
+	got, err := p.cmdable.Get(ctx, key).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil // 缓存未命中
+		}
+		return nil, errorx.Wrapf(err, "redis get space list with task fail, key: %v", key)
+	}
+
+	var spaces []*foundationEntity.Space
+	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &spaces); err != nil {
+		return nil, errorx.Wrapf(err, "unmarshal space list with task cache failed")
+	}
+
+	return spaces, nil
+}
+
+// SetSpaceListWithTask 设置包含任务的空间列表缓存
+func (p *TaskDAOImpl) SetSpaceListWithTask(ctx context.Context, spaces []*foundationEntity.Space, ttl time.Duration) error {
+	key := p.makeSpaceListWithTaskKey()
+
+	bytes, err := json.Marshal(spaces)
+	if err != nil {
+		return errorx.Wrapf(err, "marshal space list with task cache failed")
+	}
+
+	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis set space list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set space list with task key: %v", key)
+	}
+	return nil
+}
+
+// DeleteSpaceListWithTask 删除包含任务的空间列表缓存
+func (p *TaskDAOImpl) DeleteSpaceListWithTask(ctx context.Context) error {
+	key := p.makeSpaceListWithTaskKey()
+	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis delete space list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis delete space list with task key: %v", key)
+	}
+	return nil
 }
