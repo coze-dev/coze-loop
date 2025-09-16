@@ -109,6 +109,7 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	var datasetID int64
 	for _, dataReflowConfig := range dataReflowConfigs {
 		if dataReflowConfig.DatasetID != nil {
+			datasetID = *dataReflowConfig.DatasetID
 			logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", dataReflowConfig.DatasetID)
 			continue
 		}
