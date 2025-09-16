@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
@@ -26,7 +27,8 @@ import (
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 设置当前任务上下文
-	if err := h.setBackfillTask(ctx, event); err != nil {
+	sub, err := h.setBackfillTask(ctx, event)
+	if err != nil {
 		return err
 	}
 
@@ -57,7 +59,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	wg.Add(1)
 	goroutine.Go(ctx, func() {
 		defer wg.Done()
-		h.flushSpans(subCtx)
+		h.flushSpans(subCtx, sub)
 	})
 
 	// 5. 获取 span 数据 - 从观测服务获取需要处理的数据
@@ -76,16 +78,30 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 }
 
 // setBackfillTask 设置当前回填任务的上下文
-func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity.BackFillEvent) error {
+func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity.BackFillEvent) (*spanSubscriber, error) {
 	taskConfig, err := h.taskRepo.GetTask(ctx, event.TaskID, nil, nil)
 	if err != nil {
 		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", event.TaskID, err)
-		return err
+		return nil, err
 	}
 	if taskConfig == nil {
-		return errors.New("task config not found")
+		return nil, errors.New("task config not found")
 	}
-
+	taskConfigDO := tconv.TaskPO2DTO(ctx, taskConfig, nil)
+	proc, err := processor.NewProcessor(ctx, taskConfig.TaskType)
+	if err != nil {
+		return nil, err
+	}
+	sub := &spanSubscriber{
+		taskID:           taskConfigDO.GetID(),
+		RWMutex:          sync.RWMutex{},
+		t:                taskConfigDO,
+		processor:        proc,
+		bufCap:           0,
+		flushWait:        sync.WaitGroup{},
+		maxFlushInterval: time.Second * 5,
+		taskRepo:         h.taskRepo,
+	}
 	// 解析任务规则
 	var rule *task.Rule
 	if taskConfig.Sampler != nil && *taskConfig.Sampler != "" {
@@ -106,7 +122,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		Rule:        rule,
 	}
 
-	return nil
+	return sub, nil
 }
 
 // isBackfillDone 检查回填任务是否已完成
@@ -356,7 +372,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 	return nil
 }
 
-func (h *TraceHubServiceImpl) flushSpans(ctx context.Context) {
+func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, sub *spanSubscriber) {
 	for {
 		select {
 		case fr, ok := <-h.flushCh:
@@ -365,7 +381,7 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context) {
 				return
 			}
 
-			flushed, sampled, err := h.doFlush(ctx, fr)
+			flushed, sampled, err := h.doFlush(ctx, fr, sub)
 			if err != nil {
 				logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", h.task.GetID(), err)
 				// 收集错误，继续处理
@@ -384,7 +400,7 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context) {
 	}
 }
 
-func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq) (flushed, sampled int, _ error) {
+func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *spanSubscriber) (flushed, sampled int, _ error) {
 	if fr == nil || len(fr.spans) == 0 {
 		return 0, 0, nil
 	}
@@ -406,7 +422,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq) (flushe
 	}
 
 	// 3. 执行具体的业务逻辑处理
-	err := h.processSpansForBackfill(ctx, sampledSpans)
+	err := h.processSpansForBackfill(ctx, sampledSpans, sub)
 	if err != nil {
 		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", h.task.GetID(), err)
 		return len(validSpans), len(sampledSpans), err
@@ -484,7 +500,7 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span) []*loop_spa
 }
 
 // processSpansForBackfill 处理回填的 span 数据
-func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span) error {
+func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	// 批量处理 spans，提高效率
 	const batchSize = 100
 
@@ -495,7 +511,7 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		}
 
 		batch := spans[i:end]
-		if err := h.processBatchSpans(ctx, batch); err != nil {
+		if err := h.processBatchSpans(ctx, batch, sub); err != nil {
 			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
 				h.task.GetID(), i, err)
 			// 继续处理下一批，不因单批失败而中断
@@ -507,13 +523,13 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 }
 
 // processBatchSpans 批量处理 span 数据
-func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span) error {
+func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	// 这里实现具体的批量处理逻辑
 	// 例如：数据转换、存储、触发下游处理等
 
 	for _, span := range spans {
 		// 执行单个 span 的处理逻辑
-		if err := h.processIndividualSpan(ctx, span); err != nil {
+		if err := h.processIndividualSpan(ctx, span, sub); err != nil {
 			logs.CtxWarn(ctx, "process individual span failed, span_id=%s, trace_id=%s, err=%v",
 				span.SpanID, span.TraceID, err)
 			// 继续处理其他span，不因单个失败而中断批处理
@@ -524,10 +540,14 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 }
 
 // processIndividualSpan 处理单个 span
-func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *loop_span.Span) error {
+func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *loop_span.Span, sub *spanSubscriber) error {
 	// 根据任务类型执行相应的处理逻辑
 	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 		span.SpanID, span.TraceID, h.task.GetID())
+
+	if err := h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
+		return err
+	}
 
 	// 这里可以添加具体的处理逻辑：
 	// 1. 数据验证
