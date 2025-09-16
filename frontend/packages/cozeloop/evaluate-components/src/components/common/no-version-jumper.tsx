@@ -17,7 +17,7 @@ const NoVersionJumper = (props: NoVersionJumperProps) => {
         <div className="coz-fg-dim">{I18n.t('draft_version')}</div>
         {isShowTag ? (
           <Tag color="yellow" className="!h-5 !px-2 !py-[2px] rounded-[3px]">
-            {I18n.t('changes_not_submitted')}
+            {I18n.t('unsubmitted_changes')}
           </Tag>
         ) : null}
       </div>
@@ -28,7 +28,7 @@ const NoVersionJumper = (props: NoVersionJumperProps) => {
         className="flex-shrink-0 h-8 flex flex-row items-center cursor-pointer"
       >
         <div className="text-sm font-medium text-brand-9">
-          {I18n.t('go_submit')}
+          {I18n.t('to_submit')}
         </div>
         <IconCozLongArrowTopRight className="h-4 w-4 text-brand-9 ml-1" />
       </div>

@@ -7,6 +7,7 @@ import { TraceDetailPanel } from '@cozeloop/observation-component-adapter';
 import { IconButtonContainer } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { IconCozNode } from '@coze-arch/coze-design/icons';
+import { Tooltip, type TooltipProps } from '@coze-arch/coze-design';
 
 function getTimeString(time: Int64 | undefined) {
   if (!time) {
@@ -27,6 +28,7 @@ export function TraceTrigger({
   startTime,
   endTime,
   className,
+  tooltipProps,
   ...rest
 }: {
   traceID: Int64;
@@ -34,32 +36,44 @@ export function TraceTrigger({
   startTime?: Int64;
   endTime?: Int64;
   className?: string;
+  tooltipProps?: TooltipProps;
 }) {
   const [visible, setVisible] = useState(false);
   const { spaceID, space } = useSpace();
+  const iconButton = (
+    <IconButtonContainer
+      {...rest}
+      className={classNames('actual-outputy-trace-trigger', className)}
+      icon={<IconCozNode />}
+      onClick={e => {
+        e.stopPropagation();
+        setVisible(true);
+      }}
+    />
+  );
   return (
     <>
-      <IconButtonContainer
-        {...rest}
-        className={classNames('actual-outputy-trace-trigger', className)}
-        icon={<IconCozNode />}
-        onClick={e => {
-          e.stopPropagation();
-          setVisible(true);
-        }}
-      />
+      {tooltipProps ? (
+        <Tooltip {...tooltipProps}>
+          <div>{iconButton}</div>
+        </Tooltip>
+      ) : (
+        iconButton
+      )}
       {visible ? (
         <TraceDetailPanel
           spaceID={spaceID}
           spaceName={space?.name ?? ''}
           searchType="trace_id"
-          platformType={platformType.toString()}
+          platformType={platformType?.toString()}
           id={traceID?.toString()}
           startTime={getTimeString(startTime)}
           endTime={getTimeString(endTime)}
           moduleName="evaluation"
           visible={visible}
-          onClose={() => setVisible(false)}
+          onClose={() => {
+            setVisible(false);
+          }}
         />
       ) : null}
     </>

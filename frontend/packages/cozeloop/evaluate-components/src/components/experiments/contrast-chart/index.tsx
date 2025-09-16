@@ -360,9 +360,7 @@ export function ExperimentContrastChart({
         <div className="flex justify-end mb-3 gap-2">
           <EvaluatorSelectLocalData
             prefix={I18n.t('indicator')}
-            placeholder={I18n.t('please_select', {
-              field: I18n.t('indicator'),
-            })}
+            placeholder={I18n.t('please_select_an_indicator')}
             multiple={true}
             maxTagCount={1}
             style={{ minWidth: 200 }}

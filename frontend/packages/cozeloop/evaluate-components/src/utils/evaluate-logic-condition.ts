@@ -20,6 +20,8 @@ const operatorMap: Record<string, FilterOperatorType> = {
   'greater-than-equals': FilterOperatorType.GreaterOrEqual,
   'less-than': FilterOperatorType.Less,
   'less-than-equals': FilterOperatorType.LessOrEqual,
+  like: FilterOperatorType.Like,
+  'not-like': FilterOperatorType.NotLike,
 };
 
 /**
@@ -52,7 +54,8 @@ function logicFilterToCondition(logicFilter: LogicFilter | undefined): Filters {
         if (Array.isArray(right)) {
           value = right.join(',');
         }
-        const field = JSON.parse(left) as { type: FieldType; key: string };
+        const fieldName = Array.isArray(left) ? left[left.length - 1] : left;
+        const field = JSON.parse(fieldName) as { type: FieldType; key: string };
         const filterCondition: FilterCondition = {
           field: {
             field_type: field.type,
@@ -79,7 +82,11 @@ function logicFilterToCondition(logicFilter: LogicFilter | undefined): Filters {
 /** 普通对象类型的筛选数据转化为筛选条件 */
 function filterToCondition<T extends object>(
   filter: T,
-  filterFields: { key: keyof T; type: FieldType }[],
+  filterFields: {
+    key: keyof T;
+    type: FieldType;
+    operator?: FilterOperatorType;
+  }[],
 ): FilterCondition[] {
   const conditions: FilterCondition[] = [];
   filterFields?.forEach(field => {
@@ -101,7 +108,7 @@ function filterToCondition<T extends object>(
     // 这里后段约定value必须是字符串，所以需要转换一下
     conditions.push({
       field: { field_type: field.type },
-      operator: FilterOperatorType.In,
+      operator: field.operator ?? FilterOperatorType.In,
       value,
     });
   });

@@ -5,12 +5,15 @@
 import { useEffect } from 'react';
 
 import cs from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { type Version } from '@cozeloop/components';
 import { TableColActions, TableWithPagination } from '@cozeloop/components';
-import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
+import {
+  type EvaluationSetItem,
+  type EvaluationSet,
+} from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozIllusAdd } from '@coze-arch/coze-design/illustrations';
 import {
@@ -24,6 +27,7 @@ import { useVersionManage } from '../version-manage/use-version-manage';
 import { TextEllipsis } from '../../text-ellipsis';
 import { DatasetItemPanel } from '../../dataset-item-panel';
 import {
+  convertEvaluationSetItemListToTableData,
   type EvaluationSetItemTableData,
   useDatasetItemList,
 } from './use-dataset-item-list';
@@ -90,17 +94,15 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
   const handleDeleteItem = (item: EvaluationSetItemTableData) => {
     Modal.error({
       width: 420,
-      title: I18n.t('delete_data_item'),
+      title: I18n.t('delete_data_items'),
       type: 'dialog',
       content: (
         <Typography.Text className="break-all">
-          {I18n.t('confirm_to_delete_data_item', {
-            name: (
-              <Typography.Text className="!font-medium">
-                #{(item.item_id as string)?.slice(-5)}
-              </Typography.Text>
-            ),
-          })}
+          {I18n.t('confirm_delete_data_items')}
+          <Typography.Text className="!font-medium">
+            #{(item.item_id as string)?.slice(-5)}
+          </Typography.Text>
+          {I18n.t('this_change_irreversible')}
         </Typography.Text>
       ),
       autoLoading: true,
@@ -113,17 +115,17 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         refreshDatasetDetail();
       },
       showCancelButton: true,
-      cancelText: I18n.t('Cancel'),
-      okText: I18n.t('delete'),
+      cancelText: I18n.t('global_btn_cancel'),
+      okText: I18n.t('space_member_role_type_del_btn'),
     });
   };
   const columnsItems: ColumnProps[] = [
     ...(batchSelectVisible ? [selectColumn] : []),
     ...(columns?.filter(column => !!column.checked) || []),
     {
-      title: I18n.t('update_time'),
+      title: I18n.t('prompt_prompt_update_time'),
       key: 'updated_at',
-      displayName: I18n.t('update_time'),
+      displayName: I18n.t('prompt_prompt_update_time'),
       sorter: true,
       width: 180,
       dataIndex: 'base_info.updated_at',
@@ -137,9 +139,9 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         ),
     },
     {
-      title: I18n.t('create_time'),
+      title: I18n.t('prompt_prompt_create_time'),
       key: 'created_at',
-      displayName: I18n.t('create_time'),
+      displayName: I18n.t('prompt_prompt_create_time'),
       width: 180,
       dataIndex: 'base_info.created_at',
       sorter: true,
@@ -167,7 +169,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
               <TableColActions
                 actions={[
                   {
-                    label: I18n.t('edit'),
+                    label: I18n.t('space_basic_edit_btn'),
                     onClick: () => {
                       setSelectedItem({
                         item: row,
@@ -247,7 +249,9 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
               size="full_screen"
               icon={<IconCozIllusAdd />}
               title={I18n.t('no_data')}
-              description={I18n.t('click_to_add_data')}
+              description={I18n.t(
+                'cozeloop_open_evaluate_click_top_right_to_add_data',
+              )}
             />
           }
           header={
@@ -273,6 +277,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         {selectedItem.item ? (
           <DatasetItemPanel
             datasetItem={selectedItem.item}
+            datasetDetail={datasetDetail}
             fieldSchemas={fieldSchemas}
             isEdit={selectedItem.isEdit}
             onCancel={() => {
@@ -281,14 +286,24 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
                 isEdit: false,
                 index: 0,
               });
-            }}
-            onSave={() => {
-              setSelectedItem({
-                item: undefined,
-                isEdit: false,
-                index: 0,
-              });
               refreshDatasetDetail();
+            }}
+            onSave={(newItemData: EvaluationSetItem) => {
+              service.mutate({
+                ...service.data,
+                list:
+                  service.data?.list?.map((item, index) => {
+                    if (item?.id === newItemData.id) {
+                      const newItem = convertEvaluationSetItemListToTableData(
+                        [newItemData],
+                        service?.data?.latestFieldSchemas ?? [],
+                      )?.[0];
+                      return newItem;
+                    }
+                    return item;
+                  }) || [],
+                total: service.data?.total as number,
+              });
             }}
             switchConfig={switchConfig}
           />

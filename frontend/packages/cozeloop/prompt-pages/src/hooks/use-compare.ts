@@ -109,11 +109,11 @@ export const useCompare = (uid?: number) => {
     const compareItem = compareConfig?.groups?.[uid] || {};
     return {
       messageList: compareItem?.prompt_detail?.prompt_template?.messages?.map(
-        (it: Message & { key?: string }) => {
+        (it: Message & { key?: string }, index) => {
           if (!it?.key) {
             return {
               ...it,
-              key: nanoid(),
+              key: `${uid}-${index}`,
             };
           }
           return it;

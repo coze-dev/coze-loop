@@ -2,10 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 /* eslint-disable @coze-arch/max-line-per-function */
+import { isEmpty } from 'lodash-es';
 import classNames from 'classnames';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { SpanStatus, SpanType } from '@cozeloop/api-schema/observation';
-import { IconCozArrowDown, IconCozClock } from '@coze-arch/coze-design/icons';
+import {
+  IconCozArrowDown,
+  IconCozClock,
+  IconCozSuccessRate,
+} from '@coze-arch/coze-design/icons';
 import { Tag, Tooltip } from '@coze-arch/coze-design';
 
 import { formatTime } from '@/utils/time';
@@ -46,6 +51,7 @@ export const CustomTreeNode = ({
     children,
     span_type,
   } = spanNode;
+
   const hasChildren = children?.length && children?.length > 0;
   const isBroken = [BROKEN_ROOT_SPAN_ID, NORMAL_BROKEN_SPAN_ID].includes(
     span_id,
@@ -189,6 +195,17 @@ export const CustomTreeNode = ({
                 {Number(tokens)}
               </Tag>
             </Tooltip>
+          ) : null}
+          {!isEmpty(spanNode.annotations) ? (
+            <Tag
+              color="primary"
+              className="m-w-full !h-4 !px-1 !bg-transparent"
+              prefixIcon={
+                <IconCozSuccessRate className="w-[12px] h-[12px] box-border !text-[var(--coz-fg-secondary)]" />
+              }
+            >
+              <span className="text-[var(--coz-fg-secondary)]">feedback</span>
+            </Tag>
           ) : null}
         </div>
       </div>

@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 /* eslint-disable complexity */
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable max-lines-per-function */
@@ -7,7 +8,6 @@ import { useCallback, useRef, useState } from 'react';
 
 import { cloneDeep } from 'lodash-es';
 import { type ParsedEvent } from 'eventsource-parser';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type DebugToolCall } from '@cozeloop/api-schema/prompt';
 import { promptDebug } from '@cozeloop/api-schema';
 import { fetchStream } from '@coze-arch/fetch-stream';
@@ -43,6 +43,9 @@ export interface LLMStreamResponse {
   debugId?: Int64;
   reasoningContent?: string;
 }
+
+const RISE_ERR_CODE = 601505011;
+const JINJA_ERR_CODES = [600501004, 600501005];
 
 export const useLLMStreamRun = (uid?: number) => {
   const {
@@ -157,7 +160,7 @@ export const useLLMStreamRun = (uid?: number) => {
       const startTime = new Date().getTime();
       debugIdRef.current = undefined;
 
-      return new Promise<LLMStreamResponse>(resolve => {
+      return new Promise<LLMStreamResponse>((resolve, reject) => {
         fetchStream<ParsedEvent>(
           promptDebug.DebugStreaming.meta.url.replace(
             ':prompt_id',
@@ -182,9 +185,11 @@ export const useLLMStreamRun = (uid?: number) => {
                   message.data,
                 ) as promptDebug.DebugStreamingResponse & {
                   msg?: string;
+                  message?: string;
                   biz_extra?: {
                     biz_err_custom_extra?: string;
                   };
+                  biz_status?: number;
                 };
 
                 if (!messageChunk?.delta) {
@@ -192,8 +197,45 @@ export const useLLMStreamRun = (uid?: number) => {
                     messageChunk?.biz_extra?.biz_err_custom_extra;
                   const extra = JSON.parse(bizExtra || '{}');
                   debugIdRef.current = extra?.debug_id;
+
+                  const riskContent = JSON.parse(extra?.risk_content || '{}');
+
+                  const onlyBackUp = (
+                    riskContent?.recommend_operations || []
+                  ).every(item => item === 'backup_response');
+
+                  if (
+                    RISE_ERR_CODE === messageChunk?.biz_status &&
+                    onlyBackUp
+                  ) {
+                    autoExecuteResultRef.current =
+                      '用户输入或者模型返回包含风险内容';
+                    setAutoExecuteResult(autoExecuteResultRef.current);
+                    resolve({
+                      message: autoExecuteResultRef.current,
+                      tools: [],
+                      debugTrace: undefined,
+                      costInfo: {
+                        characters: 0,
+                        outpotTokens: '0',
+                        duration: '0',
+                        inputTokens: '0',
+                        recordId: '',
+                      },
+                      debugId: debugIdRef.current,
+                      reasoningContent: undefined,
+                    });
+                    abort();
+                    return;
+                  }
+
                   throw new Error(
-                    messageChunk?.msg || I18n.t('model_run_error'),
+                    messageChunk?.msg ||
+                      messageChunk?.message ||
+                      '模型运行出错',
+                    {
+                      cause: messageChunk?.biz_status || '',
+                    },
                   );
                 }
                 const {
@@ -277,13 +319,26 @@ export const useLLMStreamRun = (uid?: number) => {
 
                 console.error(error);
 
-                const errMsg = error instanceof Error ? error.message : '';
-                Toast.error(errMsg || I18n.t('model_run_error'));
-                resolve({
-                  debugId: debugIdRef.current,
-                  message: autoExecuteResultRef.current,
-                  tools: streamTools.current,
-                });
+                if ((error as Error)?.cause === RISE_ERR_CODE) {
+                  Toast.error('用户输入或者模型返回包含风险内容');
+                  reject(error);
+                } else if (
+                  JINJA_ERR_CODES.includes(Number((error as Error)?.cause))
+                ) {
+                  Toast.error((error as Error)?.message);
+                  resolve({
+                    debugId: debugIdRef.current,
+                    message: autoExecuteResultRef.current,
+                    tools: streamTools.current,
+                  });
+                } else {
+                  Toast.error('模型运行错误');
+                  resolve({
+                    debugId: debugIdRef.current,
+                    message: autoExecuteResultRef.current,
+                    tools: streamTools.current,
+                  });
+                }
               }
             },
             onAllSuccess: () => {
@@ -310,9 +365,7 @@ export const useLLMStreamRun = (uid?: number) => {
             },
             onError: e => {
               abort();
-              Toast.error(
-                e?.fetchStreamError?.msg || I18n.t('model_run_error'),
-              );
+              Toast.error(e?.fetchStreamError?.msg || '模型运行错误');
               console.error(e?.fetchStreamError?.msg);
             },
           },

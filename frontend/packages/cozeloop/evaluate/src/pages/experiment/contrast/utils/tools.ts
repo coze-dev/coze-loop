@@ -8,6 +8,10 @@ import {
   type FieldData,
 } from '@cozeloop/api-schema/evaluation';
 
+import {
+  type ColumnInfo,
+  type ColumnRecord,
+} from '@/types/experiment/experiment-contrast';
 import { type DatasetRow } from '@/types';
 
 export interface ExperimentContrastItem {
@@ -56,3 +60,27 @@ export function experimentContrastToRecordItems(data: ItemResult[]) {
   });
   return recordItems;
 }
+
+export const getColumnRecords = (
+  columnInfos: ColumnInfo[],
+  result?: ExperimentTurnPayload,
+) => {
+  const res: ColumnRecord[] = [];
+  columnInfos?.forEach(info => {
+    if (info.type === 'evaluator') {
+      res.push({
+        type: 'evaluator',
+        columnInfo: info,
+        data: result?.evaluator_output?.evaluator_records?.[info.key],
+      });
+    } else if (info.type === 'annotation') {
+      res.push({
+        type: 'annotation',
+        columnInfo: info,
+        data: result?.annotate_result?.annotate_records?.[info.key],
+      });
+    }
+  }) ?? [];
+
+  return res;
+};

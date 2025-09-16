@@ -29,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -228,7 +229,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
-	go func() {
+	goroutine.GoSafe(ctx, func() {
 		var executeErr error
 		defer func() {
 			e := recover()
@@ -278,7 +279,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if executeErr != nil {
 			return
 		}
-	}()
+	})
 	// send result
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {
@@ -293,9 +294,12 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		}
 		err = stream.Send(ctx, chunk)
 		if err != nil {
-			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "debug streaming canceled")
+			} else if errors.Is(err, context.DeadlineExceeded) {
+				err = nil
+				logs.CtxWarn(ctx, "debug streaming ctx deadline exceeded")
 			} else {
 				logs.CtxError(ctx, "send chunk failed, err=%v", err)
 			}
@@ -307,9 +311,12 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if !ok {
 			logs.CtxInfo(ctx, "debug streaming finished")
 		} else {
-			if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "debug streaming canceled")
+			} else if errors.Is(err, context.DeadlineExceeded) {
+				err = nil
+				logs.CtxWarn(ctx, "debug streaming ctx deadline exceeded")
 			} else {
 				logs.CtxError(ctx, "debug streaming failed, err=%v", err)
 			}

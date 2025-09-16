@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useMemo, useRef } from 'react';
 
+import cls from 'classnames';
 import {
   type Params,
   type PaginationResult,
@@ -31,11 +32,17 @@ export const DEFAULT_PAGE_SIZE = 20;
 export function TableWithPagination<RecordItem>(
   props: TableProps & {
     heightFull?: boolean;
-    service: PaginationResult<{ total: number; list: RecordItem[] }, Params>;
+    service: Pick<
+      PaginationResult<{ total: number; list: RecordItem[] }, Params>,
+      'data' | 'pagination' | 'loading'
+    >;
     pageSizeOpts?: number[];
     header?: React.ReactNode;
+    /** 该参数将插入到分页器左侧，共同作为 footer 的一部分 */
+    footerWithPagination?: React.ReactNode;
     pageSizeStorageKey?: string;
     showSizeChanger?: boolean;
+    footerClassName?: string;
   },
 ) {
   const {
@@ -43,8 +50,10 @@ export function TableWithPagination<RecordItem>(
     service,
     header,
     heightFull = false,
+    footerWithPagination,
     pageSizeStorageKey,
     showSizeChanger = true,
+    footerClassName,
   } = props;
   const { columns } = props.tableProps ?? {};
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -100,10 +109,10 @@ export function TableWithPagination<RecordItem>(
               y:
                 size?.height === undefined || !heightFull
                   ? undefined
-                  : size.height - tableHeaderHeight,
+                  : size.height - tableHeaderHeight - 2,
               ...(props.tableProps?.scroll ?? {}),
             },
-            loading: service?.loading,
+            loading: service?.loading || props?.tableProps?.loading,
             columns: columns
               ?.filter(
                 column => column.hidden !== true && column.checked !== false,
@@ -120,8 +129,18 @@ export function TableWithPagination<RecordItem>(
       </div>
       {service.pagination.current > 1 ||
       (service?.data?.list?.length && service?.data?.list?.length > 0) ? (
-        <div className="shrink-0 flex flex-row-reverse">
-          <CozPagination showTotal {...tablePagination}></CozPagination>
+        <div
+          className={cls(
+            'shrink-0 flex flex-row-reverse justify-between items-center',
+            footerClassName,
+          )}
+        >
+          <CozPagination
+            {...tablePagination}
+            showTotal
+            showSizeChanger={true}
+          ></CozPagination>
+          {footerWithPagination}
         </div>
       ) : null}
     </div>

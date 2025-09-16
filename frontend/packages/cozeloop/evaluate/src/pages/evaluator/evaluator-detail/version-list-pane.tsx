@@ -1,8 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { useEffect, useState } from 'react';
+
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { VersionItem } from '@cozeloop/components';
+import { type Version, VersionItem, VersionList } from '@cozeloop/components';
 import {
   type EvaluatorVersion,
   type Evaluator,
@@ -10,6 +12,21 @@ import {
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozCross } from '@coze-arch/coze-design/icons';
 import { IconButton, Spin } from '@coze-arch/coze-design';
+
+function evaluatorVersionToVersion(
+  evaluatorVersion: EvaluatorVersion,
+): Version {
+  const version = evaluatorVersion;
+  const versionItem: Version = {
+    id: version.id || '',
+    version: version.version,
+    description: version.description,
+    submitTime: version.base_info?.created_at,
+    submitter: version.base_info?.created_by,
+    isDraft: false,
+  };
+  return versionItem;
+}
 
 export function VersionListPane({
   evaluator,
@@ -24,17 +41,36 @@ export function VersionListPane({
   onClose: () => void;
   refreshFlag: never[];
 }) {
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const service = useRequest(
-    async () =>
+    async ({ pageNumber }: { pageNumber: number }) =>
       StoneEvaluationApi.ListEvaluatorVersions({
         workspace_id: evaluator.workspace_id || '',
         evaluator_id: evaluator.evaluator_id,
-        page_size: 10000,
+        page_size: 20,
+        page_number: pageNumber,
       }),
     {
-      refreshDeps: [refreshFlag],
+      manual: true,
     },
   );
+  const handleLoadMore = async (pageNumber: number) => {
+    const res = await service.runAsync({ pageNumber });
+    setTotal(Number(res?.total) || 0);
+    setPage(pageNumber + 1);
+    const newVersions =
+      res.evaluator_versions?.map(evaluatorVersionToVersion) ?? [];
+    if (newVersions.length > 0) {
+      setVersions(oldVersions => [...oldVersions, ...newVersions]);
+    }
+  };
+
+  useEffect(() => {
+    setVersions([]);
+    handleLoadMore(1);
+  }, [refreshFlag]);
 
   return (
     <div className="flex-shrink-0 w-[340px] h-full overflow-hidden flex flex-col border-0 border-l border-solid coz-stroke-primary">
@@ -51,8 +87,10 @@ export function VersionListPane({
         />
       </div>
       <div className="flex-1 overflow-y-auto p-6 gap-3 styled-scrollbar pr-[18px]">
-        {service.loading ? (
-          <Spin spinning={true} wrapperClassName="!w-full" />
+        {versions.length === 0 && service.loading ? (
+          <div className="h-full flex items-center justify-center">
+            <Spin spinning={true} />
+          </div>
         ) : (
           <>
             <VersionItem
@@ -66,21 +104,22 @@ export function VersionListPane({
               active={!selectedVersion}
               onClick={() => onSelectVersion(undefined)}
             />
-            {service.data?.evaluator_versions?.map(version => (
-              <VersionItem
-                key={version.id}
-                version={{
-                  id: version.id || '',
-                  version: version.version,
-                  description: version.description,
-                  submitTime: version.base_info?.created_at,
-                  submitter: version.base_info?.created_by,
-                  isDraft: false,
-                }}
-                active={selectedVersion && selectedVersion?.id === version.id}
-                onClick={() => onSelectVersion(version)}
-              />
-            ))}
+            <VersionList
+              activeVersionId={selectedVersion?.id ?? 'draft'}
+              onActiveChange={(_, version) => {
+                if (selectedVersion && selectedVersion.id === version.id) {
+                  return;
+                }
+                onSelectVersion(version.isDraft ? undefined : version);
+              }}
+              enableLoadMore={true}
+              noMore={total <= versions?.length}
+              loadMoreLoading={service.loading}
+              versions={versions}
+              onLoadMore={() => {
+                handleLoadMore(page);
+              }}
+            />
           </>
         )}
       </div>

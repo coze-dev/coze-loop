@@ -1,6 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type Tool } from '@cozeloop/api-schema/prompt';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
 import { IconButton, Popconfirm, Typography } from '@coze-arch/coze-design';
@@ -40,10 +39,10 @@ export function ToolItem({
         </Typography.Text>
         {!showDelete ? null : (
           <Popconfirm
-            title={I18n.t('delete_function')}
-            content={I18n.t('confirm_delete_function')}
-            cancelText={I18n.t('Cancel')}
-            okText={I18n.t('delete')}
+            title="删除函数"
+            content="确认删除该函数吗？"
+            cancelText="取消"
+            okText="删除"
             okButtonProps={{ color: 'red' }}
             stopPropagation={true}
             onConfirm={e => {
@@ -76,7 +75,7 @@ export function ToolItem({
       </div>
       <div className="flex gap-1 w-full">
         <Typography.Text type="tertiary" size="small" className="flex-shrink-0">
-          {I18n.t('mock_value')}:
+          模拟值:
         </Typography.Text>
         <Typography.Text
           type="secondary"

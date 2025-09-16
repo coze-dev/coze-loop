@@ -6,6 +6,7 @@ import React, { type ReactText } from 'react';
 import { isEmpty } from 'lodash-es';
 import classNames from 'classnames';
 import { type FieldMeta } from '@cozeloop/api-schema/observation';
+import { tag } from '@cozeloop/api-schema/data';
 import {
   Input,
   Select,
@@ -18,7 +19,7 @@ import {
   getOptionCopywriting,
   getLabelUnit,
 } from './utils';
-import { type CustomRightRenderMap } from './logic-expr';
+import { type Left, type CustomRightRenderMap } from './logic-expr';
 import {
   EMPTY_RENDER_CMP_OP_LIST,
   type FilterFields,
@@ -26,6 +27,7 @@ import {
   SELECT_MULTIPLE_RENDER_CMP_OP_LIST,
   SELECT_RENDER_CMP_OP_LIST,
 } from './consts';
+import { AUTO_EVAL_FEEDBACK } from './const';
 
 import styles from './index.module.less';
 
@@ -38,7 +40,7 @@ export const checkValueIsEmpty = (
   value === null;
 
 export interface RightRenderProps {
-  left?: string;
+  left?: Left;
   operator?: number | string;
   right?: string | number | string[] | number[];
   disabled?: boolean;
@@ -53,7 +55,7 @@ export interface RightRenderProps {
 
 export const RightRender: React.FC<RightRenderProps> = props => {
   const {
-    left = '',
+    left,
     operator,
     right,
     disabled,
@@ -67,7 +69,7 @@ export const RightRender: React.FC<RightRenderProps> = props => {
   } = props;
 
   const { field_options, value_type, support_customizable_option } =
-    tagFilterRecord[left] || {};
+    tagFilterRecord[left?.type ?? ''] || {};
 
   const options = getOptionsWithKind({
     fieldOptions: field_options,
@@ -97,17 +99,27 @@ export const RightRender: React.FC<RightRenderProps> = props => {
 
   const showSelect =
     SELECT_MULTIPLE_RENDER_CMP_OP_LIST.includes(String(operator)) ||
-    SELECT_RENDER_CMP_OP_LIST.includes(String(operator));
+    SELECT_RENDER_CMP_OP_LIST.includes(String(operator)) ||
+    left?.extraInfo?.content_type === tag.TagContentType.Boolean;
 
   const isMultiple = SELECT_MULTIPLE_RENDER_CMP_OP_LIST.includes(
     String(operator),
   );
+  const fieldKey = left?.type ?? '';
 
-  const isNumberInput = NUMBER_RENDER_CMP_OP_LIST.includes(
-    left as FilterFields,
-  );
+  const isNumberInput =
+    NUMBER_RENDER_CMP_OP_LIST.includes(fieldKey as FilterFields) ||
+    left?.extraInfo?.content_type === tag.TagContentType.ContinuousNumber;
 
-  const customRightRender = customRightRenderMap?.[left];
+  const numberInputFormatter =
+    left.type === AUTO_EVAL_FEEDBACK ||
+    left?.extraInfo?.content_type === tag.TagContentType.ContinuousNumber
+      ? (v: string | number) =>
+          !Number.isNaN(parseFloat(`${v}`)) ? parseFloat(`${v}`).toString() : ''
+      : (v: string | number) => `${v}`.replace(/\D/g, '');
+  const customRightRender =
+    customRightRenderMap?.[fieldKey] ??
+    customRightRenderMap?.[left?.extraInfo?.content_type ?? ''];
 
   if (customRightRender) {
     return (
@@ -118,17 +130,18 @@ export const RightRender: React.FC<RightRenderProps> = props => {
         })}
       >
         {customRightRender?.({
-          disabled: disabled || defaultImmutableKeys?.includes(left),
+          disabled: disabled || defaultImmutableKeys?.includes(fieldKey),
           style: { width: '100%' },
           value: right,
           onChange: v => {
             onRightValueChange?.(v as string[] | number[] | string | number);
-            onValueChangeStatus?.(left, true);
+            onValueChangeStatus?.(left?.value ?? '', true);
           },
           optionList: options?.map(item => ({
-            label: getOptionCopywriting(left, item),
+            label: getOptionCopywriting(left?.type ?? '', item),
             value: item,
           })),
+          left,
           ...(isMultiple ? multipleSelectProps : {}),
         })}
       </div>
@@ -145,32 +158,34 @@ export const RightRender: React.FC<RightRenderProps> = props => {
       {operator && showSelect ? (
         <Select
           dropdownClassName={styles['render-select']}
-          disabled={disabled || defaultImmutableKeys?.includes(left)}
+          disabled={
+            disabled || defaultImmutableKeys?.includes(left?.type ?? '')
+          }
           style={{ width: '100%' }}
           value={right}
           onChange={v => {
             onRightValueChange?.(v as string[] | number[] | string | number);
-            onValueChangeStatus?.(left, true);
+            onValueChangeStatus?.(fieldKey, true);
           }}
           optionList={options?.map(item => ({
-            label: getOptionCopywriting(left, item),
+            label: getOptionCopywriting(fieldKey, item),
             value: item,
           }))}
           {...(isMultiple ? multipleSelectProps : {})}
         />
       ) : isNumberInput ? (
         <CozInputNumber
-          formatter={v => `${v}`.replace(/\D/g, '')}
+          formatter={numberInputFormatter}
           disabled={disabled}
           hideButtons
-          value={right as ReactText}
+          value={right?.[0] as string}
           max={Number.MAX_SAFE_INTEGER}
           min={Number.MIN_SAFE_INTEGER}
           onChange={v => {
-            onRightValueChange?.(`${v}`.replace(/\D/g, ''));
-            onValueChangeStatus?.(left, true);
+            onRightValueChange?.(numberInputFormatter(`${v}`) as string);
+            onValueChangeStatus?.(fieldKey, true);
           }}
-          suffix={getLabelUnit(left)}
+          suffix={getLabelUnit(fieldKey)}
         />
       ) : (
         <Input
@@ -178,7 +193,7 @@ export const RightRender: React.FC<RightRenderProps> = props => {
           value={right as ReactText}
           onChange={v => {
             onRightValueChange?.(v);
-            onValueChangeStatus?.(left, true);
+            onValueChangeStatus?.(fieldKey, true);
           }}
         />
       )}

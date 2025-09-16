@@ -66,11 +66,12 @@ func MessageToSpanMessage(message *entity.Message) *tracespec.ModelMessage {
 		return nil
 	}
 	return &tracespec.ModelMessage{
-		Role:       RoleToSpanRole(message.Role),
-		Content:    ptr.From(message.Content),
-		Parts:      ContentPartsToSpanParts(message.Parts),
-		ToolCalls:  ToolCallsToSpanToolCalls(message.ToolCalls),
-		ToolCallID: ptr.From(message.ToolCallID),
+		Role:             RoleToSpanRole(message.Role),
+		Content:          ptr.From(message.Content),
+		ReasoningContent: ptr.From(message.ReasoningContent),
+		Parts:            ContentPartsToSpanParts(message.Parts),
+		ToolCalls:        ToolCallsToSpanToolCalls(message.ToolCalls),
+		ToolCallID:       ptr.From(message.ToolCallID),
 	}
 }
 
@@ -113,6 +114,7 @@ func ContentPartToSpanPart(part *entity.ContentPart) *tracespec.ModelMessagePart
 			URL: part.ImageURL.URL,
 		}
 	}
+	// 二进制数据暂不上报
 	return &tracespec.ModelMessagePart{
 		Type:     ContentTypeToSpanPartType(part.Type),
 		Text:     ptr.From(part.Text),
@@ -124,7 +126,7 @@ func ContentTypeToSpanPartType(partType entity.ContentType) tracespec.ModelMessa
 	switch partType {
 	case entity.ContentTypeText:
 		return tracespec.ModelMessagePartTypeText
-	case entity.ContentTypeImageURL:
+	case entity.ContentTypeImageURL, entity.ContentTypeBase64Data:
 		return tracespec.ModelMessagePartTypeImage
 	case entity.ContentTypeMultiPartVariable:
 		return "multi_part_variable"

@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 
-import { EqualItem, getTypeText, ReadonlyItem } from '../column-item-map';
+import {
+  EqualItem,
+  getSchemaTypeText,
+  getTypeText,
+  ReadonlyItem,
+} from '../column-item-map';
 import { schemaSourceTypeMap, type OptionSchema } from './types';
 
 export function ReadonlyMappingItem({
@@ -19,7 +24,7 @@ export function ReadonlyMappingItem({
       <ReadonlyItem
         className="flex-1 basis-80 overflow-hidden"
         title={keyTitle}
-        typeText={getTypeText(keySchema)}
+        typeText={getSchemaTypeText(keySchema)}
         value={keySchema?.name}
       />
       <EqualItem />

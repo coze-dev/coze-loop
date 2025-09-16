@@ -116,6 +116,7 @@ const getOutputAndReasoningContent = (output: string) => {
         role: c.message.role,
         content: c.message.content,
         reasoning_content: c.message.reasoning_content,
+        parts: c.message.parts,
       },
     })),
   };

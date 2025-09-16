@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
 import {
   type CommonFieldProps,
   type SelectProps,
@@ -24,18 +24,13 @@ const PromptEvalTargetVersionFormSelect: React.FC<
   SelectProps & CommonFieldProps & EvalTargetVersionProps
 > = props => {
   const { promptId, sourceTargetVersion } = props;
-  const { baseURL } = useBaseURL();
+  const { getPromptDetailURL } = useResourcePageJump();
 
   return (
     <FormSelectInner
       remote
       onChangeWithObject
-      rules={[
-        {
-          required: true,
-          message: I18n.t('please_select', { field: I18n.t('version') }),
-        },
-      ]}
+      rules={[{ required: true, message: I18n.t('select_version') }]}
       label={{
         text: I18n.t('version'),
         className: 'justify-between pr-0',
@@ -43,9 +38,7 @@ const PromptEvalTargetVersionFormSelect: React.FC<
           <>
             {promptId && sourceTargetVersion ? (
               <OpenDetailText
-                url={`${baseURL}/pe/prompts/${
-                  promptId
-                }?version=${sourceTargetVersion}`}
+                url={getPromptDetailURL(promptId, sourceTargetVersion)}
               />
             ) : null}
           </>

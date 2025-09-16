@@ -98,12 +98,10 @@ export const useBatchSelect = ({
 
   const handleDelete = () => {
     Modal.confirm({
-      title: I18n.t('delete_data_item'),
-      content: I18n.t('confirm_to_delete_selected_data_item', {
-        num: batchSelectItems.size,
-      }),
-      okText: I18n.t('delete'),
-      cancelText: I18n.t('Cancel'),
+      title: I18n.t('delete_data_items'),
+      content: `${I18n.t('cozeloop_open_evaluate_confirm_delete_selected_data_irreversible', { placeholder1: batchSelectItems.size })}`,
+      okText: I18n.t('space_member_role_type_del_btn'),
+      cancelText: I18n.t('global_btn_cancel'),
       okButtonProps: {
         color: 'red',
       },
@@ -123,13 +121,11 @@ export const useBatchSelect = ({
   const BatchSelectHeader = (
     <div className="flex items-center justify-end gap-2">
       <Typography.Text size="small">
-        {I18n.t('x_data_item_selected', {
-          num: (
-            <Typography.Text size="small" className="mx-[2px]  font-medium">
-              {batchSelectItems.size}
-            </Typography.Text>
-          ),
-        })}
+        {I18n.t('selected')}
+        <Typography.Text size="small" className="mx-[2px]  font-medium">
+          {batchSelectItems.size}
+        </Typography.Text>
+        {I18n.t('tiao_items')}
       </Typography.Text>
       <Typography.Text
         link
@@ -138,7 +134,7 @@ export const useBatchSelect = ({
           setBatchSelectedItems(new Set());
         }}
       >
-        {I18n.t('unselect')}
+        {I18n.t('cancel_selection')}
       </Typography.Text>
       <Guard point={GuardPoint['eval.dataset.batch_delete']}>
         <Button

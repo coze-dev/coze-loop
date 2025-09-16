@@ -2141,3 +2141,6 @@ evaluator_template_conf_en-US:
         prompt_template_key: builtin_template_detail
         prompt_template_name: "Detail"
       receive_chat_history: false
+
+expt_export_white_list:
+  allow_all: true

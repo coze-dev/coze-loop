@@ -9,9 +9,9 @@ import { IconButtonContainer, JumpIconButton } from '@cozeloop/components';
 import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluatorResult,
-  type Evaluator,
   type UserInfo,
   type Experiment,
+  type ColumnEvaluator,
 } from '@cozeloop/api-schema/evaluation';
 import { IconCozPencil } from '@coze-arch/coze-design/icons';
 import { Divider, Popover, Tag, Toast, Tooltip } from '@coze-arch/coze-design';
@@ -65,7 +65,7 @@ export function EvaluatorResultPanel({
   return (
     <div className="w-80">
       <div className="font-bold mb-1 flex items-center">
-        {I18n.t('score')}
+        {I18n.t('evaluate_task_score')}
         {correction ? (
           <Tag
             color="brand"
@@ -204,20 +204,22 @@ export function EvaluatorNameScoreTag({
           </Tooltip>
         ) : null}
         {enableTrace && traceID ? (
-          <Tooltip theme="dark" content={I18n.t('view_evaluator_trace')}>
-            <div
-              className="flex items-center"
-              onClick={() => onReportEvaluatorTrace?.()}
-            >
-              <TraceTrigger
-                traceID={traceID ?? ''}
-                className={defaultShowAction ? '' : 'hidden group-hover:flex'}
-                platformType={traceEvaluatorPlatformType}
-                startTime={startTime}
-                endTime={endTime}
-              />
-            </div>
-          </Tooltip>
+          <div
+            className="flex items-center"
+            onClick={() => onReportEvaluatorTrace?.()}
+          >
+            <TraceTrigger
+              traceID={traceID ?? ''}
+              className={defaultShowAction ? '' : 'hidden group-hover:flex'}
+              platformType={traceEvaluatorPlatformType}
+              startTime={startTime}
+              endTime={endTime}
+              tooltipProps={{
+                content: I18n.t('view_evaluator_trace'),
+                theme: 'dark',
+              }}
+            />
+          </div>
         ) : null}
         {enableEditScore && hasResult ? (
           <EvaluatorManualScore
@@ -228,7 +230,7 @@ export function EvaluatorNameScoreTag({
             customSubmitManualScore={customSubmitManualScore}
             onSuccess={() => {
               setVisible(false);
-              Toast.success(I18n.t('update_rating_success'));
+              Toast.success(I18n.t('update_score_successful'));
               onSuccess?.();
             }}
           >
@@ -274,7 +276,7 @@ export function EvaluatorNameScore({
   onReportCalibration,
   onReportEvaluatorTrace,
 }: {
-  evaluator: Evaluator | undefined;
+  evaluator: ColumnEvaluator | undefined;
   experiment: Experiment | undefined;
   evaluatorResult: EvaluatorResult | undefined;
   updateUser?: UserInfo;
@@ -294,8 +296,13 @@ export function EvaluatorNameScore({
   onReportCalibration?: () => void;
   onReportEvaluatorTrace?: () => void;
 }) {
-  const { evaluator_id, name, current_version } = evaluator ?? {};
-  const { version, id: versionId } = current_version ?? {};
+  const {
+    evaluator_id,
+    name,
+    version,
+    evaluator_version_id: versionId,
+  } = evaluator ?? {};
+
   if (!enablePopover) {
     return (
       <EvaluatorNameScoreTag

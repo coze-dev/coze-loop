@@ -27,16 +27,26 @@ export default function IDWithCopy({
       <span className="text-sm text-[var(--coz-fg-primary)] font-normal ml-2 mr-[2px]">
         {I18n.t('data_item_id')}
       </span>
-      <Tooltip content={`${I18n.t('copy')} ${idString}`} theme="dark">
+
+      <Tooltip
+        content={`${I18n.t('cozeloop_open_evaluate_copy_with_id', { idString })}`}
+        theme="dark"
+      >
         <Button
           onClick={async e => {
             e.stopPropagation();
             try {
               await navigator.clipboard.writeText(idString);
-              Toast.success({ content: I18n.t('copy_success'), top: 80 });
+              Toast.success({
+                content: I18n.t('prompt_example_copy_success'),
+                top: 80,
+              });
             } catch (error) {
               console.error(error);
-              Toast.error({ content: I18n.t('copy_failed'), top: 80 });
+              Toast.error({
+                content: I18n.t('prompt_example_copy_failed'),
+                top: 80,
+              });
             }
           }}
           color="secondary"

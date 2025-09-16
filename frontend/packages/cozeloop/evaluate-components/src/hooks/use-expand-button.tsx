@@ -7,7 +7,7 @@ import { IconCozLoose, IconCozTight } from '@coze-arch/coze-design/icons';
 import { Radio, Tooltip } from '@coze-arch/coze-design';
 
 export const useExpandButton = ({
-  shrinkTooltip = I18n.t('collapse'),
+  shrinkTooltip = I18n.t('fold'),
   expandTooltip = I18n.t('expand'),
 }: {
   shrinkTooltip?: string;

@@ -3,21 +3,26 @@
 import { useMemo } from 'react';
 
 import {
-  type EvaluationSetItem,
+  ContentType,
+  type EvaluationSet,
   type FieldSchema,
   type Turn,
 } from '@cozeloop/api-schema/evaluation';
 import { withField } from '@coze-arch/coze-design';
 
-import { validarDatasetItem } from '../../dataset-item/util';
+import {
+  validateMultiPartData,
+  validateTextFieldData,
+} from '../../dataset-item/util';
 import { DatasetFieldItemRender } from '../../dataset-item/dataset-field-render';
 
 interface DatasetItemRenderListProps {
-  datasetItem?: EvaluationSetItem;
+  datasetDetail?: EvaluationSet;
   turn?: Turn;
   fieldSchemas?: FieldSchema[];
   isEdit: boolean;
   fieldKey?: string;
+  itemMaxHeightAuto?: boolean; // 列内容高度不受限制
 }
 const FormFieldItemRender = withField(DatasetFieldItemRender);
 
@@ -26,6 +31,8 @@ export const DatasetItemRenderList = ({
   isEdit,
   turn,
   fieldKey,
+  itemMaxHeightAuto,
+  datasetDetail,
 }: DatasetItemRenderListProps) => {
   const fieldSchemaMap = useMemo(() => {
     const map = new Map<string, FieldSchema>();
@@ -43,6 +50,8 @@ export const DatasetItemRenderList = ({
         return (
           <FormFieldItemRender
             noLabel
+            datasetID={datasetDetail?.id}
+            className={itemMaxHeightAuto ? '!max-h-none' : ''}
             field={`${fieldKey}.field_data_list[${index}]`}
             key={fieldData?.key}
             fieldSchema={fieldSchema}
@@ -52,16 +61,19 @@ export const DatasetItemRenderList = ({
             showEmpty={true}
             displayFormat={true}
             isEdit={isEdit}
+            multipartConfig={datasetDetail?.spec?.multi_modal_spec}
             rules={[
               {
                 validator: (_, value, callback) => {
-                  if (
-                    value?.content?.text === '' ||
-                    value?.content?.text === undefined
-                  ) {
-                    return true;
+                  if (fieldSchema?.content_type === ContentType.MultiPart) {
+                    const res = validateMultiPartData(
+                      value?.content?.multi_part,
+                      callback,
+                      fieldSchema,
+                    );
+                    return res;
                   }
-                  const res = validarDatasetItem(
+                  const res = validateTextFieldData(
                     value?.content?.text,
                     callback,
                     fieldSchema,

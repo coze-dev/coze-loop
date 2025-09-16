@@ -7,6 +7,8 @@ export const codeOptionsConfig: editor.IStandaloneEditorConstructionOptions = {
   automaticLayout: true,
   scrollBeyondLastLine: false,
   renderLineHighlight: 'none',
+  tabSize: 2, // 设置 tab 大小为2
+  insertSpaces: true,
   minimap: {
     enabled: false,
   },

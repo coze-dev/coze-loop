@@ -24,7 +24,7 @@ func TestPromptFilter_BuildBasicSpanFilter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			env:  &SpanEnv{WorkspaceId: 123},
+			env:  &SpanEnv{WorkspaceID: 123},
 			want: []*loop_span.FilterField{
 				{
 					FieldName: loop_span.SpanFieldSpaceId,

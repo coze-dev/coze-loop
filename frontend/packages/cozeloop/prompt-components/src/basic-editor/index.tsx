@@ -1,23 +1,29 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
-import { type VariableDef } from '@cozeloop/api-schema/prompt';
 import {
   EditorProvider,
   Renderer,
   Placeholder,
 } from '@coze-editor/editor/react';
-import preset from '@coze-editor/editor/preset-prompt';
-import { EditorView } from '@codemirror/view';
-import { type Extension } from '@codemirror/state';
+import preset, { type EditorAPI } from '@coze-editor/editor/preset-prompt';
+import { EditorView, keymap } from '@codemirror/view';
+import { Prec, type Extension } from '@codemirror/state';
+import { indentWithTab } from '@codemirror/commands';
 
-import Variable from './extensions/variable';
+import Variable, { type VariableType } from './extensions/variable';
 import Validation from './extensions/validation';
+import { search } from './extensions/search';
 import MarkdownHighlight from './extensions/markdown';
 import LanguageSupport from './extensions/language-support';
+import { insertFourSpaces } from './extensions/keymap';
 import JinjaHighlight from './extensions/jinja';
 import { goExtension } from './extensions/go-template';
 
@@ -27,7 +33,11 @@ export interface PromptBasicEditorProps {
   minHeight?: number;
   maxHeight?: number;
   fontSize?: number;
-  variables?: VariableDef[];
+  /**
+   * 变量
+   * 只需要传入文本型变量，非文本型变量不能出现在快捷操作中
+   */
+  variables?: VariableType[];
   forbidVariables?: boolean;
   linePlaceholder?: string;
   forbidJinjaHighlight?: boolean;
@@ -35,15 +45,18 @@ export interface PromptBasicEditorProps {
   customExtensions?: Extension[];
   autoScrollToBottom?: boolean;
   isGoTemplate?: boolean;
+  isJinja2Template?: boolean;
   onChange?: (value: string) => void;
   onBlur?: () => void;
   onFocus?: () => void;
   children?: React.ReactNode;
+  canSearch?: boolean;
 }
 
 export interface PromptBasicEditorRef {
   setEditorValue: (value?: string) => void;
   insertText?: (text: string) => void;
+  getEditor?: () => EditorAPI | null;
 }
 
 const extensions = [
@@ -57,6 +70,7 @@ const extensions = [
       paddingRight: '6px !important',
     },
   }),
+  Prec.high(keymap.of([{ key: 'Tab', run: insertFourSpaces }, indentWithTab])),
 ];
 
 export const PromptBasicEditor = forwardRef<
@@ -75,17 +89,19 @@ export const PromptBasicEditor = forwardRef<
       forbidJinjaHighlight,
       forbidVariables,
       readOnly,
-      linePlaceholder = I18n.t('please_input_with_vars'),
-      customExtensions,
+      linePlaceholder = '请输入内容，支持按此格式书写变量：{{USER_NAME}}',
+      customExtensions = [],
       autoScrollToBottom,
       onBlur,
       isGoTemplate,
       onFocus,
+      canSearch,
       children,
+      isJinja2Template,
     }: PromptBasicEditorProps,
     ref,
   ) => {
-    const editorRef = useRef<any>(null);
+    const editorRef = useRef<EditorAPI | null>(null);
 
     useImperativeHandle(ref, () => ({
       setEditorValue: (value?: string) => {
@@ -93,7 +109,7 @@ export const PromptBasicEditor = forwardRef<
         if (!editor) {
           return;
         }
-        editor?.setValue?.(value);
+        editor?.setValue?.(value || '');
       },
       insertText: (text: string) => {
         const editor = editorRef.current;
@@ -110,15 +126,25 @@ export const PromptBasicEditor = forwardRef<
           cursorOffset: 0,
         });
       },
+      getEditor: () => editorRef.current,
     }));
 
     const newExtensions = useMemo(() => {
-      const xExtensions = customExtensions || extensions;
+      const xExtensions = [...extensions, ...customExtensions];
+      const searchExt = canSearch ? [...search()] : [];
       if (isGoTemplate) {
-        return [...xExtensions, goExtension];
+        return [...xExtensions, goExtension, ...searchExt];
       }
-      return xExtensions;
-    }, [customExtensions, extensions, isGoTemplate]);
+      return [...xExtensions, ...searchExt];
+    }, [customExtensions, extensions, isGoTemplate, canSearch]);
+
+    useEffect(() => {
+      if (isJinja2Template || isGoTemplate) {
+        setTimeout(() => {
+          editorRef.current?.updateWholeDecorations();
+        }, 150);
+      }
+    }, [variables, isJinja2Template, isGoTemplate]);
 
     return (
       <EditorProvider>
@@ -150,14 +176,19 @@ export const PromptBasicEditor = forwardRef<
         />
 
         {/* 输入 { 唤起变量选择 */}
-        {!forbidVariables && <Variable variables={variables || []} />}
+        {!forbidVariables && (
+          <Variable variables={variables || []} isGoTemplate={isGoTemplate} />
+        )}
 
         <LanguageSupport />
         {/* Jinja 语法高亮 */}
-        {!forbidJinjaHighlight && (
+        {!forbidJinjaHighlight && !isGoTemplate && (
           <>
-            <Validation />
-            <JinjaHighlight />
+            <Validation
+              variables={variables}
+              isNormalTemplate={!isJinja2Template && !isGoTemplate}
+            />
+            <JinjaHighlight isJinja2Template={isJinja2Template} />
           </>
         )}
 

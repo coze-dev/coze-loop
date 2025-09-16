@@ -20,6 +20,8 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
 
+import { DynamicParams } from './dynamic-params';
+
 function DescriptionItem({
   label,
   content,
@@ -64,6 +66,7 @@ const ExperimentDescription = ({
     end_time,
     base_info,
     desc,
+    target_runtime_param,
   } = experiment ?? {};
 
   const header = (
@@ -89,7 +92,7 @@ const ExperimentDescription = ({
           }
         />
         <DescriptionItem
-          label={I18n.t('evaluator_type')}
+          label={I18n.t('evaluation_object_type')}
           content={
             <EvaluateTargetTypePreview type={eval_target?.eval_target_type} />
           }
@@ -98,6 +101,7 @@ const ExperimentDescription = ({
           label={I18n.t('evaluation_object')}
           content={
             <EvalTargetPreview
+              evalSet={eval_set}
               evalTarget={eval_target}
               spaceID={spaceID}
               enableLinkJump={true}
@@ -146,7 +150,20 @@ const ExperimentDescription = ({
           label={I18n.t('description')}
           content={<TypographyText>{desc || '-'}</TypographyText>}
         />
-        <DescriptionItem />
+        {target_runtime_param?.json_value &&
+        target_runtime_param.json_value !== '{}' ? (
+          <DescriptionItem
+            label={I18n.t('evaluate_parameter_injection')}
+            content={
+              <DynamicParams
+                evalTarget={eval_target}
+                data={target_runtime_param}
+              />
+            }
+          />
+        ) : (
+          <DescriptionItem />
+        )}
       </div>
     </>
   );

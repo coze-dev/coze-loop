@@ -10,7 +10,7 @@ export function DevLayout({
   className,
   style,
 }: {
-  title: string;
+  title: React.ReactNode;
   actionBtns?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;

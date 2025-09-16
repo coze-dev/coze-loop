@@ -3,7 +3,6 @@
 import { type CSSProperties, type ReactNode } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozIllus404Dark,
   IconCozIllus404,
@@ -56,7 +55,7 @@ export function PageNotFound({ className, ...props }: PageContentProps) {
       <Empty
         image={<IconCozIllus404 className="text-[160px]" />}
         darkModeImage={<IconCozIllus404Dark className="text-[160px]" />}
-        description={I18n.t('page_not_found')}
+        description="页面丢失了"
         {...props}
       />
     </FullPage>
@@ -69,7 +68,7 @@ export function PageError({ className, ...props }: PageContentProps) {
       <Empty
         image={<IconCozIllusError className="text-[160px]" />}
         darkModeImage={<IconCozIllusErrorDark className="text-[160px]" />}
-        description={I18n.t('page_load_failed')}
+        description="页面加载失败"
         {...props}
       />
     </FullPage>
@@ -82,7 +81,7 @@ export function PageNoAuth({ className, ...props }: PageContentProps) {
       <Empty
         image={<IconCozIllusLock className="text-[160px]" />}
         darkModeImage={<IconCozIllusLockDark className="text-[160px]" />}
-        description={I18n.t('no_permission')}
+        description="暂无权限"
         {...props}
       ></Empty>
     </FullPage>

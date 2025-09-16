@@ -1,6 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { useState } from 'react';
+
 import { I18n } from '@cozeloop/i18n-adapter';
+import { ChipSelect } from '@cozeloop/evaluate-components';
+import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 import {
   IconCozInfoCircle,
   IconCozWarningCircleFillPalette,
@@ -8,6 +12,7 @@ import {
 import { Banner, Tooltip } from '@coze-arch/coze-design';
 
 import { type ExperimentItem } from '@/types/experiment';
+import { FORMAT_LIST } from '@/types';
 import { useExperiment } from '@/hooks/use-experiment';
 import { ActualOutputWithTrace } from '@/components/experiment';
 
@@ -19,16 +24,35 @@ export default function EvalActualOutputTable({
   expand?: boolean;
 }) {
   const experiment = useExperiment();
+  const [format, setFormat] = useState<FieldDisplayFormat>(
+    item?.actualOutput?.format || FieldDisplayFormat.Markdown,
+  );
+  const actualOutput = {
+    ...item?.actualOutput,
+    format,
+  };
   return (
-    <div className="text-sm py-3">
-      <div className="flex items-center gap-1 mt-2 mb-3 px-5">
-        <div className="font-medium text-xs">actual_output</div>
-        <Tooltip
-          theme="dark"
-          content={I18n.t('evaluation_object_actual_output')}
-        >
-          <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
-        </Tooltip>
+    <div className="text-sm py-3 group">
+      <div className="flex items-center justify-between gap-1 mt-2 mb-3 px-5 ">
+        <div className="flex gap-1 items-center">
+          <div className="font-medium text-xs">actual_output</div>
+          <Tooltip
+            theme="dark"
+            content={I18n.t('evaluation_object_actual_output')}
+          >
+            <IconCozInfoCircle className="text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
+          </Tooltip>
+        </div>
+        <ChipSelect
+          chipRender="selectedItem"
+          value={format}
+          size="small"
+          className="invisible group-hover:visible"
+          optionList={FORMAT_LIST}
+          onChange={value => {
+            setFormat(value as FieldDisplayFormat);
+          }}
+        ></ChipSelect>
       </div>
       {item.targetErrorMsg ? (
         <Banner
@@ -46,11 +70,12 @@ export default function EvalActualOutputTable({
         <div className="px-5">
           <ActualOutputWithTrace
             expand={expand}
-            content={item.actualOutput}
+            content={actualOutput}
             traceID={item?.evalTargetTraceID}
             displayFormat={true}
             startTime={experiment?.start_time}
             endTime={experiment?.end_time}
+            className="w-full"
           />
         </div>
       )}

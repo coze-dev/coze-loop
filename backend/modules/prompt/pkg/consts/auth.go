@@ -7,6 +7,7 @@ const (
 	ActionLoopPromptRead            = "read"
 	ActionLoopPromptEdit            = "edit"
 	ActionLoopPromptDebug           = "debug"
+	ActionLoopPromptExecute         = "execute"
 	ActionWorkspaceListLoopPrompt   = "listLoopPrompt"
 	ActionWorkspaceCreateLoopPrompt = "createLoopPrompt"
 )

@@ -701,7 +701,7 @@ func TestExptAnnotateRepoImpl_UpdateCompleteCount(t *testing.T) {
 		tagKeyID: 10,
 		mockSetup: func() {
 			mockTagRefDAO.EXPECT().UpdateCompleteCount(gomock.Any(), int64(1), int64(1), int64(10), gomock.Any()).
-				Return(int32(100), int32(30), nil)
+				Return(nil)
 		},
 		wantTotal:    100,
 		wantComplete: 30,
@@ -713,7 +713,7 @@ func TestExptAnnotateRepoImpl_UpdateCompleteCount(t *testing.T) {
 		tagKeyID: 20,
 		mockSetup: func() {
 			mockTagRefDAO.EXPECT().UpdateCompleteCount(gomock.Any(), int64(2), int64(2), int64(20), gomock.Any()).
-				Return(int32(0), int32(0), errors.New("更新失败"))
+				Return(errors.New("更新失败"))
 		},
 		wantTotal:    0,
 		wantComplete: 0,
@@ -723,13 +723,11 @@ func TestExptAnnotateRepoImpl_UpdateCompleteCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-			total, complete, err := repo.UpdateCompleteCount(context.Background(), tt.exptID, tt.spaceID, tt.tagKeyID)
+			err := repo.UpdateCompleteCount(context.Background(), tt.exptID, tt.spaceID, tt.tagKeyID)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.wantTotal, total)
-				assert.Equal(t, tt.wantComplete, complete)
 			}
 		})
 	}

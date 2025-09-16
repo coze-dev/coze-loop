@@ -8,20 +8,21 @@ import {
   type Span,
   type TraceAdvanceInfo,
 } from '@/trace-detail/typings/params';
+import { type TraceDetailContext } from '@/trace-detail/hooks/use-trace-detail-context';
 import { type SpanNode } from '@/trace-detail/components/graphs/trace-tree/type';
 
 export interface TraceDetailOptions {
   refresh: () => void;
 }
 
-export interface TraceDetailProps {
+export interface TraceDetailProps extends TraceDetailContext {
   spaceID: string;
   spaceName: string;
   searchType: 'trace_id';
   id: string;
   dataSource?: DataSource;
   moduleName: string;
-  platformType?: string;
+  platformType?: string | number;
   startTime?: number | string;
   endTime?: number | string;
   defaultSpanID?: string;
@@ -46,7 +47,6 @@ export interface TraceDetailProps {
   style?: CSSProperties;
   onReady?: () => void;
   hideTraceDetailHeader?: boolean;
-  defaultActiveTabKey?: string;
 }
 
 export interface SwitchConfig {

@@ -71,5 +71,19 @@
   "version": "版本",
   "view": "查看",
   "yes": "是",
-  "yesterday": "昨天"
+  "yesterday": "昨天",
+  "create": "创建",
+  "create_time": "创建时间",
+  "update_time": "更新时间",
+  "creator": "创建人",
+  "type": "类型",
+  "number": "数字",
+  "category": "分类",
+  "boolean": "布尔值",
+  "status": "状态",
+  "enable": "启用",
+  "disable": "禁用",
+  "submit_time": "提交时间",
+  "submit_user": "提交人",
+  "basic_info": "基础信息"
 }

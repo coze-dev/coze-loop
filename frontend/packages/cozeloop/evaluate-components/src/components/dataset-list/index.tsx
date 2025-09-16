@@ -48,16 +48,14 @@ export const DatasetList = () => {
       size: 'large',
       className: 'w-[420px]',
       type: 'dialog',
-      title: I18n.t('delete_evaluation_set'),
+      title: I18n.t('delete_review_set'),
       content: (
         <Typography.Text className="break-all">
-          {I18n.t('confirm_to_delete_evaluation_set', {
-            name: (
-              <Typography.Text className="!font-medium mx-[2px]">
-                {row.name}
-              </Typography.Text>
-            ),
-          })}
+          {I18n.t('cozeloop_open_evaluate_confirm_delete_evaluation_set')}
+          <Typography.Text className="!font-medium mx-[2px]">
+            {row.name}
+          </Typography.Text>
+          {I18n.t('this_change_irreversible')}
         </Typography.Text>
       ),
       autoLoading: true,
@@ -69,8 +67,8 @@ export const DatasetList = () => {
         service.refresh();
       },
       showCancelButton: true,
-      cancelText: I18n.t('Cancel'),
-      okText: I18n.t('delete'),
+      cancelText: I18n.t('global_btn_cancel'),
+      okText: I18n.t('space_member_role_type_del_btn'),
     });
   };
 
@@ -134,7 +132,7 @@ export const DatasetList = () => {
                 navigate('evaluation/datasets/create');
               }}
             >
-              {I18n.t('new_evaluation_set')}
+              {I18n.t('create_evaluation_set')}
             </Button>
           </div>
         </div>
@@ -173,16 +171,14 @@ export const DatasetList = () => {
               size="full_screen"
               icon={<IconCozIllusNone />}
               title={I18n.t('failed_to_find_related_results')}
-              description={I18n.t(
-                'try_other_keywords_or_modify_filter_options',
-              )}
+              description={I18n.t('try_other_keywords')}
             />
           ) : (
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusAdd />}
               title={I18n.t('no_evaluation_dataset')}
-              description={I18n.t('click_to_create_evaluation_set')}
+              description={I18n.t('evaluation_set_click_the_button_to_create')}
             />
           )
         }

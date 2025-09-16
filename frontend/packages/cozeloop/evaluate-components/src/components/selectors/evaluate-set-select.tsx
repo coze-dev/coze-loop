@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 
 import { isArray } from 'lodash-es';
 import { useDebounceFn, useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
@@ -14,7 +15,6 @@ import {
   type SelectProps,
   Typography,
 } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 const EvaluationSetLabel = ({
   name,
@@ -121,7 +121,7 @@ export function EvaluateSetSelect(
 
   return (
     <BaseSearchSelect
-      placeholder={I18n.t('please_select', { field: I18n.t('evaluation_set') })}
+      placeholder={I18n.t('select_evaluation_set')}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       filter
       remote
@@ -129,6 +129,7 @@ export function EvaluateSetSelect(
       onSearch={handleSearch.run}
       showRefreshBtn={true}
       onClickRefresh={() => service.run()}
+      emptyContent={I18n.t('no_data_yet')}
       outerBottomSlot={
         !props.disableAddEvalSet ? (
           <div
@@ -139,7 +140,7 @@ export function EvaluateSetSelect(
           >
             <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
             <div className="text-sm font-medium text-brand-9">
-              {I18n.t('new_evaluation_set')}
+              {I18n.t('create_evaluation_set')}
             </div>
           </div>
         ) : null

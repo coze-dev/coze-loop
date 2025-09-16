@@ -8,6 +8,7 @@ import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import {
   Select,
+  type SelectProps,
   Tag,
   Tooltip,
   withField,
@@ -15,7 +16,7 @@ import {
 } from '@coze-arch/coze-design';
 
 import { TypographyText } from '../text-ellipsis';
-import { EqualItem, ReadonlyItem, getTypeText } from '../column-item-map';
+import { EqualItem, ReadonlyItem, getSchemaTypeText } from '../column-item-map';
 import {
   type OptionGroup,
   type OptionSchema,
@@ -26,25 +27,39 @@ import styles from './index.module.less';
 
 const separator = '--';
 
+function getGroupKey(group: OptionGroup) {
+  const childrenNames = group.children?.map(e => e.name)?.join(',') ?? '';
+  return group.schemaSourceType + childrenNames;
+}
+
 export interface MappingItemProps {
+  id?: string;
   keyTitle?: string;
-  keySchema?: FieldSchema;
+  keySchema?: FieldSchema & { type?: string };
   optionGroups?: OptionGroup[];
   value?: OptionSchema;
   onChange?: (v?: OptionSchema) => void;
+  onAfterChange?: (v?: OptionSchema, field?: string) => void;
   validateStatus?: 'error';
+  disabled?: boolean;
+  selectProps?: SelectProps;
 }
 
 export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
   withField(function (props: MappingItemProps) {
     const {
+      id,
       keyTitle,
       keySchema,
       optionGroups,
       value,
       onChange,
+      onAfterChange,
       validateStatus,
+      disabled = false,
+      selectProps = {},
     } = props;
+
     const selectValue = value
       ? `${value.schemaSourceType}${separator}${value.name}`
       : undefined;
@@ -57,6 +72,8 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
         ? selectGroup?.children.find(s => s.name === name)
         : undefined;
       onChange?.(selectOptionSchema);
+      // 提供外部回调
+      onAfterChange?.(selectOptionSchema, id);
     };
 
     return (
@@ -64,7 +81,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
         <ReadonlyItem
           className="flex-1"
           title={keyTitle}
-          typeText={getTypeText(keySchema)}
+          typeText={getSchemaTypeText(keySchema)}
           value={keySchema?.name}
         />
         <EqualItem />
@@ -78,12 +95,13 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
           }
           suffix={
             value?.content_type && (
-              <Tag size="mini" color="primary">
-                {getTypeText(value)}
+              <Tag size="mini" color="primary" className="font-[600]">
+                {getSchemaTypeText(value)}
               </Tag>
             )
           }
           value={selectValue}
+          disabled={disabled}
           // @ts-expect-error semi类型问题
           onChange={handleChange}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,6 +109,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
             const [_, name] = optionNode?.value?.split(separator) || [];
             return name;
           }}
+          {...selectProps}
         >
           {optionGroups?.map(group => (
             <Select.OptGroup
@@ -100,7 +119,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
                   {schemaSourceTypeMap[group.schemaSourceType]}
                 </div>
               }
-              key={group.schemaSourceType}
+              key={getGroupKey(group)}
             >
               {group.children.map(option => (
                 <Select.Option
@@ -115,11 +134,11 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
                       </Tooltip>
                     ) : null}
                     <Tag
-                      className="mx-3 ml-auto shrink-0"
+                      className="mx-3 ml-auto shrink-0 font-[600]"
                       size="mini"
                       color="primary"
                     >
-                      {getTypeText(option)}
+                      {getSchemaTypeText(option)}
                     </Tag>
                   </div>
                 </Select.Option>

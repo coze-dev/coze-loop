@@ -8,6 +8,7 @@ import VChart, {
   type TooltipHandlerParams,
   type ISpec,
   type ITooltipActual,
+  type EventParams,
 } from '@visactor/vchart';
 
 export {
@@ -26,6 +27,7 @@ interface ChartProps {
   values: Datum[];
   className?: string;
   customTooltip?: (props: CustomTooltipProps) => JSX.Element | null;
+  onClick?: (e: EventParams) => void;
 }
 
 export function Chart({
@@ -33,6 +35,7 @@ export function Chart({
   values = [],
   className,
   customTooltip,
+  onClick,
 }: ChartProps) {
   const divRef = useRef<HTMLDivElement>(null);
   const vChartRef = useRef<VChart>();
@@ -47,6 +50,7 @@ export function Chart({
     };
     // 自定义渲染 tooltip 内容
     if (CustomTooltip) {
+      tooltip.renderMode = 'html';
       tooltip.updateElement = (tooltipElement, actualTooltip, params) => {
         tooltipElement.style.width = 'auto';
         const root = createRoot(tooltipElement);
@@ -105,6 +109,21 @@ export function Chart({
       vChartRef.current?.hideTooltip();
     };
   }, [spec, values]);
+
+  useEffect(() => {
+    if (!vChartRef.current) {
+      return;
+    }
+
+    const handleClick = (e: EventParams) => {
+      onClick?.(e);
+    };
+    vChartRef.current.on('click', { level: 'mark' }, handleClick);
+
+    return () => {
+      vChartRef.current?.off('click');
+    };
+  }, []);
 
   return <div ref={divRef} className={className} data-chart="true" />;
 }

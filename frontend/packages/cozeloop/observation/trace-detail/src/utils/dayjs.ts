@@ -29,4 +29,4 @@ const dayJsTimeZone = (param?: ConfigType): Dayjs => {
 
 export default dayJsTimeZone;
 
-export { Dayjs, QUnitType } from 'dayjs';
+export { Dayjs, type QUnitType } from 'dayjs';

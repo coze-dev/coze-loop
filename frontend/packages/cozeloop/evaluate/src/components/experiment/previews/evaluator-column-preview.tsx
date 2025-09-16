@@ -47,15 +47,15 @@ export default function EvaluatorColumnPreview({
     >
       <TypographyText>{name ?? '-'}</TypographyText>
       <Tag
-        size="small"
         color="primary"
+        size="small"
         {...tagProps}
         className={classNames('shrink-0', tagProps.className)}
       >
         {version}
       </Tag>
       {enableLinkJump ? (
-        <Tooltip theme="dark" content={I18n.t('view_detail')}>
+        <Tooltip theme="dark" content={I18n.t('detail')}>
           <div>
             <JumpIconButton
               className={defaultShowLinkJump ? '' : '!hidden group-hover:!flex'}

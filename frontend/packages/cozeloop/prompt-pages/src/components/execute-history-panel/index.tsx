@@ -11,7 +11,6 @@ import {
   getEndTime,
   getStartTime,
 } from '@cozeloop/observation-component-adapter';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type DebugLog } from '@cozeloop/api-schema/prompt';
@@ -144,7 +143,7 @@ export const ExecuteHistoryPanel = ({
                 size="small"
                 color="secondary"
               >
-                {loadingMore ? I18n.t('loading') : I18n.t('load_more')}
+                {loadingMore ? '加载中' : '加载更多'}
               </Button>
             )}
           </div>
@@ -159,7 +158,7 @@ export const ExecuteHistoryPanel = ({
         <Empty
           image={<IconCozIllusEmpty width="160" height="160" />}
           darkModeImage={<IconCozIllusEmptyDark width="160" height="160" />}
-          description={I18n.t('no_debug_record')}
+          description="暂无调试记录"
         />
       </div>
     ) : (
@@ -198,7 +197,7 @@ export const ExecuteHistoryPanel = ({
         borderTop: '1px solid var(--semi-color-border)',
         overflowY: 'hidden',
       }}
-      title={I18n.t('debug_history')}
+      title="调试历史"
       zIndex={9}
     >
       <div className="flex w-full h-full" ref={dom}>

@@ -6,11 +6,11 @@ import { get } from 'lodash-es';
 import { type ISpec, type Datum } from '@visactor/vchart/esm/typings';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
-  EvaluatorPreview,
   Chart,
   ChartCardItemRender,
   ExperimentScoreTypeSelect,
   type CustomTooltipProps,
+  TypographyText,
 } from '@cozeloop/evaluate-components';
 import {
   type AggregateData,
@@ -99,6 +99,7 @@ function getEvaluatorAggregateResultMap(
   return resultMap;
 }
 
+// eslint-disable-next-line complexity
 function ComplexTooltipContent(
   props: CustomTooltipProps & {
     experiment: Experiment | undefined;
@@ -119,7 +120,14 @@ function ComplexTooltipContent(
   return (
     <div className="text-xs flex flex-col gap-2 w-56">
       <div className="text-sm font-medium">
-        <EvaluatorPreview evaluator={evaluator} />
+        <TypographyText style={{ maxWidth: 160, marginRight: 4 }}>
+          {evaluator?.name ?? '-'}
+        </TypographyText>
+        {evaluator?.current_version?.version ? (
+          <Tag size="small" color="primary" className="shrink-0 font-normal">
+            {evaluator?.current_version?.version}
+          </Tag>
+        ) : null}
       </div>
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-[var(--semi-color-primary)]" />

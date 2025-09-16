@@ -445,7 +445,7 @@ struct GetExptResultExportRecordRequest {
 }
 
 struct GetExptResultExportRecordResponse {
-    1: optional expt.ExptResultExportRecord expt_result_export_record (agw.key = "expt_result_export_records")
+    1: optional expt.ExptResultExportRecord expt_result_export_record (api.body = "expt_result_export_records")
 
     255: base.BaseResp BaseResp
 }

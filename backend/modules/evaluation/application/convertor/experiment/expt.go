@@ -31,11 +31,9 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*e
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
 	}
-	if cer.GetTargetFieldMapping() != nil && cer.GetTargetFieldMapping().GetFromEvalSet() != nil {
-		ec.ConnectorConf.TargetConf = &entity.TargetConf{
-			TargetVersionID: cer.GetTargetVersionID(),
-			IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping(), cer.GetTargetRuntimeParam()),
-		}
+	ec.ConnectorConf.TargetConf = &entity.TargetConf{
+		TargetVersionID: cer.GetTargetVersionID(),
+		IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping(), cer.GetTargetRuntimeParam()),
 	}
 	if cer.GetEvaluatorFieldMapping() != nil {
 		ec.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
@@ -47,22 +45,18 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*e
 }
 
 func toTargetFieldMappingDO(mapping *domain_expt.TargetFieldMapping, rtp *common.RuntimeParam) *entity.TargetIngressConf {
-	if mapping == nil {
-		return nil
-	}
+	tic := &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}
 
-	fc := make([]*entity.FieldConf, 0, len(mapping.GetFromEvalSet()))
-	for _, fm := range mapping.GetFromEvalSet() {
-		fc = append(fc, &entity.FieldConf{
-			FieldName: fm.GetFieldName(),
-			FromField: fm.GetFromFieldName(),
-			Value:     fm.GetConstValue(),
-		})
-	}
-	tic := &entity.TargetIngressConf{
-		EvalSetAdapter: &entity.FieldAdapter{
-			FieldConfs: fc,
-		},
+	if mapping != nil {
+		fc := make([]*entity.FieldConf, 0, len(mapping.GetFromEvalSet()))
+		for _, fm := range mapping.GetFromEvalSet() {
+			fc = append(fc, &entity.FieldConf{
+				FieldName: fm.GetFieldName(),
+				FromField: fm.GetFromFieldName(),
+				Value:     fm.GetConstValue(),
+			})
+		}
+		tic.EvalSetAdapter.FieldConfs = fc
 	}
 
 	if rtp != nil && len(rtp.GetJSONValue()) > 0 {

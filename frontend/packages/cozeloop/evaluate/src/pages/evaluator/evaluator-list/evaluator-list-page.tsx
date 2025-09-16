@@ -84,13 +84,13 @@ function EvaluatorListPage() {
     Modal.info({
       size: 'large',
       className: 'w-[420px]',
-      title: 'copy_evaluator_config',
+      title: I18n.t('copy_evaluator_config'),
       content: I18n.t('copy_and_create_evaluator', {
         name: record.name,
       }),
       onOk: () => navigate(`create/${record.evaluator_id}`),
       showCancelButton: true,
-      cancelText: I18n.t('Cancel'),
+      cancelText: I18n.t('cancel'),
       okText: I18n.t('confirm'),
     });
   };
@@ -159,8 +159,8 @@ function EvaluatorListPage() {
         checked: true,
       },
       // {
-      //   title: '类型',
-      //   value: '类型',
+      //   title: I18n.t('type'),
+      //   value: I18n.t('type'),
       //   dataIndex: 'evaluator_type',
       //   key: 'evaluator_type',
       //   render: (text: Evaluator['evaluator_type']) =>
@@ -275,7 +275,7 @@ function EvaluatorListPage() {
                     content: I18n.t('caution_of_operation'),
                     onOk: () => deleteService.runAsync(record),
                     showCancelButton: true,
-                    cancelText: I18n.t('Cancel'),
+                    cancelText: I18n.t('cancel'),
                     okText: I18n.t('delete'),
                   }),
               },
