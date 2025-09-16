@@ -132,8 +132,8 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			[]string{spanID},
 			"",
 			workspaceIDStr,
-			startTime-time.Second.Milliseconds(),
-			startTime+time.Second.Milliseconds(),
+			startTime/1000-time.Second.Milliseconds(),
+			startTime/1000+time.Second.Milliseconds(),
 		)
 		span := spans[0]
 		annotation := &loop_span.Annotation{
