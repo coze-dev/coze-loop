@@ -320,9 +320,19 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		logs.CtxError(ctx, "ListNonFinalTask err:%v", err)
 		return
 	}
-	tasks := tconv.TaskPOs2DOs(ctx, taskPOs, nil)
+	var tasks []*task.Task
+	taskRunstat := make(map[int64]bool)
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
-
+	for _, taskPO := range taskPOs {
+		tasks = append(tasks, tconv.TaskPO2DTO(ctx, taskPO, nil))
+		runDone := true
+		for _, taskRun := range taskPO.TaskRuns {
+			if taskRun.RunStatus == task.RunStatusRunning {
+				runDone = false
+			}
+		}
+		taskRunstat[taskPO.ID] = runDone
+	}
 	// 遍历任务
 	for _, taskInfo := range tasks {
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
@@ -335,7 +345,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 达到任务时间期限
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
-		if time.Now().After(endTime) {
+		if time.Now().After(endTime) && taskRunstat[*taskInfo.ID] {
 			updateMap := map[string]interface{}{
 				"task_status": task.TaskStatusSuccess,
 			}
