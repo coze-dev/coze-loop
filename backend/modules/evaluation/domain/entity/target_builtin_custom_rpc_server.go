@@ -28,6 +28,8 @@ type CustomRPCServer struct {
 	CustomEvalTarget *CustomEvalTarget
 	// 是否异步
 	IsAsync *bool
+	// 额外信息
+	Ext map[string]string
 }
 
 type HTTPInfo struct {
