@@ -37,7 +37,7 @@ func TaskRunPO2DTO(ctx context.Context, v *entity.TaskRun, userMap map[string]*e
 		TaskType:          v.TaskType,
 		RunStatus:         v.RunStatus,
 		RunDetail:         RunDetailPO2DTO(ctx, v.RunDetail),
-		BackfillRunDetail: RunDetailPO2DTO(ctx, v.BackfillDetail),
+		BackfillRunDetail: BackfillRunDetailPO2DTO(ctx, v.BackfillDetail),
 		RunStartAt:        v.RunStartAt.UnixMilli(),
 		RunEndAt:          v.RunEndAt.UnixMilli(),
 		TaskRunConfig:     TaskRunConfigPO2DTO(ctx, v.RunConfig),
@@ -51,13 +51,28 @@ func RunDetailPO2DTO(ctx context.Context, runDetail *string) *task.RunDetail {
 	if runDetail == nil || *runDetail == "" {
 		return nil
 	}
-	
+
 	var runDetailDTO task.RunDetail
 	if err := sonic.Unmarshal([]byte(*runDetail), &runDetailDTO); err != nil {
 		logs.CtxError(ctx, "RunDetailPO2DTO sonic.Unmarshal err:%v", err)
 		return nil
 	}
-	
+
+	return &runDetailDTO
+}
+
+// RunDetailPO2DTO 将JSON字符串转换为RunDetail结构体
+func BackfillRunDetailPO2DTO(ctx context.Context, runDetail *string) *task.BackfillDetail {
+	if runDetail == nil || *runDetail == "" {
+		return nil
+	}
+
+	var runDetailDTO task.BackfillDetail
+	if err := sonic.Unmarshal([]byte(*runDetail), &runDetailDTO); err != nil {
+		logs.CtxError(ctx, "RunDetailPO2DTO sonic.Unmarshal err:%v", err)
+		return nil
+	}
+
 	return &runDetailDTO
 }
 
@@ -66,13 +81,13 @@ func TaskRunConfigPO2DTO(ctx context.Context, runConfig *string) *task.TaskRunCo
 	if runConfig == nil || *runConfig == "" {
 		return nil
 	}
-	
+
 	var runConfigDTO task.TaskRunConfig
 	if err := sonic.Unmarshal([]byte(*runConfig), &runConfigDTO); err != nil {
 		logs.CtxError(ctx, "TaskRunConfigPO2DTO sonic.Unmarshal err:%v", err)
 		return nil
 	}
-	
+
 	return &runConfigDTO
 }
 
