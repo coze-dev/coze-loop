@@ -115,23 +115,19 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
-	// 数据回流任务——创建/更新输出数据集
-	if t.shouldCreateTaskRun(req.Task) {
-		if err = t.upsertDatasetForTask(ctx, req.Task); err != nil {
-			return nil, err
-		}
-	}
 	// 创建task
 	taskPO := tconv.CreateTaskDTO2PO(ctx, req.Task, userID)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
 	}
-	// 创建taskrun
+	// 数据回流任务——创建/更新输出数据集
+	// 自动评测历史回溯——创建空壳子
 	if t.shouldCreateTaskRun(req.Task) {
-		if err := t.createInitialTaskRun(ctx, id, req.Task, userID); err != nil {
+		if err = proc.OnChangeProcessor(ctx, req.Task, task.TaskStatusUnstarted); err != nil {
 			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
-			// 根据业务需求，TaskRun创建失败不影响任务创建，只记录错误日志
+			//任务改为禁用？
+			return nil, err
 		}
 	}
 	// TODO: 历史回溯数据发MQ
@@ -295,16 +291,14 @@ func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *task.Task) bool {
 
 	return backfillTime.GetStartAt() > 0 &&
 		backfillTime.GetEndAt() > 0 &&
-		backfillTime.GetStartAt() < backfillTime.GetEndAt()
-}
-func (t *TaskServiceImpl) upsertDatasetForTask(ctx context.Context, task *task.Task) error {
-	return nil
+		backfillTime.GetStartAt() < backfillTime.GetEndAt() &&
+		backfillTime.GetEndAt() > time.Now().UnixMilli()
 }
 
 // shouldCreateTaskRun 判断是否需要创建TaskRun
 func (t *TaskServiceImpl) shouldCreateTaskRun(taskDO *task.Task) bool {
 	// 只有数据回流任务需要立即创建TaskRun
-	return taskDO.GetTaskType() == task.TaskTypeAutoDataReflow
+	return taskDO.GetTaskType() == task.TaskTypeAutoDataReflow || t.shouldTriggerBackfill(taskDO)
 }
 
 // sendBackfillMessage 发送MQ消息
@@ -314,40 +308,6 @@ func (t *TaskServiceImpl) sendBackfillMessage(ctx context.Context, event *entity
 	}
 
 	return t.backfillProducer.SendBackfill(ctx, event)
-}
-
-// createInitialTaskRun 创建TaskRun实例
-func (t *TaskServiceImpl) createInitialTaskRun(ctx context.Context, taskID int64, taskDO *task.Task, userID string) error {
-	// 计算任务运行时间
-	//effectiveTime := taskDO.GetRule().GetEffectiveTime()
-	//startTime := time.UnixMilli(effectiveTime.GetStartAt())
-	//endTime := time.UnixMilli(effectiveTime.GetEndAt())
-	//
-	//// 构建运行配置
-	//runConfig := &task.TaskRunConfig{
-	//	DataReflowRunConfig: &task.DataReflowRunConfig{
-	//		DatasetID:    0, // 将在processor中设置
-	//		EndAt:        effectiveTime.GetEndAt(),
-	//		CycleStartAt: effectiveTime.GetStartAt(),
-	//		CycleEndAt:   effectiveTime.GetEndAt(),
-	//		Status:       task.TaskStatusPending,
-	//	},
-	//}
-	//
-	//taskRun := &entity.TaskRun{
-	//	TaskID:      taskID,
-	//	WorkspaceID: taskDO.GetWorkspaceID(),
-	//	TaskType:    taskDO.GetTaskType(),
-	//	RunStatus:   task.TaskStatusPending,
-	//	RunStartAt:  startTime,
-	//	RunEndAt:    endTime,
-	//	RunConfig:   ptr.Of(t.toJSONString(ctx, runConfig)),
-	//	CreatedAt:   time.Now(),
-	//	UpdatedAt:   time.Now(),
-	//}
-	//
-	//_, err := t.TaskRunRepo.CreateTaskRun(ctx, taskRun)
-	return nil
 }
 
 // toJSONString 将对象转换为JSON字符串
