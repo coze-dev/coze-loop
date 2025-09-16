@@ -1068,13 +1068,13 @@ func (p *EvalTargetContent) FastReadField104(buf []byte) (int, error) {
 
 func (p *EvalTargetContent) FastReadField105(buf []byte) (int, error) {
 	offset := 0
-	_field := NewCustomPSM()
+	_field := NewCustomRPCServer()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 	}
-	p.CustomPsm = _field
+	p.CustomRPCServer = _field
 	return offset, nil
 }
 
@@ -1193,9 +1193,9 @@ func (p *EvalTargetContent) fastWriteField104(buf []byte, w thrift.NocopyWriter)
 
 func (p *EvalTargetContent) fastWriteField105(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetCustomPsm() {
+	if p.IsSetCustomRPCServer() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 105)
-		offset += p.CustomPsm.FastWriteNocopy(buf[offset:], w)
+		offset += p.CustomRPCServer.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -1273,9 +1273,9 @@ func (p *EvalTargetContent) field104Length() int {
 
 func (p *EvalTargetContent) field105Length() int {
 	l := 0
-	if p.IsSetCustomPsm() {
+	if p.IsSetCustomRPCServer() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.CustomPsm.BLength()
+		l += p.CustomRPCServer.BLength()
 	}
 	return l
 }
@@ -1360,19 +1360,19 @@ func (p *EvalTargetContent) DeepCopy(s interface{}) error {
 	}
 	p.VolcengineAgent = _volcengineAgent
 
-	var _customPsm *CustomPSM
-	if src.CustomPsm != nil {
-		_customPsm = &CustomPSM{}
-		if err := _customPsm.DeepCopy(src.CustomPsm); err != nil {
+	var _customRPCServer *CustomRPCServer
+	if src.CustomRPCServer != nil {
+		_customRPCServer = &CustomRPCServer{}
+		if err := _customRPCServer.DeepCopy(src.CustomRPCServer); err != nil {
 			return err
 		}
 	}
-	p.CustomPsm = _customPsm
+	p.CustomRPCServer = _customRPCServer
 
 	return nil
 }
 
-func (p *CustomPSM) FastRead(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -1584,12 +1584,12 @@ func (p *CustomPSM) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomPSM[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomRPCServer[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *CustomPSM) FastReadField1(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1603,7 +1603,7 @@ func (p *CustomPSM) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField2(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1617,7 +1617,7 @@ func (p *CustomPSM) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField3(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1631,7 +1631,7 @@ func (p *CustomPSM) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField10(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1641,11 +1641,11 @@ func (p *CustomPSM) FastReadField10(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.Psm = _field
+	p.ServerName = _field
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField11(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *AccessProtocol
@@ -1659,7 +1659,7 @@ func (p *CustomPSM) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField12(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField12(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -1683,7 +1683,7 @@ func (p *CustomPSM) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField13(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField13(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1697,7 +1697,7 @@ func (p *CustomPSM) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField14(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField14(buf []byte) (int, error) {
 	offset := 0
 	_field := NewHTTPInfo()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1709,7 +1709,7 @@ func (p *CustomPSM) FastReadField14(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField15(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField15(buf []byte) (int, error) {
 	offset := 0
 	_field := NewHTTPInfo()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1721,7 +1721,7 @@ func (p *CustomPSM) FastReadField15(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField16(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField16(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *bool
@@ -1735,7 +1735,7 @@ func (p *CustomPSM) FastReadField16(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField17(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField17(buf []byte) (int, error) {
 	offset := 0
 	_field := NewHTTPInfo()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1747,7 +1747,7 @@ func (p *CustomPSM) FastReadField17(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField18(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField18(buf []byte) (int, error) {
 	offset := 0
 	_field := NewCustomEvalTarget()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -1759,7 +1759,7 @@ func (p *CustomPSM) FastReadField18(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastReadField19(buf []byte) (int, error) {
+func (p *CustomRPCServer) FastReadField19(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *bool
@@ -1773,11 +1773,11 @@ func (p *CustomPSM) FastReadField19(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CustomPSM) FastWrite(buf []byte) int {
+func (p *CustomRPCServer) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *CustomPSM) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -1798,7 +1798,7 @@ func (p *CustomPSM) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) BLength() int {
+func (p *CustomRPCServer) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -1819,7 +1819,7 @@ func (p *CustomPSM) BLength() int {
 	return l
 }
 
-func (p *CustomPSM) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
@@ -1828,7 +1828,7 @@ func (p *CustomPSM) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
@@ -1837,7 +1837,7 @@ func (p *CustomPSM) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDescription() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
@@ -1846,16 +1846,16 @@ func (p *CustomPSM) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetPsm() {
+	if p.IsSetServerName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Psm)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ServerName)
 	}
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetAccessProtocol() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 11)
@@ -1864,7 +1864,7 @@ func (p *CustomPSM) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetRegions() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 12)
@@ -1880,7 +1880,7 @@ func (p *CustomPSM) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetCluster() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 13)
@@ -1889,7 +1889,7 @@ func (p *CustomPSM) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetInvokeHTTPInfo() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 14)
@@ -1898,7 +1898,7 @@ func (p *CustomPSM) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetAsyncInvokeHTTPInfo() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 15)
@@ -1907,7 +1907,7 @@ func (p *CustomPSM) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField16(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField16(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetNeedSearchTarget() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 16)
@@ -1916,7 +1916,7 @@ func (p *CustomPSM) fastWriteField16(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField17(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField17(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSearchHTTPInfo() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 17)
@@ -1925,7 +1925,7 @@ func (p *CustomPSM) fastWriteField17(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField18(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField18(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetCustomEvalTarget() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 18)
@@ -1934,7 +1934,7 @@ func (p *CustomPSM) fastWriteField18(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) fastWriteField19(buf []byte, w thrift.NocopyWriter) int {
+func (p *CustomRPCServer) fastWriteField19(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetIsAsync() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 19)
@@ -1943,7 +1943,7 @@ func (p *CustomPSM) fastWriteField19(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *CustomPSM) field1Length() int {
+func (p *CustomRPCServer) field1Length() int {
 	l := 0
 	if p.IsSetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1952,7 +1952,7 @@ func (p *CustomPSM) field1Length() int {
 	return l
 }
 
-func (p *CustomPSM) field2Length() int {
+func (p *CustomRPCServer) field2Length() int {
 	l := 0
 	if p.IsSetName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1961,7 +1961,7 @@ func (p *CustomPSM) field2Length() int {
 	return l
 }
 
-func (p *CustomPSM) field3Length() int {
+func (p *CustomRPCServer) field3Length() int {
 	l := 0
 	if p.IsSetDescription() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1970,16 +1970,16 @@ func (p *CustomPSM) field3Length() int {
 	return l
 }
 
-func (p *CustomPSM) field10Length() int {
+func (p *CustomRPCServer) field10Length() int {
 	l := 0
-	if p.IsSetPsm() {
+	if p.IsSetServerName() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Psm)
+		l += thrift.Binary.StringLengthNocopy(*p.ServerName)
 	}
 	return l
 }
 
-func (p *CustomPSM) field11Length() int {
+func (p *CustomRPCServer) field11Length() int {
 	l := 0
 	if p.IsSetAccessProtocol() {
 		l += thrift.Binary.FieldBeginLength()
@@ -1988,7 +1988,7 @@ func (p *CustomPSM) field11Length() int {
 	return l
 }
 
-func (p *CustomPSM) field12Length() int {
+func (p *CustomRPCServer) field12Length() int {
 	l := 0
 	if p.IsSetRegions() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2001,7 +2001,7 @@ func (p *CustomPSM) field12Length() int {
 	return l
 }
 
-func (p *CustomPSM) field13Length() int {
+func (p *CustomRPCServer) field13Length() int {
 	l := 0
 	if p.IsSetCluster() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2010,7 +2010,7 @@ func (p *CustomPSM) field13Length() int {
 	return l
 }
 
-func (p *CustomPSM) field14Length() int {
+func (p *CustomRPCServer) field14Length() int {
 	l := 0
 	if p.IsSetInvokeHTTPInfo() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2019,7 +2019,7 @@ func (p *CustomPSM) field14Length() int {
 	return l
 }
 
-func (p *CustomPSM) field15Length() int {
+func (p *CustomRPCServer) field15Length() int {
 	l := 0
 	if p.IsSetAsyncInvokeHTTPInfo() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2028,7 +2028,7 @@ func (p *CustomPSM) field15Length() int {
 	return l
 }
 
-func (p *CustomPSM) field16Length() int {
+func (p *CustomRPCServer) field16Length() int {
 	l := 0
 	if p.IsSetNeedSearchTarget() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2037,7 +2037,7 @@ func (p *CustomPSM) field16Length() int {
 	return l
 }
 
-func (p *CustomPSM) field17Length() int {
+func (p *CustomRPCServer) field17Length() int {
 	l := 0
 	if p.IsSetSearchHTTPInfo() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2046,7 +2046,7 @@ func (p *CustomPSM) field17Length() int {
 	return l
 }
 
-func (p *CustomPSM) field18Length() int {
+func (p *CustomRPCServer) field18Length() int {
 	l := 0
 	if p.IsSetCustomEvalTarget() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2055,7 +2055,7 @@ func (p *CustomPSM) field18Length() int {
 	return l
 }
 
-func (p *CustomPSM) field19Length() int {
+func (p *CustomRPCServer) field19Length() int {
 	l := 0
 	if p.IsSetIsAsync() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2064,8 +2064,8 @@ func (p *CustomPSM) field19Length() int {
 	return l
 }
 
-func (p *CustomPSM) DeepCopy(s interface{}) error {
-	src, ok := s.(*CustomPSM)
+func (p *CustomRPCServer) DeepCopy(s interface{}) error {
+	src, ok := s.(*CustomRPCServer)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -2091,12 +2091,12 @@ func (p *CustomPSM) DeepCopy(s interface{}) error {
 		p.Description = &tmp
 	}
 
-	if src.Psm != nil {
+	if src.ServerName != nil {
 		var tmp string
-		if *src.Psm != "" {
-			tmp = kutils.StringDeepCopy(*src.Psm)
+		if *src.ServerName != "" {
+			tmp = kutils.StringDeepCopy(*src.ServerName)
 		}
-		p.Psm = &tmp
+		p.ServerName = &tmp
 	}
 
 	if src.AccessProtocol != nil {

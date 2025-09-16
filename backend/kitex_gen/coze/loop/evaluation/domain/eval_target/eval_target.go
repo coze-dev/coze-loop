@@ -22,9 +22,9 @@ const (
 
 	AccessProtocolRPCOld = "rpc_old"
 
-	AccessProtocolBytefaasHTTP = "bytefaas_http"
+	AccessProtocolFaasHTTP = "faas_http"
 
-	AccessProtocolBytefaasHTTPOld = "bytefaas_http_old"
+	AccessProtocolFaasHTTPOld = "faas_http_old"
 
 	HTTPMethodGet = "get"
 
@@ -43,8 +43,8 @@ const (
 	EvalTargetType_CozeWorkflow EvalTargetType = 4
 	// 火山智能体
 	EvalTargetType_VolcengineAgent EvalTargetType = 5
-	// 自定义psm服务 for内场
-	EvalTargetType_CustomPSM EvalTargetType = 6
+	// 自定义RPC服务 for内场
+	EvalTargetType_CustomRPCServer EvalTargetType = 6
 )
 
 func (p EvalTargetType) String() string {
@@ -59,8 +59,8 @@ func (p EvalTargetType) String() string {
 		return "CozeWorkflow"
 	case EvalTargetType_VolcengineAgent:
 		return "VolcengineAgent"
-	case EvalTargetType_CustomPSM:
-		return "CustomPSM"
+	case EvalTargetType_CustomRPCServer:
+		return "CustomRPCServer"
 	}
 	return "<UNSET>"
 }
@@ -77,8 +77,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_CozeWorkflow, nil
 	case "VolcengineAgent":
 		return EvalTargetType_VolcengineAgent, nil
-	case "CustomPSM":
-		return EvalTargetType_CustomPSM, nil
+	case "CustomRPCServer":
+		return EvalTargetType_CustomRPCServer, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }
@@ -1419,8 +1419,8 @@ type EvalTargetContent struct {
 	CozeWorkflow *CozeWorkflow `thrift:"coze_workflow,103,optional" frugal:"103,optional,CozeWorkflow" form:"coze_workflow" json:"coze_workflow,omitempty" query:"coze_workflow"`
 	// EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息
 	VolcengineAgent *VolcengineAgent `thrift:"volcengine_agent,104,optional" frugal:"104,optional,VolcengineAgent" form:"volcengine_agent" json:"volcengine_agent,omitempty" query:"volcengine_agent"`
-	// EvalTargetType=6 时，传参此字段。 评测对象为 CustomPSM 时, 需要设置 CustomPSM 信息
-	CustomPsm *CustomPSM `thrift:"custom_psm,105,optional" frugal:"105,optional,CustomPSM" form:"custom_psm" json:"custom_psm,omitempty" query:"custom_psm"`
+	// EvalTargetType=6 时，传参此字段。 评测对象为 CustomRPCServer 时, 需要设置 CustomRPCServer 信息
+	CustomRPCServer *CustomRPCServer `thrift:"custom_rpc_server,105,optional" frugal:"105,optional,CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty" query:"custom_rpc_server"`
 }
 
 func NewEvalTargetContent() *EvalTargetContent {
@@ -1514,16 +1514,16 @@ func (p *EvalTargetContent) GetVolcengineAgent() (v *VolcengineAgent) {
 	return p.VolcengineAgent
 }
 
-var EvalTargetContent_CustomPsm_DEFAULT *CustomPSM
+var EvalTargetContent_CustomRPCServer_DEFAULT *CustomRPCServer
 
-func (p *EvalTargetContent) GetCustomPsm() (v *CustomPSM) {
+func (p *EvalTargetContent) GetCustomRPCServer() (v *CustomRPCServer) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetCustomPsm() {
-		return EvalTargetContent_CustomPsm_DEFAULT
+	if !p.IsSetCustomRPCServer() {
+		return EvalTargetContent_CustomRPCServer_DEFAULT
 	}
-	return p.CustomPsm
+	return p.CustomRPCServer
 }
 func (p *EvalTargetContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
@@ -1546,8 +1546,8 @@ func (p *EvalTargetContent) SetCozeWorkflow(val *CozeWorkflow) {
 func (p *EvalTargetContent) SetVolcengineAgent(val *VolcengineAgent) {
 	p.VolcengineAgent = val
 }
-func (p *EvalTargetContent) SetCustomPsm(val *CustomPSM) {
-	p.CustomPsm = val
+func (p *EvalTargetContent) SetCustomRPCServer(val *CustomRPCServer) {
+	p.CustomRPCServer = val
 }
 
 var fieldIDToName_EvalTargetContent = map[int16]string{
@@ -1558,7 +1558,7 @@ var fieldIDToName_EvalTargetContent = map[int16]string{
 	102: "prompt",
 	103: "coze_workflow",
 	104: "volcengine_agent",
-	105: "custom_psm",
+	105: "custom_rpc_server",
 }
 
 func (p *EvalTargetContent) IsSetInputSchemas() bool {
@@ -1589,8 +1589,8 @@ func (p *EvalTargetContent) IsSetVolcengineAgent() bool {
 	return p.VolcengineAgent != nil
 }
 
-func (p *EvalTargetContent) IsSetCustomPsm() bool {
-	return p.CustomPsm != nil
+func (p *EvalTargetContent) IsSetCustomRPCServer() bool {
+	return p.CustomRPCServer != nil
 }
 
 func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
@@ -1794,11 +1794,11 @@ func (p *EvalTargetContent) ReadField104(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *EvalTargetContent) ReadField105(iprot thrift.TProtocol) error {
-	_field := NewCustomPSM()
+	_field := NewCustomRPCServer()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.CustomPsm = _field
+	p.CustomRPCServer = _field
 	return nil
 }
 
@@ -2001,11 +2001,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
 }
 func (p *EvalTargetContent) writeField105(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomPsm() {
-		if err = oprot.WriteFieldBegin("custom_psm", thrift.STRUCT, 105); err != nil {
+	if p.IsSetCustomRPCServer() {
+		if err = oprot.WriteFieldBegin("custom_rpc_server", thrift.STRUCT, 105); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.CustomPsm.Write(oprot); err != nil {
+		if err := p.CustomRPCServer.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2054,7 +2054,7 @@ func (p *EvalTargetContent) DeepEqual(ano *EvalTargetContent) bool {
 	if !p.Field104DeepEqual(ano.VolcengineAgent) {
 		return false
 	}
-	if !p.Field105DeepEqual(ano.CustomPsm) {
+	if !p.Field105DeepEqual(ano.CustomRPCServer) {
 		return false
 	}
 	return true
@@ -2126,15 +2126,15 @@ func (p *EvalTargetContent) Field104DeepEqual(src *VolcengineAgent) bool {
 	}
 	return true
 }
-func (p *EvalTargetContent) Field105DeepEqual(src *CustomPSM) bool {
+func (p *EvalTargetContent) Field105DeepEqual(src *CustomRPCServer) bool {
 
-	if !p.CustomPsm.DeepEqual(src) {
+	if !p.CustomRPCServer.DeepEqual(src) {
 		return false
 	}
 	return true
 }
 
-type CustomPSM struct {
+type CustomRPCServer struct {
 	// 应用ID
 	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
 	// DTO使用，不存数据库
@@ -2142,7 +2142,7 @@ type CustomPSM struct {
 	// DTO使用，不存数据库
 	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	// 注意以下信息会存储到DB，也就是说实验创建时以下内容就确定了，运行时直接从评测DB中获取，而不是实时从app模块拉
-	Psm *string `thrift:"psm,10,optional" frugal:"10,optional,string" form:"psm" json:"psm,omitempty" query:"psm"`
+	ServerName *string `thrift:"server_name,10,optional" frugal:"10,optional,string" form:"server_name" json:"server_name,omitempty" query:"server_name"`
 	// 接入协议
 	AccessProtocol *AccessProtocol `thrift:"access_protocol,11,optional" frugal:"11,optional,string" form:"access_protocol" json:"access_protocol,omitempty" query:"access_protocol"`
 	Regions        []Region        `thrift:"regions,12,optional" frugal:"12,optional,list<string>" form:"regions" json:"regions,omitempty" query:"regions"`
@@ -2161,213 +2161,213 @@ type CustomPSM struct {
 	IsAsync *bool `thrift:"is_async,19,optional" frugal:"19,optional,bool" form:"is_async" json:"is_async,omitempty" query:"is_async"`
 }
 
-func NewCustomPSM() *CustomPSM {
-	return &CustomPSM{}
+func NewCustomRPCServer() *CustomRPCServer {
+	return &CustomRPCServer{}
 }
 
-func (p *CustomPSM) InitDefault() {
+func (p *CustomRPCServer) InitDefault() {
 }
 
-var CustomPSM_ID_DEFAULT int64
+var CustomRPCServer_ID_DEFAULT int64
 
-func (p *CustomPSM) GetID() (v int64) {
+func (p *CustomRPCServer) GetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetID() {
-		return CustomPSM_ID_DEFAULT
+		return CustomRPCServer_ID_DEFAULT
 	}
 	return *p.ID
 }
 
-var CustomPSM_Name_DEFAULT string
+var CustomRPCServer_Name_DEFAULT string
 
-func (p *CustomPSM) GetName() (v string) {
+func (p *CustomRPCServer) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
-		return CustomPSM_Name_DEFAULT
+		return CustomRPCServer_Name_DEFAULT
 	}
 	return *p.Name
 }
 
-var CustomPSM_Description_DEFAULT string
+var CustomRPCServer_Description_DEFAULT string
 
-func (p *CustomPSM) GetDescription() (v string) {
+func (p *CustomRPCServer) GetDescription() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDescription() {
-		return CustomPSM_Description_DEFAULT
+		return CustomRPCServer_Description_DEFAULT
 	}
 	return *p.Description
 }
 
-var CustomPSM_Psm_DEFAULT string
+var CustomRPCServer_ServerName_DEFAULT string
 
-func (p *CustomPSM) GetPsm() (v string) {
+func (p *CustomRPCServer) GetServerName() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetPsm() {
-		return CustomPSM_Psm_DEFAULT
+	if !p.IsSetServerName() {
+		return CustomRPCServer_ServerName_DEFAULT
 	}
-	return *p.Psm
+	return *p.ServerName
 }
 
-var CustomPSM_AccessProtocol_DEFAULT AccessProtocol
+var CustomRPCServer_AccessProtocol_DEFAULT AccessProtocol
 
-func (p *CustomPSM) GetAccessProtocol() (v AccessProtocol) {
+func (p *CustomRPCServer) GetAccessProtocol() (v AccessProtocol) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetAccessProtocol() {
-		return CustomPSM_AccessProtocol_DEFAULT
+		return CustomRPCServer_AccessProtocol_DEFAULT
 	}
 	return *p.AccessProtocol
 }
 
-var CustomPSM_Regions_DEFAULT []Region
+var CustomRPCServer_Regions_DEFAULT []Region
 
-func (p *CustomPSM) GetRegions() (v []Region) {
+func (p *CustomRPCServer) GetRegions() (v []Region) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetRegions() {
-		return CustomPSM_Regions_DEFAULT
+		return CustomRPCServer_Regions_DEFAULT
 	}
 	return p.Regions
 }
 
-var CustomPSM_Cluster_DEFAULT string
+var CustomRPCServer_Cluster_DEFAULT string
 
-func (p *CustomPSM) GetCluster() (v string) {
+func (p *CustomRPCServer) GetCluster() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCluster() {
-		return CustomPSM_Cluster_DEFAULT
+		return CustomRPCServer_Cluster_DEFAULT
 	}
 	return *p.Cluster
 }
 
-var CustomPSM_InvokeHTTPInfo_DEFAULT *HTTPInfo
+var CustomRPCServer_InvokeHTTPInfo_DEFAULT *HTTPInfo
 
-func (p *CustomPSM) GetInvokeHTTPInfo() (v *HTTPInfo) {
+func (p *CustomRPCServer) GetInvokeHTTPInfo() (v *HTTPInfo) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetInvokeHTTPInfo() {
-		return CustomPSM_InvokeHTTPInfo_DEFAULT
+		return CustomRPCServer_InvokeHTTPInfo_DEFAULT
 	}
 	return p.InvokeHTTPInfo
 }
 
-var CustomPSM_AsyncInvokeHTTPInfo_DEFAULT *HTTPInfo
+var CustomRPCServer_AsyncInvokeHTTPInfo_DEFAULT *HTTPInfo
 
-func (p *CustomPSM) GetAsyncInvokeHTTPInfo() (v *HTTPInfo) {
+func (p *CustomRPCServer) GetAsyncInvokeHTTPInfo() (v *HTTPInfo) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetAsyncInvokeHTTPInfo() {
-		return CustomPSM_AsyncInvokeHTTPInfo_DEFAULT
+		return CustomRPCServer_AsyncInvokeHTTPInfo_DEFAULT
 	}
 	return p.AsyncInvokeHTTPInfo
 }
 
-var CustomPSM_NeedSearchTarget_DEFAULT bool
+var CustomRPCServer_NeedSearchTarget_DEFAULT bool
 
-func (p *CustomPSM) GetNeedSearchTarget() (v bool) {
+func (p *CustomRPCServer) GetNeedSearchTarget() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetNeedSearchTarget() {
-		return CustomPSM_NeedSearchTarget_DEFAULT
+		return CustomRPCServer_NeedSearchTarget_DEFAULT
 	}
 	return *p.NeedSearchTarget
 }
 
-var CustomPSM_SearchHTTPInfo_DEFAULT *HTTPInfo
+var CustomRPCServer_SearchHTTPInfo_DEFAULT *HTTPInfo
 
-func (p *CustomPSM) GetSearchHTTPInfo() (v *HTTPInfo) {
+func (p *CustomRPCServer) GetSearchHTTPInfo() (v *HTTPInfo) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSearchHTTPInfo() {
-		return CustomPSM_SearchHTTPInfo_DEFAULT
+		return CustomRPCServer_SearchHTTPInfo_DEFAULT
 	}
 	return p.SearchHTTPInfo
 }
 
-var CustomPSM_CustomEvalTarget_DEFAULT *CustomEvalTarget
+var CustomRPCServer_CustomEvalTarget_DEFAULT *CustomEvalTarget
 
-func (p *CustomPSM) GetCustomEvalTarget() (v *CustomEvalTarget) {
+func (p *CustomRPCServer) GetCustomEvalTarget() (v *CustomEvalTarget) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCustomEvalTarget() {
-		return CustomPSM_CustomEvalTarget_DEFAULT
+		return CustomRPCServer_CustomEvalTarget_DEFAULT
 	}
 	return p.CustomEvalTarget
 }
 
-var CustomPSM_IsAsync_DEFAULT bool
+var CustomRPCServer_IsAsync_DEFAULT bool
 
-func (p *CustomPSM) GetIsAsync() (v bool) {
+func (p *CustomRPCServer) GetIsAsync() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetIsAsync() {
-		return CustomPSM_IsAsync_DEFAULT
+		return CustomRPCServer_IsAsync_DEFAULT
 	}
 	return *p.IsAsync
 }
-func (p *CustomPSM) SetID(val *int64) {
+func (p *CustomRPCServer) SetID(val *int64) {
 	p.ID = val
 }
-func (p *CustomPSM) SetName(val *string) {
+func (p *CustomRPCServer) SetName(val *string) {
 	p.Name = val
 }
-func (p *CustomPSM) SetDescription(val *string) {
+func (p *CustomRPCServer) SetDescription(val *string) {
 	p.Description = val
 }
-func (p *CustomPSM) SetPsm(val *string) {
-	p.Psm = val
+func (p *CustomRPCServer) SetServerName(val *string) {
+	p.ServerName = val
 }
-func (p *CustomPSM) SetAccessProtocol(val *AccessProtocol) {
+func (p *CustomRPCServer) SetAccessProtocol(val *AccessProtocol) {
 	p.AccessProtocol = val
 }
-func (p *CustomPSM) SetRegions(val []Region) {
+func (p *CustomRPCServer) SetRegions(val []Region) {
 	p.Regions = val
 }
-func (p *CustomPSM) SetCluster(val *string) {
+func (p *CustomRPCServer) SetCluster(val *string) {
 	p.Cluster = val
 }
-func (p *CustomPSM) SetInvokeHTTPInfo(val *HTTPInfo) {
+func (p *CustomRPCServer) SetInvokeHTTPInfo(val *HTTPInfo) {
 	p.InvokeHTTPInfo = val
 }
-func (p *CustomPSM) SetAsyncInvokeHTTPInfo(val *HTTPInfo) {
+func (p *CustomRPCServer) SetAsyncInvokeHTTPInfo(val *HTTPInfo) {
 	p.AsyncInvokeHTTPInfo = val
 }
-func (p *CustomPSM) SetNeedSearchTarget(val *bool) {
+func (p *CustomRPCServer) SetNeedSearchTarget(val *bool) {
 	p.NeedSearchTarget = val
 }
-func (p *CustomPSM) SetSearchHTTPInfo(val *HTTPInfo) {
+func (p *CustomRPCServer) SetSearchHTTPInfo(val *HTTPInfo) {
 	p.SearchHTTPInfo = val
 }
-func (p *CustomPSM) SetCustomEvalTarget(val *CustomEvalTarget) {
+func (p *CustomRPCServer) SetCustomEvalTarget(val *CustomEvalTarget) {
 	p.CustomEvalTarget = val
 }
-func (p *CustomPSM) SetIsAsync(val *bool) {
+func (p *CustomRPCServer) SetIsAsync(val *bool) {
 	p.IsAsync = val
 }
 
-var fieldIDToName_CustomPSM = map[int16]string{
+var fieldIDToName_CustomRPCServer = map[int16]string{
 	1:  "id",
 	2:  "name",
 	3:  "description",
-	10: "psm",
+	10: "server_name",
 	11: "access_protocol",
 	12: "regions",
 	13: "cluster",
@@ -2379,59 +2379,59 @@ var fieldIDToName_CustomPSM = map[int16]string{
 	19: "is_async",
 }
 
-func (p *CustomPSM) IsSetID() bool {
+func (p *CustomRPCServer) IsSetID() bool {
 	return p.ID != nil
 }
 
-func (p *CustomPSM) IsSetName() bool {
+func (p *CustomRPCServer) IsSetName() bool {
 	return p.Name != nil
 }
 
-func (p *CustomPSM) IsSetDescription() bool {
+func (p *CustomRPCServer) IsSetDescription() bool {
 	return p.Description != nil
 }
 
-func (p *CustomPSM) IsSetPsm() bool {
-	return p.Psm != nil
+func (p *CustomRPCServer) IsSetServerName() bool {
+	return p.ServerName != nil
 }
 
-func (p *CustomPSM) IsSetAccessProtocol() bool {
+func (p *CustomRPCServer) IsSetAccessProtocol() bool {
 	return p.AccessProtocol != nil
 }
 
-func (p *CustomPSM) IsSetRegions() bool {
+func (p *CustomRPCServer) IsSetRegions() bool {
 	return p.Regions != nil
 }
 
-func (p *CustomPSM) IsSetCluster() bool {
+func (p *CustomRPCServer) IsSetCluster() bool {
 	return p.Cluster != nil
 }
 
-func (p *CustomPSM) IsSetInvokeHTTPInfo() bool {
+func (p *CustomRPCServer) IsSetInvokeHTTPInfo() bool {
 	return p.InvokeHTTPInfo != nil
 }
 
-func (p *CustomPSM) IsSetAsyncInvokeHTTPInfo() bool {
+func (p *CustomRPCServer) IsSetAsyncInvokeHTTPInfo() bool {
 	return p.AsyncInvokeHTTPInfo != nil
 }
 
-func (p *CustomPSM) IsSetNeedSearchTarget() bool {
+func (p *CustomRPCServer) IsSetNeedSearchTarget() bool {
 	return p.NeedSearchTarget != nil
 }
 
-func (p *CustomPSM) IsSetSearchHTTPInfo() bool {
+func (p *CustomRPCServer) IsSetSearchHTTPInfo() bool {
 	return p.SearchHTTPInfo != nil
 }
 
-func (p *CustomPSM) IsSetCustomEvalTarget() bool {
+func (p *CustomRPCServer) IsSetCustomEvalTarget() bool {
 	return p.CustomEvalTarget != nil
 }
 
-func (p *CustomPSM) IsSetIsAsync() bool {
+func (p *CustomRPCServer) IsSetIsAsync() bool {
 	return p.IsAsync != nil
 }
 
-func (p *CustomPSM) Read(iprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -2572,7 +2572,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomPSM[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomRPCServer[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -2582,7 +2582,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *CustomPSM) ReadField1(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -2593,7 +2593,7 @@ func (p *CustomPSM) ReadField1(iprot thrift.TProtocol) error {
 	p.ID = _field
 	return nil
 }
-func (p *CustomPSM) ReadField2(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2604,7 +2604,7 @@ func (p *CustomPSM) ReadField2(iprot thrift.TProtocol) error {
 	p.Name = _field
 	return nil
 }
-func (p *CustomPSM) ReadField3(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2615,7 +2615,7 @@ func (p *CustomPSM) ReadField3(iprot thrift.TProtocol) error {
 	p.Description = _field
 	return nil
 }
-func (p *CustomPSM) ReadField10(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2623,10 +2623,10 @@ func (p *CustomPSM) ReadField10(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.Psm = _field
+	p.ServerName = _field
 	return nil
 }
-func (p *CustomPSM) ReadField11(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField11(iprot thrift.TProtocol) error {
 
 	var _field *AccessProtocol
 	if v, err := iprot.ReadString(); err != nil {
@@ -2637,7 +2637,7 @@ func (p *CustomPSM) ReadField11(iprot thrift.TProtocol) error {
 	p.AccessProtocol = _field
 	return nil
 }
-func (p *CustomPSM) ReadField12(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField12(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -2660,7 +2660,7 @@ func (p *CustomPSM) ReadField12(iprot thrift.TProtocol) error {
 	p.Regions = _field
 	return nil
 }
-func (p *CustomPSM) ReadField13(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField13(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2671,7 +2671,7 @@ func (p *CustomPSM) ReadField13(iprot thrift.TProtocol) error {
 	p.Cluster = _field
 	return nil
 }
-func (p *CustomPSM) ReadField14(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField14(iprot thrift.TProtocol) error {
 	_field := NewHTTPInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2679,7 +2679,7 @@ func (p *CustomPSM) ReadField14(iprot thrift.TProtocol) error {
 	p.InvokeHTTPInfo = _field
 	return nil
 }
-func (p *CustomPSM) ReadField15(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField15(iprot thrift.TProtocol) error {
 	_field := NewHTTPInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2687,7 +2687,7 @@ func (p *CustomPSM) ReadField15(iprot thrift.TProtocol) error {
 	p.AsyncInvokeHTTPInfo = _field
 	return nil
 }
-func (p *CustomPSM) ReadField16(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField16(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -2698,7 +2698,7 @@ func (p *CustomPSM) ReadField16(iprot thrift.TProtocol) error {
 	p.NeedSearchTarget = _field
 	return nil
 }
-func (p *CustomPSM) ReadField17(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField17(iprot thrift.TProtocol) error {
 	_field := NewHTTPInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2706,7 +2706,7 @@ func (p *CustomPSM) ReadField17(iprot thrift.TProtocol) error {
 	p.SearchHTTPInfo = _field
 	return nil
 }
-func (p *CustomPSM) ReadField18(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField18(iprot thrift.TProtocol) error {
 	_field := NewCustomEvalTarget()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2714,7 +2714,7 @@ func (p *CustomPSM) ReadField18(iprot thrift.TProtocol) error {
 	p.CustomEvalTarget = _field
 	return nil
 }
-func (p *CustomPSM) ReadField19(iprot thrift.TProtocol) error {
+func (p *CustomRPCServer) ReadField19(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -2726,9 +2726,9 @@ func (p *CustomPSM) ReadField19(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CustomPSM) Write(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CustomPSM"); err != nil {
+	if err = oprot.WriteStructBegin("CustomRPCServer"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -2802,7 +2802,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CustomPSM) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetID() {
 		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
@@ -2820,7 +2820,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CustomPSM) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetName() {
 		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -2838,7 +2838,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CustomPSM) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDescription() {
 		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -2856,12 +2856,12 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CustomPSM) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPsm() {
-		if err = oprot.WriteFieldBegin("psm", thrift.STRING, 10); err != nil {
+func (p *CustomRPCServer) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetServerName() {
+		if err = oprot.WriteFieldBegin("server_name", thrift.STRING, 10); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Psm); err != nil {
+		if err := oprot.WriteString(*p.ServerName); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2874,7 +2874,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
-func (p *CustomPSM) writeField11(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAccessProtocol() {
 		if err = oprot.WriteFieldBegin("access_protocol", thrift.STRING, 11); err != nil {
 			goto WriteFieldBeginError
@@ -2892,7 +2892,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
-func (p *CustomPSM) writeField12(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField12(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRegions() {
 		if err = oprot.WriteFieldBegin("regions", thrift.LIST, 12); err != nil {
 			goto WriteFieldBeginError
@@ -2918,7 +2918,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
-func (p *CustomPSM) writeField13(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField13(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCluster() {
 		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 13); err != nil {
 			goto WriteFieldBeginError
@@ -2936,7 +2936,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
-func (p *CustomPSM) writeField14(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField14(oprot thrift.TProtocol) (err error) {
 	if p.IsSetInvokeHTTPInfo() {
 		if err = oprot.WriteFieldBegin("invoke_http_info", thrift.STRUCT, 14); err != nil {
 			goto WriteFieldBeginError
@@ -2954,7 +2954,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
-func (p *CustomPSM) writeField15(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField15(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAsyncInvokeHTTPInfo() {
 		if err = oprot.WriteFieldBegin("async_invoke_http_info", thrift.STRUCT, 15); err != nil {
 			goto WriteFieldBeginError
@@ -2972,7 +2972,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
-func (p *CustomPSM) writeField16(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField16(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNeedSearchTarget() {
 		if err = oprot.WriteFieldBegin("need_search_target", thrift.BOOL, 16); err != nil {
 			goto WriteFieldBeginError
@@ -2990,7 +2990,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
-func (p *CustomPSM) writeField17(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField17(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSearchHTTPInfo() {
 		if err = oprot.WriteFieldBegin("search_http_info", thrift.STRUCT, 17); err != nil {
 			goto WriteFieldBeginError
@@ -3008,7 +3008,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
-func (p *CustomPSM) writeField18(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField18(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCustomEvalTarget() {
 		if err = oprot.WriteFieldBegin("custom_eval_target", thrift.STRUCT, 18); err != nil {
 			goto WriteFieldBeginError
@@ -3026,7 +3026,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
-func (p *CustomPSM) writeField19(oprot thrift.TProtocol) (err error) {
+func (p *CustomRPCServer) writeField19(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIsAsync() {
 		if err = oprot.WriteFieldBegin("is_async", thrift.BOOL, 19); err != nil {
 			goto WriteFieldBeginError
@@ -3045,15 +3045,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
 }
 
-func (p *CustomPSM) String() string {
+func (p *CustomRPCServer) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CustomPSM(%+v)", *p)
+	return fmt.Sprintf("CustomRPCServer(%+v)", *p)
 
 }
 
-func (p *CustomPSM) DeepEqual(ano *CustomPSM) bool {
+func (p *CustomRPCServer) DeepEqual(ano *CustomRPCServer) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3068,7 +3068,7 @@ func (p *CustomPSM) DeepEqual(ano *CustomPSM) bool {
 	if !p.Field3DeepEqual(ano.Description) {
 		return false
 	}
-	if !p.Field10DeepEqual(ano.Psm) {
+	if !p.Field10DeepEqual(ano.ServerName) {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.AccessProtocol) {
@@ -3101,7 +3101,7 @@ func (p *CustomPSM) DeepEqual(ano *CustomPSM) bool {
 	return true
 }
 
-func (p *CustomPSM) Field1DeepEqual(src *int64) bool {
+func (p *CustomRPCServer) Field1DeepEqual(src *int64) bool {
 
 	if p.ID == src {
 		return true
@@ -3113,7 +3113,7 @@ func (p *CustomPSM) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field2DeepEqual(src *string) bool {
+func (p *CustomRPCServer) Field2DeepEqual(src *string) bool {
 
 	if p.Name == src {
 		return true
@@ -3125,7 +3125,7 @@ func (p *CustomPSM) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field3DeepEqual(src *string) bool {
+func (p *CustomRPCServer) Field3DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -3137,19 +3137,19 @@ func (p *CustomPSM) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field10DeepEqual(src *string) bool {
+func (p *CustomRPCServer) Field10DeepEqual(src *string) bool {
 
-	if p.Psm == src {
+	if p.ServerName == src {
 		return true
-	} else if p.Psm == nil || src == nil {
+	} else if p.ServerName == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.Psm, *src) != 0 {
+	if strings.Compare(*p.ServerName, *src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *CustomPSM) Field11DeepEqual(src *AccessProtocol) bool {
+func (p *CustomRPCServer) Field11DeepEqual(src *AccessProtocol) bool {
 
 	if p.AccessProtocol == src {
 		return true
@@ -3161,7 +3161,7 @@ func (p *CustomPSM) Field11DeepEqual(src *AccessProtocol) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field12DeepEqual(src []Region) bool {
+func (p *CustomRPCServer) Field12DeepEqual(src []Region) bool {
 
 	if len(p.Regions) != len(src) {
 		return false
@@ -3174,7 +3174,7 @@ func (p *CustomPSM) Field12DeepEqual(src []Region) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field13DeepEqual(src *string) bool {
+func (p *CustomRPCServer) Field13DeepEqual(src *string) bool {
 
 	if p.Cluster == src {
 		return true
@@ -3186,21 +3186,21 @@ func (p *CustomPSM) Field13DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field14DeepEqual(src *HTTPInfo) bool {
+func (p *CustomRPCServer) Field14DeepEqual(src *HTTPInfo) bool {
 
 	if !p.InvokeHTTPInfo.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CustomPSM) Field15DeepEqual(src *HTTPInfo) bool {
+func (p *CustomRPCServer) Field15DeepEqual(src *HTTPInfo) bool {
 
 	if !p.AsyncInvokeHTTPInfo.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CustomPSM) Field16DeepEqual(src *bool) bool {
+func (p *CustomRPCServer) Field16DeepEqual(src *bool) bool {
 
 	if p.NeedSearchTarget == src {
 		return true
@@ -3212,21 +3212,21 @@ func (p *CustomPSM) Field16DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field17DeepEqual(src *HTTPInfo) bool {
+func (p *CustomRPCServer) Field17DeepEqual(src *HTTPInfo) bool {
 
 	if !p.SearchHTTPInfo.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CustomPSM) Field18DeepEqual(src *CustomEvalTarget) bool {
+func (p *CustomRPCServer) Field18DeepEqual(src *CustomEvalTarget) bool {
 
 	if !p.CustomEvalTarget.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CustomPSM) Field19DeepEqual(src *bool) bool {
+func (p *CustomRPCServer) Field19DeepEqual(src *bool) bool {
 
 	if p.IsAsync == src {
 		return true

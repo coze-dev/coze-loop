@@ -68,14 +68,14 @@ func (p *EvalTargetContent) IsValid() error {
 			return fmt.Errorf("field VolcengineAgent not valid, %w", err)
 		}
 	}
-	if p.CustomPsm != nil {
-		if err := p.CustomPsm.IsValid(); err != nil {
-			return fmt.Errorf("field CustomPsm not valid, %w", err)
+	if p.CustomRPCServer != nil {
+		if err := p.CustomRPCServer.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
 		}
 	}
 	return nil
 }
-func (p *CustomPSM) IsValid() error {
+func (p *CustomRPCServer) IsValid() error {
 	if p.InvokeHTTPInfo != nil {
 		if err := p.InvokeHTTPInfo.IsValid(); err != nil {
 			return fmt.Errorf("field InvokeHTTPInfo not valid, %w", err)

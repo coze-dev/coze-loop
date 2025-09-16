@@ -3,7 +3,7 @@
 
 package entity
 
-type CustomPSM struct {
+type CustomRPCServer struct {
 	// 应用ID
 	ID int64
 	// DTO使用，不存数据库
@@ -11,7 +11,7 @@ type CustomPSM struct {
 	// DTO使用，不存数据库
 	Description string `json:"-"`
 	// 注意以下信息会存储到DB，也就是说实验创建时以下内容就确定了，运行时直接从评测DB中获取，而不是实时从app模块拉
-	Psm string
+	ServerName string
 	// 接入协议
 	AccessProtocol AccessProtocol
 	Regions        []Region
@@ -59,10 +59,10 @@ const (
 type AccessProtocol = string
 
 const (
-	AccessProtocolRPC             = "rpc"
-	AccessProtocolRPCOld          = "rpc_old"
-	AccessProtocolBytefaasHTTP    = "bytefaas_http"
-	AccessProtocolBytefaasHTTPOld = "bytefaas_http_old"
+	AccessProtocolRPC         = "rpc"
+	AccessProtocolRPCOld      = "rpc_old"
+	AccessProtocolFaasHTTP    = "faas_http"
+	AccessProtocolFaasHTTPOld = "faas_http_old"
 )
 
 type HTTPMethod = string

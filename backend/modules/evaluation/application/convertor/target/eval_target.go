@@ -186,26 +186,26 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
 			}
 		}
-	case do.EvalTargetTypeCustomPSM:
+	case do.EvalTargetTypeCustomRPCServer:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
 		}
-		if targetVersionDO.CustomPsm != nil {
-			targetVersionDTO.EvalTargetContent.CustomPsm = &dto.CustomPSM{
-				ID:                  &targetVersionDO.CustomPsm.ID,
-				Name:                &targetVersionDO.CustomPsm.Name,
-				Description:         &targetVersionDO.CustomPsm.Description,
-				Psm:                 &targetVersionDO.CustomPsm.Psm,
-				AccessProtocol:      &targetVersionDO.CustomPsm.AccessProtocol,
-				Regions:             targetVersionDO.CustomPsm.Regions,
-				Cluster:             &targetVersionDO.CustomPsm.Cluster,
-				InvokeHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomPsm.InvokeHTTPInfo),
-				AsyncInvokeHTTPInfo: HttpInfoDO2DTO(targetVersionDO.CustomPsm.AsyncInvokeHTTPInfo),
-				NeedSearchTarget:    targetVersionDO.CustomPsm.NeedSearchTarget,
-				SearchHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomPsm.SearchHTTPInfo),
-				CustomEvalTarget:    CustomEvalTargetDO2DTO(targetVersionDO.CustomPsm.CustomEvalTarget),
-				IsAsync:             targetVersionDO.CustomPsm.IsAsync,
+		if targetVersionDO.CustomRPCServer != nil {
+			targetVersionDTO.EvalTargetContent.CustomRPCServer = &dto.CustomRPCServer{
+				ID:                  &targetVersionDO.CustomRPCServer.ID,
+				Name:                &targetVersionDO.CustomRPCServer.Name,
+				Description:         &targetVersionDO.CustomRPCServer.Description,
+				ServerName:          &targetVersionDO.CustomRPCServer.ServerName,
+				AccessProtocol:      &targetVersionDO.CustomRPCServer.AccessProtocol,
+				Regions:             targetVersionDO.CustomRPCServer.Regions,
+				Cluster:             &targetVersionDO.CustomRPCServer.Cluster,
+				InvokeHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.InvokeHTTPInfo),
+				AsyncInvokeHTTPInfo: HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.AsyncInvokeHTTPInfo),
+				NeedSearchTarget:    targetVersionDO.CustomRPCServer.NeedSearchTarget,
+				SearchHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.SearchHTTPInfo),
+				CustomEvalTarget:    CustomEvalTargetDO2DTO(targetVersionDO.CustomRPCServer.CustomEvalTarget),
+				IsAsync:             targetVersionDO.CustomRPCServer.IsAsync,
 			}
 		}
 	default:

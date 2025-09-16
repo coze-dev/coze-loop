@@ -42,8 +42,8 @@ struct EvalTargetContent {
     103: optional CozeWorkflow coze_workflow
     // EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息
     104: optional VolcengineAgent volcengine_agent
-    // EvalTargetType=6 时，传参此字段。 评测对象为 CustomPSM 时, 需要设置 CustomPSM 信息
-    105: optional CustomPSM custom_psm
+    // EvalTargetType=6 时，传参此字段。 评测对象为 CustomRPCServer 时, 需要设置 CustomRPCServer 信息
+    105: optional CustomRPCServer custom_rpc_server
 }
 
 enum EvalTargetType {
@@ -52,17 +52,17 @@ enum EvalTargetType {
     Trace = 3 // Trace
     CozeWorkflow = 4
     VolcengineAgent = 5 // 火山智能体
-    CustomPSM = 6 // 自定义psm服务 for内场
+    CustomRPCServer = 6 // 自定义RPC服务 for内场
 }
 
-struct CustomPSM {
+struct CustomRPCServer {
     1: optional i64 id    // 应用ID
 
     2: optional string name    // DTO使用，不存数据库
     3: optional string description // DTO使用，不存数据库
 
     // 注意以下信息会存储到DB，也就是说实验创建时以下内容就确定了，运行时直接从评测DB中获取，而不是实时从app模块拉
-    10: optional string psm
+    10: optional string server_name
     11: optional AccessProtocol access_protocol  // 接入协议
     12: optional list<Region> regions
     13: optional string cluster
@@ -97,8 +97,8 @@ const Region Region_I18N = "i18n"
 typedef string AccessProtocol (ts.enum="true")
 const AccessProtocol AccessProtocol_RPC = "rpc"
 const AccessProtocol AccessProtocol_RPCOld = "rpc_old"
-const AccessProtocol AccessProtocol_BytefaasHTTP = "bytefaas_http"
-const AccessProtocol AccessProtocol_BytefaasHTTPOld = "bytefaas_http_old"
+const AccessProtocol AccessProtocol_faasHTTP = "faas_http"
+const AccessProtocol AccessProtocol_faasHTTPOld = "faas_http_old"
 
 typedef string HTTPMethod (ts.enum="true")
 const HTTPMethod HTTPMethod_Get = "get"

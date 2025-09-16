@@ -184,8 +184,8 @@ struct ListSourceEvalTargetVersionsResponse {
 struct SearchCustomEvalTargetRequest {
     1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"') // 空间ID
     2: optional string keyword // 透传spi接口
-    3: optional i64 application_id (api.js_conv="true", go.tag = 'json:"application_id"') // 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义PSM详情
-    4: optional eval_target.CustomPSM custom_psm,    // 自定义PSM详情，非必填，应用注册调试时传
+    3: optional i64 application_id (api.js_conv="true", go.tag = 'json:"application_id"') // 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义服务详情
+    4: optional eval_target.CustomRPCServer custom_rpc_server,    // 自定义服务详情，非必填，应用注册调试时传
     5: optional eval_target.Region region    // 必填
 
     100: optional i32 page_size
@@ -210,7 +210,7 @@ struct DebugEvalTargetRequest {
     10: optional string param    // 执行参数：如果type=6,则传spi request json序列化结果
     11: optional common.RuntimeParam target_runtime_param    // 动态参数
 
-    50: optional eval_target.CustomPSM custom_psm    // 如果type=6,需要前端传入自定义psm相关信息
+    50: optional eval_target.CustomRPCServer custom_rpc_server    // 如果type=6,需要前端传入自定义服务相关信息
 
     255: optional base.Base Base
 }
@@ -225,10 +225,10 @@ struct AsyncDebugEvalTargetRequest {
     1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional eval_target.EvalTargetType eval_target_type    // 类型
 
-    10: optional common.RuntimeParam target_runtime_param    // 动态参数
+    10: optional string param    // 执行参数：如果type=6,则传spi request json序列化结果
+    11: optional common.RuntimeParam target_runtime_param    // 动态参数
 
-    50: optional eval_target.CustomPSM custom_psm    // 如果type=6,需要前端传入自定义psm相关信息
-    51: optional string custom_psm_spi_param    // 执行参数：如果type=6,则传spi request json序列化结果
+    50: optional eval_target.CustomRPCServer custom_rpc_server    // 如果type=6,需要前端传入自定义服务相关信息
 
     255: optional base.Base Base
 }

@@ -236,9 +236,9 @@ func (p *ListSourceEvalTargetVersionsResponse) IsValid() error {
 	return nil
 }
 func (p *SearchCustomEvalTargetRequest) IsValid() error {
-	if p.CustomPsm != nil {
-		if err := p.CustomPsm.IsValid(); err != nil {
-			return fmt.Errorf("field CustomPsm not valid, %w", err)
+	if p.CustomRPCServer != nil {
+		if err := p.CustomRPCServer.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -262,9 +262,9 @@ func (p *DebugEvalTargetRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
-	if p.CustomPsm != nil {
-		if err := p.CustomPsm.IsValid(); err != nil {
-			return fmt.Errorf("field CustomPsm not valid, %w", err)
+	if p.CustomRPCServer != nil {
+		if err := p.CustomRPCServer.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -293,9 +293,9 @@ func (p *AsyncDebugEvalTargetRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
-	if p.CustomPsm != nil {
-		if err := p.CustomPsm.IsValid(); err != nil {
-			return fmt.Errorf("field CustomPsm not valid, %w", err)
+	if p.CustomRPCServer != nil {
+		if err := p.CustomRPCServer.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

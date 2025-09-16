@@ -8457,10 +8457,10 @@ type SearchCustomEvalTargetRequest struct {
 	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	// 透传spi接口
 	Keyword *string `thrift:"keyword,2,optional" frugal:"2,optional,string" form:"keyword" json:"keyword,omitempty" query:"keyword"`
-	// 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义PSM详情
+	// 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义服务详情
 	ApplicationID *int64 `thrift:"application_id,3,optional" frugal:"3,optional,i64" json:"application_id" form:"application_id" query:"application_id"`
-	// 自定义PSM详情，非必填，应用注册调试时传
-	CustomPsm *eval_target.CustomPSM `thrift:"custom_psm,4,optional" frugal:"4,optional,eval_target.CustomPSM" form:"custom_psm" json:"custom_psm,omitempty" query:"custom_psm"`
+	// 自定义服务详情，非必填，应用注册调试时传
+	CustomRPCServer *eval_target.CustomRPCServer `thrift:"custom_rpc_server,4,optional" frugal:"4,optional,eval_target.CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty" query:"custom_rpc_server"`
 	// 必填
 	Region    *eval_target.Region `thrift:"region,5,optional" frugal:"5,optional,string" form:"region" json:"region,omitempty" query:"region"`
 	PageSize  *int32              `thrift:"page_size,100,optional" frugal:"100,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
@@ -8511,16 +8511,16 @@ func (p *SearchCustomEvalTargetRequest) GetApplicationID() (v int64) {
 	return *p.ApplicationID
 }
 
-var SearchCustomEvalTargetRequest_CustomPsm_DEFAULT *eval_target.CustomPSM
+var SearchCustomEvalTargetRequest_CustomRPCServer_DEFAULT *eval_target.CustomRPCServer
 
-func (p *SearchCustomEvalTargetRequest) GetCustomPsm() (v *eval_target.CustomPSM) {
+func (p *SearchCustomEvalTargetRequest) GetCustomRPCServer() (v *eval_target.CustomRPCServer) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetCustomPsm() {
-		return SearchCustomEvalTargetRequest_CustomPsm_DEFAULT
+	if !p.IsSetCustomRPCServer() {
+		return SearchCustomEvalTargetRequest_CustomRPCServer_DEFAULT
 	}
-	return p.CustomPsm
+	return p.CustomRPCServer
 }
 
 var SearchCustomEvalTargetRequest_Region_DEFAULT eval_target.Region
@@ -8579,8 +8579,8 @@ func (p *SearchCustomEvalTargetRequest) SetKeyword(val *string) {
 func (p *SearchCustomEvalTargetRequest) SetApplicationID(val *int64) {
 	p.ApplicationID = val
 }
-func (p *SearchCustomEvalTargetRequest) SetCustomPsm(val *eval_target.CustomPSM) {
-	p.CustomPsm = val
+func (p *SearchCustomEvalTargetRequest) SetCustomRPCServer(val *eval_target.CustomRPCServer) {
+	p.CustomRPCServer = val
 }
 func (p *SearchCustomEvalTargetRequest) SetRegion(val *eval_target.Region) {
 	p.Region = val
@@ -8599,7 +8599,7 @@ var fieldIDToName_SearchCustomEvalTargetRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "keyword",
 	3:   "application_id",
-	4:   "custom_psm",
+	4:   "custom_rpc_server",
 	5:   "region",
 	100: "page_size",
 	101: "page_token",
@@ -8618,8 +8618,8 @@ func (p *SearchCustomEvalTargetRequest) IsSetApplicationID() bool {
 	return p.ApplicationID != nil
 }
 
-func (p *SearchCustomEvalTargetRequest) IsSetCustomPsm() bool {
-	return p.CustomPsm != nil
+func (p *SearchCustomEvalTargetRequest) IsSetCustomRPCServer() bool {
+	return p.CustomRPCServer != nil
 }
 
 func (p *SearchCustomEvalTargetRequest) IsSetRegion() bool {
@@ -8783,11 +8783,11 @@ func (p *SearchCustomEvalTargetRequest) ReadField3(iprot thrift.TProtocol) error
 	return nil
 }
 func (p *SearchCustomEvalTargetRequest) ReadField4(iprot thrift.TProtocol) error {
-	_field := eval_target.NewCustomPSM()
+	_field := eval_target.NewCustomRPCServer()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.CustomPsm = _field
+	p.CustomRPCServer = _field
 	return nil
 }
 func (p *SearchCustomEvalTargetRequest) ReadField5(iprot thrift.TProtocol) error {
@@ -8943,11 +8943,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *SearchCustomEvalTargetRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomPsm() {
-		if err = oprot.WriteFieldBegin("custom_psm", thrift.STRUCT, 4); err != nil {
+	if p.IsSetCustomRPCServer() {
+		if err = oprot.WriteFieldBegin("custom_rpc_server", thrift.STRUCT, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.CustomPsm.Write(oprot); err != nil {
+		if err := p.CustomRPCServer.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9056,7 +9056,7 @@ func (p *SearchCustomEvalTargetRequest) DeepEqual(ano *SearchCustomEvalTargetReq
 	if !p.Field3DeepEqual(ano.ApplicationID) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.CustomPsm) {
+	if !p.Field4DeepEqual(ano.CustomRPCServer) {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.Region) {
@@ -9110,9 +9110,9 @@ func (p *SearchCustomEvalTargetRequest) Field3DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *SearchCustomEvalTargetRequest) Field4DeepEqual(src *eval_target.CustomPSM) bool {
+func (p *SearchCustomEvalTargetRequest) Field4DeepEqual(src *eval_target.CustomRPCServer) bool {
 
-	if !p.CustomPsm.DeepEqual(src) {
+	if !p.CustomRPCServer.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -9581,9 +9581,9 @@ type DebugEvalTargetRequest struct {
 	Param *string `thrift:"param,10,optional" frugal:"10,optional,string" form:"param" json:"param,omitempty" query:"param"`
 	// 动态参数
 	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,11,optional" frugal:"11,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
-	// 如果type=6,需要前端传入自定义psm相关信息
-	CustomPsm *eval_target.CustomPSM `thrift:"custom_psm,50,optional" frugal:"50,optional,eval_target.CustomPSM" form:"custom_psm" json:"custom_psm,omitempty" query:"custom_psm"`
-	Base      *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 如果type=6,需要前端传入自定义服务相关信息
+	CustomRPCServer *eval_target.CustomRPCServer `thrift:"custom_rpc_server,50,optional" frugal:"50,optional,eval_target.CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty" query:"custom_rpc_server"`
+	Base            *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewDebugEvalTargetRequest() *DebugEvalTargetRequest {
@@ -9641,16 +9641,16 @@ func (p *DebugEvalTargetRequest) GetTargetRuntimeParam() (v *common.RuntimeParam
 	return p.TargetRuntimeParam
 }
 
-var DebugEvalTargetRequest_CustomPsm_DEFAULT *eval_target.CustomPSM
+var DebugEvalTargetRequest_CustomRPCServer_DEFAULT *eval_target.CustomRPCServer
 
-func (p *DebugEvalTargetRequest) GetCustomPsm() (v *eval_target.CustomPSM) {
+func (p *DebugEvalTargetRequest) GetCustomRPCServer() (v *eval_target.CustomRPCServer) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetCustomPsm() {
-		return DebugEvalTargetRequest_CustomPsm_DEFAULT
+	if !p.IsSetCustomRPCServer() {
+		return DebugEvalTargetRequest_CustomRPCServer_DEFAULT
 	}
-	return p.CustomPsm
+	return p.CustomRPCServer
 }
 
 var DebugEvalTargetRequest_Base_DEFAULT *base.Base
@@ -9676,8 +9676,8 @@ func (p *DebugEvalTargetRequest) SetParam(val *string) {
 func (p *DebugEvalTargetRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
-func (p *DebugEvalTargetRequest) SetCustomPsm(val *eval_target.CustomPSM) {
-	p.CustomPsm = val
+func (p *DebugEvalTargetRequest) SetCustomRPCServer(val *eval_target.CustomRPCServer) {
+	p.CustomRPCServer = val
 }
 func (p *DebugEvalTargetRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -9688,7 +9688,7 @@ var fieldIDToName_DebugEvalTargetRequest = map[int16]string{
 	2:   "eval_target_type",
 	10:  "param",
 	11:  "target_runtime_param",
-	50:  "custom_psm",
+	50:  "custom_rpc_server",
 	255: "Base",
 }
 
@@ -9708,8 +9708,8 @@ func (p *DebugEvalTargetRequest) IsSetTargetRuntimeParam() bool {
 	return p.TargetRuntimeParam != nil
 }
 
-func (p *DebugEvalTargetRequest) IsSetCustomPsm() bool {
-	return p.CustomPsm != nil
+func (p *DebugEvalTargetRequest) IsSetCustomRPCServer() bool {
+	return p.CustomRPCServer != nil
 }
 
 func (p *DebugEvalTargetRequest) IsSetBase() bool {
@@ -9854,11 +9854,11 @@ func (p *DebugEvalTargetRequest) ReadField11(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *DebugEvalTargetRequest) ReadField50(iprot thrift.TProtocol) error {
-	_field := eval_target.NewCustomPSM()
+	_field := eval_target.NewCustomRPCServer()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.CustomPsm = _field
+	p.CustomRPCServer = _field
 	return nil
 }
 func (p *DebugEvalTargetRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -9991,11 +9991,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 func (p *DebugEvalTargetRequest) writeField50(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomPsm() {
-		if err = oprot.WriteFieldBegin("custom_psm", thrift.STRUCT, 50); err != nil {
+	if p.IsSetCustomRPCServer() {
+		if err = oprot.WriteFieldBegin("custom_rpc_server", thrift.STRUCT, 50); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.CustomPsm.Write(oprot); err != nil {
+		if err := p.CustomRPCServer.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -10053,7 +10053,7 @@ func (p *DebugEvalTargetRequest) DeepEqual(ano *DebugEvalTargetRequest) bool {
 	if !p.Field11DeepEqual(ano.TargetRuntimeParam) {
 		return false
 	}
-	if !p.Field50DeepEqual(ano.CustomPsm) {
+	if !p.Field50DeepEqual(ano.CustomRPCServer) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -10105,9 +10105,9 @@ func (p *DebugEvalTargetRequest) Field11DeepEqual(src *common.RuntimeParam) bool
 	}
 	return true
 }
-func (p *DebugEvalTargetRequest) Field50DeepEqual(src *eval_target.CustomPSM) bool {
+func (p *DebugEvalTargetRequest) Field50DeepEqual(src *eval_target.CustomRPCServer) bool {
 
-	if !p.CustomPsm.DeepEqual(src) {
+	if !p.CustomRPCServer.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -10364,13 +10364,13 @@ type AsyncDebugEvalTargetRequest struct {
 	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	// 类型
 	EvalTargetType *eval_target.EvalTargetType `thrift:"eval_target_type,2,optional" frugal:"2,optional,EvalTargetType" form:"eval_target_type" json:"eval_target_type,omitempty" query:"eval_target_type"`
-	// 动态参数
-	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,10,optional" frugal:"10,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
-	// 如果type=6,需要前端传入自定义psm相关信息
-	CustomPsm *eval_target.CustomPSM `thrift:"custom_psm,50,optional" frugal:"50,optional,eval_target.CustomPSM" form:"custom_psm" json:"custom_psm,omitempty" query:"custom_psm"`
 	// 执行参数：如果type=6,则传spi request json序列化结果
-	CustomPsmSpiParam *string    `thrift:"custom_psm_spi_param,51,optional" frugal:"51,optional,string" form:"custom_psm_spi_param" json:"custom_psm_spi_param,omitempty" query:"custom_psm_spi_param"`
-	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Param *string `thrift:"param,10,optional" frugal:"10,optional,string" form:"param" json:"param,omitempty" query:"param"`
+	// 动态参数
+	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,11,optional" frugal:"11,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
+	// 如果type=6,需要前端传入自定义服务相关信息
+	CustomRPCServer *eval_target.CustomRPCServer `thrift:"custom_rpc_server,50,optional" frugal:"50,optional,eval_target.CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty" query:"custom_rpc_server"`
+	Base            *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewAsyncDebugEvalTargetRequest() *AsyncDebugEvalTargetRequest {
@@ -10404,6 +10404,18 @@ func (p *AsyncDebugEvalTargetRequest) GetEvalTargetType() (v eval_target.EvalTar
 	return *p.EvalTargetType
 }
 
+var AsyncDebugEvalTargetRequest_Param_DEFAULT string
+
+func (p *AsyncDebugEvalTargetRequest) GetParam() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetParam() {
+		return AsyncDebugEvalTargetRequest_Param_DEFAULT
+	}
+	return *p.Param
+}
+
 var AsyncDebugEvalTargetRequest_TargetRuntimeParam_DEFAULT *common.RuntimeParam
 
 func (p *AsyncDebugEvalTargetRequest) GetTargetRuntimeParam() (v *common.RuntimeParam) {
@@ -10416,28 +10428,16 @@ func (p *AsyncDebugEvalTargetRequest) GetTargetRuntimeParam() (v *common.Runtime
 	return p.TargetRuntimeParam
 }
 
-var AsyncDebugEvalTargetRequest_CustomPsm_DEFAULT *eval_target.CustomPSM
+var AsyncDebugEvalTargetRequest_CustomRPCServer_DEFAULT *eval_target.CustomRPCServer
 
-func (p *AsyncDebugEvalTargetRequest) GetCustomPsm() (v *eval_target.CustomPSM) {
+func (p *AsyncDebugEvalTargetRequest) GetCustomRPCServer() (v *eval_target.CustomRPCServer) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetCustomPsm() {
-		return AsyncDebugEvalTargetRequest_CustomPsm_DEFAULT
+	if !p.IsSetCustomRPCServer() {
+		return AsyncDebugEvalTargetRequest_CustomRPCServer_DEFAULT
 	}
-	return p.CustomPsm
-}
-
-var AsyncDebugEvalTargetRequest_CustomPsmSpiParam_DEFAULT string
-
-func (p *AsyncDebugEvalTargetRequest) GetCustomPsmSpiParam() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetCustomPsmSpiParam() {
-		return AsyncDebugEvalTargetRequest_CustomPsmSpiParam_DEFAULT
-	}
-	return *p.CustomPsmSpiParam
+	return p.CustomRPCServer
 }
 
 var AsyncDebugEvalTargetRequest_Base_DEFAULT *base.Base
@@ -10457,14 +10457,14 @@ func (p *AsyncDebugEvalTargetRequest) SetWorkspaceID(val *int64) {
 func (p *AsyncDebugEvalTargetRequest) SetEvalTargetType(val *eval_target.EvalTargetType) {
 	p.EvalTargetType = val
 }
+func (p *AsyncDebugEvalTargetRequest) SetParam(val *string) {
+	p.Param = val
+}
 func (p *AsyncDebugEvalTargetRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
-func (p *AsyncDebugEvalTargetRequest) SetCustomPsm(val *eval_target.CustomPSM) {
-	p.CustomPsm = val
-}
-func (p *AsyncDebugEvalTargetRequest) SetCustomPsmSpiParam(val *string) {
-	p.CustomPsmSpiParam = val
+func (p *AsyncDebugEvalTargetRequest) SetCustomRPCServer(val *eval_target.CustomRPCServer) {
+	p.CustomRPCServer = val
 }
 func (p *AsyncDebugEvalTargetRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -10473,9 +10473,9 @@ func (p *AsyncDebugEvalTargetRequest) SetBase(val *base.Base) {
 var fieldIDToName_AsyncDebugEvalTargetRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "eval_target_type",
-	10:  "target_runtime_param",
-	50:  "custom_psm",
-	51:  "custom_psm_spi_param",
+	10:  "param",
+	11:  "target_runtime_param",
+	50:  "custom_rpc_server",
 	255: "Base",
 }
 
@@ -10487,16 +10487,16 @@ func (p *AsyncDebugEvalTargetRequest) IsSetEvalTargetType() bool {
 	return p.EvalTargetType != nil
 }
 
+func (p *AsyncDebugEvalTargetRequest) IsSetParam() bool {
+	return p.Param != nil
+}
+
 func (p *AsyncDebugEvalTargetRequest) IsSetTargetRuntimeParam() bool {
 	return p.TargetRuntimeParam != nil
 }
 
-func (p *AsyncDebugEvalTargetRequest) IsSetCustomPsm() bool {
-	return p.CustomPsm != nil
-}
-
-func (p *AsyncDebugEvalTargetRequest) IsSetCustomPsmSpiParam() bool {
-	return p.CustomPsmSpiParam != nil
+func (p *AsyncDebugEvalTargetRequest) IsSetCustomRPCServer() bool {
+	return p.CustomRPCServer != nil
 }
 
 func (p *AsyncDebugEvalTargetRequest) IsSetBase() bool {
@@ -10538,8 +10538,16 @@ func (p *AsyncDebugEvalTargetRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 10:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10548,14 +10556,6 @@ func (p *AsyncDebugEvalTargetRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField50(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 51:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10622,6 +10622,17 @@ func (p *AsyncDebugEvalTargetRequest) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *AsyncDebugEvalTargetRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Param = _field
+	return nil
+}
+func (p *AsyncDebugEvalTargetRequest) ReadField11(iprot thrift.TProtocol) error {
 	_field := common.NewRuntimeParam()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -10630,22 +10641,11 @@ func (p *AsyncDebugEvalTargetRequest) ReadField10(iprot thrift.TProtocol) error 
 	return nil
 }
 func (p *AsyncDebugEvalTargetRequest) ReadField50(iprot thrift.TProtocol) error {
-	_field := eval_target.NewCustomPSM()
+	_field := eval_target.NewCustomRPCServer()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.CustomPsm = _field
-	return nil
-}
-func (p *AsyncDebugEvalTargetRequest) ReadField51(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.CustomPsmSpiParam = _field
+	p.CustomRPCServer = _field
 	return nil
 }
 func (p *AsyncDebugEvalTargetRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -10675,12 +10675,12 @@ func (p *AsyncDebugEvalTargetRequest) Write(oprot thrift.TProtocol) (err error) 
 			fieldId = 10
 			goto WriteFieldError
 		}
-		if err = p.writeField50(oprot); err != nil {
-			fieldId = 50
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
-		if err = p.writeField51(oprot); err != nil {
-			fieldId = 51
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10742,11 +10742,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *AsyncDebugEvalTargetRequest) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTargetRuntimeParam() {
-		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 10); err != nil {
+	if p.IsSetParam() {
+		if err = oprot.WriteFieldBegin("param", thrift.STRING, 10); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.TargetRuntimeParam.Write(oprot); err != nil {
+		if err := oprot.WriteString(*p.Param); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -10759,12 +10759,30 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
-func (p *AsyncDebugEvalTargetRequest) writeField50(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomPsm() {
-		if err = oprot.WriteFieldBegin("custom_psm", thrift.STRUCT, 50); err != nil {
+func (p *AsyncDebugEvalTargetRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetRuntimeParam() {
+		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 11); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.CustomPsm.Write(oprot); err != nil {
+		if err := p.TargetRuntimeParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *AsyncDebugEvalTargetRequest) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomRPCServer() {
+		if err = oprot.WriteFieldBegin("custom_rpc_server", thrift.STRUCT, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomRPCServer.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -10776,24 +10794,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
-}
-func (p *AsyncDebugEvalTargetRequest) writeField51(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomPsmSpiParam() {
-		if err = oprot.WriteFieldBegin("custom_psm_spi_param", thrift.STRING, 51); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.CustomPsmSpiParam); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
 }
 func (p *AsyncDebugEvalTargetRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -10834,13 +10834,13 @@ func (p *AsyncDebugEvalTargetRequest) DeepEqual(ano *AsyncDebugEvalTargetRequest
 	if !p.Field2DeepEqual(ano.EvalTargetType) {
 		return false
 	}
-	if !p.Field10DeepEqual(ano.TargetRuntimeParam) {
+	if !p.Field10DeepEqual(ano.Param) {
 		return false
 	}
-	if !p.Field50DeepEqual(ano.CustomPsm) {
+	if !p.Field11DeepEqual(ano.TargetRuntimeParam) {
 		return false
 	}
-	if !p.Field51DeepEqual(ano.CustomPsmSpiParam) {
+	if !p.Field50DeepEqual(ano.CustomRPCServer) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -10873,28 +10873,28 @@ func (p *AsyncDebugEvalTargetRequest) Field2DeepEqual(src *eval_target.EvalTarge
 	}
 	return true
 }
-func (p *AsyncDebugEvalTargetRequest) Field10DeepEqual(src *common.RuntimeParam) bool {
+func (p *AsyncDebugEvalTargetRequest) Field10DeepEqual(src *string) bool {
+
+	if p.Param == src {
+		return true
+	} else if p.Param == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Param, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AsyncDebugEvalTargetRequest) Field11DeepEqual(src *common.RuntimeParam) bool {
 
 	if !p.TargetRuntimeParam.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *AsyncDebugEvalTargetRequest) Field50DeepEqual(src *eval_target.CustomPSM) bool {
+func (p *AsyncDebugEvalTargetRequest) Field50DeepEqual(src *eval_target.CustomRPCServer) bool {
 
-	if !p.CustomPsm.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *AsyncDebugEvalTargetRequest) Field51DeepEqual(src *string) bool {
-
-	if p.CustomPsmSpiParam == src {
-		return true
-	} else if p.CustomPsmSpiParam == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.CustomPsmSpiParam, *src) != 0 {
+	if !p.CustomRPCServer.DeepEqual(src) {
 		return false
 	}
 	return true
