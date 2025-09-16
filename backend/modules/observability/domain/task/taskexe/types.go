@@ -36,6 +36,13 @@ type Processor interface {
 	Invoke(ctx context.Context, config any, trigger *Trigger) error              //根据不同类型进行执行，如rpc回调、mq投递等
 	OnChangeProcessor(ctx context.Context, task *task.Task, taskOp TaskOp) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
 	Finish(ctx context.Context, config any, trigger *Trigger) error              //Finish
+
+	OnCreateChangeProcessor(ctx context.Context, task *task.Task) error //OnCreateChangeProcessor 调用 evaluation 接口进行前期物料准备
+	OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error //OnUpdateChangeProcessor 调用 evaluation 接口进行前期物料准备
+	OnFinishChangeProcessor(ctx context.Context, task *task.Task) error //OnFinishChangeProcessor 调用 evaluation 接口进行前期物料准备
+
+	OnCreateTaskRunProcessor(ctx context.Context, task *task.TaskRun) error //OnCreateTaskRunProcessor 调用 evaluation 接口进行前期物料准备
+	OnFinishTaskRunProcessor(ctx context.Context, task *task.TaskRun) error //OnFinishTaskRunProcessor 调用 evaluation 接口进行前期物料准备
 }
 
 type ProcessorUnion interface {
