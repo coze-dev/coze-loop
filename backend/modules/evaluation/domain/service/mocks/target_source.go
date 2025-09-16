@@ -182,6 +182,23 @@ func (mr *MockISourceEvalTargetOperateServiceMockRecorder) RuntimeParam() *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RuntimeParam", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).RuntimeParam))
 }
 
+// SearchCustomEvalTarget mocks base method.
+func (m *MockISourceEvalTargetOperateService) SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) ([]*entity.CustomEvalTarget, string, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchCustomEvalTarget", ctx, param)
+	ret0, _ := ret[0].([]*entity.CustomEvalTarget)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(bool)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// SearchCustomEvalTarget indicates an expected call of SearchCustomEvalTarget.
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) SearchCustomEvalTarget(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCustomEvalTarget", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).SearchCustomEvalTarget), ctx, param)
+}
+
 // ValidateInput mocks base method.
 func (m *MockISourceEvalTargetOperateService) ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error {
 	m.ctrl.T.Helper()

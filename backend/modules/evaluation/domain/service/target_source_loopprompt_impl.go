@@ -473,3 +473,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BatchGetSource(ctx context.Context, 
 	}
 	return targets, nil
 }
+
+func (t *PromptSourceEvalTargetServiceImpl) SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) (targets []*entity.CustomEvalTarget, nextCursor string, hasMore bool, err error) {
+	return nil, "", false, nil
+}
