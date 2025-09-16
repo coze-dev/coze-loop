@@ -121,10 +121,11 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if err != nil {
 		return nil, err
 	}
+	taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
 	if t.shouldCreateTaskRun(req.Task) {
-		if err = proc.OnChangeProcessor(ctx, req.Task, task.TaskStatusUnstarted); err != nil {
+		if err = proc.OnChangeProcessor(ctx, taskConfig, task.TaskStatusUnstarted); err != nil {
 			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 			//任务改为禁用？
 			return nil, err
