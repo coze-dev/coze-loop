@@ -18,19 +18,10 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
+      "path": "../adapter-interfaces/tsconfig.build.json"
+    },
+    {
       "path": "../api-schema/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/bot-md-box-adapter/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../base-hooks/tsconfig.build.json"
-    },
-    {
-      "path": "../biz-components/tsconfig.build.json"
     },
     {
       "path": "../biz-hooks/tsconfig.build.json"
@@ -51,34 +42,10 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../env/tsconfig.build.json"
-    },
-    {
-      "path": "../evaluate-adapter/tsconfig.build.json"
-    },
-    {
-      "path": "../guard/tsconfig.build.json"
-    },
-    {
-      "path": "../i18n/tsconfig.build.json"
-    },
-    {
-      "path": "../observation/trace-detail-open/tsconfig.build.json"
-    },
-    {
       "path": "../prompt-components/tsconfig.build.json"
     },
     {
-      "path": "../stores/tsconfig.build.json"
-    },
-    {
       "path": "../tailwind-config/tsconfig.build.json"
-    },
-    {
-      "path": "../tea/tsconfig.build.json"
-    },
-    {
-      "path": "../toolkit/tsconfig.build.json"
     }
   ]
 }
