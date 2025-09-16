@@ -333,6 +333,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		}
 		taskRunstat[taskPO.ID] = runDone
 	}
+	logs.CtxInfo(ctx, "taskRunstat:%v", taskRunstat)
 	// 遍历任务
 	for _, taskInfo := range tasks {
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
