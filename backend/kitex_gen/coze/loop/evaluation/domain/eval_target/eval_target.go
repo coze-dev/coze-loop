@@ -26,9 +26,9 @@ const (
 
 	AccessProtocolBytefaasHTTPOld = "bytefaas_http_old"
 
-	HttpMethodGet = "get"
+	HTTPMethodGet = "get"
 
-	HttpMethodPost = "post"
+	HTTPMethodPost = "post"
 )
 
 type EvalTargetType int64
@@ -289,7 +289,7 @@ type Region = string
 
 type AccessProtocol = string
 
-type HttpMethod = string
+type HTTPMethod = string
 
 type EvalTarget struct {
 	// 基本信息
@@ -2148,13 +2148,13 @@ type CustomPSM struct {
 	Regions        []Region        `thrift:"regions,12,optional" frugal:"12,optional,list<string>" form:"regions" json:"regions,omitempty" query:"regions"`
 	Cluster        *string         `thrift:"cluster,13,optional" frugal:"13,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
 	// 执行http信息
-	InvokeHTTPInfo *HttpInfo `thrift:"invoke_http_info,14,optional" frugal:"14,optional,HttpInfo" form:"invoke_http_info" json:"invoke_http_info,omitempty" query:"invoke_http_info"`
+	InvokeHTTPInfo *HTTPInfo `thrift:"invoke_http_info,14,optional" frugal:"14,optional,HTTPInfo" form:"invoke_http_info" json:"invoke_http_info,omitempty" query:"invoke_http_info"`
 	// 异步执行http信息，如果用户选了异步就传入这个字段
-	AsyncInvokeHTTPInfo *HttpInfo `thrift:"async_invoke_http_info,15,optional" frugal:"15,optional,HttpInfo" form:"async_invoke_http_info" json:"async_invoke_http_info,omitempty" query:"async_invoke_http_info"`
+	AsyncInvokeHTTPInfo *HTTPInfo `thrift:"async_invoke_http_info,15,optional" frugal:"15,optional,HTTPInfo" form:"async_invoke_http_info" json:"async_invoke_http_info,omitempty" query:"async_invoke_http_info"`
 	// 是否需要搜索对象
 	NeedSearchTarget *bool `thrift:"need_search_target,16,optional" frugal:"16,optional,bool" form:"need_search_target" json:"need_search_target,omitempty" query:"need_search_target"`
 	// 搜索对象http信息
-	SearchHTTPInfo *HttpInfo `thrift:"search_http_info,17,optional" frugal:"17,optional,HttpInfo" form:"search_http_info" json:"search_http_info,omitempty" query:"search_http_info"`
+	SearchHTTPInfo *HTTPInfo `thrift:"search_http_info,17,optional" frugal:"17,optional,HTTPInfo" form:"search_http_info" json:"search_http_info,omitempty" query:"search_http_info"`
 	// 搜索对象返回的信息
 	CustomEvalTarget *CustomEvalTarget `thrift:"custom_eval_target,18,optional" frugal:"18,optional,CustomEvalTarget" form:"custom_eval_target" json:"custom_eval_target,omitempty" query:"custom_eval_target"`
 	// 是否异步
@@ -2252,9 +2252,9 @@ func (p *CustomPSM) GetCluster() (v string) {
 	return *p.Cluster
 }
 
-var CustomPSM_InvokeHTTPInfo_DEFAULT *HttpInfo
+var CustomPSM_InvokeHTTPInfo_DEFAULT *HTTPInfo
 
-func (p *CustomPSM) GetInvokeHTTPInfo() (v *HttpInfo) {
+func (p *CustomPSM) GetInvokeHTTPInfo() (v *HTTPInfo) {
 	if p == nil {
 		return
 	}
@@ -2264,9 +2264,9 @@ func (p *CustomPSM) GetInvokeHTTPInfo() (v *HttpInfo) {
 	return p.InvokeHTTPInfo
 }
 
-var CustomPSM_AsyncInvokeHTTPInfo_DEFAULT *HttpInfo
+var CustomPSM_AsyncInvokeHTTPInfo_DEFAULT *HTTPInfo
 
-func (p *CustomPSM) GetAsyncInvokeHTTPInfo() (v *HttpInfo) {
+func (p *CustomPSM) GetAsyncInvokeHTTPInfo() (v *HTTPInfo) {
 	if p == nil {
 		return
 	}
@@ -2288,9 +2288,9 @@ func (p *CustomPSM) GetNeedSearchTarget() (v bool) {
 	return *p.NeedSearchTarget
 }
 
-var CustomPSM_SearchHTTPInfo_DEFAULT *HttpInfo
+var CustomPSM_SearchHTTPInfo_DEFAULT *HTTPInfo
 
-func (p *CustomPSM) GetSearchHTTPInfo() (v *HttpInfo) {
+func (p *CustomPSM) GetSearchHTTPInfo() (v *HTTPInfo) {
 	if p == nil {
 		return
 	}
@@ -2344,16 +2344,16 @@ func (p *CustomPSM) SetRegions(val []Region) {
 func (p *CustomPSM) SetCluster(val *string) {
 	p.Cluster = val
 }
-func (p *CustomPSM) SetInvokeHTTPInfo(val *HttpInfo) {
+func (p *CustomPSM) SetInvokeHTTPInfo(val *HTTPInfo) {
 	p.InvokeHTTPInfo = val
 }
-func (p *CustomPSM) SetAsyncInvokeHTTPInfo(val *HttpInfo) {
+func (p *CustomPSM) SetAsyncInvokeHTTPInfo(val *HTTPInfo) {
 	p.AsyncInvokeHTTPInfo = val
 }
 func (p *CustomPSM) SetNeedSearchTarget(val *bool) {
 	p.NeedSearchTarget = val
 }
-func (p *CustomPSM) SetSearchHTTPInfo(val *HttpInfo) {
+func (p *CustomPSM) SetSearchHTTPInfo(val *HTTPInfo) {
 	p.SearchHTTPInfo = val
 }
 func (p *CustomPSM) SetCustomEvalTarget(val *CustomEvalTarget) {
@@ -2672,7 +2672,7 @@ func (p *CustomPSM) ReadField13(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *CustomPSM) ReadField14(iprot thrift.TProtocol) error {
-	_field := NewHttpInfo()
+	_field := NewHTTPInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -2680,7 +2680,7 @@ func (p *CustomPSM) ReadField14(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *CustomPSM) ReadField15(iprot thrift.TProtocol) error {
-	_field := NewHttpInfo()
+	_field := NewHTTPInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -2699,7 +2699,7 @@ func (p *CustomPSM) ReadField16(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *CustomPSM) ReadField17(iprot thrift.TProtocol) error {
-	_field := NewHttpInfo()
+	_field := NewHTTPInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -3186,14 +3186,14 @@ func (p *CustomPSM) Field13DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field14DeepEqual(src *HttpInfo) bool {
+func (p *CustomPSM) Field14DeepEqual(src *HTTPInfo) bool {
 
 	if !p.InvokeHTTPInfo.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CustomPSM) Field15DeepEqual(src *HttpInfo) bool {
+func (p *CustomPSM) Field15DeepEqual(src *HTTPInfo) bool {
 
 	if !p.AsyncInvokeHTTPInfo.DeepEqual(src) {
 		return false
@@ -3212,7 +3212,7 @@ func (p *CustomPSM) Field16DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *CustomPSM) Field17DeepEqual(src *HttpInfo) bool {
+func (p *CustomPSM) Field17DeepEqual(src *HTTPInfo) bool {
 
 	if !p.SearchHTTPInfo.DeepEqual(src) {
 		return false
@@ -3685,84 +3685,84 @@ func (p *CustomEvalTarget) Field10DeepEqual(src map[string]string) bool {
 	return true
 }
 
-type HttpInfo struct {
-	Method *HttpMethod `thrift:"method,1,optional" frugal:"1,optional,string" form:"method" json:"method,omitempty" query:"method"`
+type HTTPInfo struct {
+	Method *HTTPMethod `thrift:"method,1,optional" frugal:"1,optional,string" form:"method" json:"method,omitempty" query:"method"`
 	Path   *string     `thrift:"path,2,optional" frugal:"2,optional,string" form:"path" json:"path,omitempty" query:"path"`
 	// ms，默认5000，最大800,000
 	Timeout *int64 `thrift:"timeout,4,optional" frugal:"4,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
 }
 
-func NewHttpInfo() *HttpInfo {
-	return &HttpInfo{}
+func NewHTTPInfo() *HTTPInfo {
+	return &HTTPInfo{}
 }
 
-func (p *HttpInfo) InitDefault() {
+func (p *HTTPInfo) InitDefault() {
 }
 
-var HttpInfo_Method_DEFAULT HttpMethod
+var HTTPInfo_Method_DEFAULT HTTPMethod
 
-func (p *HttpInfo) GetMethod() (v HttpMethod) {
+func (p *HTTPInfo) GetMethod() (v HTTPMethod) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMethod() {
-		return HttpInfo_Method_DEFAULT
+		return HTTPInfo_Method_DEFAULT
 	}
 	return *p.Method
 }
 
-var HttpInfo_Path_DEFAULT string
+var HTTPInfo_Path_DEFAULT string
 
-func (p *HttpInfo) GetPath() (v string) {
+func (p *HTTPInfo) GetPath() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPath() {
-		return HttpInfo_Path_DEFAULT
+		return HTTPInfo_Path_DEFAULT
 	}
 	return *p.Path
 }
 
-var HttpInfo_Timeout_DEFAULT int64
+var HTTPInfo_Timeout_DEFAULT int64
 
-func (p *HttpInfo) GetTimeout() (v int64) {
+func (p *HTTPInfo) GetTimeout() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTimeout() {
-		return HttpInfo_Timeout_DEFAULT
+		return HTTPInfo_Timeout_DEFAULT
 	}
 	return *p.Timeout
 }
-func (p *HttpInfo) SetMethod(val *HttpMethod) {
+func (p *HTTPInfo) SetMethod(val *HTTPMethod) {
 	p.Method = val
 }
-func (p *HttpInfo) SetPath(val *string) {
+func (p *HTTPInfo) SetPath(val *string) {
 	p.Path = val
 }
-func (p *HttpInfo) SetTimeout(val *int64) {
+func (p *HTTPInfo) SetTimeout(val *int64) {
 	p.Timeout = val
 }
 
-var fieldIDToName_HttpInfo = map[int16]string{
+var fieldIDToName_HTTPInfo = map[int16]string{
 	1: "method",
 	2: "path",
 	4: "timeout",
 }
 
-func (p *HttpInfo) IsSetMethod() bool {
+func (p *HTTPInfo) IsSetMethod() bool {
 	return p.Method != nil
 }
 
-func (p *HttpInfo) IsSetPath() bool {
+func (p *HTTPInfo) IsSetPath() bool {
 	return p.Path != nil
 }
 
-func (p *HttpInfo) IsSetTimeout() bool {
+func (p *HTTPInfo) IsSetTimeout() bool {
 	return p.Timeout != nil
 }
 
-func (p *HttpInfo) Read(iprot thrift.TProtocol) (err error) {
+func (p *HTTPInfo) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -3823,7 +3823,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_HttpInfo[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_HTTPInfo[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3833,9 +3833,9 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *HttpInfo) ReadField1(iprot thrift.TProtocol) error {
+func (p *HTTPInfo) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field *HttpMethod
+	var _field *HTTPMethod
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
@@ -3844,7 +3844,7 @@ func (p *HttpInfo) ReadField1(iprot thrift.TProtocol) error {
 	p.Method = _field
 	return nil
 }
-func (p *HttpInfo) ReadField2(iprot thrift.TProtocol) error {
+func (p *HTTPInfo) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3855,7 +3855,7 @@ func (p *HttpInfo) ReadField2(iprot thrift.TProtocol) error {
 	p.Path = _field
 	return nil
 }
-func (p *HttpInfo) ReadField4(iprot thrift.TProtocol) error {
+func (p *HTTPInfo) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3867,9 +3867,9 @@ func (p *HttpInfo) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *HttpInfo) Write(oprot thrift.TProtocol) (err error) {
+func (p *HTTPInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("HttpInfo"); err != nil {
+	if err = oprot.WriteStructBegin("HTTPInfo"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3903,7 +3903,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *HttpInfo) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *HTTPInfo) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMethod() {
 		if err = oprot.WriteFieldBegin("method", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
@@ -3921,7 +3921,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *HttpInfo) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *HTTPInfo) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPath() {
 		if err = oprot.WriteFieldBegin("path", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -3939,7 +3939,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *HttpInfo) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *HTTPInfo) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTimeout() {
 		if err = oprot.WriteFieldBegin("timeout", thrift.I64, 4); err != nil {
 			goto WriteFieldBeginError
@@ -3958,15 +3958,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
-func (p *HttpInfo) String() string {
+func (p *HTTPInfo) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("HttpInfo(%+v)", *p)
+	return fmt.Sprintf("HTTPInfo(%+v)", *p)
 
 }
 
-func (p *HttpInfo) DeepEqual(ano *HttpInfo) bool {
+func (p *HTTPInfo) DeepEqual(ano *HTTPInfo) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3984,7 +3984,7 @@ func (p *HttpInfo) DeepEqual(ano *HttpInfo) bool {
 	return true
 }
 
-func (p *HttpInfo) Field1DeepEqual(src *HttpMethod) bool {
+func (p *HTTPInfo) Field1DeepEqual(src *HTTPMethod) bool {
 
 	if p.Method == src {
 		return true
@@ -3996,7 +3996,7 @@ func (p *HttpInfo) Field1DeepEqual(src *HttpMethod) bool {
 	}
 	return true
 }
-func (p *HttpInfo) Field2DeepEqual(src *string) bool {
+func (p *HTTPInfo) Field2DeepEqual(src *string) bool {
 
 	if p.Path == src {
 		return true
@@ -4008,7 +4008,7 @@ func (p *HttpInfo) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *HttpInfo) Field4DeepEqual(src *int64) bool {
+func (p *HTTPInfo) Field4DeepEqual(src *int64) bool {
 
 	if p.Timeout == src {
 		return true

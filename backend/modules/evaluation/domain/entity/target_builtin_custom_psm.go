@@ -17,21 +17,21 @@ type CustomPSM struct {
 	Regions        []Region
 	Cluster        string
 	// 执行http信息
-	InvokeHTTPInfo *HttpInfo
+	InvokeHTTPInfo *HTTPInfo
 	// 异步执行http信息，如果用户选了异步就传入这个字段
-	AsyncInvokeHTTPInfo *HttpInfo
+	AsyncInvokeHTTPInfo *HTTPInfo
 	// 是否需要搜索对象
 	NeedSearchTarget *bool
 	// 搜索对象http信息
-	SearchHTTPInfo *HttpInfo
+	SearchHTTPInfo *HTTPInfo
 	// 搜索对象返回的信息
 	CustomEvalTarget *CustomEvalTarget
 	// 是否异步
 	IsAsync *bool
 }
 
-type HttpInfo struct {
-	Method HttpMethod
+type HTTPInfo struct {
+	Method HTTPMethod
 	Path   string
 	// ms，默认5000，最大800,000
 	Timeout *int64
@@ -65,9 +65,9 @@ const (
 	AccessProtocolBytefaasHTTPOld = "bytefaas_http_old"
 )
 
-type HttpMethod = string
+type HTTPMethod = string
 
 const (
-	HttpMethodGet  = "get"
-	HttpMethodPost = "post"
+	HTTPMethodGet  = "get"
+	HTTPMethodPost = "post"
 )

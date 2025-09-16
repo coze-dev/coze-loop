@@ -225,11 +225,11 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 	return targetVersionDTO
 }
 
-func HttpInfoDO2DTO(httpInfoDO *do.HttpInfo) (httpInfoDTO *dto.HttpInfo) {
+func HttpInfoDO2DTO(httpInfoDO *do.HTTPInfo) (httpInfoDTO *dto.HTTPInfo) {
 	if httpInfoDO == nil {
 		return nil
 	}
-	return &dto.HttpInfo{
+	return &dto.HTTPInfo{
 		Method:  gptr.Of(httpInfoDO.Method),
 		Path:    gptr.Of(httpInfoDO.Path),
 		Timeout: httpInfoDO.Timeout,

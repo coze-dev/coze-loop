@@ -66,10 +66,10 @@ struct CustomPSM {
     11: optional AccessProtocol access_protocol  // 接入协议
     12: optional list<Region> regions
     13: optional string cluster
-    14: optional HttpInfo invoke_http_info // 执行http信息
-    15: optional HttpInfo async_invoke_http_info // 异步执行http信息，如果用户选了异步就传入这个字段
+    14: optional HTTPInfo invoke_http_info // 执行http信息
+    15: optional HTTPInfo async_invoke_http_info // 异步执行http信息，如果用户选了异步就传入这个字段
     16: optional bool need_search_target // 是否需要搜索对象
-    17: optional HttpInfo search_http_info  // 搜索对象http信息
+    17: optional HTTPInfo search_http_info  // 搜索对象http信息
     18: optional CustomEvalTarget custom_eval_target   // 搜索对象返回的信息
     19: optional bool is_async    // 是否异步
 
@@ -83,8 +83,8 @@ struct CustomEvalTarget {
     10: optional map<string, string> ext    // 扩展字段，目前主要存储旧版协议response中的额外字段：object_type(旧版ID)、object_meta、space_id
 }
 
-struct HttpInfo {
-    1: optional HttpMethod method
+struct HTTPInfo {
+    1: optional HTTPMethod method
     2: optional string path
     4: optional i64 timeout    // ms，默认5000，最大800,000
 }
@@ -100,9 +100,9 @@ const AccessProtocol AccessProtocol_RPCOld = "rpc_old"
 const AccessProtocol AccessProtocol_BytefaasHTTP = "bytefaas_http"
 const AccessProtocol AccessProtocol_BytefaasHTTPOld = "bytefaas_http_old"
 
-typedef string HttpMethod (ts.enum="true")
-const HttpMethod HttpMethod_Get = "get"
-const HttpMethod HttpMethod_Post = "post"
+typedef string HTTPMethod (ts.enum="true")
+const HTTPMethod HTTPMethod_Get = "get"
+const HTTPMethod HTTPMethod_Post = "post"
 
 
 struct VolcengineAgent {
