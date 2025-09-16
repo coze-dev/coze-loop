@@ -29,6 +29,8 @@ type ISourceEvalTargetOperateService interface {
 	// Execute
 	Execute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (outputData *entity.EvalTargetOutputData, status entity.EvalTargetRunStatus, err error)
 	RuntimeParam() entity.IRuntimeParam
+	// 搜索自定义评测对象
+	SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) (targets []*entity.CustomEvalTarget, nextCursor string, hasMore bool, err error)
 }
 
 //type Option func(option *Opt)

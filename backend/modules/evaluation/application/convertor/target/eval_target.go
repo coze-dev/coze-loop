@@ -247,3 +247,17 @@ func CustomEvalTargetDO2DTO(customEvalTargetDO *do.CustomEvalTarget) (customEval
 		Ext:       customEvalTargetDO.Ext,
 	}
 }
+
+func CustomEvalTargetDO2DTOs(customEvalTargetDOs []*do.CustomEvalTarget) (customEvalTargetDTOs []*dto.CustomEvalTarget) {
+	if customEvalTargetDOs == nil {
+		return nil
+	}
+	customEvalTargetDTOs = make([]*dto.CustomEvalTarget, 0)
+	for _, customEvalTargetDO := range customEvalTargetDOs {
+		if customEvalTargetDO == nil {
+			continue
+		}
+		customEvalTargetDTOs = append(customEvalTargetDTOs, CustomEvalTargetDO2DTO(customEvalTargetDO))
+	}
+	return customEvalTargetDTOs
+}
