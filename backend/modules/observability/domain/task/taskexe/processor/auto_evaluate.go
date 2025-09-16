@@ -251,33 +251,37 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	if taskOp != taskexe.TaskOpNewData {
 		taskConfig.TaskStatus = task.TaskStatusRunning
 	}
-	var cycleStartAt, cycleEndAt int64
+	var cycleStartAt, cycleEndAt, endAt int64
 	currentTime := time.Now().UnixMilli()
 
-	if len(taskConfig.TaskRuns) == 0 {
-		// 首次创建 taskrun，从任务生效时间开始
-		cycleStartAt = resetStartTime(currentTime, effectiveTime.GetStartAt(), maxAliveTime)
-	} else {
-		// 找到最新的 cycleEndAt 作为新的 cycleStartAt
-		for _, run := range taskConfig.TaskRuns {
-			if run.RunStartAt.UnixMilli() > cycleStartAt {
-				cycleStartAt = run.RunEndAt.UnixMilli()
+	if taskOp != taskexe.TaskOpCreateBackfill {
+		endAt = effectiveTime.GetEndAt()
+		if len(taskConfig.TaskRuns) == 0 {
+			// 首次创建 taskrun，从任务生效时间开始
+			cycleStartAt = resetStartTime(currentTime, effectiveTime.GetStartAt(), maxAliveTime)
+		} else {
+			// 找到最新的 cycleEndAt 作为新的 cycleStartAt
+			for _, run := range taskConfig.TaskRuns {
+				if run.RunStartAt.UnixMilli() > cycleStartAt {
+					cycleStartAt = run.RunEndAt.UnixMilli()
+				}
 			}
+			cycleStartAt = resetStartTime(currentTime, cycleStartAt, maxAliveTime)
 		}
-		cycleStartAt = resetStartTime(currentTime, cycleStartAt, maxAliveTime)
-	}
-	cycleEndAt = cycleStartAt + maxAliveTime
-
-	// 确保周期开始时间不早于任务生效时间
-	if cycleStartAt < effectiveTime.GetStartAt() {
-		cycleStartAt = effectiveTime.GetStartAt()
 		cycleEndAt = cycleStartAt + maxAliveTime
+
+		// 确保周期开始时间不早于任务生效时间
+		if cycleStartAt < effectiveTime.GetStartAt() {
+			cycleStartAt = effectiveTime.GetStartAt()
+			cycleEndAt = cycleStartAt + maxAliveTime
+		}
+
+		// 确保周期结束时间不晚于任务结束时间
+		if cycleEndAt > effectiveTime.GetEndAt() {
+			cycleEndAt = effectiveTime.GetEndAt()
+		}
 	}
 
-	// 确保周期结束时间不晚于任务结束时间
-	if cycleEndAt > effectiveTime.GetEndAt() {
-		cycleEndAt = effectiveTime.GetEndAt()
-	}
 	logs.CtxInfo(ctx, "Creating taskrun with cycle: startAt=%d, endAt=%d, currentTime=%d", cycleStartAt, cycleEndAt, currentTime)
 	// 5、创建 taskrun
 	taskRunConfig := &task.TaskRunConfig{
@@ -287,7 +291,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 			EvalID:       datasetID,
 			SchemaID:     evaluationSetConfig.DatasetVersion.DatasetSchema.ID,
 			Schema:       ptr.Of(ToJSONString(ctx, evaluationSetConfig.DatasetVersion.DatasetSchema.FieldSchemas)),
-			EndAt:        effectiveTime.GetEndAt(),
+			EndAt:        endAt,
 			CycleStartAt: cycleStartAt,
 			CycleEndAt:   cycleEndAt,
 			Status:       task.TaskStatusRunning,
