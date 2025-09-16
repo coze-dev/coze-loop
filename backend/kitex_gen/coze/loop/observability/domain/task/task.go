@@ -3495,6 +3495,418 @@ func (p *RunDetail) Field2DeepEqual(src *int64) bool {
 	return true
 }
 
+type BackfillDetail struct {
+	SuccessCount      *int64     `thrift:"success_count,1,optional" frugal:"1,optional,i64" form:"success_count" json:"success_count,omitempty" query:"success_count"`
+	FailedCount       *int64     `thrift:"failed_count,2,optional" frugal:"2,optional,i64" form:"failed_count" json:"failed_count,omitempty" query:"failed_count"`
+	BackfillStatus    *RunStatus `thrift:"backfill_status,3,optional" frugal:"3,optional,string" form:"backfill_status" json:"backfill_status,omitempty" query:"backfill_status"`
+	LastSpanPageToken *string    `thrift:"last_span_page_token,4,optional" frugal:"4,optional,string" form:"last_span_page_token" json:"last_span_page_token,omitempty" query:"last_span_page_token"`
+}
+
+func NewBackfillDetail() *BackfillDetail {
+	return &BackfillDetail{}
+}
+
+func (p *BackfillDetail) InitDefault() {
+}
+
+var BackfillDetail_SuccessCount_DEFAULT int64
+
+func (p *BackfillDetail) GetSuccessCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccessCount() {
+		return BackfillDetail_SuccessCount_DEFAULT
+	}
+	return *p.SuccessCount
+}
+
+var BackfillDetail_FailedCount_DEFAULT int64
+
+func (p *BackfillDetail) GetFailedCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFailedCount() {
+		return BackfillDetail_FailedCount_DEFAULT
+	}
+	return *p.FailedCount
+}
+
+var BackfillDetail_BackfillStatus_DEFAULT RunStatus
+
+func (p *BackfillDetail) GetBackfillStatus() (v RunStatus) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBackfillStatus() {
+		return BackfillDetail_BackfillStatus_DEFAULT
+	}
+	return *p.BackfillStatus
+}
+
+var BackfillDetail_LastSpanPageToken_DEFAULT string
+
+func (p *BackfillDetail) GetLastSpanPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLastSpanPageToken() {
+		return BackfillDetail_LastSpanPageToken_DEFAULT
+	}
+	return *p.LastSpanPageToken
+}
+func (p *BackfillDetail) SetSuccessCount(val *int64) {
+	p.SuccessCount = val
+}
+func (p *BackfillDetail) SetFailedCount(val *int64) {
+	p.FailedCount = val
+}
+func (p *BackfillDetail) SetBackfillStatus(val *RunStatus) {
+	p.BackfillStatus = val
+}
+func (p *BackfillDetail) SetLastSpanPageToken(val *string) {
+	p.LastSpanPageToken = val
+}
+
+var fieldIDToName_BackfillDetail = map[int16]string{
+	1: "success_count",
+	2: "failed_count",
+	3: "backfill_status",
+	4: "last_span_page_token",
+}
+
+func (p *BackfillDetail) IsSetSuccessCount() bool {
+	return p.SuccessCount != nil
+}
+
+func (p *BackfillDetail) IsSetFailedCount() bool {
+	return p.FailedCount != nil
+}
+
+func (p *BackfillDetail) IsSetBackfillStatus() bool {
+	return p.BackfillStatus != nil
+}
+
+func (p *BackfillDetail) IsSetLastSpanPageToken() bool {
+	return p.LastSpanPageToken != nil
+}
+
+func (p *BackfillDetail) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BackfillDetail[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BackfillDetail) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SuccessCount = _field
+	return nil
+}
+func (p *BackfillDetail) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FailedCount = _field
+	return nil
+}
+func (p *BackfillDetail) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *RunStatus
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BackfillStatus = _field
+	return nil
+}
+func (p *BackfillDetail) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LastSpanPageToken = _field
+	return nil
+}
+
+func (p *BackfillDetail) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BackfillDetail"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BackfillDetail) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccessCount() {
+		if err = oprot.WriteFieldBegin("success_count", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SuccessCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BackfillDetail) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFailedCount() {
+		if err = oprot.WriteFieldBegin("failed_count", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FailedCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BackfillDetail) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBackfillStatus() {
+		if err = oprot.WriteFieldBegin("backfill_status", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BackfillStatus); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *BackfillDetail) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastSpanPageToken() {
+		if err = oprot.WriteFieldBegin("last_span_page_token", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LastSpanPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *BackfillDetail) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BackfillDetail(%+v)", *p)
+
+}
+
+func (p *BackfillDetail) DeepEqual(ano *BackfillDetail) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SuccessCount) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FailedCount) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.BackfillStatus) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.LastSpanPageToken) {
+		return false
+	}
+	return true
+}
+
+func (p *BackfillDetail) Field1DeepEqual(src *int64) bool {
+
+	if p.SuccessCount == src {
+		return true
+	} else if p.SuccessCount == nil || src == nil {
+		return false
+	}
+	if *p.SuccessCount != *src {
+		return false
+	}
+	return true
+}
+func (p *BackfillDetail) Field2DeepEqual(src *int64) bool {
+
+	if p.FailedCount == src {
+		return true
+	} else if p.FailedCount == nil || src == nil {
+		return false
+	}
+	if *p.FailedCount != *src {
+		return false
+	}
+	return true
+}
+func (p *BackfillDetail) Field3DeepEqual(src *RunStatus) bool {
+
+	if p.BackfillStatus == src {
+		return true
+	} else if p.BackfillStatus == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BackfillStatus, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *BackfillDetail) Field4DeepEqual(src *string) bool {
+
+	if p.LastSpanPageToken == src {
+		return true
+	} else if p.LastSpanPageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LastSpanPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type FieldMapping struct {
 	// 数据集字段约束
 	FieldSchema        *dataset.FieldSchema `thrift:"field_schema,1,required" frugal:"1,required,dataset.FieldSchema" form:"field_schema,required" json:"field_schema,required" query:"field_schema,required"`
@@ -3903,9 +4315,9 @@ type TaskRun struct {
 	// 任务状态详情
 	RunDetail *RunDetail `thrift:"run_detail,6,optional" frugal:"6,optional,RunDetail" form:"run_detail" json:"run_detail,omitempty" query:"run_detail"`
 	// 任务历史数据执行详情
-	BackfillRunDetail *RunDetail `thrift:"backfill_run_detail,7,optional" frugal:"7,optional,RunDetail" form:"backfill_run_detail" json:"backfill_run_detail,omitempty" query:"backfill_run_detail"`
-	RunStartAt        int64      `thrift:"run_start_at,8,required" frugal:"8,required,i64" json:"run_start_at" form:"run_start_at,required" query:"run_start_at,required"`
-	RunEndAt          int64      `thrift:"run_end_at,9,required" frugal:"9,required,i64" json:"run_end_at" form:"run_end_at,required" query:"run_end_at,required"`
+	BackfillRunDetail *BackfillDetail `thrift:"backfill_run_detail,7,optional" frugal:"7,optional,BackfillDetail" form:"backfill_run_detail" json:"backfill_run_detail,omitempty" query:"backfill_run_detail"`
+	RunStartAt        int64           `thrift:"run_start_at,8,required" frugal:"8,required,i64" json:"run_start_at" form:"run_start_at,required" query:"run_start_at,required"`
+	RunEndAt          int64           `thrift:"run_end_at,9,required" frugal:"9,required,i64" json:"run_end_at" form:"run_end_at,required" query:"run_end_at,required"`
 	// 配置
 	TaskRunConfig *TaskRunConfig `thrift:"task_run_config,10,optional" frugal:"10,optional,TaskRunConfig" form:"task_run_config" json:"task_run_config,omitempty" query:"task_run_config"`
 	// 基础信息
@@ -3966,9 +4378,9 @@ func (p *TaskRun) GetRunDetail() (v *RunDetail) {
 	return p.RunDetail
 }
 
-var TaskRun_BackfillRunDetail_DEFAULT *RunDetail
+var TaskRun_BackfillRunDetail_DEFAULT *BackfillDetail
 
-func (p *TaskRun) GetBackfillRunDetail() (v *RunDetail) {
+func (p *TaskRun) GetBackfillRunDetail() (v *BackfillDetail) {
 	if p == nil {
 		return
 	}
@@ -4033,7 +4445,7 @@ func (p *TaskRun) SetRunStatus(val RunStatus) {
 func (p *TaskRun) SetRunDetail(val *RunDetail) {
 	p.RunDetail = val
 }
-func (p *TaskRun) SetBackfillRunDetail(val *RunDetail) {
+func (p *TaskRun) SetBackfillRunDetail(val *BackfillDetail) {
 	p.BackfillRunDetail = val
 }
 func (p *TaskRun) SetRunStartAt(val int64) {
@@ -4328,7 +4740,7 @@ func (p *TaskRun) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *TaskRun) ReadField7(iprot thrift.TProtocol) error {
-	_field := NewRunDetail()
+	_field := NewBackfillDetail()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -4719,7 +5131,7 @@ func (p *TaskRun) Field6DeepEqual(src *RunDetail) bool {
 	}
 	return true
 }
-func (p *TaskRun) Field7DeepEqual(src *RunDetail) bool {
+func (p *TaskRun) Field7DeepEqual(src *BackfillDetail) bool {
 
 	if !p.BackfillRunDetail.DeepEqual(src) {
 		return false

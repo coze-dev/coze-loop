@@ -98,7 +98,7 @@ func (p *DataReflowProcessor) Finish(ctx context.Context, config any, trigger *t
 	return nil
 }
 
-func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
+func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp taskexe.TaskOp) error {
 	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	session := getSession(ctx, currentTask)
 	category := getCategory(currentTask.TaskType)
@@ -133,7 +133,9 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	if err != nil {
 		return err
 	}
-	taskConfig.TaskStatus = task.TaskStatusRunning
+	if taskOp != taskexe.TaskOpNewData {
+		taskConfig.TaskStatus = task.TaskStatusRunning
+	}
 	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
 	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
 	// 5、创建 taskrun

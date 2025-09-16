@@ -102,6 +102,9 @@ func (p *AutoEvaluateConfig) IsValid() error {
 func (p *RunDetail) IsValid() error {
 	return nil
 }
+func (p *BackfillDetail) IsValid() error {
+	return nil
+}
 func (p *FieldMapping) IsValid() error {
 	if p.FieldSchema != nil {
 		if err := p.FieldSchema.IsValid(); err != nil {

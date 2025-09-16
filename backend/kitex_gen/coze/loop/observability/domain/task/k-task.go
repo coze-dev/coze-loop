@@ -2506,6 +2506,285 @@ func (p *RunDetail) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *BackfillDetail) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BackfillDetail[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *BackfillDetail) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuccessCount = _field
+	return offset, nil
+}
+
+func (p *BackfillDetail) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FailedCount = _field
+	return offset, nil
+}
+
+func (p *BackfillDetail) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *RunStatus
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.BackfillStatus = _field
+	return offset, nil
+}
+
+func (p *BackfillDetail) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LastSpanPageToken = _field
+	return offset, nil
+}
+
+func (p *BackfillDetail) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *BackfillDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *BackfillDetail) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *BackfillDetail) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccessCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.SuccessCount)
+	}
+	return offset
+}
+
+func (p *BackfillDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFailedCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.FailedCount)
+	}
+	return offset
+}
+
+func (p *BackfillDetail) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBackfillStatus() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BackfillStatus)
+	}
+	return offset
+}
+
+func (p *BackfillDetail) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLastSpanPageToken() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LastSpanPageToken)
+	}
+	return offset
+}
+
+func (p *BackfillDetail) field1Length() int {
+	l := 0
+	if p.IsSetSuccessCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *BackfillDetail) field2Length() int {
+	l := 0
+	if p.IsSetFailedCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *BackfillDetail) field3Length() int {
+	l := 0
+	if p.IsSetBackfillStatus() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.BackfillStatus)
+	}
+	return l
+}
+
+func (p *BackfillDetail) field4Length() int {
+	l := 0
+	if p.IsSetLastSpanPageToken() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LastSpanPageToken)
+	}
+	return l
+}
+
+func (p *BackfillDetail) DeepCopy(s interface{}) error {
+	src, ok := s.(*BackfillDetail)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.SuccessCount != nil {
+		tmp := *src.SuccessCount
+		p.SuccessCount = &tmp
+	}
+
+	if src.FailedCount != nil {
+		tmp := *src.FailedCount
+		p.FailedCount = &tmp
+	}
+
+	if src.BackfillStatus != nil {
+		tmp := *src.BackfillStatus
+		p.BackfillStatus = &tmp
+	}
+
+	if src.LastSpanPageToken != nil {
+		var tmp string
+		if *src.LastSpanPageToken != "" {
+			tmp = kutils.StringDeepCopy(*src.LastSpanPageToken)
+		}
+		p.LastSpanPageToken = &tmp
+	}
+
+	return nil
+}
+
 func (p *FieldMapping) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -3118,7 +3397,7 @@ func (p *TaskRun) FastReadField6(buf []byte) (int, error) {
 
 func (p *TaskRun) FastReadField7(buf []byte) (int, error) {
 	offset := 0
-	_field := NewRunDetail()
+	_field := NewBackfillDetail()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -3417,9 +3696,9 @@ func (p *TaskRun) DeepCopy(s interface{}) error {
 	}
 	p.RunDetail = _runDetail
 
-	var _backfillRunDetail *RunDetail
+	var _backfillRunDetail *BackfillDetail
 	if src.BackfillRunDetail != nil {
-		_backfillRunDetail = &RunDetail{}
+		_backfillRunDetail = &BackfillDetail{}
 		if err := _backfillRunDetail.DeepCopy(src.BackfillRunDetail); err != nil {
 			return err
 		}

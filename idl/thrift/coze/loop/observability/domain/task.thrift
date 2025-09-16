@@ -89,6 +89,13 @@ struct RunDetail {
     2: optional i64 failed_count
 }
 
+struct BackfillDetail {
+    1: optional i64 success_count
+    2: optional i64 failed_count
+    3: optional RunStatus backfill_status
+    4: optional string last_span_page_token
+}
+
 struct FieldMapping {
     1: required export_dataset.FieldSchema field_schema   // 数据集字段约束
     2: required string trace_field_key
@@ -104,7 +111,7 @@ struct TaskRun {
     4: required TaskType task_type                                                              // 类型
     5: required RunStatus run_status                                                            // 状态
     6: optional RunDetail run_detail                                                            // 任务状态详情
-    7: optional RunDetail backfill_run_detail                                                   // 任务历史数据执行详情
+    7: optional BackfillDetail backfill_run_detail                                              // 任务历史数据执行详情
     8: required i64 run_start_at (api.js_conv="true", go.tag='json:"run_start_at"')
     9: required i64 run_end_at (api.js_conv="true", go.tag='json:"run_end_at"')
     10: optional TaskRunConfig task_run_config                                                  // 配置
