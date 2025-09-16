@@ -53,8 +53,8 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 		[]string{spanID},
 		traceID,
 		workspaceIDStr,
-		startTime-time.Second.Milliseconds(),
-		startTime+time.Second.Milliseconds(),
+		startTime/1000-time.Second.Milliseconds(),
+		startTime/1000+time.Second.Milliseconds(),
 	)
 	if err != nil {
 		return err
