@@ -146,117 +146,179 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 
 // 处理任务过滤条件
 func (v *TaskDaoImpl) applyTaskFilters(q *query.Query, taskFilters *filter.TaskFilterFields) (field.Expr, error) {
-	var filterExpr field.Expr
-	if taskFilters == nil {
+	if taskFilters == nil || len(taskFilters.FilterFields) == 0 {
 		return nil, nil
 	}
+
+	// 收集所有过滤条件
+	var expressions []field.Expr
+
 	for _, f := range taskFilters.FilterFields {
-		if f.FieldName == nil || f.QueryType == nil {
-			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("field name or query type is nil"))
+		expr, err := v.buildSingleFilterExpr(q, f)
+		if err != nil {
+			return nil, err
 		}
-
-		switch *f.FieldName {
-		case filter.TaskFieldNameTaskName:
-			switch *f.QueryType {
-			case filter.QueryTypeEq:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg(("no value provided for query")))
-				}
-				filterExpr = q.ObservabilityTask.Name.Eq(f.Values[0])
-			case filter.QueryTypeMatch:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for query"))
-				}
-				filterExpr = q.ObservabilityTask.Name.Like(fmt.Sprintf("%%%s%%", f.Values[0]))
-			default:
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task name"))
-			}
-		case filter.TaskFieldNameTaskType:
-			switch *f.QueryType {
-			case filter.QueryTypeIn:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for in query"))
-				}
-				filterExpr = q.ObservabilityTask.TaskType.In(f.Values...)
-			case filter.QueryTypeNotIn:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for not in query"))
-				}
-				filterExpr = q.ObservabilityTask.TaskType.NotIn(f.Values...)
-			default:
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task type"))
-			}
-		case filter.TaskFieldNameTaskStatus:
-			switch *f.QueryType {
-			case filter.QueryTypeIn:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for in query"))
-				}
-				filterExpr = q.ObservabilityTask.TaskStatus.In(f.Values...)
-			case filter.QueryTypeNotIn:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for not in query"))
-				}
-				filterExpr = q.ObservabilityTask.TaskStatus.NotIn(f.Values...)
-			default:
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task status"))
-			}
-		case filter.TaskFieldNameCreatedBy:
-			switch *f.QueryType {
-			case filter.QueryTypeIn:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for in query"))
-				}
-				filterExpr = q.ObservabilityTask.CreatedBy.In(f.Values...)
-			case filter.QueryTypeNotIn:
-				if len(f.Values) == 0 {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for not in query"))
-				}
-				filterExpr = q.ObservabilityTask.CreatedBy.NotIn(f.Values...)
-			default:
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for created_by"))
-			}
-		case filter.TaskFieldNameSampleRate:
-			if len(f.Values) == 0 {
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for sample rate"))
-			}
-			//sampleRate, err := strconv.ParseFloat(f.Values[0], 64)
-			//if err != nil {
-			//	return nil,  errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid sample rate: %v", err.Error()))
-			//}
-			switch *f.QueryType {
-			case filter.QueryTypeGte:
-				//filterExpr = q.ObservabilityTask.Sampler.Gte(sampleRate)
-				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') >= ?", sampleRate)
-			case filter.QueryTypeLte:
-				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') <= ?", sampleRate)
-			case filter.QueryTypeEq:
-				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') = ?", sampleRate)
-			case filter.QueryTypeNotEq:
-				//db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') !=?", sampleRate)
-			default:
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for sample rate"))
-			}
-		case "task_id":
-			if len(f.Values) == 0 {
-				return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task id"))
-			}
-			var taskIDs []int64
-			for _, value := range f.Values {
-				taskID, err := strconv.ParseInt(value, 10, 64)
-				if err != nil {
-					return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid task id: %v", err.Error()))
-				}
-				taskIDs = append(taskIDs, taskID)
-			}
-
-			filterExpr = q.ObservabilityTask.ID.In(taskIDs...)
-		default:
-			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
+		if expr != nil {
+			expressions = append(expressions, expr)
 		}
 	}
 
-	return filterExpr, nil
+	if len(expressions) == 0 {
+		return nil, nil
+	}
+
+	// 根据 QueryAndOr 关系组合条件
+	return v.combineExpressions(expressions, taskFilters.GetQueryAndOr()), nil
+}
+
+// 构建单个过滤条件
+func (v *TaskDaoImpl) buildSingleFilterExpr(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if f.FieldName == nil || f.QueryType == nil {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("field name or query type is nil"))
+	}
+
+	switch *f.FieldName {
+	case filter.TaskFieldNameTaskName:
+		return v.buildTaskNameFilter(q, f)
+	case filter.TaskFieldNameTaskType:
+		return v.buildTaskTypeFilter(q, f)
+	case filter.TaskFieldNameTaskStatus:
+		return v.buildTaskStatusFilter(q, f)
+	case filter.TaskFieldNameCreatedBy:
+		return v.buildCreatedByFilter(q, f)
+	case filter.TaskFieldNameSampleRate:
+		return v.buildSampleRateFilter(q, f)
+	case "task_id":
+		return v.buildTaskIDFilter(q, f)
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
+	}
+}
+
+// 组合多个表达式
+func (v *TaskDaoImpl) combineExpressions(expressions []field.Expr, relation string) field.Expr {
+	if len(expressions) == 1 {
+		return expressions[0]
+	}
+
+	if relation == filter.QueryRelationOr {
+		return field.Or(expressions...)
+	}
+	// 默认使用 AND 关系
+	return field.And(expressions...)
+}
+
+// 构建任务名称过滤条件
+func (v *TaskDaoImpl) buildTaskNameFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task name query"))
+	}
+
+	switch *f.QueryType {
+	case filter.QueryTypeEq:
+		return q.ObservabilityTask.Name.Eq(f.Values[0]), nil
+	case filter.QueryTypeMatch:
+		return q.ObservabilityTask.Name.Like(fmt.Sprintf("%%%s%%", f.Values[0])), nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task name"))
+	}
+}
+
+// 构建任务类型过滤条件
+func (v *TaskDaoImpl) buildTaskTypeFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for task type query"))
+	}
+
+	switch *f.QueryType {
+	case filter.QueryTypeIn:
+		return q.ObservabilityTask.TaskType.In(f.Values...), nil
+	case filter.QueryTypeNotIn:
+		return q.ObservabilityTask.TaskType.NotIn(f.Values...), nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task type"))
+	}
+}
+
+// 构建任务状态过滤条件
+func (v *TaskDaoImpl) buildTaskStatusFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for task status query"))
+	}
+
+	switch *f.QueryType {
+	case filter.QueryTypeIn:
+		return q.ObservabilityTask.TaskStatus.In(f.Values...), nil
+	case filter.QueryTypeNotIn:
+		return q.ObservabilityTask.TaskStatus.NotIn(f.Values...), nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task status"))
+	}
+}
+
+// 构建创建者过滤条件
+func (v *TaskDaoImpl) buildCreatedByFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for created_by query"))
+	}
+
+	switch *f.QueryType {
+	case filter.QueryTypeIn:
+		return q.ObservabilityTask.CreatedBy.In(f.Values...), nil
+	case filter.QueryTypeNotIn:
+		return q.ObservabilityTask.CreatedBy.NotIn(f.Values...), nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for created_by"))
+	}
+}
+
+// 构建采样率过滤条件
+func (v *TaskDaoImpl) buildSampleRateFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for sample rate"))
+	}
+
+	// 暂时保留原有的注释逻辑，等待具体实现
+	// sampleRate, err := strconv.ParseFloat(f.Values[0], 64)
+	// if err != nil {
+	//     return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid sample rate: %v", err.Error()))
+	// }
+
+	switch *f.QueryType {
+	case filter.QueryTypeGte:
+		// filterExpr = q.ObservabilityTask.Sampler.Gte(sampleRate)
+		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') >= ?", sampleRate)
+		return nil, nil
+	case filter.QueryTypeLte:
+		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') <= ?", sampleRate)
+		return nil, nil
+	case filter.QueryTypeEq:
+		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') = ?", sampleRate)
+		return nil, nil
+	case filter.QueryTypeNotEq:
+		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') != ?", sampleRate)
+		return nil, nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for sample rate"))
+	}
+}
+
+// 构建任务ID过滤条件
+func (v *TaskDaoImpl) buildTaskIDFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task id"))
+	}
+
+	var taskIDs []int64
+	for _, value := range f.Values {
+		taskID, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid task id: %v", err.Error()))
+		}
+		taskIDs = append(taskIDs, taskID)
+	}
+
+	return q.ObservabilityTask.ID.In(taskIDs...), nil
 }
 
 // 计算分页参数
