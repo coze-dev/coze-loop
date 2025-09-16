@@ -85,8 +85,9 @@ type BatchGetEvaluationSetVersionsResult struct {
 type Option func(option *Opt)
 
 type Opt struct {
-	PublishVersion *string
-	BotInfoType    CozeBotInfoType
+	PublishVersion   *string
+	BotInfoType      CozeBotInfoType
+	CustomEvalTarget *CustomEvalTarget
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -98,6 +99,12 @@ func WithCozeBotPublishVersion(publishVersion *string) Option {
 func WithCozeBotInfoType(botInfoType CozeBotInfoType) Option {
 	return func(option *Opt) {
 		option.BotInfoType = botInfoType
+	}
+}
+
+func WithCustomEvalTarget(customTarget *CustomEvalTarget) Option {
+	return func(option *Opt) {
+		option.CustomEvalTarget = customTarget
 	}
 }
 
