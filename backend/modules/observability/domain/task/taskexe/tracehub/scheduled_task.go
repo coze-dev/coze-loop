@@ -47,14 +47,25 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
 	for _, taskPO := range taskPOs {
 		tasks = append(tasks, tconv.TaskPO2DTO(ctx, taskPO, nil))
-		runDone := true
-		for _, taskRun := range taskPO.TaskRuns {
-			if taskRun.RunStatus == task.RunStatusRunning {
-				runDone = false
+		
+		// 计算 taskRunstat：只有当所有 run 都为 done 状态时才为 true
+		allRunsDone := true
+		if len(taskPO.TaskRuns) == 0 {
+			// 如果没有 TaskRuns，则认为未完成
+			allRunsDone = false
+		} else {
+			// 检查所有 TaskRuns 是否都为 done 状态
+			for _, taskRun := range taskPO.TaskRuns {
+				if taskRun.RunStatus != task.RunStatusDone {
+					allRunsDone = false
+					break
+				}
 			}
 		}
-		taskRunstat[taskPO.ID] = runDone
+		
+		taskRunstat[taskPO.ID] = allRunsDone
 	}
+	logs.CtxInfo(ctx, "taskPOs:%v", taskPOs)
 	logs.CtxInfo(ctx, "taskRunstat:%v", taskRunstat)
 	// 遍历任务
 	for _, taskInfo := range tasks {

@@ -167,27 +167,6 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 	return nil
 }
 
-func (v *TaskRepoImpl) DeleteTask(ctx context.Context, id int64, workspaceID int64, userID string) error {
-	// 先执行数据库操作
-	err := v.TaskDao.DeleteTask(ctx, id, workspaceID, userID)
-	if err != nil {
-		return err
-	}
-
-	// 数据库操作成功后，删除缓存
-	go func() {
-		// 删除单个任务缓存
-		if err := v.TaskRedisDao.DeleteTask(context.Background(), id); err != nil {
-			logs.Error("failed to delete task cache", "id", id, "err", err)
-		}
-
-		// 清理相关列表缓存
-		v.clearListCaches(context.Background(), workspaceID)
-	}()
-
-	return nil
-}
-
 func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
 	// 先查 Redis 缓存
 	cachedTasks, err := v.TaskRedisDao.GetNonFinalTaskList(ctx)
@@ -247,11 +226,6 @@ func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspac
 
 	// 数据库操作成功后，删除缓存（因为无法直接更新部分字段）
 	go func() {
-		// 删除单个任务缓存，下次查询时会重新加载
-		if err := v.TaskRedisDao.DeleteTask(context.Background(), id); err != nil {
-			logs.Error("failed to delete task cache after OCC update", "id", id, "err", err)
-		}
-
 		// 清理相关列表缓存
 		v.clearListCaches(context.Background(), workspaceID)
 
@@ -332,7 +306,6 @@ func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID in
 }
 
 func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID int64) error {
-
 	return nil
 }
 func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID int64) error {
