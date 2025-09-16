@@ -121,20 +121,15 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
 			logs.Error("failed to set task cache after create", "id", createdID, "err", err)
 		}
-		
+
 		// 更新非最终状态任务列表缓存
-		if isNonFinalTaskStatus(do.TaskStatus) {
-			// 读取当前缓存的非最终状态任务列表
-			currentList, err := v.TaskRedisDao.GetNonFinalTaskList(context.Background())
-			if err != nil {
-				logs.Error("failed to get non final task list cache", "id", createdID, "err", err)
-			} else {
-				// 将新创建的任务添加到列表中
-				updatedList := append(currentList, do)
-				// 更新缓存
-				if err := v.TaskRedisDao.SetNonFinalTaskList(context.Background(), updatedList, NonFinalTaskListTTL); err != nil {
-					logs.Error("failed to update non final task list cache after create", "id", createdID, "err", err)
-				}
+		currentList, err := v.TaskRedisDao.GetNonFinalTaskList(context.Background())
+		if err != nil {
+			logs.Error("failed to get non final task list cache", "id", createdID, "err", err)
+		} else {
+			updatedList := append(currentList, do)
+			if err := v.TaskRedisDao.SetNonFinalTaskList(context.Background(), updatedList, NonFinalTaskListTTL); err != nil {
+				logs.Error("failed to update non final task list cache after create", "id", createdID, "err", err)
 			}
 		}
 	}()

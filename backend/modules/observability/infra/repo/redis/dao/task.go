@@ -22,34 +22,32 @@ import (
 
 //go:generate mockgen -destination=mocks/Task_dao.go -package=mocks . ITaskDAO
 type ITaskDAO interface {
-	// 原有方法
-	MSetTaskConfig(ctx context.Context, taskConfig *entity.ObservabilityTask) error
-	MGetTaskConfig(ctx context.Context, taskID int64) (taskConfig *entity.ObservabilityTask, err error)
-	MGetTaskCount(ctx context.Context, taskID int64) (count int64, err error)
-	MGetTaskRunCount(ctx context.Context, taskID, runID int64) (count int64, err error)
-	MIncrTaskCount(ctx context.Context, taskID int64, count int64) error
-	MDecrTaskCount(ctx context.Context, taskID int64, count int64) error
-	MIncrTaskRunCount(ctx context.Context, taskID, runID int64, count int64) error
-	MDecrTaskRunCount(ctx context.Context, taskID, runID int64, count int64) error
-
-	// 新增 CRUD 缓存方法
+	// Task相关
 	GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error)
 	SetTask(ctx context.Context, task *entity.ObservabilityTask, ttl time.Duration) error
-	DeleteTask(ctx context.Context, id int64) error
 
+	// TaskList相关
 	GetTaskList(ctx context.Context, key string) ([]*entity.ObservabilityTask, int64, error)
 	SetTaskList(ctx context.Context, key string, tasks []*entity.ObservabilityTask, total int64, ttl time.Duration) error
 	DeleteTaskList(ctx context.Context, pattern string) error
 
+	// NonFinalTaskList相关
 	GetNonFinalTaskList(ctx context.Context) ([]*entity.ObservabilityTask, error)
 	SetNonFinalTaskList(ctx context.Context, tasks []*entity.ObservabilityTask, ttl time.Duration) error
 	DeleteNonFinalTaskList(ctx context.Context) error
+	AddNonFinalTask(ctx context.Context, task *entity.ObservabilityTask) error
+	RemoveNonFinalTask(ctx context.Context, taskID int64) error
 
+	// TaskCount相关
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
 	SetTaskCount(ctx context.Context, taskID int64, count int64, ttl time.Duration) error
 	DeleteTaskCount(ctx context.Context, taskID int64) error
 
+	// TaskRunCount相关
 	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
+	SetTaskRunCount(ctx context.Context, taskID, taskRunID int64, count int64, ttl time.Duration) error
+	DeleteTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
+
 	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
 }
 
@@ -64,30 +62,25 @@ func NewTaskDAO(cmdable redis.Cmdable) ITaskDAO {
 	}
 }
 
-// 原有 key 生成方法
 func (q *TaskDAOImpl) makeTaskConfigKey(taskID int64) string {
 	return fmt.Sprintf("task_config_%d", taskID)
 }
 
-func (q *TaskDAOImpl) makeTaskCountKey(taskID int64) string {
-	return fmt.Sprintf("count_%d", taskID)
-}
-
-func (q *TaskDAOImpl) makeTaskRunCountKey(taskID, runID int64) string {
-	return fmt.Sprintf("count_%d_%d", taskID, runID)
-}
-
-// 新增 key 生成方法
-func (q *TaskDAOImpl) makeTaskDetailKey(id int64) string {
-	return fmt.Sprintf("task:detail:%d", id)
-}
-
-func (q *TaskDAOImpl) makeTaskListKey(workspaceID int64, filterHash string, page, size int32) string {
-	return fmt.Sprintf("task:list:%d:%s:%d:%d", workspaceID, filterHash, page, size)
-}
-
 func (q *TaskDAOImpl) makeNonFinalTaskListKey() string {
 	return "task:list:non_final"
+}
+
+func (q *TaskDAOImpl) makeSpaceListWithTaskKey() string {
+	return "space:list:with_task"
+}
+func (q *TaskDAOImpl) makeBotListWithTaskKey() string {
+	return "bot:list:with_task"
+}
+func (q *TaskDAOImpl) makeWorkflowListWithTaskKey() string {
+	return "workflow:list:with_task"
+}
+func (q *TaskDAOImpl) makeAppListWithTaskKey() string {
+	return "app:list:with_task"
 }
 
 func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
@@ -115,77 +108,6 @@ func (q *TaskDAOImpl) generateFilterHash(param mysql.ListTaskParam) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (p *TaskDAOImpl) MSetTaskConfig(ctx context.Context, taskConfig *entity.ObservabilityTask) error {
-	bytes, err := convert.NewTaskConverter().FromDO(taskConfig)
-	if err != nil {
-		return err
-	}
-	key := p.makeTaskConfigKey(taskConfig.ID)
-	if err := p.cmdable.Set(ctx, key, bytes, time.Hour*24*2).Err(); err != nil {
-		return errorx.Wrapf(err, "redis set key: %v", key)
-	}
-	return nil
-}
-
-func (p *TaskDAOImpl) MGetTaskConfig(ctx context.Context, taskID int64) (taskConfig *entity.ObservabilityTask, err error) {
-	key := p.makeTaskConfigKey(taskID)
-	got, err := p.cmdable.Get(ctx, key).Result()
-	if err != nil && !redis.IsNilError(err) {
-		return nil, errorx.Wrapf(err, "redis get fail, key: %v", key)
-	}
-	return convert.NewTaskConverter().ToDO(conv.UnsafeStringToBytes(got))
-}
-
-func (p *TaskDAOImpl) MGetTaskCount(ctx context.Context, taskID int64) (count int64, err error) {
-	key := p.makeTaskCountKey(taskID)
-	got, err := p.cmdable.Get(ctx, key).Int64()
-	if err != nil && !redis.IsNilError(err) {
-		return 0, errorx.Wrapf(err, "redis get fail, key: %v", key)
-	}
-	return got, nil
-}
-
-func (p *TaskDAOImpl) MGetTaskRunCount(ctx context.Context, taskID, runID int64) (count int64, err error) {
-	key := p.makeTaskRunCountKey(taskID, runID)
-	got, err := p.cmdable.Get(ctx, key).Int64()
-	if err != nil && !redis.IsNilError(err) {
-		return 0, errorx.Wrapf(err, "redis get fail, key: %v", key)
-	}
-	return got, nil
-}
-
-func (p *TaskDAOImpl) MIncrTaskCount(ctx context.Context, taskID int64, count int64) error {
-	key := p.makeTaskCountKey(taskID)
-	if err := p.cmdable.IncrBy(ctx, key, count).Err(); err != nil {
-		return errorx.Wrapf(err, "redis incr key: %v", key)
-	}
-	return nil
-}
-func (p *TaskDAOImpl) MDecrTaskCount(ctx context.Context, taskID int64, count int64) error {
-	key := p.makeTaskCountKey(taskID)
-	if err := p.cmdable.DecrBy(ctx, key, count).Err(); err != nil {
-		return errorx.Wrapf(err, "redis decr key: %v", key)
-	}
-	return nil
-}
-
-func (p *TaskDAOImpl) MIncrTaskRunCount(ctx context.Context, taskID, runID int64, count int64) error {
-	key := p.makeTaskRunCountKey(taskID, runID)
-	if err := p.cmdable.IncrBy(ctx, key, count).Err(); err != nil {
-		return errorx.Wrapf(err, "redis incr key: %v", key)
-	}
-	return nil
-}
-func (p *TaskDAOImpl) MDecrTaskRunCount(ctx context.Context, taskID, runID int64, count int64) error {
-	key := p.makeTaskRunCountKey(taskID, runID)
-	if err := p.cmdable.DecrBy(ctx, key, count).Err(); err != nil {
-		return errorx.Wrapf(err, "redis decr key: %v", key)
-	}
-	return nil
-}
-
-// 新增 CRUD 缓存方法实现
-
 // GetTask 获取单个任务缓存
 func (p *TaskDAOImpl) GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error) {
 	key := p.makeTaskConfigKey(id)
@@ -209,16 +131,6 @@ func (p *TaskDAOImpl) SetTask(ctx context.Context, task *entity.ObservabilityTas
 	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
 		logs.CtxError(ctx, "redis set task cache failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis set task key: %v", key)
-	}
-	return nil
-}
-
-// DeleteTask 删除单个任务缓存
-func (p *TaskDAOImpl) DeleteTask(ctx context.Context, id int64) error {
-	key := p.makeTaskDetailKey(id)
-	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
-		logs.CtxError(ctx, "redis delete task cache failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis delete task key: %v", key)
 	}
 	return nil
 }
@@ -311,6 +223,33 @@ func (p *TaskDAOImpl) SetNonFinalTaskList(ctx context.Context, tasks []*entity.O
 	return nil
 }
 
+// 向非最终状态任务列表中新增任务
+func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, task *entity.ObservabilityTask) error {
+	tasks, err := p.GetNonFinalTaskList(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "GetNonFinalTaskList failed", "err", err)
+		return err
+	}
+	tasks = append(tasks, task)
+	return p.SetNonFinalTaskList(ctx, tasks, time.Hour*24*2)
+}
+
+// 向非最终状态任务列表中删除任务
+func (p *TaskDAOImpl) RemoveNonFinalTask(ctx context.Context, taskID int64) error {
+	tasks, err := p.GetNonFinalTaskList(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "GetNonFinalTaskList failed", "err", err)
+		return err
+	}
+	for i, task := range tasks {
+		if task.ID == taskID {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			break
+		}
+	}
+	return p.SetNonFinalTaskList(ctx, tasks, time.Hour*24*2)
+}
+
 // DeleteNonFinalTaskList 删除非最终状态任务列表缓存
 func (p *TaskDAOImpl) DeleteNonFinalTaskList(ctx context.Context) error {
 	key := p.makeNonFinalTaskListKey()
@@ -365,6 +304,26 @@ func (p *TaskDAOImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int
 		return 0, errorx.Wrapf(err, "redis get task count fail, key: %v", key)
 	}
 	return got, nil
+}
+
+// SetTaskRunCount 设置任务运行计数缓存
+func (p *TaskDAOImpl) SetTaskRunCount(ctx context.Context, taskID, taskRunID int64, count int64, ttl time.Duration) error {
+	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
+	if err := p.cmdable.Set(ctx, key, count, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis set task run count cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set task run count key: %v", key)
+	}
+	return nil
+}
+
+// DeleteTaskRunCount 删除任务运行计数缓存
+func (p *TaskDAOImpl) DeleteTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
+	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
+	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis delete task run count cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis delete task run count key: %v", key)
+	}
+	return nil
 }
 
 func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, error) {
