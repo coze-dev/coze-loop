@@ -122,7 +122,6 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if err != nil {
 		return nil, err
 	}
-	taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
 	taskOp := taskexe.TaskOpUndefined
@@ -133,13 +132,14 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		taskOp = taskexe.TaskOpCreateBackfill
 	}
 	if taskOp != taskexe.TaskOpUndefined {
+		taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
 		if err = proc.OnChangeProcessor(ctx, taskConfig, taskOp); err != nil {
 			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 			//任务改为禁用？
 			return nil, err
 		}
 	}
-	// TODO: 历史回溯数据发MQ
+	// 历史回溯数据发MQ
 	if t.shouldTriggerBackfill(req.Task) {
 		backfillEvent := &entity.BackFillEvent{
 			SpaceID: req.Task.GetWorkspaceID(),
@@ -169,6 +169,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 	if userID == "" {
 		return errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
+	// 校验更新参数是否合法
 	if req.Description != nil {
 		taskPO.Description = req.Description
 	}
@@ -189,7 +190,19 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		}
 		if validTaskStatus != "" {
 			if validTaskStatus == task.TaskStatusDisabled {
-				//todo[xun]:禁用操作处理
+				// 禁用操作处理
+				proc, err := processor.NewProcessor(ctx, task.TaskTypeAutoEval)
+				if err != nil {
+					logs.CtxError(ctx, "CreateTask NewProcessor err:%v", err)
+					return err
+				}
+				taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
+				taskRuns := tconv.TaskRunPOs2DOs(ctx, taskPO.TaskRuns, nil)
+				if err = proc.Finish(ctx, taskRuns, &taskexe.Trigger{Task: taskConfig, Span: nil, IsFinish: false}); err != nil {
+					logs.CtxError(ctx, "proc Finish err:%v", err)
+					return err
+
+				}
 			}
 			taskPO.TaskStatus = *req.TaskStatus
 		}
@@ -201,6 +214,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 	}
 	return nil
 }
+
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
 	taskPOs, total, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},

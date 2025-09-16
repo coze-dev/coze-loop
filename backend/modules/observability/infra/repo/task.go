@@ -330,3 +330,20 @@ func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID in
 	}
 	return count, nil
 }
+
+func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID int64) error {
+
+	return nil
+}
+func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID int64) error {
+
+	return nil
+}
+func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
+
+	return nil
+}
+func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
+
+	return nil
+}

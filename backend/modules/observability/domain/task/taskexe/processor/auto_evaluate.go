@@ -12,6 +12,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 
 	"github.com/apaxa-go/helper/strconvh"
@@ -59,7 +61,38 @@ func newAutoEvaluteProcessor(
 }
 
 func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) error {
-
+	cfg, ok := config.(*task.Task)
+	if !ok {
+		return taskexe.ErrInvalidConfig
+	}
+	if cfg.GetRule() != nil && cfg.GetRule().GetEffectiveTime() != nil {
+		startAt := cfg.GetRule().GetEffectiveTime().GetStartAt()
+		endAt := cfg.GetRule().GetEffectiveTime().GetEndAt()
+		if startAt <= time.Now().Add(-10*time.Minute).UnixMilli() {
+			return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+		}
+		if startAt >= endAt {
+			return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+		}
+	}
+	var evaluatorVersionIDs []int64
+	for _, autoEvaluateConfig := range cfg.GetTaskConfig().GetAutoEvaluateConfigs() {
+		evaluatorVersionIDs = append(evaluatorVersionIDs, autoEvaluateConfig.GetEvaluatorVersionID())
+	}
+	if len(evaluatorVersionIDs) == 0 {
+		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+	}
+	// 检查评估器版本是否合法
+	evaluators, _, err := p.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+		WorkspaceID:         cfg.GetWorkspaceID(),
+		EvaluatorVersionIds: evaluatorVersionIDs,
+	})
+	if err != nil {
+		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+	}
+	if len(evaluators) != len(evaluatorVersionIDs) {
+		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+	}
 	return nil
 }
 

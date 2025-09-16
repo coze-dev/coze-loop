@@ -14,7 +14,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type ITaskQueueConsumer interface {
@@ -115,32 +114,6 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 		if startAt >= endAt {
 			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("The start time must be earlier than the end time."))
 		}
-	}
-	switch req.GetTask().GetTaskType() {
-	case "auto_evaluate":
-		var evaluatorVersionIDs []int64
-		for _, autoEvaluateConfig := range req.GetTask().GetTaskConfig().GetAutoEvaluateConfigs() {
-			evaluatorVersionIDs = append(evaluatorVersionIDs, autoEvaluateConfig.GetEvaluatorVersionID())
-		}
-		if len(evaluatorVersionIDs) == 0 {
-			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Invalid parameter. Please check the parameter and try again."))
-		}
-		// 检查评估器版本是否合法
-		evaluators, _, err := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
-			WorkspaceID:         req.GetTask().GetWorkspaceID(),
-			EvaluatorVersionIds: evaluatorVersionIDs,
-		})
-		if err != nil {
-			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithMsgParam("evaluatorVersionIDs is invalid, BatchGetEvaluators err: %v", err.Error()))
-		}
-		if len(evaluators) != len(evaluatorVersionIDs) {
-			logs.CtxError(ctx, "evaluators len: %d, evaluatorVersionIDs len: %d", len(evaluators), len(evaluatorVersionIDs))
-			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("evaluatorVersionIDs is invalid, len(evaluators) != len(evaluatorVersionIDs)"))
-		}
-	case "auto_data_reflow":
-		// 检查数据集id是否合法
-	default:
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Invalid parameter. Please check the parameter and try again."))
 	}
 
 	return nil

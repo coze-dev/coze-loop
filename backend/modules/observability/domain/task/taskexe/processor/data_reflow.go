@@ -37,7 +37,15 @@ func newDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdapto
 }
 
 func (p *DataReflowProcessor) ValidateConfig(ctx context.Context, config any) error {
+	cfg, ok := config.(*task.Task)
+	if !ok {
+		return taskexe.ErrInvalidConfig
+	}
+	if cfg.GetTaskConfig().GetDataReflowConfig() == nil || len(cfg.GetTaskConfig().GetDataReflowConfig()) == 0 {
+		return taskexe.ErrInvalidConfig
+	}
 
+	// todo:[xun]1、数据集是否存在，2、数据集是否重名
 	return nil
 }
 

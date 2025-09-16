@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
-	foundationEntity "github.com/coze-dev/coze-loop/backend/modules/foundation/domain/user/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
@@ -52,9 +51,24 @@ type ITaskDAO interface {
 	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
 
 	// SpaceListWithTask相关
-	GetSpaceListWithTask(ctx context.Context) ([]*foundationEntity.Space, error)
-	SetSpaceListWithTask(ctx context.Context, spaces []*foundationEntity.Space, ttl time.Duration) error
+	GetSpaceListWithTask(ctx context.Context) ([]string, error)
+	SetSpaceListWithTask(ctx context.Context, spaces []string, ttl time.Duration) error
 	DeleteSpaceListWithTask(ctx context.Context) error
+
+	// BotListWithTask相关
+	GetBotListWithTask(ctx context.Context) ([]string, error)
+	SetBotListWithTask(ctx context.Context, bots []string, ttl time.Duration) error
+	DeleteBotListWithTask(ctx context.Context) error
+
+	// WorkflowListWithTask相关
+	GetWorkflowListWithTask(ctx context.Context) ([]string, error)
+	SetWorkflowListWithTask(ctx context.Context, workflows []string, ttl time.Duration) error
+	DeleteWorkflowListWithTask(ctx context.Context) error
+
+	// AppListWithTask相关
+	GetAppListWithTask(ctx context.Context) ([]string, error)
+	SetAppListWithTask(ctx context.Context, apps []string, ttl time.Duration) error
+	DeleteAppListWithTask(ctx context.Context) error
 }
 
 type TaskDAOImpl struct {
@@ -299,7 +313,7 @@ func (p *TaskDAOImpl) DeleteTaskCount(ctx context.Context, workspaceID int64) er
 	return nil
 }
 
-// GetTaskCount 获取任务计数缓存
+// GetTaskRunCount 获取任务运行计数缓存
 func (p *TaskDAOImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
 	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
 	got, err := p.cmdable.Get(ctx, key).Int64()
@@ -361,7 +375,7 @@ func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 }
 
 // GetSpaceListWithTask 获取包含任务的空间列表缓存
-func (p *TaskDAOImpl) GetSpaceListWithTask(ctx context.Context) ([]*foundationEntity.Space, error) {
+func (p *TaskDAOImpl) GetSpaceListWithTask(ctx context.Context) ([]string, error) {
 	key := p.makeSpaceListWithTaskKey()
 	got, err := p.cmdable.Get(ctx, key).Result()
 	if err != nil {
@@ -371,7 +385,7 @@ func (p *TaskDAOImpl) GetSpaceListWithTask(ctx context.Context) ([]*foundationEn
 		return nil, errorx.Wrapf(err, "redis get space list with task fail, key: %v", key)
 	}
 
-	var spaces []*foundationEntity.Space
+	var spaces []string
 	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &spaces); err != nil {
 		return nil, errorx.Wrapf(err, "unmarshal space list with task cache failed")
 	}
@@ -380,7 +394,7 @@ func (p *TaskDAOImpl) GetSpaceListWithTask(ctx context.Context) ([]*foundationEn
 }
 
 // SetSpaceListWithTask 设置包含任务的空间列表缓存
-func (p *TaskDAOImpl) SetSpaceListWithTask(ctx context.Context, spaces []*foundationEntity.Space, ttl time.Duration) error {
+func (p *TaskDAOImpl) SetSpaceListWithTask(ctx context.Context, spaces []string, ttl time.Duration) error {
 	key := p.makeSpaceListWithTaskKey()
 
 	bytes, err := json.Marshal(spaces)
@@ -401,6 +415,141 @@ func (p *TaskDAOImpl) DeleteSpaceListWithTask(ctx context.Context) error {
 	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
 		logs.CtxError(ctx, "redis delete space list with task cache failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis delete space list with task key: %v", key)
+	}
+	return nil
+}
+
+// GetBotListWithTask 获取包含任务的机器人列表缓存
+func (p *TaskDAOImpl) GetBotListWithTask(ctx context.Context) ([]string, error) {
+	key := p.makeBotListWithTaskKey()
+	got, err := p.cmdable.Get(ctx, key).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil // 缓存未命中
+		}
+		return nil, errorx.Wrapf(err, "redis get bot list with task fail, key: %v", key)
+	}
+
+	var bots []string
+	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &bots); err != nil {
+		return nil, errorx.Wrapf(err, "unmarshal bot list with task cache failed")
+	}
+
+	return bots, nil
+}
+
+// SetBotListWithTask 设置包含任务的机器人列表缓存
+func (p *TaskDAOImpl) SetBotListWithTask(ctx context.Context, bots []string, ttl time.Duration) error {
+	key := p.makeBotListWithTaskKey()
+
+	bytes, err := json.Marshal(bots)
+	if err != nil {
+		return errorx.Wrapf(err, "marshal bot list with task cache failed")
+	}
+
+	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis set bot list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set bot list with task key: %v", key)
+	}
+	return nil
+}
+
+// DeleteBotListWithTask 删除包含任务的机器人列表缓存
+func (p *TaskDAOImpl) DeleteBotListWithTask(ctx context.Context) error {
+	key := p.makeBotListWithTaskKey()
+	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis delete bot list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis delete bot list with task key: %v", key)
+	}
+	return nil
+}
+
+// GetWorkflowListWithTask 获取包含任务的工作流列表缓存
+func (p *TaskDAOImpl) GetWorkflowListWithTask(ctx context.Context) ([]string, error) {
+	key := p.makeWorkflowListWithTaskKey()
+	got, err := p.cmdable.Get(ctx, key).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil // 缓存未命中
+		}
+		return nil, errorx.Wrapf(err, "redis get workflow list with task fail, key: %v", key)
+	}
+
+	var workflows []string
+	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &workflows); err != nil {
+		return nil, errorx.Wrapf(err, "unmarshal workflow list with task cache failed")
+	}
+
+	return workflows, nil
+}
+
+// SetWorkflowListWithTask 设置包含任务的工作流列表缓存
+func (p *TaskDAOImpl) SetWorkflowListWithTask(ctx context.Context, workflows []string, ttl time.Duration) error {
+	key := p.makeWorkflowListWithTaskKey()
+
+	bytes, err := json.Marshal(workflows)
+	if err != nil {
+		return errorx.Wrapf(err, "marshal workflow list with task cache failed")
+	}
+
+	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis set workflow list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set workflow list with task key: %v", key)
+	}
+	return nil
+}
+
+// DeleteWorkflowListWithTask 删除包含任务的工作流列表缓存
+func (p *TaskDAOImpl) DeleteWorkflowListWithTask(ctx context.Context) error {
+	key := p.makeWorkflowListWithTaskKey()
+	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis delete workflow list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis delete workflow list with task key: %v", key)
+	}
+	return nil
+}
+
+// GetAppListWithTask 获取包含任务的应用列表缓存
+func (p *TaskDAOImpl) GetAppListWithTask(ctx context.Context) ([]string, error) {
+	key := p.makeAppListWithTaskKey()
+	got, err := p.cmdable.Get(ctx, key).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil // 缓存未命中
+		}
+		return nil, errorx.Wrapf(err, "redis get app list with task fail, key: %v", key)
+	}
+
+	var apps []string
+	if err := json.Unmarshal(conv.UnsafeStringToBytes(got), &apps); err != nil {
+		return nil, errorx.Wrapf(err, "unmarshal app list with task cache failed")
+	}
+
+	return apps, nil
+}
+
+// SetAppListWithTask 设置包含任务的应用列表缓存
+func (p *TaskDAOImpl) SetAppListWithTask(ctx context.Context, apps []string, ttl time.Duration) error {
+	key := p.makeAppListWithTaskKey()
+
+	bytes, err := json.Marshal(apps)
+	if err != nil {
+		return errorx.Wrapf(err, "marshal app list with task cache failed")
+	}
+
+	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis set app list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set app list with task key: %v", key)
+	}
+	return nil
+}
+
+// DeleteAppListWithTask 删除包含任务的应用列表缓存
+func (p *TaskDAOImpl) DeleteAppListWithTask(ctx context.Context) error {
+	key := p.makeAppListWithTaskKey()
+	if err := p.cmdable.Del(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis delete app list with task cache failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis delete app list with task key: %v", key)
 	}
 	return nil
 }
