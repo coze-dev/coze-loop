@@ -646,3 +646,20 @@ func GetContentInfo(ctx context.Context, contentType common.ContentType, value s
 	}
 	return content, nil
 }
+
+func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, task *task.Task) error {
+	return nil
+}
+func (p *AutoEvaluteProcessor) OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error {
+	return nil
+}
+func (p *AutoEvaluteProcessor) OnFinishChangeProcessor(ctx context.Context, task *task.Task) error {
+	return nil
+}
+
+func (p *AutoEvaluteProcessor) OnCreateTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+	return nil
+}
+func (p *AutoEvaluteProcessor) OnFinishTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+	return nil
+}

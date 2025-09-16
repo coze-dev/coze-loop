@@ -180,3 +180,20 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	}
 	return nil
 }
+
+func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, task *task.Task) error {
+	return nil
+}
+func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error {
+	return nil
+}
+func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, task *task.Task) error {
+	return nil
+}
+
+func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+	return nil
+}
+func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+	return nil
+}
