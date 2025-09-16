@@ -118,12 +118,16 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 	do.ID = createdID
 	go func() {
 		// 缓存新创建的任务
-		if err := v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
+		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
 			logs.Error("failed to set task cache after create", "id", createdID, "err", err)
 		}
-
-		// 清理相关列表缓存
-		v.clearListCaches(context.Background(), do.WorkspaceID)
+		
+		// 更新非最终状态任务列表缓存
+		if isNonFinalTaskStatus(do.TaskStatus) {
+			if err := v.TaskRedisDao.DeleteNonFinalTaskList(context.Background()); err != nil {
+				logs.Error("failed to delete non final task list cache after create", "id", createdID, "err", err)
+			}
+		}
 	}()
 
 	return createdID, nil
@@ -275,17 +279,15 @@ func (v *TaskRepoImpl) clearListCaches(ctx context.Context, workspaceID int64) {
 	}
 }
 
-// generateFilterHash 生成过滤条件的 hash
-func (v *TaskRepoImpl) generateFilterHash(param mysql.ListTaskParam) string {
-	if param.TaskFilters == nil {
-		return "no_filter"
+// isNonFinalTaskStatus 判断任务状态是否为非最终状态
+func isNonFinalTaskStatus(status string) bool {
+	finalStatuses := []string{"success", "disabled"}
+	for _, finalStatus := range finalStatuses {
+		if status == finalStatus {
+			return false
+		}
 	}
-
-	// 将过滤条件序列化为字符串
-	filterStr := fmt.Sprintf("%+v", param.TaskFilters)
-
-	// 生成简单的 hash（在实际生产环境中可能需要更复杂的 hash 算法）
-	return fmt.Sprintf("%x", len(filterStr))
+	return true
 }
 
 func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string) {
