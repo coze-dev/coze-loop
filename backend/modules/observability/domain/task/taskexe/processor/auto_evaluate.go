@@ -254,7 +254,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	var cycleStartAt, cycleEndAt, endAt int64
 	currentTime := time.Now().UnixMilli()
 
-	if effectiveTime != nil {
+	if effectiveTime.StartAt != nil && effectiveTime.EndAt != nil {
 		endAt = effectiveTime.GetEndAt()
 		if len(taskConfig.TaskRuns) == 0 {
 			// 首次创建 taskrun，从任务生效时间开始
