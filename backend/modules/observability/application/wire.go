@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/receiver/rmqreceiver"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
+	obcollector "github.com/coze-dev/coze-loop/backend/modules/observability/infra/collector"
 	obconfig "github.com/coze-dev/coze-loop/backend/modules/observability/infra/config"
 	obmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/infra/metrics"
 	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq/producer"
@@ -61,6 +62,7 @@ var (
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
 		obmetrics.NewTraceMetricsImpl,
+		obcollector.NewEventCollectorProvider,
 		mq2.NewTraceProducerImpl,
 		mq2.NewAnnotationProducerImpl,
 		file.NewFileRPCProvider,

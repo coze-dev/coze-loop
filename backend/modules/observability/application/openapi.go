@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
 	"io"
 	"strconv"
 	"strings"
@@ -64,6 +65,7 @@ func NewOpenAPIApplication(
 	rateLimiter limiter.IRateLimiterFactory,
 	traceConfig config.ITraceConfig,
 	metrics metrics.ITraceMetrics,
+	collector collector.ICollectorProvider,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService: traceService,
@@ -74,6 +76,7 @@ func NewOpenAPIApplication(
 		rateLimiter:  rateLimiter.NewRateLimiter(),
 		traceConfig:  traceConfig,
 		metrics:      metrics,
+		collector:    collector,
 	}, nil
 }
 
@@ -86,6 +89,7 @@ type OpenAPIApplication struct {
 	rateLimiter  limiter.IRateLimiter
 	traceConfig  config.ITraceConfig
 	metrics      metrics.ITraceMetrics
+	collector    collector.ICollectorProvider
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -465,6 +469,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	defer func() {
 		if req != nil {
 			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
