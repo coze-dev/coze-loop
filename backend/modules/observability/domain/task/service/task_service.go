@@ -297,8 +297,7 @@ func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *task.Task) bool {
 
 	return backfillTime.GetStartAt() > 0 &&
 		backfillTime.GetEndAt() > 0 &&
-		backfillTime.GetStartAt() < backfillTime.GetEndAt() &&
-		backfillTime.GetEndAt() > time.Now().UnixMilli()
+		backfillTime.GetStartAt() < backfillTime.GetEndAt()
 }
 
 // shouldCreateTaskRun 判断是否需要创建TaskRun
