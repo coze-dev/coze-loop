@@ -198,7 +198,14 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 				}
 				taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
 				taskRuns := tconv.TaskRunPOs2DOs(ctx, taskPO.TaskRuns, nil)
-				if err = proc.Finish(ctx, taskRuns, &taskexe.Trigger{Task: taskConfig, Span: nil, IsFinish: false}); err != nil {
+				var taskRun *task.TaskRun
+				for _, tr := range taskRuns {
+					if tr.RunStatus == task.RunStatusRunning {
+						taskRun = tr
+						break
+					}
+				}
+				if err = proc.Finish(ctx, taskRun, &taskexe.Trigger{Task: taskConfig, Span: nil, IsFinish: false}); err != nil {
 					logs.CtxError(ctx, "proc Finish err:%v", err)
 					return err
 
