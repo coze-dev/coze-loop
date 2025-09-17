@@ -36,7 +36,6 @@ const (
 	TaskRunDetailTTL       = 15 * time.Minute // TaskRun缓存15分钟
 	NonFinalTaskRunListTTL = 30 * time.Second // 非终态TaskRun缓存30秒
 	TaskRunListByTaskTTL   = 5 * time.Minute  // 按Task分组的TaskRun列表缓存5分钟
-	TaskRunCountTTL        = 10 * time.Minute // TaskRun计数缓存10分钟
 	ObjListWithTaskRunTTL  = 15 * time.Minute // 对象列表缓存15分钟
 )
 

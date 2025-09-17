@@ -39,6 +39,12 @@ type TaskRepoImpl struct {
 const (
 	TaskDetailTTL       = 30 * time.Minute // 单个任务缓存30分钟
 	NonFinalTaskListTTL = 1 * time.Minute  // 非最终状态任务缓存1分钟
+	TaskCountTTL        = 10 * time.Minute // 任务计数缓存10分钟
+)
+
+// 任务运行计数TTL常量
+const (
+	TaskRunCountTTL = 10 * time.Minute // 任务运行计数缓存10分钟
 )
 
 func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error) {
@@ -71,9 +77,8 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 		ReqLimit:    1000,
 		ReqOffset:   0,
 	})
-	for _, tr := range TaskRunPo {
-		taskDO.TaskRuns = append(taskDO.TaskRuns, convertor.TaskRunPO2DO(tr))
-	}
+
+	taskDO.TaskRuns = convertor.TaskRunsPO2DO(TaskRunPo)
 	if err != nil {
 		return nil, err
 	}
@@ -121,16 +126,10 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
 			logs.Error("failed to set task cache after create", "id", createdID, "err", err)
 		}
-
 		// 更新非最终状态任务列表缓存
-		currentList, err := v.TaskRedisDao.GetNonFinalTaskList(context.Background())
-		if err != nil {
-			logs.Error("failed to get non final task list cache", "id", createdID, "err", err)
-		} else {
-			updatedList := append(currentList, do)
-			if err := v.TaskRedisDao.SetNonFinalTaskList(context.Background(), updatedList, NonFinalTaskListTTL); err != nil {
-				logs.Error("failed to update non final task list cache after create", "id", createdID, "err", err)
-			}
+		if err = v.TaskRedisDao.AddNonFinalTask(ctx, do); err != nil {
+			logs.Error("failed to set non final task cache after create", "id", createdID, "err", err)
+			return
 		}
 	}()
 
@@ -158,10 +157,8 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 		// 更新单个任务缓存
 		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
 			logs.Error("failed to update task cache", "id", do.ID, "err", err)
+			return
 		}
-
-		// 清理相关列表缓存
-		v.clearListCaches(context.Background(), do.WorkspaceID)
 	}()
 
 	return nil
@@ -285,7 +282,6 @@ func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []stri
 }
 
 func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, error) {
-	// 先查 Redis 缓存
 	count, err := v.TaskRedisDao.GetTaskCount(ctx, taskID)
 	if err != nil {
 		logs.CtxWarn(ctx, "failed to get task count from redis cache", "taskID", taskID, "err", err)
@@ -295,7 +291,6 @@ func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, e
 	return count, nil
 }
 func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
-	// 先查 Redis 缓存
 	count, err := v.TaskRedisDao.GetTaskRunCount(ctx, taskID, taskRunID)
 	if err != nil {
 		logs.CtxWarn(ctx, "failed to get task run count from redis cache", "taskID", taskID, "err", err)
@@ -306,17 +301,37 @@ func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID in
 }
 
 func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID int64) error {
+	_, err := v.TaskRedisDao.IncrTaskCount(ctx, taskID, TaskCountTTL)
+	if err != nil {
+		logs.CtxError(ctx, "failed to increment task count", "taskID", taskID, "err", err)
+		return err
+	}
 	return nil
 }
+
 func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID int64) error {
-
+	_, err := v.TaskRedisDao.DecrTaskCount(ctx, taskID, TaskCountTTL)
+	if err != nil {
+		logs.CtxError(ctx, "failed to decrement task count", "taskID", taskID, "err", err)
+		return err
+	}
 	return nil
 }
+
 func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
-
+	_, err := v.TaskRedisDao.IncrTaskRunCount(ctx, taskID, taskRunID, TaskRunCountTTL)
+	if err != nil {
+		logs.CtxError(ctx, "failed to increment task run count", "taskID", taskID, "taskRunID", taskRunID, "err", err)
+		return err
+	}
 	return nil
 }
-func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
 
+func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
+	_, err := v.TaskRedisDao.DecrTaskRunCount(ctx, taskID, taskRunID, TaskRunCountTTL)
+	if err != nil {
+		logs.CtxError(ctx, "failed to decrement task run count", "taskID", taskID, "taskRunID", taskRunID, "err", err)
+		return err
+	}
 	return nil
 }
