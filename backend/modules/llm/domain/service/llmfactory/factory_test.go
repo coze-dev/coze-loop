@@ -110,7 +110,39 @@ func TestFactoryImpl_CreateLLM(t *testing.T) {
 						Model:     "your-model",
 						TimeoutMs: nil,
 						ProtocolConfigOpenAI: &entity.ProtocolConfigOpenAI{
-							ByAzure: true,
+							ByAzure:            true,
+							ResponseFormatType: "json_schema",
+							ResponseFormatJsonSchema: `{
+    "name": "Categorization",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "results": {
+                "type": "array",
+                "description": "List of two-level product categorization results",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "product_id": {
+                            "type": "string"
+                        },
+                        "primary_category": {
+                            "type": "string"
+                        },
+                        "secondary_category": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["product_id", "primary_category", "secondary_category"],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "required": ["results"],
+        "additionalProperties": false
+    },
+    "strict": true
+}`,
 						},
 					},
 					ParamConfig: paramCfg,
