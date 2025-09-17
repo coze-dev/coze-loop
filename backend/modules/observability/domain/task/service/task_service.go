@@ -305,12 +305,13 @@ func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameR
 		logs.CtxError(ctx, "ListTasks err:%v", err)
 		return nil, err
 	}
+	var pass bool
 	if len(taskPOs) > 0 {
-		resp.Pass = gptr.Of(false)
+		pass = false
 	} else {
-		resp.Pass = gptr.Of(true)
+		pass = true
 	}
-	return resp, nil
+	return &CheckTaskNameResp{Pass: gptr.Of(pass)}, nil
 }
 
 // shouldTriggerBackfill 判断是否需要发送历史回溯MQ
