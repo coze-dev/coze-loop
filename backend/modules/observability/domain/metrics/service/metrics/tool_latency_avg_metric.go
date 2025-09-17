@@ -6,6 +6,7 @@ package metrics
 import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -16,19 +17,20 @@ func (m *ToolLatencyAvgMetric) Name() string {
 	return "tool_latency_avg"
 }
 
-func (m *ToolLatencyAvgMetric) Type() entity.MetricType {
-	return entity.MetricTypeSummary
+func (m *ToolLatencyAvgMetric) Type() string {
+	return "summary"
 }
 
-func (m *ToolLatencyAvgMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+func (m *ToolLatencyAvgMetric) Source() string {
+	return "ck"
 }
 
 func (m *ToolLatencyAvgMetric) Expression() string {
 	return "sum(duration / 1000) / count()"
 }
 
-func (m *ToolLatencyAvgMetric) Where(filterFields *loop_span.FilterFields) ([]*loop_span.FilterField, error) {
+func (m *ToolLatencyAvgMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	// 直接返回工具Span筛选条件，不使用Filter接口，因为这是固定的筛选逻辑
 	return []*loop_span.FilterField{
 		{
 			FieldName: loop_span.SpanFieldSpanType,

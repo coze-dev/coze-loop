@@ -5,6 +5,7 @@ package entity
 
 import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
 type MetricType string
@@ -28,12 +29,12 @@ type Dimension struct {
 }
 
 type IMetricDefinition interface {
-	Name() string                                                    // 指标名，全局唯一
-	Type() MetricType                                                // 指标类型
-	Source() MetricSource                                            // 数据来源
-	Expression() string                                              // 计算表达式
-	Where(*loop_span.FilterFields) ([]*loop_span.FilterField, error) // 筛选条件
-	GroupBy() []*Dimension                                           // 聚合维度
+	Name() string                                                                        // 指标名，全局唯一
+	Type() string                                                                        // 指标类型：time_series/summary/pie
+	Source() string                                                                      // 数据来源：span/coze
+	Expression() string                                                                  // 计算表达式
+	Where(span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error)   // 筛选条件
+	GroupBy() []*Dimension                                                               // 聚合维度
 }
 
 type QueryMetricsReq struct {

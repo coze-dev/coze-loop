@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks . IMetricsService
@@ -18,15 +19,17 @@ type IMetricsService interface {
 
 // MetricsService 指标服务实现
 type MetricsService struct {
-	metricsRepo repo.IMetricsRepo
-	definitions []entity.IMetricDefinition
+	metricsRepo         repo.IMetricsRepo
+	definitions         []entity.IMetricDefinition
+	platformFilterFactory span_filter.PlatformFilterFactory
 }
 
 // NewMetricsService 创建指标服务
-func NewMetricsService(metricsRepo repo.IMetricsRepo, definitions []entity.IMetricDefinition) IMetricsService {
+func NewMetricsService(metricsRepo repo.IMetricsRepo, definitions []entity.IMetricDefinition, platformFilterFactory span_filter.PlatformFilterFactory) IMetricsService {
 	return &MetricsService{
-		metricsRepo: metricsRepo,
-		definitions: definitions,
+		metricsRepo:           metricsRepo,
+		definitions:           definitions,
+		platformFilterFactory: platformFilterFactory,
 	}
 }
 
@@ -57,8 +60,20 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *entity.QueryMetr
 			continue // 跳过未找到的指标定义
 		}
 		
+		// 获取平台相关的Filter
+		platformFilter, filterErr := s.platformFilterFactory.GetFilter(ctx, loop_span.PlatformCozeLoop)
+		if filterErr != nil {
+			return nil, filterErr
+		}
+		
+		// 构建SpanEnv
+		spanEnv := &span_filter.SpanEnv{
+			WorkspaceID:           0, // TODO: 从req中获取WorkspaceID
+			ThirdPartyWorkspaceID: req.WorkspaceID,
+		}
+		
 		// 获取指标的筛选条件
-		whereFilters, whereErr := definition.Where(req.FilterFields)
+		whereFilters, whereErr := definition.Where(platformFilter, spanEnv)
 		if whereErr != nil {
 			return nil, whereErr
 		}
@@ -101,11 +116,11 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *entity.QueryMetr
 		var err error
 		
 		switch definition.Type() {
-		case entity.MetricTypeTimeSeries:
+		case "time_series":
 			result, err = s.metricsRepo.GetTimeSeries(ctx, param)
-		case entity.MetricTypeSummary:
+		case "summary":
 			result, err = s.metricsRepo.GetSummary(ctx, param)
-		case entity.MetricTypePie:
+		case "pie":
 			result, err = s.metricsRepo.GetPie(ctx, param)
 		default:
 			continue

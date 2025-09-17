@@ -4,9 +4,11 @@
 package metrics
 
 import (
+	"context"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/filter"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
 // TotalCountMetric 使用次数指标
@@ -16,21 +18,21 @@ func (m *TotalCountMetric) Name() string {
 	return "total_count"
 }
 
-func (m *TotalCountMetric) Type() entity.MetricType {
-	return entity.MetricTypeSummary
+func (m *TotalCountMetric) Type() string {
+	return "summary"
 }
 
-func (m *TotalCountMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+func (m *TotalCountMetric) Source() string {
+	return "ck"
 }
 
 func (m *TotalCountMetric) Expression() string {
 	return "count()"
 }
 
-func (m *TotalCountMetric) Where(filterFields *loop_span.FilterFields) ([]*loop_span.FilterField, error) {
+func (m *TotalCountMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	// 需要RootSpan筛选
-	return filter.BuildRootSpanFilter()
+	return filter.BuildRootSpanFilter(context.Background(), env)
 }
 
 func (m *TotalCountMetric) GroupBy() []*entity.Dimension {
