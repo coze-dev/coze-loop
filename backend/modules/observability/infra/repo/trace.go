@@ -391,18 +391,35 @@ func (t *TraceCkRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_
 
 // GetMetrics 获取指标数据
 func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *repo.GetMetricsParam) ([]map[string]any, error) {
-	// TODO: 实现GetMetrics方法
-	// 构建SQL查询
-	// 根据param中的Aggregations构建SELECT子句
-	// 根据param中的GroupBys构建GROUP BY子句
-	// 根据param中的Filters构建WHERE子句
-	// 根据param中的Granularity构建时间分组
+	// 转换参数格式
+	ckParam := &ck.GetMetricsParam{
+		Tables:       param.Tables,
+		Aggregations: convertDimensions(param.Aggregations),
+		GroupBys:     convertDimensions(param.GroupBys),
+		Filters:      param.Filters,
+		StartAt:      param.StartAt,
+		EndAt:        param.EndAt,
+		Granularity:  param.Granularity,
+	}
 	
 	// 调用ClickHouse DAO层执行查询
-	// 返回原始查询结果
+	return t.spansDao.GetMetrics(ctx, ckParam)
+}
+
+// convertDimensions 转换维度格式
+func convertDimensions(dimensions []*repo.Dimension) []*ck.Dimension {
+	if dimensions == nil {
+		return nil
+	}
 	
-	// 暂时返回空结果
-	return []map[string]any{}, nil
+	result := make([]*ck.Dimension, len(dimensions))
+	for i, dim := range dimensions {
+		result[i] = &ck.Dimension{
+			Expression: dim.Expression,
+			Alias:      dim.Alias,
+		}
+	}
+	return result
 }
 
 func parsePageToken(pageToken string) (*PageToken, error) {

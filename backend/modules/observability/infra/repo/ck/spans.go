@@ -48,6 +48,24 @@ type InsertParam struct {
 type ISpansDao interface {
 	Insert(context.Context, *InsertParam) error
 	Get(context.Context, *QueryParam) ([]*model.ObservabilitySpan, error)
+	GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error)
+}
+
+// GetMetricsParam 指标查询参数
+type GetMetricsParam struct {
+	Tables       []string
+	Aggregations []*Dimension
+	GroupBys     []*Dimension
+	Filters      *loop_span.FilterFields
+	StartAt      int64
+	EndAt        int64
+	Granularity  string
+}
+
+// Dimension 维度定义
+type Dimension struct {
+	Expression string // 字段名或表达式
+	Alias      string // 别名
 }
 
 func NewSpansCkDaoImpl(db ck.Provider) (ISpansDao, error) {
@@ -398,4 +416,203 @@ var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
+}
+
+// GetMetrics 获取指标数据
+func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error) {
+	sql, err := s.buildMetricsSQL(ctx, param)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get metrics request"))
+	}
+	
+	logs.CtxInfo(ctx, "Get Metrics SQL: %s", sql)
+	
+	var results []map[string]any
+	if err := s.newSession(ctx).Raw(sql).Scan(&results).Error; err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	
+	return results, nil
+}
+
+// buildMetricsSQL 构建指标查询SQL
+func (s *SpansCkDaoImpl) buildMetricsSQL(ctx context.Context, param *GetMetricsParam) (string, error) {
+	if len(param.Tables) == 0 {
+		return "", fmt.Errorf("tables cannot be empty")
+	}
+	
+	var sqlBuilder strings.Builder
+	
+	// 构建SELECT子句
+	sqlBuilder.WriteString("SELECT ")
+	
+	// 添加时间分组（如果有granularity）
+	if param.Granularity != "" {
+		timeInterval := s.getTimeInterval(param.Granularity)
+		sqlBuilder.WriteString(fmt.Sprintf("toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL %s) AS time_bucket", timeInterval))
+		if len(param.Aggregations) > 0 || len(param.GroupBys) > 0 {
+			sqlBuilder.WriteString(", ")
+		}
+	}
+	
+	// 添加聚合字段
+	for i, agg := range param.Aggregations {
+		if i > 0 {
+			sqlBuilder.WriteString(", ")
+		}
+		if agg.Alias != "" {
+			sqlBuilder.WriteString(fmt.Sprintf("%s AS %s", agg.Expression, agg.Alias))
+		} else {
+			sqlBuilder.WriteString(agg.Expression)
+		}
+	}
+	
+	// 添加分组字段
+	if len(param.GroupBys) > 0 {
+		if len(param.Aggregations) > 0 {
+			sqlBuilder.WriteString(", ")
+		}
+		for i, groupBy := range param.GroupBys {
+			if i > 0 {
+				sqlBuilder.WriteString(", ")
+			}
+			if groupBy.Alias != "" {
+				sqlBuilder.WriteString(fmt.Sprintf("%s AS %s", groupBy.Expression, groupBy.Alias))
+			} else {
+				sqlBuilder.WriteString(groupBy.Expression)
+			}
+		}
+	}
+	
+	// 构建FROM子句
+	sqlBuilder.WriteString(" FROM ")
+	if len(param.Tables) == 1 {
+		sqlBuilder.WriteString(param.Tables[0])
+	} else {
+		// 多表联合查询
+		sqlBuilder.WriteString("(")
+		for i, table := range param.Tables {
+			if i > 0 {
+				sqlBuilder.WriteString(" UNION ALL ")
+			}
+			sqlBuilder.WriteString(fmt.Sprintf("SELECT * FROM %s", table))
+		}
+		sqlBuilder.WriteString(")")
+	}
+	
+	// 构建WHERE子句
+	whereClause, err := s.buildWhereClause(param)
+	if err != nil {
+		return "", err
+	}
+	if whereClause != "" {
+		sqlBuilder.WriteString(" WHERE ")
+		sqlBuilder.WriteString(whereClause)
+	}
+	
+	// 构建GROUP BY子句
+	groupByClause := s.buildGroupByClause(param)
+	if groupByClause != "" {
+		sqlBuilder.WriteString(" GROUP BY ")
+		sqlBuilder.WriteString(groupByClause)
+	}
+	
+	// 构建ORDER BY子句（时间序列需要）
+	if param.Granularity != "" {
+		sqlBuilder.WriteString(" ORDER BY time_bucket")
+		
+		// 添加WITH FILL（时间序列填充）
+		timeInterval := s.getTimeInterval(param.Granularity)
+		sqlBuilder.WriteString(fmt.Sprintf(" WITH FILL FROM toStartOfInterval(fromUnixTimestamp64Micro(%d), INTERVAL %s) TO toStartOfInterval(fromUnixTimestamp64Micro(%d), INTERVAL %s) STEP %s",
+			param.StartAt, timeInterval, param.EndAt, timeInterval, timeInterval))
+	}
+	
+	return sqlBuilder.String(), nil
+}
+
+// buildWhereClause 构建WHERE子句
+func (s *SpansCkDaoImpl) buildWhereClause(param *GetMetricsParam) (string, error) {
+	var conditions []string
+	
+	// 添加时间范围条件
+	if param.StartAt > 0 && param.EndAt > 0 {
+		conditions = append(conditions, fmt.Sprintf("start_time >= %d", param.StartAt))
+		conditions = append(conditions, fmt.Sprintf("start_time <= %d", param.EndAt))
+		
+		// 添加日期范围条件（性能优化）
+		startDate := s.formatDate(param.StartAt)
+		endDate := s.formatDate(param.EndAt)
+		conditions = append(conditions, fmt.Sprintf("start_date >= '%s'", startDate))
+		conditions = append(conditions, fmt.Sprintf("start_date <= '%s'", endDate))
+	}
+	
+	// 添加过滤条件
+	if param.Filters != nil {
+		filterSQL, err := s.buildFilterSQL(param.Filters)
+		if err != nil {
+			return "", err
+		}
+		if filterSQL != "" {
+			conditions = append(conditions, filterSQL)
+		}
+	}
+	
+	return strings.Join(conditions, " AND "), nil
+}
+
+// buildGroupByClause 构建GROUP BY子句
+func (s *SpansCkDaoImpl) buildGroupByClause(param *GetMetricsParam) string {
+	var groupBys []string
+	
+	// 添加时间分组
+	if param.Granularity != "" {
+		groupBys = append(groupBys, "time_bucket")
+	}
+	
+	// 添加其他分组字段
+	for _, groupBy := range param.GroupBys {
+		if groupBy.Alias != "" {
+			groupBys = append(groupBys, groupBy.Alias)
+		} else {
+			groupBys = append(groupBys, groupBy.Expression)
+		}
+	}
+	
+	return strings.Join(groupBys, ", ")
+}
+
+// buildFilterSQL 构建过滤条件SQL
+func (s *SpansCkDaoImpl) buildFilterSQL(filters *loop_span.FilterFields) (string, error) {
+	// 复用现有的过滤逻辑
+	// TODO: 这里需要根据现有的filter构建逻辑进行实现
+	// 可以参考现有的buildSql方法中的过滤逻辑
+	return "", nil
+}
+
+// getTimeInterval 根据granularity获取时间间隔
+func (s *SpansCkDaoImpl) getTimeInterval(granularity string) string {
+	switch granularity {
+	case "1min":
+		return "1 MINUTE"
+	case "5min":
+		return "5 MINUTE"
+	case "15min":
+		return "15 MINUTE"
+	case "1hour":
+		return "1 HOUR"
+	case "1day":
+		return "1 DAY"
+	default:
+		return "5 MINUTE" // 默认5分钟
+	}
+}
+
+// formatDate 格式化日期
+func (s *SpansCkDaoImpl) formatDate(timestamp int64) string {
+	// timestamp是微秒，需要转换为秒
+	seconds := timestamp / 1000000
+	return fmt.Sprintf("%d-%02d-%02d", 
+		1970+seconds/(365*24*3600), // 简化的年份计算
+		1+((seconds%(365*24*3600))/(30*24*3600)), // 简化的月份计算
+		1+((seconds%(30*24*3600))/(24*3600))) // 简化的日期计算
 }

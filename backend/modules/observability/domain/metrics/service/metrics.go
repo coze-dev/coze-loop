@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks . IMetricsService
@@ -56,10 +57,39 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *entity.QueryMetr
 			continue // 跳过未找到的指标定义
 		}
 		
+		// 获取指标的筛选条件
+		whereFilters, whereErr := definition.Where(req.FilterFields)
+		if whereErr != nil {
+			return nil, whereErr
+		}
+		
+		// 合并筛选条件
+		mergedFilters := req.FilterFields
+		if whereFilters != nil && len(whereFilters) > 0 {
+			if mergedFilters == nil {
+				mergedFilters = &loop_span.FilterFields{
+					FilterFields: whereFilters,
+				}
+			} else {
+				// 合并过滤条件
+				if mergedFilters.FilterFields == nil {
+					mergedFilters.FilterFields = whereFilters
+				} else {
+					mergedFilters.FilterFields = append(mergedFilters.FilterFields, whereFilters...)
+				}
+			}
+		}
+		
 		// 构建查询参数
 		param := &entity.GetMetricsParam{
-			Tenants:     []string{req.WorkspaceID},
-			Filters:     req.FilterFields,
+			Tenants: []string{req.WorkspaceID},
+			Aggregations: []*entity.Dimension{
+				{
+					Expression: definition.Expression(),
+					Alias:      definition.Name(),
+				},
+			},
+			Filters:     mergedFilters,
 			StartAt:     req.StartTime,
 			EndAt:       req.EndTime,
 			Granularity: req.Granularity,

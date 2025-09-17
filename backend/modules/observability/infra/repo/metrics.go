@@ -27,9 +27,9 @@ func NewMetricsCkRepoImpl(traceRepo traceRepo.ITraceRepo) metricsRepo.IMetricsRe
 func (m *MetricsCkRepoImpl) GetTimeSeries(ctx context.Context, param *entity.GetMetricsParam) (*entity.GetMetricsResult, error) {
 	// 调用扩展后的traceRepo.GetMetrics方法
 	data, err := m.traceRepo.GetMetrics(ctx, &traceRepo.GetMetricsParam{
-		Tables:       []string{"spans"}, // 默认查询spans表
-		Aggregations: convertDimensions(param.Aggregations),
-		GroupBys:     convertDimensions(param.GroupBys),
+		Tables:       []string{"trace_1.fornax_90d"}, // 使用文档中的表名
+		Aggregations: convertMetricsDimensions(param.Aggregations),
+		GroupBys:     convertMetricsDimensions(param.GroupBys),
 		Filters:      param.Filters,
 		StartAt:      param.StartAt,
 		EndAt:        param.EndAt,
@@ -44,15 +44,19 @@ func (m *MetricsCkRepoImpl) GetTimeSeries(ctx context.Context, param *entity.Get
 
 // GetSummary 获取汇总指标数据
 func (m *MetricsCkRepoImpl) GetSummary(ctx context.Context, param *entity.GetMetricsParam) (*entity.GetMetricsResult, error) {
+	// Summary类型不需要时间分组
+	summaryParam := *param
+	summaryParam.Granularity = ""
+	
 	// 调用扩展后的traceRepo.GetMetrics方法
 	data, err := m.traceRepo.GetMetrics(ctx, &traceRepo.GetMetricsParam{
-		Tables:       []string{"spans"}, // 默认查询spans表
-		Aggregations: convertDimensions(param.Aggregations),
-		GroupBys:     convertDimensions(param.GroupBys),
-		Filters:      param.Filters,
-		StartAt:      param.StartAt,
-		EndAt:        param.EndAt,
-		Granularity:  param.Granularity,
+		Tables:       []string{"trace_1.fornax_90d"}, // 使用文档中的表名
+		Aggregations: convertMetricsDimensions(summaryParam.Aggregations),
+		GroupBys:     convertMetricsDimensions(summaryParam.GroupBys),
+		Filters:      summaryParam.Filters,
+		StartAt:      summaryParam.StartAt,
+		EndAt:        summaryParam.EndAt,
+		Granularity:  summaryParam.Granularity,
 	})
 	if err != nil {
 		return nil, err
@@ -60,18 +64,21 @@ func (m *MetricsCkRepoImpl) GetSummary(ctx context.Context, param *entity.GetMet
 
 	return &entity.GetMetricsResult{Data: data}, nil
 }
-
 // GetPie 获取饼图指标数据
 func (m *MetricsCkRepoImpl) GetPie(ctx context.Context, param *entity.GetMetricsParam) (*entity.GetMetricsResult, error) {
+	// 饼图类型不需要时间分组
+	pieParam := *param
+	pieParam.Granularity = ""
+	
 	// 调用扩展后的traceRepo.GetMetrics方法
 	data, err := m.traceRepo.GetMetrics(ctx, &traceRepo.GetMetricsParam{
-		Tables:       []string{"spans"}, // 默认查询spans表
-		Aggregations: convertDimensions(param.Aggregations),
-		GroupBys:     convertDimensions(param.GroupBys),
-		Filters:      param.Filters,
-		StartAt:      param.StartAt,
-		EndAt:        param.EndAt,
-		Granularity:  param.Granularity,
+		Tables:       []string{"trace_1.fornax_90d"}, // 使用文档中的表名
+		Aggregations: convertMetricsDimensions(pieParam.Aggregations),
+		GroupBys:     convertMetricsDimensions(pieParam.GroupBys),
+		Filters:      pieParam.Filters,
+		StartAt:      pieParam.StartAt,
+		EndAt:        pieParam.EndAt,
+		Granularity:  pieParam.Granularity,
 	})
 	if err != nil {
 		return nil, err
@@ -80,8 +87,8 @@ func (m *MetricsCkRepoImpl) GetPie(ctx context.Context, param *entity.GetMetrics
 	return &entity.GetMetricsResult{Data: data}, nil
 }
 
-// convertDimensions 转换维度类型
-func convertDimensions(dimensions []*entity.Dimension) []*traceRepo.Dimension {
+// convertMetricsDimensions 转换指标维度类型
+func convertMetricsDimensions(dimensions []*entity.Dimension) []*traceRepo.Dimension {
 	if dimensions == nil {
 		return nil
 	}
