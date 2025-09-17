@@ -67,6 +67,23 @@ type InsertAnnotationParam struct {
 	Annotations []*loop_span.Annotation
 }
 
+// GetMetrics查询参数
+type GetMetricsParam struct {
+	Tables       []string
+	Aggregations []*Dimension
+	GroupBys     []*Dimension
+	Filters      *loop_span.FilterFields
+	StartAt      int64
+	EndAt        int64
+	Granularity  string
+}
+
+// 维度定义
+type Dimension struct {
+	Expression string // 字段名或表达式
+	Alias      string // 别名
+}
+
 //go:generate mockgen -destination=mocks/trace.go -package=mocks . ITraceRepo
 type ITraceRepo interface {
 	InsertSpans(context.Context, *InsertTraceParam) error
@@ -75,4 +92,5 @@ type ITraceRepo interface {
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)
 	GetAnnotation(context.Context, *GetAnnotationParam) (*loop_span.Annotation, error)
 	InsertAnnotations(context.Context, *InsertAnnotationParam) error
+	GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error)
 }
