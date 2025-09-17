@@ -165,7 +165,7 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 
 func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, userIDInContext string, disableTracing bool) (resp *entity.ReplyItem, err error) {
 	var modelSpan *evaluatorSpan
-	var modelCtx = ctx
+	modelCtx := ctx
 
 	if !disableTracing {
 		modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
@@ -174,7 +174,7 @@ func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVe
 		}()
 	}
 
-	var modelTraceCtx = modelCtx
+	modelTraceCtx := modelCtx
 	if !disableTracing {
 		modelTraceCtx = looptracer.GetTracer().Inject(modelCtx)
 		if err != nil {
