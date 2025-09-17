@@ -36,7 +36,6 @@ import (
 )
 
 func NewExptManager(
-// tupleSvc IExptTupleService,
 	exptResultService ExptResultService,
 	exptRepo repo.IExperimentRepo,
 	exptRunLogRepo repo.IExptRunLogRepo,
