@@ -73,8 +73,10 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 	}
 	opts := make([]entity.Option, 0)
 	opts = append(opts, entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
-		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())))
-	if request.GetParam().GetCustomEvalTarget() != nil {
+		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())),
+		entity.WithRegion(request.Param.Region),
+		entity.WithEnv(request.Param.Env))
+	if request.GetParam().CustomEvalTarget != nil {
 		opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 			ID:        request.GetParam().GetCustomEvalTarget().ID,
 			Name:      request.GetParam().GetCustomEvalTarget().Name,

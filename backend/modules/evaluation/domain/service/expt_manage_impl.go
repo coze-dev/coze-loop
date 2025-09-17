@@ -483,7 +483,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if !req.CreateEvalTargetParam.IsNull() {
 		opts := make([]entity.Option, 0)
 		opts = append(opts, entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
-			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)))
+			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)),
+			entity.WithRegion(req.CreateEvalTargetParam.Region),
+			entity.WithEnv(req.CreateEvalTargetParam.Env))
 		if req.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        req.CreateEvalTargetParam.CustomEvalTarget.ID,

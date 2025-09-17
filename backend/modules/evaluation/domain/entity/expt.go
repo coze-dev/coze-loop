@@ -296,6 +296,8 @@ type CreateEvalTargetParam struct {
 	BotInfoType         *CozeBotInfoType
 	BotPublishVersion   *string
 	CustomEvalTarget    *CustomEvalTarget // 搜索对象返回的信息
+	Region              *Region
+	Env                 *string
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {

@@ -333,6 +333,10 @@ type CreateEvalTargetParam struct {
 	BotPublishVersion *string `thrift:"bot_publish_version,5,optional" frugal:"5,optional,string" form:"bot_publish_version" json:"bot_publish_version,omitempty" query:"bot_publish_version"`
 	// type=6,并且有搜索对象，搜索结果信息通过这个字段透传
 	CustomEvalTarget *eval_target.CustomEvalTarget `thrift:"custom_eval_target,6,optional" frugal:"6,optional,eval_target.CustomEvalTarget" form:"custom_eval_target" json:"custom_eval_target,omitempty" query:"custom_eval_target"`
+	// 有区域限制需要填充这个字段
+	Region *eval_target.Region `thrift:"region,7,optional" frugal:"7,optional,string" form:"region" json:"region,omitempty" query:"region"`
+	// 有环境限制需要填充这个字段
+	Env *string `thrift:"env,8,optional" frugal:"8,optional,string" form:"env" json:"env,omitempty" query:"env"`
 }
 
 func NewCreateEvalTargetParam() *CreateEvalTargetParam {
@@ -413,6 +417,30 @@ func (p *CreateEvalTargetParam) GetCustomEvalTarget() (v *eval_target.CustomEval
 	}
 	return p.CustomEvalTarget
 }
+
+var CreateEvalTargetParam_Region_DEFAULT eval_target.Region
+
+func (p *CreateEvalTargetParam) GetRegion() (v eval_target.Region) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRegion() {
+		return CreateEvalTargetParam_Region_DEFAULT
+	}
+	return *p.Region
+}
+
+var CreateEvalTargetParam_Env_DEFAULT string
+
+func (p *CreateEvalTargetParam) GetEnv() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnv() {
+		return CreateEvalTargetParam_Env_DEFAULT
+	}
+	return *p.Env
+}
 func (p *CreateEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -431,6 +459,12 @@ func (p *CreateEvalTargetParam) SetBotPublishVersion(val *string) {
 func (p *CreateEvalTargetParam) SetCustomEvalTarget(val *eval_target.CustomEvalTarget) {
 	p.CustomEvalTarget = val
 }
+func (p *CreateEvalTargetParam) SetRegion(val *eval_target.Region) {
+	p.Region = val
+}
+func (p *CreateEvalTargetParam) SetEnv(val *string) {
+	p.Env = val
+}
 
 var fieldIDToName_CreateEvalTargetParam = map[int16]string{
 	1: "source_target_id",
@@ -439,6 +473,8 @@ var fieldIDToName_CreateEvalTargetParam = map[int16]string{
 	4: "bot_info_type",
 	5: "bot_publish_version",
 	6: "custom_eval_target",
+	7: "region",
+	8: "env",
 }
 
 func (p *CreateEvalTargetParam) IsSetSourceTargetID() bool {
@@ -463,6 +499,14 @@ func (p *CreateEvalTargetParam) IsSetBotPublishVersion() bool {
 
 func (p *CreateEvalTargetParam) IsSetCustomEvalTarget() bool {
 	return p.CustomEvalTarget != nil
+}
+
+func (p *CreateEvalTargetParam) IsSetRegion() bool {
+	return p.Region != nil
+}
+
+func (p *CreateEvalTargetParam) IsSetEnv() bool {
+	return p.Env != nil
 }
 
 func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -526,6 +570,22 @@ func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -625,6 +685,28 @@ func (p *CreateEvalTargetParam) ReadField6(iprot thrift.TProtocol) error {
 	p.CustomEvalTarget = _field
 	return nil
 }
+func (p *CreateEvalTargetParam) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *eval_target.Region
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Region = _field
+	return nil
+}
+func (p *CreateEvalTargetParam) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Env = _field
+	return nil
+}
 
 func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -654,6 +736,14 @@ func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -782,6 +872,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *CreateEvalTargetParam) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRegion() {
+		if err = oprot.WriteFieldBegin("region", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Region); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *CreateEvalTargetParam) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnv() {
+		if err = oprot.WriteFieldBegin("env", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Env); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 
 func (p *CreateEvalTargetParam) String() string {
 	if p == nil {
@@ -813,6 +939,12 @@ func (p *CreateEvalTargetParam) DeepEqual(ano *CreateEvalTargetParam) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.CustomEvalTarget) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Region) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Env) {
 		return false
 	}
 	return true
@@ -881,6 +1013,30 @@ func (p *CreateEvalTargetParam) Field5DeepEqual(src *string) bool {
 func (p *CreateEvalTargetParam) Field6DeepEqual(src *eval_target.CustomEvalTarget) bool {
 
 	if !p.CustomEvalTarget.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateEvalTargetParam) Field7DeepEqual(src *eval_target.Region) bool {
+
+	if p.Region == src {
+		return true
+	} else if p.Region == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Region, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateEvalTargetParam) Field8DeepEqual(src *string) bool {
+
+	if p.Env == src {
+		return true
+	} else if p.Env == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Env, *src) != 0 {
 		return false
 	}
 	return true

@@ -362,6 +362,34 @@ func (p *CreateEvalTargetParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -466,6 +494,34 @@ func (p *CreateEvalTargetParam) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateEvalTargetParam) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *eval_target.Region
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Region = _field
+	return offset, nil
+}
+
+func (p *CreateEvalTargetParam) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Env = _field
+	return offset, nil
+}
+
 func (p *CreateEvalTargetParam) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -479,6 +535,8 @@ func (p *CreateEvalTargetParam) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -493,6 +551,8 @@ func (p *CreateEvalTargetParam) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -552,6 +612,24 @@ func (p *CreateEvalTargetParam) fastWriteField6(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
+func (p *CreateEvalTargetParam) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRegion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Region)
+	}
+	return offset
+}
+
+func (p *CreateEvalTargetParam) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnv() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
+	}
+	return offset
+}
+
 func (p *CreateEvalTargetParam) field1Length() int {
 	l := 0
 	if p.IsSetSourceTargetID() {
@@ -606,6 +684,24 @@ func (p *CreateEvalTargetParam) field6Length() int {
 	return l
 }
 
+func (p *CreateEvalTargetParam) field7Length() int {
+	l := 0
+	if p.IsSetRegion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Region)
+	}
+	return l
+}
+
+func (p *CreateEvalTargetParam) field8Length() int {
+	l := 0
+	if p.IsSetEnv() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Env)
+	}
+	return l
+}
+
 func (p *CreateEvalTargetParam) DeepCopy(s interface{}) error {
 	src, ok := s.(*CreateEvalTargetParam)
 	if !ok {
@@ -654,6 +750,19 @@ func (p *CreateEvalTargetParam) DeepCopy(s interface{}) error {
 		}
 	}
 	p.CustomEvalTarget = _customEvalTarget
+
+	if src.Region != nil {
+		tmp := *src.Region
+		p.Region = &tmp
+	}
+
+	if src.Env != nil {
+		var tmp string
+		if *src.Env != "" {
+			tmp = kutils.StringDeepCopy(*src.Env)
+		}
+		p.Env = &tmp
+	}
 
 	return nil
 }

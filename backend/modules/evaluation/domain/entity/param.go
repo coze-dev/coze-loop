@@ -90,6 +90,8 @@ type Opt struct {
 	PublishVersion   *string
 	BotInfoType      CozeBotInfoType
 	CustomEvalTarget *CustomEvalTarget
+	Region           *Region
+	Env              *string
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -107,6 +109,18 @@ func WithCozeBotInfoType(botInfoType CozeBotInfoType) Option {
 func WithCustomEvalTarget(customTarget *CustomEvalTarget) Option {
 	return func(option *Opt) {
 		option.CustomEvalTarget = customTarget
+	}
+}
+
+func WithRegion(region *Region) Option {
+	return func(option *Opt) {
+		option.Region = region
+	}
+}
+
+func WithEnv(env *string) Option {
+	return func(option *Opt) {
+		option.Env = env
 	}
 }
 
