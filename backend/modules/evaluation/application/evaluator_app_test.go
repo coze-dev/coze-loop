@@ -1181,7 +1181,6 @@ func Test_buildRunEvaluatorRequest_DisableTracing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// 模拟API层面设置DisableTracing参数的逻辑
 			// 由于API接口暂时还没有这个字段，我们通过模拟的方式测试内部参数传递
-			
 			// 创建一个模拟的请求，手动设置DisableTracing字段用于测试
 			mockRequest := &entity.RunEvaluatorRequest{
 				SpaceID:            tt.request.WorkspaceID,
@@ -1193,10 +1192,10 @@ func Test_buildRunEvaluatorRequest_DisableTracing(t *testing.T) {
 				TurnID:             tt.request.GetTurnID(),
 				DisableTracing:     tt.expectedTracing, // 手动设置用于测试
 			}
-			
+
 			// 验证DisableTracing字段正确设置
 			assert.Equal(t, tt.expectedTracing, mockRequest.DisableTracing)
-			
+
 			// 验证其他基本字段
 			assert.Equal(t, tt.expectedSpaceID, mockRequest.SpaceID)
 			assert.Equal(t, tt.expectedEvaluatorID, mockRequest.EvaluatorVersionID)

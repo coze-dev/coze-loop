@@ -75,14 +75,14 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	var err error
 	startTime := time.Now()
 	var rootSpan *evaluatorSpan
-	
+
 	if !disableTracing {
 		rootSpan, ctx = newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
 		traceID = rootSpan.GetTraceID()
 	} else {
 		traceID = ""
 	}
-	
+
 	defer func() {
 		if output == nil {
 			output = &entity.EvaluatorOutputData{
@@ -165,16 +165,16 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 
 func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, userIDInContext string, disableTracing bool) (resp *entity.ReplyItem, err error) {
 	var modelSpan *evaluatorSpan
-	var modelCtx context.Context = ctx
-	
+	var modelCtx = ctx
+
 	if !disableTracing {
 		modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
 		defer func() {
 			modelSpan.reportModelSpan(modelCtx, evaluatorVersion, resp, err)
 		}()
 	}
-	
-	var modelTraceCtx context.Context = modelCtx
+
+	var modelTraceCtx = modelCtx
 	if !disableTracing {
 		modelTraceCtx = looptracer.GetTracer().Inject(modelCtx)
 		if err != nil {
@@ -509,7 +509,7 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 			ValueType: valueType,
 		})
 	}
-	
+
 	var renderTemplateSpan *evaluatorSpan
 	if !disableTracing {
 		renderTemplateSpan, ctx = newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
