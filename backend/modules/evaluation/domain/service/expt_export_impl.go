@@ -235,7 +235,9 @@ func (e ExptResultExportService) HandleExportEvent(ctx context.Context, spaceID,
 
 		err1 := e.repo.Update(ctx, record)
 		if err1 != nil {
-			return
+			if err == nil {
+				err = err1
+			}
 		}
 	}()
 

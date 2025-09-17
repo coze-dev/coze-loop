@@ -8,29 +8,29 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	mockidgen "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type testMocks struct {
-	analysisRecordDAO      *mocks.MockIExptInsightAnalysisRecordDAO
-	feedbackCommentDAO     *mocks.MockIExptInsightAnalysisFeedbackCommentDAO
-	feedbackVoteDAO        *mocks.MockIExptInsightAnalysisFeedbackVoteDAO
-	idGenerator           *mockidgen.MockIIDGenerator
+	analysisRecordDAO  *mocks.MockIExptInsightAnalysisRecordDAO
+	feedbackCommentDAO *mocks.MockIExptInsightAnalysisFeedbackCommentDAO
+	feedbackVoteDAO    *mocks.MockIExptInsightAnalysisFeedbackVoteDAO
+	idGenerator        *mockidgen.MockIIDGenerator
 }
 
 func newTestExptInsightAnalysisRecordRepo(ctrl *gomock.Controller) (*ExptInsightAnalysisRecordRepo, *testMocks) {
 	mocks := &testMocks{
-		analysisRecordDAO:      mocks.NewMockIExptInsightAnalysisRecordDAO(ctrl),
-		feedbackCommentDAO:     mocks.NewMockIExptInsightAnalysisFeedbackCommentDAO(ctrl),
-		feedbackVoteDAO:        mocks.NewMockIExptInsightAnalysisFeedbackVoteDAO(ctrl),
-		idGenerator:           mockidgen.NewMockIIDGenerator(ctrl),
+		analysisRecordDAO:  mocks.NewMockIExptInsightAnalysisRecordDAO(ctrl),
+		feedbackCommentDAO: mocks.NewMockIExptInsightAnalysisFeedbackCommentDAO(ctrl),
+		feedbackVoteDAO:    mocks.NewMockIExptInsightAnalysisFeedbackVoteDAO(ctrl),
+		idGenerator:        mockidgen.NewMockIIDGenerator(ctrl),
 	}
 
 	repo := &ExptInsightAnalysisRecordRepo{
@@ -95,10 +95,10 @@ func TestExptInsightAnalysisRecordRepo_GetAnalysisRecordByID(t *testing.T) {
 	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
 
 	mocks.analysisRecordDAO.EXPECT().GetByID(gomock.Any(), int64(1), int64(1), int64(1), gomock.Any()).Return(&model.ExptInsightAnalysisRecord{
-		ID:      1,
-		SpaceID: 1,
-		ExptID:  1,
-		Status:  int32(entity.InsightAnalysisStatus_Success),
+		ID:        1,
+		SpaceID:   1,
+		ExptID:    1,
+		Status:    int32(entity.InsightAnalysisStatus_Success),
 		CreatedBy: "test-user",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -119,10 +119,10 @@ func TestExptInsightAnalysisRecordRepo_ListAnalysisRecord(t *testing.T) {
 
 	mocks.analysisRecordDAO.EXPECT().List(gomock.Any(), int64(1), int64(1), entity.NewPage(1, 10)).Return([]*model.ExptInsightAnalysisRecord{
 		{
-			ID:      1,
-			SpaceID: 1,
-			ExptID:  1,
-			Status:  int32(entity.InsightAnalysisStatus_Success),
+			ID:        1,
+			SpaceID:   1,
+			ExptID:    1,
+			Status:    int32(entity.InsightAnalysisStatus_Success),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
@@ -312,4 +312,163 @@ func TestExptInsightAnalysisRecordRepo_List(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, comments, 1)
 	assert.Equal(t, int64(1), total)
+}
+
+// Test error cases for better coverage
+func TestExptInsightAnalysisRecordRepo_CreateAnalysisRecord_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	record := &entity.ExptInsightAnalysisRecord{
+		SpaceID:               1,
+		ExptID:                1,
+		Status:                entity.InsightAnalysisStatus_Running,
+		AnalysisReportContent: "test content",
+		CreatedBy:             "user123",
+	}
+
+	// Test ID generation error
+	mocks.idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(0), assert.AnError)
+
+	id, err := repo.CreateAnalysisRecord(context.Background(), record)
+
+	assert.Error(t, err)
+	assert.Equal(t, int64(0), id)
+}
+
+func TestExptInsightAnalysisRecordRepo_CreateAnalysisRecord_DAOError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	record := &entity.ExptInsightAnalysisRecord{
+		SpaceID:               1,
+		ExptID:                1,
+		Status:                entity.InsightAnalysisStatus_Running,
+		AnalysisReportContent: "test content",
+		CreatedBy:             "user123",
+	}
+
+	// Test DAO create error
+	mocks.idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(123), nil)
+	mocks.analysisRecordDAO.EXPECT().Create(gomock.Any(), gomock.Any()).Return(assert.AnError)
+
+	id, err := repo.CreateAnalysisRecord(context.Background(), record)
+
+	assert.Error(t, err)
+	assert.Equal(t, int64(0), id)
+}
+
+func TestExptInsightAnalysisRecordRepo_CreateFeedbackComment_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	comment := &entity.ExptInsightAnalysisFeedbackComment{
+		SpaceID:          1,
+		ExptID:           1,
+		AnalysisRecordID: 1,
+		Comment:          "test comment",
+		CreatedBy:        "user123",
+	}
+
+	// Test ID generation error
+	mocks.idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(0), assert.AnError)
+
+	err := repo.CreateFeedbackComment(context.Background(), comment)
+
+	assert.Error(t, err)
+}
+
+func TestExptInsightAnalysisRecordRepo_CreateFeedbackVote_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	vote := &entity.ExptInsightAnalysisFeedbackVote{
+		SpaceID:          1,
+		ExptID:           1,
+		AnalysisRecordID: 1,
+		VoteType:         entity.Upvote,
+		CreatedBy:        "user123",
+	}
+
+	// Test ID generation error
+	mocks.idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(0), assert.AnError)
+
+	err := repo.CreateFeedbackVote(context.Background(), vote)
+
+	assert.Error(t, err)
+}
+
+func TestExptInsightAnalysisRecordRepo_GetFeedbackCommentByRecordID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	mocks.feedbackCommentDAO.EXPECT().GetByRecordID(gomock.Any(), int64(1), int64(1), int64(1), gomock.Any()).Return(&model.ExptInsightAnalysisFeedbackComment{
+		ID:               1,
+		SpaceID:          1,
+		ExptID:           1,
+		AnalysisRecordID: ptr.Of(int64(1)),
+		Comment:          ptr.Of("test comment"),
+		CreatedBy:        "user123",
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}, nil)
+
+	comment, err := repo.GetFeedbackCommentByRecordID(context.Background(), 1, 1, 1)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, comment)
+	assert.Equal(t, int64(1), comment.ID)
+}
+
+func TestExptInsightAnalysisRecordRepo_GetFeedbackCommentByRecordID_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	mocks.feedbackCommentDAO.EXPECT().GetByRecordID(gomock.Any(), int64(1), int64(1), int64(1), gomock.Any()).Return(nil, assert.AnError)
+
+	comment, err := repo.GetFeedbackCommentByRecordID(context.Background(), 1, 1, 1)
+
+	assert.Error(t, err)
+	assert.Nil(t, comment)
+}
+
+func TestExptInsightAnalysisRecordRepo_GetFeedbackVoteByUser_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	mocks.feedbackVoteDAO.EXPECT().GetByUser(gomock.Any(), int64(1), int64(1), int64(1), "user123", gomock.Any()).Return(nil, assert.AnError)
+
+	vote, err := repo.GetFeedbackVoteByUser(context.Background(), 1, 1, 1, "user123")
+
+	assert.Error(t, err)
+	assert.Nil(t, vote)
+}
+
+func TestExptInsightAnalysisRecordRepo_List_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo, mocks := newTestExptInsightAnalysisRecordRepo(ctrl)
+
+	mocks.feedbackCommentDAO.EXPECT().List(gomock.Any(), int64(1), int64(1), int64(1), entity.NewPage(1, 10)).Return(nil, int64(0), assert.AnError)
+
+	comments, total, err := repo.List(context.Background(), 1, 1, 1, entity.NewPage(1, 10))
+
+	assert.Error(t, err)
+	assert.Nil(t, comments)
+	assert.Equal(t, int64(0), total)
 }
