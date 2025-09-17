@@ -26,7 +26,6 @@ type SimpleCmdable interface {
 	Eval(ctx context.Context, script string, keys []string, args ...any) *redis.Cmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	Exists(ctx context.Context, keys ...string) *redis.IntCmd
-	Keys(ctx context.Context, pattern string) *redis.StringSliceCmd
 }
 
 // StringCmdable copy methods we need in [redis.StringCmdable]

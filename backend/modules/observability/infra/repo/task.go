@@ -335,3 +335,123 @@ func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID i
 	}
 	return nil
 }
+
+func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityTask) error {
+	// 先执行数据库删除操作
+	err := v.TaskDao.DeleteTask(ctx, do.ID, do.WorkspaceID, do.CreatedBy)
+	if err != nil {
+		return err
+	}
+
+	// 数据库操作成功后，异步清理缓存
+	go func() {
+		// 清理相关列表缓存
+		v.clearListCaches(context.Background(), do.WorkspaceID)
+		
+		// 如果是非终态任务，需要从非终态任务列表中移除
+		if isNonFinalTaskStatus(do.TaskStatus) {
+			if err := v.TaskRedisDao.RemoveNonFinalTask(context.Background(), do.ID); err != nil {
+				logs.Error("failed to remove task from non final task list after delete", "id", do.ID, "err", err)
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (v *TaskRepoImpl) GetTaskRun(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.TaskRun, error) {
+	// 直接查询数据库(TaskRun通常不单独缓存)
+	taskRunPo, err := v.TaskRunDao.GetTaskRun(ctx, id, workspaceID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// 如果需要userID验证，需要通过Task表验证创建者权限
+	if userID != nil {
+		taskPo, err := v.TaskDao.GetTask(ctx, taskRunPo.TaskID, workspaceID, userID)
+		if err != nil {
+			return nil, err
+		}
+		if taskPo == nil {
+			return nil, nil // 权限不符，返回空
+		}
+	}
+
+	return convertor.TaskRunPO2DO(taskRunPo), nil
+}
+
+func (v *TaskRepoImpl) ListTaskRuns(ctx context.Context, taskID int64, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error) {
+	// 设置TaskID过滤条件
+	param.TaskID = &taskID
+
+	// 查询数据库
+	results, total, err := v.TaskRunDao.ListTaskRuns(ctx, param)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 转换为DO
+	taskRuns := convertor.TaskRunsPO2DO(results)
+	return taskRuns, total, nil
+}
+
+func (v *TaskRepoImpl) CreateTaskRun(ctx context.Context, do *entity.TaskRun) (int64, error) {
+	// 1. 生成ID
+	id, err := v.idGenerator.GenID(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	// 2. 转换并设置ID
+	taskRunPo := convertor.TaskRunDO2PO(do)
+	taskRunPo.ID = id
+
+	// 3. 数据库创建
+	createdID, err := v.TaskRunDao.CreateTaskRun(ctx, taskRunPo)
+	if err != nil {
+		return 0, err
+	}
+
+	// 4. 异步更新缓存
+	do.ID = createdID
+	go func() {
+		// 清理相关列表缓存(因为TaskRuns列表发生变化，Task的缓存会自然过期)
+		v.clearListCaches(context.Background(), do.WorkspaceID)
+	}()
+
+	return createdID, nil
+}
+
+func (v *TaskRepoImpl) UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error {
+	// 1. 转换并更新数据库
+	taskRunPo := convertor.TaskRunDO2PO(do)
+	err := v.TaskRunDao.UpdateTaskRun(ctx, taskRunPo)
+	if err != nil {
+		return err
+	}
+
+	// 2. 异步清理缓存
+	go func() {
+		// 清理相关列表缓存(因为TaskRuns信息发生变化，Task的缓存会自然过期)
+		v.clearListCaches(context.Background(), do.WorkspaceID)
+	}()
+
+	return nil
+}
+
+func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
+	// 1. 执行OCC更新
+	logs.CtxInfo(ctx, "UpdateTaskRunWithOCC", "id", id, "workspaceID", workspaceID, "updateMap", updateMap)
+	err := v.TaskRunDao.UpdateTaskRunWithOCC(ctx, id, workspaceID, updateMap)
+	if err != nil {
+		return err
+	}
+
+	// 2. 异步清理缓存
+	go func() {
+		// 清理相关列表缓存(Task的缓存会自然过期)
+		v.clearListCaches(context.Background(), workspaceID)
+	}()
+
+	return nil
+}
