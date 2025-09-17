@@ -3,8 +3,6 @@
 
 package entity
 
-import "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
-
 type CreateEvaluationSetParam struct {
 	SpaceID             int64
 	Name                string
@@ -285,8 +283,8 @@ type SearchCustomEvalTargetParam struct {
 	WorkspaceID     *int64
 	Keyword         *string
 	ApplicationID   *int64
-	CustomRPCServer *eval_target.CustomRPCServer
-	Region          *eval_target.Region
+	CustomRPCServer *CustomRPCServer
+	Region          *Region
 	Env             *string
 	PageSize        *int32
 	PageToken       *string
