@@ -42,7 +42,8 @@ func InitProcessor(
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
-	taskRepo repo.ITaskRepo) {
-	autoEvaluteProc = newAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo)
+	taskRepo repo.ITaskRepo,
+	taskRunRepo repo.ITaskRunRepo) {
+	autoEvaluteProc = newAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo)
 	dataReflowProc = newDataReflowProcessor(datasetServiceProvider, taskRepo)
 }

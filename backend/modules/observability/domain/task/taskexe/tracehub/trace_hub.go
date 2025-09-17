@@ -45,7 +45,7 @@ func NewTraceHubImpl(
 	tenantProvider tenant.ITenantProvider,
 	buildHelper service.TraceFilterProcessorBuilder,
 ) (ITraceHubService, error) {
-	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo)
+	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo, tRunRepo)
 	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo:       tRepo,
