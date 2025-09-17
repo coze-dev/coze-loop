@@ -31,6 +31,12 @@ import (
 	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
+	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	metric_service_def "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
+	metric_tool "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -129,7 +135,34 @@ var (
 		NewTaskLocker,
 		traceDomainSet,
 	)
+	taskSet = wire.NewSet(
+		tracehub.NewTraceHubImpl,
+		NewTaskApplication,
+		auth.NewAuthProvider,
+		user.NewUserRPCProvider,
+		evaluation.NewEvaluationRPCProvider,
+		NewTaskLocker,
+		traceDomainSet,
+	)
+	metricsSet = wire.NewSet(
+		NewMetricApplication,
+		metric_service.NewMetricsService,
+		obrepo.NewTraceMetricCKRepoImpl,
+		tenant.NewTenantProvider,
+		auth.NewAuthProvider,
+		NewTraceConfigLoader,
+		NewTraceProcessorBuilder,
+		obconfig.NewTraceConfigCenter,
+		NewMetricDefinitions,
+		ckdao.NewSpansCkDaoImpl,
+		ckdao.NewAnnotationCkDaoImpl,
+		file.NewFileRPCProvider,
+	)
 )
+
+func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
+	return lock.NewRedisLockerWithHolder(cmdable, "observability")
+}
 
 func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "observability")
@@ -178,6 +211,58 @@ func NewTraceProcessorBuilder(
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		})
+}
+
+func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
+	return []metrics_entity.IMetricDefinition{
+		metric_general.NewGeneralTotalCountMetric(),
+		metric_general.NewGeneralFailRatioMetric(),
+		metric_general.NewGeneralModelTotalTokensMetric(),
+		metric_general.NewGeneralModelLatencyMetric(),
+		metric_general.NewGeneralModelFailRatioMetric(),
+		metric_general.NewGeneralToolTotalCountMetric(),
+		metric_general.NewGeneralToolLatencyMetric(),
+		metric_general.NewGeneralToolFailRatioMetric(),
+
+		metric_model.NewModelDurationMetric(),
+		metric_model.NewModelInputTokenCountMetric(),
+		metric_model.NewModelOutputTokenCountMetric(),
+		metric_model.NewModelNamePieMetric(),
+		metric_model.NewModelQPMAllMetric(),
+		metric_model.NewModelQPMFailMetric(),
+		metric_model.NewModelQPMSuccessMetric(),
+		metric_model.NewModelQPSAllMetric(),
+		metric_model.NewModelQPSFailMetric(),
+		metric_model.NewModelQPSSuccessMetric(),
+		metric_model.NewModelSuccessRatioMetric(),
+		metric_model.NewModelSystemTokenCountMetric(),
+		metric_model.NewModelTokenCountMetric(),
+		metric_model.NewModelTokenCountPieMetric(),
+		metric_model.NewModelToolChoiceTokenCountMetric(),
+		metric_model.NewModelTPMMetric(),
+		metric_model.NewModelTPOTMetric(),
+		metric_model.NewModelTPSMetric(),
+		metric_model.NewModelTTFTMetric(),
+
+		metric_service_def.NewServiceDurationMetric(),
+		metric_service_def.NewServiceExecutionStepCountMetric(),
+		metric_service_def.NewServiceMessageCountMetric(),
+		metric_service_def.NewServiceQPMAllMetric(),
+		metric_service_def.NewServiceQPMSuccessMetric(),
+		metric_service_def.NewServiceQPMFailMetric(),
+		metric_service_def.NewServiceQPSAllMetric(),
+		metric_service_def.NewServiceQPSSuccessMetric(),
+		metric_service_def.NewServiceQPSFailMetric(),
+		metric_service_def.NewServiceSpanCountMetric(),
+		metric_service_def.NewServiceSuccessRatioMetric(),
+		metric_service_def.NewServiceTraceCountMetric(),
+		metric_service_def.NewServiceUserCountMetric(),
+
+		metric_tool.NewToolDurationMetric(),
+		metric_tool.NewToolNamePieMetric(),
+		metric_tool.NewToolSuccessRatioMetric(),
+		metric_tool.NewToolTotalCountMetric(),
+	}
 }
 
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo.ITraceRepo) service.IngestionCollectorFactory {
@@ -249,6 +334,17 @@ func InitOpenAPIApplication(
 	evalService evaluatorservice.Client,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
+	return nil, nil
+}
+
+func InitMetricApplication(
+	ckDb ck.Provider,
+	configFactory conf.IConfigLoaderFactory,
+	fileClient fileservice.Client,
+	benefit benefit.IBenefitService,
+	authClient authservice.Client,
+) (IMetricApplication, error) {
+	wire.Build(metricsSet)
 	return nil, nil
 }
 

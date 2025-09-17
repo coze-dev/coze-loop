@@ -20,6 +20,7 @@ const (
 	AuthActionTraceTaskEdit      = "edit"
 	AuthActionTaskWritable       = "task_writable"
 	AuthActionTaskReadable       = "task_readable"
+	AuthActionTraceMetricRead    = "readLoopIndictor"
 )
 
 //go:generate mockgen -destination=mocks/auth_provider.go -package=mocks . IAuthProvider

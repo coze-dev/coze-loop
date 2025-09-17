@@ -31,7 +31,17 @@ import (
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	service4 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
+	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	service3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
+	entity2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	processor2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
@@ -173,6 +183,40 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	return iObservabilityOpenAPIApplication, nil
 }
 
+func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client) (IMetricApplication, error) {
+	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iConfigLoader, err := NewTraceConfigLoader(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
+	iMetricRepo, err := repo.NewTraceMetricCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	if err != nil {
+		return nil, err
+	}
+	v := NewMetricDefinitions()
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
+	iFileProvider := file.NewFileRPCProvider(fileClient)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iMetricsService, err := service2.NewMetricsService(iMetricRepo, v, iTenantProvider, traceFilterProcessorBuilder)
+	if err != nil {
+		return nil, err
+	}
+	iAuthProvider := auth.NewAuthProvider(authClient)
+	iMetricApplication, err := NewMetricApplication(iMetricsService, iTenantProvider, iAuthProvider)
+	if err != nil {
+		return nil, err
+	}
+	return iMetricApplication, nil
+}
+
 func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
@@ -256,7 +300,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 
 var (
 	taskDomainSet = wire.NewSet(
-		NewInitTaskProcessor, service2.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, dao.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl,
+		NewInitTaskProcessor, service3.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, dao.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl,
 	)
 	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
 		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, evaluator.NewEvaluatorRPCProvider, NewDatasetServiceAdapter,
@@ -274,6 +318,10 @@ var (
 	)
 	taskSet = wire.NewSet(tracehub.NewTraceHubImpl, NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluation.NewEvaluationRPCProvider, NewTaskLocker,
 		traceDomainSet,
+	)
+	metricsSet = wire.NewSet(
+		NewMetricApplication, service2.NewMetricsService, repo.NewTraceMetricCKRepoImpl, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, NewMetricDefinitions, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, file.NewFileRPCProvider,
 	)
 )
 
@@ -300,6 +348,10 @@ func NewTraceProcessorBuilder(
 		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)})
 }
 
+func NewMetricDefinitions() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{general.NewGeneralTotalCountMetric(), general.NewGeneralFailRatioMetric(), general.NewGeneralModelTotalTokensMetric(), general.NewGeneralModelLatencyMetric(), general.NewGeneralModelFailRatioMetric(), general.NewGeneralToolTotalCountMetric(), general.NewGeneralToolLatencyMetric(), general.NewGeneralToolFailRatioMetric(), model.NewModelDurationMetric(), model.NewModelInputTokenCountMetric(), model.NewModelOutputTokenCountMetric(), model.NewModelNamePieMetric(), model.NewModelQPMAllMetric(), model.NewModelQPMFailMetric(), model.NewModelQPMSuccessMetric(), model.NewModelQPSAllMetric(), model.NewModelQPSFailMetric(), model.NewModelQPSSuccessMetric(), model.NewModelSuccessRatioMetric(), model.NewModelSystemTokenCountMetric(), model.NewModelTokenCountMetric(), model.NewModelTokenCountPieMetric(), model.NewModelToolChoiceTokenCountMetric(), model.NewModelTPMMetric(), model.NewModelTPOTMetric(), model.NewModelTPSMetric(), model.NewModelTTFTMetric(), service4.NewServiceDurationMetric(), service4.NewServiceExecutionStepCountMetric(), service4.NewServiceMessageCountMetric(), service4.NewServiceQPMAllMetric(), service4.NewServiceQPMSuccessMetric(), service4.NewServiceQPMFailMetric(), service4.NewServiceQPSAllMetric(), service4.NewServiceQPSSuccessMetric(), service4.NewServiceQPSFailMetric(), service4.NewServiceSpanCountMetric(), service4.NewServiceSuccessRatioMetric(), service4.NewServiceTraceCountMetric(), service4.NewServiceUserCountMetric(), tool.NewToolDurationMetric(), tool.NewToolNamePieMetric(), tool.NewToolSuccessRatioMetric(), tool.NewToolTotalCountMetric()}
+}
+
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo2.ITraceRepo) service.IngestionCollectorFactory {
 	return service.NewIngestionCollectorFactory(
 		[]receiver.Factory{rmqreceiver.NewFactory(mqFactory)},
@@ -315,7 +367,7 @@ func NewTraceConfigLoader(confFactory conf.IConfigLoaderFactory) (conf.IConfigLo
 func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datasetService datasetservice.Client) *service.DatasetServiceAdaptor {
 	adapter := service.NewDatasetServiceAdaptor()
 	datasetProvider := dataset.NewDatasetProvider(datasetService)
-	adapter.Register(entity.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
+	adapter.Register(entity2.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
 	return adapter
 }
 

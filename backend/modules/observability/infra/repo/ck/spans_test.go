@@ -8,14 +8,187 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/clickhouse"
-	"gorm.io/gorm"
-
+	ck_mock "github.com/coze-dev/coze-loop/backend/infra/ck/mocks"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"gorm.io/driver/clickhouse"
+	"gorm.io/gorm"
 )
+
+func TestSpansCkDaoImpl_convertFieldName(t *testing.T) {
+	t.Parallel()
+
+	dao := &SpansCkDaoImpl{}
+	ctx := context.Background()
+
+	type testCase struct {
+		name    string
+		filter  *loop_span.FilterField
+		want    string
+		wantErr bool
+	}
+
+	testCases := []testCase{
+		{
+			name: "invalid field name",
+			filter: &loop_span.FilterField{
+				FieldName: "invalid-name",
+				FieldType: loop_span.FieldTypeString,
+				IsCustom:  true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "custom string field",
+			filter: &loop_span.FilterField{
+				FieldName: "custom_str",
+				FieldType: loop_span.FieldTypeString,
+				IsCustom:  true,
+			},
+			want: "tags_string['custom_str']",
+		},
+		{
+			name: "custom long field",
+			filter: &loop_span.FilterField{
+				FieldName: "custom_long",
+				FieldType: loop_span.FieldTypeLong,
+				IsCustom:  true,
+			},
+			want: "tags_long['custom_long']",
+		},
+		{
+			name: "custom double field",
+			filter: &loop_span.FilterField{
+				FieldName: "custom_double",
+				FieldType: loop_span.FieldTypeDouble,
+				IsCustom:  true,
+			},
+			want: "tags_float['custom_double']",
+		},
+		{
+			name: "custom bool field",
+			filter: &loop_span.FilterField{
+				FieldName: "custom_bool",
+				FieldType: loop_span.FieldTypeBool,
+				IsCustom:  true,
+			},
+			want: "tags_bool['custom_bool']",
+		},
+		{
+			name: "custom fallback field type",
+			filter: &loop_span.FilterField{
+				FieldName: "custom_unknown",
+				FieldType: loop_span.FieldType("unknown"),
+				IsCustom:  true,
+			},
+			want: "tags_string['custom_unknown']",
+		},
+		{
+			name: "system string field",
+			filter: &loop_span.FilterField{
+				FieldName: "system_str",
+				FieldType: loop_span.FieldTypeString,
+				IsSystem:  true,
+			},
+			want: "system_tags_string['system_str']",
+		},
+		{
+			name: "system long field",
+			filter: &loop_span.FilterField{
+				FieldName: "system_long",
+				FieldType: loop_span.FieldTypeLong,
+				IsSystem:  true,
+			},
+			want: "system_tags_long['system_long']",
+		},
+		{
+			name: "system double field",
+			filter: &loop_span.FilterField{
+				FieldName: "system_double",
+				FieldType: loop_span.FieldTypeDouble,
+				IsSystem:  true,
+			},
+			want: "system_tags_float['system_double']",
+		},
+		{
+			name: "system fallback field type",
+			filter: &loop_span.FilterField{
+				FieldName: "system_unknown",
+				FieldType: loop_span.FieldTypeBool,
+				IsSystem:  true,
+			},
+			want: "system_tags_string['system_unknown']",
+		},
+		{
+			name: "super field",
+			filter: &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldDuration,
+				FieldType: loop_span.FieldTypeLong,
+			},
+			want: "`duration`",
+		},
+		{
+			name: "default string field",
+			filter: &loop_span.FilterField{
+				FieldName: "default_str",
+				FieldType: loop_span.FieldTypeString,
+			},
+			want: "tags_string['default_str']",
+		},
+		{
+			name: "default long field",
+			filter: &loop_span.FilterField{
+				FieldName: "default_long",
+				FieldType: loop_span.FieldTypeLong,
+			},
+			want: "tags_long['default_long']",
+		},
+		{
+			name: "default double field",
+			filter: &loop_span.FilterField{
+				FieldName: "default_double",
+				FieldType: loop_span.FieldTypeDouble,
+			},
+			want: "tags_float['default_double']",
+		},
+		{
+			name: "default bool field",
+			filter: &loop_span.FilterField{
+				FieldName: "default_bool",
+				FieldType: loop_span.FieldTypeBool,
+			},
+			want: "tags_bool['default_bool']",
+		},
+		{
+			name: "default fallback field type",
+			filter: &loop_span.FilterField{
+				FieldName: "default_unknown",
+				FieldType: loop_span.FieldType("unknown"),
+			},
+			want: "tags_string['default_unknown']",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := dao.convertFieldName(ctx, tc.filter)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
 
 func TestSpansCkDaoImpl_convertFieldName(t *testing.T) {
 	t.Parallel()
