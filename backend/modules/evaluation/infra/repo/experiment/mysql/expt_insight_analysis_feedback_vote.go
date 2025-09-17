@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate  mockgen -destination=mocks/expt_insight_analysis_feedback_vote.go  -package mocks . IExptInsightAnalysisFeedbackVoteDAO
 type IExptInsightAnalysisFeedbackVoteDAO interface {
 	Create(ctx context.Context, feedbackVote *model.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
 	Update(ctx context.Context, feedbackVote *model.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error

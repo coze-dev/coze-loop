@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
+//go:generate  mockgen -destination=mocks/expt_insight_analysis_feedback_comment.go  -package mocks . IExptInsightAnalysisFeedbackCommentDAO
 type IExptInsightAnalysisFeedbackCommentDAO interface {
 	Create(ctx context.Context, feedbackComment *model.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
 	Update(ctx context.Context, feedbackComment *model.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error

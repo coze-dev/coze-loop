@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IExptInsightAnalysisRecordRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
