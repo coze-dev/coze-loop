@@ -102,6 +102,19 @@ type TaskServiceImpl struct {
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
+	// 校验task name是否存在
+	checkResp, err := t.CheckTaskName(ctx, &CheckTaskNameReq{
+		WorkspaceID: req.Task.GetWorkspaceID(),
+		Name:        req.Task.GetName(),
+	})
+	if err != nil {
+		logs.CtxError(ctx, "CheckTaskName err:%v", err)
+		return nil, err
+	}
+	if !*checkResp.Pass {
+		logs.CtxError(ctx, "task name exist")
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+	}
 	proc, err := processor.NewProcessor(ctx, req.Task.TaskType)
 	if err != nil {
 		logs.CtxError(ctx, "NewProcessor err:%v", err)
