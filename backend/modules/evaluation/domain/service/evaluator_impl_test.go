@@ -1797,7 +1797,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
-	
+
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,

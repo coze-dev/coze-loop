@@ -940,10 +940,10 @@ func TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		disableTracing  bool
-		setupMocks      func()
-		checkTraceID    func(t *testing.T, traceID string)
+		name           string
+		disableTracing bool
+		setupMocks     func()
+		checkTraceID   func(t *testing.T, traceID string)
 	}{
 		{
 			name:           "disableTracing=true时不创建Span",
@@ -985,7 +985,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing(t *testing.T) {
 			// 由于输入验证失败，验证错误状态
 			assert.Equal(t, entity.EvaluatorRunStatusFail, status)
 			assert.NotNil(t, output)
-			
+
 			// 验证追踪ID的生成情况
 			tt.checkTraceID(t, traceID)
 		})
