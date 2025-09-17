@@ -37,6 +37,7 @@ type ITraceHubService interface {
 
 func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
+	tRunRepo repo.ITaskRunRepo,
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
@@ -48,6 +49,7 @@ func NewTraceHubImpl(
 	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
 	impl := &TraceHubServiceImpl{
 		taskRepo:       tRepo,
+		taskRunRepo:    tRunRepo,
 		ticker:         ticker,
 		stopChan:       make(chan struct{}),
 		traceRepo:      traceRepo,
@@ -65,6 +67,7 @@ type TraceHubServiceImpl struct {
 	ticker         *time.Ticker
 	stopChan       chan struct{}
 	taskRepo       repo.ITaskRepo
+	taskRunRepo    repo.ITaskRunRepo
 	traceRepo      trace_repo.ITraceRepo
 	tenantProvider tenant.ITenantProvider
 

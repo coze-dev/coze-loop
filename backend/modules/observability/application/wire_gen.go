@@ -232,7 +232,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTaskRunRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
