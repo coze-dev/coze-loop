@@ -62,14 +62,17 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	if event.EvaluatorResult.Correction == nil || event.EvaluatorResult == nil {
 		return err
 	}
+	if len(spans) == 0 {
+		return fmt.Errorf("span not found, span_id: %s", spanID)
+	}
 	span := spans[0]
 	annotations, err := h.traceRepo.ListAnnotations(ctx, &repo.ListAnnotationsParam{
 		Tenants:     tenants,
 		SpanID:      spanID,
 		TraceID:     traceID,
 		WorkspaceId: workspaceID,
-		StartAt:     startTime - time.Second.Milliseconds(),
-		EndAt:       startTime + time.Second.Milliseconds(),
+		StartAt:     startTime - 5*time.Second.Milliseconds(),
+		EndAt:       startTime + 5*time.Second.Milliseconds(),
 	})
 	if err != nil {
 		return err
