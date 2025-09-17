@@ -83,3 +83,14 @@ func TaskRunPO2DO(taskRun *model.ObservabilityTaskRun) *entity.TaskRun {
 		UpdatedAt:      taskRun.UpdatedAt,
 	}
 }
+
+func TaskRunsPO2DO(taskRun []*model.ObservabilityTaskRun) []*entity.TaskRun {
+	if taskRun == nil {
+		return nil
+	}
+	resp := make([]*entity.TaskRun, len(taskRun))
+	for i, tr := range taskRun {
+		resp[i] = TaskRunPO2DO(tr)
+	}
+	return resp
+}

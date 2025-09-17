@@ -87,13 +87,15 @@ struct AutoEvaluateConfig {
 struct RunDetail {
     1: optional i64 success_count
     2: optional i64 failed_count
+    3: optional i64 total_count
 }
 
 struct BackfillDetail {
     1: optional i64 success_count
     2: optional i64 failed_count
-    3: optional RunStatus backfill_status
-    4: optional string last_span_page_token
+    3: optional i64 total_count
+    4: optional RunStatus backfill_status
+    5: optional string last_span_page_token
 }
 
 struct FieldMapping {

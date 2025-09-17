@@ -5,6 +5,7 @@ package task
 
 import (
 	"context"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
@@ -44,6 +45,60 @@ func TaskRunPO2DTO(ctx context.Context, v *entity.TaskRun, userMap map[string]*e
 		BaseInfo:          buildTaskRunBaseInfo(v, userMap),
 	}
 	return taskRunInfo
+}
+func TaskRunDO2PO(ctx context.Context, v *task.TaskRun, userMap map[string]*entity_common.UserInfo) *entity.TaskRun {
+	if v == nil {
+		return nil
+	}
+	taskRunPO := &entity.TaskRun{
+		ID:             v.ID,
+		WorkspaceID:    v.WorkspaceID,
+		TaskID:         v.TaskID,
+		TaskType:       v.TaskType,
+		RunStatus:      v.RunStatus,
+		RunDetail:      RunDetailDTO2PO(ctx, v.RunDetail),
+		BackfillDetail: BackfillRunDetailDTO2PO(ctx, v.BackfillRunDetail),
+		RunStartAt:     time.UnixMilli(v.RunStartAt),
+		RunEndAt:       time.UnixMilli(v.RunEndAt),
+		RunConfig:      TaskRunConfigDTO2PO(ctx, v.TaskRunConfig),
+	}
+	return taskRunPO
+}
+
+func RunDetailDTO2PO(ctx context.Context, v *task.RunDetail) *string {
+	if v == nil {
+		return nil
+	}
+	runDetailJSON, err := sonic.MarshalString(v)
+	if err != nil {
+		logs.CtxError(ctx, "RunDetailDTO2PO sonic.MarshalString err:%v", err)
+		return nil
+	}
+	return gptr.Of(runDetailJSON)
+}
+
+func BackfillRunDetailDTO2PO(ctx context.Context, v *task.BackfillDetail) *string {
+	if v == nil {
+		return nil
+	}
+	backfillDetailJSON, err := sonic.MarshalString(v)
+	if err != nil {
+		logs.CtxError(ctx, "BackfillRunDetailDTO2PO sonic.MarshalString err:%v", err)
+		return nil
+	}
+	return gptr.Of(backfillDetailJSON)
+}
+
+func TaskRunConfigDTO2PO(ctx context.Context, v *task.TaskRunConfig) *string {
+	if v == nil {
+		return nil
+	}
+	taskRunConfigJSON, err := sonic.MarshalString(v)
+	if err != nil {
+		logs.CtxError(ctx, "TaskRunConfigDTO2PO sonic.MarshalString err:%v", err)
+		return nil
+	}
+	return gptr.Of(taskRunConfigJSON)
 }
 
 // RunDetailPO2DTO 将JSON字符串转换为RunDetail结构体

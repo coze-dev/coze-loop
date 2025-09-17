@@ -19,6 +19,13 @@ type ITaskRepo interface {
 	CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error)
 	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 
+	// task run
+	GetTaskRun(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.TaskRun, error)
+	ListTaskRuns(ctx context.Context, taskID int64, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error)
+	UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error
+	CreateTaskRun(ctx context.Context, do *entity.TaskRun) (int64, error)
+	UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
+
 	// task count
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
 	IncrTaskCount(ctx context.Context, taskID int64) error
@@ -28,7 +35,7 @@ type ITaskRepo interface {
 	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
 	DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
-	
+
 	//
 	ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error)
 	GetObjListWithTask(ctx context.Context) ([]string, []string)

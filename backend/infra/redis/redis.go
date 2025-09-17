@@ -146,6 +146,10 @@ func (p *provider) Expire(ctx context.Context, key string, expiration time.Durat
 	return p.cli.Expire(ctx, key, expiration)
 }
 
+func (p *provider) Keys(ctx context.Context, pattern string) *redis.StringSliceCmd {
+	return p.cli.Keys(ctx, pattern)
+}
+
 func (p *provider) Pipeline() Pipeliner {
 	pipe := p.cli.Pipeline()
 	return pipe

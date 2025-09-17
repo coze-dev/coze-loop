@@ -56,6 +56,15 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	}
 	taskRun := tconv.TaskRunPO2DTO(ctx, cfg, nil)
 
+	taskCount, _ := p.taskRepo.GetTaskCount(ctx, *trigger.Task.ID)
+	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
+
+	if (trigger.Task.GetRule().GetSampler().GetCycleCount() != 0 && taskRunCount > trigger.Task.GetRule().GetSampler().GetCycleCount()) || taskCount > trigger.Task.GetRule().GetSampler().GetSampleSize() {
+		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
+		p.taskRepo.IncrTaskCount(ctx, *trigger.Task.ID)
+		p.taskRepo.IncrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
+		return nil
+	}
 	ctx = session.WithCtxUser(ctx, &session.User{ID: *trigger.Task.BaseInfo.CreatedBy.UserID})
 	workspaceID := trigger.Task.GetWorkspaceID()
 	sessionInfo := getSession(ctx, trigger.Task)
@@ -75,8 +84,12 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	))
 	_, _, err := p.datasetServiceAdaptor.GetDatasetProvider(category).AddDatasetItems(ctx, taskRun.TaskRunConfig.DataReflowRunConfig.DatasetID, category, successItems)
 	if err != nil {
+		logs.CtxError(ctx, "[task-debug] AutoEvaluteProcessor Invoke, AddDatasetItems err, taskID:%d, err:%v", *trigger.Task.ID, err)
+		p.taskRepo.DecrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
+		p.taskRepo.DecrTaskCount(ctx, *trigger.Task.ID)
 		return err
 	}
+
 	return nil
 }
 
@@ -182,18 +195,37 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 }
 
 func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, task *task.Task) error {
+	// 1、创建/更新数据集
+	// 2、更新任务配置
+	// 3、创建 taskrun：历史回溯生成一个taskRun,新数据生成一个taskRun
+	// 4、更新任务配置
 	return nil
 }
 func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error {
+	//
 	return nil
 }
 func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, task *task.Task) error {
+	// 更新任务配置
+	// 更新TaskRun
 	return nil
 }
 
 func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+	// 创建taskRun
+	logs.CtxInfo(ctx, "[auto_task] OnCreateTaskRunProcessor, taskID:%d, taskRun:%+v", task.GetTaskID(), task)
+
 	return nil
 }
-func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
+	taskRunDo := tconv.TaskRunDO2PO(ctx, taskRun, nil)
+	// 设置taskRun状态为已完成
+	taskRunDo.RunStatus = task.RunStatusDone
+	// 更新taskRun
+	err := p.taskRepo.UpdateTaskRun(ctx, taskRunDo)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnFinishTaskRunProcessor, UpdateTaskRun err, taskRunID:%d, err:%v", taskRun.GetID(), err)
+		return err
+	}
 	return nil
 }
