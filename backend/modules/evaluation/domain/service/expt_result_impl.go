@@ -873,13 +873,13 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 	wg.Wait()
 	close(resultCh)
 
-	var exptResultBuildersWithResult []*ExptResultBuilder // 任务结果
+	var exptIDToResultBuilder map[int64]*ExptResultBuilder
 	var errors []error
 	for exptResultBuilder := range resultCh {
 		if exptResultBuilder.Err != nil {
 			errors = append(errors, fmt.Errorf("ExptID %d: %v", exptResultBuilder.ExptID, exptResultBuilder.Err))
 		} else {
-			exptResultBuildersWithResult = append(exptResultBuildersWithResult, exptResultBuilder)
+			exptIDToResultBuilder[exptResultBuilder.ExptID] = exptResultBuilder
 		}
 	}
 	if len(errors) > 0 {
@@ -887,7 +887,13 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 		return nil, fmt.Errorf("build expt result fail, errors:%v", errors)
 	}
 
-	b.ExptResultBuilders = exptResultBuildersWithResult
+	resultedBuilders := make([]*ExptResultBuilder, 0, len(exptIDToResultBuilder))
+	for _, exptID := range b.ExptIDs {
+		if got := exptIDToResultBuilder[exptID]; got != nil {
+			resultedBuilders = append(resultedBuilders, exptIDToResultBuilder[exptID])
+		}
+	}
+	b.ExptResultBuilders = resultedBuilders
 
 	// 填充数据
 	err := b.fillItemResults(ctx)
