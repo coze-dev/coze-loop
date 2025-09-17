@@ -107,7 +107,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 	taskRun := tconv.TaskRunPO2DTO(ctx, cfg, nil)
 	workspaceID := trigger.Task.GetWorkspaceID()
 	session := getSession(ctx, trigger.Task)
-	var mapping []*task.FieldMapping
+	var mapping []*task.EvaluateFieldMapping
 	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
 	}
@@ -470,7 +470,7 @@ func getCategory(taskType task.TaskType) entity.DatasetCategory {
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task.FieldMapping,
+func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task.EvaluateFieldMapping,
 	evaluationSetSchema string) (turns []*eval_set.Turn) {
 	turns = make([]*eval_set.Turn, 0, len(spans))
 	for _, span := range spans {
@@ -535,7 +535,7 @@ func buildDatasetItem(ctx context.Context, span *loop_span.Span, i int, fieldMap
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.FieldMapping,
+func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.EvaluateFieldMapping,
 	evaluationSetSchema string) []*eval_set.FieldData {
 	var fieldDatas []*eval_set.FieldData
 	fieldDatas = append(fieldDatas, &eval_set.FieldData{

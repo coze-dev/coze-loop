@@ -118,7 +118,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	h.syncTaskRunCounts()
 }
 
-// syncTaskRunCounts 全量同步TaskRunCount到数据库
+// syncTaskRunCounts 同步TaskRunCount到数据库
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 
 }
