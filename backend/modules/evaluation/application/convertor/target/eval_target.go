@@ -225,6 +225,38 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 	return targetVersionDTO
 }
 
+func CustomRPCServerDTO2DO(dto *dto.CustomRPCServer) (doRes *do.CustomRPCServer) {
+	if dto == nil {
+		return nil
+	}
+	return &do.CustomRPCServer{
+		ID:                  gptr.Indirect(dto.ID),
+		Name:                gptr.Indirect(dto.Name),
+		Description:         gptr.Indirect(dto.Description),
+		ServerName:          gptr.Indirect(dto.ServerName),
+		AccessProtocol:      gptr.Indirect(dto.AccessProtocol),
+		Regions:             dto.Regions,
+		Cluster:             gptr.Indirect(dto.Cluster),
+		NeedSearchTarget:    dto.NeedSearchTarget,
+		IsAsync:             dto.IsAsync,
+		InvokeHTTPInfo:      HttpInfoDTO2DO(dto.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: HttpInfoDTO2DO(dto.AsyncInvokeHTTPInfo),
+		SearchHTTPInfo:      HttpInfoDTO2DO(dto.SearchHTTPInfo),
+		CustomEvalTarget:    CustomEvalTargetDTO2DO(dto.CustomEvalTarget),
+	}
+}
+
+func HttpInfoDTO2DO(httpInfoDTO *dto.HTTPInfo) (httpInfoDO *do.HTTPInfo) {
+	if httpInfoDTO == nil {
+		return nil
+	}
+	return &do.HTTPInfo{
+		Method:  gptr.Indirect(httpInfoDTO.Method),
+		Path:    gptr.Indirect(httpInfoDTO.Path),
+		Timeout: httpInfoDTO.Timeout,
+	}
+}
+
 func HttpInfoDO2DTO(httpInfoDO *do.HTTPInfo) (httpInfoDTO *dto.HTTPInfo) {
 	if httpInfoDO == nil {
 		return nil
@@ -233,6 +265,18 @@ func HttpInfoDO2DTO(httpInfoDO *do.HTTPInfo) (httpInfoDTO *dto.HTTPInfo) {
 		Method:  gptr.Of(httpInfoDO.Method),
 		Path:    gptr.Of(httpInfoDO.Path),
 		Timeout: httpInfoDO.Timeout,
+	}
+}
+
+func CustomEvalTargetDTO2DO(customEvalTargetDTO *dto.CustomEvalTarget) (customEvalTargetDO *do.CustomEvalTarget) {
+	if customEvalTargetDTO == nil {
+		return nil
+	}
+	return &do.CustomEvalTarget{
+		ID:        customEvalTargetDTO.ID,
+		Name:      customEvalTargetDTO.Name,
+		AvatarURL: customEvalTargetDTO.AvatarURL,
+		Ext:       customEvalTargetDTO.Ext,
 	}
 }
 
