@@ -113,7 +113,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	}
 	if !*checkResp.Pass {
 		logs.CtxError(ctx, "task name exist")
-		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode)
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("task name exist"))
 	}
 	proc, err := processor.NewProcessor(ctx, req.Task.TaskType)
 	if err != nil {
