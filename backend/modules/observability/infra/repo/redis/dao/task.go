@@ -73,6 +73,9 @@ type ITaskDAO interface {
 	GetAppListWithTask(ctx context.Context) ([]string, error)
 	SetAppListWithTask(ctx context.Context, apps []string, ttl time.Duration) error
 	DeleteAppListWithTask(ctx context.Context) error
+
+	// 获取所有TaskRunCount键
+	GetAllTaskRunCountKeys(ctx context.Context) ([]string, error)
 }
 
 type TaskDAOImpl struct {
@@ -676,4 +679,17 @@ func (p *TaskDAOImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID in
 	}
 	
 	return result, nil
+}
+
+// GetAllTaskRunCountKeys 获取所有TaskRunCount键
+// 注意：由于Cmdable接口限制，这里使用一个简化的实现
+// 在实际生产环境中，应该通过其他方式（如维护键列表）来实现
+func (p *TaskDAOImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, error) {
+	// 由于Cmdable接口没有Keys或Scan方法，这里返回空列表
+	// 实际实现中，可能需要：
+	// 1. 在写入时维护一个键列表
+	// 2. 使用更高级的Redis客户端接口
+	// 3. 或者通过其他方式来获取键列表
+	logs.CtxWarn(ctx, "GetAllTaskRunCountKeys not fully implemented due to Cmdable interface limitations")
+	return []string{}, nil
 }

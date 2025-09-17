@@ -455,3 +455,8 @@ func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, works
 
 	return nil
 }
+
+// GetAllTaskRunCountKeys 获取所有TaskRunCount键
+func (v *TaskRepoImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, error) {
+	return v.TaskRedisDao.GetAllTaskRunCountKeys(ctx)
+}

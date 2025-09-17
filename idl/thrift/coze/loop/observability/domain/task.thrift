@@ -80,7 +80,7 @@ struct DataReflowConfig {
 struct AutoEvaluateConfig {
     1: required i64 evaluator_version_id (api.js_conv="true", go.tag='json:"evaluator_version_id"')
     2: required i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
-    3: required list<FieldMapping> field_mappings
+    3: required list<EvaluateFieldMapping> field_mappings
 }
 
 // RunDetail
@@ -98,7 +98,7 @@ struct BackfillDetail {
     5: optional string last_span_page_token
 }
 
-struct FieldMapping {
+struct EvaluateFieldMapping {
     1: required export_dataset.FieldSchema field_schema   // 数据集字段约束
     2: required string trace_field_key
     3: required string trace_field_jsonpath

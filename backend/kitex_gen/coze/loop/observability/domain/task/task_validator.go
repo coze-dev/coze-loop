@@ -105,7 +105,7 @@ func (p *RunDetail) IsValid() error {
 func (p *BackfillDetail) IsValid() error {
 	return nil
 }
-func (p *FieldMapping) IsValid() error {
+func (p *EvaluateFieldMapping) IsValid() error {
 	if p.FieldSchema != nil {
 		if err := p.FieldSchema.IsValid(); err != nil {
 			return fmt.Errorf("field FieldSchema not valid, %w", err)

@@ -40,6 +40,21 @@ func TaskPO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 	if v == nil {
 		return nil
 	}
+	var taskDetail *task.RunDetail
+	var totalCount, successCount, failedCount int64
+	for _, tr := range v.TaskRuns {
+		trDO := TaskRunPO2DTO(ctx, tr, nil)
+		if trDO.RunDetail != nil {
+			totalCount += *trDO.RunDetail.TotalCount
+			successCount += *trDO.RunDetail.SuccessCount
+			failedCount += *trDO.RunDetail.FailedCount
+		}
+	}
+	taskDetail = &task.RunDetail{
+		TotalCount:   gptr.Of(totalCount),
+		SuccessCount: gptr.Of(successCount),
+		FailedCount:  gptr.Of(failedCount),
+	}
 	taskInfo := &task.Task{
 		ID:          ptr.Of(v.ID),
 		Name:        v.Name,
@@ -49,6 +64,7 @@ func TaskPO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		TaskStatus:  ptr.Of(v.TaskStatus),
 		Rule:        RulePO2DO(ctx, v.SpanFilter, v.EffectiveTime, v.Sampler, v.BackfillEffectiveTime),
 		TaskConfig:  TaskConfigPO2DO(ctx, v.TaskConfig),
+		TaskDetail:  taskDetail,
 		BaseInfo: &common.BaseInfo{
 			CreatedAt: gptr.Of(v.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(v.UpdatedAt.UnixMilli()),

@@ -2212,8 +2212,8 @@ func (p *AutoEvaluateConfig) FastReadField3(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make([]*FieldMapping, 0, size)
-	values := make([]FieldMapping, size)
+	_field := make([]*EvaluateFieldMapping, 0, size)
+	values := make([]EvaluateFieldMapping, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -2319,11 +2319,11 @@ func (p *AutoEvaluateConfig) DeepCopy(s interface{}) error {
 	p.EvaluatorID = src.EvaluatorID
 
 	if src.FieldMappings != nil {
-		p.FieldMappings = make([]*FieldMapping, 0, len(src.FieldMappings))
+		p.FieldMappings = make([]*EvaluateFieldMapping, 0, len(src.FieldMappings))
 		for _, elem := range src.FieldMappings {
-			var _elem *FieldMapping
+			var _elem *EvaluateFieldMapping
 			if elem != nil {
-				_elem = &FieldMapping{}
+				_elem = &EvaluateFieldMapping{}
 				if err := _elem.DeepCopy(elem); err != nil {
 					return err
 				}
@@ -2891,7 +2891,7 @@ func (p *BackfillDetail) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *FieldMapping) FastRead(buf []byte) (int, error) {
+func (p *EvaluateFieldMapping) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -2997,14 +2997,14 @@ func (p *FieldMapping) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FieldMapping[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluateFieldMapping[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_FieldMapping[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_EvaluateFieldMapping[fieldId]))
 }
 
-func (p *FieldMapping) FastReadField1(buf []byte) (int, error) {
+func (p *EvaluateFieldMapping) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 	_field := dataset.NewFieldSchema()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -3016,7 +3016,7 @@ func (p *FieldMapping) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *FieldMapping) FastReadField2(buf []byte) (int, error) {
+func (p *EvaluateFieldMapping) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field string
@@ -3030,7 +3030,7 @@ func (p *FieldMapping) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *FieldMapping) FastReadField3(buf []byte) (int, error) {
+func (p *EvaluateFieldMapping) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field string
@@ -3044,7 +3044,7 @@ func (p *FieldMapping) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *FieldMapping) FastReadField4(buf []byte) (int, error) {
+func (p *EvaluateFieldMapping) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -3058,11 +3058,11 @@ func (p *FieldMapping) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *FieldMapping) FastWrite(buf []byte) int {
+func (p *EvaluateFieldMapping) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *FieldMapping) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluateFieldMapping) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -3074,7 +3074,7 @@ func (p *FieldMapping) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *FieldMapping) BLength() int {
+func (p *EvaluateFieldMapping) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -3086,28 +3086,28 @@ func (p *FieldMapping) BLength() int {
 	return l
 }
 
-func (p *FieldMapping) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluateFieldMapping) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.FieldSchema.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
-func (p *FieldMapping) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluateFieldMapping) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.TraceFieldKey)
 	return offset
 }
 
-func (p *FieldMapping) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluateFieldMapping) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.TraceFieldJsonpath)
 	return offset
 }
 
-func (p *FieldMapping) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluateFieldMapping) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvalSetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
@@ -3116,28 +3116,28 @@ func (p *FieldMapping) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *FieldMapping) field1Length() int {
+func (p *EvaluateFieldMapping) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.FieldSchema.BLength()
 	return l
 }
 
-func (p *FieldMapping) field2Length() int {
+func (p *EvaluateFieldMapping) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.TraceFieldKey)
 	return l
 }
 
-func (p *FieldMapping) field3Length() int {
+func (p *EvaluateFieldMapping) field3Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.TraceFieldJsonpath)
 	return l
 }
 
-func (p *FieldMapping) field4Length() int {
+func (p *EvaluateFieldMapping) field4Length() int {
 	l := 0
 	if p.IsSetEvalSetName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -3146,8 +3146,8 @@ func (p *FieldMapping) field4Length() int {
 	return l
 }
 
-func (p *FieldMapping) DeepCopy(s interface{}) error {
-	src, ok := s.(*FieldMapping)
+func (p *EvaluateFieldMapping) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvaluateFieldMapping)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}

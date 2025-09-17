@@ -2902,9 +2902,9 @@ func (p *DataReflowConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
 }
 
 type AutoEvaluateConfig struct {
-	EvaluatorVersionID int64           `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
-	EvaluatorID        int64           `thrift:"evaluator_id,2,required" frugal:"2,required,i64" json:"evaluator_id" form:"evaluator_id,required" query:"evaluator_id,required"`
-	FieldMappings      []*FieldMapping `thrift:"field_mappings,3,required" frugal:"3,required,list<FieldMapping>" form:"field_mappings,required" json:"field_mappings,required" query:"field_mappings,required"`
+	EvaluatorVersionID int64                   `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
+	EvaluatorID        int64                   `thrift:"evaluator_id,2,required" frugal:"2,required,i64" json:"evaluator_id" form:"evaluator_id,required" query:"evaluator_id,required"`
+	FieldMappings      []*EvaluateFieldMapping `thrift:"field_mappings,3,required" frugal:"3,required,list<EvaluateFieldMapping>" form:"field_mappings,required" json:"field_mappings,required" query:"field_mappings,required"`
 }
 
 func NewAutoEvaluateConfig() *AutoEvaluateConfig {
@@ -2928,7 +2928,7 @@ func (p *AutoEvaluateConfig) GetEvaluatorID() (v int64) {
 	return
 }
 
-func (p *AutoEvaluateConfig) GetFieldMappings() (v []*FieldMapping) {
+func (p *AutoEvaluateConfig) GetFieldMappings() (v []*EvaluateFieldMapping) {
 	if p != nil {
 		return p.FieldMappings
 	}
@@ -2940,7 +2940,7 @@ func (p *AutoEvaluateConfig) SetEvaluatorVersionID(val int64) {
 func (p *AutoEvaluateConfig) SetEvaluatorID(val int64) {
 	p.EvaluatorID = val
 }
-func (p *AutoEvaluateConfig) SetFieldMappings(val []*FieldMapping) {
+func (p *AutoEvaluateConfig) SetFieldMappings(val []*EvaluateFieldMapping) {
 	p.FieldMappings = val
 }
 
@@ -3070,8 +3070,8 @@ func (p *AutoEvaluateConfig) ReadField3(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make([]*FieldMapping, 0, size)
-	values := make([]FieldMapping, size)
+	_field := make([]*EvaluateFieldMapping, 0, size)
+	values := make([]EvaluateFieldMapping, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -3222,7 +3222,7 @@ func (p *AutoEvaluateConfig) Field2DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *AutoEvaluateConfig) Field3DeepEqual(src []*FieldMapping) bool {
+func (p *AutoEvaluateConfig) Field3DeepEqual(src []*EvaluateFieldMapping) bool {
 
 	if len(p.FieldMappings) != len(src) {
 		return false
@@ -4061,7 +4061,7 @@ func (p *BackfillDetail) Field5DeepEqual(src *string) bool {
 	return true
 }
 
-type FieldMapping struct {
+type EvaluateFieldMapping struct {
 	// 数据集字段约束
 	FieldSchema        *dataset.FieldSchema `thrift:"field_schema,1,required" frugal:"1,required,dataset.FieldSchema" form:"field_schema,required" json:"field_schema,required" query:"field_schema,required"`
 	TraceFieldKey      string               `thrift:"trace_field_key,2,required" frugal:"2,required,string" form:"trace_field_key,required" json:"trace_field_key,required" query:"trace_field_key,required"`
@@ -4069,79 +4069,79 @@ type FieldMapping struct {
 	EvalSetName        *string              `thrift:"eval_set_name,4,optional" frugal:"4,optional,string" form:"eval_set_name" json:"eval_set_name,omitempty" query:"eval_set_name"`
 }
 
-func NewFieldMapping() *FieldMapping {
-	return &FieldMapping{}
+func NewEvaluateFieldMapping() *EvaluateFieldMapping {
+	return &EvaluateFieldMapping{}
 }
 
-func (p *FieldMapping) InitDefault() {
+func (p *EvaluateFieldMapping) InitDefault() {
 }
 
-var FieldMapping_FieldSchema_DEFAULT *dataset.FieldSchema
+var EvaluateFieldMapping_FieldSchema_DEFAULT *dataset.FieldSchema
 
-func (p *FieldMapping) GetFieldSchema() (v *dataset.FieldSchema) {
+func (p *EvaluateFieldMapping) GetFieldSchema() (v *dataset.FieldSchema) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetFieldSchema() {
-		return FieldMapping_FieldSchema_DEFAULT
+		return EvaluateFieldMapping_FieldSchema_DEFAULT
 	}
 	return p.FieldSchema
 }
 
-func (p *FieldMapping) GetTraceFieldKey() (v string) {
+func (p *EvaluateFieldMapping) GetTraceFieldKey() (v string) {
 	if p != nil {
 		return p.TraceFieldKey
 	}
 	return
 }
 
-func (p *FieldMapping) GetTraceFieldJsonpath() (v string) {
+func (p *EvaluateFieldMapping) GetTraceFieldJsonpath() (v string) {
 	if p != nil {
 		return p.TraceFieldJsonpath
 	}
 	return
 }
 
-var FieldMapping_EvalSetName_DEFAULT string
+var EvaluateFieldMapping_EvalSetName_DEFAULT string
 
-func (p *FieldMapping) GetEvalSetName() (v string) {
+func (p *EvaluateFieldMapping) GetEvalSetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvalSetName() {
-		return FieldMapping_EvalSetName_DEFAULT
+		return EvaluateFieldMapping_EvalSetName_DEFAULT
 	}
 	return *p.EvalSetName
 }
-func (p *FieldMapping) SetFieldSchema(val *dataset.FieldSchema) {
+func (p *EvaluateFieldMapping) SetFieldSchema(val *dataset.FieldSchema) {
 	p.FieldSchema = val
 }
-func (p *FieldMapping) SetTraceFieldKey(val string) {
+func (p *EvaluateFieldMapping) SetTraceFieldKey(val string) {
 	p.TraceFieldKey = val
 }
-func (p *FieldMapping) SetTraceFieldJsonpath(val string) {
+func (p *EvaluateFieldMapping) SetTraceFieldJsonpath(val string) {
 	p.TraceFieldJsonpath = val
 }
-func (p *FieldMapping) SetEvalSetName(val *string) {
+func (p *EvaluateFieldMapping) SetEvalSetName(val *string) {
 	p.EvalSetName = val
 }
 
-var fieldIDToName_FieldMapping = map[int16]string{
+var fieldIDToName_EvaluateFieldMapping = map[int16]string{
 	1: "field_schema",
 	2: "trace_field_key",
 	3: "trace_field_jsonpath",
 	4: "eval_set_name",
 }
 
-func (p *FieldMapping) IsSetFieldSchema() bool {
+func (p *EvaluateFieldMapping) IsSetFieldSchema() bool {
 	return p.FieldSchema != nil
 }
 
-func (p *FieldMapping) IsSetEvalSetName() bool {
+func (p *EvaluateFieldMapping) IsSetEvalSetName() bool {
 	return p.EvalSetName != nil
 }
 
-func (p *FieldMapping) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluateFieldMapping) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetFieldSchema bool = false
@@ -4230,7 +4230,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FieldMapping[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluateFieldMapping[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -4239,10 +4239,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_FieldMapping[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_EvaluateFieldMapping[fieldId]))
 }
 
-func (p *FieldMapping) ReadField1(iprot thrift.TProtocol) error {
+func (p *EvaluateFieldMapping) ReadField1(iprot thrift.TProtocol) error {
 	_field := dataset.NewFieldSchema()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -4250,7 +4250,7 @@ func (p *FieldMapping) ReadField1(iprot thrift.TProtocol) error {
 	p.FieldSchema = _field
 	return nil
 }
-func (p *FieldMapping) ReadField2(iprot thrift.TProtocol) error {
+func (p *EvaluateFieldMapping) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -4261,7 +4261,7 @@ func (p *FieldMapping) ReadField2(iprot thrift.TProtocol) error {
 	p.TraceFieldKey = _field
 	return nil
 }
-func (p *FieldMapping) ReadField3(iprot thrift.TProtocol) error {
+func (p *EvaluateFieldMapping) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -4272,7 +4272,7 @@ func (p *FieldMapping) ReadField3(iprot thrift.TProtocol) error {
 	p.TraceFieldJsonpath = _field
 	return nil
 }
-func (p *FieldMapping) ReadField4(iprot thrift.TProtocol) error {
+func (p *EvaluateFieldMapping) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -4284,9 +4284,9 @@ func (p *FieldMapping) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *FieldMapping) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluateFieldMapping) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("FieldMapping"); err != nil {
+	if err = oprot.WriteStructBegin("EvaluateFieldMapping"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -4324,7 +4324,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *FieldMapping) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluateFieldMapping) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("field_schema", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -4340,7 +4340,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *FieldMapping) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *EvaluateFieldMapping) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("trace_field_key", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -4356,7 +4356,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *FieldMapping) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *EvaluateFieldMapping) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("trace_field_jsonpath", thrift.STRING, 3); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -4372,7 +4372,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *FieldMapping) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *EvaluateFieldMapping) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetName() {
 		if err = oprot.WriteFieldBegin("eval_set_name", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
@@ -4391,15 +4391,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
-func (p *FieldMapping) String() string {
+func (p *EvaluateFieldMapping) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("FieldMapping(%+v)", *p)
+	return fmt.Sprintf("EvaluateFieldMapping(%+v)", *p)
 
 }
 
-func (p *FieldMapping) DeepEqual(ano *FieldMapping) bool {
+func (p *EvaluateFieldMapping) DeepEqual(ano *EvaluateFieldMapping) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -4420,28 +4420,28 @@ func (p *FieldMapping) DeepEqual(ano *FieldMapping) bool {
 	return true
 }
 
-func (p *FieldMapping) Field1DeepEqual(src *dataset.FieldSchema) bool {
+func (p *EvaluateFieldMapping) Field1DeepEqual(src *dataset.FieldSchema) bool {
 
 	if !p.FieldSchema.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *FieldMapping) Field2DeepEqual(src string) bool {
+func (p *EvaluateFieldMapping) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.TraceFieldKey, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *FieldMapping) Field3DeepEqual(src string) bool {
+func (p *EvaluateFieldMapping) Field3DeepEqual(src string) bool {
 
 	if strings.Compare(p.TraceFieldJsonpath, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *FieldMapping) Field4DeepEqual(src *string) bool {
+func (p *EvaluateFieldMapping) Field4DeepEqual(src *string) bool {
 
 	if p.EvalSetName == src {
 		return true

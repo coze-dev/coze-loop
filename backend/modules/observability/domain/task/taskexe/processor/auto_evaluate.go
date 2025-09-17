@@ -45,18 +45,21 @@ type AutoEvaluteProcessor struct {
 	evaluationSvc         rpc.IEvaluationRPCAdapter
 	datasetServiceAdaptor *service.DatasetServiceAdaptor
 	taskRepo              repo.ITaskRepo
+	taskRunRepo           repo.ITaskRunRepo
 }
 
 func newAutoEvaluteProcessor(
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
-	taskRepo repo.ITaskRepo) *AutoEvaluteProcessor {
+	taskRepo repo.ITaskRepo,
+	taskRunRepo repo.ITaskRunRepo) *AutoEvaluteProcessor {
 	return &AutoEvaluteProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
 		evaluationSvc:         evaluationService,
 		taskRepo:              taskRepo,
+		taskRunRepo:           taskRunRepo,
 	}
 }
 
@@ -330,8 +333,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 			Status:       task.TaskStatusRunning,
 		},
 	}
-	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
-		ID:          exptID,
+	taskRun := &task_entity.TaskRun{
 		TaskID:      currentTask.GetID(),
 		WorkspaceID: currentTask.GetWorkspaceID(),
 		TaskType:    currentTask.GetTaskType(),
@@ -341,13 +343,11 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
-	})
-	for _, run := range taskConfig.TaskRuns {
-		logs.CtxInfo(ctx, "taskConfig:%+v", &run)
 	}
 
 	// 6、更新任务配置
 	// todo:[xun]改task_run?
+	_, err = p.taskRunRepo.CreateTaskRun(ctx, taskRun)
 	err = p.taskRepo.UpdateTask(ctx, taskConfig)
 	if err != nil {
 		return err
