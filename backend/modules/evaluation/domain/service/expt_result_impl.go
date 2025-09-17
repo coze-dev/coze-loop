@@ -873,8 +873,10 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 	wg.Wait()
 	close(resultCh)
 
-	var exptIDToResultBuilder map[int64]*ExptResultBuilder
-	var errors []error
+	var (
+		errors                []error
+		exptIDToResultBuilder = make(map[int64]*ExptResultBuilder)
+	)
 	for exptResultBuilder := range resultCh {
 		if exptResultBuilder.Err != nil {
 			errors = append(errors, fmt.Errorf("ExptID %d: %v", exptResultBuilder.ExptID, exptResultBuilder.Err))
