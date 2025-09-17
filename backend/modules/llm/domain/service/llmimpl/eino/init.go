@@ -135,10 +135,10 @@ func openAIBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opti
 			if err := sonic.UnmarshalString(pc.ResponseFormatJsonSchema, js); err != nil {
 				return nil, err
 			}
-		}
-		cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
-			Type:       acl_openai.ChatCompletionResponseFormatType(pc.ResponseFormatType),
-			JSONSchema: &js,
+			cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
+				Type:       acl_openai.ChatCompletionResponseFormatType(pc.ResponseFormatType),
+				JSONSchema: &js,
+			}
 		}
 	}
 	if ops.ResponseFormat != nil {
