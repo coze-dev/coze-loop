@@ -2381,6 +2381,20 @@ func (p *RunDetail) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2427,6 +2441,20 @@ func (p *RunDetail) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RunDetail) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TotalCount = _field
+	return offset, nil
+}
+
 func (p *RunDetail) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2436,6 +2464,7 @@ func (p *RunDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2446,6 +2475,7 @@ func (p *RunDetail) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2469,6 +2499,15 @@ func (p *RunDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *RunDetail) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotalCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.TotalCount)
+	}
+	return offset
+}
+
 func (p *RunDetail) field1Length() int {
 	l := 0
 	if p.IsSetSuccessCount() {
@@ -2481,6 +2520,15 @@ func (p *RunDetail) field1Length() int {
 func (p *RunDetail) field2Length() int {
 	l := 0
 	if p.IsSetFailedCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *RunDetail) field3Length() int {
+	l := 0
+	if p.IsSetTotalCount() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -2501,6 +2549,11 @@ func (p *RunDetail) DeepCopy(s interface{}) error {
 	if src.FailedCount != nil {
 		tmp := *src.FailedCount
 		p.FailedCount = &tmp
+	}
+
+	if src.TotalCount != nil {
+		tmp := *src.TotalCount
+		p.TotalCount = &tmp
 	}
 
 	return nil
@@ -2552,7 +2605,7 @@ func (p *BackfillDetail) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 3:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
@@ -2568,6 +2621,20 @@ func (p *BackfillDetail) FastRead(buf []byte) (int, error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2628,6 +2695,20 @@ func (p *BackfillDetail) FastReadField2(buf []byte) (int, error) {
 func (p *BackfillDetail) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TotalCount = _field
+	return offset, nil
+}
+
+func (p *BackfillDetail) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
 	var _field *RunStatus
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
@@ -2639,7 +2720,7 @@ func (p *BackfillDetail) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *BackfillDetail) FastReadField4(buf []byte) (int, error) {
+func (p *BackfillDetail) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -2664,6 +2745,7 @@ func (p *BackfillDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2676,6 +2758,7 @@ func (p *BackfillDetail) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2701,17 +2784,26 @@ func (p *BackfillDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int 
 
 func (p *BackfillDetail) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetBackfillStatus() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BackfillStatus)
+	if p.IsSetTotalCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.TotalCount)
 	}
 	return offset
 }
 
 func (p *BackfillDetail) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetLastSpanPageToken() {
+	if p.IsSetBackfillStatus() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BackfillStatus)
+	}
+	return offset
+}
+
+func (p *BackfillDetail) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLastSpanPageToken() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LastSpanPageToken)
 	}
 	return offset
@@ -2737,6 +2829,15 @@ func (p *BackfillDetail) field2Length() int {
 
 func (p *BackfillDetail) field3Length() int {
 	l := 0
+	if p.IsSetTotalCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *BackfillDetail) field4Length() int {
+	l := 0
 	if p.IsSetBackfillStatus() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.BackfillStatus)
@@ -2744,7 +2845,7 @@ func (p *BackfillDetail) field3Length() int {
 	return l
 }
 
-func (p *BackfillDetail) field4Length() int {
+func (p *BackfillDetail) field5Length() int {
 	l := 0
 	if p.IsSetLastSpanPageToken() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2767,6 +2868,11 @@ func (p *BackfillDetail) DeepCopy(s interface{}) error {
 	if src.FailedCount != nil {
 		tmp := *src.FailedCount
 		p.FailedCount = &tmp
+	}
+
+	if src.TotalCount != nil {
+		tmp := *src.TotalCount
+		p.TotalCount = &tmp
 	}
 
 	if src.BackfillStatus != nil {

@@ -149,6 +149,9 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		if err = proc.OnChangeProcessor(ctx, taskConfig, taskOp); err != nil {
 			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 			//任务改为禁用？
+			if err = t.TaskRepo.DeleteTask(ctx, taskPO); err != nil {
+				logs.CtxError(ctx, "delete task failed, task_id=%d, err=%v", id, err)
+			}
 			return nil, err
 		}
 	}

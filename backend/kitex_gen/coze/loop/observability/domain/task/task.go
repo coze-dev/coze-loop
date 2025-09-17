@@ -3240,6 +3240,7 @@ func (p *AutoEvaluateConfig) Field3DeepEqual(src []*FieldMapping) bool {
 type RunDetail struct {
 	SuccessCount *int64 `thrift:"success_count,1,optional" frugal:"1,optional,i64" form:"success_count" json:"success_count,omitempty" query:"success_count"`
 	FailedCount  *int64 `thrift:"failed_count,2,optional" frugal:"2,optional,i64" form:"failed_count" json:"failed_count,omitempty" query:"failed_count"`
+	TotalCount   *int64 `thrift:"total_count,3,optional" frugal:"3,optional,i64" form:"total_count" json:"total_count,omitempty" query:"total_count"`
 }
 
 func NewRunDetail() *RunDetail {
@@ -3272,16 +3273,32 @@ func (p *RunDetail) GetFailedCount() (v int64) {
 	}
 	return *p.FailedCount
 }
+
+var RunDetail_TotalCount_DEFAULT int64
+
+func (p *RunDetail) GetTotalCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotalCount() {
+		return RunDetail_TotalCount_DEFAULT
+	}
+	return *p.TotalCount
+}
 func (p *RunDetail) SetSuccessCount(val *int64) {
 	p.SuccessCount = val
 }
 func (p *RunDetail) SetFailedCount(val *int64) {
 	p.FailedCount = val
 }
+func (p *RunDetail) SetTotalCount(val *int64) {
+	p.TotalCount = val
+}
 
 var fieldIDToName_RunDetail = map[int16]string{
 	1: "success_count",
 	2: "failed_count",
+	3: "total_count",
 }
 
 func (p *RunDetail) IsSetSuccessCount() bool {
@@ -3290,6 +3307,10 @@ func (p *RunDetail) IsSetSuccessCount() bool {
 
 func (p *RunDetail) IsSetFailedCount() bool {
 	return p.FailedCount != nil
+}
+
+func (p *RunDetail) IsSetTotalCount() bool {
+	return p.TotalCount != nil
 }
 
 func (p *RunDetail) Read(iprot thrift.TProtocol) (err error) {
@@ -3321,6 +3342,14 @@ func (p *RunDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3377,6 +3406,17 @@ func (p *RunDetail) ReadField2(iprot thrift.TProtocol) error {
 	p.FailedCount = _field
 	return nil
 }
+func (p *RunDetail) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TotalCount = _field
+	return nil
+}
 
 func (p *RunDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3390,6 +3430,10 @@ func (p *RunDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -3446,6 +3490,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *RunDetail) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotalCount() {
+		if err = oprot.WriteFieldBegin("total_count", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TotalCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *RunDetail) String() string {
 	if p == nil {
@@ -3465,6 +3527,9 @@ func (p *RunDetail) DeepEqual(ano *RunDetail) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.FailedCount) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TotalCount) {
 		return false
 	}
 	return true
@@ -3494,12 +3559,25 @@ func (p *RunDetail) Field2DeepEqual(src *int64) bool {
 	}
 	return true
 }
+func (p *RunDetail) Field3DeepEqual(src *int64) bool {
+
+	if p.TotalCount == src {
+		return true
+	} else if p.TotalCount == nil || src == nil {
+		return false
+	}
+	if *p.TotalCount != *src {
+		return false
+	}
+	return true
+}
 
 type BackfillDetail struct {
 	SuccessCount      *int64     `thrift:"success_count,1,optional" frugal:"1,optional,i64" form:"success_count" json:"success_count,omitempty" query:"success_count"`
 	FailedCount       *int64     `thrift:"failed_count,2,optional" frugal:"2,optional,i64" form:"failed_count" json:"failed_count,omitempty" query:"failed_count"`
-	BackfillStatus    *RunStatus `thrift:"backfill_status,3,optional" frugal:"3,optional,string" form:"backfill_status" json:"backfill_status,omitempty" query:"backfill_status"`
-	LastSpanPageToken *string    `thrift:"last_span_page_token,4,optional" frugal:"4,optional,string" form:"last_span_page_token" json:"last_span_page_token,omitempty" query:"last_span_page_token"`
+	TotalCount        *int64     `thrift:"total_count,3,optional" frugal:"3,optional,i64" form:"total_count" json:"total_count,omitempty" query:"total_count"`
+	BackfillStatus    *RunStatus `thrift:"backfill_status,4,optional" frugal:"4,optional,string" form:"backfill_status" json:"backfill_status,omitempty" query:"backfill_status"`
+	LastSpanPageToken *string    `thrift:"last_span_page_token,5,optional" frugal:"5,optional,string" form:"last_span_page_token" json:"last_span_page_token,omitempty" query:"last_span_page_token"`
 }
 
 func NewBackfillDetail() *BackfillDetail {
@@ -3533,6 +3611,18 @@ func (p *BackfillDetail) GetFailedCount() (v int64) {
 	return *p.FailedCount
 }
 
+var BackfillDetail_TotalCount_DEFAULT int64
+
+func (p *BackfillDetail) GetTotalCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotalCount() {
+		return BackfillDetail_TotalCount_DEFAULT
+	}
+	return *p.TotalCount
+}
+
 var BackfillDetail_BackfillStatus_DEFAULT RunStatus
 
 func (p *BackfillDetail) GetBackfillStatus() (v RunStatus) {
@@ -3562,6 +3652,9 @@ func (p *BackfillDetail) SetSuccessCount(val *int64) {
 func (p *BackfillDetail) SetFailedCount(val *int64) {
 	p.FailedCount = val
 }
+func (p *BackfillDetail) SetTotalCount(val *int64) {
+	p.TotalCount = val
+}
 func (p *BackfillDetail) SetBackfillStatus(val *RunStatus) {
 	p.BackfillStatus = val
 }
@@ -3572,8 +3665,9 @@ func (p *BackfillDetail) SetLastSpanPageToken(val *string) {
 var fieldIDToName_BackfillDetail = map[int16]string{
 	1: "success_count",
 	2: "failed_count",
-	3: "backfill_status",
-	4: "last_span_page_token",
+	3: "total_count",
+	4: "backfill_status",
+	5: "last_span_page_token",
 }
 
 func (p *BackfillDetail) IsSetSuccessCount() bool {
@@ -3582,6 +3676,10 @@ func (p *BackfillDetail) IsSetSuccessCount() bool {
 
 func (p *BackfillDetail) IsSetFailedCount() bool {
 	return p.FailedCount != nil
+}
+
+func (p *BackfillDetail) IsSetTotalCount() bool {
+	return p.TotalCount != nil
 }
 
 func (p *BackfillDetail) IsSetBackfillStatus() bool {
@@ -3627,7 +3725,7 @@ func (p *BackfillDetail) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -3637,6 +3735,14 @@ func (p *BackfillDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3695,6 +3801,17 @@ func (p *BackfillDetail) ReadField2(iprot thrift.TProtocol) error {
 }
 func (p *BackfillDetail) ReadField3(iprot thrift.TProtocol) error {
 
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TotalCount = _field
+	return nil
+}
+func (p *BackfillDetail) ReadField4(iprot thrift.TProtocol) error {
+
 	var _field *RunStatus
 	if v, err := iprot.ReadString(); err != nil {
 		return err
@@ -3704,7 +3821,7 @@ func (p *BackfillDetail) ReadField3(iprot thrift.TProtocol) error {
 	p.BackfillStatus = _field
 	return nil
 }
-func (p *BackfillDetail) ReadField4(iprot thrift.TProtocol) error {
+func (p *BackfillDetail) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3736,6 +3853,10 @@ func (p *BackfillDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -3793,11 +3914,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *BackfillDetail) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBackfillStatus() {
-		if err = oprot.WriteFieldBegin("backfill_status", thrift.STRING, 3); err != nil {
+	if p.IsSetTotalCount() {
+		if err = oprot.WriteFieldBegin("total_count", thrift.I64, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.BackfillStatus); err != nil {
+		if err := oprot.WriteI64(*p.TotalCount); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3811,11 +3932,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *BackfillDetail) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetLastSpanPageToken() {
-		if err = oprot.WriteFieldBegin("last_span_page_token", thrift.STRING, 4); err != nil {
+	if p.IsSetBackfillStatus() {
+		if err = oprot.WriteFieldBegin("backfill_status", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.LastSpanPageToken); err != nil {
+		if err := oprot.WriteString(*p.BackfillStatus); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3827,6 +3948,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *BackfillDetail) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastSpanPageToken() {
+		if err = oprot.WriteFieldBegin("last_span_page_token", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LastSpanPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
 func (p *BackfillDetail) String() string {
@@ -3849,10 +3988,13 @@ func (p *BackfillDetail) DeepEqual(ano *BackfillDetail) bool {
 	if !p.Field2DeepEqual(ano.FailedCount) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.BackfillStatus) {
+	if !p.Field3DeepEqual(ano.TotalCount) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.LastSpanPageToken) {
+	if !p.Field4DeepEqual(ano.BackfillStatus) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.LastSpanPageToken) {
 		return false
 	}
 	return true
@@ -3882,7 +4024,19 @@ func (p *BackfillDetail) Field2DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *BackfillDetail) Field3DeepEqual(src *RunStatus) bool {
+func (p *BackfillDetail) Field3DeepEqual(src *int64) bool {
+
+	if p.TotalCount == src {
+		return true
+	} else if p.TotalCount == nil || src == nil {
+		return false
+	}
+	if *p.TotalCount != *src {
+		return false
+	}
+	return true
+}
+func (p *BackfillDetail) Field4DeepEqual(src *RunStatus) bool {
 
 	if p.BackfillStatus == src {
 		return true
@@ -3894,7 +4048,7 @@ func (p *BackfillDetail) Field3DeepEqual(src *RunStatus) bool {
 	}
 	return true
 }
-func (p *BackfillDetail) Field4DeepEqual(src *string) bool {
+func (p *BackfillDetail) Field5DeepEqual(src *string) bool {
 
 	if p.LastSpanPageToken == src {
 		return true
