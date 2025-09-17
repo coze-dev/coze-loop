@@ -17,6 +17,7 @@ type ITaskRepo interface {
 	ListTasks(ctx context.Context, param mysql.ListTaskParam) ([]*entity.ObservabilityTask, int64, error)
 	UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error
 	CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error)
+	DeleteTask(ctx context.Context, do *entity.ObservabilityTask) error
 	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 
 	// task run
