@@ -10,19 +10,17 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
-	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
+	fileMocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
+	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
-	fileMocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
-	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	serviceMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
-
-
 
 func newTestInsightAnalysisService(ctrl *gomock.Controller) (*ExptInsightAnalysisServiceImpl, *testInsightAnalysisServiceMocks) {
 	mockRepo := repoMocks.NewMockIExptInsightAnalysisRecordRepo(ctrl)
@@ -170,16 +168,16 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 		{
 			name: "success - record with report ID",
 			setup: func() {
-					mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
-						ID:               1,
-						SpaceID:          1,
-						ExptID:           1,
-						Status:           entity.InsightAnalysisStatus_Running,
-						AnalysisReportID: gptr.Of(int64(123)),
-					}, nil)
-					mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("", entity.ReportStatus_Running, nil)
-					mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				},
+				mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+					ID:               1,
+					SpaceID:          1,
+					ExptID:           1,
+					Status:           entity.InsightAnalysisStatus_Running,
+					AnalysisReportID: gptr.Of(int64(123)),
+				}, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("", entity.ReportStatus_Running, nil)
+				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
 			spaceID:  1,
 			exptID:   1,
 			recordID: 1,
@@ -231,18 +229,18 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 		{
 			name: "success",
 			setup: func() {
-					mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
-						ID:               1,
-						SpaceID:          1,
-						ExptID:           1,
-						Status:           entity.InsightAnalysisStatus_Success,
-						AnalysisReportID: gptr.Of(int64(123)),
-						CreatedBy:        "user1",
-					}, nil)
-					mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report content", entity.ReportStatus_Success, nil)
-					mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(5), int64(2), nil)
-					mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(1), "user1").Return(nil, nil)
-				},
+				mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+					ID:               1,
+					SpaceID:          1,
+					ExptID:           1,
+					Status:           entity.InsightAnalysisStatus_Success,
+					AnalysisReportID: gptr.Of(int64(123)),
+					CreatedBy:        "user1",
+				}, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report content", entity.ReportStatus_Success, nil)
+				mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(5), int64(2), nil)
+				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(1), "user1").Return(nil, nil)
+			},
 			spaceID:  1,
 			exptID:   1,
 			recordID: 1,

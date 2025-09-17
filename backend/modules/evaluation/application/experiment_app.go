@@ -70,7 +70,6 @@ func NewExperimentApplication(
 	manager service.IExptManager,
 	scheduler service.ExptSchedulerEvent,
 	recordEval service.ExptItemEvalEvent,
-// tupleSvc service.IExptTupleService,
 	idgen idgen.IIDGenerator,
 	configer component.IConfiger,
 	auth rpc.IAuthProvider,

@@ -424,9 +424,6 @@ func TestExptResultExportService_ListExportRecord(t *testing.T) {
 }
 
 func TestExptResultExportService_DoExportCSV(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	tests := []struct {
 		name     string
 		spaceID  int64
@@ -441,17 +438,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				// 获取实验信息
-				expt := &entity.Experiment{
-					ID:   123,
-					Name: "test_expt",
-				}
-				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
-					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(expt, nil).
-					Times(1)
-
-				// 新增MGetExperimentResult模拟调用
+				// MGetExperimentResult模拟调用
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
 				colEvalSetFields := []*entity.ColumnEvalSetField{{Name: ptr.Of("test_field")}}
 				colAnnotation := []*entity.ColumnAnnotation{{TagKeyID: 1, TagName: "test_tag"}}
@@ -551,11 +538,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				//	Return([]*entity.ExptTurnResult{}, int64(0), nil).
 				//	Times(1)
 
-				// 更新导出记录为成功
-				svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
-					Update(gomock.Any(), gomock.Any()).
-					Return(nil).
-					Times(1)
+
 			},
 			wantErr: false,
 		},
@@ -573,41 +556,15 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 		//	wantErr: true,
 		// },
 		{
-			name:     "获取实验信息失败",
+			name:     "MGetExperimentResult失败",
 			spaceID:  1,
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				// record := &entity.ExptResultExportRecord{
-				//	ID:              456,
-				//	SpaceID:         1,
-				//	ExptID:          123,
-				//	CsvExportStatus: entity.CSVExportStatus_Running,
-				// }
-				// svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
-				//	Get(gomock.Any(), int64(1), int64(456)).
-				//	Return(record, nil)
-
-				// svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
-				//	GetByID(gomock.Any(), int64(123), int64(1)).
-				//	Return(nil, errors.New("get expt error"))
-				colEvaluators := []*entity.ColumnEvaluator{{Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
-				colEvalSetFields := []*entity.ColumnEvalSetField{{Name: ptr.Of("test_field")}}
-				colAnnotation := []*entity.ColumnAnnotation{{TagName: "test_tag"}}
-				exptColAnnotation := []*entity.ExptColumnAnnotation{{ExptID: 1, ColumnAnnotations: colAnnotation}}
-				itemResults := []*entity.ItemResult{{ItemID: 1}}
+				// MGetExperimentResult返回错误
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(len(itemResults)), fmt.Errorf("err"))
-				// 更新导出记录为失败
-				svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
-					Update(gomock.Any(), gomock.Any()).
-					Return(nil)
-				svc.configer.(*componentMocks.MockIConfiger).EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{
-					ResultErrConverts: []*entity.ResultErrConvert{{MatchedText: "err", ToErrMsg: "err"}},
-					SpaceErrRetryCtrl: map[int64]*entity.ErrRetryCtrl{1: {RetryConf: &entity.RetryConf{RetryTimes: 2}}},
-					ErrRetryCtrl:      &entity.ErrRetryCtrl{RetryConf: &entity.RetryConf{RetryTimes: 1}},
-				})
+					Return(nil, nil, nil, nil, nil, int64(0), fmt.Errorf("MGetExperimentResult error"))
 			},
 			wantErr: true,
 		},
@@ -615,6 +572,9 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			
 			svc := newTestExptResultExportService(ctrl)
 			tt.setup(svc)
 
