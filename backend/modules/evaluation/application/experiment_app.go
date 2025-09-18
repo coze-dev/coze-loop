@@ -1186,7 +1186,12 @@ func (e *experimentApplication) DeleteExptInsightAnalysisRecord(ctx context.Cont
 }
 
 func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest) (r *expt.GetExptInsightAnalysisRecordResponse, err error) {
-	session := &entity.Session{UserID: strconv.FormatInt(req.GetSession().GetUserID(), 10)}
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,

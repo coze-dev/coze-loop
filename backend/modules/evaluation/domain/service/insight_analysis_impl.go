@@ -99,13 +99,11 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		}
 		if err != nil {
 			record.Status = entity.InsightAnalysisStatus_Failed
-			// 不重试
-			err = nil
 		}
 		err1 := e.repo.UpdateAnalysisRecord(ctx, record)
 		if err1 != nil {
 			logs.CtxError(ctx, "UpdateAnalysisRecord failed: %v", err1)
-			return
+			err = err1
 		}
 	}()
 

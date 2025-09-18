@@ -518,8 +518,8 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 					logID = ptr.From(payload.SystemInfo.LogID)
 				}
 				traceID := ""
-				if payload.TargetOutput == nil ||
-					payload.TargetOutput.EvalTargetRecord == nil {
+				if payload.TargetOutput != nil &&
+					payload.TargetOutput.EvalTargetRecord != nil {
 					traceID = payload.TargetOutput.EvalTargetRecord.TraceID
 				}
 				rowData = append(rowData, logID)

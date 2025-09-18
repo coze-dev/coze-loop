@@ -231,7 +231,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 			exptID:   1,
 			recordID: 1,
 			createAt: time.Now().Unix(),
-			wantErr:  false,
+			wantErr:  true,
 		},
 		{
 			name: "sign download req error - defer should update status to failed",
@@ -253,7 +253,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 			exptID:   1,
 			recordID: 1,
 			createAt: time.Now().Unix(),
-			wantErr:  false,
+			wantErr:  true,
 		},
 		{
 			name: "call trace agent error - defer should update status to failed",
@@ -276,7 +276,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 			exptID:   1,
 			recordID: 1,
 			createAt: time.Now().Unix(),
-			wantErr:  false,
+			wantErr:  true,
 		},
 		{
 			name: "publish event error - defer should update status to failed",
@@ -300,7 +300,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 			exptID:   1,
 			recordID: 1,
 			createAt: time.Now().Unix(),
-			wantErr:  false,
+			wantErr:  true,
 		},
 		{
 			name: "defer update error - should not affect main error",
@@ -318,7 +318,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 			exptID:   1,
 			recordID: 1,
 			createAt: time.Now().Unix(),
-			wantErr:  false,
+			wantErr:  true,
 		},
 	}
 

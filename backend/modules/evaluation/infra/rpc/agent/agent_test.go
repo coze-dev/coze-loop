@@ -25,10 +25,7 @@ func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 				adapter := &AgentAdapter{}
 				return adapter, ctx
 			},
-			wantErr: false,
-			errCheck: func(t *testing.T, err error) {
-				assert.NoError(t, err)
-			},
+			wantErr: true,
 		},
 	}
 
@@ -46,9 +43,6 @@ func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 				assert.Equal(t, int64(0), result)
 			}
 
-			if tt.errCheck != nil {
-				tt.errCheck(t, err)
-			}
 		})
 	}
 }
@@ -66,10 +60,7 @@ func TestAgentAdapter_GetReport(t *testing.T) {
 				adapter := &AgentAdapter{}
 				return adapter, ctx
 			},
-			wantErr: false,
-			errCheck: func(t *testing.T, err error) {
-				assert.NoError(t, err)
-			},
+			wantErr: true,
 		},
 	}
 
@@ -87,10 +78,7 @@ func TestAgentAdapter_GetReport(t *testing.T) {
 				assert.Equal(t, "", report)
 				assert.Equal(t, entity.ReportStatus_Unknown, status)
 			}
-
-			if tt.errCheck != nil {
-				tt.errCheck(t, err)
-			}
+			
 		})
 	}
 }

@@ -88,7 +88,7 @@ func (e exptInsightAnalysisRecordDAO) List(ctx context.Context, spaceID, exptID 
 func (e exptInsightAnalysisRecordDAO) Delete(ctx context.Context, spaceID, exptID, recordID int64) error {
 	po := &model.ExptInsightAnalysisRecord{}
 	db := e.db.NewSession(ctx)
-	err := db.Where("space_id = ? AND expt_id = ?  AND record_id = ?", spaceID, exptID, recordID).
+	err := db.Where("space_id = ? AND expt_id = ?  AND id = ?", spaceID, exptID, recordID).
 		Delete(po).Error
 	if err != nil {
 		return err
