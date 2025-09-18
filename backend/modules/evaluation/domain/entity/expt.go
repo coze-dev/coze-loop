@@ -166,7 +166,7 @@ func (t *TargetConf) Valid(ctx context.Context, targetType EvalTargetType) error
 	if t == nil || t.TargetVersionID == 0 {
 		return fmt.Errorf("invalid TargetConf: %v", json.Jsonify(t))
 	}
-	if targetType == EvalTargetTypeLoopPrompt { // prompt target might receive no input
+	if targetType == EvalTargetTypeLoopPrompt || targetType == EvalTargetTypeCustomRPCServer { // prompt target might receive no input
 		return nil
 	}
 	if t.IngressConf != nil && t.IngressConf.EvalSetAdapter != nil && len(t.IngressConf.EvalSetAdapter.FieldConfs) > 0 {
