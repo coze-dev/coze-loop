@@ -274,8 +274,34 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			Status:       task.RunStatusRunning,
 		},
 	}
+	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig)
+	if err != nil {
+		return err
+	}
+	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
+	err = p.taskRepo.UpdateTask(ctx, taskConfig)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
+	//
+	return nil
+}
+func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, currentTask *task.Task) error {
+	// 更新任务配置
+	// 更新TaskRun
+	return nil
+}
+
+func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig) (*task_entity.TaskRun, error) {
+	// 创建taskRun
+	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
+	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
+	var taskRun *task_entity.TaskRun
+	taskRunConfig := runConfig
 	taskRun = &task_entity.TaskRun{
-		ID:          datasetID,
 		TaskID:      currentTask.GetID(),
 		WorkspaceID: currentTask.GetWorkspaceID(),
 		TaskType:    currentTask.GetTaskType(),
@@ -286,30 +312,8 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 		UpdatedAt:   time.Now(),
 		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
 	}
-	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-	err = p.taskRepo.UpdateTask(ctx, taskConfig)
-	if err != nil {
-		return err
-	}
-	taskRun1 := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
-	p.OnCreateTaskRunProcessor(ctx, taskRun1)
-	return nil
-}
-func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error {
-	//
-	return nil
-}
-func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, task *task.Task) error {
-	// 更新任务配置
-	// 更新TaskRun
-	return nil
-}
-
-func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
-	// 创建taskRun
-	logs.CtxInfo(ctx, "[auto_task] OnCreateTaskRunProcessor, taskID:%d, taskRun:%+v", taskRun.GetTaskID(), taskRun)
-
-	return nil
+	p.taskRepo.CreateTaskRun(ctx, taskRun)
+	return taskRun, nil
 }
 func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
 	taskRunDo := tconv.TaskRunDO2PO(ctx, taskRun, nil)

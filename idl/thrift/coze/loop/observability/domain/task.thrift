@@ -13,6 +13,10 @@ typedef string TaskType (ts.enum="true")
 const TaskType TaskType_AutoEval = "auto_evaluate"          // 自动评测
 const TaskType TaskType_AutoDataReflow = "auto_data_reflow" // 数据回流
 
+typedef string TaskRunType (ts.enum="true")
+const TaskRunType TaskRunType_BackFill = "back_fill"     // 历史数据回填
+const TaskRunType TaskRunType_NewData = "new_data"       // 新数据
+
 typedef string TaskStatus (ts.enum="true")
 const TaskStatus TaskStatus_Unstarted = "unstarted"   // 未启动
 const TaskStatus TaskStatus_Running = "running"       // 正在运行
@@ -110,7 +114,7 @@ struct TaskRun {
     1: required i64 id (api.js_conv="true", go.tag='json:"id"')                                 // 任务 run id
     2: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')             // 所在空间
     3: required i64 task_id (api.js_conv="true", go.tag='json:"task_id"')                       // 任务 id
-    4: required TaskType task_type                                                              // 类型
+    4: required TaskRunType task_type                                                              // 类型
     5: required RunStatus run_status                                                            // 状态
     6: optional RunDetail run_detail                                                            // 任务状态详情
     7: optional BackfillDetail backfill_run_detail                                              // 任务历史数据执行详情

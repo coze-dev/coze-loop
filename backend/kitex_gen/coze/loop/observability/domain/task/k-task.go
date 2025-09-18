@@ -3464,7 +3464,7 @@ func (p *TaskRun) FastReadField3(buf []byte) (int, error) {
 func (p *TaskRun) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field TaskType
+	var _field TaskRunType
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {

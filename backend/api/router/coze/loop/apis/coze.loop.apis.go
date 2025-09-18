@@ -288,7 +288,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_tasks0 := _v14.Group("/tasks", _tasks0Mw(handler)...)
-					_tasks0.GET("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
+					_tasks0.POST("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
 				}
 				{
 					_trace := _v14.Group("/trace", _traceMw(handler)...)

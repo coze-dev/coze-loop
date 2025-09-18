@@ -22,6 +22,10 @@ const (
 
 	TaskTypeAutoDataReflow = "auto_data_reflow"
 
+	TaskRunTypeBackFill = "back_fill"
+
+	TaskRunTypeNewData = "new_data"
+
 	TaskStatusUnstarted = "unstarted"
 
 	TaskStatusRunning = "running"
@@ -42,6 +46,8 @@ const (
 type TimeUnit = string
 
 type TaskType = string
+
+type TaskRunType = string
 
 type TaskStatus = string
 
@@ -4463,7 +4469,7 @@ type TaskRun struct {
 	// 任务 id
 	TaskID int64 `thrift:"task_id,3,required" frugal:"3,required,i64" json:"task_id" form:"task_id,required" query:"task_id,required"`
 	// 类型
-	TaskType TaskType `thrift:"task_type,4,required" frugal:"4,required,string" form:"task_type,required" json:"task_type,required" query:"task_type,required"`
+	TaskType TaskRunType `thrift:"task_type,4,required" frugal:"4,required,string" form:"task_type,required" json:"task_type,required" query:"task_type,required"`
 	// 状态
 	RunStatus RunStatus `thrift:"run_status,5,required" frugal:"5,required,string" form:"run_status,required" json:"run_status,required" query:"run_status,required"`
 	// 任务状态详情
@@ -4506,7 +4512,7 @@ func (p *TaskRun) GetTaskID() (v int64) {
 	return
 }
 
-func (p *TaskRun) GetTaskType() (v TaskType) {
+func (p *TaskRun) GetTaskType() (v TaskRunType) {
 	if p != nil {
 		return p.TaskType
 	}
@@ -4590,7 +4596,7 @@ func (p *TaskRun) SetWorkspaceID(val int64) {
 func (p *TaskRun) SetTaskID(val int64) {
 	p.TaskID = val
 }
-func (p *TaskRun) SetTaskType(val TaskType) {
+func (p *TaskRun) SetTaskType(val TaskRunType) {
 	p.TaskType = val
 }
 func (p *TaskRun) SetRunStatus(val RunStatus) {
@@ -4865,7 +4871,7 @@ func (p *TaskRun) ReadField3(iprot thrift.TProtocol) error {
 }
 func (p *TaskRun) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field TaskType
+	var _field TaskRunType
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
@@ -5264,7 +5270,7 @@ func (p *TaskRun) Field3DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *TaskRun) Field4DeepEqual(src TaskType) bool {
+func (p *TaskRun) Field4DeepEqual(src TaskRunType) bool {
 
 	if strings.Compare(p.TaskType, src) != 0 {
 		return false
