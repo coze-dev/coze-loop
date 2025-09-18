@@ -42,7 +42,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			case <-h.ticker.C:
 				// 执行定时任务
 				h.runScheduledTask()
-				//h.syncTaskRunCounts()
+				h.syncTaskRunCounts()
 			case <-h.stopChan:
 				// 停止定时任务
 				h.ticker.Stop()
