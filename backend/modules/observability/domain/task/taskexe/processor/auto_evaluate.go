@@ -160,7 +160,7 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task, isBackFill bool) error {
+func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, isBackFill bool) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d,  task:%+v", currentTask.GetID(), currentTask)
 	//todo:[xun]加锁
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
@@ -642,7 +642,7 @@ func GetContentInfo(ctx context.Context, contentType common.ContentType, value s
 	return content, nil
 }
 
-func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task) error {
+func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnCreateChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
 	//todo:[xun]加锁
 	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
@@ -654,14 +654,9 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
 		isBackFill = true
 	}
-	err = p.OnCreateChangeProcessor(ctx, currentTask, isBackFill)
+	err = p.OnChangeProcessor(ctx, currentTask, isBackFill)
 	if err != nil {
 		logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-		return err
-	}
-	err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
-	if err != nil {
-		logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err
 	}
 
