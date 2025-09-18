@@ -1415,3 +1415,359 @@ func TestFilterSpan(t *testing.T) {
 		assert.Equal(t, tc.filter.Satisfied(tc.span), tc.satisfied)
 	}
 }
+
+// TestQueryTypeEnumNotMatchExceptionCases 测试 QueryTypeEnumNotMatch 的异常流程
+func TestQueryTypeEnumNotMatchExceptionCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		filter    *FilterFields
+		span      *Span
+		satisfied bool
+	}{
+		// 边界情况测试
+		{
+			name: "Empty values array should return true",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{}, // 空数组
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: true, // 空值时应该返回true
+		},
+		{
+			name: "Empty string in values should work correctly",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{""}, // 包含空字符串
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: false, // span_type_a 包含空字符串（任何字符串都包含空字符串）
+		},
+		{
+			name: "Empty string in values with empty span field",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{""}, // 包含空字符串
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "", // 空字符串字段
+			},
+			satisfied: false, // 空字符串包含空字符串
+		},
+		{
+			name: "Nil span field should return false",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "non_existent_field",
+						FieldType: FieldTypeString,
+						Values:    []string{"test"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: true, // 不存在的字段返回nil，nil不包含任何内容，所以NotMatch应该返回true
+		},
+		{
+			name: "Multiple values should only use first value",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_a", "_b", "_c"}, // 多个值，只应该使用第一个
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: false, // span_type_a 包含 "_a"（第一个值）
+		},
+		{
+			name: "Multiple values with first not matching",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_x", "_a", "_b"}, // 多个值，第一个不匹配
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: true, // span_type_a 不包含 "_x"（第一个值）
+		},
+		// 类型错误测试
+		{
+			name: "Non-string field type should return false",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: SpanFieldStatusCode, // 这是一个long类型字段
+						FieldType: FieldTypeLong,       // 但我们尝试用string的查询类型
+						Values:    []string{"100"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch), // 这个查询类型只支持string
+					},
+				},
+			},
+			span: &Span{
+				StatusCode: 100,
+			},
+			satisfied: false, // 非字符串类型应该返回false
+		},
+		// 组合场景测试
+		{
+			name: "NotMatch with other query types using AND",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_b"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+					{
+						FieldName: "service_name",
+						FieldType: FieldTypeString,
+						Values:    []string{"service_name_a"},
+						QueryType: ptr.Of(QueryTypeEnumEq),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+				TagsString: map[string]string{
+					"service_name": "service_name_a",
+				},
+			},
+			satisfied: true, // span_type_a不包含"_b" AND service_name等于"service_name_a"
+		},
+		{
+			name: "NotMatch with other query types using OR",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_a"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+					{
+						FieldName: "service_name",
+						FieldType: FieldTypeString,
+						Values:    []string{"service_name_b"},
+						QueryType: ptr.Of(QueryTypeEnumEq),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+				TagsString: map[string]string{
+					"service_name": "service_name_a",
+				},
+			},
+			satisfied: false, // span_type_a包含"_a" OR service_name不等于"service_name_b" = false OR false = false
+		},
+		{
+			name: "Complex nested filters with NotMatch",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_test"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+					{
+						SubFilter: &FilterFields{
+							QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+							FilterFields: []*FilterField{
+								{
+									FieldName: "service_name",
+									FieldType: FieldTypeString,
+									Values:    []string{"service_name_a"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+								{
+									FieldName: "span_type",
+									FieldType: FieldTypeString,
+									Values:    []string{"_b"},
+									QueryType: ptr.Of(QueryTypeEnumNotMatch),
+								},
+							},
+						},
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+				TagsString: map[string]string{
+					"service_name": "service_name_a",
+				},
+			},
+			satisfied: true, // span_type_a不包含"_test" AND (service_name等于"service_name_a" OR span_type_a不包含"_b") = true AND (true OR true) = true
+		},
+		// 特殊字符处理测试
+		{
+			name: "Special characters in match value",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"[special]"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_[special]_test",
+			},
+			satisfied: false, // 包含特殊字符的匹配
+		},
+		{
+			name: "Unicode characters in match value",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"测试"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_测试_unicode",
+			},
+			satisfied: false, // 包含Unicode字符的匹配
+		},
+		{
+			name: "Unicode characters not matching",
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"测试"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_english_only",
+			},
+			satisfied: true, // 不包含Unicode字符
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			satisfied := test.filter.Satisfied(test.span)
+			assert.Equal(t, test.satisfied, satisfied, "Test case: %s", test.name)
+		})
+	}
+}
+
+// TestQueryTypeEnumNotMatchValidation 测试 QueryTypeEnumNotMatch 的验证逻辑
+func TestQueryTypeEnumNotMatchValidation(t *testing.T) {
+	// 测试有效的组合
+	validFilter := &FilterFields{
+		QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+		FilterFields: []*FilterField{
+			{
+				FieldName: "test_field",
+				FieldType: FieldTypeString, // 只有string类型支持NotMatch
+				Values:    []string{"test"},
+				QueryType: ptr.Of(QueryTypeEnumNotMatch),
+			},
+		},
+	}
+	err := validFilter.Validate()
+	assert.NoError(t, err, "Valid NotMatch filter should pass validation")
+
+	// 测试无效的类型组合
+	invalidFilters := []*FilterFields{
+		{
+			QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+			FilterFields: []*FilterField{
+				{
+					FieldName: "test_field",
+					FieldType: FieldTypeLong, // long类型不支持NotMatch
+					Values:    []string{"123"},
+					QueryType: ptr.Of(QueryTypeEnumNotMatch),
+				},
+			},
+		},
+		{
+			QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+			FilterFields: []*FilterField{
+				{
+					FieldName: "test_field",
+					FieldType: FieldTypeDouble, // double类型不支持NotMatch
+					Values:    []string{"123.45"},
+					QueryType: ptr.Of(QueryTypeEnumNotMatch),
+				},
+			},
+		},
+		{
+			QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+			FilterFields: []*FilterField{
+				{
+					FieldName: "test_field",
+					FieldType: FieldTypeBool, // bool类型不支持NotMatch
+					Values:    []string{"true"},
+					QueryType: ptr.Of(QueryTypeEnumNotMatch),
+				},
+			},
+		},
+	}
+
+	for i, filter := range invalidFilters {
+		err := filter.Validate()
+		assert.Error(t, err, "Invalid NotMatch filter %d should fail validation", i)
+	}
+}
