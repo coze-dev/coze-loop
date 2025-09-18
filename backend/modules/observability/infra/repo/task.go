@@ -197,7 +197,19 @@ func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context) ([]*entity.Observab
 
 	resp := make([]*entity.ObservabilityTask, len(results))
 	for i, result := range results {
-		resp[i] = convertor.TaskPO2DO(result)
+		taskDO := convertor.TaskPO2DO(result)
+		taskRuns, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
+			WorkspaceID: ptr.Of(taskDO.WorkspaceID),
+			TaskID:      ptr.Of(taskDO.ID),
+			ReqLimit:    1000,
+			ReqOffset:   0,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "ListTaskRuns err, taskID:%d, err:%v", taskDO.ID, err)
+			continue
+		}
+		taskDO.TaskRuns = convertor.TaskRunsPO2DO(taskRuns)
+		resp[i] = taskDO
 	}
 
 	// 异步缓存到 Redis（短TTL，因为非最终状态变化频繁）

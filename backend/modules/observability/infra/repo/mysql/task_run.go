@@ -256,11 +256,6 @@ func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, wor
 		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
 
-	// 检查是否有行被更新（乐观并发控制）
-	if info.RowsAffected == 0 {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("TaskRun not found or version conflict"))
-	}
-
 	logs.CtxInfo(ctx, "TaskRun updated with OCC", "id", id, "workspaceID", workspaceID, "rowsAffected", info.RowsAffected)
 	return nil
 }
