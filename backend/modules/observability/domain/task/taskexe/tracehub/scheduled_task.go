@@ -42,6 +42,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			case <-h.ticker.C:
 				// 执行定时任务
 				h.runScheduledTask()
+				//h.syncTaskRunCounts()
 			case <-h.stopChan:
 				// 停止定时任务
 				h.ticker.Stop()
@@ -119,7 +120,6 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			}
 		}
 	}
-	h.syncTaskRunCounts()
 }
 
 // syncTaskRunCounts 同步TaskRunCount到数据库
@@ -251,24 +251,24 @@ func (h *TraceHubServiceImpl) syncSingleTaskRunCount(ctx context.Context, info *
 	// 获取并更新成功计数
 	successCount, err := h.taskRepo.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
 	if err != nil {
-		logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败: taskID=%d, taskRunID=%d, err=%v", 
+		logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败: taskID=%d, taskRunID=%d, err=%v",
 			info.TaskID, info.TaskRunID, err)
 	} else if successCount >= 0 {
 		// 只有当获取成功且计数>=0时才更新
 		runDetail.SuccessCount = &successCount
-		logs.CtxDebug(ctx, "成功获取SuccessCount: taskID=%d, taskRunID=%d, count=%d", 
+		logs.CtxDebug(ctx, "成功获取SuccessCount: taskID=%d, taskRunID=%d, count=%d",
 			info.TaskID, info.TaskRunID, successCount)
 	}
 
 	// 获取并更新失败计数
 	failedCount, err := h.taskRepo.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
 	if err != nil {
-		logs.CtxWarn(ctx, "获取TaskRunFailCount失败: taskID=%d, taskRunID=%d, err=%v", 
+		logs.CtxWarn(ctx, "获取TaskRunFailCount失败: taskID=%d, taskRunID=%d, err=%v",
 			info.TaskID, info.TaskRunID, err)
 	} else if failedCount >= 0 {
 		// 只有当获取成功且计数>=0时才更新
 		runDetail.FailedCount = &failedCount
-		logs.CtxDebug(ctx, "成功获取FailedCount: taskID=%d, taskRunID=%d, count=%d", 
+		logs.CtxDebug(ctx, "成功获取FailedCount: taskID=%d, taskRunID=%d, count=%d",
 			info.TaskID, info.TaskRunID, failedCount)
 	}
 
@@ -289,7 +289,7 @@ func (h *TraceHubServiceImpl) syncSingleTaskRunCount(ctx context.Context, info *
 		return fmt.Errorf("更新TaskRun记录失败: taskRunID=%d, err=%v", info.TaskRunID, err)
 	}
 
-	logs.CtxInfo(ctx, "成功更新TaskRun的run_detail: taskRunID=%d, totalCount=%d, successCount=%v, failedCount=%v", 
+	logs.CtxInfo(ctx, "成功更新TaskRun的run_detail: taskRunID=%d, totalCount=%d, successCount=%v, failedCount=%v",
 		info.TaskRunID, info.Count, runDetail.SuccessCount, runDetail.FailedCount)
 	return nil
 }
