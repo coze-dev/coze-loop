@@ -224,11 +224,75 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	return nil
 }
 
-func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, task *task.Task) error {
+func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
 	// 1、创建/更新数据集
+	session := getSession(ctx, currentTask)
+	category := getCategory(currentTask.TaskType)
+	dataReflowConfigs := currentTask.GetTaskConfig().GetDataReflowConfig()
+	var err error
+	// 1、创建数据集
+	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
+	var datasetID int64
+	for _, dataReflowConfig := range dataReflowConfigs {
+		if dataReflowConfig.DatasetID != nil {
+			datasetID = *dataReflowConfig.DatasetID
+			logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", dataReflowConfig.DatasetID)
+			continue
+		}
+		schema := convertDatasetSchemaDTO2DO(dataReflowConfig.GetDatasetSchema())
+		datasetID, err = p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
+			0,
+			currentTask.GetWorkspaceID(),
+			dataReflowConfig.GetDatasetName(),
+			category,
+			schema,
+			session,
+		))
+		if err != nil {
+			return err
+		}
+		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
+	}
 	// 2、更新任务配置
+	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
+	if err != nil {
+		return err
+	}
+	if ShouldTriggerBackfill(currentTask) {
+		taskConfig.TaskStatus = task.TaskStatusRunning
+	}
 	// 3、创建 taskrun：历史回溯生成一个taskRun,新数据生成一个taskRun
-	// 4、更新任务配置
+	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
+	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
+	var taskRun *task_entity.TaskRun
+	taskRunConfig := &task.TaskRunConfig{
+		DataReflowRunConfig: &task.DataReflowRunConfig{
+			DatasetID:    datasetID,
+			EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
+			CycleStartAt: cycleStartAt,
+			CycleEndAt:   cycleEndAt,
+			Status:       task.RunStatusRunning,
+		},
+	}
+	taskRun = &task_entity.TaskRun{
+		ID:          datasetID,
+		TaskID:      currentTask.GetID(),
+		WorkspaceID: currentTask.GetWorkspaceID(),
+		TaskType:    currentTask.GetTaskType(),
+		RunStatus:   task.RunStatusRunning,
+		RunStartAt:  time.UnixMilli(cycleStartAt),
+		RunEndAt:    time.UnixMilli(cycleEndAt),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
+	}
+	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
+	err = p.taskRepo.UpdateTask(ctx, taskConfig)
+	if err != nil {
+		return err
+	}
+	taskRun1 := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
+	p.OnCreateTaskRunProcessor(ctx, taskRun1)
 	return nil
 }
 func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error {
@@ -241,9 +305,9 @@ func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, task 
 	return nil
 }
 
-func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, task *task.TaskRun) error {
+func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
 	// 创建taskRun
-	logs.CtxInfo(ctx, "[auto_task] OnCreateTaskRunProcessor, taskID:%d, taskRun:%+v", task.GetTaskID(), task)
+	logs.CtxInfo(ctx, "[auto_task] OnCreateTaskRunProcessor, taskID:%d, taskRun:%+v", taskRun.GetTaskID(), taskRun)
 
 	return nil
 }
