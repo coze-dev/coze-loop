@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package agent
@@ -14,9 +14,9 @@ import (
 
 func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 	tests := []struct {
-		name    string
-		setup   func(ctx context.Context) (*AgentAdapter, context.Context)
-		wantErr bool
+		name     string
+		setup    func(ctx context.Context) (*AgentAdapter, context.Context)
+		wantErr  bool
 		errCheck func(t *testing.T, err error)
 	}{
 		{
@@ -55,9 +55,9 @@ func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 
 func TestAgentAdapter_GetReport(t *testing.T) {
 	tests := []struct {
-		name    string
-		setup   func(ctx context.Context) (*AgentAdapter, context.Context)
-		wantErr bool
+		name     string
+		setup    func(ctx context.Context) (*AgentAdapter, context.Context)
+		wantErr  bool
 		errCheck func(t *testing.T, err error)
 	}{
 		{
