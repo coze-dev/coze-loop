@@ -142,7 +142,7 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 		return
 	}
 
-	logs.CtxInfo(ctx, "获取到非终态任务数量", "count", len(taskPOs))
+	logs.CtxInfo(ctx, "获取到非终态任务数量,count:%d", len(taskPOs))
 
 	// 2. 收集所有需要同步的TaskRun信息
 	var taskRunInfos []*TaskRunCountInfo
