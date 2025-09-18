@@ -104,6 +104,20 @@ func (v *TaskRepoImpl) ListTasks(ctx context.Context, param mysql.ListTaskParam)
 	for i, result := range results {
 		resp[i] = convertor.TaskPO2DO(result)
 	}
+	for _, t := range resp {
+		taskRuns, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
+			WorkspaceID: ptr.Of(t.WorkspaceID),
+			TaskID:      ptr.Of(t.ID),
+			ReqLimit:    1000,
+			ReqOffset:   0,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "ListTaskRuns err, taskID:%d, err:%v", t.ID, err)
+			continue
+		}
+		t.TaskRuns = convertor.TaskRunsPO2DO(taskRuns)
+	}
+
 	return resp, total, nil
 }
 

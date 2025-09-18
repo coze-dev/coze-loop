@@ -8,9 +8,12 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/pkg/errors"
 )
@@ -58,7 +61,23 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	// 读取所有非终态（成功/禁用）任务
-	taskPOs, err := h.taskRepo.ListNonFinalTask(ctx)
+	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		ReqLimit:  1000,
+		ReqOffset: 0,
+		TaskFilters: &filter.TaskFilterFields{
+			FilterFields: []*filter.TaskFilterField{
+				{
+					FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+					Values: []string{
+						string(task.TaskStatusUnstarted),
+						string(task.TaskStatusRunning),
+					},
+					QueryType: ptr.Of(filter.QueryTypeIn),
+					FieldType: ptr.Of(filter.FieldTypeString),
+				},
+			},
+		},
+	})
 	if err != nil {
 		logs.CtxError(ctx, "ListNonFinalTask err:%v", err)
 		return

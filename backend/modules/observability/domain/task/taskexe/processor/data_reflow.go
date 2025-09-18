@@ -68,6 +68,7 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
 		p.taskRepo.DecrTaskCount(ctx, *trigger.Task.ID)
 		p.taskRepo.DecrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
+		p.taskRepo.DecrTaskRunSuccessCount(ctx, *trigger.Task.ID, taskRun.ID)
 		return nil
 	}
 	ctx = session.WithCtxUser(ctx, &session.User{ID: *trigger.Task.BaseInfo.CreatedBy.UserID})
@@ -90,8 +91,7 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	_, _, err := p.datasetServiceAdaptor.GetDatasetProvider(category).AddDatasetItems(ctx, taskRun.TaskRunConfig.DataReflowRunConfig.DatasetID, category, successItems)
 	if err != nil {
 		logs.CtxError(ctx, "[task-debug] AutoEvaluteProcessor Invoke, AddDatasetItems err, taskID:%d, err:%v", *trigger.Task.ID, err)
-		p.taskRepo.DecrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
-		p.taskRepo.DecrTaskCount(ctx, *trigger.Task.ID)
+		p.taskRepo.IncrTaskRunFailCount(ctx, *trigger.Task.ID, taskRun.ID)
 		return err
 	}
 
