@@ -682,14 +682,40 @@ func (p *TaskDAOImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID in
 }
 
 // GetAllTaskRunCountKeys 获取所有TaskRunCount键
-// 注意：由于Cmdable接口限制，这里使用一个简化的实现
-// 在实际生产环境中，应该通过其他方式（如维护键列表）来实现
 func (p *TaskDAOImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, error) {
-	// 由于Cmdable接口没有Keys或Scan方法，这里返回空列表
-	// 实际实现中，可能需要：
-	// 1. 在写入时维护一个键列表
-	// 2. 使用更高级的Redis客户端接口
-	// 3. 或者通过其他方式来获取键列表
-	logs.CtxWarn(ctx, "GetAllTaskRunCountKeys not fully implemented due to Cmdable interface limitations")
-	return []string{}, nil
+	pattern := "count_*_*" // 匹配 count_{taskID}_{taskRunID} 格式的键
+	var allKeys []string
+	
+	// 使用SCAN命令遍历匹配的键
+	iter := p.cmdable.Scan(ctx, 0, pattern, 100).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		// 验证键格式是否为TaskRunCount键（包含两个下划线，表示taskID和taskRunID）
+		if p.isTaskRunCountKey(key) {
+			allKeys = append(allKeys, key)
+		}
+	}
+	
+	if err := iter.Err(); err != nil {
+		logs.CtxError(ctx, "scan task run count keys failed", "pattern", pattern, "err", err)
+		return nil, errorx.Wrapf(err, "scan task run count keys with pattern: %s", pattern)
+	}
+	
+	logs.CtxInfo(ctx, "found %d task run count keys", len(allKeys))
+	return allKeys, nil
+}
+
+// isTaskRunCountKey 检查键是否为TaskRunCount键格式
+func (p *TaskDAOImpl) isTaskRunCountKey(key string) bool {
+	// TaskRunCount键格式: count_{taskID}_{taskRunID}
+	// TaskCount键格式: count_{taskID}
+	// 通过下划线数量来区分
+	underscoreCount := 0
+	for _, char := range key {
+		if char == '_' {
+			underscoreCount++
+		}
+	}
+	// TaskRunCount键应该有2个下划线
+	return underscoreCount == 2
 }

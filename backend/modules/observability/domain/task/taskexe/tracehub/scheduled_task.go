@@ -5,6 +5,10 @@ package tracehub
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
@@ -120,5 +124,147 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 
 // syncTaskRunCounts 同步TaskRunCount到数据库
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
+	ctx := context.Background()
+	logs.CtxInfo(ctx, "开始同步TaskRunCount数据到数据库")
 
+	// 1. 获取所有TaskRunCount键
+	keys, err := h.taskRepo.GetAllTaskRunCountKeys(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "获取TaskRunCount键失败: %v", err)
+		return
+	}
+
+	if len(keys) == 0 {
+		logs.CtxInfo(ctx, "没有找到TaskRunCount键，跳过同步")
+		return
+	}
+
+	logs.CtxInfo(ctx, "找到%d个TaskRunCount键，开始同步", len(keys))
+
+	// 2. 批量处理键
+	batchSize := 50 // 每批处理50个键
+	for i := 0; i < len(keys); i += batchSize {
+		end := i + batchSize
+		if end > len(keys) {
+			end = len(keys)
+		}
+
+		batch := keys[i:end]
+		h.processBatch(ctx, batch)
+	}
+}
+
+// processBatch 批量处理TaskRunCount键
+func (h *TraceHubServiceImpl) processBatch(ctx context.Context, keys []string) {
+	// 1. 解析键并获取计数信息
+	var taskRunInfos []*TaskRunCountInfo
+
+	for _, key := range keys {
+		info, err := h.parseTaskRunCountKey(ctx, key)
+		if err != nil {
+			logs.CtxWarn(ctx, "解析键失败: key=%s, err=%v", key, err)
+			continue
+		}
+
+		// 获取Redis中的计数值
+		count, err := h.taskRepo.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
+		if err != nil {
+			logs.CtxWarn(ctx, "获取TaskRunCount失败: taskID=%d, taskRunID=%d, err=%v",
+				info.TaskID, info.TaskRunID, err)
+			continue
+		}
+
+		// 如果计数为-1，表示Redis中不存在该键，跳过
+		if count == -1 {
+			logs.CtxDebug(ctx, "Redis中不存在键: taskID=%d, taskRunID=%d", info.TaskID, info.TaskRunID)
+			continue
+		}
+
+		info.Count = count
+		taskRunInfos = append(taskRunInfos, info)
+	}
+
+	// 2. 批量更新数据库
+	for _, info := range taskRunInfos {
+		if err := h.syncSingleTaskRunCount(ctx, info); err != nil {
+			logs.CtxError(ctx, "同步TaskRunCount失败: taskID=%d, taskRunID=%d, count=%d, err=%v",
+				info.TaskID, info.TaskRunID, info.Count, err)
+		} else {
+			logs.CtxDebug(ctx, "同步TaskRunCount成功: taskID=%d, taskRunID=%d, count=%d",
+				info.TaskID, info.TaskRunID, info.Count)
+		}
+	}
+}
+
+// parseTaskRunCountKey 解析TaskRunCount键获取taskID和taskRunID
+func (h *TraceHubServiceImpl) parseTaskRunCountKey(ctx context.Context, key string) (*TaskRunCountInfo, error) {
+	// 键格式: count_{taskID}_{taskRunID}
+	parts := strings.Split(key, "_")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid key format: %s", key)
+	}
+
+	taskID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid taskID in key %s: %v", key, err)
+	}
+
+	taskRunID, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid taskRunID in key %s: %v", key, err)
+	}
+
+	return &TaskRunCountInfo{
+		TaskID:    taskID,
+		TaskRunID: taskRunID,
+		KeyType:   "taskrun",
+	}, nil
+}
+
+// syncSingleTaskRunCount 同步单个TaskRunCount到数据库
+func (h *TraceHubServiceImpl) syncSingleTaskRunCount(ctx context.Context, info *TaskRunCountInfo) error {
+	// 获取TaskRun记录
+	taskRun, err := h.taskRunRepo.GetTaskRun(ctx, info.TaskRunID, nil, nil)
+	if err != nil {
+		return fmt.Errorf("获取TaskRun记录失败: taskRunID=%d, err=%v", info.TaskRunID, err)
+	}
+
+	if taskRun == nil {
+		return fmt.Errorf("TaskRun记录不存在: taskRunID=%d", info.TaskRunID)
+	}
+
+	// 处理RunDetail
+	var runDetail *task.RunDetail
+	if taskRun.RunDetail != nil && *taskRun.RunDetail != "" {
+		runDetail = &task.RunDetail{}
+		if err := json.Unmarshal([]byte(*taskRun.RunDetail), runDetail); err != nil {
+			logs.CtxWarn(ctx, "反序列化RunDetail失败，创建新的: taskRunID=%d, err=%v", info.TaskRunID, err)
+			runDetail = &task.RunDetail{}
+		}
+	} else {
+		runDetail = &task.RunDetail{}
+	}
+
+	// 更新TotalCount
+	runDetail.TotalCount = &info.Count
+
+	// 序列化RunDetail
+	runDetailJSON, err := json.Marshal(runDetail)
+	if err != nil {
+		return fmt.Errorf("序列化RunDetail失败: taskRunID=%d, err=%v", info.TaskRunID, err)
+	}
+
+	// 更新数据库
+	updateMap := map[string]interface{}{
+		"run_detail": string(runDetailJSON),
+		"updated_at": time.Now(),
+	}
+
+	err = h.taskRunRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, taskRun.WorkspaceID, updateMap)
+	if err != nil {
+		return fmt.Errorf("更新TaskRun记录失败: taskRunID=%d, err=%v", info.TaskRunID, err)
+	}
+
+	logs.CtxInfo(ctx, "成功更新TaskRun的run_detail: taskRunID=%d, totalCount=%d", info.TaskRunID, info.Count)
+	return nil
 }
