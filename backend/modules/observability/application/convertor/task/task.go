@@ -25,13 +25,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func TaskDTO2PO(ctx context.Context, v *task.Task, userMap map[string]*entity_common.UserInfo) *entity.ObservabilityTask {
-	if v == nil {
-		return nil
-	}
-	taskInfo := &entity.ObservabilityTask{}
-	return taskInfo
-}
 func TaskPOs2DOs(ctx context.Context, taskPOs []*entity.ObservabilityTask, userInfos map[string]*entity_common.UserInfo) []*task.Task {
 	var taskList []*task.Task
 	if len(taskPOs) == 0 {
