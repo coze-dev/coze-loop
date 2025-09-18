@@ -41,12 +41,12 @@ func TestExptInsightAnalysisRecordDO2DTO(t *testing.T) {
 				},
 			},
 			expected: &domain_expt.ExptInsightAnalysisRecord{
-				RecordID:                    123,
-				WorkspaceID:                 456,
-				ExptID:                      789,
-				AnalysisStatus:              domain_expt.InsightAnalysisStatusSuccess,
-				AnalysisReportID:            ptr.Of(int64(999)),
-				AnalysisReportContent:       ptr.Of("Analysis report content"),
+				RecordID:              123,
+				WorkspaceID:           456,
+				ExptID:                789,
+				AnalysisStatus:        domain_expt.InsightAnalysisStatusSuccess,
+				AnalysisReportID:      ptr.Of(int64(999)),
+				AnalysisReportContent: ptr.Of("Analysis report content"),
 				ExptInsightAnalysisFeedback: &domain_expt.ExptInsightAnalysisFeedback{
 					UpvoteCnt:           ptr.Of(int32(10)),
 					DownvoteCnt:         ptr.Of(int32(2)),
@@ -81,12 +81,12 @@ func TestExptInsightAnalysisRecordDO2DTO(t *testing.T) {
 				},
 			},
 			expected: &domain_expt.ExptInsightAnalysisRecord{
-				RecordID:                    1,
-				WorkspaceID:                 2,
-				ExptID:                      3,
-				AnalysisStatus:              domain_expt.InsightAnalysisStatusRunning,
-				AnalysisReportID:            nil,
-				AnalysisReportContent:       ptr.Of(""),
+				RecordID:              1,
+				WorkspaceID:           2,
+				ExptID:                3,
+				AnalysisStatus:        domain_expt.InsightAnalysisStatusRunning,
+				AnalysisReportID:      nil,
+				AnalysisReportContent: ptr.Of(""),
 				ExptInsightAnalysisFeedback: &domain_expt.ExptInsightAnalysisFeedback{
 					UpvoteCnt:           ptr.Of(int32(0)),
 					DownvoteCnt:         ptr.Of(int32(0)),
@@ -121,12 +121,12 @@ func TestExptInsightAnalysisRecordDO2DTO(t *testing.T) {
 				},
 			},
 			expected: &domain_expt.ExptInsightAnalysisRecord{
-				RecordID:                    100,
-				WorkspaceID:                 200,
-				ExptID:                      300,
-				AnalysisStatus:              domain_expt.InsightAnalysisStatusFailed,
-				AnalysisReportID:            nil,
-				AnalysisReportContent:       ptr.Of("Error occurred"),
+				RecordID:              100,
+				WorkspaceID:           200,
+				ExptID:                300,
+				AnalysisStatus:        domain_expt.InsightAnalysisStatusFailed,
+				AnalysisReportID:      nil,
+				AnalysisReportContent: ptr.Of("Error occurred"),
 				ExptInsightAnalysisFeedback: &domain_expt.ExptInsightAnalysisFeedback{
 					UpvoteCnt:           ptr.Of(int32(5)),
 					DownvoteCnt:         ptr.Of(int32(15)),
@@ -462,44 +462,4 @@ func TestExptInsightAnalysisFeedbackCommentDO2DTO_EdgeCases(t *testing.T) {
 		assert.Equal(t, int64(0), result.RecordID)
 		assert.Equal(t, "", result.Content)
 	})
-}
-
-// Benchmark tests
-func BenchmarkExptInsightAnalysisRecordDO2DTO(b *testing.B) {
-	do := &entity.ExptInsightAnalysisRecord{
-		ID:                    123,
-		SpaceID:               456,
-		ExptID:                789,
-		Status:                entity.InsightAnalysisStatus_Success,
-		AnalysisReportContent: "Benchmark test content",
-		CreatedBy:             "benchuser",
-		CreatedAt:             time.Now(),
-		UpdatedAt:             time.Now(),
-		ExptInsightAnalysisFeedback: entity.ExptInsightAnalysisFeedback{
-			UpvoteCount:         10,
-			DownvoteCount:       2,
-			CurrentUserVoteType: entity.Upvote,
-		},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		ExptInsightAnalysisRecordDO2DTO(do)
-	}
-}
-
-func BenchmarkInsightAnalysisStatus2DTO(b *testing.B) {
-	status := entity.InsightAnalysisStatus_Success
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		InsightAnalysisStatus2DTO(status)
-	}
-}
-
-func BenchmarkFeedbackActionType2DO(b *testing.B) {
-	action := domain_expt.FeedbackActionTypeUpvote
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		FeedbackActionType2DO(action)
-	}
 }

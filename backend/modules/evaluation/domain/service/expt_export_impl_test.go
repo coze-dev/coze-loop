@@ -715,21 +715,21 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 					Return(expt, nil)
 
 				// Mock DoExportCSV失败
-			svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
-				MGetExperimentResult(gomock.Any(), gomock.Any()).
-				Return(nil, nil, nil, nil, nil, int64(0), fmt.Errorf("export failed")).
-				Times(1)
+				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
+					MGetExperimentResult(gomock.Any(), gomock.Any()).
+					Return(nil, nil, nil, nil, nil, int64(0), fmt.Errorf("export failed")).
+					Times(1)
 
-			// Mock GetErrCtrl
-			svc.configer.(*componentMocks.MockIConfiger).EXPECT().
-				GetErrCtrl(gomock.Any()).
-				Return(nil)
+				// Mock GetErrCtrl
+				svc.configer.(*componentMocks.MockIConfiger).EXPECT().
+					GetErrCtrl(gomock.Any()).
+					Return(nil)
 
-			// Mock UpdateExportRecord失败状态
-			svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
-				Update(gomock.Any(), gomock.Any()).
-				Return(nil).
-				Times(1)
+				// Mock UpdateExportRecord失败状态
+				svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
+					Update(gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(1)
 			},
 			wantErr: true,
 		},
@@ -753,19 +753,19 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 				itemResults := []*entity.ItemResult{{ItemID: 1}}
 
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
-				MGetExperimentResult(gomock.Any(), gomock.Any()).
-				Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(1), nil).
-				Times(1)
+					MGetExperimentResult(gomock.Any(), gomock.Any()).
+					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(1), nil).
+					Times(1)
 
-			svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().
-				Upload(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(nil)
+				svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().
+					Upload(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 
-			// Mock UpdateExportRecord失败
-			svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
-				Update(gomock.Any(), gomock.Any()).
-				Return(fmt.Errorf("update failed")).
-				Times(1)
+				// Mock UpdateExportRecord失败
+				svc.repo.(*repoMocks.MockIExptResultExportRecordRepo).EXPECT().
+					Update(gomock.Any(), gomock.Any()).
+					Return(fmt.Errorf("update failed")).
+					Times(1)
 			},
 			wantErr: true,
 		},
