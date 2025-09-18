@@ -63,6 +63,7 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
 		p.taskRepo.IncrTaskCount(ctx, *trigger.Task.ID)
 		p.taskRepo.IncrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
+		p.taskRepo.IncrTaskRunSuccessCount(ctx, *trigger.Task.ID, taskRun.ID)
 		return nil
 	}
 	ctx = session.WithCtxUser(ctx, &session.User{ID: *trigger.Task.BaseInfo.CreatedBy.UserID})
