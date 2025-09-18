@@ -1571,6 +1571,34 @@ func (p *CustomRPCServer) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 20:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 21:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField21(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1773,6 +1801,34 @@ func (p *CustomRPCServer) FastReadField19(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CustomRPCServer) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *Region
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExecRegion = _field
+	return offset, nil
+}
+
+func (p *CustomRPCServer) FastReadField21(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExecEnv = _field
+	return offset, nil
+}
+
 func (p *CustomRPCServer) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1793,6 +1849,8 @@ func (p *CustomRPCServer) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 		offset += p.fastWriteField15(buf[offset:], w)
 		offset += p.fastWriteField17(buf[offset:], w)
 		offset += p.fastWriteField18(buf[offset:], w)
+		offset += p.fastWriteField20(buf[offset:], w)
+		offset += p.fastWriteField21(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1814,6 +1872,8 @@ func (p *CustomRPCServer) BLength() int {
 		l += p.field17Length()
 		l += p.field18Length()
 		l += p.field19Length()
+		l += p.field20Length()
+		l += p.field21Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1943,6 +2003,24 @@ func (p *CustomRPCServer) fastWriteField19(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *CustomRPCServer) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExecRegion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 20)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExecRegion)
+	}
+	return offset
+}
+
+func (p *CustomRPCServer) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExecEnv() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 21)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExecEnv)
+	}
+	return offset
+}
+
 func (p *CustomRPCServer) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -2064,6 +2142,24 @@ func (p *CustomRPCServer) field19Length() int {
 	return l
 }
 
+func (p *CustomRPCServer) field20Length() int {
+	l := 0
+	if p.IsSetExecRegion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ExecRegion)
+	}
+	return l
+}
+
+func (p *CustomRPCServer) field21Length() int {
+	l := 0
+	if p.IsSetExecEnv() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ExecEnv)
+	}
+	return l
+}
+
 func (p *CustomRPCServer) DeepCopy(s interface{}) error {
 	src, ok := s.(*CustomRPCServer)
 	if !ok {
@@ -2165,6 +2261,19 @@ func (p *CustomRPCServer) DeepCopy(s interface{}) error {
 	if src.IsAsync != nil {
 		tmp := *src.IsAsync
 		p.IsAsync = &tmp
+	}
+
+	if src.ExecRegion != nil {
+		tmp := *src.ExecRegion
+		p.ExecRegion = &tmp
+	}
+
+	if src.ExecEnv != nil {
+		var tmp string
+		if *src.ExecEnv != "" {
+			tmp = kutils.StringDeepCopy(*src.ExecEnv)
+		}
+		p.ExecEnv = &tmp
 	}
 
 	return nil

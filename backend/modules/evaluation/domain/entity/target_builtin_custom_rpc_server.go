@@ -32,7 +32,7 @@ type CustomRPCServer struct {
 	Ext map[string]string
 
 	ExecRegion Region  // 执行区域
-	Env        *string // 执行环境
+	ExecEnv    *string // 执行环境
 }
 
 type HTTPInfo struct {

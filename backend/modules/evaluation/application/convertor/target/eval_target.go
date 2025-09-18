@@ -206,6 +206,8 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				SearchHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.SearchHTTPInfo),
 				CustomEvalTarget:    CustomEvalTargetDO2DTO(targetVersionDO.CustomRPCServer.CustomEvalTarget),
 				IsAsync:             targetVersionDO.CustomRPCServer.IsAsync,
+				ExecRegion:          gptr.Of(targetVersionDO.CustomRPCServer.ExecRegion),
+				ExecEnv:             targetVersionDO.CustomRPCServer.ExecEnv,
 			}
 		}
 	default:

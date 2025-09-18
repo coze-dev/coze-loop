@@ -2159,6 +2159,10 @@ type CustomRPCServer struct {
 	CustomEvalTarget *CustomEvalTarget `thrift:"custom_eval_target,18,optional" frugal:"18,optional,CustomEvalTarget" form:"custom_eval_target" json:"custom_eval_target,omitempty" query:"custom_eval_target"`
 	// 是否异步
 	IsAsync *bool `thrift:"is_async,19,optional" frugal:"19,optional,bool" form:"is_async" json:"is_async,omitempty" query:"is_async"`
+	// 执行区域
+	ExecRegion *Region `thrift:"exec_region,20,optional" frugal:"20,optional,string" form:"exec_region" json:"exec_region,omitempty" query:"exec_region"`
+	// 执行环境
+	ExecEnv *string `thrift:"exec_env,21,optional" frugal:"21,optional,string" form:"exec_env" json:"exec_env,omitempty" query:"exec_env"`
 }
 
 func NewCustomRPCServer() *CustomRPCServer {
@@ -2323,6 +2327,30 @@ func (p *CustomRPCServer) GetIsAsync() (v bool) {
 	}
 	return *p.IsAsync
 }
+
+var CustomRPCServer_ExecRegion_DEFAULT Region
+
+func (p *CustomRPCServer) GetExecRegion() (v Region) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExecRegion() {
+		return CustomRPCServer_ExecRegion_DEFAULT
+	}
+	return *p.ExecRegion
+}
+
+var CustomRPCServer_ExecEnv_DEFAULT string
+
+func (p *CustomRPCServer) GetExecEnv() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExecEnv() {
+		return CustomRPCServer_ExecEnv_DEFAULT
+	}
+	return *p.ExecEnv
+}
 func (p *CustomRPCServer) SetID(val *int64) {
 	p.ID = val
 }
@@ -2362,6 +2390,12 @@ func (p *CustomRPCServer) SetCustomEvalTarget(val *CustomEvalTarget) {
 func (p *CustomRPCServer) SetIsAsync(val *bool) {
 	p.IsAsync = val
 }
+func (p *CustomRPCServer) SetExecRegion(val *Region) {
+	p.ExecRegion = val
+}
+func (p *CustomRPCServer) SetExecEnv(val *string) {
+	p.ExecEnv = val
+}
 
 var fieldIDToName_CustomRPCServer = map[int16]string{
 	1:  "id",
@@ -2377,6 +2411,8 @@ var fieldIDToName_CustomRPCServer = map[int16]string{
 	17: "search_http_info",
 	18: "custom_eval_target",
 	19: "is_async",
+	20: "exec_region",
+	21: "exec_env",
 }
 
 func (p *CustomRPCServer) IsSetID() bool {
@@ -2429,6 +2465,14 @@ func (p *CustomRPCServer) IsSetCustomEvalTarget() bool {
 
 func (p *CustomRPCServer) IsSetIsAsync() bool {
 	return p.IsAsync != nil
+}
+
+func (p *CustomRPCServer) IsSetExecRegion() bool {
+	return p.ExecRegion != nil
+}
+
+func (p *CustomRPCServer) IsSetExecEnv() bool {
+	return p.ExecEnv != nil
 }
 
 func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
@@ -2548,6 +2592,22 @@ func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
 		case 19:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField19(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2725,6 +2785,28 @@ func (p *CustomRPCServer) ReadField19(iprot thrift.TProtocol) error {
 	p.IsAsync = _field
 	return nil
 }
+func (p *CustomRPCServer) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *Region
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExecRegion = _field
+	return nil
+}
+func (p *CustomRPCServer) ReadField21(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExecEnv = _field
+	return nil
+}
 
 func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2782,6 +2864,14 @@ func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField19(oprot); err != nil {
 			fieldId = 19
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 	}
@@ -3044,6 +3134,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
 }
+func (p *CustomRPCServer) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExecRegion() {
+		if err = oprot.WriteFieldBegin("exec_region", thrift.STRING, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExecRegion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *CustomRPCServer) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExecEnv() {
+		if err = oprot.WriteFieldBegin("exec_env", thrift.STRING, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExecEnv); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
 
 func (p *CustomRPCServer) String() string {
 	if p == nil {
@@ -3096,6 +3222,12 @@ func (p *CustomRPCServer) DeepEqual(ano *CustomRPCServer) bool {
 		return false
 	}
 	if !p.Field19DeepEqual(ano.IsAsync) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.ExecRegion) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.ExecEnv) {
 		return false
 	}
 	return true
@@ -3234,6 +3366,30 @@ func (p *CustomRPCServer) Field19DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsAsync != *src {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCServer) Field20DeepEqual(src *Region) bool {
+
+	if p.ExecRegion == src {
+		return true
+	} else if p.ExecRegion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExecRegion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCServer) Field21DeepEqual(src *string) bool {
+
+	if p.ExecEnv == src {
+		return true
+	} else if p.ExecEnv == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExecEnv, *src) != 0 {
 		return false
 	}
 	return true
