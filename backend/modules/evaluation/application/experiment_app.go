@@ -1125,17 +1125,11 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
 		}
 	}
-	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
-	if err != nil {
-		return nil, err
-	}
 
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
-		OwnerID:         gptr.Of(got.CreatedBy),
-		ResourceSpaceID: req.GetWorkspaceID(),
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err

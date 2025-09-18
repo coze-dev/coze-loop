@@ -302,6 +302,9 @@ func (e ExptInsightAnalysisServiceImpl) FeedbackExptInsightAnalysis(ctx context.
 		}
 		return e.repo.CreateFeedbackComment(ctx, feedbackComment)
 	case entity.FeedbackActionType_Update_Comment:
+		if param.CommentID == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("empty comment_id"))
+		}
 		feedbackComment := &entity.ExptInsightAnalysisFeedbackComment{
 			ID:               ptr.From(param.CommentID),
 			SpaceID:          param.SpaceID,
@@ -312,6 +315,9 @@ func (e ExptInsightAnalysisServiceImpl) FeedbackExptInsightAnalysis(ctx context.
 		}
 		return e.repo.UpdateFeedbackComment(ctx, feedbackComment)
 	case entity.FeedbackActionType_Delete_Comment:
+		if param.CommentID == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("empty comment_id"))
+		}
 		return e.repo.DeleteFeedbackComment(ctx, param.SpaceID, param.ExptID, ptr.From(param.CommentID))
 	default:
 		return nil

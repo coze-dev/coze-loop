@@ -3634,7 +3634,7 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 }
 
 func TestListExptInsightAnalysisRecord(t *testing.T) {
-	ctx, app, mockManager, _, mockInsightService, mockAuth := setupTestApp(t)
+	ctx, app, _, _, mockInsightService, mockAuth := setupTestApp(t)
 
 	req := &exptpb.ListExptInsightAnalysisRecordRequest{
 		WorkspaceID: 123,
@@ -3647,27 +3647,16 @@ func TestListExptInsightAnalysisRecord(t *testing.T) {
 	}
 
 	t.Run("成功获取洞察分析记录列表", func(t *testing.T) {
-		// Mock the manager.Get call
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
 		// Mock the auth.AuthorizationWithoutSPI call
-		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().ListAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptInsightAnalysisRecord{}, int64(0), nil)
 
 		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
 		assert.NoError(t, err)
 	})
 
-	t.Run("获取实验失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get experiment error"))
-
-		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "get experiment error")
-	})
-
 	t.Run("权限验证失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
-		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
 
 		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
 		assert.Error(t, err)
@@ -3675,8 +3664,7 @@ func TestListExptInsightAnalysisRecord(t *testing.T) {
 	})
 
 	t.Run("获取分析记录列表失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
-		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().ListAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("list analysis record error"))
 
 		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
