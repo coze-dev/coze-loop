@@ -244,7 +244,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		//获取对应的taskcount和subtaskcount
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
-
+		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
 		if taskRunConfig == nil {
 			logs.CtxWarn(ctx, "task run config not found, task_id=%d", sub.taskID)
 			if err := sub.Creative(ctx); err != nil {
