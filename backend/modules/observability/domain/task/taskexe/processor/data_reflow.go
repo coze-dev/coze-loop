@@ -315,14 +315,13 @@ func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, curr
 	p.taskRepo.CreateTaskRun(ctx, taskRun)
 	return taskRun, nil
 }
-func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
-	taskRunDo := tconv.TaskRunDO2PO(ctx, taskRun, nil)
+func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error {
 	// 设置taskRun状态为已完成
-	taskRunDo.RunStatus = task.RunStatusDone
+	taskRun.RunStatus = task.RunStatusDone
 	// 更新taskRun
-	err := p.taskRepo.UpdateTaskRun(ctx, taskRunDo)
+	err := p.taskRepo.UpdateTaskRun(ctx, taskRun)
 	if err != nil {
-		logs.CtxError(ctx, "[auto_task] OnFinishTaskRunProcessor, UpdateTaskRun err, taskRunID:%d, err:%v", taskRun.GetID(), err)
+		logs.CtxError(ctx, "[auto_task] OnFinishTaskRunProcessor, UpdateTaskRun err, taskRunID:%d, err:%v", taskRun.ID, err)
 		return err
 	}
 	return nil

@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -41,8 +42,8 @@ type Processor interface {
 	OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error //OnUpdateChangeProcessor
 	OnFinishChangeProcessor(ctx context.Context, task *task.Task) error //OnFinishChangeProcessor
 
-	OnCreateTaskRunProcessor(ctx context.Context, task *task.TaskRun) error //OnCreateTaskRunProcessor
-	OnFinishTaskRunProcessor(ctx context.Context, task *task.TaskRun) error //OnFinishTaskRunProcessor
+	OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
+	OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                  //OnFinishTaskRunProcessor
 }
 
 type ProcessorUnion interface {

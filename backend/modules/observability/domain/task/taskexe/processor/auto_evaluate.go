@@ -852,9 +852,9 @@ func (p *AutoEvaluteProcessor) OnFinishChangeProcessor(ctx context.Context, task
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnCreateTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
-	return nil
+func (p *AutoEvaluteProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig) (*task_entity.TaskRun, error) {
+	return nil, nil
 }
-func (p *AutoEvaluteProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task.TaskRun) error {
+func (p *AutoEvaluteProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error {
 	return nil
 }
