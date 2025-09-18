@@ -152,82 +152,21 @@ func ShouldTriggerBackfill(taskDO *task.Task) bool {
 		backfillTime.GetStartAt() < backfillTime.GetEndAt()
 }
 
-func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
-	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
-	session := getSession(ctx, currentTask)
-	category := getCategory(currentTask.TaskType)
-	dataReflowConfigs := currentTask.GetTaskConfig().GetDataReflowConfig()
-	var err error
-	// 1、创建数据集
-	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
-	var datasetID int64
-	for _, dataReflowConfig := range dataReflowConfigs {
-		if dataReflowConfig.DatasetID != nil {
-			datasetID = *dataReflowConfig.DatasetID
-			logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", dataReflowConfig.DatasetID)
-			continue
-		}
-		schema := convertDatasetSchemaDTO2DO(dataReflowConfig.GetDatasetSchema())
-		datasetID, err = p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
-			0,
-			currentTask.GetWorkspaceID(),
-			dataReflowConfig.GetDatasetName(),
-			category,
-			schema,
-			session,
-		))
-		if err != nil {
-			return err
-		}
-		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
-	}
-
-	// 4、更新任务配置
-	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
+func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task) error {
+	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
+	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
 	if err != nil {
+		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err
 	}
-	if ShouldTriggerBackfill(currentTask) {
-		taskConfig.TaskStatus = task.TaskStatusRunning
+	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
+		err = p.OnCreateChangeProcessor(ctx, currentTask, true)
 	}
-	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
-	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
-	// 5、创建 taskrun
-	taskRunConfig := &task.TaskRunConfig{
-		DataReflowRunConfig: &task.DataReflowRunConfig{
-			DatasetID:    datasetID,
-			EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
-			CycleStartAt: cycleStartAt,
-			CycleEndAt:   cycleEndAt,
-			Status:       task.RunStatusRunning,
-		},
-	}
-	taskConfig.TaskRuns = append(taskConfig.TaskRuns, &task_entity.TaskRun{
-		ID:          datasetID,
-		TaskID:      currentTask.GetID(),
-		WorkspaceID: currentTask.GetWorkspaceID(),
-		TaskType:    currentTask.GetTaskType(),
-		RunStatus:   task.RunStatusRunning,
-		RunStartAt:  time.UnixMilli(cycleStartAt),
-		RunEndAt:    time.UnixMilli(cycleEndAt),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
-	})
-	for _, run := range taskConfig.TaskRuns {
-		logs.CtxInfo(ctx, "taskConfig:%+v", &run)
-	}
-
-	// 6、更新任务配置
-	// todo:[xun]改task_run?
-	err = p.taskRepo.UpdateTask(ctx, taskConfig)
-	if err != nil {
-		return err
-	}
+	err = p.OnCreateChangeProcessor(ctx, currentTask, false)
 	return nil
 }
 
-func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
+func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task, isBackFill bool) error {
 	// 1、创建/更新数据集
 	session := getSession(ctx, currentTask)
 	category := getCategory(currentTask.TaskType)
@@ -261,9 +200,8 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 	if err != nil {
 		return err
 	}
-	if ShouldTriggerBackfill(currentTask) {
-		taskConfig.TaskStatus = task.TaskStatusRunning
-	}
+	taskConfig.TaskStatus = task.TaskStatusRunning
+
 	// 3、创建 taskrun：历史回溯生成一个taskRun,新数据生成一个taskRun
 	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
 	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
@@ -277,24 +215,17 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			Status:       task.RunStatusRunning,
 		},
 	}
-
-	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, task.TaskRunTypeNewData)
+	var runType task.TaskRunType
+	if isBackFill {
+		runType = task.TaskRunTypeBackFill
+	} else {
+		runType = task.TaskRunTypeNewData
+	}
+	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
 	if err != nil {
 		return err
 	}
 	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-	backfillTaskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
-	if err != nil {
-		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
-		return err
-	}
-	if ShouldTriggerBackfill(currentTask) && backfillTaskRuns == nil {
-		taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, task.TaskRunTypeBackFill)
-		if err != nil {
-			return err
-		}
-		taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-	}
 
 	err = p.taskRepo.UpdateTask(ctx, taskConfig)
 	if err != nil {

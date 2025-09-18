@@ -129,7 +129,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		}
 		// 如果任务状态为unstarted，到任务开始时间就开始create
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
-			err = proc.OnChangeProcessor(ctx, taskInfo, task.TaskStatusUnstarted)
+			err = proc.OnChangeProcessor(ctx, taskInfo)
 			if err != nil {
 				logs.CtxError(ctx, "OnChangeProcessor err:%v", err)
 				continue

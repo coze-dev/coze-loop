@@ -160,8 +160,8 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
-	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
+func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task, isBackFill bool) error {
+	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d,  task:%+v", currentTask.GetID(), currentTask)
 	//todo:[xun]加锁
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
 	sessionInfo := getSession(ctx, currentTask)
@@ -284,8 +284,10 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	if err != nil {
 		return err
 	}
-	if ShouldTriggerBackfill(currentTask) {
+	runType := task.TaskRunTypeNewData
+	if isBackFill {
 		taskConfig.TaskStatus = task.TaskStatusRunning
+		runType = task.TaskRunTypeBackFill
 	}
 
 	var cycleStartAt, cycleEndAt, endAt int64
@@ -334,21 +336,13 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 			Status:       task.TaskStatusRunning,
 		},
 	}
-	taskRun := &task_entity.TaskRun{
-		TaskID:      currentTask.GetID(),
-		WorkspaceID: currentTask.GetWorkspaceID(),
-		TaskType:    currentTask.GetTaskType(),
-		RunStatus:   task.RunStatusRunning,
-		RunStartAt:  time.UnixMilli(cycleStartAt),
-		RunEndAt:    time.UnixMilli(cycleEndAt),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
-	}
 
 	// 6、更新任务配置
-	// todo:[xun]改task_run?
-	_, err = p.taskRunRepo.CreateTaskRun(ctx, taskRun)
+	taskRun, err := p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
+	if err != nil {
+		return err
+	}
+	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
 	err = p.taskRepo.UpdateTask(ctx, taskConfig)
 	if err != nil {
 		return err
@@ -648,7 +642,7 @@ func GetContentInfo(ctx context.Context, contentType common.ContentType, value s
 	return content, nil
 }
 
-func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
+func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnCreateChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
 	//todo:[xun]加锁
 	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
@@ -656,193 +650,21 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err
 	}
+	var isBackFill bool
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
-		ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
-		sessionInfo := getSession(ctx, currentTask)
-		var evaluationSetColumns []string
-		var evaluatorVersionIds []int64
-		var evaluatorFieldMappings []*expt.EvaluatorFieldMapping
-		evaluationSetColumns = append(evaluationSetColumns, "span_id", "trace_id")
-		autoEvaluateConfigs := currentTask.GetTaskConfig().GetAutoEvaluateConfigs()
-		evaluationSetSchema, fromEvalSet := getBasicEvaluationSetSchema(evaluationSetColumns)
-		for _, autoEvaluateConfig := range autoEvaluateConfigs {
-			evaluatorVersionIds = append(evaluatorVersionIds, autoEvaluateConfig.EvaluatorVersionID)
-			filedMappings := autoEvaluateConfig.GetFieldMappings()
-			for _, fieldMapping := range filedMappings {
-				if fieldMapping.GetFieldSchema() == nil {
-					continue
-				}
-				fromEvalSet = append(fromEvalSet, &expt.FieldMapping{
-					FieldName:     gptr.Of(fieldMapping.GetFieldSchema().GetName()),
-					FromFieldName: gptr.Of(fieldMapping.GetEvalSetName()),
-				})
-				if slices.Contains(evaluationSetColumns, fieldMapping.GetEvalSetName()) {
-					continue
-				}
-				// todo[xun]:原来有历史数据兼容，plain_text 转为 text，需要刷数据，
-				evaluationSetSchema.FieldSchemas = append(evaluationSetSchema.FieldSchemas, &dataset0.FieldSchema{
-					Key:         gptr.Of(fieldMapping.GetEvalSetName()),
-					Name:        gptr.Of(fieldMapping.GetEvalSetName()),
-					Description: gptr.Of(fieldMapping.TraceFieldJsonpath),
-					ContentType: gptr.Of(fieldMapping.GetFieldSchema().GetContentType()),
-					//DefaultDisplayFormat: gptr.Of(dataset.FieldDisplayFormat_PlainText),
-					TextSchema: fieldMapping.GetFieldSchema().TextSchema,
-					//Hidden:               gptr.Of(false),
-				})
-				evaluationSetColumns = append(evaluationSetColumns, fieldMapping.GetEvalSetName())
-			}
-
-			evaluatorFieldMappings = append(evaluatorFieldMappings, &expt.EvaluatorFieldMapping{
-				EvaluatorVersionID: autoEvaluateConfig.GetEvaluatorVersionID(),
-				FromEvalSet:        fromEvalSet,
-			})
-		}
-		category := getCategory(currentTask.TaskType)
-		schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
-		// 1、创建评测集
-		logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
-		datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
-			0,
-			currentTask.GetWorkspaceID(),
-			fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day()),
-			category,
-			schema,
-			sessionInfo,
-		))
-		if err != nil {
-			logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.GetWorkspaceID(), err)
-			return err
-			//datasetID = 7548288691995672577
-		}
-		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
-		// 2、创建实验
-		maxAliveTime := currentTask.GetRule().GetEffectiveTime().GetEndAt() - currentTask.GetRule().GetEffectiveTime().GetStartAt()
-		if currentTask.GetRule().GetSampler().GetIsCycle() {
-			switch *currentTask.GetRule().GetSampler().CycleTimeUnit {
-			case task.TimeUnitDay:
-				maxAliveTime = (*currentTask.GetRule().GetSampler().CycleInterval) * 24 * time.Hour.Milliseconds()
-			case task.TimeUnitWeek:
-				maxAliveTime = (*currentTask.GetRule().GetSampler().CycleInterval) * 7 * 24 * time.Hour.Milliseconds()
-			default:
-				maxAliveTime = (*currentTask.GetRule().GetSampler().CycleInterval) * 10 * time.Minute.Milliseconds()
-			}
-		}
-		submitExperimentReq := rpc.SubmitExperimentReq{
-			WorkspaceID:           currentTask.GetWorkspaceID(),
-			EvalSetVersionID:      gptr.Of(datasetID),
-			EvaluatorVersionIds:   evaluatorVersionIds,
-			Name:                  gptr.Of(fmt.Sprintf("自动化任务实验_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())),
-			Desc:                  gptr.Of("自动化任务实验"),
-			EvalSetID:             gptr.Of(datasetID),
-			EvaluatorFieldMapping: evaluatorFieldMappings,
-			TargetFieldMapping: &expt.TargetFieldMapping{
-				FromEvalSet: []*expt.FieldMapping{},
-			},
-			CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
-				SourceTargetID: gptr.Of(strconvh.FormatInt64(currentTask.GetID())),
-				EvalTargetType: gptr.Of(eval_target_d.EvalTargetType_Trace),
-			},
-			ExptType:     gptr.Of(expt.ExptType_Online),
-			MaxAliveTime: gptr.Of(maxAliveTime),
-			SourceType:   gptr.Of(expt.SourceType_AutoTask),
-			SourceID:     gptr.Of(strconvh.FormatInt64(currentTask.GetID())),
-			Session:      sessionInfo,
-		}
-		logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
-		exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
-		if err != nil {
-			logs.CtxError(ctx, "SubmitExperiment failed, workspace_id=%d, err=%#v", currentTask.GetWorkspaceID(), err)
-			return err
-		}
-		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
-
-		evaluationSetConfig, err := p.datasetServiceAdaptor.GetDatasetProvider(category).GetDataset(ctx, currentTask.GetWorkspaceID(), datasetID, category)
-		if err != nil {
-			logs.CtxError(ctx, "[task-debug] GetEvaluationSet err:%v", err)
-			return err
-		}
-		// 3、更新任务状态
-		//if currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
-		//	updateMap := map[string]interface{}{
-		//		"task_status": task.TaskStatusRunning,
-		//	}
-		//	logs.CtxInfo(ctx, "currentTask.GetID():%d, currentTask.GetWorkspaceID():%d", currentTask.GetID(), currentTask.GetWorkspaceID())
-		//	err = p.taskRepo.UpdateTaskWithOCC(ctx, currentTask.GetID(), currentTask.GetWorkspaceID(), updateMap)
-		//	if err != nil {
-		//		return err
-		//	}
-		//}
-		// 4、更新任务配置
-		effectiveTime := currentTask.GetRule().GetEffectiveTime()
-		taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
-		if err != nil {
-			return err
-		}
-		runType := task.TaskRunTypeNewData
-		if ShouldTriggerBackfill(currentTask) {
-			taskConfig.TaskStatus = task.TaskStatusRunning
-			runType = task.TaskRunTypeBackFill
-		}
-
-		var cycleStartAt, cycleEndAt, endAt int64
-		currentTime := time.Now().UnixMilli()
-
-		if effectiveTime.StartAt != nil && effectiveTime.EndAt != nil {
-			endAt = effectiveTime.GetEndAt()
-			if len(taskConfig.TaskRuns) == 0 {
-				// 首次创建 taskrun，从任务生效时间开始
-				cycleStartAt = resetStartTime(currentTime, effectiveTime.GetStartAt(), maxAliveTime)
-			} else {
-				// 找到最新的 cycleEndAt 作为新的 cycleStartAt
-				for _, run := range taskConfig.TaskRuns {
-					if run.RunStartAt.UnixMilli() > cycleStartAt {
-						cycleStartAt = run.RunEndAt.UnixMilli()
-					}
-				}
-				cycleStartAt = resetStartTime(currentTime, cycleStartAt, maxAliveTime)
-			}
-			cycleEndAt = cycleStartAt + maxAliveTime
-
-			// 确保周期开始时间不早于任务生效时间
-			if cycleStartAt < effectiveTime.GetStartAt() {
-				cycleStartAt = effectiveTime.GetStartAt()
-				cycleEndAt = cycleStartAt + maxAliveTime
-			}
-
-			// 确保周期结束时间不晚于任务结束时间
-			if cycleEndAt > effectiveTime.GetEndAt() {
-				cycleEndAt = effectiveTime.GetEndAt()
-			}
-		}
-
-		logs.CtxInfo(ctx, "Creating taskrun with cycle: startAt=%d, endAt=%d, currentTime=%d", cycleStartAt, cycleEndAt, currentTime)
-		// 5、创建 taskrun
-		taskRunConfig := &task.TaskRunConfig{
-			AutoEvaluateRunConfig: &task.AutoEvaluateRunConfig{
-				ExptID:       exptID,
-				ExptRunID:    exptRunID,
-				EvalID:       datasetID,
-				SchemaID:     evaluationSetConfig.DatasetVersion.DatasetSchema.ID,
-				Schema:       ptr.Of(ToJSONString(ctx, evaluationSetConfig.DatasetVersion.DatasetSchema.FieldSchemas)),
-				EndAt:        endAt,
-				CycleStartAt: cycleStartAt,
-				CycleEndAt:   cycleEndAt,
-				Status:       task.TaskStatusRunning,
-			},
-		}
-
-		// 6、更新任务配置
-		// todo:[xun]改task_run?
-		taskRun, err := p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
-		if err != nil {
-			return err
-		}
-		taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-		err = p.taskRepo.UpdateTask(ctx, taskConfig)
-		if err != nil {
-			return err
-		}
+		isBackFill = true
 	}
+	err = p.OnCreateChangeProcessor(ctx, currentTask, isBackFill)
+	if err != nil {
+		logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
+	err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+	if err != nil {
+		logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
+
 	return nil
 }
 func (p *AutoEvaluteProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {

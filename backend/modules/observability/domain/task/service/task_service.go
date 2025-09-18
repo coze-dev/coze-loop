@@ -138,7 +138,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	// 自动评测历史回溯——创建空壳子
 
 	taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
-	if err = proc.OnCreateChangeProcessor(ctx, taskConfig); err != nil {
+	if err = proc.OnChangeProcessor(ctx, taskConfig); err != nil {
 		logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 		//任务改为禁用？
 		if err1 := t.TaskRepo.DeleteTask(ctx, taskPO); err1 != nil {

@@ -61,7 +61,7 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	return true, nil
 }
 func (s *spanSubscriber) Creative(ctx context.Context) error {
-	err := s.processor.OnCreateChangeProcessor(ctx, s.t)
+	err := s.processor.OnChangeProcessor(ctx, s.t)
 	if err != nil {
 		return err
 	}
