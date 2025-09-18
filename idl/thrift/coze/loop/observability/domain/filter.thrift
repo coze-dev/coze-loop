@@ -12,7 +12,7 @@ const QueryType QueryType_Exist = "exist"
 const QueryType QueryType_NotExist = "not_exist"
 const QueryType QueryType_In = "in"
 const QueryType QueryType_not_In = "not_in"
-const QueryType QueryType_NotMatch = "match"
+const QueryType QueryType_NotMatch = "not_match"
 
 typedef string QueryRelation (ts.enum="true")
 const QueryRelation QueryRelation_And = "and"
