@@ -19,6 +19,7 @@ type IEvalTargetRepo interface {
 
 	// target record start
 	CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) (int64, error)
+	SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
 	ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
 	// target record end

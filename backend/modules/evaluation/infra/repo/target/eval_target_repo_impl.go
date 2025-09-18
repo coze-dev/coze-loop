@@ -257,3 +257,11 @@ func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Con
 
 	return res, nil
 }
+
+func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	po, err := convertor.EvalTargetRecordDO2PO(record)
+	if err != nil {
+		return err
+	}
+	return e.evalTargetRecordDao.Save(ctx, po)
+}

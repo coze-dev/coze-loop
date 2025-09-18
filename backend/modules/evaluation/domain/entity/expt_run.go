@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -398,6 +401,26 @@ func (e *ExptTurnRunResult) GetEvaluatorRecord(evaluatorVersionID int64) *Evalua
 	return e.EvaluatorResults[evaluatorVersionID]
 }
 
+func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
+	// invalid target result
+	if e.TargetResult == nil {
+		e.SetEvalErr(errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result is nil")))
+		return true
+	}
+
+	// target exec error
+	if e.TargetResult.EvalTargetOutputData != nil && e.TargetResult.EvalTargetOutputData.EvalTargetRunError != nil {
+		return true
+	}
+
+	// target async exec, with no record
+	if expt.AsyncCallTarget() && gptr.Indirect(e.TargetResult.Status) == EvalTargetRunStatusAsyncInvoking {
+		return true
+	}
+
+	return false
+}
+
 //go:generate  mockgen -destination  ./mocks/expt_scheduler_mock.go  --package mocks . ExptSchedulerMode
 type ExptSchedulerMode interface {
 	Mode() ExptRunMode
@@ -413,4 +436,10 @@ type ExptSchedulerMode interface {
 type CKDBConfig struct {
 	ExptTurnResultFilterDBName string `json:"expt_turn_result_filter_db_name" mapstructure:"expt_turn_result_filter_db_name"`
 	DatasetItemsSnapshotDBName string `json:"dataset_items_snapshot_db_name" mapstructure:"dataset_items_snapshot_db_name"`
+}
+
+type ExptItemTurnEvalAsyncCtx struct {
+	Event       *ExptItemEvalEvent
+	TurnID      int64
+	AsyncUnixMS int64 // async call time with unix ms ts
 }

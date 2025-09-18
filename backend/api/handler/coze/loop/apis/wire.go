@@ -79,6 +79,7 @@ var (
 		evaluationapp.InitEvaluatorApplication,
 		evaluationapp.InitEvaluationSetApplication,
 		evaluationapp.InitEvalTargetApplication,
+		evaluationapp.InitEvalOpenAPIApplication,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler,

@@ -62,6 +62,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"SearchCustomEvalTarget": kitex.NewMethodInfo(
+		searchCustomEvalTargetHandler,
+		newEvalTargetServiceSearchCustomEvalTargetArgs,
+		newEvalTargetServiceSearchCustomEvalTargetResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ExecuteEvalTarget": kitex.NewMethodInfo(
 		executeEvalTargetHandler,
 		newEvalTargetServiceExecuteEvalTargetArgs,
@@ -80,6 +87,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		batchGetEvalTargetRecordsHandler,
 		newEvalTargetServiceBatchGetEvalTargetRecordsArgs,
 		newEvalTargetServiceBatchGetEvalTargetRecordsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DebugEvalTarget": kitex.NewMethodInfo(
+		debugEvalTargetHandler,
+		newEvalTargetServiceDebugEvalTargetArgs,
+		newEvalTargetServiceDebugEvalTargetResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"AsyncDebugEvalTarget": kitex.NewMethodInfo(
+		asyncDebugEvalTargetHandler,
+		newEvalTargetServiceAsyncDebugEvalTargetArgs,
+		newEvalTargetServiceAsyncDebugEvalTargetResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -249,6 +270,25 @@ func newEvalTargetServiceBatchGetSourceEvalTargetsResult() interface{} {
 	return eval_target.NewEvalTargetServiceBatchGetSourceEvalTargetsResult()
 }
 
+func searchCustomEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceSearchCustomEvalTargetArgs)
+	realResult := result.(*eval_target.EvalTargetServiceSearchCustomEvalTargetResult)
+	success, err := handler.(eval_target.EvalTargetService).SearchCustomEvalTarget(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceSearchCustomEvalTargetArgs() interface{} {
+	return eval_target.NewEvalTargetServiceSearchCustomEvalTargetArgs()
+}
+
+func newEvalTargetServiceSearchCustomEvalTargetResult() interface{} {
+	return eval_target.NewEvalTargetServiceSearchCustomEvalTargetResult()
+}
+
 func executeEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_target.EvalTargetServiceExecuteEvalTargetArgs)
 	realResult := result.(*eval_target.EvalTargetServiceExecuteEvalTargetResult)
@@ -304,6 +344,44 @@ func newEvalTargetServiceBatchGetEvalTargetRecordsArgs() interface{} {
 
 func newEvalTargetServiceBatchGetEvalTargetRecordsResult() interface{} {
 	return eval_target.NewEvalTargetServiceBatchGetEvalTargetRecordsResult()
+}
+
+func debugEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceDebugEvalTargetArgs)
+	realResult := result.(*eval_target.EvalTargetServiceDebugEvalTargetResult)
+	success, err := handler.(eval_target.EvalTargetService).DebugEvalTarget(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceDebugEvalTargetArgs() interface{} {
+	return eval_target.NewEvalTargetServiceDebugEvalTargetArgs()
+}
+
+func newEvalTargetServiceDebugEvalTargetResult() interface{} {
+	return eval_target.NewEvalTargetServiceDebugEvalTargetResult()
+}
+
+func asyncDebugEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceAsyncDebugEvalTargetArgs)
+	realResult := result.(*eval_target.EvalTargetServiceAsyncDebugEvalTargetResult)
+	success, err := handler.(eval_target.EvalTargetService).AsyncDebugEvalTarget(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceAsyncDebugEvalTargetArgs() interface{} {
+	return eval_target.NewEvalTargetServiceAsyncDebugEvalTargetArgs()
+}
+
+func newEvalTargetServiceAsyncDebugEvalTargetResult() interface{} {
+	return eval_target.NewEvalTargetServiceAsyncDebugEvalTargetResult()
 }
 
 type kClient struct {
@@ -388,6 +466,16 @@ func (p *kClient) BatchGetSourceEvalTargets(ctx context.Context, request *eval_t
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) SearchCustomEvalTarget(ctx context.Context, req *eval_target.SearchCustomEvalTargetRequest) (r *eval_target.SearchCustomEvalTargetResponse, err error) {
+	var _args eval_target.EvalTargetServiceSearchCustomEvalTargetArgs
+	_args.Req = req
+	var _result eval_target.EvalTargetServiceSearchCustomEvalTargetResult
+	if err = p.c.Call(ctx, "SearchCustomEvalTarget", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) ExecuteEvalTarget(ctx context.Context, request *eval_target.ExecuteEvalTargetRequest) (r *eval_target.ExecuteEvalTargetResponse, err error) {
 	var _args eval_target.EvalTargetServiceExecuteEvalTargetArgs
 	_args.Request = request
@@ -413,6 +501,26 @@ func (p *kClient) BatchGetEvalTargetRecords(ctx context.Context, request *eval_t
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceBatchGetEvalTargetRecordsResult
 	if err = p.c.Call(ctx, "BatchGetEvalTargetRecords", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
+	var _args eval_target.EvalTargetServiceDebugEvalTargetArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceDebugEvalTargetResult
+	if err = p.c.Call(ctx, "DebugEvalTarget", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
+	var _args eval_target.EvalTargetServiceAsyncDebugEvalTargetArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceAsyncDebugEvalTargetResult
+	if err = p.c.Call(ctx, "AsyncDebugEvalTarget", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

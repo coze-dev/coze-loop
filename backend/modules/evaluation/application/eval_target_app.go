@@ -71,10 +71,21 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 	if err != nil {
 		return nil, err
 	}
+	opts := make([]entity.Option, 0)
+	opts = append(opts, entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
+		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())),
+		entity.WithRegion(request.Param.Region),
+		entity.WithEnv(request.Param.Env))
+	if request.GetParam().CustomEvalTarget != nil {
+		opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
+			ID:        request.GetParam().GetCustomEvalTarget().ID,
+			Name:      request.GetParam().GetCustomEvalTarget().Name,
+			AvatarURL: request.GetParam().GetCustomEvalTarget().AvatarURL,
+			Ext:       request.GetParam().GetCustomEvalTarget().Ext,
+		}))
+	}
 	id, versionID, err := e.evalTargetService.CreateEvalTarget(ctx, request.WorkspaceID, request.Param.GetSourceTargetID(), request.Param.GetSourceTargetVersion(),
-		entity.EvalTargetType(request.Param.GetEvalTargetType()),
-		entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
-		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())))
+		entity.EvalTargetType(request.Param.GetEvalTargetType()), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -395,4 +406,59 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 	return &eval_target.BatchGetSourceEvalTargetsResponse{
 		EvalTargets: dtos,
 	}, nil
+}
+
+func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, req *eval_target.SearchCustomEvalTargetRequest) (r *eval_target.SearchCustomEvalTargetResponse, err error) {
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.WorkspaceID == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID is nil"))
+	}
+	if req.ApplicationID == nil && req.CustomRPCServer == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("app info is nil"))
+	}
+	if req.Region == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("region is nil"))
+	}
+	if e.typedOperators[entity.EvalTargetTypeCustomRPCServer] == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(gptr.Indirect(req.WorkspaceID), 10),
+		SpaceID:       gptr.Indirect(req.WorkspaceID),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	res, nextCursor, hasMore, err := e.typedOperators[entity.EvalTargetTypeCustomRPCServer].SearchCustomEvalTarget(ctx, &entity.SearchCustomEvalTargetParam{
+		WorkspaceID:     req.WorkspaceID,
+		Keyword:         req.Keyword,
+		ApplicationID:   req.ApplicationID,
+		CustomRPCServer: target.CustomRPCServerDTO2DO(req.CustomRPCServer),
+		Region:          req.Region,
+		PageSize:        req.PageSize,
+		PageToken:       req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &eval_target.SearchCustomEvalTargetResponse{
+		CustomEvalTargets: target.CustomEvalTargetDO2DTOs(res),
+		NextPageToken:     &nextCursor,
+		HasMore:           &hasMore,
+	}, nil
+}
+
+func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
+	// TODO implement me
+	panic("implement me")
 }
