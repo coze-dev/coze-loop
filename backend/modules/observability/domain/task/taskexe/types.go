@@ -32,10 +32,10 @@ const (
 )
 
 type Processor interface {
-	ValidateConfig(ctx context.Context, config any) error                        // 校验配置项是否有效
-	Invoke(ctx context.Context, config any, trigger *Trigger) error              //根据不同类型进行执行，如rpc回调、mq投递等
-	OnChangeProcessor(ctx context.Context, task *task.Task, taskOp TaskOp) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
-	Finish(ctx context.Context, config any, trigger *Trigger) error              //Finish
+	ValidateConfig(ctx context.Context, config any) error                                 // 校验配置项是否有效
+	Invoke(ctx context.Context, config any, trigger *Trigger) error                       //根据不同类型进行执行，如rpc回调、mq投递等
+	OnChangeProcessor(ctx context.Context, task *task.Task, taskOp task.TaskStatus) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
+	Finish(ctx context.Context, config any, trigger *Trigger) error                       //Finish
 
 	OnCreateChangeProcessor(ctx context.Context, task *task.Task) error //OnCreateChangeProcessor
 	OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error //OnUpdateChangeProcessor

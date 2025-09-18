@@ -36,9 +36,10 @@ type ITaskRepo interface {
 	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
 	DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
-	
+
 	// task run success/fail count
 	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
+	DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
 	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
 	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)

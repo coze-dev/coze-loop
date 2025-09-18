@@ -23,27 +23,28 @@ type ITaskRunDAO interface {
 	GetTaskRun(ctx context.Context, id int64) (*entity.TaskRun, error)
 	SetTaskRun(ctx context.Context, taskRun *entity.TaskRun, ttl time.Duration) error
 	DeleteTaskRun(ctx context.Context, id int64) error
-	
+
 	// 列表缓存操作
 	GetNonFinalTaskRunList(ctx context.Context) ([]*entity.TaskRun, error)
 	SetNonFinalTaskRunList(ctx context.Context, taskRuns []*entity.TaskRun, ttl time.Duration) error
 	DeleteNonFinalTaskRunList(ctx context.Context) error
-	
+
 	GetTaskRunListByTask(ctx context.Context, taskID int64) ([]*entity.TaskRun, error)
 	SetTaskRunListByTask(ctx context.Context, taskID int64, taskRuns []*entity.TaskRun, ttl time.Duration) error
 	DeleteTaskRunListByTask(ctx context.Context, taskID int64) error
-	
+
 	// 计数缓存操作
 	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	SetTaskRunCount(ctx context.Context, taskID, taskRunID int64, count int64, ttl time.Duration) error
 	DeleteTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
-	
+
 	// 成功/失败计数操作
 	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
+	DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
 	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
 	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
-	
+
 	// 对象列表缓存操作
 	GetObjListWithTaskRun(ctx context.Context) ([]string, []string, error)
 	SetObjListWithTaskRun(ctx context.Context, spaceList, botList []string, ttl time.Duration) error
@@ -362,4 +363,12 @@ func (p *TaskRunDAOImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRu
 		return 0, errorx.Wrapf(err, "redis get taskrun fail count fail, key: %v", key)
 	}
 	return got, nil
+}
+func (p *TaskRunDAOImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
+	key := p.makeTaskRunSuccessCountKey(taskID, taskRunID)
+	if err := p.cmdable.Decr(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis decr taskrun success count failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis decr taskrun success count key: %v", key)
+	}
+	return nil
 }

@@ -160,7 +160,7 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp taskexe.TaskOp) error {
+func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	//todo:[xun]加锁
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
@@ -284,9 +284,8 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	if err != nil {
 		return err
 	}
-	if taskOp != taskexe.TaskOpNewData {
-		taskConfig.TaskStatus = task.TaskStatusRunning
-	}
+	taskConfig.TaskStatus = task.TaskStatusRunning
+
 	var cycleStartAt, cycleEndAt, endAt int64
 	currentTime := time.Now().UnixMilli()
 

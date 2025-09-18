@@ -19,7 +19,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -137,24 +136,17 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	}
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
-	taskOp := taskexe.TaskOpUndefined
-	if req.Task.GetTaskType() == task.TaskTypeAutoDataReflow {
-		taskOp = taskexe.TaskOpNewData
-	}
-	if t.shouldTriggerBackfill(req.Task) {
-		taskOp = taskexe.TaskOpCreateBackfill
-	}
-	if taskOp != taskexe.TaskOpUndefined {
-		taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
-		if err = proc.OnChangeProcessor(ctx, taskConfig, taskOp); err != nil {
-			logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
-			//任务改为禁用？
-			if err1 := t.TaskRepo.DeleteTask(ctx, taskPO); err1 != nil {
-				logs.CtxError(ctx, "delete task failed, task_id=%d, err=%v", id, err1)
-			}
-			return nil, err
+
+	taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
+	if err = proc.OnChangeProcessor(ctx, taskConfig, task.TaskStatusUnstarted); err != nil {
+		logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
+		//任务改为禁用？
+		if err1 := t.TaskRepo.DeleteTask(ctx, taskPO); err1 != nil {
+			logs.CtxError(ctx, "delete task failed, task_id=%d, err=%v", id, err1)
 		}
+		return nil, err
 	}
+	
 	// 历史回溯数据发MQ
 	if t.shouldTriggerBackfill(req.Task) {
 		backfillEvent := &entity.BackFillEvent{

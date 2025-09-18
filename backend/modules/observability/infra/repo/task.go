@@ -349,7 +349,7 @@ func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityT
 	go func() {
 		// 清理相关列表缓存
 		v.clearListCaches(context.Background(), do.WorkspaceID)
-		
+
 		// 如果是非终态任务，需要从非终态任务列表中移除
 		if isNonFinalTaskStatus(do.TaskStatus) {
 			if err := v.TaskRedisDao.RemoveNonFinalTask(context.Background(), do.ID); err != nil {
@@ -466,6 +466,9 @@ func (v *TaskRepoImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, er
 // IncrTaskRunSuccessCount 增加TaskRun成功计数
 func (v *TaskRepoImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
 	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+}
+func (v *TaskRepoImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
+	return v.TaskRunRedisDao.DecrTaskRunSuccessCount(ctx, taskID, taskRunID)
 }
 
 // IncrTaskRunFailCount 增加TaskRun失败计数

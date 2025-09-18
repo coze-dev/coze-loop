@@ -58,12 +58,13 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 
 	taskCount, _ := p.taskRepo.GetTaskCount(ctx, *trigger.Task.ID)
 	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
+
 	p.taskRepo.IncrTaskCount(ctx, *trigger.Task.ID)
 	p.taskRepo.IncrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
 	p.taskRepo.IncrTaskRunSuccessCount(ctx, *trigger.Task.ID, taskRun.ID)
-	
-	if (trigger.Task.GetRule().GetSampler().GetCycleCount() != 0 && taskRunCount != -1 && taskRunCount > trigger.Task.GetRule().GetSampler().GetCycleCount()) ||
-		(taskCount != -1 && taskCount > trigger.Task.GetRule().GetSampler().GetSampleSize()) {
+
+	if (trigger.Task.GetRule().GetSampler().GetCycleCount() != 0 && taskRunCount > trigger.Task.GetRule().GetSampler().GetCycleCount()) ||
+		(taskCount > trigger.Task.GetRule().GetSampler().GetSampleSize()) {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
 		p.taskRepo.DecrTaskCount(ctx, *trigger.Task.ID)
 		p.taskRepo.DecrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
@@ -123,7 +124,7 @@ func (p *DataReflowProcessor) Finish(ctx context.Context, config any, trigger *t
 	return nil
 }
 
-func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp taskexe.TaskOp) error {
+func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	session := getSession(ctx, currentTask)
 	category := getCategory(currentTask.TaskType)
@@ -158,9 +159,8 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	if err != nil {
 		return err
 	}
-	if taskOp != taskexe.TaskOpNewData {
-		taskConfig.TaskStatus = task.TaskStatusRunning
-	}
+	taskConfig.TaskStatus = task.TaskStatusRunning
+
 	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
 	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
 	// 5、创建 taskrun
