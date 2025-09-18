@@ -1,4 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
+// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: Apache-2.0
 
 package notify
@@ -12,9 +12,9 @@ import (
 
 func TestNotifyRPCAdapter_SendLarkMessageCard(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(ctx context.Context) (*NotifyRPCAdapter, context.Context)
-		wantErr  bool
+		name    string
+		setup   func(ctx context.Context) (*NotifyRPCAdapter, context.Context)
+		wantErr bool
 		errCheck func(t *testing.T, err error)
 	}{
 		{

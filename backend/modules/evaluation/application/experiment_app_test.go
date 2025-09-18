@@ -3593,17 +3593,44 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 		},
 	}
 
-	// Mock the manager.Get call
-	mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
-	// Mock the auth.AuthorizationWithoutSPI call
-	mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-	// Mock the CreateAnalysisRecord call
-	mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
+	t.Run("成功创建洞察分析", func(t *testing.T) {
+		// Mock the manager.Get call
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		// Mock the auth.AuthorizationWithoutSPI call
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		// Mock the CreateAnalysisRecord call
+		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
 
-	_, err := app.InsightAnalysisExperiment(ctx, req)
-	if err != nil {
-		t.Errorf("InsightAnalysisExperiment failed: %v", err)
-	}
+		_, err := app.InsightAnalysisExperiment(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("获取实验失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get experiment error"))
+
+		_, err := app.InsightAnalysisExperiment(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "get experiment error")
+	})
+
+	t.Run("权限验证失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+
+		_, err := app.InsightAnalysisExperiment(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "authorization error")
+	})
+
+	t.Run("创建分析记录失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("create analysis record error"))
+
+		_, err := app.InsightAnalysisExperiment(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "create analysis record error")
+	})
 }
 
 func TestListExptInsightAnalysisRecord(t *testing.T) {
@@ -3619,16 +3646,43 @@ func TestListExptInsightAnalysisRecord(t *testing.T) {
 		},
 	}
 
-	// Mock the manager.Get call
-	mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
-	// Mock the auth.AuthorizationWithoutSPI call
-	mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-	mockInsightService.EXPECT().ListAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptInsightAnalysisRecord{}, int64(0), nil)
+	t.Run("成功获取洞察分析记录列表", func(t *testing.T) {
+		// Mock the manager.Get call
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		// Mock the auth.AuthorizationWithoutSPI call
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().ListAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptInsightAnalysisRecord{}, int64(0), nil)
 
-	_, err := app.ListExptInsightAnalysisRecord(ctx, req)
-	if err != nil {
-		t.Errorf("ListExptInsightAnalysisRecord failed: %v", err)
-	}
+		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("获取实验失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get experiment error"))
+
+		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "get experiment error")
+	})
+
+	t.Run("权限验证失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+
+		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "authorization error")
+	})
+
+	t.Run("获取分析记录列表失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().ListAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("list analysis record error"))
+
+		_, err := app.ListExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "list analysis record error")
+	})
 }
 
 func TestGetExptInsightAnalysisRecord(t *testing.T) {
@@ -3644,24 +3698,41 @@ func TestGetExptInsightAnalysisRecord(t *testing.T) {
 		},
 	}
 
-	// Mock the auth.Authorization call
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-	// Mock the service call
-	mockInsightService.EXPECT().GetAnalysisRecordByID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptInsightAnalysisRecord{
-		ID:        789,
-		ExptID:    456,
-		SpaceID:   123,
-		Status:    entity.InsightAnalysisStatus_Running,
-		CreatedBy: "test-user",
-	}, nil)
+	t.Run("成功获取洞察分析记录", func(t *testing.T) {
+		// Mock the auth.Authorization call
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		// Mock the service call
+		mockInsightService.EXPECT().GetAnalysisRecordByID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptInsightAnalysisRecord{
+			ID:        789,
+			ExptID:    456,
+			SpaceID:   123,
+			Status:    entity.InsightAnalysisStatus_Running,
+			CreatedBy: "test-user",
+		}, nil)
 
-	resp, err := app.GetExptInsightAnalysisRecord(ctx, req)
-	if err != nil {
-		t.Errorf("GetExptInsightAnalysisRecord failed: %v", err)
-	}
-	if resp == nil {
-		t.Error("Expected non-nil response")
-	}
+		resp, err := app.GetExptInsightAnalysisRecord(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
+	t.Run("权限验证失败", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+
+		resp, err := app.GetExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Contains(t, err.Error(), "authorization error")
+	})
+
+	t.Run("获取分析记录失败", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().GetAnalysisRecordByID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get analysis record error"))
+
+		resp, err := app.GetExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Contains(t, err.Error(), "get analysis record error")
+	})
 }
 
 func TestDeleteExptInsightAnalysisRecord(t *testing.T) {
@@ -3676,16 +3747,43 @@ func TestDeleteExptInsightAnalysisRecord(t *testing.T) {
 		},
 	}
 
-	// Mock the manager.Get call
-	mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
-	// Mock the auth.AuthorizationWithoutSPI call
-	mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-	mockInsightService.EXPECT().DeleteAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	t.Run("成功删除洞察分析记录", func(t *testing.T) {
+		// Mock the manager.Get call
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		// Mock the auth.AuthorizationWithoutSPI call
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().DeleteAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	_, err := app.DeleteExptInsightAnalysisRecord(ctx, req)
-	if err != nil {
-		t.Errorf("DeleteExptInsightAnalysisRecord failed: %v", err)
-	}
+		_, err := app.DeleteExptInsightAnalysisRecord(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("获取实验失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get experiment error"))
+
+		_, err := app.DeleteExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "get experiment error")
+	})
+
+	t.Run("权限验证失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+
+		_, err := app.DeleteExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "authorization error")
+	})
+
+	t.Run("删除分析记录失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().DeleteAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("delete analysis record error"))
+
+		_, err := app.DeleteExptInsightAnalysisRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "delete analysis record error")
+	})
 }
 
 func TestFeedbackExptInsightAnalysisReport(t *testing.T) {
@@ -3701,16 +3799,43 @@ func TestFeedbackExptInsightAnalysisReport(t *testing.T) {
 		},
 	}
 
-	// Mock the manager.Get call
-	mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
-	// Mock the auth.AuthorizationWithoutSPI call
-	mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-	mockInsightService.EXPECT().FeedbackExptInsightAnalysis(gomock.Any(), gomock.Any()).Return(nil)
+	t.Run("成功反馈洞察分析报告", func(t *testing.T) {
+		// Mock the manager.Get call
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		// Mock the auth.AuthorizationWithoutSPI call
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().FeedbackExptInsightAnalysis(gomock.Any(), gomock.Any()).Return(nil)
 
-	_, err := app.FeedbackExptInsightAnalysisReport(ctx, req)
-	if err != nil {
-		t.Errorf("FeedbackExptInsightAnalysisReport failed: %v", err)
-	}
+		_, err := app.FeedbackExptInsightAnalysisReport(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("获取实验失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get experiment error"))
+
+		_, err := app.FeedbackExptInsightAnalysisReport(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "get experiment error")
+	})
+
+	t.Run("权限验证失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+
+		_, err := app.FeedbackExptInsightAnalysisReport(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "authorization error")
+	})
+
+	t.Run("反馈操作失败", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().FeedbackExptInsightAnalysis(gomock.Any(), gomock.Any()).Return(errors.New("feedback error"))
+
+		_, err := app.FeedbackExptInsightAnalysisReport(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "feedback error")
+	})
 }
 
 func TestListExptInsightAnalysisComment(t *testing.T) {
@@ -3727,12 +3852,29 @@ func TestListExptInsightAnalysisComment(t *testing.T) {
 		},
 	}
 
-	// Mock the auth.Authorization call
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-	mockInsightService.EXPECT().ListExptInsightAnalysisFeedbackComment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptInsightAnalysisFeedbackComment{}, int64(0), nil)
+	t.Run("成功获取洞察分析评论列表", func(t *testing.T) {
+		// Mock the auth.Authorization call
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().ListExptInsightAnalysisFeedbackComment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptInsightAnalysisFeedbackComment{}, int64(0), nil)
 
-	_, err := app.ListExptInsightAnalysisComment(ctx, req)
-	if err != nil {
-		t.Errorf("ListExptInsightAnalysisComment failed: %v", err)
-	}
+		_, err := app.ListExptInsightAnalysisComment(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("权限验证失败", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
+
+		_, err := app.ListExptInsightAnalysisComment(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "authorization error")
+	})
+
+	t.Run("获取评论列表失败", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().ListExptInsightAnalysisFeedbackComment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("list comment error"))
+
+		_, err := app.ListExptInsightAnalysisComment(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "list comment error")
+	})
 }
