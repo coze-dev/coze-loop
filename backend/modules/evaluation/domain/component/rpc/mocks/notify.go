@@ -34,16 +34,16 @@ func (m *MockINotifyRPCAdapter) EXPECT() *MockINotifyRPCAdapterMockRecorder {
 	return m.recorder
 }
 
-// SendLarkMessageCard mocks base method.
-func (m *MockINotifyRPCAdapter) SendLarkMessageCard(arg0 context.Context, arg1, arg2 string, arg3 map[string]string) error {
+// SendMessageCard mocks base method.
+func (m *MockINotifyRPCAdapter) SendMessageCard(arg0 context.Context, arg1, arg2 string, arg3 map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendLarkMessageCard", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "SendMessageCard", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SendLarkMessageCard indicates an expected call of SendLarkMessageCard.
-func (mr *MockINotifyRPCAdapterMockRecorder) SendLarkMessageCard(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+// SendMessageCard indicates an expected call of SendMessageCard.
+func (mr *MockINotifyRPCAdapterMockRecorder) SendMessageCard(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendLarkMessageCard", reflect.TypeOf((*MockINotifyRPCAdapter)(nil).SendLarkMessageCard), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessageCard", reflect.TypeOf((*MockINotifyRPCAdapter)(nil).SendMessageCard), arg0, arg1, arg2, arg3)
 }

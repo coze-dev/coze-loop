@@ -203,15 +203,7 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	// 聚合报告生成状态
-	//if status == entity.ReportStatus_Failed {
-	//	analysisRecord.Status = entity.InsightAnalysisStatus_Failed
-	//	return analysisRecord, nil
-	//}
-	//if status == entity.ReportStatus_Running {
-	//	analysisRecord.Status = entity.InsightAnalysisStatus_Running
-	//	return analysisRecord, nil
-	//}
+
 	analysisRecord.AnalysisReportContent = report
 
 	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, recordID)
@@ -254,7 +246,7 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 	userInfo := userInfos[0]
 	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
 	const cardID = "AAq9DvIYd2qHu"
-	err = e.notifyRPCAdapter.SendLarkMessageCard(ctx, ptr.From(userInfo.Email), cardID, map[string]string{
+	err = e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfo.Email), cardID, map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(spaceID, 10),
 		"expt_id":   strconv.FormatInt(exptID, 10),

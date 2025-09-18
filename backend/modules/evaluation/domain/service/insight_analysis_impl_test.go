@@ -962,7 +962,7 @@ func TestExptInsightAnalysisServiceImpl_notifyAnalysisComplete(t *testing.T) {
 				mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{
 					{Email: ptr.Of("user1@example.com")},
 				}, nil)
-				mocks.notifyRPCAdapter.EXPECT().SendLarkMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(nil)
+				mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(nil)
 			},
 			userID:  "user1",
 			spaceID: 1,
@@ -1126,7 +1126,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 				mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{
 					{Email: ptr.Of("user1@example.com")},
 				}, nil)
-				mocks.notifyRPCAdapter.EXPECT().SendLarkMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(nil)
+				mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(nil)
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			record: &entity.ExptInsightAnalysisRecord{
@@ -1150,7 +1150,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 				mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{
 					{Email: ptr.Of("user1@example.com")},
 				}, nil)
-				mocks.notifyRPCAdapter.EXPECT().SendLarkMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(errors.New("notify error"))
+				mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(errors.New("notify error"))
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			record: &entity.ExptInsightAnalysisRecord{

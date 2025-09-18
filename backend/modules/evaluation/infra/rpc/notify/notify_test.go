@@ -90,7 +90,7 @@ func TestNotifyRPCAdapter_SendLarkMessageCard(t *testing.T) {
 				param = nil
 			}
 
-			err := adapter.SendLarkMessageCard(ctx, userID, cardID, param)
+			err := adapter.SendMessageCard(ctx, userID, cardID, param)
 
 			if tt.wantErr {
 				assert.Error(t, err)
