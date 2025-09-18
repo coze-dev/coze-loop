@@ -1376,6 +1376,40 @@ func TestFilterSpan(t *testing.T) {
 			},
 			satisfied: false,
 		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_b"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName: "span_type",
+						FieldType: FieldTypeString,
+						Values:    []string{"_a"},
+						QueryType: ptr.Of(QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			span: &Span{
+				SpanType: "span_type_a",
+			},
+			satisfied: false,
+		},
 	}
 	for _, tc := range tests {
 		assert.Equal(t, tc.filter.Satisfied(tc.span), tc.satisfied)
