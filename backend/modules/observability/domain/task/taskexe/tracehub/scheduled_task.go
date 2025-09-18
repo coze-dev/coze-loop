@@ -259,10 +259,9 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *TaskRunCountInfo) error {
 	// 构建run_detail JSON数据
 	runDetail := map[string]interface{}{
-		"task_run_count":         info.TaskRunCount,
-		"task_run_success_count": info.TaskRunSuccCount,
-		"task_run_fail_count":    info.TaskRunFailCount,
-		"last_sync_time":         time.Now().Format(time.RFC3339),
+		"total_count":   info.TaskRunCount,
+		"success_count": info.TaskRunSuccCount,
+		"failed_count":  info.TaskRunFailCount,
 	}
 
 	// 序列化为JSON字符串
