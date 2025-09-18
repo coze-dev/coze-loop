@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
@@ -245,8 +246,7 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 
 	userInfo := userInfos[0]
 	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
-	const cardID = "AAq9DvIYd2qHu"
-	err = e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfo.Email), cardID, map[string]string{
+	err = e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfo.Email), consts.InsightAnalysisNotifyCardID, map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(spaceID, 10),
 		"expt_id":   strconv.FormatInt(exptID, 10),

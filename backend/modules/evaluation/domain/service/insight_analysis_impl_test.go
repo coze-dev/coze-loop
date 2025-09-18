@@ -1031,7 +1031,7 @@ func TestExptInsightAnalysisServiceImpl_notifyAnalysisComplete(t *testing.T) {
 				mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{
 					{Email: ptr.Of("user1@example.com")},
 				}, nil)
-				mocks.notifyRPCAdapter.EXPECT().SendLarkMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(errors.New("notify error"))
+				mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), "AAq9DvIYd2qHu", gomock.Any()).Return(errors.New("notify error"))
 			},
 			userID:  "user1",
 			spaceID: 1,
