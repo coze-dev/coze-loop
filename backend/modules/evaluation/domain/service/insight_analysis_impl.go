@@ -39,7 +39,8 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	exptResultExportService IExptResultExportService,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
-	exptRepo repo.IExperimentRepo) IExptInsightAnalysisService {
+	exptRepo repo.IExperimentRepo,
+) IExptInsightAnalysisService {
 	return &ExptInsightAnalysisServiceImpl{
 		repo:                    repo,
 		exptPublisher:           exptPublisher,

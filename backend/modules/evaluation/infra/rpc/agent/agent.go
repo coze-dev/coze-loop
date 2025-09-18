@@ -10,9 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-type AgentAdapter struct {
-	//traceagentservice.Client
-}
+type AgentAdapter struct{}
 
 func NewAgentAdapter() rpc.IAgentAdapter {
 	return &AgentAdapter{}

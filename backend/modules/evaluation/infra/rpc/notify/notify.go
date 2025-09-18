@@ -9,8 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 )
 
-type NotifyRPCAdapter struct {
-}
+type NotifyRPCAdapter struct{}
 
 func NewNotifyRPCAdapter() rpc.INotifyRPCAdapter {
 	return NotifyRPCAdapter{}
