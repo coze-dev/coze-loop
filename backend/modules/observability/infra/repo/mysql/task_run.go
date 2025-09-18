@@ -126,7 +126,7 @@ func (v *TaskRunDaoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *in
 	taskRunPo, err := qd.First()
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("TaskRun not found"))
+			return nil, nil
 		} else {
 			return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 		}
