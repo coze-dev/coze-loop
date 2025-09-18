@@ -113,6 +113,7 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResults []*entity.OnlineExptTurnEvalResult, isSync bool) (err error) {
 	for _, turn := range turnEvalResults {
 		spanID := turn.Ext["span_id"]
+		traceID := turn.Ext["trace_id"]
 		startTimeStr := turn.Ext["start_time"]
 		startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
 		if err != nil {
@@ -133,7 +134,7 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 		spans, err := h.getSpan(ctx,
 			tenants,
 			[]string{spanID},
-			"",
+			traceID,
 			workspaceIDStr,
 			startTime/1000-time.Second.Milliseconds(),
 			startTime/1000+time.Second.Milliseconds(),
