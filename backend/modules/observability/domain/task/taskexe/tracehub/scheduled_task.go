@@ -5,20 +5,23 @@ package tracehub
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/pkg/errors"
 )
 
 // TaskRunCountInfo TaskRunCount信息结构
 type TaskRunCountInfo struct {
-	TaskID    int64
-	TaskRunID int64
-	Count     int64
-	KeyType   string // "task" 或 "taskrun"
+	TaskID           int64
+	TaskRunID        int64
+	TaskRunCount     int64
+	TaskRunSuccCount int64
+	TaskRunFailCount int64
 }
 
 // SyncMetrics 同步统计指标
@@ -38,7 +41,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			case <-h.ticker.C:
 				// 执行定时任务
 				h.runScheduledTask()
-				//h.syncTaskRunCounts()
+				h.syncTaskRunCounts()
 			case <-h.stopChan:
 				// 停止定时任务
 				h.ticker.Stop()
@@ -120,5 +123,147 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 
 // syncTaskRunCounts 同步TaskRunCount到数据库
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
-	// 同步非终态任务的taskruncount、taskrunscesscount、taskrunfailcount到数据库
+	ctx := context.Background()
+	logID := logs.NewLogID()
+	ctx = logs.SetLogID(ctx, logID)
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+
+	logs.CtxInfo(ctx, "开始同步TaskRunCounts到数据库...")
+
+	// 1. 获取非终态任务列表
+	taskPOs, err := h.taskRepo.ListNonFinalTask(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "获取非终态任务列表失败", "err", err)
+		return
+	}
+
+	if len(taskPOs) == 0 {
+		logs.CtxInfo(ctx, "没有非终态任务需要同步")
+		return
+	}
+
+	logs.CtxInfo(ctx, "获取到非终态任务数量", "count", len(taskPOs))
+
+	// 2. 收集所有需要同步的TaskRun信息
+	var taskRunInfos []*TaskRunCountInfo
+	for _, taskPO := range taskPOs {
+		if len(taskPO.TaskRuns) == 0 {
+			continue
+		}
+
+		for _, taskRun := range taskPO.TaskRuns {
+			taskRunInfos = append(taskRunInfos, &TaskRunCountInfo{
+				TaskID:    taskPO.ID,
+				TaskRunID: taskRun.ID,
+			})
+		}
+	}
+
+	if len(taskRunInfos) == 0 {
+		logs.CtxInfo(ctx, "没有TaskRun需要同步")
+		return
+	}
+
+	logs.CtxInfo(ctx, "需要同步的TaskRun数量", "count", len(taskRunInfos))
+
+	// 3. 批量处理TaskRun，每批50个
+	batchSize := 50
+	for i := 0; i < len(taskRunInfos); i += batchSize {
+		end := i + batchSize
+		if end > len(taskRunInfos) {
+			end = len(taskRunInfos)
+		}
+
+		batch := taskRunInfos[i:end]
+		h.processBatch(ctx, batch)
+	}
+}
+
+// processBatch 批量处理TaskRun计数同步
+func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRunCountInfo) {
+	logs.CtxInfo(ctx, "开始处理批次", "batchSize", len(batch))
+
+	// 1. 批量读取Redis计数数据
+	for _, info := range batch {
+		// 读取taskruncount
+		count, err := h.taskRepo.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
+		if err != nil {
+			logs.CtxWarn(ctx, "获取TaskRunCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+			count = 0
+		}
+		info.TaskRunCount = count
+
+		// 读取taskrunscesscount
+		successCount, err := h.taskRepo.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
+		if err != nil {
+			logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+			successCount = 0
+		}
+		info.TaskRunSuccCount = successCount
+
+		// 读取taskrunfailcount
+		failCount, err := h.taskRepo.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
+		if err != nil {
+			logs.CtxWarn(ctx, "获取TaskRunFailCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+			failCount = 0
+		}
+		info.TaskRunFailCount = failCount
+
+		logs.CtxDebug(ctx, "读取计数数据",
+			"taskID", info.TaskID,
+			"taskRunID", info.TaskRunID,
+			"runCount", info.TaskRunCount,
+			"successCount", info.TaskRunSuccCount,
+			"failCount", info.TaskRunFailCount)
+	}
+
+	// 2. 批量更新数据库
+	for _, info := range batch {
+		err := h.updateTaskRunDetail(ctx, info)
+		if err != nil {
+			logs.CtxError(ctx, "更新TaskRun详情失败",
+				"taskID", info.TaskID,
+				"taskRunID", info.TaskRunID,
+				"err", err)
+		} else {
+			logs.CtxDebug(ctx, "更新TaskRun详情成功",
+				"taskID", info.TaskID,
+				"taskRunID", info.TaskRunID)
+		}
+	}
+
+	logs.CtxInfo(ctx, "批次处理完成",
+		"batchSize", len(batch))
+}
+
+// updateTaskRunDetail 更新TaskRun的run_detail字段
+func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *TaskRunCountInfo) error {
+	// 构建run_detail JSON数据
+	runDetail := map[string]interface{}{
+		"task_run_count":         info.TaskRunCount,
+		"task_run_success_count": info.TaskRunSuccCount,
+		"task_run_fail_count":    info.TaskRunFailCount,
+		"last_sync_time":         time.Now().Format(time.RFC3339),
+	}
+
+	// 序列化为JSON字符串
+	runDetailJSON, err := json.Marshal(runDetail)
+	if err != nil {
+		return errors.Wrap(err, "序列化run_detail失败")
+	}
+
+	runDetailStr := string(runDetailJSON)
+
+	// 构建更新映射
+	updateMap := map[string]interface{}{
+		"run_detail": &runDetailStr,
+	}
+
+	// 使用乐观锁更新
+	err = h.taskRunRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
+	if err != nil {
+		return errors.Wrap(err, "更新TaskRun失败")
+	}
+
+	return nil
 }
