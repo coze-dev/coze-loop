@@ -17071,7 +17071,7 @@ func (p *ListExptInsightAnalysisRecordResponse) FastRead(buf []byte) (int, error
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetExptResultExportRecords bool = false
+	var issetExptInsightAnalysisRecords bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -17089,7 +17089,7 @@ func (p *ListExptInsightAnalysisRecordResponse) FastRead(buf []byte) (int, error
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetExptResultExportRecords = true
+				issetExptInsightAnalysisRecords = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17134,7 +17134,7 @@ func (p *ListExptInsightAnalysisRecordResponse) FastRead(buf []byte) (int, error
 		}
 	}
 
-	if !issetExptResultExportRecords {
+	if !issetExptInsightAnalysisRecords {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -17170,7 +17170,7 @@ func (p *ListExptInsightAnalysisRecordResponse) FastReadField1(buf []byte) (int,
 
 		_field = append(_field, _elem)
 	}
-	p.ExptResultExportRecords = _field
+	p.ExptInsightAnalysisRecords = _field
 	return offset, nil
 }
 
@@ -17232,7 +17232,7 @@ func (p *ListExptInsightAnalysisRecordResponse) fastWriteField1(buf []byte, w th
 	listBeginOffset := offset
 	offset += thrift.Binary.ListBeginLength()
 	var length int
-	for _, v := range p.ExptResultExportRecords {
+	for _, v := range p.ExptInsightAnalysisRecords {
 		length++
 		offset += v.FastWriteNocopy(buf[offset:], w)
 	}
@@ -17260,7 +17260,7 @@ func (p *ListExptInsightAnalysisRecordResponse) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.ListBeginLength()
-	for _, v := range p.ExptResultExportRecords {
+	for _, v := range p.ExptInsightAnalysisRecords {
 		_ = v
 		l += v.BLength()
 	}
@@ -17289,9 +17289,9 @@ func (p *ListExptInsightAnalysisRecordResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.ExptResultExportRecords != nil {
-		p.ExptResultExportRecords = make([]*expt.ExptInsightAnalysisRecord, 0, len(src.ExptResultExportRecords))
-		for _, elem := range src.ExptResultExportRecords {
+	if src.ExptInsightAnalysisRecords != nil {
+		p.ExptInsightAnalysisRecords = make([]*expt.ExptInsightAnalysisRecord, 0, len(src.ExptInsightAnalysisRecords))
+		for _, elem := range src.ExptInsightAnalysisRecords {
 			var _elem *expt.ExptInsightAnalysisRecord
 			if elem != nil {
 				_elem = &expt.ExptInsightAnalysisRecord{}
@@ -17300,7 +17300,7 @@ func (p *ListExptInsightAnalysisRecordResponse) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.ExptResultExportRecords = append(p.ExptResultExportRecords, _elem)
+			p.ExptInsightAnalysisRecords = append(p.ExptInsightAnalysisRecords, _elem)
 		}
 	}
 

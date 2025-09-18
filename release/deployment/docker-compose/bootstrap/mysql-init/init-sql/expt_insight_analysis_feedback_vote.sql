@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS `expt_insight_analysis_feedback_vote` (
                                                        `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                                        `deleted_at` timestamp NULL DEFAULT NULL COMMENT '删除时间',
                                                        PRIMARY KEY (`id`),
-                                                       Unique KEY `uniq_space_id_expt_id_analysis_record_id_created_by` (`space_id`,`expt_id`,`analysis_record_id`,`created_by`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='实验洞察分析反馈点赞表'
+                                                       UNIQUE KEY `uniq_space_id_expt_id_analysis_record_id_created_by` (`space_id`,`expt_id`,`analysis_record_id`,`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='实验洞察分析反馈点赞表';

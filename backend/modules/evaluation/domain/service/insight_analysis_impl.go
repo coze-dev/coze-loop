@@ -65,7 +65,7 @@ func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context
 		ExperimentID: record.ExptID,
 		SpaceID:      record.SpaceID,
 		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreateAt:     time.Now().Unix(),
+		CreatedAt:    time.Now().Unix(),
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Second*3))
 	if err != nil {
@@ -137,7 +137,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		ExperimentID: exptID,
 		SpaceID:      spaceID,
 		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreateAt:     CreateAt,
+		CreatedAt:    CreateAt,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*3))
 	if err != nil {
@@ -177,7 +177,7 @@ func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context
 		ExperimentID: record.ExptID,
 		SpaceID:      record.SpaceID,
 		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreateAt:     CreateAt,
+		CreatedAt:    CreateAt,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*1))
 	if err != nil {
@@ -236,14 +236,12 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 	if err != nil {
 		return err
 	}
-	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfos: %v", userInfos)
 
 	if len(userInfos) != 1 || userInfos[0] == nil {
 		return nil
 	}
 
 	userInfo := userInfos[0]
-	logs.CtxInfo(ctx, "notifyAnalysisComplete userInfo: %v", userInfo)
 	err = e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfo.Email), consts.InsightAnalysisNotifyCardID, map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(spaceID, 10),

@@ -1149,8 +1149,9 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 		dtos = append(dtos, experiment.ExptInsightAnalysisRecordDO2DTO(record))
 	}
 	return &expt.ListExptInsightAnalysisRecordResponse{
-		ExptResultExportRecords: dtos,
-		Total:                   ptr.Of(total),
+		ExptInsightAnalysisRecords: dtos,
+		Total:                      ptr.Of(total),
+		BaseResp:                   base.NewBaseResp(),
 	}, nil
 }
 

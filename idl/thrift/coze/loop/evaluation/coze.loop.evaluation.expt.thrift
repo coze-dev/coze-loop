@@ -492,7 +492,7 @@ struct ListExptInsightAnalysisRecordRequest {
 }
 
 struct ListExptInsightAnalysisRecordResponse {
-    1: required list<expt.ExptInsightAnalysisRecord> expt_result_export_records
+    1: required list<expt.ExptInsightAnalysisRecord> expt_insight_analysis_records
     20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
     255: base.BaseResp BaseResp
 }

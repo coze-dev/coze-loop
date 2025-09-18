@@ -42,7 +42,6 @@ func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, int64(0), result)
 			}
-
 		})
 	}
 }
@@ -78,7 +77,6 @@ func TestAgentAdapter_GetReport(t *testing.T) {
 				assert.Equal(t, "", report)
 				assert.Equal(t, entity.ReportStatus_Unknown, status)
 			}
-			
 		})
 	}
 }

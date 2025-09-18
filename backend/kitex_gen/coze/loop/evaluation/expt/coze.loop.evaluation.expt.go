@@ -23329,9 +23329,9 @@ func (p *ListExptInsightAnalysisRecordRequest) Field255DeepEqual(src *base.Base)
 }
 
 type ListExptInsightAnalysisRecordResponse struct {
-	ExptResultExportRecords []*expt.ExptInsightAnalysisRecord `thrift:"expt_result_export_records,1,required" frugal:"1,required,list<expt.ExptInsightAnalysisRecord>" form:"expt_result_export_records,required" json:"expt_result_export_records,required" query:"expt_result_export_records,required"`
-	Total                   *int64                            `thrift:"total,20,optional" frugal:"20,optional,i64" json:"total" form:"total" `
-	BaseResp                *base.BaseResp                    `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExptInsightAnalysisRecords []*expt.ExptInsightAnalysisRecord `thrift:"expt_insight_analysis_records,1,required" frugal:"1,required,list<expt.ExptInsightAnalysisRecord>" form:"expt_insight_analysis_records,required" json:"expt_insight_analysis_records,required" query:"expt_insight_analysis_records,required"`
+	Total                      *int64                            `thrift:"total,20,optional" frugal:"20,optional,i64" json:"total" form:"total" `
+	BaseResp                   *base.BaseResp                    `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewListExptInsightAnalysisRecordResponse() *ListExptInsightAnalysisRecordResponse {
@@ -23341,9 +23341,9 @@ func NewListExptInsightAnalysisRecordResponse() *ListExptInsightAnalysisRecordRe
 func (p *ListExptInsightAnalysisRecordResponse) InitDefault() {
 }
 
-func (p *ListExptInsightAnalysisRecordResponse) GetExptResultExportRecords() (v []*expt.ExptInsightAnalysisRecord) {
+func (p *ListExptInsightAnalysisRecordResponse) GetExptInsightAnalysisRecords() (v []*expt.ExptInsightAnalysisRecord) {
 	if p != nil {
-		return p.ExptResultExportRecords
+		return p.ExptInsightAnalysisRecords
 	}
 	return
 }
@@ -23371,8 +23371,8 @@ func (p *ListExptInsightAnalysisRecordResponse) GetBaseResp() (v *base.BaseResp)
 	}
 	return p.BaseResp
 }
-func (p *ListExptInsightAnalysisRecordResponse) SetExptResultExportRecords(val []*expt.ExptInsightAnalysisRecord) {
-	p.ExptResultExportRecords = val
+func (p *ListExptInsightAnalysisRecordResponse) SetExptInsightAnalysisRecords(val []*expt.ExptInsightAnalysisRecord) {
+	p.ExptInsightAnalysisRecords = val
 }
 func (p *ListExptInsightAnalysisRecordResponse) SetTotal(val *int64) {
 	p.Total = val
@@ -23382,7 +23382,7 @@ func (p *ListExptInsightAnalysisRecordResponse) SetBaseResp(val *base.BaseResp) 
 }
 
 var fieldIDToName_ListExptInsightAnalysisRecordResponse = map[int16]string{
-	1:   "expt_result_export_records",
+	1:   "expt_insight_analysis_records",
 	20:  "total",
 	255: "BaseResp",
 }
@@ -23398,7 +23398,7 @@ func (p *ListExptInsightAnalysisRecordResponse) IsSetBaseResp() bool {
 func (p *ListExptInsightAnalysisRecordResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetExptResultExportRecords bool = false
+	var issetExptInsightAnalysisRecords bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -23419,7 +23419,7 @@ func (p *ListExptInsightAnalysisRecordResponse) Read(iprot thrift.TProtocol) (er
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetExptResultExportRecords = true
+				issetExptInsightAnalysisRecords = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23452,7 +23452,7 @@ func (p *ListExptInsightAnalysisRecordResponse) Read(iprot thrift.TProtocol) (er
 		goto ReadStructEndError
 	}
 
-	if !issetExptResultExportRecords {
+	if !issetExptInsightAnalysisRecords {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -23494,7 +23494,7 @@ func (p *ListExptInsightAnalysisRecordResponse) ReadField1(iprot thrift.TProtoco
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.ExptResultExportRecords = _field
+	p.ExptInsightAnalysisRecords = _field
 	return nil
 }
 func (p *ListExptInsightAnalysisRecordResponse) ReadField20(iprot thrift.TProtocol) error {
@@ -23554,13 +23554,13 @@ WriteStructEndError:
 }
 
 func (p *ListExptInsightAnalysisRecordResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("expt_result_export_records", thrift.LIST, 1); err != nil {
+	if err = oprot.WriteFieldBegin("expt_insight_analysis_records", thrift.LIST, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptResultExportRecords)); err != nil {
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptInsightAnalysisRecords)); err != nil {
 		return err
 	}
-	for _, v := range p.ExptResultExportRecords {
+	for _, v := range p.ExptInsightAnalysisRecords {
 		if err := v.Write(oprot); err != nil {
 			return err
 		}
@@ -23626,7 +23626,7 @@ func (p *ListExptInsightAnalysisRecordResponse) DeepEqual(ano *ListExptInsightAn
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ExptResultExportRecords) {
+	if !p.Field1DeepEqual(ano.ExptInsightAnalysisRecords) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.Total) {
@@ -23640,10 +23640,10 @@ func (p *ListExptInsightAnalysisRecordResponse) DeepEqual(ano *ListExptInsightAn
 
 func (p *ListExptInsightAnalysisRecordResponse) Field1DeepEqual(src []*expt.ExptInsightAnalysisRecord) bool {
 
-	if len(p.ExptResultExportRecords) != len(src) {
+	if len(p.ExptInsightAnalysisRecords) != len(src) {
 		return false
 	}
-	for i, v := range p.ExptResultExportRecords {
+	for i, v := range p.ExptInsightAnalysisRecords {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

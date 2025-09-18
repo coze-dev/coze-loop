@@ -122,7 +122,7 @@ type ExportCSVEvent struct {
 
 	Session     *Session
 	ExportScene ExportScene
-	CreateAt    int64
+	CreatedAt   int64
 }
 
 type ExportScene int
