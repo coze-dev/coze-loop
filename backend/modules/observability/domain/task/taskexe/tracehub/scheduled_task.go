@@ -61,27 +61,12 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	// 读取所有非终态（成功/禁用）任务
-	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
-		ReqLimit:  1000,
-		ReqOffset: 0,
-		TaskFilters: &filter.TaskFilterFields{
-			FilterFields: []*filter.TaskFilterField{
-				{
-					FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
-					Values: []string{
-						string(task.TaskStatusUnstarted),
-						string(task.TaskStatusRunning),
-					},
-					QueryType: ptr.Of(filter.QueryTypeIn),
-					FieldType: ptr.Of(filter.FieldTypeString),
-				},
-			},
-		},
-	})
+	taskPOs, err := h.taskRepo.ListNonFinalTask(ctx)
 	if err != nil {
-		logs.CtxError(ctx, "ListNonFinalTask err:%v", err)
+		logs.CtxError(ctx, "获取非终态任务列表失败", "err", err)
 		return
 	}
+
 	var tasks []*task.Task
 	taskRunstat := make(map[int64]bool)
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
@@ -150,12 +135,27 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	logs.CtxInfo(ctx, "开始同步TaskRunCounts到数据库...")
 
 	// 1. 获取非终态任务列表
-	taskPOs, err := h.taskRepo.ListNonFinalTask(ctx)
+	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		ReqLimit:  1000,
+		ReqOffset: 0,
+		TaskFilters: &filter.TaskFilterFields{
+			FilterFields: []*filter.TaskFilterField{
+				{
+					FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+					Values: []string{
+						string(task.TaskStatusUnstarted),
+						string(task.TaskStatusRunning),
+					},
+					QueryType: ptr.Of(filter.QueryTypeIn),
+					FieldType: ptr.Of(filter.FieldTypeString),
+				},
+			},
+		},
+	})
 	if err != nil {
-		logs.CtxError(ctx, "获取非终态任务列表失败", "err", err)
+		logs.CtxError(ctx, "ListNonFinalTask err:%v", err)
 		return
 	}
-
 	if len(taskPOs) == 0 {
 		logs.CtxInfo(ctx, "没有非终态任务需要同步")
 		return
