@@ -94,8 +94,10 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 			SpaceID:            spaceID,
 			ExptID:             exptID,
 			ExptResultFilePath: ptr.Of(exptResultFilePath),
-			AnalysisReportID:   ptr.Of(analysisReportID),
 			Status:             entity.InsightAnalysisStatus_Running,
+		}
+		if analysisReportID > 0 {
+			record.AnalysisReportID = ptr.Of(analysisReportID)
 		}
 		if err != nil {
 			record.Status = entity.InsightAnalysisStatus_Failed
@@ -121,13 +123,12 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	if err != nil {
 		return err
 	}
-	logs.CtxInfo(ctx, "GenAnalysisReport get csv url=%v", url)
 
 	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url)
 	if err != nil {
 		return err
 	}
-	logs.CtxInfo(ctx, "[GenAnalysisReport] CallTraceAgent success, expt_id=%v, record_id=%v, report_id=%v, csv url=%v", exptID, recordID, reportID, url)
+	logs.CtxInfo(ctx, "[GenAnalysisReport] CallTraceAgent success, expt_id=%v, record_id=%v, report_id=%v", exptID, recordID, reportID)
 
 	analysisReportID = reportID
 

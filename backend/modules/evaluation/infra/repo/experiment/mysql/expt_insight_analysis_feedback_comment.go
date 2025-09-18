@@ -85,7 +85,7 @@ func (e exptInsightAnalysisFeedbackCommentDAO) List(ctx context.Context, spaceID
 	db := e.db.NewSession(ctx).Model(&model.ExptInsightAnalysisFeedbackComment{}).
 		Where("space_id =?", spaceID).
 		Where("expt_id =?", exptID).
-		Where("analysis_record_id =?", recordID)
+		Where("analysis_record_id =?", recordID).Order("created_at DESC")
 	// 总记录数
 	db = db.Count(&total)
 	// 分页

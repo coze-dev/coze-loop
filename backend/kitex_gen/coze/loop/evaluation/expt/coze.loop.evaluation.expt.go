@@ -24293,7 +24293,7 @@ type FeedbackExptInsightAnalysisReportRequest struct {
 	WorkspaceID             int64                   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ExptID                  int64                   `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
 	InsightAnalysisRecordID int64                   `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
-	FeedbackActionType      expt.FeedbackActionType `thrift:"FeedbackActionType,4,required" frugal:"4,required,string" form:"FeedbackActionType,required" json:"FeedbackActionType,required" query:"FeedbackActionType,required"`
+	FeedbackActionType      expt.FeedbackActionType `thrift:"feedback_action_type,4,required" frugal:"4,required,string" form:"feedback_action_type,required" json:"feedback_action_type,required" query:"feedback_action_type,required"`
 	Comment                 *string                 `thrift:"comment,5,optional" frugal:"5,optional,string" form:"comment" json:"comment,omitempty" query:"comment"`
 	// 用于更新comment
 	CommentID *int64          `thrift:"comment_id,6,optional" frugal:"6,optional,i64" json:"comment_id" form:"comment_id" `
@@ -24412,7 +24412,7 @@ var fieldIDToName_FeedbackExptInsightAnalysisReportRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "expt_id",
 	3:   "insight_analysis_record_id",
-	4:   "FeedbackActionType",
+	4:   "feedback_action_type",
 	5:   "comment",
 	6:   "comment_id",
 	200: "session",
@@ -24763,7 +24763,7 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *FeedbackExptInsightAnalysisReportRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("FeedbackActionType", thrift.STRING, 4); err != nil {
+	if err = oprot.WriteFieldBegin("feedback_action_type", thrift.STRING, 4); err != nil {
 		goto WriteFieldBeginError
 	}
 	if err := oprot.WriteString(p.FeedbackActionType); err != nil {
