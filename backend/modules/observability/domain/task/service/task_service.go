@@ -146,7 +146,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		}
 		return nil, err
 	}
-	
+
 	// 历史回溯数据发MQ
 	if t.shouldTriggerBackfill(req.Task) {
 		backfillEvent := &entity.BackFillEvent{

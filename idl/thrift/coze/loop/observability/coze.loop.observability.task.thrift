@@ -75,7 +75,7 @@ struct CheckTaskNameResponse {
 }
 
 service TaskService {
-    CheckTaskNameResponse CheckTaskName(1: CheckTaskNameRequest req) (api.get = '/api/observability/v1/tasks/check_name')
+    CheckTaskNameResponse CheckTaskName(1: CheckTaskNameRequest req) (api.post = '/api/observability/v1/tasks/check_name')
     CreateTaskResponse CreateTask(1: CreateTaskRequest req) (api.post = '/api/observability/v1/tasks')
     UpdateTaskResponse UpdateTask(1: UpdateTaskRequest req) (api.put = '/api/observability/v1/tasks/:task_id')
     ListTasksResponse ListTasks(1: ListTasksRequest req) (api.post = '/api/observability/v1/tasks/list')
