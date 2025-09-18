@@ -284,7 +284,9 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	if err != nil {
 		return err
 	}
-	taskConfig.TaskStatus = task.TaskStatusRunning
+	if ShouldTriggerBackfill(currentTask) {
+		taskConfig.TaskStatus = task.TaskStatusRunning
+	}
 
 	var cycleStartAt, cycleEndAt, endAt int64
 	currentTime := time.Now().UnixMilli()

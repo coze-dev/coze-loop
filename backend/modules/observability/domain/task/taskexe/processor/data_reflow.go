@@ -124,6 +124,30 @@ func (p *DataReflowProcessor) Finish(ctx context.Context, config any, trigger *t
 	return nil
 }
 
+// shouldTriggerBackfill 判断是否需要发送历史回溯MQ
+func ShouldTriggerBackfill(taskDO *task.Task) bool {
+	// 检查任务类型
+	taskType := taskDO.GetTaskType()
+	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
+		return false
+	}
+
+	// 检查回填时间配置
+	rule := taskDO.GetRule()
+	if rule == nil {
+		return false
+	}
+
+	backfillTime := rule.GetBackfillEffectiveTime()
+	if backfillTime == nil {
+		return false
+	}
+
+	return backfillTime.GetStartAt() > 0 &&
+		backfillTime.GetEndAt() > 0 &&
+		backfillTime.GetStartAt() < backfillTime.GetEndAt()
+}
+
 func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, taskOp:%s, task:%+v", currentTask.GetID(), taskOp, currentTask)
 	session := getSession(ctx, currentTask)
@@ -159,7 +183,9 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	if err != nil {
 		return err
 	}
-	taskConfig.TaskStatus = task.TaskStatusRunning
+	if ShouldTriggerBackfill(currentTask) {
+		taskConfig.TaskStatus = task.TaskStatusRunning
+	}
 
 	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
 	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
