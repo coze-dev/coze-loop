@@ -15,23 +15,23 @@ import (
 type ModelFailRatioMetric struct{}
 
 func (m *ModelFailRatioMetric) Name() string {
-	return "model_fail_ratio"
+	return entity.MetricNameModelFailRatio
 }
 
 func (m *ModelFailRatioMetric) Type() string {
-	return "summary"
+	return string(entity.MetricTypeSummary)
 }
 
 func (m *ModelFailRatioMetric) Source() string {
-	return "ck"
+	return string(entity.MetricSourceCK)
 }
 
 func (m *ModelFailRatioMetric) Expression() string {
 	return "countIf(1, status_code != 0) / count()"
 }
 
-func (m *ModelFailRatioMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildLLMSpanFilter(context.Background(), env)
+func (m *ModelFailRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return filter.BuildLLMSpanFilter(ctx, env)
 }
 
 func (m *ModelFailRatioMetric) GroupBy() []*entity.Dimension {

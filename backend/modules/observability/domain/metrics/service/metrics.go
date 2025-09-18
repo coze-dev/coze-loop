@@ -73,7 +73,7 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *entity.QueryMetr
 		}
 		
 		// 获取指标的筛选条件
-		whereFilters, whereErr := definition.Where(platformFilter, spanEnv)
+		whereFilters, whereErr := definition.Where(ctx, platformFilter, spanEnv)
 		if whereErr != nil {
 			return nil, whereErr
 		}

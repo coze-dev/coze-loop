@@ -4,6 +4,8 @@
 package metrics
 
 import (
+	"context"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
@@ -14,28 +16,28 @@ import (
 type ToolLatencyAvgMetric struct{}
 
 func (m *ToolLatencyAvgMetric) Name() string {
-	return "tool_latency_avg"
+	return entity.MetricNameToolLatencyAvg
 }
 
 func (m *ToolLatencyAvgMetric) Type() string {
-	return "summary"
+	return string(entity.MetricTypeSummary)
 }
 
 func (m *ToolLatencyAvgMetric) Source() string {
-	return "ck"
+	return string(entity.MetricSourceCK)
 }
 
 func (m *ToolLatencyAvgMetric) Expression() string {
 	return "sum(duration / 1000) / count()"
 }
 
-func (m *ToolLatencyAvgMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *ToolLatencyAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	// 直接返回工具Span筛选条件，不使用Filter接口，因为这是固定的筛选逻辑
 	return []*loop_span.FilterField{
 		{
 			FieldName: loop_span.SpanFieldSpanType,
 			FieldType: loop_span.FieldTypeString,
-			Values:    []string{"tool"},
+			Values:    []string{entity.SpanTypeTool},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}, nil

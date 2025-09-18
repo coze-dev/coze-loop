@@ -4,6 +4,8 @@
 package entity
 
 import (
+	"context"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -23,6 +25,23 @@ const (
 	MetricSourceCoze MetricSource = "coze" // Coze系统
 )
 
+// 指标名称常量
+const (
+	MetricNameModelFailRatio    = "model_fail_ratio"
+	MetricNameToolFailRatio     = "tool_fail_ratio"
+	MetricNameModelLatencyAvg   = "model_latency_avg"
+	MetricNameModelTotalTokens  = "model_total_tokens"
+	MetricNameToolLatencyAvg    = "tool_latency_avg"
+	MetricNameToolTotalCount    = "tool_total_count"
+	MetricNameTotalCount        = "total_count"
+	MetricNameFailRatio         = "fail_ratio"
+)
+
+// Span类型常量
+const (
+	SpanTypeTool = "tool"
+)
+
 type Dimension struct {
 	Expression string // 字段名或表达式
 	Alias      string // 别名
@@ -33,7 +52,7 @@ type IMetricDefinition interface {
 	Type() string                                                                        // 指标类型：time_series/summary/pie
 	Source() string                                                                      // 数据来源：span/coze
 	Expression() string                                                                  // 计算表达式
-	Where(span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error)   // 筛选条件
+	Where(context.Context, span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) // 筛选条件
 	GroupBy() []*Dimension                                                               // 聚合维度
 }
 

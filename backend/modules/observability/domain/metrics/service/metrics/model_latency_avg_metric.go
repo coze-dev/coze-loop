@@ -15,23 +15,23 @@ import (
 type ModelLatencyAvgMetric struct{}
 
 func (m *ModelLatencyAvgMetric) Name() string {
-	return "model_latency_avg"
+	return entity.MetricNameModelLatencyAvg
 }
 
 func (m *ModelLatencyAvgMetric) Type() string {
-	return "summary"
+	return string(entity.MetricTypeSummary)
 }
 
 func (m *ModelLatencyAvgMetric) Source() string {
-	return "ck"
+	return string(entity.MetricSourceCK)
 }
 
 func (m *ModelLatencyAvgMetric) Expression() string {
 	return "sum(duration / 1000) / count()"
 }
 
-func (m *ModelLatencyAvgMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildLLMSpanFilter(context.Background(), env)
+func (m *ModelLatencyAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return filter.BuildLLMSpanFilter(ctx, env)
 }
 
 func (m *ModelLatencyAvgMetric) GroupBy() []*entity.Dimension {

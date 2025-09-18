@@ -15,24 +15,24 @@ import (
 type TotalCountMetric struct{}
 
 func (m *TotalCountMetric) Name() string {
-	return "total_count"
+	return entity.MetricNameTotalCount
 }
 
 func (m *TotalCountMetric) Type() string {
-	return "summary"
+	return string(entity.MetricTypeSummary)
 }
 
 func (m *TotalCountMetric) Source() string {
-	return "ck"
+	return string(entity.MetricSourceCK)
 }
 
 func (m *TotalCountMetric) Expression() string {
 	return "count()"
 }
 
-func (m *TotalCountMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *TotalCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	// 需要RootSpan筛选
-	return filter.BuildRootSpanFilter(context.Background(), env)
+	return filter.BuildRootSpanFilter(ctx, env)
 }
 
 func (m *TotalCountMetric) GroupBy() []*entity.Dimension {

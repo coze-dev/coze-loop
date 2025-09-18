@@ -15,23 +15,23 @@ import (
 type ModelTotalTokensMetric struct{}
 
 func (m *ModelTotalTokensMetric) Name() string {
-	return "model_total_tokens"
+	return entity.MetricNameModelTotalTokens
 }
 
 func (m *ModelTotalTokensMetric) Type() string {
-	return "summary"
+	return string(entity.MetricTypeSummary)
 }
 
 func (m *ModelTotalTokensMetric) Source() string {
-	return "ck"
+	return string(entity.MetricSourceCK)
 }
 
 func (m *ModelTotalTokensMetric) Expression() string {
 	return "sum(tags_long['input_tokens'] + tags_long['output_tokens'])"
 }
 
-func (m *ModelTotalTokensMetric) Where(filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildLLMSpanFilter(context.Background(), env)
+func (m *ModelTotalTokensMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return filter.BuildLLMSpanFilter(ctx, env)
 }
 
 func (m *ModelTotalTokensMetric) GroupBy() []*entity.Dimension {
