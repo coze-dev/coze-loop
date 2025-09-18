@@ -25,6 +25,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+func TaskDTO2PO(ctx context.Context, v *task.Task, userMap map[string]*entity_common.UserInfo) *entity.ObservabilityTask {
+	if v == nil {
+		return nil
+	}
+	taskInfo := &entity.ObservabilityTask{}
+	return taskInfo
+}
 func TaskPOs2DOs(ctx context.Context, taskPOs []*entity.ObservabilityTask, userInfos map[string]*entity_common.UserInfo) []*task.Task {
 	var taskList []*task.Task
 	if len(taskPOs) == 0 {
@@ -239,6 +246,17 @@ func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *en
 	if taskDO == nil {
 		return nil
 	}
+	var createdBy, updatedBy string
+	if taskDO.GetBaseInfo().GetCreatedBy() != nil {
+		createdBy = taskDO.GetBaseInfo().GetCreatedBy().GetUserID()
+	}
+	if taskDO.GetBaseInfo().GetUpdatedBy() != nil {
+		updatedBy = taskDO.GetBaseInfo().GetUpdatedBy().GetUserID()
+	}
+	if userID != "" {
+		createdBy = userID
+		updatedBy = userID
+	}
 	return &entity.ObservabilityTask{
 		WorkspaceID:           taskDO.GetWorkspaceID(),
 		Name:                  taskDO.GetName(),
@@ -252,8 +270,8 @@ func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *en
 		TaskConfig:            TaskConfigDTO2PO(ctx, taskDO.GetTaskConfig()),
 		CreatedAt:             time.Now(),
 		UpdatedAt:             time.Now(),
-		CreatedBy:             userID,
-		UpdatedBy:             userID,
+		CreatedBy:             createdBy,
+		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetBackfillEffectiveTime())),
 	}
 }

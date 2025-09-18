@@ -38,9 +38,9 @@ type Processor interface {
 	OnChangeProcessor(ctx context.Context, task *task.Task, taskOp task.TaskStatus) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
 	Finish(ctx context.Context, config any, trigger *Trigger) error                       //Finish
 
-	OnCreateChangeProcessor(ctx context.Context, task *task.Task) error //OnCreateChangeProcessor
-	OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error //OnUpdateChangeProcessor
-	OnFinishChangeProcessor(ctx context.Context, task *task.Task) error //OnFinishChangeProcessor
+	OnCreateChangeProcessor(ctx context.Context, task *task.Task) error                                //OnCreateChangeProcessor
+	OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error //OnUpdateChangeProcessor
+	OnFinishChangeProcessor(ctx context.Context, task *task.Task) error                                //OnFinishChangeProcessor
 
 	OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
 	OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                                            //OnFinishTaskRunProcessor

@@ -845,7 +845,34 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 	}
 	return nil
 }
-func (p *AutoEvaluteProcessor) OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error {
+func (p *AutoEvaluteProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
+	switch taskOp {
+	case task.TaskStatusSuccess:
+		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusSuccess)
+		}
+	case task.TaskStatusRunning:
+		if currentTask.GetTaskStatus() != task.TaskStatusDisabled && currentTask.GetTaskStatus() != task.TaskStatusSuccess {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusRunning)
+		}
+	case task.TaskStatusDisabled:
+		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusDisabled)
+		}
+	case task.TaskStatusPending:
+		if currentTask.GetTaskStatus() == task.TaskStatusPending || currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusPending)
+		}
+	default:
+		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
+	}
+	// 2、更新任务
+	taskPO := tconv.CreateTaskDTO2PO(ctx, currentTask, "")
+	err := p.taskRepo.UpdateTask(ctx, taskPO)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnUpdateChangeProcessor, UpdateTask err, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
 	return nil
 }
 func (p *AutoEvaluteProcessor) OnFinishChangeProcessor(ctx context.Context, task *task.Task) error {

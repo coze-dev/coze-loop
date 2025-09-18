@@ -278,26 +278,22 @@ func (v *TaskDaoImpl) buildSampleRateFilter(q *query.Query, f *filter.TaskFilter
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for sample rate"))
 	}
 
-	// 暂时保留原有的注释逻辑，等待具体实现
-	// sampleRate, err := strconv.ParseFloat(f.Values[0], 64)
-	// if err != nil {
-	//     return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid sample rate: %v", err.Error()))
-	// }
+	// 解析采样率值
+	sampleRate, err := strconv.ParseFloat(f.Values[0], 64)
+	if err != nil {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid sample rate: %v", err.Error()))
+	}
 
+	// 构建 JSON_EXTRACT 表达式
 	switch *f.QueryType {
 	case filter.QueryTypeGte:
-		// filterExpr = q.ObservabilityTask.Sampler.Gte(sampleRate)
-		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') >= ?", sampleRate)
-		return nil, nil
+		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) >= ?", q.ObservabilityTask.Sampler, sampleRate), nil
 	case filter.QueryTypeLte:
-		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') <= ?", sampleRate)
-		return nil, nil
+		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) <= ?", q.ObservabilityTask.Sampler, sampleRate), nil
 	case filter.QueryTypeEq:
-		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') = ?", sampleRate)
-		return nil, nil
+		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) = ?", q.ObservabilityTask.Sampler, sampleRate), nil
 	case filter.QueryTypeNotEq:
-		// db = db.Where("JSON_EXTRACT(sampler, '$.sample_rate') != ?", sampleRate)
-		return nil, nil
+		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) != ?", q.ObservabilityTask.Sampler, sampleRate), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for sample rate"))
 	}

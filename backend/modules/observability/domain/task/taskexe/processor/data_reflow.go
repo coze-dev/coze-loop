@@ -5,6 +5,7 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -301,8 +302,34 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 	}
 	return nil
 }
-func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
-	//
+func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
+	switch taskOp {
+	case task.TaskStatusSuccess:
+		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusSuccess)
+		}
+	case task.TaskStatusRunning:
+		if currentTask.GetTaskStatus() != task.TaskStatusDisabled && currentTask.GetTaskStatus() != task.TaskStatusSuccess {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusRunning)
+		}
+	case task.TaskStatusDisabled:
+		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusDisabled)
+		}
+	case task.TaskStatusPending:
+		if currentTask.GetTaskStatus() == task.TaskStatusPending || currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
+			currentTask.TaskStatus = ptr.Of(task.TaskStatusPending)
+		}
+	default:
+		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
+	}
+	// 2、更新任务
+	taskPO := tconv.CreateTaskDTO2PO(ctx, currentTask, "")
+	err := p.taskRepo.UpdateTask(ctx, taskPO)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnUpdateChangeProcessor, UpdateTask err, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
 	return nil
 }
 func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, currentTask *task.Task) error {
