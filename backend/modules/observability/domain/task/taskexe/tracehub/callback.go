@@ -159,6 +159,9 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
+		if err = annotation.GenID(); err != nil {
+			return err
+		}
 
 		err = h.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
 			Tenant:      span.GetTenant(),
