@@ -40,6 +40,8 @@ type ListTaskRunParam struct {
 type ITaskRunDao interface {
 	// 基础CRUD操作
 	GetTaskRun(ctx context.Context, id int64, workspaceID *int64, taskID *int64) (*model.ObservabilityTaskRun, error)
+	GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error)
+	GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error)
 	CreateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) (int64, error)
 	UpdateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) error
 	DeleteTaskRun(ctx context.Context, id int64, workspaceID int64, userID string) error
@@ -113,6 +115,42 @@ func (v *TaskRunDaoImpl) GetTaskRun(ctx context.Context, id int64, workspaceID *
 		}
 	}
 	return taskRunPo, nil
+}
+func (v *TaskRunDaoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error) {
+	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
+	qd := q.WithContext(ctx).Where(q.TaskType.Eq(task.TaskRunTypeBackFill)).Where(q.TaskID.Eq(taskID))
+
+	if workspaceID != nil {
+		qd = qd.Where(q.WorkspaceID.Eq(*workspaceID))
+	}
+	taskRunPo, err := qd.First()
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("TaskRun not found"))
+		} else {
+			return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+	}
+	return taskRunPo, nil
+
+}
+func (v *TaskRunDaoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error) {
+	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
+	qd := q.WithContext(ctx).Where(q.TaskType.Eq(task.TaskRunTypeNewData)).Where(q.TaskID.Eq(taskID))
+
+	if workspaceID != nil {
+		qd = qd.Where(q.WorkspaceID.Eq(*workspaceID))
+	}
+	taskRunPo, err := qd.Order(q.CreatedAt.Desc()).First()
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("TaskRun not found"))
+		} else {
+			return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+	}
+	return taskRunPo, nil
+
 }
 
 func (v *TaskRunDaoImpl) CreateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) (int64, error) {

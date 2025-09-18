@@ -26,13 +26,16 @@ var _ taskexe.Processor = (*DataReflowProcessor)(nil)
 type DataReflowProcessor struct {
 	datasetServiceAdaptor *service.DatasetServiceAdaptor
 	taskRepo              repo.ITaskRepo
+	taskRunRepo           repo.ITaskRunRepo
 }
 
 func newDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
-	taskRepo repo.ITaskRepo) *DataReflowProcessor {
+	taskRepo repo.ITaskRepo,
+	taskRunRepo repo.ITaskRunRepo) *DataReflowProcessor {
 	return &DataReflowProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		taskRepo:              taskRepo,
+		taskRunRepo:           taskRunRepo,
 	}
 }
 
@@ -186,7 +189,6 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	if ShouldTriggerBackfill(currentTask) {
 		taskConfig.TaskStatus = task.TaskStatusRunning
 	}
-
 	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
 	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
 	// 5、创建 taskrun
@@ -274,15 +276,25 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			Status:       task.RunStatusRunning,
 		},
 	}
-	runType := task.TaskRunTypeNewData
-	if ShouldTriggerBackfill(currentTask) {
-		runType = task.TaskRunTypeBackFill
-	}
-	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
+
+	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, task.TaskRunTypeNewData)
 	if err != nil {
 		return err
 	}
 	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
+	backfillTaskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
+	if err != nil {
+		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
+	if ShouldTriggerBackfill(currentTask) && backfillTaskRuns == nil {
+		taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, task.TaskRunTypeBackFill)
+		if err != nil {
+			return err
+		}
+		taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
+	}
+
 	err = p.taskRepo.UpdateTask(ctx, taskConfig)
 	if err != nil {
 		return err

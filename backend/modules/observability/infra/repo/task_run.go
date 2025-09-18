@@ -74,6 +74,31 @@ func (v *TaskRunRepoImpl) GetTaskRun(ctx context.Context, id int64, workspaceID 
 	return taskRunDO, nil
 }
 
+// GetBackfillTaskRun 获取Backfill类型的TaskRun
+func (v *TaskRunRepoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error) {
+	taskRunPo, err := v.TaskRunDao.GetBackfillTaskRun(ctx, workspaceID, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if taskRunPo == nil {
+		return nil, nil
+	}
+	return convertor.TaskRunPO2DO(taskRunPo), nil
+}
+
+// GetNewDataTaskRun 获取NewData类型的TaskRun
+
+func (v *TaskRunRepoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error) {
+	taskRunPo, err := v.TaskRunDao.GetLatestNewDataTaskRun(ctx, workspaceID, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if taskRunPo == nil {
+		return nil, nil
+	}
+	return convertor.TaskRunPO2DO(taskRunPo), nil
+}
+
 // ListTaskRuns 获取TaskRun列表
 func (v *TaskRunRepoImpl) ListTaskRuns(ctx context.Context, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error) {
 	results, total, err := v.TaskRunDao.ListTaskRuns(ctx, param)

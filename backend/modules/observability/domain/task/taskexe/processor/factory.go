@@ -45,5 +45,5 @@ func InitProcessor(
 	taskRepo repo.ITaskRepo,
 	taskRunRepo repo.ITaskRunRepo) {
 	autoEvaluteProc = newAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo)
-	dataReflowProc = newDataReflowProcessor(datasetServiceProvider, taskRepo)
+	dataReflowProc = newDataReflowProcessor(datasetServiceProvider, taskRepo, taskRunRepo)
 }

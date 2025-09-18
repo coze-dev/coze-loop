@@ -28,6 +28,7 @@ type spanSubscriber struct {
 	flushWait        sync.WaitGroup
 	maxFlushInterval time.Duration
 	taskRepo         repo.ITaskRepo
+	taskRunRepo      repo.ITaskRunRepo
 	runType          task.TaskRunType
 }
 
@@ -60,7 +61,7 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	return true, nil
 }
 func (s *spanSubscriber) Creative(ctx context.Context) error {
-	err := s.processor.OnChangeProcessor(ctx, s.t, task.TaskStatusUnstarted)
+	err := s.processor.OnCreateChangeProcessor(ctx, s.t)
 	if err != nil {
 		return err
 	}
@@ -68,24 +69,27 @@ func (s *spanSubscriber) Creative(ctx context.Context) error {
 }
 
 func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) error {
-	taskConfig, err := s.taskRepo.GetTask(ctx, s.t.GetID(), nil, nil)
-	if err != nil {
-		return err
-	}
-
 	var taskRunConfig *entity.TaskRun
-	if taskConfig != nil {
-		for _, run := range taskConfig.TaskRuns {
-			if run.RunStatus == task.TaskStatusRunning && run.TaskType == string(s.runType) {
-				taskRunConfig = run
-				break
-			}
+	var err error
+	if s.runType == task.TaskRunTypeNewData {
+		taskRunConfig, err = s.taskRunRepo.GetLatestNewDataTaskRun(ctx, nil, s.t.GetID())
+		if err != nil {
+			logs.CtxWarn(ctx, "get latest new data task run failed, task_id=%d, err: %v", s.t.GetID(), err)
+			return err
+		}
+	} else {
+		taskRunConfig, err = s.taskRunRepo.GetBackfillTaskRun(ctx, nil, s.t.GetID())
+		if err != nil {
+			logs.CtxWarn(ctx, "get backfill task run failed, task_id=%d, err: %v", s.t.GetID(), err)
+			return err
 		}
 	}
+
 	if taskRunConfig == nil {
 		logs.CtxWarn(ctx, "no taskRunConfig：%v", taskRunConfig)
 		return nil
 	}
+
 	if taskRunConfig.RunEndAt.UnixMilli() < time.Now().UnixMilli() || taskRunConfig.RunStartAt.UnixMilli() > time.Now().UnixMilli() {
 		return nil
 	}

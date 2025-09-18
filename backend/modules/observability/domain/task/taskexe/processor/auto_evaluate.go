@@ -649,9 +649,14 @@ func GetContentInfo(ctx context.Context, contentType common.ContentType, value s
 }
 
 func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
-	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
+	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnCreateChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
 	//todo:[xun]加锁
-	if ShouldTriggerBackfill(currentTask) {
+	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
+	if err != nil {
+		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
+	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
 		ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
 		sessionInfo := getSession(ctx, currentTask)
 		var evaluationSetColumns []string
