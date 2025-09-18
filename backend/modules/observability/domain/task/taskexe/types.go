@@ -42,8 +42,8 @@ type Processor interface {
 	OnUpdateChangeProcessor(ctx context.Context, task *task.Task) error //OnUpdateChangeProcessor
 	OnFinishChangeProcessor(ctx context.Context, task *task.Task) error //OnFinishChangeProcessor
 
-	OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
-	OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                  //OnFinishTaskRunProcessor
+	OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
+	OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                                            //OnFinishTaskRunProcessor
 }
 
 type ProcessorUnion interface {

@@ -773,8 +773,10 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 		if err != nil {
 			return err
 		}
+		runType := task.TaskRunTypeNewData
 		if ShouldTriggerBackfill(currentTask) {
 			taskConfig.TaskStatus = task.TaskStatusRunning
+			runType = task.TaskRunTypeBackFill
 		}
 
 		var cycleStartAt, cycleEndAt, endAt int64
@@ -823,21 +825,14 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 				Status:       task.TaskStatusRunning,
 			},
 		}
-		taskRun := &task_entity.TaskRun{
-			TaskID:      currentTask.GetID(),
-			WorkspaceID: currentTask.GetWorkspaceID(),
-			TaskType:    currentTask.GetTaskType(),
-			RunStatus:   task.RunStatusRunning,
-			RunStartAt:  time.UnixMilli(cycleStartAt),
-			RunEndAt:    time.UnixMilli(cycleEndAt),
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-			RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
-		}
 
 		// 6、更新任务配置
 		// todo:[xun]改task_run?
-		_, err = p.taskRunRepo.CreateTaskRun(ctx, taskRun)
+		taskRun, err := p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
+		if err != nil {
+			return err
+		}
+		taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
 		err = p.taskRepo.UpdateTask(ctx, taskConfig)
 		if err != nil {
 			return err
@@ -852,9 +847,34 @@ func (p *AutoEvaluteProcessor) OnFinishChangeProcessor(ctx context.Context, task
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig) (*task_entity.TaskRun, error) {
-	return nil, nil
+func (p *AutoEvaluteProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) {
+	taskRun := &task_entity.TaskRun{
+		TaskID:      currentTask.GetID(),
+		WorkspaceID: currentTask.GetWorkspaceID(),
+		TaskType:    runType,
+		RunStatus:   task.RunStatusRunning,
+		RunStartAt:  time.UnixMilli(runConfig.GetAutoEvaluateRunConfig().GetCycleStartAt()),
+		RunEndAt:    time.UnixMilli(runConfig.GetAutoEvaluateRunConfig().GetCycleEndAt()),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		RunConfig:   ptr.Of(ToJSONString(ctx, runConfig)),
+	}
+	id, err := p.taskRepo.CreateTaskRun(ctx, taskRun)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnCreateTaskRunProcessor, CreateTaskRun err, taskRun:%+v, err:%v", taskRun, err)
+		return nil, err
+	}
+	taskRun.ID = id
+	return taskRun, nil
 }
 func (p *AutoEvaluteProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error {
+	// 设置taskRun状态为已完成
+	taskRun.RunStatus = task.RunStatusDone
+	// 更新taskRun
+	err := p.taskRepo.UpdateTaskRun(ctx, taskRun)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnFinishTaskRunProcessor, UpdateTaskRun err, taskRunID:%d, err:%v", taskRun.ID, err)
+		return err
+	}
 	return nil
 }

@@ -274,7 +274,11 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			Status:       task.RunStatusRunning,
 		},
 	}
-	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig)
+	runType := task.TaskRunTypeNewData
+	if ShouldTriggerBackfill(currentTask) {
+		runType = task.TaskRunTypeBackFill
+	}
+	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
 	if err != nil {
 		return err
 	}
@@ -295,7 +299,7 @@ func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, curre
 	return nil
 }
 
-func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig) (*task_entity.TaskRun, error) {
+func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) {
 	// 创建taskRun
 	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
 	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
@@ -304,7 +308,7 @@ func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, curr
 	taskRun = &task_entity.TaskRun{
 		TaskID:      currentTask.GetID(),
 		WorkspaceID: currentTask.GetWorkspaceID(),
-		TaskType:    currentTask.GetTaskType(),
+		TaskType:    runType,
 		RunStatus:   task.RunStatusRunning,
 		RunStartAt:  time.UnixMilli(cycleStartAt),
 		RunEndAt:    time.UnixMilli(cycleEndAt),
@@ -312,7 +316,12 @@ func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, curr
 		UpdatedAt:   time.Now(),
 		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
 	}
-	p.taskRepo.CreateTaskRun(ctx, taskRun)
+	id, err := p.taskRepo.CreateTaskRun(ctx, taskRun)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnCreateTaskRunProcessor, CreateTaskRun err, taskRun:%+v, err:%v", taskRun, err)
+		return nil, err
+	}
+	taskRun.ID = id
 	return taskRun, nil
 }
 func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error {
