@@ -148,6 +148,7 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			TraceID:        span.TraceID,
 			WorkspaceID:    workspaceIDStr,
 			AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+			StartTime:      time.UnixMicro(span.StartTime),
 			Key:            fmt.Sprintf("%d:%d", taskID, turn.EvaluatorVersionID),
 			Value: loop_span.AnnotationValue{
 				ValueType:  loop_span.AnnotationValueTypeDouble,
