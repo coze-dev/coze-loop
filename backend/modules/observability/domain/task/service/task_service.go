@@ -197,7 +197,9 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		taskPO.EffectiveTime = ptr.Of(tconv.ToJSONString(ctx, validEffectiveTime))
 	}
 	if req.SampleRate != nil {
-		taskPO.Sampler = ptr.Of(tconv.ToJSONString(ctx, req.SampleRate))
+		sampler := tconv.SamplerPO2DO(ctx, taskPO.Sampler)
+		sampler.SampleRate = req.SampleRate
+		taskPO.Sampler = ptr.Of(tconv.ToJSONString(ctx, sampler))
 	}
 	if req.TaskStatus != nil {
 		validTaskStatus, err := tconv.CheckTaskStatus(ctx, *req.TaskStatus, taskPO.TaskStatus)
