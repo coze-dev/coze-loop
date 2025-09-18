@@ -101,6 +101,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		flushWait:        sync.WaitGroup{},
 		maxFlushInterval: time.Second * 5,
 		taskRepo:         h.taskRepo,
+		runType:          task.TaskRunTypeBackFill,
 	}
 	// 解析任务规则
 	var rule *task.Rule

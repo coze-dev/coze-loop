@@ -166,6 +166,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 			flushWait:        sync.WaitGroup{},
 			maxFlushInterval: time.Second * 5,
 			taskRepo:         h.taskRepo,
+			runType:          task.TaskRunTypeNewData,
 		})
 	}
 

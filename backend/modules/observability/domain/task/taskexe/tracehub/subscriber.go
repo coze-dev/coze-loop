@@ -28,6 +28,7 @@ type spanSubscriber struct {
 	flushWait        sync.WaitGroup
 	maxFlushInterval time.Duration
 	taskRepo         repo.ITaskRepo
+	runType          task.TaskRunType
 }
 
 // Sampled 根据采样率计算是否被采样；采样数量将在 flush 时强制校验。
@@ -75,7 +76,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	var taskRunConfig *entity.TaskRun
 	if taskConfig != nil {
 		for _, run := range taskConfig.TaskRuns {
-			if run.RunStatus == task.TaskStatusRunning {
+			if run.RunStatus == task.TaskStatusRunning && run.TaskType == string(s.runType) {
 				taskRunConfig = run
 				break
 			}
