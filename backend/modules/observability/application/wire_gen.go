@@ -95,7 +95,8 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis2 redis.Cmdabl
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao)
+	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
@@ -151,7 +152,8 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao)
+	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
@@ -196,8 +198,8 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
-	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao)
 	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
+	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
 	iTaskRunRepo := repo.NewTaskRunRepoImpl(iTaskRunDao, idgen2, iTaskRunDAO)
 	iUserProvider := user.NewUserRPCProvider(userClient)
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
