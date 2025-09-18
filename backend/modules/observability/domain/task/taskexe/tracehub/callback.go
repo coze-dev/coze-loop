@@ -136,9 +136,12 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			[]string{spanID},
 			traceID,
 			workspaceIDStr,
-			startTime/1000-time.Second.Milliseconds(),
-			startTime/1000+time.Second.Milliseconds(),
+			startTime/1000-5*time.Second.Milliseconds(),
+			startTime/1000+5*time.Second.Milliseconds(),
 		)
+		if len(spans) == 0 {
+			return fmt.Errorf("span not found, span_id: %s", spanID)
+		}
 		span := spans[0]
 		annotation := &loop_span.Annotation{
 			SpanID:         spanID,
