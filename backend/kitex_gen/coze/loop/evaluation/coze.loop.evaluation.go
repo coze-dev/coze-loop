@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 )
 
 type EvaluationSetService interface {
@@ -141,6 +142,32 @@ func NewEvalOpenAPIServiceClient(c thrift.TClient) *EvalOpenAPIServiceClient {
 	}
 }
 
+type EvalSPIService interface {
+	spi.EvaluationSPIService
+}
+
+type EvalSPIServiceClient struct {
+	*spi.EvaluationSPIServiceClient
+}
+
+func NewEvalSPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvalSPIServiceClient {
+	return &EvalSPIServiceClient{
+		EvaluationSPIServiceClient: spi.NewEvaluationSPIServiceClientFactory(t, f),
+	}
+}
+
+func NewEvalSPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvalSPIServiceClient {
+	return &EvalSPIServiceClient{
+		EvaluationSPIServiceClient: spi.NewEvaluationSPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewEvalSPIServiceClient(c thrift.TClient) *EvalSPIServiceClient {
+	return &EvalSPIServiceClient{
+		EvaluationSPIServiceClient: spi.NewEvaluationSPIServiceClient(c),
+	}
+}
+
 type EvaluationSetServiceProcessor struct {
 	*eval_set.EvaluationSetServiceProcessor
 }
@@ -183,5 +210,14 @@ type EvalOpenAPIServiceProcessor struct {
 
 func NewEvalOpenAPIServiceProcessor(handler EvalOpenAPIService) *EvalOpenAPIServiceProcessor {
 	self := &EvalOpenAPIServiceProcessor{openapi.NewEvaluationOpenAPIServiceProcessor(handler)}
+	return self
+}
+
+type EvalSPIServiceProcessor struct {
+	*spi.EvaluationSPIServiceProcessor
+}
+
+func NewEvalSPIServiceProcessor(handler EvalSPIService) *EvalSPIServiceProcessor {
+	self := &EvalSPIServiceProcessor{spi.NewEvaluationSPIServiceProcessor(handler)}
 	return self
 }
