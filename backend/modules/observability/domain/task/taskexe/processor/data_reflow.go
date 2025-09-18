@@ -73,7 +73,7 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 		mapping = ConvertFieldMappingsDTO2DO(dataReflowConfig.FieldMappings)
 	}
 
-	category := getCategory(cfg.TaskType)
+	category := entity.DatasetCategory_General
 	successItems, _, _ := buildDatasetItems(ctx, []*loop_span.Span{trigger.Span}, mapping, workspaceID, *trigger.Task.ID, entity.NewDataset(
 		taskRun.TaskRunConfig.GetDataReflowRunConfig().GetDatasetID(),
 		workspaceID,

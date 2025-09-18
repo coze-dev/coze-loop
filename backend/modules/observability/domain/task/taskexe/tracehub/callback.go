@@ -143,6 +143,15 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			return fmt.Errorf("span not found, span_id: %s", spanID)
 		}
 		span := spans[0]
+
+		// 新增：根据Status写Redis计数
+		err = h.updateTaskRunStatusCount(ctx, taskID, turn)
+		if err != nil {
+			logs.CtxWarn(ctx, "更新TaskRun状态计数失败: taskID=%d, status=%d, err=%v",
+				taskID, turn.Status, err)
+			// 不中断流程，继续处理
+		}
+
 		annotation := &loop_span.Annotation{
 			SpanID:         spanID,
 			TraceID:        span.TraceID,
@@ -220,4 +229,30 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 		return nil, nil
 	}
 	return res.Spans, nil
+}
+
+// updateTaskRunStatusCount 根据Status更新Redis计数
+func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult) error {
+	// 从Ext中获取taskRunID
+	taskRunIDStr := turn.Ext["task_run_id"]
+	if taskRunIDStr == "" {
+		return fmt.Errorf("task_run_id not found in ext")
+	}
+
+	taskRunID, err := strconv.ParseInt(taskRunIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid task_run_id: %s, err: %v", taskRunIDStr, err)
+	}
+
+	// 根据Status增加相应计数
+	switch turn.Status {
+	case entity.EvaluatorRunStatus_Success:
+		return h.taskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+	case entity.EvaluatorRunStatus_Fail:
+		return h.taskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+	default:
+		logs.CtxDebug(ctx, "未知的评估状态，跳过计数: taskID=%d, taskRunID=%d, status=%d",
+			taskID, taskRunID, turn.Status)
+		return nil
+	}
 }

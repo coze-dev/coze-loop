@@ -19,20 +19,22 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func NewTaskRepoImpl(TaskDao mysql.ITaskDao, idGenerator idgen.IIDGenerator, taskRedisDao dao.ITaskDAO, taskRunDao mysql.ITaskRunDao) repo.ITaskRepo {
+func NewTaskRepoImpl(TaskDao mysql.ITaskDao, idGenerator idgen.IIDGenerator, taskRedisDao dao.ITaskDAO, taskRunDao mysql.ITaskRunDao, taskRunRedisDao dao.ITaskRunDAO) repo.ITaskRepo {
 	return &TaskRepoImpl{
-		TaskDao:      TaskDao,
-		idGenerator:  idGenerator,
-		TaskRedisDao: taskRedisDao,
-		TaskRunDao:   taskRunDao,
+		TaskDao:         TaskDao,
+		idGenerator:     idGenerator,
+		TaskRedisDao:    taskRedisDao,
+		TaskRunDao:      taskRunDao,
+		TaskRunRedisDao: taskRunRedisDao,
 	}
 }
 
 type TaskRepoImpl struct {
-	TaskDao      mysql.ITaskDao
-	TaskRunDao   mysql.ITaskRunDao
-	TaskRedisDao dao.ITaskDAO
-	idGenerator  idgen.IIDGenerator
+	TaskDao         mysql.ITaskDao
+	TaskRunDao      mysql.ITaskRunDao
+	TaskRedisDao    dao.ITaskDAO
+	TaskRunRedisDao dao.ITaskRunDAO
+	idGenerator     idgen.IIDGenerator
 }
 
 // 缓存 TTL 常量
@@ -459,4 +461,24 @@ func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, works
 // GetAllTaskRunCountKeys 获取所有TaskRunCount键
 func (v *TaskRepoImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, error) {
 	return v.TaskRedisDao.GetAllTaskRunCountKeys(ctx)
+}
+
+// IncrTaskRunSuccessCount 增加TaskRun成功计数
+func (v *TaskRepoImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
+	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+}
+
+// IncrTaskRunFailCount 增加TaskRun失败计数
+func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error {
+	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+}
+
+// GetTaskRunSuccessCount 获取TaskRun成功计数
+func (v *TaskRepoImpl) GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
+	return v.TaskRunRedisDao.GetTaskRunSuccessCount(ctx, taskID, taskRunID)
+}
+
+// GetTaskRunFailCount 获取TaskRun失败计数
+func (v *TaskRepoImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
+	return v.TaskRunRedisDao.GetTaskRunFailCount(ctx, taskID, taskRunID)
 }

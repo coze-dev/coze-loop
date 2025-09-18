@@ -38,6 +38,12 @@ type ITaskRunDAO interface {
 	SetTaskRunCount(ctx context.Context, taskID, taskRunID int64, count int64, ttl time.Duration) error
 	DeleteTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
 	
+	// 成功/失败计数操作
+	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
+	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
+	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
+	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
+	
 	// 对象列表缓存操作
 	GetObjListWithTaskRun(ctx context.Context) ([]string, []string, error)
 	SetObjListWithTaskRun(ctx context.Context, spaceList, botList []string, ttl time.Duration) error
@@ -70,6 +76,14 @@ func (q *TaskRunDAOImpl) makeTaskRunListByTaskKey(taskID int64) string {
 
 func (q *TaskRunDAOImpl) makeTaskRunCountKey(taskID, taskRunID int64) string {
 	return fmt.Sprintf("taskrun:count:%d:%d", taskID, taskRunID)
+}
+
+func (q *TaskRunDAOImpl) makeTaskRunSuccessCountKey(taskID, taskRunID int64) string {
+	return fmt.Sprintf("taskrun:success_count:%d:%d", taskID, taskRunID)
+}
+
+func (q *TaskRunDAOImpl) makeTaskRunFailCountKey(taskID, taskRunID int64) string {
+	return fmt.Sprintf("taskrun:fail_count:%d:%d", taskID, taskRunID)
 }
 
 func (q *TaskRunDAOImpl) makeObjListWithTaskRunKey() string {
@@ -300,4 +314,52 @@ func (p *TaskRunDAOImpl) DeleteObjListWithTaskRun(ctx context.Context) error {
 		return errorx.Wrapf(err, "redis delete obj list with taskrun key: %v", key)
 	}
 	return nil
+}
+
+// 成功/失败计数操作实现
+
+// IncrTaskRunSuccessCount 增加成功计数
+func (p *TaskRunDAOImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
+	key := p.makeTaskRunSuccessCountKey(taskID, taskRunID)
+	if err := p.cmdable.Incr(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis incr taskrun success count failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis incr taskrun success count key: %v", key)
+	}
+	return nil
+}
+
+// IncrTaskRunFailCount 增加失败计数
+func (p *TaskRunDAOImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error {
+	key := p.makeTaskRunFailCountKey(taskID, taskRunID)
+	if err := p.cmdable.Incr(ctx, key).Err(); err != nil {
+		logs.CtxError(ctx, "redis incr taskrun fail count failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis incr taskrun fail count key: %v", key)
+	}
+	return nil
+}
+
+// GetTaskRunSuccessCount 获取成功计数
+func (p *TaskRunDAOImpl) GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
+	key := p.makeTaskRunSuccessCountKey(taskID, taskRunID)
+	got, err := p.cmdable.Get(ctx, key).Int64()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return 0, nil // 缓存未命中，返回0
+		}
+		return 0, errorx.Wrapf(err, "redis get taskrun success count fail, key: %v", key)
+	}
+	return got, nil
+}
+
+// GetTaskRunFailCount 获取失败计数
+func (p *TaskRunDAOImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
+	key := p.makeTaskRunFailCountKey(taskID, taskRunID)
+	got, err := p.cmdable.Get(ctx, key).Int64()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return 0, nil // 缓存未命中，返回0
+		}
+		return 0, errorx.Wrapf(err, "redis get taskrun fail count fail, key: %v", key)
+	}
+	return got, nil
 }
