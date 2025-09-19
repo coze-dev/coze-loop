@@ -157,6 +157,10 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 		return err
 	}
 	//todo:[xun]根据是否是真的结束实验做处理
+	if trigger.IsFinish {
+		if err := p.OnUpdateChangeProcessor(ctx, trigger.Task, task.TaskStatusSuccess); err != nil {
+		}
+	}
 	return nil
 }
 
