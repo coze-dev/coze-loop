@@ -44,7 +44,8 @@ type ExecuteParam struct {
 	SingleStep    bool
 	DebugTraceKey string
 
-	Scenario entity.Scenario
+	Scenario       entity.Scenario
+	DisableTracing bool
 }
 
 type ExecuteStreamingParam struct {
@@ -176,10 +177,12 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 
 func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param ExecuteStreamingParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
 	var span cozeloop.Span
-	ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
-	defer func() {
-		p.finishSequenceSpan(ctx, span, aggregatedReply, err)
-	}()
+	if !param.DisableTracing {
+		ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
+		defer func() {
+			p.finishSequenceSpan(ctx, span, aggregatedReply, err)
+		}()
+	}
 	var llmCallParam rpc.LLMCallParam
 	llmCallParam, err = p.prepareLLMCallParam(ctx, param.ExecuteParam)
 	if err != nil {
@@ -221,17 +224,21 @@ func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param Exec
 		}
 	}
 
-	// report tool call span
-	p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
+	if !param.DisableTracing {
+		// report tool call span
+		p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
+	}
 	return replyItemWrapper(aggregatedResult), nil
 }
 
 func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
 	var span cozeloop.Span
-	ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
-	defer func() {
-		p.finishSequenceSpan(ctx, span, aggregatedReply, err)
-	}()
+	if !param.DisableTracing {
+		ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
+		defer func() {
+			p.finishSequenceSpan(ctx, span, aggregatedReply, err)
+		}()
+	}
 	var llmCallParam rpc.LLMCallParam
 	llmCallParam, err = p.prepareLLMCallParam(ctx, param)
 	if err != nil {
@@ -242,8 +249,10 @@ func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam,
 	if err != nil {
 		return nil, err
 	}
-	// tool call处理
-	p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
+	if !param.DisableTracing {
+		// tool call处理
+		p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
+	}
 	return replyItemWrapper(aggregatedResult), nil
 }
 

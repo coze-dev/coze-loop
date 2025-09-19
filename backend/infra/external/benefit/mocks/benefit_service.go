@@ -71,6 +71,21 @@ func (mr *MockIBenefitServiceMockRecorder) CheckAndDeductEvalBenefit(ctx, param 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAndDeductEvalBenefit", reflect.TypeOf((*MockIBenefitService)(nil).CheckAndDeductEvalBenefit), ctx, param)
 }
 
+// CheckAndDeductOptimizationBenefit mocks base method.
+func (m *MockIBenefitService) CheckAndDeductOptimizationBenefit(ctx context.Context, param *benefit.CheckAndDeductOptimizationBenefitParams) (*benefit.CheckAndDeductOptimizationBenefitResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckAndDeductOptimizationBenefit", ctx, param)
+	ret0, _ := ret[0].(*benefit.CheckAndDeductOptimizationBenefitResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckAndDeductOptimizationBenefit indicates an expected call of CheckAndDeductOptimizationBenefit.
+func (mr *MockIBenefitServiceMockRecorder) CheckAndDeductOptimizationBenefit(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAndDeductOptimizationBenefit", reflect.TypeOf((*MockIBenefitService)(nil).CheckAndDeductOptimizationBenefit), ctx, param)
+}
+
 // CheckEvaluatorBenefit mocks base method.
 func (m *MockIBenefitService) CheckEvaluatorBenefit(ctx context.Context, param *benefit.CheckEvaluatorBenefitParams) (*benefit.CheckEvaluatorBenefitResult, error) {
 	m.ctrl.T.Helper()
@@ -114,6 +129,20 @@ func (m *MockIBenefitService) CheckTraceBenefit(ctx context.Context, param *bene
 func (mr *MockIBenefitServiceMockRecorder) CheckTraceBenefit(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckTraceBenefit", reflect.TypeOf((*MockIBenefitService)(nil).CheckTraceBenefit), ctx, param)
+}
+
+// DeductOptimizationBenefit mocks base method.
+func (m *MockIBenefitService) DeductOptimizationBenefit(ctx context.Context, param *benefit.DeductOptimizationBenefitParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeductOptimizationBenefit", ctx, param)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeductOptimizationBenefit indicates an expected call of DeductOptimizationBenefit.
+func (mr *MockIBenefitServiceMockRecorder) DeductOptimizationBenefit(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeductOptimizationBenefit", reflect.TypeOf((*MockIBenefitService)(nil).DeductOptimizationBenefit), ctx, param)
 }
 
 // DeductTraceBenefit mocks base method.
