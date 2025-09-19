@@ -537,8 +537,17 @@ func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationResult(data map[st
 	// 如果无效，获取错误信息
 	if !result.Valid {
 		if errorVal, ok := data["error"]; ok {
-			if errorMsg, ok := errorVal.(string); ok {
-				result.ErrorMsg = errorMsg
+			switch errorInfo := errorVal.(type) {
+			case string:
+				// 兼容旧格式：简单字符串错误信息
+				result.ErrorMsg = errorInfo
+			case map[string]interface{}:
+				// 新格式：包含详细行列号信息的对象
+				if fullMsg, ok := errorInfo["full_message"].(string); ok {
+					result.ErrorMsg = fullMsg
+				} else if msg, ok := errorInfo["message"].(string); ok {
+					result.ErrorMsg = msg
+				}
 			}
 		}
 	}
