@@ -217,6 +217,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 			*config.DatasetName,
 			category,
 			config.DatasetSchema,
+			nil,
 		))
 		if err != nil {
 			return nil, err
@@ -240,6 +241,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 				"",
 				category,
 				config.DatasetSchema,
+				nil,
 			)); err != nil {
 				return nil, err
 			}
@@ -477,6 +479,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 		"",
 		category,
 		schema,
+		nil,
 	)
 	if config.DatasetID != nil {
 		dataset.ID = *config.DatasetID
@@ -488,7 +491,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 }
 
 func (r *TraceExportServiceImpl) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
-	return r.DatasetServiceAdaptor.getDatasetProvider(category)
+	return r.DatasetServiceAdaptor.GetDatasetProvider(category)
 }
 
 type DatasetServiceAdaptor struct {
@@ -506,7 +509,7 @@ func (d *DatasetServiceAdaptor) Register(category entity.DatasetCategory, provid
 	d.datasetServiceMap[category] = provider
 }
 
-func (d *DatasetServiceAdaptor) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
+func (d *DatasetServiceAdaptor) GetDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
 	datasetProvider, ok := d.datasetServiceMap[category]
 	if !ok {
 		return rpc.NoopDatasetProvider

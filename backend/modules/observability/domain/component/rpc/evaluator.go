@@ -3,7 +3,9 @@
 
 package rpc
 
-import "context"
+import (
+	"context"
+)
 
 type Evaluator struct {
 	EvaluatorVersionID int64
@@ -15,8 +17,21 @@ type BatchGetEvaluatorVersionsParam struct {
 	WorkspaceID         int64
 	EvaluatorVersionIds []int64
 }
+type UpdateEvaluatorRecordParam struct {
+	WorkspaceID       string
+	EvaluatorRecordID int64
+	Score             float64
+	Reasoning         string
+	UpdatedBy         string
+}
+type ListEvaluatorsParam struct {
+	WorkspaceID int64
+	Name        *string
+}
 
 //go:generate mockgen -destination=mocks/evaluator.go -package=mocks . IEvaluatorRPCAdapter
 type IEvaluatorRPCAdapter interface {
 	BatchGetEvaluatorVersions(ctx context.Context, param *BatchGetEvaluatorVersionsParam) ([]*Evaluator, map[int64]*Evaluator, error)
+	UpdateEvaluatorRecord(ctx context.Context, param *UpdateEvaluatorRecordParam) error
+	ListEvaluators(ctx context.Context, param *ListEvaluatorsParam) ([]*Evaluator, error)
 }

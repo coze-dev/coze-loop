@@ -14,15 +14,19 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -40,8 +44,10 @@ import (
 	obrepo "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
@@ -54,6 +60,16 @@ import (
 )
 
 var (
+	taskDomainSet = wire.NewSet(
+		taskSvc.NewTaskServiceImpl,
+		obrepo.NewTaskRepoImpl,
+		obrepo.NewTaskRunRepoImpl,
+		mysqldao.NewTaskDaoImpl,
+		tredis.NewTaskDAO,
+		tredis.NewTaskRunDAO,
+		mysqldao.NewTaskRunDaoImpl,
+		mq2.NewBackfillProducerImpl,
+	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
@@ -69,7 +85,9 @@ var (
 		obconfig.NewTraceConfigCenter,
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
+		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
+		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
@@ -78,7 +96,6 @@ var (
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
-		evaluator.NewEvaluatorRPCProvider,
 		traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
@@ -94,6 +111,16 @@ var (
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
 		auth.NewAuthProvider,
+		traceDomainSet,
+	)
+	taskSet = wire.NewSet(
+		//NewDatasetServiceAdapter,
+		tracehub.NewTraceHubImpl,
+		NewTaskApplication,
+		auth.NewAuthProvider,
+		user.NewUserRPCProvider,
+		//evaluator.NewEvaluatorRPCProvider,
+		evaluation.NewEvaluationRPCProvider,
 		traceDomainSet,
 	)
 )
@@ -171,6 +198,7 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 func InitTraceApplication(
 	db db.Provider,
 	ckDb ck.Provider,
+	redis redis.Cmdable,
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
@@ -197,6 +225,10 @@ func InitOpenAPIApplication(
 	limiterFactory limiter.IRateLimiterFactory,
 	authClient authservice.Client,
 	meter metrics.Meter,
+	db db.Provider,
+	redis redis.Cmdable,
+	idgen idgen.IIDGenerator,
+	evalService evaluatorservice.Client,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
 	return nil, nil
@@ -207,5 +239,24 @@ func InitTraceIngestionApplication(
 	ckDb ck.Provider,
 	mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
+	return nil, nil
+}
+
+func InitTaskApplication(
+	db db.Provider,
+	idgen idgen.IIDGenerator,
+	configFactory conf.IConfigLoaderFactory,
+	ckDb ck.Provider,
+	redis redis.Cmdable,
+	mqFactory mq.IFactory,
+	userClient userservice.Client,
+	authClient authservice.Client,
+	evalService evaluatorservice.Client,
+	evalSetService evaluationsetservice.Client,
+	exptService experimentservice.Client,
+	datasetService datasetservice.Client,
+	benefit benefit.IBenefitService,
+	fileClient fileservice.Client) (ITaskApplication, error) {
+	wire.Build(taskSet)
 	return nil, nil
 }

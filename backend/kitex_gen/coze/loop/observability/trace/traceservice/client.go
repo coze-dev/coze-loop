@@ -26,6 +26,9 @@ type Client interface {
 	ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error)
 	ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.ExportTracesToDatasetResponse, err error)
 	PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.PreviewExportTracesToDatasetResponse, err error)
+	ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error)
+	ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationEvaluatorsResponse, err error)
+	ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest, callOptions ...callopt.Option) (r *trace.ExtractSpanInfoResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -130,4 +133,19 @@ func (p *kTraceServiceClient) ExportTracesToDataset(ctx context.Context, req *tr
 func (p *kTraceServiceClient) PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.PreviewExportTracesToDatasetResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.PreviewExportTracesToDataset(ctx, req)
+}
+
+func (p *kTraceServiceClient) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ChangeEvaluatorScore(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationEvaluatorsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListAnnotationEvaluators(ctx, req)
+}
+
+func (p *kTraceServiceClient) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest, callOptions ...callopt.Option) (r *trace.ExtractSpanInfoResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ExtractSpanInfo(ctx, req)
 }
