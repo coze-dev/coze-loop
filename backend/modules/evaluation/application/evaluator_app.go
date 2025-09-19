@@ -743,14 +743,9 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *eva
 			if languageMap, exists := codeTemplates[templateKey]; exists {
 				if request.GetLanguageType() != "" {
 					// 指定了语言类型，查找对应的模板
-					template, ok = languageMap[string(request.GetLanguageType())]
+					template, ok = languageMap[request.GetLanguageType()]
 				} else {
-					// 未指定语言类型，返回第一个可用的模板
-					for _, t := range languageMap {
-						template = t
-						ok = true
-						break
-					}
+					template, ok = languageMap[evaluatordto.LanguageTypePython]
 				}
 			}
 		}
@@ -1224,7 +1219,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 			// 首先转换输出数据
 			if outputDataDO != nil {
 				results[index] = evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO)
-				
+
 				// 检查是否需要使用debugErr作为EvaluatorRunError
 				if results[index].EvaluatorRunError == nil && debugErr != nil {
 					results[index].EvaluatorRunError = &evaluatordto.EvaluatorRunError{
