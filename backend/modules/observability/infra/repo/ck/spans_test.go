@@ -197,6 +197,19 @@ func TestBuildSql(t *testing.T) {
 			},
 			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldInput,
+						FieldType: loop_span.FieldTypeString,
+						Values:    []string{"123"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumNotMatch),
+					},
+				},
+			},
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
 	}
 	for _, tc := range testCases {
 		qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &QueryParam{

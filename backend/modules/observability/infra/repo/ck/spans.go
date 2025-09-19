@@ -200,6 +200,11 @@ func (s *SpansCkDaoImpl) buildSqlForFilterField(ctx context.Context, db *gorm.DB
 				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
 			}
 			queryChain = queryChain.Where(fmt.Sprintf("%s like ?", fieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
+		case loop_span.QueryTypeEnumNotMatch:
+			if len(fieldValues) != 1 {
+				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+			}
+			queryChain = queryChain.Where(fmt.Sprintf("%s NOT like ?", fieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
 		case loop_span.QueryTypeEnumEq:
 			if len(fieldValues) != 1 {
 				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
