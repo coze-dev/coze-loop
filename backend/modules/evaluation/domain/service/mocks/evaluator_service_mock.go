@@ -5,12 +5,11 @@
 package mocks
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
-	"go.uber.org/mock/gomock"
-
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockEvaluatorService is a mock of EvaluatorService interface.
@@ -139,6 +138,8 @@ func (mr *MockEvaluatorServiceMockRecorder) GetEvaluator(arg0, arg1, arg2, arg3 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).GetEvaluator), arg0, arg1, arg2, arg3)
 }
+
+
 
 // GetEvaluatorVersion mocks base method.
 func (m *MockEvaluatorService) GetEvaluatorVersion(arg0 context.Context, arg1 int64, arg2 bool) (*entity.Evaluator, error) {

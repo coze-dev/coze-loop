@@ -8,10 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockIExptDAO is a mock of IExptDAO interface.
