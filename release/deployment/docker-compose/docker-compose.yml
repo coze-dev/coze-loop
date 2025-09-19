@@ -34,6 +34,10 @@ services:
         condition: service_healthy
       rocketmq-init:
         condition: service_completed_successfully
+      coze-loop-python-faas:
+        condition: service_healthy
+      coze-loop-js-faas:
+        condition: service_healthy
     environment:
       # redis
       COZE_LOOP_REDIS_DOMAIN: "${COZE_LOOP_REDIS_DOMAIN}"
@@ -62,13 +66,16 @@ services:
       # rmq
       COZE_LOOP_RMQ_NAMESRV_DOMAIN: "${COZE_LOOP_RMQ_NAMESRV_DOMAIN}"
       COZE_LOOP_RMQ_NAMESRV_PORT: "${COZE_LOOP_RMQ_NAMESRV_PORT}"
+      # faas
+      COZE_LOOP_PYTHON_FAAS_URL: "http://coze-loop-python-faas:8000"
+      COZE_LOOP_JS_FAAS_URL: "http://coze-loop-js-faas:8000"
     entrypoint: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
     healthcheck:
       test: [ "CMD", "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
       interval: 15s
-      timeout: 5s
-      retries: 30
-      start_period: 10s
+      timeout: 10s
+      retries: 50
+      start_period: 30s
 
   redis:
     profiles: [ "redis" ]
@@ -295,6 +302,78 @@ services:
       retries: 5
       start_period: 10s
 
+  # Python FaaS服务
+  coze-loop-python-faas:
+    profiles: [ "faas", "app" ]
+    container_name: "coze-loop-python-faas"
+    image: "python:3.11-slim"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_PYTHON_FAAS_PORT:-8890}:8000"
+    volumes:
+      - python_faas_workspace:/tmp/faas-workspace
+      - ./bootstrap/python-faas:/app/bootstrap
+    environment:
+      FAAS_WORKSPACE: "/tmp/faas-workspace"
+      FAAS_PORT: "8000"
+      FAAS_TIMEOUT: "30000"
+      FAAS_LANGUAGE: "python"
+    working_dir: /app
+    command: ["python3", "/app/bootstrap/python_faas_server.py"]
+    deploy:
+      resources:
+        limits:
+          memory: "${PYTHON_FAAS_MEMORY_LIMIT:-1G}"
+          cpus: "${PYTHON_FAAS_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: "${PYTHON_FAAS_MEMORY_RESERVE:-256M}"
+          cpus: "${PYTHON_FAAS_CPU_RESERVE:-0.25}"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; import json; resp = urllib.request.urlopen('http://localhost:8000/health'); data = json.loads(resp.read().decode()); print('Health:', data['status']); exit(0 if data['status'] == 'healthy' else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # JavaScript FaaS服务
+  coze-loop-js-faas:
+    profiles: [ "faas", "app" ]
+    container_name: "coze-loop-js-faas"
+    image: "denoland/deno:1.45.5"
+    restart: always
+    networks:
+      - coze-loop-network
+    ports:
+      - "${COZE_LOOP_JS_FAAS_PORT:-8891}:8000"
+    volumes:
+      - js_faas_workspace:/tmp/faas-workspace
+      - ./bootstrap/js-faas:/app/bootstrap
+    environment:
+      DENO_DIR: "/tmp/.deno"
+      DENO_NO_UPDATE_CHECK: "1"
+      FAAS_WORKSPACE: "/tmp/faas-workspace"
+      FAAS_PORT: "8000"
+      FAAS_TIMEOUT: "30000"
+      FAAS_LANGUAGE: "javascript"
+    working_dir: /app
+    command: ["deno", "run", "--allow-all", "/app/bootstrap/js_faas_server.ts"]
+    deploy:
+      resources:
+        limits:
+          memory: "${JS_FAAS_MEMORY_LIMIT:-1G}"
+          cpus: "${JS_FAAS_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: "${JS_FAAS_MEMORY_RESERVE:-256M}"
+          cpus: "${JS_FAAS_CPU_RESERVE:-0.25}"
+    healthcheck:
+      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 volumes:
   redis_data:
     name: coze-loop_redis_data
@@ -311,7 +390,12 @@ volumes:
   rmq_broker_data:
     name: coze-loop_rocketmq_broker_data
   nginx_data:
-    name: ${COZE_LOOP_NGINX_DATA_VOLUME_NAME}
+<<<<<<< HEAD
+    name: coze-loop_nginx_data
+  python_faas_workspace:
+    name: coze-loop_python_faas_workspace
+  js_faas_workspace:
+    name: coze-loop_js_faas_workspace
 
 networks:
   coze-loop-network:

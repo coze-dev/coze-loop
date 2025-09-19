@@ -413,7 +413,7 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		return t.EvaluationSetVersion.ID, t
 	})
 	evaluatorMap := gslice.ToMap(evaluators, func(t *entity.Evaluator) (int64, *entity.Evaluator) {
-		return t.GetEvaluatorVersion().GetID(), t
+		return t.GetEvaluatorVersionID(), t
 	})
 
 	res := make([]*entity.ExptTuple, 0, len(tupleIDs))
@@ -516,12 +516,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	for i, es := range tuple.Evaluators {
 		evaluatorRefs = append(evaluatorRefs, &entity.ExptEvaluatorVersionRef{
 			EvaluatorID:        es.ID,
-			EvaluatorVersionID: es.GetEvaluatorVersion().GetID(),
+			EvaluatorVersionID: es.GetEvaluatorVersionID(),
 		})
 		exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
 			SpaceID:   req.WorkspaceID,
 			ExptID:    ids[0],
-			FromField: strconv.FormatInt(es.GetEvaluatorVersion().GetID(), 10),
+			FromField: strconv.FormatInt(es.GetEvaluatorVersionID(), 10),
 			ToKey:     "key" + strconv.Itoa(i+1),
 			FieldType: entity.FieldTypeEvaluator,
 		})

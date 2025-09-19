@@ -39,6 +39,7 @@ type EvaluatorService interface {
 	SubmitEvaluatorVersion(ctx context.Context, evaluatorVersionDO *entity.Evaluator, version, description, cid string) (*entity.Evaluator, error)
 	// CheckNameExist
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
+
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

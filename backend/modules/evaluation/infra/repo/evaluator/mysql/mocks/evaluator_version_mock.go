@@ -11,7 +11,7 @@ import (
 	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	mysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
-	"go.uber.org/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockEvaluatorVersionDAO is a mock of EvaluatorVersionDAO interface.
