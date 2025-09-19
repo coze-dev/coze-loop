@@ -120,5 +120,14 @@ type ExportCSVEvent struct {
 	ExperimentID int64
 	SpaceID      int64
 
-	Session *Session
+	Session     *Session
+	ExportScene ExportScene
+	CreatedAt   int64
 }
+
+type ExportScene int
+
+const (
+	ExportSceneDefault         ExportScene = 0
+	ExportSceneInsightAnalysis ExportScene = 1
+)
