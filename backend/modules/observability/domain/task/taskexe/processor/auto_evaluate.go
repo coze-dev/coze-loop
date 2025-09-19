@@ -226,10 +226,18 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	// 1、创建评测集
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
+	var datasetName, exptName string
+	if isBackFill {
+		datasetName = fmt.Sprintf("自动化任务评测集_历史回溯_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
+		exptName = fmt.Sprintf("自动化任务实验_历史回溯_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
+	} else {
+		datasetName = fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
+		exptName = fmt.Sprintf("自动化任务实验_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
+	}
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 		0,
 		currentTask.GetWorkspaceID(),
-		fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day()),
+		datasetName,
 		category,
 		schema,
 		sessionInfo,
@@ -256,7 +264,7 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTas
 		WorkspaceID:           currentTask.GetWorkspaceID(),
 		EvalSetVersionID:      gptr.Of(datasetID),
 		EvaluatorVersionIds:   evaluatorVersionIds,
-		Name:                  gptr.Of(fmt.Sprintf("自动化任务实验_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())),
+		Name:                  ptr.Of(exptName),
 		Desc:                  gptr.Of("自动化任务实验"),
 		EvalSetID:             gptr.Of(datasetID),
 		EvaluatorFieldMapping: evaluatorFieldMappings,
