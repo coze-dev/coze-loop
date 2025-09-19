@@ -22,4 +22,5 @@ type RequestParam struct {
 
 	Timeout time.Duration
 	Cluster *string
+	WithSD  *bool
 }
