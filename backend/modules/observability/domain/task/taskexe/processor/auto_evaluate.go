@@ -377,7 +377,11 @@ func resetStartTime(currentTime int64, originalStartTime int64, maxAliveTime int
 }
 
 func getSession(ctx context.Context, task *task.Task) *common.Session {
-	userID, err := strconv.ParseInt(task.BaseInfo.CreatedBy.GetUserID(), 10, 64)
+	userIDStr := session.UserIDInCtxOrEmpty(ctx)
+	if userIDStr == "" {
+		userIDStr = task.GetBaseInfo().GetCreatedBy().GetUserID()
+	}
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
 		logs.CtxError(ctx, "[task-debug] AutoEvaluteProcessor OnChangeProcessor, ParseInt err:%v", err)
 	}
