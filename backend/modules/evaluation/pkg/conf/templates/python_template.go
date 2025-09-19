@@ -63,7 +63,6 @@ const PythonSyntaxCheckTemplate = `
 import ast
 import json
 
-{{RETURN_VAL_FUNCTION}}
 
 def check_syntax(code):
     """

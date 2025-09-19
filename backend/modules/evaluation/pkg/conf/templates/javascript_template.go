@@ -54,7 +54,6 @@ function main() {
 
 // JavaScriptSyntaxCheckTemplate JavaScript语法检查模板
 const JavaScriptSyntaxCheckTemplate = `
-{{RETURN_VAL_FUNCTION}}
 
 // JavaScript语法检查
 const userCode = ` + "`" + `{{USER_CODE}}` + "`" + `;
