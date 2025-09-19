@@ -7,6 +7,7 @@
 package application
 
 import (
+	"context"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
@@ -21,7 +22,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/llm/infra/repo/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/infra/rpc"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
-	"context"
 	"github.com/google/wire"
 )
 
