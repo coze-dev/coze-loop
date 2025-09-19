@@ -1,12 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metrics
+package metric
 
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -14,19 +14,19 @@ import (
 // ModelLatencyAvgMetric 模型调用平均耗时指标
 type ModelLatencyAvgMetric struct{}
 
-func (m *ModelLatencyAvgMetric) Name() string {
+func (m *ModelLatencyAvgMetric) Name() entity.MetricName {
 	return entity.MetricNameModelLatencyAvg
 }
 
-func (m *ModelLatencyAvgMetric) Type() string {
-	return string(entity.MetricTypeSummary)
+func (m *ModelLatencyAvgMetric) Type() entity.MetricType {
+	return entity.MetricTypeSummary
 }
 
 func (m *ModelLatencyAvgMetric) Source() string {
 	return string(entity.MetricSourceCK)
 }
 
-func (m *ModelLatencyAvgMetric) Expression() string {
+func (m *ModelLatencyAvgMetric) Expression(granularity entity.MetricGranularity) string {
 	return "sum(duration / 1000) / count()"
 }
 

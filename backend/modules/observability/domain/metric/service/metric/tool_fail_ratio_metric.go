@@ -1,12 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metrics
+package metric
 
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -15,19 +15,19 @@ import (
 // ToolFailRatioMetric 工具调用错误率指标
 type ToolFailRatioMetric struct{}
 
-func (m *ToolFailRatioMetric) Name() string {
+func (m *ToolFailRatioMetric) Name() entity.MetricName {
 	return entity.MetricNameToolFailRatio
 }
 
-func (m *ToolFailRatioMetric) Type() string {
-	return string(entity.MetricTypeSummary)
+func (m *ToolFailRatioMetric) Type() entity.MetricType {
+	return entity.MetricTypeSummary
 }
 
 func (m *ToolFailRatioMetric) Source() string {
 	return string(entity.MetricSourceCK)
 }
 
-func (m *ToolFailRatioMetric) Expression() string {
+func (m *ToolFailRatioMetric) Expression(granularity entity.MetricGranularity) string {
 	return "countIf(1, status_code != 0) / count()"
 }
 
@@ -37,7 +37,7 @@ func (m *ToolFailRatioMetric) Where(ctx context.Context, filter span_filter.Filt
 		{
 			FieldName: loop_span.SpanFieldSpanType,
 			FieldType: loop_span.FieldTypeString,
-			Values:    []string{entity.SpanTypeTool},
+			Values:    []string{"tool"},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}, nil

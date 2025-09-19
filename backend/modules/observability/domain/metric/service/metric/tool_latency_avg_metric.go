@@ -1,12 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metrics
+package metric
 
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -15,19 +15,19 @@ import (
 // ToolLatencyAvgMetric 工具调用平均耗时指标
 type ToolLatencyAvgMetric struct{}
 
-func (m *ToolLatencyAvgMetric) Name() string {
+func (m *ToolLatencyAvgMetric) Name() entity.MetricName {
 	return entity.MetricNameToolLatencyAvg
 }
 
-func (m *ToolLatencyAvgMetric) Type() string {
-	return string(entity.MetricTypeSummary)
+func (m *ToolLatencyAvgMetric) Type() entity.MetricType {
+	return entity.MetricTypeSummary
 }
 
 func (m *ToolLatencyAvgMetric) Source() string {
 	return string(entity.MetricSourceCK)
 }
 
-func (m *ToolLatencyAvgMetric) Expression() string {
+func (m *ToolLatencyAvgMetric) Expression(granularity entity.MetricGranularity) string {
 	return "sum(duration / 1000) / count()"
 }
 
@@ -37,7 +37,7 @@ func (m *ToolLatencyAvgMetric) Where(ctx context.Context, filter span_filter.Fil
 		{
 			FieldName: loop_span.SpanFieldSpanType,
 			FieldType: loop_span.FieldTypeString,
-			Values:    []string{entity.SpanTypeTool},
+			Values:    []string{"tool"},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}, nil
