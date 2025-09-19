@@ -251,6 +251,7 @@ func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.O
 		updatedBy = userID
 	}
 	return &entity.ObservabilityTask{
+		ID:                    taskDO.GetID(),
 		WorkspaceID:           taskDO.GetWorkspaceID(),
 		Name:                  taskDO.GetName(),
 		Description:           ptr.Of(taskDO.GetDescription()),
