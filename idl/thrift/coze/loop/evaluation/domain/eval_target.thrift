@@ -75,6 +75,8 @@ struct CustomRPCServer {
 
     20: optional Region exec_region // 执行区域
     21: optional string exec_env // 执行环境
+    22: optional i64 timeout // 执行超时时间，单位ms
+    23: optional i64 async_timeout // 异步执行超时时间，单位ms
 
 }
 
@@ -89,7 +91,6 @@ struct CustomEvalTarget {
 struct HTTPInfo {
     1: optional HTTPMethod method
     2: optional string path
-    4: optional i64 timeout    // ms，默认5000，最大800,000
 }
 
 typedef string Region (ts.enum="true")

@@ -31,15 +31,15 @@ type CustomRPCServer struct {
 	// 额外信息
 	Ext map[string]string
 
-	ExecRegion Region  // 执行区域
-	ExecEnv    *string // 执行环境
+	ExecRegion   Region  // 执行区域
+	ExecEnv      *string // 执行环境
+	Timeout      *int64  // 执行超时，单位ms
+	AsyncTimeout *int64  // 执行超时，单位ms
 }
 
 type HTTPInfo struct {
 	Method HTTPMethod
 	Path   string
-	// ms，默认5000，最大800,000
-	Timeout *int64
 }
 
 type CustomEvalTarget struct {

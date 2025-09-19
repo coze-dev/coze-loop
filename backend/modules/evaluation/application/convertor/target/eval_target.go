@@ -208,6 +208,8 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				IsAsync:             targetVersionDO.CustomRPCServer.IsAsync,
 				ExecRegion:          gptr.Of(targetVersionDO.CustomRPCServer.ExecRegion),
 				ExecEnv:             targetVersionDO.CustomRPCServer.ExecEnv,
+				Timeout:             targetVersionDO.CustomRPCServer.Timeout,
+				AsyncTimeout:        targetVersionDO.CustomRPCServer.AsyncTimeout,
 			}
 		}
 	default:
@@ -245,6 +247,10 @@ func CustomRPCServerDTO2DO(dto *dto.CustomRPCServer) (doRes *do.CustomRPCServer)
 		AsyncInvokeHTTPInfo: HttpInfoDTO2DO(dto.AsyncInvokeHTTPInfo),
 		SearchHTTPInfo:      HttpInfoDTO2DO(dto.SearchHTTPInfo),
 		CustomEvalTarget:    CustomEvalTargetDTO2DO(dto.CustomEvalTarget),
+		ExecRegion:          gptr.Indirect(dto.ExecRegion),
+		ExecEnv:             dto.ExecEnv,
+		Timeout:             dto.Timeout,
+		AsyncTimeout:        dto.AsyncTimeout,
 	}
 }
 
@@ -253,9 +259,8 @@ func HttpInfoDTO2DO(httpInfoDTO *dto.HTTPInfo) (httpInfoDO *do.HTTPInfo) {
 		return nil
 	}
 	return &do.HTTPInfo{
-		Method:  gptr.Indirect(httpInfoDTO.Method),
-		Path:    gptr.Indirect(httpInfoDTO.Path),
-		Timeout: httpInfoDTO.Timeout,
+		Method: gptr.Indirect(httpInfoDTO.Method),
+		Path:   gptr.Indirect(httpInfoDTO.Path),
 	}
 }
 
@@ -264,9 +269,8 @@ func HttpInfoDO2DTO(httpInfoDO *do.HTTPInfo) (httpInfoDTO *dto.HTTPInfo) {
 		return nil
 	}
 	return &dto.HTTPInfo{
-		Method:  gptr.Of(httpInfoDO.Method),
-		Path:    gptr.Of(httpInfoDO.Path),
-		Timeout: httpInfoDO.Timeout,
+		Method: gptr.Of(httpInfoDO.Method),
+		Path:   gptr.Of(httpInfoDO.Path),
 	}
 }
 

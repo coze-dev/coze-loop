@@ -1599,6 +1599,34 @@ func (p *CustomRPCServer) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 23:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1829,6 +1857,34 @@ func (p *CustomRPCServer) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CustomRPCServer) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Timeout = _field
+	return offset, nil
+}
+
+func (p *CustomRPCServer) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AsyncTimeout = _field
+	return offset, nil
+}
+
 func (p *CustomRPCServer) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1839,6 +1895,8 @@ func (p *CustomRPCServer) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField16(buf[offset:], w)
 		offset += p.fastWriteField19(buf[offset:], w)
+		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -1874,6 +1932,8 @@ func (p *CustomRPCServer) BLength() int {
 		l += p.field19Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
+		l += p.field23Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2021,6 +2081,24 @@ func (p *CustomRPCServer) fastWriteField21(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *CustomRPCServer) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTimeout() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 22)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Timeout)
+	}
+	return offset
+}
+
+func (p *CustomRPCServer) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAsyncTimeout() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 23)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.AsyncTimeout)
+	}
+	return offset
+}
+
 func (p *CustomRPCServer) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -2160,6 +2238,24 @@ func (p *CustomRPCServer) field21Length() int {
 	return l
 }
 
+func (p *CustomRPCServer) field22Length() int {
+	l := 0
+	if p.IsSetTimeout() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *CustomRPCServer) field23Length() int {
+	l := 0
+	if p.IsSetAsyncTimeout() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *CustomRPCServer) DeepCopy(s interface{}) error {
 	src, ok := s.(*CustomRPCServer)
 	if !ok {
@@ -2274,6 +2370,16 @@ func (p *CustomRPCServer) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ExecEnv)
 		}
 		p.ExecEnv = &tmp
+	}
+
+	if src.Timeout != nil {
+		tmp := *src.Timeout
+		p.Timeout = &tmp
+	}
+
+	if src.AsyncTimeout != nil {
+		tmp := *src.AsyncTimeout
+		p.AsyncTimeout = &tmp
 	}
 
 	return nil
@@ -2653,20 +2759,6 @@ func (p *HTTPInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 4:
-			if fieldTypeId == thrift.I64 {
-				l, err = p.FastReadField4(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2713,20 +2805,6 @@ func (p *HTTPInfo) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *HTTPInfo) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.Timeout = _field
-	return offset, nil
-}
-
 func (p *HTTPInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2734,7 +2812,6 @@ func (p *HTTPInfo) FastWrite(buf []byte) int {
 func (p *HTTPInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
-		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 	}
@@ -2747,7 +2824,6 @@ func (p *HTTPInfo) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
-		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2771,15 +2847,6 @@ func (p *HTTPInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *HTTPInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetTimeout() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.Timeout)
-	}
-	return offset
-}
-
 func (p *HTTPInfo) field1Length() int {
 	l := 0
 	if p.IsSetMethod() {
@@ -2794,15 +2861,6 @@ func (p *HTTPInfo) field2Length() int {
 	if p.IsSetPath() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.Path)
-	}
-	return l
-}
-
-func (p *HTTPInfo) field4Length() int {
-	l := 0
-	if p.IsSetTimeout() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -2824,11 +2882,6 @@ func (p *HTTPInfo) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Path)
 		}
 		p.Path = &tmp
-	}
-
-	if src.Timeout != nil {
-		tmp := *src.Timeout
-		p.Timeout = &tmp
 	}
 
 	return nil

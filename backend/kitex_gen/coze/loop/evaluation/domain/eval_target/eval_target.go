@@ -2163,6 +2163,10 @@ type CustomRPCServer struct {
 	ExecRegion *Region `thrift:"exec_region,20,optional" frugal:"20,optional,string" form:"exec_region" json:"exec_region,omitempty" query:"exec_region"`
 	// 执行环境
 	ExecEnv *string `thrift:"exec_env,21,optional" frugal:"21,optional,string" form:"exec_env" json:"exec_env,omitempty" query:"exec_env"`
+	// 执行超时时间，单位ms
+	Timeout *int64 `thrift:"timeout,22,optional" frugal:"22,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
+	// 异步执行超时时间，单位ms
+	AsyncTimeout *int64 `thrift:"async_timeout,23,optional" frugal:"23,optional,i64" form:"async_timeout" json:"async_timeout,omitempty" query:"async_timeout"`
 }
 
 func NewCustomRPCServer() *CustomRPCServer {
@@ -2351,6 +2355,30 @@ func (p *CustomRPCServer) GetExecEnv() (v string) {
 	}
 	return *p.ExecEnv
 }
+
+var CustomRPCServer_Timeout_DEFAULT int64
+
+func (p *CustomRPCServer) GetTimeout() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeout() {
+		return CustomRPCServer_Timeout_DEFAULT
+	}
+	return *p.Timeout
+}
+
+var CustomRPCServer_AsyncTimeout_DEFAULT int64
+
+func (p *CustomRPCServer) GetAsyncTimeout() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAsyncTimeout() {
+		return CustomRPCServer_AsyncTimeout_DEFAULT
+	}
+	return *p.AsyncTimeout
+}
 func (p *CustomRPCServer) SetID(val *int64) {
 	p.ID = val
 }
@@ -2396,6 +2424,12 @@ func (p *CustomRPCServer) SetExecRegion(val *Region) {
 func (p *CustomRPCServer) SetExecEnv(val *string) {
 	p.ExecEnv = val
 }
+func (p *CustomRPCServer) SetTimeout(val *int64) {
+	p.Timeout = val
+}
+func (p *CustomRPCServer) SetAsyncTimeout(val *int64) {
+	p.AsyncTimeout = val
+}
 
 var fieldIDToName_CustomRPCServer = map[int16]string{
 	1:  "id",
@@ -2413,6 +2447,8 @@ var fieldIDToName_CustomRPCServer = map[int16]string{
 	19: "is_async",
 	20: "exec_region",
 	21: "exec_env",
+	22: "timeout",
+	23: "async_timeout",
 }
 
 func (p *CustomRPCServer) IsSetID() bool {
@@ -2473,6 +2509,14 @@ func (p *CustomRPCServer) IsSetExecRegion() bool {
 
 func (p *CustomRPCServer) IsSetExecEnv() bool {
 	return p.ExecEnv != nil
+}
+
+func (p *CustomRPCServer) IsSetTimeout() bool {
+	return p.Timeout != nil
+}
+
+func (p *CustomRPCServer) IsSetAsyncTimeout() bool {
+	return p.AsyncTimeout != nil
 }
 
 func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
@@ -2608,6 +2652,22 @@ func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2807,6 +2867,28 @@ func (p *CustomRPCServer) ReadField21(iprot thrift.TProtocol) error {
 	p.ExecEnv = _field
 	return nil
 }
+func (p *CustomRPCServer) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Timeout = _field
+	return nil
+}
+func (p *CustomRPCServer) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AsyncTimeout = _field
+	return nil
+}
 
 func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2872,6 +2954,14 @@ func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 	}
@@ -3170,6 +3260,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
+func (p *CustomRPCServer) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeout() {
+		if err = oprot.WriteFieldBegin("timeout", thrift.I64, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Timeout); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+func (p *CustomRPCServer) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAsyncTimeout() {
+		if err = oprot.WriteFieldBegin("async_timeout", thrift.I64, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.AsyncTimeout); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 
 func (p *CustomRPCServer) String() string {
 	if p == nil {
@@ -3228,6 +3354,12 @@ func (p *CustomRPCServer) DeepEqual(ano *CustomRPCServer) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.ExecEnv) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.Timeout) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.AsyncTimeout) {
 		return false
 	}
 	return true
@@ -3390,6 +3522,30 @@ func (p *CustomRPCServer) Field21DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ExecEnv, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCServer) Field22DeepEqual(src *int64) bool {
+
+	if p.Timeout == src {
+		return true
+	} else if p.Timeout == nil || src == nil {
+		return false
+	}
+	if *p.Timeout != *src {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCServer) Field23DeepEqual(src *int64) bool {
+
+	if p.AsyncTimeout == src {
+		return true
+	} else if p.AsyncTimeout == nil || src == nil {
+		return false
+	}
+	if *p.AsyncTimeout != *src {
 		return false
 	}
 	return true
@@ -3844,8 +4000,6 @@ func (p *CustomEvalTarget) Field10DeepEqual(src map[string]string) bool {
 type HTTPInfo struct {
 	Method *HTTPMethod `thrift:"method,1,optional" frugal:"1,optional,string" form:"method" json:"method,omitempty" query:"method"`
 	Path   *string     `thrift:"path,2,optional" frugal:"2,optional,string" form:"path" json:"path,omitempty" query:"path"`
-	// ms，默认5000，最大800,000
-	Timeout *int64 `thrift:"timeout,4,optional" frugal:"4,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
 }
 
 func NewHTTPInfo() *HTTPInfo {
@@ -3878,32 +4032,16 @@ func (p *HTTPInfo) GetPath() (v string) {
 	}
 	return *p.Path
 }
-
-var HTTPInfo_Timeout_DEFAULT int64
-
-func (p *HTTPInfo) GetTimeout() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTimeout() {
-		return HTTPInfo_Timeout_DEFAULT
-	}
-	return *p.Timeout
-}
 func (p *HTTPInfo) SetMethod(val *HTTPMethod) {
 	p.Method = val
 }
 func (p *HTTPInfo) SetPath(val *string) {
 	p.Path = val
 }
-func (p *HTTPInfo) SetTimeout(val *int64) {
-	p.Timeout = val
-}
 
 var fieldIDToName_HTTPInfo = map[int16]string{
 	1: "method",
 	2: "path",
-	4: "timeout",
 }
 
 func (p *HTTPInfo) IsSetMethod() bool {
@@ -3912,10 +4050,6 @@ func (p *HTTPInfo) IsSetMethod() bool {
 
 func (p *HTTPInfo) IsSetPath() bool {
 	return p.Path != nil
-}
-
-func (p *HTTPInfo) IsSetTimeout() bool {
-	return p.Timeout != nil
 }
 
 func (p *HTTPInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -3947,14 +4081,6 @@ func (p *HTTPInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4011,17 +4137,6 @@ func (p *HTTPInfo) ReadField2(iprot thrift.TProtocol) error {
 	p.Path = _field
 	return nil
 }
-func (p *HTTPInfo) ReadField4(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Timeout = _field
-	return nil
-}
 
 func (p *HTTPInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4035,10 +4150,6 @@ func (p *HTTPInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -4095,24 +4206,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *HTTPInfo) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTimeout() {
-		if err = oprot.WriteFieldBegin("timeout", thrift.I64, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.Timeout); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
 
 func (p *HTTPInfo) String() string {
 	if p == nil {
@@ -4132,9 +4225,6 @@ func (p *HTTPInfo) DeepEqual(ano *HTTPInfo) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Path) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.Timeout) {
 		return false
 	}
 	return true
@@ -4160,18 +4250,6 @@ func (p *HTTPInfo) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Path, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *HTTPInfo) Field4DeepEqual(src *int64) bool {
-
-	if p.Timeout == src {
-		return true
-	} else if p.Timeout == nil || src == nil {
-		return false
-	}
-	if *p.Timeout != *src {
 		return false
 	}
 	return true
