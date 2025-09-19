@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockgen -destination=mocks/ck.go -package=mocks . Provider
 type Provider interface {
 	NewSession(ctx context.Context) *gorm.DB
 }

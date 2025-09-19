@@ -11,15 +11,16 @@ import (
 	"strconv"
 	"strings"
 
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/samber/lo"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -54,18 +55,12 @@ type ISpansDao interface {
 // GetMetricsParam 指标查询参数
 type GetMetricsParam struct {
 	Tables       []string
-	Aggregations []*Dimension
-	GroupBys     []*Dimension
+	Aggregations []*metrics_entity.Dimension
+	GroupBys     []*metrics_entity.Dimension
 	Filters      *loop_span.FilterFields
 	StartAt      int64
 	EndAt        int64
-	Granularity  string
-}
-
-// Dimension 维度定义
-type Dimension struct {
-	Expression string // 字段名或表达式
-	Alias      string // 别名
+	Granularity  metrics_entity.MetricGranularity
 }
 
 func NewSpansCkDaoImpl(db ck.Provider) (ISpansDao, error) {
@@ -115,6 +110,76 @@ func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.O
 	return spans, nil
 }
 
+// select/inner_query/group_by/order_by/with_fill
+var metricsSqlTemplate = `SELECT %s FROM (%s) %s %s`
+
+func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error) {
+	sql, err := s.buildMetricsSql(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "Get Metrics SQL: %+v", sql)
+	db := s.newSession(ctx)
+	result := make([]map[string]any, 0)
+	if err := db.Raw(sql).Find(&result).Error; err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	return result, nil
+}
+
+func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsParam) (string, error) {
+	// 直接复用现有的SQL获取所有数据, 然后再计算指标
+	sql, err := s.buildSql(ctx, &QueryParam{
+		Tables:           param.Tables,
+		StartTime:        param.StartAt,
+		EndTime:          param.EndAt,
+		Filters:          param.Filters,
+		Limit:            -1,
+		OrderByStartTime: false,
+		OmitColumns:      []string{"input", "output"}, // 当前不用, 先忽略
+	})
+	if err != nil {
+		return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get trace request"))
+	}
+	var (
+		innerQuery     string
+		selectClauses  []string
+		groupByClauses []string
+		orderByClauses []string
+	)
+	innerQuery = sql.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	})
+
+	if param.Granularity != "" {
+		ckTimeInterval := getTimeInterval(param.Granularity)
+		selectClauses = append(selectClauses,
+			fmt.Sprintf("toStartOfInterval(fromUnixTimestamp64Micro(start_time), %s) AS time_bucket", ckTimeInterval))
+		groupByClauses = append(groupByClauses, "time_bucket")
+		orderByClauses = append(orderByClauses,
+			fmt.Sprintf("time_bucket WITH FILL FROM toStartOfInterval(fromUnixTimestamp64Micro(%d), %s) TO toStartOfInterval(fromUnixTimestamp64Micro(%d), %s) STEP %s",
+				param.StartAt, ckTimeInterval, param.EndAt, ckTimeInterval, ckTimeInterval))
+	}
+	for _, dimension := range param.Aggregations {
+		selectClauses = append(selectClauses,
+			fmt.Sprintf("%s AS %s", dimension.Expression, dimension.Alias))
+	}
+	for _, dimension := range param.GroupBys {
+		selectClauses = append(selectClauses,
+			fmt.Sprintf("%s AS %s", dimension.Expression, dimension.Alias))
+		groupByClauses = append(groupByClauses, dimension.Expression)
+	}
+	wholeSql := fmt.Sprintf(metricsSqlTemplate,
+		strings.Join(selectClauses, ", "),
+		innerQuery,
+		lo.Ternary(len(groupByClauses) == 0,
+			"", "GROUP BY "+strings.Join(groupByClauses, ", ")),
+		lo.Ternary(len(orderByClauses) == 0,
+			"", "ORDER BY "+strings.Join(orderByClauses, ", ")),
+	)
+	return wholeSql, nil
+}
+
 func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm.DB, error) {
 	db := s.newSession(ctx)
 	var tableQueries []*gorm.DB
@@ -141,7 +206,9 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm
 		if param.OrderByStartTime {
 			sql += " ORDER BY start_time DESC, span_id DESC"
 		}
-		sql += fmt.Sprintf(" LIMIT %d", param.Limit)
+		if param.Limit >= 0 {
+			sql += fmt.Sprintf(" LIMIT %d", param.Limit)
+		}
 		return db.Raw(sql), nil
 	}
 }
@@ -412,184 +479,21 @@ var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldObjectStorage:   true,
 	loop_span.SpanFieldLogicDeleteDate: true,
 }
-var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
 }
 
-// GetMetrics 获取指标数据
-func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error) {
-	query, err := s.buildMetricsGormSQL(ctx, param)
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get metrics request"))
-	}
-
-	logs.CtxInfo(ctx, "Get Metrics SQL: %s", query.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		return tx.Find(nil)
-	}))
-
-	var results []map[string]any
-	if err := query.Scan(&results).Error; err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
-	}
-
-	return results, nil
-}
-
-// buildMetricsGormSQL 构建指标查询的GORM对象
-func (s *SpansCkDaoImpl) buildMetricsGormSQL(ctx context.Context, param *GetMetricsParam) (*gorm.DB, error) {
-	if len(param.Tables) == 0 {
-		return nil, fmt.Errorf("tables cannot be empty")
-	}
-
-	db := s.newSession(ctx)
-
-	// 构建SELECT子句
-	selectClause := s.buildSelectClause(param)
-
-	// 构建FROM子句
-	fromClause := s.buildFromClause(param.Tables)
-
-	// 构建WHERE条件
-	query := db.Select(selectClause).Table(fromClause)
-
-	// 添加WHERE条件
-	whereQuery, err := s.buildMetricsWhereClause(ctx, query, param)
-	if err != nil {
-		return nil, err
-	}
-	query = whereQuery
-
-	// 构建GROUP BY子句
-	groupByClause := s.buildGroupByClause(param)
-	if groupByClause != "" {
-		query = query.Group(groupByClause)
-	}
-
-	// 构建ORDER BY子句（时间序列需要）
-	if param.Granularity != "" {
-		orderByClause := s.buildOrderByClause(param)
-		if orderByClause != "" {
-			query = query.Order(orderByClause)
-		}
-	}
-
-	return query, nil
-}
-
-// buildSelectClause 构建SELECT子句
-func (s *SpansCkDaoImpl) buildSelectClause(param *GetMetricsParam) string {
-	var selectFields []string
-
-	// 添加时间分组（如果有granularity）
-	if param.Granularity != "" {
-		timeInterval := s.getTimeInterval(param.Granularity)
-		selectFields = append(selectFields, fmt.Sprintf("toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL %s) AS time_bucket", timeInterval))
-	}
-
-	// 添加聚合字段
-	for _, agg := range param.Aggregations {
-		if agg.Alias != "" {
-			selectFields = append(selectFields, fmt.Sprintf("%s AS %s", agg.Expression, agg.Alias))
-		} else {
-			selectFields = append(selectFields, agg.Expression)
-		}
-	}
-
-	// 添加分组字段
-	for _, groupBy := range param.GroupBys {
-		if groupBy.Alias != "" {
-			selectFields = append(selectFields, fmt.Sprintf("%s AS %s", groupBy.Expression, groupBy.Alias))
-		} else {
-			selectFields = append(selectFields, groupBy.Expression)
-		}
-	}
-
-	return strings.Join(selectFields, ", ")
-}
-
-// buildFromClause 构建FROM子句
-func (s *SpansCkDaoImpl) buildFromClause(tables []string) string {
-	if len(tables) == 1 {
-		return tables[0]
-	}
-
-	// 多表联合查询
-	var unionQueries []string
-	for _, table := range tables {
-		unionQueries = append(unionQueries, fmt.Sprintf("SELECT * FROM %s", table))
-	}
-	return fmt.Sprintf("(%s)", strings.Join(unionQueries, " UNION ALL "))
-}
-
-// buildMetricsWhereClause 构建WHERE条件
-func (s *SpansCkDaoImpl) buildMetricsWhereClause(ctx context.Context, db *gorm.DB, param *GetMetricsParam) (*gorm.DB, error) {
-	query := db
-
-	// 添加时间范围条件
-	if param.StartAt > 0 && param.EndAt > 0 {
-		query = query.Where("start_time >= ?", param.StartAt).Where("start_time <= ?", param.EndAt)
-	}
-
-	// 复用现有过滤逻辑
-	if param.Filters != nil {
-		filterQuery, err := s.buildSqlForFilterFields(ctx, query, param.Filters)
-		if err != nil {
-			return nil, err
-		}
-		query = filterQuery
-	}
-
-	return query, nil
-}
-
-// buildGroupByClause 构建GROUP BY子句
-func (s *SpansCkDaoImpl) buildGroupByClause(param *GetMetricsParam) string {
-	var groupBys []string
-
-	// 添加时间分组
-	if param.Granularity != "" {
-		groupBys = append(groupBys, "time_bucket")
-	}
-
-	// 添加其他分组字段
-	for _, groupBy := range param.GroupBys {
-		if groupBy.Alias != "" {
-			groupBys = append(groupBys, groupBy.Alias)
-		} else {
-			groupBys = append(groupBys, groupBy.Expression)
-		}
-	}
-
-	return strings.Join(groupBys, ", ")
-}
-
-// buildOrderByClause 构建ORDER BY子句
-func (s *SpansCkDaoImpl) buildOrderByClause(param *GetMetricsParam) string {
-	if param.Granularity != "" {
-		// 对于时间序列查询，按时间桶排序
-		// 注意：ClickHouse的WITH FILL需要在原生SQL中处理，这里先简化
-		return "time_bucket"
-	}
-	return ""
-}
-
-
-
-func (s *SpansCkDaoImpl) getTimeInterval(granularity string) string {
+func getTimeInterval(granularity metrics_entity.MetricGranularity) string {
 	switch granularity {
-	case "1min":
-		return "1 MINUTE"
-	case "5min":
-		return "5 MINUTE"
-	case "15min":
-		return "15 MINUTE"
-	case "1hour":
-		return "1 HOUR"
-	case "1day":
-		return "1 DAY"
+	case metrics_entity.MetricsGranularity5Min:
+		return "INTERVAL 5 MINUTE"
+	case metrics_entity.MetricsGranularity1Hour:
+		return "INTERVAL 1 HOUR"
+	case metrics_entity.MetricsGranularity1Day:
+		return "INTERVAL 1 DAY"
 	default:
-		return "5 MINUTE" // 默认5分钟
+		return "INTERVAL 1 DAY" // 默认5分钟
 	}
 }

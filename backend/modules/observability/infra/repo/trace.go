@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
@@ -269,6 +270,28 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 	})
 }
 
+func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err := t.spansDao.GetMetrics(ctx, &ck.GetMetricsParam{
+		Tables:       tableCfg.SpanTables,
+		Aggregations: param.Aggregations,
+		GroupBys:     param.GroupBys,
+		Filters:      param.Filters,
+		StartAt:      time_util.MillSec2MicroSec(param.StartAt),
+		EndAt:        time_util.MillSec2MicroSec(param.EndAt),
+		Granularity:  param.Granularity,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &metric_repo.GetMetricsResult{
+		Data: metrics,
+	}, nil
+}
+
 type queryTableCfg struct {
 	SpanTables    []string
 	AnnoTables    []string
@@ -387,39 +410,6 @@ func (t *TraceCkRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_
 			},
 		}
 	}
-}
-
-// GetMetrics 获取指标数据
-func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *repo.GetMetricsParam) ([]map[string]any, error) {
-	// 转换参数格式
-	ckParam := &ck.GetMetricsParam{
-		Tables:       param.Tables,
-		Aggregations: convertDimensions(param.Aggregations),
-		GroupBys:     convertDimensions(param.GroupBys),
-		Filters:      param.Filters,
-		StartAt:      param.StartAt,
-		EndAt:        param.EndAt,
-		Granularity:  param.Granularity,
-	}
-	
-	// 调用ClickHouse DAO层执行查询
-	return t.spansDao.GetMetrics(ctx, ckParam)
-}
-
-// convertDimensions 转换维度格式
-func convertDimensions(dimensions []*repo.Dimension) []*ck.Dimension {
-	if dimensions == nil {
-		return nil
-	}
-	
-	result := make([]*ck.Dimension, len(dimensions))
-	for i, dim := range dimensions {
-		result[i] = &ck.Dimension{
-			Expression: dim.Expression,
-			Alias:      dim.Alias,
-		}
-	}
-	return result
 }
 
 func parsePageToken(pageToken string) (*PageToken, error) {

@@ -6,22 +6,30 @@ package service
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	trace_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/samber/lo"
 )
 
 type QueryMetricsReq struct {
-	WorkspaceID  string
+	PlatformType loop_span.PlatformType
+	WorkspaceID  int64
+	MetricsNames []entity.MetricName
+	Granularity  entity.MetricGranularity
+	FilterFields *loop_span.FilterFields
 	StartTime    int64
 	EndTime      int64
-	PlatformType string
-	MetricsNames []string
-	Granularity  string
-	FilterFields *loop_span.FilterFields
 }
 
 type QueryMetricsResp struct {
@@ -34,217 +42,204 @@ type IMetricsService interface {
 }
 
 type MetricsService struct {
-	metricsRepo           repo.IMetricsRepo
-	definitions           []entity.IMetricDefinition
-	definitionsMap        map[entity.MetricName]entity.IMetricDefinition
-	platformFilterFactory span_filter.PlatformFilterFactory
-	tenantProvider        tenant.ITenantProvider
+	metricRepo     repo.IMetricRepo
+	metricDefMap   map[entity.MetricName]entity.IMetricDefinition
+	buildHelper    trace_service.TraceFilterProcessorBuilder
+	tenantProvider tenant.ITenantProvider
 }
 
 func NewMetricsService(
-	metricsRepo repo.IMetricsRepo,
-	definitions []entity.IMetricDefinition,
-	platformFilterFactory span_filter.PlatformFilterFactory,
+	metricRepo repo.IMetricRepo,
+	metricDefs []entity.IMetricDefinition,
 	tenantProvider tenant.ITenantProvider,
-) IMetricsService {
-	// 构建 definitionsMap 以优化查找性能
-	definitionsMap := make(map[entity.MetricName]entity.IMetricDefinition)
-	for _, def := range definitions {
-		definitionsMap[def.Name()] = def
+	buildHelper trace_service.TraceFilterProcessorBuilder,
+) (IMetricsService, error) {
+	metricDefMap := make(map[entity.MetricName]entity.IMetricDefinition)
+	for _, def := range metricDefs {
+		if metricDefMap[def.Name()] != nil {
+			return nil, fmt.Errorf("duplicate metric name %s", def.Name())
+		}
+		metricDefMap[def.Name()] = def
 	}
-
 	return &MetricsService{
-		metricsRepo:           metricsRepo,
-		definitions:           definitions,
-		definitionsMap:        definitionsMap,
-		platformFilterFactory: platformFilterFactory,
-		tenantProvider:        tenantProvider,
-	}
+		metricRepo:     metricRepo,
+		metricDefMap:   metricDefMap,
+		tenantProvider: tenantProvider,
+		buildHelper:    buildHelper,
+	}, nil
 }
 
-// getTenants 根据 PlatformType 获取 Tenants
-func (s *MetricsService) getTenants(ctx context.Context, platformType string) ([]string, error) {
-	return s.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType(platformType))
+type metricInfo struct {
+	mType        entity.MetricType
+	mAggregation []*entity.Dimension
+	mGroupBy     []*entity.Dimension
+	mWhere       []*loop_span.FilterField
 }
 
 func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
-	resp := &QueryMetricsResp{
-		Metrics: make(map[string]*entity.Metric),
-	}
-
-	// 1. 根据 PlatformType 获取 Tenants
-	tenants, err := s.getTenants(ctx, req.PlatformType)
+	filter, err := s.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
 	}
-
-	// 遍历请求的指标名称
+	tenants, err := s.tenantProvider.GetTenantsByPlatformType(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	param := repo.GetMetricsParam{
+		Tenants:     tenants,
+		StartAt:     req.StartTime,
+		EndAt:       req.EndTime,
+		Granularity: req.Granularity,
+	}
+	spanEnv := &span_filter.SpanEnv{
+		WorkspaceID: req.WorkspaceID,
+	}
+	basicFilter, forceQuery, err := filter.BuildBasicSpanFilter(ctx, spanEnv)
+	if err != nil {
+		return nil, err
+	} else if len(basicFilter) == 0 && !forceQuery {
+		return &QueryMetricsResp{}, nil
+	}
+	metricInfos := make([]*metricInfo, 0)
 	for _, metricName := range req.MetricsNames {
-		// 2. 使用 map 快速查找指标定义
-		definition, exists := s.definitionsMap[entity.MetricName(metricName)]
-		if !exists {
-			continue // 跳过未找到的指标定义
+		metricDef, ok := s.metricDefMap[metricName]
+		if !ok {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
+				errorx.WithExtraMsg(fmt.Sprintf("metric definition %s not found", metricName)))
 		}
-
-		// 获取平台相关的Filter
-		platformFilter, filterErr := s.platformFilterFactory.GetFilter(ctx, loop_span.PlatformType(req.PlatformType))
-		if filterErr != nil {
-			return nil, filterErr
-		}
-
-		// 构建SpanEnv
-		spanEnv := &span_filter.SpanEnv{
-			WorkspaceID:           0, // TODO: 从req中获取WorkspaceID
-			ThirdPartyWorkspaceID: req.WorkspaceID,
-		}
-
-		// 获取指标的筛选条件
-		whereFilters, whereErr := definition.Where(ctx, platformFilter, spanEnv)
-		if whereErr != nil {
-			return nil, whereErr
-		}
-
-		// 合并筛选条件
-		mergedFilters := req.FilterFields
-		if whereFilters != nil && len(whereFilters) > 0 {
-			if mergedFilters == nil {
-				mergedFilters = &loop_span.FilterFields{
-					FilterFields: whereFilters,
-				}
-			} else {
-				// 合并过滤条件
-				if mergedFilters.FilterFields == nil {
-					mergedFilters.FilterFields = whereFilters
-				} else {
-					mergedFilters.FilterFields = append(mergedFilters.FilterFields, whereFilters...)
-				}
-			}
-		}
-
-		// 3. 构造参数调用 TraceRepo 的 GetMetrics
-		param := &repo.GetMetricsParam{
-			Tenants: tenants,
-			Aggregations: []*entity.Dimension{
-				{
-					Expression: definition.Expression(entity.MetricGranularity(req.Granularity)),
-					Alias:      string(definition.Name()),
-				},
-			},
-			Filters:     mergedFilters,
-			StartAt:     req.StartTime,
-			EndAt:       req.EndTime,
-			Granularity: req.Granularity,
-			GroupBys:    definition.GroupBy(),
-		}
-
-		// 统一使用 GetMetrics 方法调用 repo
-		result, err := s.metricsRepo.GetMetrics(ctx, param)
+		mInfo := &metricInfo{}
+		mInfo.mGroupBy = metricDef.GroupBy()
+		mInfo.mWhere, err = metricDef.Where(ctx, filter, spanEnv)
 		if err != nil {
-			return nil, err
+			return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 		}
-
-		// 4. 结构转换，返回结果
-		metric := &entity.Metric{}
-		if result != nil && len(result.Data) > 0 {
-			// 根据指标类型格式化数据
-			switch definition.Type() {
-			case entity.MetricTypeTimeSeries:
-				// 处理时间序列数据
-				metric.TimeSeries = s.formatTimeSeriesData(result.Data)
-			case entity.MetricTypeSummary:
-				// 处理汇总数据
-				metric.Summary = s.formatSummaryData(result.Data)
-			case entity.MetricTypePie:
-				// 处理饼图数据
-				metric.Pie = s.formatPieData(result.Data)
-			}
-		}
-
-		resp.Metrics[metricName] = metric
+		mInfo.mAggregation = []*entity.Dimension{{
+			Expression: metricDef.Expression(req.Granularity),
+			Alias:      string(metricDef.Name()), // 聚合指标的别名是指标名，以此后续来拆分数据
+		}}
+		mInfo.mGroupBy = metricDef.GroupBy()
 	}
-
-	return resp, nil
+	mInfo, err := s.combineMetricInfos(metricInfos)
+	if err != nil {
+		return nil, err
+	}
+	param.Aggregations = mInfo.mAggregation
+	param.GroupBys = mInfo.mGroupBy
+	// TODO: 怎么确定Basic Filter，统计能看到的还是总的？？
+	param.Filters = &loop_span.FilterFields{
+		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+				SubFilter:  &loop_span.FilterFields{FilterFields: basicFilter},
+			},
+			{
+				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+				SubFilter:  req.FilterFields,
+			},
+		},
+	}
+	result, err := s.metricRepo.GetMetrics(ctx, &param)
+	if err != nil {
+		return nil, err
+	}
+	return &QueryMetricsResp{
+		Metrics: s.formatMetrics(result.Data, mInfo),
+	}, nil
 }
 
-// formatTimeSeriesData 格式化时间序列数据
-func (s *MetricsService) formatTimeSeriesData(data []map[string]any) map[string][]*entity.MetricPoint {
-	timeSeries := make(map[string][]*entity.MetricPoint)
-	
-	for _, row := range data {
-		// 这里需要根据实际的数据结构进行解析
-		// 假设数据包含 timestamp, value 等字段
-		if timestamp, ok := row["timestamp"]; ok {
-			if value, ok := row["value"]; ok {
-				key := "default" // 可以根据 GroupBy 字段确定 key
-				if timeSeries[key] == nil {
-					timeSeries[key] = make([]*entity.MetricPoint, 0)
+func (s *MetricsService) combineMetricInfos(mInfos []*metricInfo) (*metricInfo, error) {
+	if len(mInfos) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	out := mInfos[0]
+	for i := 1; i < len(mInfos); i++ {
+		mInfo := mInfos[i]
+		if mInfo.mType != out.mType {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric types not the same"))
+		} else if !reflect.DeepEqual(out.mWhere, mInfo.mWhere) {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric condition not the same"))
+		} else if !reflect.DeepEqual(out.mGroupBy, mInfo.mGroupBy) {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric groupby not the same"))
+		}
+		out.mAggregation = append(out.mAggregation, mInfo.mAggregation...)
+	}
+	return out, nil
+}
+
+/*
+[{
+	"time_bucket": "xx",
+	"aggregation_1": "xxx",
+	"aggregation_2": "xxx",
+	"group_by_1": "xx",
+	"group_by_2": "xx",
+}]
+*/
+const timeBucketKey = "time_bucket"
+
+func (s *MetricsService) formatMetrics(data []map[string]any, mInfo *metricInfo) map[string]*entity.Metric {
+	metricNameMap := lo.Associate(mInfo.mAggregation,
+		func(item *entity.Dimension) (string, bool) {
+			return item.Alias, true
+		})
+	ret := make(map[string]*entity.Metric)
+	switch mInfo.mType {
+	case entity.MetricTypeTimeSeries:
+		for _, dataItem := range data {
+			groupByVals := []string{}
+			for k, v := range dataItem {
+				if !metricNameMap[k] && k != timeBucketKey {
+					groupByVals = append(groupByVals, conv.ToString(v))
 				}
-				
-				point := &entity.MetricPoint{
-					Timestamp: toString(timestamp),
-					Value:     toString(value),
+			}
+			// 这一条聚合结果对应的聚合值,如果有多个,整合成一个
+			val := strings.Join(groupByVals, "-")
+			for k, v := range dataItem {
+				if metricNameMap[k] {
+					if ret[k] == nil {
+						ret[k] = &entity.Metric{
+							TimeSeries: make(map[string][]*entity.MetricPoint),
+						}
+					}
+					ret[k].TimeSeries[val] = append(ret[k].TimeSeries[val], &entity.MetricPoint{
+						Timestamp: conv.ToString(dataItem[timeBucketKey]),
+						Value:     conv.ToString(v),
+					})
 				}
-				timeSeries[key] = append(timeSeries[key], point)
+			}
+		}
+	case entity.MetricTypeSummary: // 预期不会有聚合, 有就是参数问题
+		for _, dataItem := range data {
+			for k, v := range dataItem {
+				if metricNameMap[k] {
+					ret[k] = &entity.Metric{
+						Summary: conv.ToString(v),
+					}
+				}
+			}
+		}
+	case entity.MetricTypePie:
+		for _, dataItem := range data {
+			groupByVals := []string{}
+			for k, v := range dataItem {
+				if !metricNameMap[k] {
+					groupByVals = append(groupByVals, conv.ToString(v))
+				}
+			}
+			// 这一条聚合结果对应的聚合值,如果有多个,整合成一个
+			val := strings.Join(groupByVals, "-")
+			for k, v := range dataItem {
+				if metricNameMap[k] {
+					if ret[k] == nil {
+						ret[k] = &entity.Metric{
+							Pie: make(map[string]string),
+						}
+					}
+					ret[k].Pie[val] = conv.ToString(v)
+				}
 			}
 		}
 	}
-	
-	return timeSeries
-}
-
-// formatSummaryData 格式化汇总数据
-func (s *MetricsService) formatSummaryData(data []map[string]any) string {
-	if len(data) == 0 {
-		return "0"
-	}
-	
-	// 取第一行数据的 value 字段作为汇总值
-	if value, ok := data[0]["value"]; ok {
-		return toString(value)
-	}
-	
-	return "0"
-}
-
-// formatPieData 格式化饼图数据
-func (s *MetricsService) formatPieData(data []map[string]any) map[string]string {
-	pie := make(map[string]string)
-	
-	for _, row := range data {
-		// 根据 GroupBy 字段确定 key，value 字段确定值
-		var key, value string
-		
-		// 这里需要根据实际的数据结构进行解析
-		for k, v := range row {
-			if k == "value" {
-				value = toString(v)
-			} else if k != "timestamp" { // 非时间戳字段作为分组键
-				key = toString(v)
-			}
-		}
-		
-		if key != "" && value != "" {
-			pie[key] = value
-		}
-	}
-	
-	return pie
-}
-
-// toString 将 any 类型转换为字符串
-func toString(v any) string {
-	if v == nil {
-		return ""
-	}
-	
-	switch val := v.(type) {
-	case string:
-		return val
-	case int, int32, int64:
-		return fmt.Sprintf("%d", val)
-	case float32, float64:
-		return fmt.Sprintf("%f", val)
-	default:
-		return fmt.Sprintf("%v", val)
-	}
+	return ret
 }

@@ -6,7 +6,7 @@ package repo
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metrics/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -17,7 +17,7 @@ type GetMetricsParam struct {
 	Filters      *loop_span.FilterFields
 	StartAt      int64
 	EndAt        int64
-	Granularity  string
+	Granularity  entity.MetricGranularity
 }
 
 type GetMetricsResult struct {
@@ -25,8 +25,6 @@ type GetMetricsResult struct {
 }
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks . IMetricsRepo
-type IMetricsRepo interface {
-	GetTimeSeries(ctx context.Context, param *GetMetricsParam) (*GetMetricsResult, error)
-	GetSummary(ctx context.Context, param *GetMetricsParam) (*GetMetricsResult, error)
-	GetPie(ctx context.Context, param *GetMetricsParam) (*GetMetricsResult, error)
+type IMetricRepo interface {
+	GetMetrics(ctx context.Context, param *GetMetricsParam) (*GetMetricsResult, error)
 }
