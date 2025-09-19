@@ -41,6 +41,21 @@ func (m *MockIEvalTargetService) EXPECT() *MockIEvalTargetServiceMockRecorder {
 	return m.recorder
 }
 
+// AsyncDebugTarget mocks base method.
+func (m *MockIEvalTargetService) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncDebugTarget", ctx, param)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AsyncDebugTarget indicates an expected call of AsyncDebugTarget.
+func (mr *MockIEvalTargetServiceMockRecorder) AsyncDebugTarget(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncDebugTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).AsyncDebugTarget), ctx, param)
+}
+
 // AsyncExecuteTarget mocks base method.
 func (m *MockIEvalTargetService) AsyncExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
 	m.ctrl.T.Helper()
@@ -120,6 +135,21 @@ func (mr *MockIEvalTargetServiceMockRecorder) CreateEvalTarget(ctx, spaceID, sou
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvalTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).CreateEvalTarget), varargs...)
+}
+
+// DebugTarget mocks base method.
+func (m *MockIEvalTargetService) DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DebugTarget", ctx, param)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DebugTarget indicates an expected call of DebugTarget.
+func (mr *MockIEvalTargetServiceMockRecorder) DebugTarget(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).DebugTarget), ctx, param)
 }
 
 // ExecuteTarget mocks base method.

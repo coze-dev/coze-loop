@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	eval_target_dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
@@ -454,9 +455,51 @@ func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, r
 }
 
 func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
-	return nil, errorx.New("not implement")
+	switch request.GetEvalTargetType() {
+	case eval_target_dto.EvalTargetType_CustomRPCServer:
+		record, err := e.evalTargetService.DebugTarget(ctx, &entity.DebugTargetParam{
+			SpaceID:      request.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{},
+			InputData: &entity.EvalTargetInputData{
+				InputFields: target.ContentDTO2DOs(request.GetInputFields()),
+				Ext: map[string]string{
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: request.GetTargetRuntimeParam().GetJSONValue(),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &eval_target.DebugEvalTargetResponse{
+			EvalTargetRecord: target.EvalTargetRecordDO2DTO(record),
+			BaseResp:         base.NewBaseResp(),
+		}, err
+	default:
+		return nil, errorx.New("unsupported eval target type %v", request.GetEvalTargetType())
+	}
 }
 
 func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
-	return nil, errorx.New("not implement")
+	switch request.GetEvalTargetType() {
+	case eval_target_dto.EvalTargetType_CustomRPCServer:
+		record, err := e.evalTargetService.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
+			SpaceID:      request.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{},
+			InputData: &entity.EvalTargetInputData{
+				InputFields: target.ContentDTO2DOs(request.GetInputFields()),
+				Ext: map[string]string{
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: request.GetTargetRuntimeParam().GetJSONValue(),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &eval_target.AsyncDebugEvalTargetResponse{
+			InvokeID: record.ID,
+			BaseResp: base.NewBaseResp(),
+		}, err
+	default:
+		return nil, errorx.New("unsupported eval target type %v", request.GetEvalTargetType())
+	}
 }
