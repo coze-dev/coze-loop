@@ -1603,3 +1603,272 @@ func (mr *MockIExptResultExportRecordRepoMockRecorder) Update(ctx, exportRecord 
 	varargs := append([]any{ctx, exportRecord}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptResultExportRecordRepo)(nil).Update), varargs...)
 }
+
+// MockIExptInsightAnalysisRecordRepo is a mock of IExptInsightAnalysisRecordRepo interface.
+type MockIExptInsightAnalysisRecordRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockIExptInsightAnalysisRecordRepoMockRecorder
+}
+
+// MockIExptInsightAnalysisRecordRepoMockRecorder is the mock recorder for MockIExptInsightAnalysisRecordRepo.
+type MockIExptInsightAnalysisRecordRepoMockRecorder struct {
+	mock *MockIExptInsightAnalysisRecordRepo
+}
+
+// NewMockIExptInsightAnalysisRecordRepo creates a new mock instance.
+func NewMockIExptInsightAnalysisRecordRepo(ctrl *gomock.Controller) *MockIExptInsightAnalysisRecordRepo {
+	mock := &MockIExptInsightAnalysisRecordRepo{ctrl: ctrl}
+	mock.recorder = &MockIExptInsightAnalysisRecordRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockIExptInsightAnalysisRecordRepo) EXPECT() *MockIExptInsightAnalysisRecordRepoMockRecorder {
+	return m.recorder
+}
+
+// CountFeedbackVote mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) CountFeedbackVote(arg0 context.Context, arg1, arg2, arg3 int64) (int64, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountFeedbackVote", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CountFeedbackVote indicates an expected call of CountFeedbackVote.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) CountFeedbackVote(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountFeedbackVote", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).CountFeedbackVote), arg0, arg1, arg2, arg3)
+}
+
+// CreateAnalysisRecord mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) CreateAnalysisRecord(arg0 context.Context, arg1 *entity.ExptInsightAnalysisRecord, arg2 ...db.Option) (int64, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateAnalysisRecord", varargs...)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAnalysisRecord indicates an expected call of CreateAnalysisRecord.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) CreateAnalysisRecord(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnalysisRecord", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).CreateAnalysisRecord), varargs...)
+}
+
+// CreateFeedbackComment mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) CreateFeedbackComment(arg0 context.Context, arg1 *entity.ExptInsightAnalysisFeedbackComment, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateFeedbackComment", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateFeedbackComment indicates an expected call of CreateFeedbackComment.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) CreateFeedbackComment(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFeedbackComment", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).CreateFeedbackComment), varargs...)
+}
+
+// CreateFeedbackVote mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) CreateFeedbackVote(arg0 context.Context, arg1 *entity.ExptInsightAnalysisFeedbackVote, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateFeedbackVote", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateFeedbackVote indicates an expected call of CreateFeedbackVote.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) CreateFeedbackVote(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFeedbackVote", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).CreateFeedbackVote), varargs...)
+}
+
+// DeleteAnalysisRecord mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) DeleteAnalysisRecord(arg0 context.Context, arg1, arg2, arg3 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAnalysisRecord", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAnalysisRecord indicates an expected call of DeleteAnalysisRecord.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) DeleteAnalysisRecord(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAnalysisRecord", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).DeleteAnalysisRecord), arg0, arg1, arg2, arg3)
+}
+
+// DeleteFeedbackComment mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) DeleteFeedbackComment(arg0 context.Context, arg1, arg2, arg3 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFeedbackComment", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFeedbackComment indicates an expected call of DeleteFeedbackComment.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) DeleteFeedbackComment(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFeedbackComment", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).DeleteFeedbackComment), arg0, arg1, arg2, arg3)
+}
+
+// GetAnalysisRecordByID mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) GetAnalysisRecordByID(arg0 context.Context, arg1, arg2, arg3 int64) (*entity.ExptInsightAnalysisRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnalysisRecordByID", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*entity.ExptInsightAnalysisRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnalysisRecordByID indicates an expected call of GetAnalysisRecordByID.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) GetAnalysisRecordByID(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisRecordByID", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).GetAnalysisRecordByID), arg0, arg1, arg2, arg3)
+}
+
+// GetFeedbackCommentByRecordID mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) GetFeedbackCommentByRecordID(arg0 context.Context, arg1, arg2, arg3 int64, arg4 ...db.Option) (*entity.ExptInsightAnalysisFeedbackComment, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetFeedbackCommentByRecordID", varargs...)
+	ret0, _ := ret[0].(*entity.ExptInsightAnalysisFeedbackComment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFeedbackCommentByRecordID indicates an expected call of GetFeedbackCommentByRecordID.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) GetFeedbackCommentByRecordID(arg0, arg1, arg2, arg3 interface{}, arg4 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeedbackCommentByRecordID", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).GetFeedbackCommentByRecordID), varargs...)
+}
+
+// GetFeedbackVoteByUser mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) GetFeedbackVoteByUser(arg0 context.Context, arg1, arg2, arg3 int64, arg4 string, arg5 ...db.Option) (*entity.ExptInsightAnalysisFeedbackVote, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetFeedbackVoteByUser", varargs...)
+	ret0, _ := ret[0].(*entity.ExptInsightAnalysisFeedbackVote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFeedbackVoteByUser indicates an expected call of GetFeedbackVoteByUser.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) GetFeedbackVoteByUser(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeedbackVoteByUser", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).GetFeedbackVoteByUser), varargs...)
+}
+
+// List mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) List(arg0 context.Context, arg1, arg2, arg3 int64, arg4 entity.Page) ([]*entity.ExptInsightAnalysisFeedbackComment, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].([]*entity.ExptInsightAnalysisFeedbackComment)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) List(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).List), arg0, arg1, arg2, arg3, arg4)
+}
+
+// ListAnalysisRecord mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) ListAnalysisRecord(arg0 context.Context, arg1, arg2 int64, arg3 entity.Page) ([]*entity.ExptInsightAnalysisRecord, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAnalysisRecord", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*entity.ExptInsightAnalysisRecord)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListAnalysisRecord indicates an expected call of ListAnalysisRecord.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) ListAnalysisRecord(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnalysisRecord", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).ListAnalysisRecord), arg0, arg1, arg2, arg3)
+}
+
+// UpdateAnalysisRecord mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) UpdateAnalysisRecord(arg0 context.Context, arg1 *entity.ExptInsightAnalysisRecord, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateAnalysisRecord", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAnalysisRecord indicates an expected call of UpdateAnalysisRecord.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) UpdateAnalysisRecord(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnalysisRecord", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).UpdateAnalysisRecord), varargs...)
+}
+
+// UpdateFeedbackComment mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) UpdateFeedbackComment(arg0 context.Context, arg1 *entity.ExptInsightAnalysisFeedbackComment, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateFeedbackComment", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFeedbackComment indicates an expected call of UpdateFeedbackComment.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) UpdateFeedbackComment(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFeedbackComment", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).UpdateFeedbackComment), varargs...)
+}
+
+// UpdateFeedbackVote mocks base method.
+func (m *MockIExptInsightAnalysisRecordRepo) UpdateFeedbackVote(arg0 context.Context, arg1 *entity.ExptInsightAnalysisFeedbackVote, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateFeedbackVote", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFeedbackVote indicates an expected call of UpdateFeedbackVote.
+func (mr *MockIExptInsightAnalysisRecordRepoMockRecorder) UpdateFeedbackVote(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFeedbackVote", reflect.TypeOf((*MockIExptInsightAnalysisRecordRepo)(nil).UpdateFeedbackVote), varargs...)
+}
