@@ -226,7 +226,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 		count, err := h.taskRepo.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || count == -1 {
 			logs.CtxWarn(ctx, "获取TaskRunCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
-			count = 0
+			return
 		}
 		info.TaskRunCount = count
 
@@ -234,7 +234,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 		successCount, err := h.taskRepo.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || successCount == -1 {
 			logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
-			successCount = 0
+			return
 		}
 		info.TaskRunSuccCount = successCount
 
@@ -242,7 +242,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 		failCount, err := h.taskRepo.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || failCount == -1 {
 			logs.CtxWarn(ctx, "获取TaskRunFailCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
-			failCount = 0
+			return
 		}
 		info.TaskRunFailCount = failCount
 
