@@ -2166,7 +2166,8 @@ type CustomRPCServer struct {
 	// 执行超时时间，单位ms
 	Timeout *int64 `thrift:"timeout,22,optional" frugal:"22,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
 	// 异步执行超时时间，单位ms
-	AsyncTimeout *int64 `thrift:"async_timeout,23,optional" frugal:"23,optional,i64" form:"async_timeout" json:"async_timeout,omitempty" query:"async_timeout"`
+	AsyncTimeout *int64            `thrift:"async_timeout,23,optional" frugal:"23,optional,i64" form:"async_timeout" json:"async_timeout,omitempty" query:"async_timeout"`
+	Ext          map[string]string `thrift:"ext,50,optional" frugal:"50,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewCustomRPCServer() *CustomRPCServer {
@@ -2379,6 +2380,18 @@ func (p *CustomRPCServer) GetAsyncTimeout() (v int64) {
 	}
 	return *p.AsyncTimeout
 }
+
+var CustomRPCServer_Ext_DEFAULT map[string]string
+
+func (p *CustomRPCServer) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return CustomRPCServer_Ext_DEFAULT
+	}
+	return p.Ext
+}
 func (p *CustomRPCServer) SetID(val *int64) {
 	p.ID = val
 }
@@ -2430,6 +2443,9 @@ func (p *CustomRPCServer) SetTimeout(val *int64) {
 func (p *CustomRPCServer) SetAsyncTimeout(val *int64) {
 	p.AsyncTimeout = val
 }
+func (p *CustomRPCServer) SetExt(val map[string]string) {
+	p.Ext = val
+}
 
 var fieldIDToName_CustomRPCServer = map[int16]string{
 	1:  "id",
@@ -2449,6 +2465,7 @@ var fieldIDToName_CustomRPCServer = map[int16]string{
 	21: "exec_env",
 	22: "timeout",
 	23: "async_timeout",
+	50: "ext",
 }
 
 func (p *CustomRPCServer) IsSetID() bool {
@@ -2517,6 +2534,10 @@ func (p *CustomRPCServer) IsSetTimeout() bool {
 
 func (p *CustomRPCServer) IsSetAsyncTimeout() bool {
 	return p.AsyncTimeout != nil
+}
+
+func (p *CustomRPCServer) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
@@ -2668,6 +2689,14 @@ func (p *CustomRPCServer) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 50:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField50(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2889,6 +2918,35 @@ func (p *CustomRPCServer) ReadField23(iprot thrift.TProtocol) error {
 	p.AsyncTimeout = _field
 	return nil
 }
+func (p *CustomRPCServer) ReadField50(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 
 func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2962,6 +3020,10 @@ func (p *CustomRPCServer) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
 			goto WriteFieldError
 		}
 	}
@@ -3296,6 +3358,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
+func (p *CustomRPCServer) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
+}
 
 func (p *CustomRPCServer) String() string {
 	if p == nil {
@@ -3360,6 +3451,9 @@ func (p *CustomRPCServer) DeepEqual(ano *CustomRPCServer) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.AsyncTimeout) {
+		return false
+	}
+	if !p.Field50DeepEqual(ano.Ext) {
 		return false
 	}
 	return true
@@ -3547,6 +3641,19 @@ func (p *CustomRPCServer) Field23DeepEqual(src *int64) bool {
 	}
 	if *p.AsyncTimeout != *src {
 		return false
+	}
+	return true
+}
+func (p *CustomRPCServer) Field50DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

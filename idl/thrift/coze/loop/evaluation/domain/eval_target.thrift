@@ -73,10 +73,13 @@ struct CustomRPCServer {
     18: optional CustomEvalTarget custom_eval_target   // 搜索对象返回的信息
     19: optional bool is_async    // 是否异步
 
+
     20: optional Region exec_region // 执行区域
     21: optional string exec_env // 执行环境
     22: optional i64 timeout // 执行超时时间，单位ms
     23: optional i64 async_timeout // 异步执行超时时间，单位ms
+
+    50: optional map<string, string> ext
 
 }
 

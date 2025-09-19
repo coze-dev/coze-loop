@@ -210,6 +210,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				ExecEnv:             targetVersionDO.CustomRPCServer.ExecEnv,
 				Timeout:             targetVersionDO.CustomRPCServer.Timeout,
 				AsyncTimeout:        targetVersionDO.CustomRPCServer.AsyncTimeout,
+				Ext:                 targetVersionDO.CustomRPCServer.Ext,
 			}
 		}
 	default:
@@ -251,6 +252,7 @@ func CustomRPCServerDTO2DO(dto *dto.CustomRPCServer) (doRes *do.CustomRPCServer)
 		ExecEnv:             dto.ExecEnv,
 		Timeout:             dto.Timeout,
 		AsyncTimeout:        dto.AsyncTimeout,
+		Ext:                 dto.Ext,
 	}
 }
 
