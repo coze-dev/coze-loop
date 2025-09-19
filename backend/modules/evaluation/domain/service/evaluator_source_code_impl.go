@@ -56,7 +56,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 	// 创建trace span
 	rootSpan, ctx := c.newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
 	traceID = rootSpan.GetTraceID()
-	
+
 	defer func() {
 		var errInfo error
 		if err != nil {
@@ -84,7 +84,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 }
 
 // handleRunDefer 处理Run方法的defer逻辑
-func (c *EvaluatorSourceCodeServiceImpl) handleRunDefer(ctx context.Context, rootSpan *evaluatorSpan, output **entity.EvaluatorOutputData, errInfo *error, input *entity.EvaluatorInputData, evaluator *entity.Evaluator, code string, runStatus entity.EvaluatorRunStatus) {
+func (c *EvaluatorSourceCodeServiceImpl) handleRunDefer(ctx context.Context, rootSpan *codeEvaluatorSpan, output **entity.EvaluatorOutputData, errInfo *error, input *entity.EvaluatorInputData, evaluator *entity.Evaluator, code string, runStatus entity.EvaluatorRunStatus) {
 	if *output == nil {
 		*output = &entity.EvaluatorOutputData{
 			EvaluatorRunError: &entity.EvaluatorRunError{},
@@ -165,10 +165,10 @@ func (c *EvaluatorSourceCodeServiceImpl) prepareAndExecuteCode(ctx context.Conte
 func (c *EvaluatorSourceCodeServiceImpl) processCodeExecutionResult(result *entity.ExecutionResult, startTime time.Time) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error) {
 	// 解析评估结果
 	evaluatorResult, retValErrorMsg := c.parseEvaluationExecutionResult(result)
-	
+
 	// 处理stdout和stderr
 	processedStdout, canIgnoreStderr := c.processStdoutAndStderr(result, evaluatorResult)
-	
+
 	// 检查是否有错误
 	if evaluatorRunError := c.checkExecutionErrors(result, retValErrorMsg, canIgnoreStderr); evaluatorRunError != nil {
 		return &entity.EvaluatorOutputData{
@@ -232,12 +232,12 @@ func (c *EvaluatorSourceCodeServiceImpl) checkExecutionErrors(result *entity.Exe
 	if result.Output != nil && !canIgnoreStderr {
 		// 构造错误消息：RetVal错误信息 + stderr
 		var errorMessage string
-		
+
 		// 优先添加 RetVal 中的错误信息
 		if retValErrorMsg != "" {
 			errorMessage = retValErrorMsg
 		}
-		
+
 		// 然后添加 stderr（如果存在）
 		if result.Output.Stderr != "" {
 			if errorMessage != "" {
@@ -246,7 +246,7 @@ func (c *EvaluatorSourceCodeServiceImpl) checkExecutionErrors(result *entity.Exe
 				errorMessage = result.Output.Stderr
 			}
 		}
-		
+
 		// 只有在有错误信息时才创建 EvaluatorRunError
 		if errorMessage != "" {
 			return &entity.EvaluatorRunError{
@@ -728,25 +728,15 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context,
 	// 构建Python语法检查代码，参考pyodide客户端的AST验证方式
 	syntaxCheckCode := c.buildPythonSyntaxCheckCode(codeVersion.CodeContent)
 
-	var result *entity.ExecutionResult
-	var valid bool
-	var errorMsg string
-
-	// 创建语法检查的span
-	syntaxCheckSpan, syntaxCtx := c.newEvaluatorSpan(ctx, "PythonSyntaxCheck", "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), true)
-	defer func() {
-		c.reportSyntaxCheckSpan(syntaxCtx, syntaxCheckSpan, "python", codeVersion.CodeContent, syntaxCheckCode, result, valid, errorMsg, err)
-	}()
-
 	// 使用runtime执行语法检查，设置较短的超时时间
 	ext := c.buildExtParams(evaluator)
-	result, err = runtime.RunCode(syntaxCtx, syntaxCheckCode, "python", 10000, ext) // 10秒超时用于语法验证
+	result, err := runtime.RunCode(ctx, syntaxCheckCode, "python", 10000, ext) // 10秒超时用于语法验证
 	if err != nil {
 		return fmt.Errorf("python syntax validation failed: %w", err)
 	}
 
 	// 处理执行结果并解析stdout中的JSON
-	valid, errorMsg, err = c.processSyntaxValidationExecutionResult(result)
+	valid, errorMsg, err := c.processSyntaxValidationExecutionResult(result)
 	if err != nil {
 		return fmt.Errorf("failed to process syntax validation result: %w", err)
 	}
@@ -780,25 +770,15 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Cont
 	// 构建JavaScript语法检查代码 (使用Builder模式)
 	syntaxCheckCode := c.buildJavaScriptSyntaxCheckCode(codeVersion.CodeContent)
 
-	var result *entity.ExecutionResult
-	var valid bool
-	var errorMsg string
-
-	// 创建语法检查的span
-	syntaxCheckSpan, syntaxCtx := c.newEvaluatorSpan(ctx, "JavaScriptSyntaxCheck", "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), true)
-	defer func() {
-		c.reportSyntaxCheckSpan(syntaxCtx, syntaxCheckSpan, "javascript", codeVersion.CodeContent, syntaxCheckCode, result, valid, errorMsg, err)
-	}()
-
 	// 使用runtime执行语法检查，设置较短的超时时间
 	ext := c.buildExtParams(evaluator)
-	result, err = runtime.RunCode(syntaxCtx, syntaxCheckCode, "js", 10000, ext) // 与Python保持一致的10秒超时
+	result, err := runtime.RunCode(ctx, syntaxCheckCode, "js", 10000, ext) // 与Python保持一致的10秒超时
 	if err != nil {
 		return fmt.Errorf("javascript syntax validation failed: %w", err)
 	}
 
 	// 使用统一的结果处理方法 (与Python保持一致)
-	valid, errorMsg, err = c.processSyntaxValidationExecutionResult(result)
+	valid, errorMsg, err := c.processSyntaxValidationExecutionResult(result)
 	if err != nil {
 		return fmt.Errorf("failed to process syntax validation result: %w", err)
 	}
@@ -820,7 +800,7 @@ func (c *EvaluatorSourceCodeServiceImpl) buildPythonSyntaxCheckCode(userCode str
 		// 如果创建失败，回退到简单构建方式以保持向后兼容
 		return c.buildSimplePythonSyntaxCheckCode(userCode)
 	}
-	
+
 	// 使用Builder的BuildSyntaxCheckCode方法
 	return codeBuilder.BuildSyntaxCheckCode(userCode)
 }
@@ -876,7 +856,7 @@ func (c *EvaluatorSourceCodeServiceImpl) buildJavaScriptSyntaxCheckCode(userCode
 		// 如果创建失败，回退到简单构建方式以保持向后兼容
 		return c.buildSimpleJavaScriptSyntaxCheckCode(userCode)
 	}
-	
+
 	// 使用Builder的BuildSyntaxCheckCode方法
 	return codeBuilder.BuildSyntaxCheckCode(userCode)
 }
@@ -1082,7 +1062,7 @@ func (c *EvaluatorSourceCodeServiceImpl) checkMaliciousPatterns(code, language s
 // buildExtParams 构建扩展参数，包含 space_id
 func (c *EvaluatorSourceCodeServiceImpl) buildExtParams(evaluator *entity.Evaluator) map[string]string {
 	ext := make(map[string]string)
-	
+
 	// 添加 space_id
 	if evaluator != nil {
 		spaceID := evaluator.GetSpaceID()
@@ -1090,7 +1070,7 @@ func (c *EvaluatorSourceCodeServiceImpl) buildExtParams(evaluator *entity.Evalua
 			ext["space_id"] = strconv.FormatInt(spaceID, 10)
 		}
 	}
-	
+
 	return ext
 }
 
@@ -1154,13 +1134,6 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptExecEvaluationFunctio
 	return fmt.Errorf("代码中必须定义 exec_evaluation 或 execEvaluation 函数。JavaScript 函数定义格式：function exec_evaluation(turn_data) { ... }")
 }
 
-
-
-// evaluatorSpan 评估器span包装器
-type evaluatorSpan struct {
-	looptracer.Span
-}
-
 // ReportCodeRootSpanRequest Code评估器专用的上报请求结构
 type ReportCodeRootSpanRequest struct {
 	input            *entity.EvaluatorInputData
@@ -1172,7 +1145,7 @@ type ReportCodeRootSpanRequest struct {
 }
 
 // reportCodeRootSpan 上报Code评估器的根节点trace
-func (e *evaluatorSpan) reportCodeRootSpan(ctx context.Context, request *ReportCodeRootSpanRequest) {
+func (e *codeEvaluatorSpan) reportCodeRootSpan(ctx context.Context, request *ReportCodeRootSpanRequest) {
 	e.SetInput(ctx, tracer.Convert2TraceString(request.input))
 	if request.output != nil {
 		e.SetOutput(ctx, tracer.Convert2TraceString(request.output.EvaluatorResult))
@@ -1199,8 +1172,13 @@ func (e *evaluatorSpan) reportCodeRootSpan(ctx context.Context, request *ReportC
 	e.Finish(ctx)
 }
 
+// codeEvaluatorSpan Code评估器专用span结构体
+type codeEvaluatorSpan struct {
+	looptracer.Span
+}
+
 // newEvaluatorSpan 创建评估器span
-func (c *EvaluatorSourceCodeServiceImpl) newEvaluatorSpan(ctx context.Context, spanName, spanType, spaceID string, asyncChild bool) (*evaluatorSpan, context.Context) {
+func (c *EvaluatorSourceCodeServiceImpl) newEvaluatorSpan(ctx context.Context, spanName, spanType, spaceID string, asyncChild bool) (*codeEvaluatorSpan, context.Context) {
 	var evalSpan looptracer.Span
 	var nctx context.Context
 	if asyncChild {
@@ -1209,57 +1187,7 @@ func (c *EvaluatorSourceCodeServiceImpl) newEvaluatorSpan(ctx context.Context, s
 		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(spaceID))
 	}
 
-	return &evaluatorSpan{
+	return &codeEvaluatorSpan{
 		Span: evalSpan,
 	}, nctx
-}
-
-// reportSyntaxCheckSpan 上报语法检查的trace信息
-func (c *EvaluatorSourceCodeServiceImpl) reportSyntaxCheckSpan(ctx context.Context, span *evaluatorSpan, language, userCode, syntaxCheckCode string, result *entity.ExecutionResult, valid bool, errorMsg string, err error) {
-	// 设置输入：用户代码
-	span.SetInput(ctx, tracer.Convert2TraceString(map[string]interface{}{
-		"user_code": userCode,
-		"language":  language,
-	}))
-	
-	// 设置输出：语法检查结果
-	output := map[string]interface{}{
-		"valid": valid,
-	}
-	if errorMsg != "" {
-		output["error"] = errorMsg
-	}
-	if result != nil && result.Output != nil {
-		output["stdout"] = result.Output.Stdout
-		output["stderr"] = result.Output.Stderr
-		output["ret_val"] = result.Output.RetVal
-	}
-	span.SetOutput(ctx, tracer.Convert2TraceString(output))
-	
-	// 设置状态码
-	if err != nil {
-		span.SetStatusCode(ctx, errno.CodeExecutionFailedCode)
-		span.SetError(ctx, err)
-	} else if !valid {
-		span.SetStatusCode(ctx, errno.InvalidInputDataCode)
-		span.SetError(ctx, fmt.Errorf("syntax validation failed: %s", errorMsg))
-	} else {
-		span.SetStatusCode(ctx, 0)
-	}
-	
-	// 设置标签
-	tags := map[string]interface{}{
-		"language":           language,
-		"syntax_check_code":  syntaxCheckCode,
-		"validation_result":  valid,
-	}
-	span.SetTags(ctx, tags)
-	span.SetCallType("Evaluator")
-	
-	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	if userIDInContext != "" {
-		span.SetUserID(ctx, userIDInContext)
-	}
-	
-	span.Finish(ctx)
 }
