@@ -22,8 +22,8 @@ func (m *TotalCountMetric) Type() entity.MetricType {
 	return entity.MetricTypeSummary
 }
 
-func (m *TotalCountMetric) Source() string {
-	return string(entity.MetricSourceCK)
+func (m *TotalCountMetric) Source() entity.MetricSource {
+	return entity.MetricSourceCK
 }
 
 func (m *TotalCountMetric) Expression(granularity entity.MetricGranularity) string {

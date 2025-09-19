@@ -22,8 +22,8 @@ func (m *ModelTotalTokensMetric) Type() entity.MetricType {
 	return entity.MetricTypeSummary
 }
 
-func (m *ModelTotalTokensMetric) Source() string {
-	return string(entity.MetricSourceCK)
+func (m *ModelTotalTokensMetric) Source() entity.MetricSource {
+	return entity.MetricSourceCK
 }
 
 func (m *ModelTotalTokensMetric) Expression(granularity entity.MetricGranularity) string {

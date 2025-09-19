@@ -23,8 +23,8 @@ func (m *ToolLatencyAvgMetric) Type() entity.MetricType {
 	return entity.MetricTypeSummary
 }
 
-func (m *ToolLatencyAvgMetric) Source() string {
-	return string(entity.MetricSourceCK)
+func (m *ToolLatencyAvgMetric) Source() entity.MetricSource {
+	return entity.MetricSourceCK
 }
 
 func (m *ToolLatencyAvgMetric) Expression(granularity entity.MetricGranularity) string {

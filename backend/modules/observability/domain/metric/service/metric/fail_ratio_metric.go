@@ -22,8 +22,8 @@ func (m *FailRatioMetric) Type() entity.MetricType {
 	return entity.MetricTypeSummary
 }
 
-func (m *FailRatioMetric) Source() string {
-	return string(entity.MetricSourceCK)
+func (m *FailRatioMetric) Source() entity.MetricSource {
+	return entity.MetricSourceCK
 }
 
 func (m *FailRatioMetric) Expression(granularity entity.MetricGranularity) string {

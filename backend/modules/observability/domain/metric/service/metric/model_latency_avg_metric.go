@@ -22,8 +22,8 @@ func (m *ModelLatencyAvgMetric) Type() entity.MetricType {
 	return entity.MetricTypeSummary
 }
 
-func (m *ModelLatencyAvgMetric) Source() string {
-	return string(entity.MetricSourceCK)
+func (m *ModelLatencyAvgMetric) Source() entity.MetricSource {
+	return entity.MetricSourceCK
 }
 
 func (m *ModelLatencyAvgMetric) Expression(granularity entity.MetricGranularity) string {
