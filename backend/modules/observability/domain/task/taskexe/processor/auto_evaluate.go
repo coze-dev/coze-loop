@@ -179,7 +179,11 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, isBackFill bool) error {
+func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, config *taskexe.Config, isBackFill bool) error {
+	if config.Task == nil {
+		return taskexe.ErrInvalidConfig
+	}
+	currentTask := config.Task
 	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, taskID:%d,  task:%+v", currentTask.GetID(), currentTask)
 	//todo:[xun]加锁
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
@@ -682,7 +686,9 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 		return err
 	}
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
-		err = p.OnChangeProcessor(ctx, currentTask, true)
+		err = p.OnChangeProcessor(ctx, &taskexe.Config{
+			Task: currentTask,
+		}, true)
 		if err != nil {
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
@@ -694,7 +700,9 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 		}
 	}
 	if ShouldTriggerNewData(currentTask) {
-		err = p.OnChangeProcessor(ctx, currentTask, false)
+		err = p.OnChangeProcessor(ctx, &taskexe.Config{
+			Task: currentTask,
+		}, false)
 		if err != nil {
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err

@@ -188,40 +188,6 @@ func ShouldTriggerNewData(taskDO *task.Task) bool {
 
 func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
 	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
-	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
-	if err != nil {
-		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
-		return err
-	}
-	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
-		err = p.OnChangeProcessor(ctx, currentTask, true)
-		if err != nil {
-			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-			return err
-		}
-		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
-		if err != nil {
-			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-			return err
-		}
-	}
-
-	if ShouldTriggerNewData(currentTask) {
-		err = p.OnChangeProcessor(ctx, currentTask, false)
-		if err != nil {
-			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-			return err
-		}
-		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
-		if err != nil {
-			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-			return err
-		}
-	}
-	return nil
-}
-
-func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask *task.Task, isBackFill bool) error {
 	// 1、创建/更新数据集
 	session := getSession(ctx, currentTask)
 	category := getCategory(currentTask.TaskType)
@@ -250,6 +216,51 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 		}
 		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
 	}
+
+	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
+	if err != nil {
+		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
+		return err
+	}
+	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
+		err = p.OnChangeProcessor(ctx, &taskexe.Config{
+			Task:      currentTask,
+			DatasetID: &datasetID,
+		}, true)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+	}
+
+	if ShouldTriggerNewData(currentTask) {
+		err = p.OnChangeProcessor(ctx, &taskexe.Config{
+			Task:      currentTask,
+			DatasetID: &datasetID,
+		}, false)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, config *taskexe.Config, isBackFill bool) error {
+	if config.Task == nil {
+		return taskexe.ErrInvalidConfig
+	}
+	currentTask := config.Task
 	// 2、更新任务配置
 	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
 	if err != nil {
@@ -261,7 +272,7 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, currentTask
 	var taskRun *task_entity.TaskRun
 	taskRunConfig := &task.TaskRunConfig{
 		DataReflowRunConfig: &task.DataReflowRunConfig{
-			DatasetID:    datasetID,
+			DatasetID:    *config.DatasetID,
 			EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
 			CycleStartAt: cycleStartAt,
 			CycleEndAt:   cycleEndAt,
