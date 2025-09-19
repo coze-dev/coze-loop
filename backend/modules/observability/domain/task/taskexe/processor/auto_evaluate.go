@@ -148,6 +148,8 @@ func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *
 	if !ok {
 		return taskexe.ErrInvalidConfig
 	}
+	taskRun := tconv.TaskRunDO2PO(ctx, cfg, nil)
+	p.OnFinishTaskRunProcessor(ctx, taskRun)
 	if err := p.evaluationSvc.FinishExperiment(ctx, &rpc.FinishExperimentReq{
 		WorkspaceID:     trigger.Task.GetWorkspaceID(),
 		ExperimentID:    cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID(),

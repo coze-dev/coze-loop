@@ -125,6 +125,18 @@ func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.Fiel
 	return result
 }
 func (p *DataReflowProcessor) Finish(ctx context.Context, config any, trigger *taskexe.Trigger) error {
+	cfg, ok := config.(*task.TaskRun)
+	if !ok {
+		return taskexe.ErrInvalidConfig
+	}
+	taskRun := tconv.TaskRunDO2PO(ctx, cfg, nil)
+	p.OnFinishTaskRunProcessor(ctx, taskRun)
+	if trigger.IsFinish {
+		if err := p.OnUpdateChangeProcessor(ctx, trigger.Task, task.TaskStatusSuccess); err != nil {
+			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", trigger.Task.GetID(), err)
+			return err
+		}
+	}
 	return nil
 }
 
