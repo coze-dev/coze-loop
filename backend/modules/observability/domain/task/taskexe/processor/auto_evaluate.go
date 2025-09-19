@@ -699,7 +699,7 @@ func (p *AutoEvaluteProcessor) OnUpdateChangeProcessor(ctx context.Context, curr
 		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
 	}
 	// 2、更新任务
-	taskPO := tconv.CreateTaskDTO2PO(ctx, currentTask, "")
+	taskPO := tconv.TaskDTO2PO(ctx, currentTask, "")
 	err := p.taskRepo.UpdateTask(ctx, taskPO)
 	if err != nil {
 		logs.CtxError(ctx, "[auto_task] OnUpdateChangeProcessor, UpdateTask err, taskID:%d, err:%v", currentTask.GetID(), err)

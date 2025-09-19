@@ -129,7 +129,8 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
 	// 创建task
-	taskPO := tconv.CreateTaskDTO2PO(ctx, req.Task, userID)
+	req.Task.TaskStatus = ptr.Of(task.TaskStatusUnstarted)
+	taskPO := tconv.TaskDTO2PO(ctx, req.Task, userID)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err

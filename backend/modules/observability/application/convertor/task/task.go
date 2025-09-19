@@ -235,7 +235,7 @@ func CheckTaskStatus(ctx context.Context, taskStatus task.TaskStatus, currentTas
 	return validTaskStatus, nil
 }
 
-func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.ObservabilityTask {
+func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.ObservabilityTask {
 	if taskDO == nil {
 		return nil
 	}
@@ -255,7 +255,7 @@ func CreateTaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *en
 		Name:                  taskDO.GetName(),
 		Description:           ptr.Of(taskDO.GetDescription()),
 		TaskType:              taskDO.GetTaskType(),
-		TaskStatus:            task.TaskStatusUnstarted,
+		TaskStatus:            taskDO.GetTaskType(),
 		TaskDetail:            ptr.Of(ToJSONString(ctx, taskDO.GetTaskDetail())),
 		SpanFilter:            SpanFilterDTO2PO(ctx, taskDO.GetRule().GetSpanFilters(), taskDO.GetWorkspaceID()),
 		EffectiveTime:         ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetEffectiveTime())),
