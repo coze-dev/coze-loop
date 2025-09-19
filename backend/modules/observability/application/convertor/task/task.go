@@ -255,7 +255,7 @@ func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.O
 		Name:                  taskDO.GetName(),
 		Description:           ptr.Of(taskDO.GetDescription()),
 		TaskType:              taskDO.GetTaskType(),
-		TaskStatus:            taskDO.GetTaskType(),
+		TaskStatus:            taskDO.GetTaskStatus(),
 		TaskDetail:            ptr.Of(ToJSONString(ctx, taskDO.GetTaskDetail())),
 		SpanFilter:            SpanFilterDTO2PO(ctx, taskDO.GetRule().GetSpanFilters(), taskDO.GetWorkspaceID()),
 		EffectiveTime:         ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetEffectiveTime())),
