@@ -88,12 +88,13 @@ const (
 )
 
 const (
-	defaultDaemonInterval       = 20 * time.Second
-	defaultZombieIntervalSecond = 60 * 60 * 24
-	defaultItemEvalConcurNum    = 3
-	defaultItemEvalInterval     = 20 * time.Second
-	defaultSpaceExptConcurLimit = 200
-	defaultItemZombieSecond     = 60 * 20
+	defaultDaemonInterval        = 20 * time.Second
+	defaultZombieIntervalSecond  = 60 * 60 * 24
+	defaultItemEvalConcurNum     = 3
+	defaultItemEvalInterval      = 20 * time.Second
+	defaultSpaceExptConcurLimit  = 200
+	defaultItemZombieSecond      = 60 * 20
+	defaultItemAsyncZombieSecond = 60 * 60 * 3
 )
 
 type ExptConsumerConf struct {
@@ -151,9 +152,10 @@ func (e *ExptExecConf) GetExptItemEvalConf() *ExptItemEvalConf {
 }
 
 type ExptItemEvalConf struct {
-	ConcurNum      int `json:"concur_num" mapstructure:"concur_num"`
-	IntervalSecond int `json:"interval_second" mapstructure:"interval_second"`
-	ZombieSecond   int `json:"zombie_second" mapstructure:"zombie_second"`
+	ConcurNum         int `json:"concur_num" mapstructure:"concur_num"`
+	IntervalSecond    int `json:"interval_second" mapstructure:"interval_second"`
+	ZombieSecond      int `json:"zombie_second" mapstructure:"zombie_second"`
+	AsyncZombieSecond int `json:"async_zombie_second" mapstructure:"async_zombie_second"`
 }
 
 func (e *ExptItemEvalConf) GetConcurNum() int {
@@ -170,11 +172,25 @@ func (e *ExptItemEvalConf) GetInterval() time.Duration {
 	return defaultItemEvalInterval
 }
 
-func (e *ExptItemEvalConf) GetZombieSecond() int {
+func (e *ExptItemEvalConf) getZombieSecond() int {
 	if e != nil && e.ZombieSecond > 0 {
 		return e.ZombieSecond
 	}
 	return defaultItemZombieSecond
+}
+
+func (e *ExptItemEvalConf) getAsyncZombieSecond() int {
+	if e != nil && e.AsyncZombieSecond > 0 {
+		return e.AsyncZombieSecond
+	}
+	return defaultItemAsyncZombieSecond
+}
+
+func (e *ExptItemEvalConf) GetItemZombieSecond(isAsync bool) int {
+	if isAsync {
+		return e.getAsyncZombieSecond()
+	}
+	return e.getZombieSecond()
 }
 
 func DefaultExptConsumerConf() *ExptConsumerConf {
