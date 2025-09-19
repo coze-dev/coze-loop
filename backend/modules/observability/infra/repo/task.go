@@ -51,19 +51,19 @@ const (
 
 func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error) {
 	// 先查 Redis 缓存
-	cachedTask, err := v.TaskRedisDao.GetTask(ctx, id)
-	if err != nil {
-		logs.CtxWarn(ctx, "failed to get task from redis cache", "id", id, "err", err)
-	} else if cachedTask != nil {
-		// 验证权限（workspaceID 和 userID）
-		if workspaceID != nil && cachedTask.WorkspaceID != *workspaceID {
-			return nil, nil // 权限不符，返回空
-		}
-		if userID != nil && cachedTask.CreatedBy != *userID {
-			return nil, nil // 权限不符，返回空
-		}
-		return cachedTask, nil
-	}
+	//cachedTask, err := v.TaskRedisDao.GetTask(ctx, id)
+	//if err != nil {
+	//	logs.CtxWarn(ctx, "failed to get task from redis cache", "id", id, "err", err)
+	//} else if cachedTask != nil {
+	//	// 验证权限（workspaceID 和 userID）
+	//	if workspaceID != nil && cachedTask.WorkspaceID != *workspaceID {
+	//		return nil, nil // 权限不符，返回空
+	//	}
+	//	if userID != nil && cachedTask.CreatedBy != *userID {
+	//		return nil, nil // 权限不符，返回空
+	//	}
+	//	return cachedTask, nil
+	//}
 
 	// 缓存未命中，查询数据库
 	TaskPo, err := v.TaskDao.GetTask(ctx, id, workspaceID, userID)
