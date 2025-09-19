@@ -46,30 +46,35 @@ func NewTraceHubImpl(
 	buildHelper service.TraceFilterProcessorBuilder,
 ) (ITraceHubService, error) {
 	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo, tRunRepo)
-	ticker := time.NewTicker(5 * time.Minute) // 每x分钟执行一次定时任务
+	// 创建两个不同间隔的独立定时器
+	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // 任务状态生命周期管理 - 5分钟间隔
+	syncTaskTicker := time.NewTicker(1 * time.Minute)      // 数据同步 - 1分钟间隔
 	impl := &TraceHubServiceImpl{
-		taskRepo:       tRepo,
-		taskRunRepo:    tRunRepo,
-		ticker:         ticker,
-		stopChan:       make(chan struct{}),
-		traceRepo:      traceRepo,
-		tenantProvider: tenantProvider,
-		buildHelper:    buildHelper,
+		taskRepo:            tRepo,
+		taskRunRepo:         tRunRepo,
+		scheduledTaskTicker: scheduledTaskTicker,
+		syncTaskTicker:      syncTaskTicker,
+		stopChan:            make(chan struct{}),
+		traceRepo:           traceRepo,
+		tenantProvider:      tenantProvider,
+		buildHelper:         buildHelper,
 	}
 
 	// 立即启动定时任务
 	impl.startScheduledTask()
+	impl.startSyncTaskRunCounts()
 
 	return impl, nil
 }
 
 type TraceHubServiceImpl struct {
-	ticker         *time.Ticker
-	stopChan       chan struct{}
-	taskRepo       repo.ITaskRepo
-	taskRunRepo    repo.ITaskRunRepo
-	traceRepo      trace_repo.ITraceRepo
-	tenantProvider tenant.ITenantProvider
+	scheduledTaskTicker *time.Ticker // 任务状态生命周期管理定时器 - 5分钟间隔
+	syncTaskTicker      *time.Ticker // 数据同步定时器 - 1分钟间隔
+	stopChan            chan struct{}
+	taskRepo            repo.ITaskRepo
+	taskRunRepo         repo.ITaskRunRepo
+	traceRepo           trace_repo.ITraceRepo
+	tenantProvider      tenant.ITenantProvider
 
 	buildHelper  service.TraceFilterProcessorBuilder
 	task         *task.Task
@@ -193,7 +198,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
-		if sub.t.GetTaskStatus() == task.TaskStatusSuccess {
+		if sub.t.GetTaskStatus() != task.TaskStatusRunning {
 			continue
 		}
 		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)

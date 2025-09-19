@@ -36,18 +36,34 @@ type SyncMetrics struct {
 	ProcessingTime time.Duration
 }
 
-// startScheduledTask 启动定时任务goroutine
+// startScheduledTask 启动定时任务goroutine - 使用5分钟间隔的定时器
 func (h *TraceHubServiceImpl) startScheduledTask() {
 	go func() {
 		for {
 			select {
-			case <-h.ticker.C:
+			case <-h.scheduledTaskTicker.C:
 				// 执行定时任务
 				h.runScheduledTask()
+			case <-h.stopChan:
+				// 停止定时任务
+				h.scheduledTaskTicker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+// startSyncTaskRunCounts 启动数据同步定时任务goroutine - 使用1分钟间隔的定时器
+func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
+	go func() {
+		for {
+			select {
+			case <-h.syncTaskTicker.C:
+				// 执行定时任务
 				h.syncTaskRunCounts()
 			case <-h.stopChan:
 				// 停止定时任务
-				h.ticker.Stop()
+				h.syncTaskTicker.Stop()
 				return
 			}
 		}
