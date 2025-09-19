@@ -441,6 +441,7 @@ func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, r
 		ApplicationID:   req.ApplicationID,
 		CustomRPCServer: target.CustomRPCServerDTO2DO(req.CustomRPCServer),
 		Region:          req.Region,
+		Env:             req.Env,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
 	})
