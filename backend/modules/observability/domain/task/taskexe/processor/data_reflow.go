@@ -152,6 +152,27 @@ func ShouldTriggerBackfill(taskDO *task.Task) bool {
 		backfillTime.GetStartAt() < backfillTime.GetEndAt()
 }
 
+func ShouldTriggerNewData(taskDO *task.Task) bool {
+	// 检查任务类型
+	taskType := taskDO.GetTaskType()
+	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
+		return false
+	}
+	rule := taskDO.GetRule()
+	if rule == nil {
+		return false
+	}
+
+	effectiveTime := rule.GetEffectiveTime()
+	if effectiveTime == nil {
+		return false
+	}
+
+	return effectiveTime.GetEndAt() > 0 &&
+		effectiveTime.GetStartAt() > 0 &&
+		time.Now().Before(time.Unix(effectiveTime.GetStartAt(), 0))
+}
+
 func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
 	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
 	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
@@ -165,8 +186,25 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
 		}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
 	}
-	err = p.OnChangeProcessor(ctx, currentTask, false)
+
+	if ShouldTriggerNewData(currentTask) {
+		err = p.OnChangeProcessor(ctx, currentTask, false)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+	}
 	return nil
 }
 

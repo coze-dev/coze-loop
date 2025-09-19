@@ -121,6 +121,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if time.Now().After(endTime) {
+			//OnFinishChangeProcessor
 			err = proc.OnUpdateChangeProcessor(ctx, taskInfo, task.TaskStatusSuccess)
 			if err != nil {
 				logs.CtxError(ctx, "OnUpdateChangeProcessor err:%v", err)
@@ -129,14 +130,9 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		}
 		// 如果任务状态为unstarted，到任务开始时间就开始create
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
-			err = proc.OnChangeProcessor(ctx, taskInfo, false)
+			err = proc.OnCreateChangeProcessor(ctx, taskInfo)
 			if err != nil {
 				logs.CtxError(ctx, "OnChangeProcessor err:%v", err)
-				continue
-			}
-			err = proc.OnUpdateChangeProcessor(ctx, taskInfo, task.TaskStatusRunning)
-			if err != nil {
-				logs.CtxError(ctx, "OnUpdateChangeProcessor err:%v", err)
 				continue
 			}
 		}

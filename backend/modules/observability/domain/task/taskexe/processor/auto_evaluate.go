@@ -650,14 +650,29 @@ func (p *AutoEvaluteProcessor) OnCreateChangeProcessor(ctx context.Context, curr
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err
 	}
-	var isBackFill bool
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
-		isBackFill = true
+		err = p.OnChangeProcessor(ctx, currentTask, true)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
 	}
-	err = p.OnChangeProcessor(ctx, currentTask, isBackFill)
-	if err != nil {
-		logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-		return err
+	if ShouldTriggerNewData(currentTask) {
+		err = p.OnChangeProcessor(ctx, currentTask, false)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
 	}
 
 	return nil
