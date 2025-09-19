@@ -454,11 +454,9 @@ func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, r
 }
 
 func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	return nil, errorx.New("not implement")
 }
 
 func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	return nil, errorx.New("not implement")
 }
