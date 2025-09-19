@@ -249,6 +249,13 @@ func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.O
 	if userID != "" {
 		createdBy = userID
 		updatedBy = userID
+	} else {
+		if taskDO.GetBaseInfo().GetCreatedBy() != nil {
+			createdBy = taskDO.GetBaseInfo().GetCreatedBy().GetUserID()
+		}
+		if taskDO.GetBaseInfo().GetUpdatedBy() != nil {
+			updatedBy = taskDO.GetBaseInfo().GetUpdatedBy().GetUserID()
+		}
 	}
 	return &entity.ObservabilityTask{
 		ID:                    taskDO.GetID(),
