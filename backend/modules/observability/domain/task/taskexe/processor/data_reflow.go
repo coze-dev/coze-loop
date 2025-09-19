@@ -277,19 +277,19 @@ func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, curre
 	switch taskOp {
 	case task.TaskStatusSuccess:
 		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
-			currentTask.TaskStatus = ptr.Of(task.TaskStatusSuccess)
+			*currentTask.TaskStatus = task.TaskStatusSuccess
 		}
 	case task.TaskStatusRunning:
 		if currentTask.GetTaskStatus() != task.TaskStatusDisabled && currentTask.GetTaskStatus() != task.TaskStatusSuccess {
-			currentTask.TaskStatus = ptr.Of(task.TaskStatusRunning)
+			*currentTask.TaskStatus = task.TaskStatusRunning
 		}
 	case task.TaskStatusDisabled:
 		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
-			currentTask.TaskStatus = ptr.Of(task.TaskStatusDisabled)
+			*currentTask.TaskStatus = task.TaskStatusDisabled
 		}
 	case task.TaskStatusPending:
 		if currentTask.GetTaskStatus() == task.TaskStatusPending || currentTask.GetTaskStatus() == task.TaskStatusUnstarted {
-			currentTask.TaskStatus = ptr.Of(task.TaskStatusPending)
+			*currentTask.TaskStatus = task.TaskStatusPending
 		}
 	default:
 		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
