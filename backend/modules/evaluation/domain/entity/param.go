@@ -297,3 +297,9 @@ type ReportTargetRecordParam struct {
 
 	Session *Session
 }
+
+type DebugTargetParam struct {
+	SpaceID      int64
+	PatchyTarget *EvalTarget
+	InputData    *EvalTargetInputData
+}

@@ -276,23 +276,32 @@ func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID 
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("AsyncExecuteTarget with invalid param"))
 	}
 
-	defer func(st time.Time) { e.metric.EmitRun(spaceID, err, st) }(time.Now()) // todo(@liushengyang): async
-	defer goroutine.Recovery(ctx)
-
 	evalTargetDO, err := e.GetEvalTargetVersion(ctx, spaceID, targetVersionID, false)
 	if err != nil {
 		return nil, err
 	}
 
-	operator := e.typedOperators[evalTargetDO.EvalTargetType]
+	return e.asyncExecuteTarget(ctx, spaceID, evalTargetDO, param, inputData)
+}
+
+func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID int64, target *entity.EvalTarget, param *entity.ExecuteTargetCtx,
+	inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
+	defer func(st time.Time) { e.metric.EmitRun(spaceID, err, st) }(time.Now()) // todo(@liushengyang): mtr
+	defer goroutine.Recovery(ctx)
+
+	targetID := target.ID
+	targetVersionID := target.EvalTargetVersion.ID
+
+	operator := e.typedOperators[target.EvalTargetType]
 	if operator == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
 
-	if err := operator.ValidateInput(ctx, spaceID, evalTargetDO.EvalTargetVersion.InputSchema, inputData); err != nil {
+	if err := operator.ValidateInput(ctx, spaceID, target.EvalTargetVersion.InputSchema, inputData); err != nil {
 		return nil, err
 	}
 
+	status := entity.EvalTargetRunStatusAsyncInvoking
 	outputData := &entity.EvalTargetOutputData{
 		OutputFields:    map[string]*entity.Content{},
 		EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 0, OutputTokens: 0},
@@ -302,15 +311,16 @@ func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID 
 	execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
-		SourceTargetID:      evalTargetDO.SourceTargetID,
-		SourceTargetVersion: evalTargetDO.EvalTargetVersion.SourceTargetVersion,
+		SourceTargetID:      target.SourceTargetID,
+		SourceTargetVersion: target.EvalTargetVersion.SourceTargetVersion,
 		Input:               inputData,
-		TargetType:          evalTargetDO.EvalTargetType,
-		EvalTarget:          evalTargetDO,
+		TargetType:          target.EvalTargetType,
+		EvalTarget:          target,
 	})
 	if execErr != nil {
 		logs.CtxError(ctx, "async execute target failed, spaceID=%v, targetID=%d, targetVersionID=%d, param=%v, inputData=%v, err=%v",
 			spaceID, targetID, targetVersionID, json.Jsonify(param), json.Jsonify(inputData), err)
+		status = entity.EvalTargetRunStatusFail
 		statusErr, ok := errorx.FromStatusError(err)
 		if ok {
 			outputData.EvalTargetRunError.Code = statusErr.Code()
@@ -338,7 +348,7 @@ func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID 
 		LogID:                logs.GetLogID(ctx),
 		EvalTargetInputData:  inputData,
 		EvalTargetOutputData: outputData,
-		Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+		Status:               gptr.Of(status),
 		BaseInfo: &entity.BaseInfo{
 			CreatedBy: &entity.UserInfo{
 				UserID: gptr.Of(userID),
@@ -355,6 +365,79 @@ func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID 
 	}
 
 	return record, nil
+}
+
+func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error) {
+	defer func(st time.Time) { e.metric.EmitRun(param.SpaceID, err, st) }(time.Now()) // todo(@liushengyang): mtr
+	defer goroutine.Recovery(ctx)
+
+	operator := e.typedOperators[param.PatchyTarget.EvalTargetType]
+	if operator == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+
+	if err := operator.ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData); err != nil {
+		return nil, err
+	}
+
+	status := entity.EvalTargetRunStatusSuccess
+	outputData := &entity.EvalTargetOutputData{
+		OutputFields:    map[string]*entity.Content{},
+		EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 0, OutputTokens: 0},
+		TimeConsumingMS: gptr.Of(int64(0)),
+	}
+
+	execErr := operator.AsyncExecute(ctx, param.SpaceID, &entity.ExecuteEvalTargetParam{
+		Input:      param.InputData,
+		TargetType: param.PatchyTarget.EvalTargetType,
+		EvalTarget: param.PatchyTarget,
+	})
+	if execErr != nil {
+		logs.CtxError(ctx, "async execute target failed, param=%v, err=%v", json.Jsonify(param), err)
+		status = entity.EvalTargetRunStatusFail
+		statusErr, ok := errorx.FromStatusError(err)
+		if ok {
+			outputData.EvalTargetRunError.Code = statusErr.Code()
+			outputData.EvalTargetRunError.Message = statusErr.Error()
+		} else {
+			outputData.EvalTargetRunError.Code = errno.CommonInternalErrorCode
+			outputData.EvalTargetRunError.Message = err.Error()
+		}
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	recordID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	record = &entity.EvalTargetRecord{
+		ID:                   recordID,
+		SpaceID:              param.SpaceID,
+		LogID:                logs.GetLogID(ctx),
+		EvalTargetInputData:  param.InputData,
+		EvalTargetOutputData: outputData,
+		Status:               gptr.Of(status),
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userID),
+			},
+			UpdatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userID),
+			},
+			CreatedAt: gptr.Of(time.Now().UnixMilli()),
+			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+		},
+	}
+	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
+		return nil, err
+	}
+
+	return record, nil
+}
+
+func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error) {
+	return e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
 }
 
 func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
