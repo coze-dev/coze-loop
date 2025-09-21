@@ -297,6 +297,7 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, config *tas
 	}
 	return nil
 }
+
 func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	switch taskOp {
 	case task.TaskStatusSuccess:

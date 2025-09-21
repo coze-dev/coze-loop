@@ -116,6 +116,17 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	tagsLong["input_tokens"] = s.SensitiveTags.InputTokens
 	tagsLong["output_tokens"] = s.SensitiveTags.OutputTokens
 	tagsLong["tokens"] = s.SensitiveTags.Tokens
+	if s.Tags == nil {
+		s.Tags = make(map[string]any)
+	}
+	if s.Tags["call_type"] == nil {
+		s.Tags["call_type"] = ""
+	}
+	callType := s.Tags["call_type"].(string)
+	if s.Tags["fornax_space_id"] == nil {
+		s.Tags["fornax_space_id"] = ""
+	}
+	spaceID := s.Tags["fornax_space_id"].(string)
 
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs / 1000,
@@ -125,8 +136,8 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		TraceID:          s.TraceID,
 		DurationMicros:   s.DurationInUs / 1000,
 		PSM:              s.ServerEnv.PSM,
-		CallType:         s.Tags["call_type"].(string),
-		WorkspaceID:      s.Tags["fornax_space_id"].(string),
+		CallType:         callType,
+		WorkspaceID:      spaceID,
 		SpanName:         s.SpanName,
 		SpanType:         s.SpanType,
 		Method:           s.Method,

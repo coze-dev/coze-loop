@@ -27,6 +27,7 @@ import (
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 设置当前任务上下文
+	// 不
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
 		return err
@@ -200,24 +201,25 @@ func (h *TraceHubServiceImpl) parseBackfillTime(ctx context.Context, taskConfig 
 			return &backfillTime, nil
 		}
 	}
+	return nil, errors.New("backfill effective time not found")
 
-	// 使用任务的有效时间
-	if taskConfig.EffectiveTime != nil && *taskConfig.EffectiveTime != "" {
-		var effectiveTime task.EffectiveTime
-		if err := json.Unmarshal([]byte(*taskConfig.EffectiveTime), &effectiveTime); err != nil {
-			logs.CtxWarn(ctx, "parse effective time failed, use default, task_id=%d, err=%v", h.task.GetID(), err)
-		} else {
-			return &effectiveTime, nil
-		}
-	}
-
-	// 使用默认时间窗口：过去24小时
-	now := time.Now().UnixMilli()
-	startTime := now - 24*60*60*1000 // 24小时前
-	return &task.EffectiveTime{
-		StartAt: &startTime,
-		EndAt:   &now,
-	}, nil
+	//// 使用任务的有效时间
+	//if taskConfig.EffectiveTime != nil && *taskConfig.EffectiveTime != "" {
+	//	var effectiveTime task.EffectiveTime
+	//	if err := json.Unmarshal([]byte(*taskConfig.EffectiveTime), &effectiveTime); err != nil {
+	//		logs.CtxWarn(ctx, "parse effective time failed, use default, task_id=%d, err=%v", h.task.GetID(), err)
+	//	} else {
+	//		return &effectiveTime, nil
+	//	}
+	//}
+	//
+	//// 使用默认时间窗口：过去24小时
+	//now := time.Now().UnixMilli()
+	//startTime := now - 24*60*60*1000 // 24小时前
+	//return &task.EffectiveTime{
+	//	StartAt: &startTime,
+	//	EndAt:   &now,
+	//}, nil
 }
 
 // getTenantsForTask 获取任务的租户信息
