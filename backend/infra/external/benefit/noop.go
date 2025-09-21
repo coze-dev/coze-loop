@@ -57,7 +57,3 @@ func (n NoopBenefitServiceImpl) BatchCheckEnableTypeBenefit(ctx context.Context,
 func (n NoopBenefitServiceImpl) CheckAndDeductOptimizationBenefit(ctx context.Context, param *CheckAndDeductOptimizationBenefitParams) (result *CheckAndDeductOptimizationBenefitResult, err error) {
 	return &CheckAndDeductOptimizationBenefitResult{}, nil
 }
-
-func (n NoopBenefitServiceImpl) DeductOptimizationBenefit(ctx context.Context, param *DeductOptimizationBenefitParams) (err error) {
-	return nil
-}
