@@ -127,6 +127,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 		p.taskRepo.DecrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
 		return nil
 	}
+	ctx = context.WithValue(ctx, "K_ENV", "prod")
 	_, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
 		WorkspaceID:     workspaceID,
 		EvaluationSetID: taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
