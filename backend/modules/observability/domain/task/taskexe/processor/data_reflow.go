@@ -343,8 +343,8 @@ func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, curre
 
 func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) {
 	// 创建taskRun
-	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
-	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
+	cycleStartAt := runConfig.DataReflowRunConfig.CycleStartAt
+	cycleEndAt := runConfig.DataReflowRunConfig.CycleEndAt
 	var taskRun *task_entity.TaskRun
 	taskRunConfig := runConfig
 	taskRun = &task_entity.TaskRun{
