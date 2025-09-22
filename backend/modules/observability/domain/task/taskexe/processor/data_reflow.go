@@ -266,23 +266,31 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, config *tas
 		return err
 	}
 	// 3、创建 taskrun：历史回溯生成一个taskRun,新数据生成一个taskRun
-	cycleStartAt := currentTask.GetRule().GetEffectiveTime().GetStartAt()
-	cycleEndAt := currentTask.GetRule().GetEffectiveTime().GetEndAt()
 	var taskRun *task_entity.TaskRun
-	taskRunConfig := &task.TaskRunConfig{
-		DataReflowRunConfig: &task.DataReflowRunConfig{
-			DatasetID:    *config.DatasetID,
-			EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
-			CycleStartAt: cycleStartAt,
-			CycleEndAt:   cycleEndAt,
-			Status:       task.RunStatusRunning,
-		},
-	}
+	var taskRunConfig *task.TaskRunConfig
 	var runType task.TaskRunType
 	if isBackFill {
 		runType = task.TaskRunTypeBackFill
+		taskRunConfig = &task.TaskRunConfig{
+			DataReflowRunConfig: &task.DataReflowRunConfig{
+				DatasetID:    *config.DatasetID,
+				EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
+				CycleStartAt: time.Now().UnixMilli(),
+				CycleEndAt:   time.Now().UnixMilli() + (currentTask.GetRule().GetEffectiveTime().GetEndAt() - currentTask.GetRule().GetEffectiveTime().GetStartAt()),
+				Status:       task.RunStatusRunning,
+			},
+		}
 	} else {
 		runType = task.TaskRunTypeNewData
+		taskRunConfig = &task.TaskRunConfig{
+			DataReflowRunConfig: &task.DataReflowRunConfig{
+				DatasetID:    *config.DatasetID,
+				EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
+				CycleStartAt: currentTask.GetRule().GetEffectiveTime().GetStartAt(),
+				CycleEndAt:   currentTask.GetRule().GetEffectiveTime().GetEndAt(),
+				Status:       task.RunStatusRunning,
+			},
+		}
 	}
 	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
 	if err != nil {
