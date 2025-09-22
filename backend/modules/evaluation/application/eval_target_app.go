@@ -478,11 +478,28 @@ func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, r
 }
 
 func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
+	//err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	//	ObjectID:      strconv.FormatInt(request.GetWorkspaceID(), 10),
+	//	SpaceID:       request.GetWorkspaceID(),
+	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	switch request.GetEvalTargetType() {
 	case eval_target_dto.EvalTargetType_CustomRPCServer:
 		record, err := e.evalTargetService.DebugTarget(ctx, &entity.DebugTargetParam{
-			SpaceID:      request.GetWorkspaceID(),
-			PatchyTarget: &entity.EvalTarget{},
+			SpaceID: request.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{
+				SpaceID:        request.GetWorkspaceID(),
+				EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:         request.GetWorkspaceID(),
+					EvalTargetType:  entity.EvalTargetTypeCustomRPCServer,
+					CustomRPCServer: target.CustomRPCServerDTO2DO(request.GetCustomRPCServer()),
+				},
+			},
 			InputData: &entity.EvalTargetInputData{
 				InputFields: target.ContentDTO2DOs(request.GetInputFields()),
 				Ext: map[string]string{
@@ -503,11 +520,28 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 }
 
 func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
+	//err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	//	ObjectID:      strconv.FormatInt(request.GetWorkspaceID(), 10),
+	//	SpaceID:       request.GetWorkspaceID(),
+	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	switch request.GetEvalTargetType() {
 	case eval_target_dto.EvalTargetType_CustomRPCServer:
 		record, err := e.evalTargetService.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
-			SpaceID:      request.GetWorkspaceID(),
-			PatchyTarget: &entity.EvalTarget{},
+			SpaceID: request.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{
+				SpaceID:        request.GetWorkspaceID(),
+				EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:         request.GetWorkspaceID(),
+					EvalTargetType:  entity.EvalTargetTypeCustomRPCServer,
+					CustomRPCServer: target.CustomRPCServerDTO2DO(request.GetCustomRPCServer()),
+				},
+			},
 			InputData: &entity.EvalTargetInputData{
 				InputFields: target.ContentDTO2DOs(request.GetInputFields()),
 				Ext: map[string]string{
