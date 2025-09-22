@@ -94,12 +94,6 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 	spanEnv := &span_filter.SpanEnv{
 		WorkspaceID: req.WorkspaceID,
 	}
-	basicFilter, forceQuery, err := filter.BuildBasicSpanFilter(ctx, spanEnv)
-	if err != nil {
-		return nil, err
-	} else if len(basicFilter) == 0 && !forceQuery {
-		return &QueryMetricsResp{}, nil
-	}
 	metricInfos := make([]*metricInfo, 0)
 	for _, metricName := range req.MetricsNames {
 		metricDef, ok := s.metricDefMap[metricName]
@@ -108,6 +102,7 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 				errorx.WithExtraMsg(fmt.Sprintf("metric definition %s not found", metricName)))
 		}
 		mInfo := &metricInfo{}
+		mInfo.mType = metricDef.Type()
 		mInfo.mGroupBy = metricDef.GroupBy()
 		mInfo.mWhere, err = metricDef.Where(ctx, filter, spanEnv)
 		if err != nil {
@@ -117,16 +112,45 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 			Expression: metricDef.Expression(req.Granularity),
 			Alias:      string(metricDef.Name()), // 聚合指标的别名是指标名，以此后续来拆分数据
 		}}
-		mInfo.mGroupBy = metricDef.GroupBy()
+		metricInfos = append(metricInfos, mInfo)
 	}
 	mInfo, err := s.combineMetricInfos(metricInfos)
 	if err != nil {
 		return nil, err
 	}
+	mFilter, err := s.buildMetricFilter(ctx, filter, spanEnv, mInfo.mWhere, req.FilterFields)
+	if err != nil {
+		return nil, err
+	} else if mFilter == nil {
+		return &QueryMetricsResp{}, nil
+	}
 	param.Aggregations = mInfo.mAggregation
-	param.GroupBys = mInfo.mGroupBy
-	// TODO: 怎么确定Basic Filter，统计能看到的还是总的？？
-	param.Filters = &loop_span.FilterFields{
+	param.GroupBys = mInfo.mGroupBy // todo 需要传group by,指标底层
+	param.Filters = mFilter
+	result, err := s.metricRepo.GetMetrics(ctx, &param)
+	if err != nil {
+		return nil, err
+	}
+	return &QueryMetricsResp{
+		Metrics: s.formatMetrics(result.Data, mInfo),
+	}, nil
+}
+
+// TODO: 怎么确定Basic Filter，统计能看到的还是总的？？
+func (s *MetricsService) buildMetricFilter(ctx context.Context,
+	filter span_filter.Filter,
+	spanEnv *span_filter.SpanEnv,
+	metricFilters []*loop_span.FilterField,
+	requestFilter *loop_span.FilterFields,
+) (*loop_span.FilterFields, error) {
+	basicFilter, forceQuery, err := filter.BuildBasicSpanFilter(ctx, spanEnv)
+	if err != nil {
+		return nil, err
+	} else if len(basicFilter) == 0 && !forceQuery {
+		return nil, nil
+	}
+	basicFilter = append(basicFilter, metricFilters...)
+	return &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 		FilterFields: []*loop_span.FilterField{
 			{
@@ -135,16 +159,9 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 			},
 			{
 				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-				SubFilter:  req.FilterFields,
+				SubFilter:  requestFilter,
 			},
 		},
-	}
-	result, err := s.metricRepo.GetMetrics(ctx, &param)
-	if err != nil {
-		return nil, err
-	}
-	return &QueryMetricsResp{
-		Metrics: s.formatMetrics(result.Data, mInfo),
 	}, nil
 }
 
@@ -168,13 +185,13 @@ func (s *MetricsService) combineMetricInfos(mInfos []*metricInfo) (*metricInfo, 
 }
 
 /*
-[{
-	"time_bucket": "xx",
-	"aggregation_1": "xxx",
-	"aggregation_2": "xxx",
-	"group_by_1": "xx",
-	"group_by_2": "xx",
-}]
+	[{
+		"time_bucket": "xx",
+		"aggregation_1": "xxx",
+		"aggregation_2": "xxx",
+		"group_by_1": "xx",
+		"group_by_2": "xx",
+	}]
 */
 const timeBucketKey = "time_bucket"
 
@@ -195,6 +212,9 @@ func (s *MetricsService) formatMetrics(data []map[string]any, mInfo *metricInfo)
 			}
 			// 这一条聚合结果对应的聚合值,如果有多个,整合成一个
 			val := strings.Join(groupByVals, "-")
+			if val == "" {
+				val = "all"
+			}
 			for k, v := range dataItem {
 				if metricNameMap[k] {
 					if ret[k] == nil {
@@ -229,6 +249,9 @@ func (s *MetricsService) formatMetrics(data []map[string]any, mInfo *metricInfo)
 			}
 			// 这一条聚合结果对应的聚合值,如果有多个,整合成一个
 			val := strings.Join(groupByVals, "-")
+			if val == "" {
+				val = "all"
+			}
 			for k, v := range dataItem {
 				if metricNameMap[k] {
 					if ret[k] == nil {
