@@ -69,6 +69,7 @@ type ConsumerConfig struct {
 	ConsumeGoroutineNums int `mapstructure:"consume_goroutine_nums"`
 	// Timeout for consumer one message
 	ConsumeTimeout time.Duration `mapstructure:"consume_timeout"`
+	EnablePPE      bool          `mapstructure:"enable_ppe"`
 }
 
 type TagSpec struct {
