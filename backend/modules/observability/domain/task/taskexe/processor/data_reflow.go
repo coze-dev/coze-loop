@@ -276,7 +276,7 @@ func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, config *tas
 				DatasetID:    *config.DatasetID,
 				EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
 				CycleStartAt: time.Now().UnixMilli(),
-				CycleEndAt:   time.Now().UnixMilli() + (currentTask.GetRule().GetEffectiveTime().GetEndAt() - currentTask.GetRule().GetEffectiveTime().GetStartAt()),
+				CycleEndAt:   time.Now().UnixMilli() + (currentTask.GetRule().GetBackfillEffectiveTime().GetEndAt() - currentTask.GetRule().GetBackfillEffectiveTime().GetStartAt()),
 				Status:       task.RunStatusRunning,
 			},
 		}
