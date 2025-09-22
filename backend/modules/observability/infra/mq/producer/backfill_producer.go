@@ -36,12 +36,12 @@ func (b *BackfillProducerImpl) SendBackfill(ctx context.Context, message *entity
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	msg := mq.NewDeferMessage(b.topic, 10*time.Second, bytes)
-	_, err = b.mqProducer.Send(ctx, msg)
+	sendMsg, err := b.mqProducer.Send(ctx, msg)
 	if err != nil {
 		logs.CtxWarn(ctx, "send annotation msg err: %v", err)
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
-	logs.CtxInfo(ctx, "send annotation msg %s successfully", string(bytes))
+	logs.CtxInfo(ctx, "send annotation msg %s successfully, msgId: %s", string(bytes), sendMsg.MessageID)
 	return nil
 }
 

@@ -143,8 +143,13 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 		AllowPartialAdd:  gptr.Of(true),
 		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
 		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
-		Ext:              map[string]string{"workspace_id": strconv.FormatInt(workspaceID, 10), "span_id": trigger.Span.SpanID, "trace_id": trigger.Span.TraceID, "start_time": strconvh.FormatInt64(trigger.Span.StartTime), "task_id": strconvh.FormatInt64(trigger.Task.GetID()), "task_run_id": strconvh.FormatInt64(taskRun.ID), "platform_type": trigger.Task.GetRule().GetSpanFilters().GetPlatformType()},
-		Session:          session,
+		Ext: map[string]string{"workspace_id": strconv.FormatInt(workspaceID, 10),
+			"span_id": trigger.Span.SpanID, "trace_id": trigger.Span.TraceID,
+			"start_time":    strconvh.FormatInt64(trigger.Span.StartTime),
+			"task_id":       strconvh.FormatInt64(trigger.Task.GetID()),
+			"task_run_id":   strconvh.FormatInt64(taskRun.ID),
+			"platform_type": trigger.Task.GetRule().GetSpanFilters().GetPlatformType()},
+		Session: session,
 	})
 	if err != nil {
 		p.taskRepo.DecrTaskCount(ctx, *trigger.Task.ID)
