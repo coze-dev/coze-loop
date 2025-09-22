@@ -54,6 +54,6 @@ func (e *CallbackConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt
 		logs.CtxError(ctx, "Callback msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "Callback msg, event: %v", event)
+	logs.CtxInfo(ctx, "Callback msg, event: %v，msgID: %s", event, ext.MsgID)
 	return e.handler.CallBack(ctx, event)
 }
