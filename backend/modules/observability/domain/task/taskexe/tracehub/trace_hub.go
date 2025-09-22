@@ -264,6 +264,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		// 达到任务时间期限
 		if time.Now().After(endTime) {
 			if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
+				logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
@@ -271,6 +272,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		// 达到任务上限
 		if taskCount+1 > sampler.GetSampleSize() {
 			if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
+				logs.CtxWarn(ctx, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID)
 				merr = multierror.Append(merr, errors.WithMessagef(err, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
