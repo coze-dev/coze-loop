@@ -388,14 +388,7 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 		return nil, err
 	}
 
-	status := entity.EvalTargetRunStatusSuccess
-	outputData := &entity.EvalTargetOutputData{
-		OutputFields:    map[string]*entity.Content{},
-		EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 0, OutputTokens: 0},
-		TimeConsumingMS: gptr.Of(int64(0)),
-	}
-
-	execErr := operator.AsyncExecute(ctx, param.SpaceID, &entity.ExecuteEvalTargetParam{
+	outputData, status, execErr := operator.Execute(ctx, param.SpaceID, &entity.ExecuteEvalTargetParam{
 		Input:      param.InputData,
 		TargetType: param.PatchyTarget.EvalTargetType,
 		EvalTarget: param.PatchyTarget,
