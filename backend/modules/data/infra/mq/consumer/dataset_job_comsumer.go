@@ -7,8 +7,6 @@ import (
 	"context"
 
 	json "github.com/bytedance/sonic"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/data/application"
 	dataset_conf "github.com/coze-dev/coze-loop/backend/modules/data/domain/component/conf"
@@ -46,7 +44,7 @@ func (e *DatasetJobConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfi
 		ConsumeTimeout:       cfg.ConsumeTimeout,
 		TagExpression:        cfg.TagExpression,
 		ConsumeGoroutineNums: cfg.ConsumeGoroutineNums,
-		EnablePPE:            ptr.Of(cfg.EnablePPE),
+		EnablePPE:            cfg.EnablePPE,
 	}
 	return res, nil
 }
