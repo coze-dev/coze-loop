@@ -232,11 +232,11 @@ func (p *AutoEvaluteProcessor) OnChangeProcessor(ctx context.Context, config *ta
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
 	var datasetName, exptName string
 	if isBackFill {
-		datasetName = fmt.Sprintf("自动化任务评测集_历史回溯_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
-		exptName = fmt.Sprintf("自动化任务实验_历史回溯_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
+		datasetName = fmt.Sprintf("自动化任务评测集_历史回溯_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		exptName = fmt.Sprintf("自动化任务实验_历史回溯_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	} else {
-		datasetName = fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
-		exptName = fmt.Sprintf("自动化任务实验_%s_%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day())
+		datasetName = fmt.Sprintf("自动化任务评测集_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		exptName = fmt.Sprintf("自动化任务实验_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	}
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
 		0,
