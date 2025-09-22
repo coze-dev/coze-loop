@@ -157,16 +157,16 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 func (p *AutoEvaluteProcessor) Finish(ctx context.Context, config any, trigger *taskexe.Trigger) error {
 	//todo:[xun]加锁
 	session := getSession(ctx, trigger.Task)
-	cfg, ok := config.(*task.TaskRun)
+	taskRun, ok := config.(*task_entity.TaskRun)
 	if !ok {
 		return taskexe.ErrInvalidConfig
 	}
-	taskRun := tconv.TaskRunDO2PO(ctx, cfg, nil)
+	taskRunPO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
 	p.OnFinishTaskRunProcessor(ctx, taskRun)
 	if err := p.evaluationSvc.FinishExperiment(ctx, &rpc.FinishExperimentReq{
 		WorkspaceID:     trigger.Task.GetWorkspaceID(),
-		ExperimentID:    cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID(),
-		ExperimentRunID: cfg.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID(),
+		ExperimentID:    taskRunPO.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID(),
+		ExperimentRunID: taskRunPO.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID(),
 		Session:         session,
 	}); err != nil {
 		return err
