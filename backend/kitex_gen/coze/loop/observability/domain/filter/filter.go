@@ -4,9 +4,8 @@ package filter
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/apache/thrift/lib/go/thrift"
+	"strings"
 )
 
 const (
@@ -32,7 +31,7 @@ const (
 
 	QueryTypeNotIn = "not_in"
 
-	QueryTypeNotMatch = "match"
+	QueryTypeNotMatch = "not_match"
 
 	QueryRelationAnd = "and"
 
