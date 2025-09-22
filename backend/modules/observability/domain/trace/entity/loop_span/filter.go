@@ -24,6 +24,7 @@ type (
 
 const (
 	QueryTypeEnumMatch    QueryTypeEnum = "match"
+	QueryTypeEnumNotMatch QueryTypeEnum = "not_match"
 	QueryTypeEnumEq       QueryTypeEnum = "eq"
 	QueryTypeEnumNotEq    QueryTypeEnum = "not_eq"
 	QueryTypeEnumLte      QueryTypeEnum = "lte"
@@ -59,6 +60,7 @@ const (
 var validFieldComb = map[FieldType]map[QueryTypeEnum]bool{
 	FieldTypeString: {
 		QueryTypeEnumMatch:    true,
+		QueryTypeEnumNotMatch: true,
 		QueryTypeEnumIn:       true,
 		QueryTypeEnumNotIn:    true,
 		QueryTypeEnumExist:    true,
@@ -363,6 +365,16 @@ func Compare[T cmp.Ordered](val T, values []T, qType QueryTypeEnum) bool {
 		switch any(val).(type) {
 		case string:
 			return strings.Contains(any(val).(string), any(values[0]).(string))
+		default:
+			return false
+		}
+	case QueryTypeEnumNotMatch:
+		if len(values) == 0 {
+			return true
+		}
+		switch any(val).(type) {
+		case string:
+			return !strings.Contains(any(val).(string), any(values[0]).(string))
 		default:
 			return false
 		}
