@@ -41,7 +41,7 @@ type ConsumerConfig struct {
 	ConsumeGoroutineNums int
 	// Timeout for consumer one message
 	ConsumeTimeout time.Duration
-	EnablePPE      bool
+	EnablePPE      *bool
 }
 
 type CompressionCodec int
