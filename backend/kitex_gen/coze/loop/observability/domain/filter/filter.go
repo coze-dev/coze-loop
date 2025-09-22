@@ -32,7 +32,7 @@ const (
 
 	QueryTypeNotIn = "not_in"
 
-	QueryTypeNotMatch = "match"
+	QueryTypeNotMatch = "not_match"
 
 	QueryRelationAnd = "and"
 
