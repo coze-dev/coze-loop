@@ -396,6 +396,12 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 	if execErr != nil {
 		logs.CtxError(ctx, "async execute target failed, param=%v, err=%v", json.Jsonify(param), execErr)
 		status = entity.EvalTargetRunStatusFail
+		outputData = &entity.EvalTargetOutputData{
+			OutputFields:       map[string]*entity.Content{},
+			EvalTargetUsage:    &entity.EvalTargetUsage{},
+			EvalTargetRunError: &entity.EvalTargetRunError{},
+			TimeConsumingMS:    gptr.Of(int64(0)),
+		}
 		statusErr, ok := errorx.FromStatusError(execErr)
 		if ok {
 			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
