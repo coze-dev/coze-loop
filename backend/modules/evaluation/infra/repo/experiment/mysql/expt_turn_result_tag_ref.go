@@ -105,10 +105,13 @@ func (e exptTurnResultTagRefDAO) GetByExptID(ctx context.Context, exptID int64, 
 }
 
 func (e exptTurnResultTagRefDAO) BatchGetByExptIDs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*model.ExptTurnResultTagRef, error) {
-	ref := e.query.ExptTurnResultTagRef
-	query := ref.WithContext(ctx)
+	db := e.db.NewSession(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
+	q := query.Use(db).ExptTurnResultTagRef
 
-	found, err := query.Where(ref.SpaceID.Eq(spaceID)).Where(ref.ExptID.In(exptIDs...)).Find()
+	found, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID)).Where(q.ExptID.In(exptIDs...)).Find()
 	if err != nil {
 		return nil, errorx.Wrapf(err, "BatchGetByExptIDs ExptTurnResultTagRef fail, expt_id: %v", exptIDs)
 	}

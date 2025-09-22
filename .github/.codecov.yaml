@@ -54,6 +54,7 @@ ignore:
   - "**/errno/**"
   - "**/main.go"
   - "**/repo/mysql/**"
+  - "**/repo/**/mysql/**"
   - "**/repo/redis/**"
 
 parsers:
