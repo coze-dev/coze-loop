@@ -192,26 +192,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
 		}
 		if targetVersionDO.CustomRPCServer != nil {
-			targetVersionDTO.EvalTargetContent.CustomRPCServer = &dto.CustomRPCServer{
-				ID:                  &targetVersionDO.CustomRPCServer.ID,
-				Name:                &targetVersionDO.CustomRPCServer.Name,
-				Description:         &targetVersionDO.CustomRPCServer.Description,
-				ServerName:          &targetVersionDO.CustomRPCServer.ServerName,
-				AccessProtocol:      &targetVersionDO.CustomRPCServer.AccessProtocol,
-				Regions:             targetVersionDO.CustomRPCServer.Regions,
-				Cluster:             &targetVersionDO.CustomRPCServer.Cluster,
-				InvokeHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.InvokeHTTPInfo),
-				AsyncInvokeHTTPInfo: HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.AsyncInvokeHTTPInfo),
-				NeedSearchTarget:    targetVersionDO.CustomRPCServer.NeedSearchTarget,
-				SearchHTTPInfo:      HttpInfoDO2DTO(targetVersionDO.CustomRPCServer.SearchHTTPInfo),
-				CustomEvalTarget:    CustomEvalTargetDO2DTO(targetVersionDO.CustomRPCServer.CustomEvalTarget),
-				IsAsync:             targetVersionDO.CustomRPCServer.IsAsync,
-				ExecRegion:          gptr.Of(targetVersionDO.CustomRPCServer.ExecRegion),
-				ExecEnv:             targetVersionDO.CustomRPCServer.ExecEnv,
-				Timeout:             targetVersionDO.CustomRPCServer.Timeout,
-				AsyncTimeout:        targetVersionDO.CustomRPCServer.AsyncTimeout,
-				Ext:                 targetVersionDO.CustomRPCServer.Ext,
-			}
+			targetVersionDTO.EvalTargetContent.CustomRPCServer = CustomRPCServerDO2DTO(targetVersionDO.CustomRPCServer)
 		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
@@ -228,6 +209,29 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 	targetVersionDTO.BaseInfo = commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.BaseInfo)
 
 	return targetVersionDTO
+}
+
+func CustomRPCServerDO2DTO(do *do.CustomRPCServer) (dtoRes *dto.CustomRPCServer) {
+	return &dto.CustomRPCServer{
+		ID:                  &do.ID,
+		Name:                &do.Name,
+		Description:         &do.Description,
+		ServerName:          &do.ServerName,
+		AccessProtocol:      &do.AccessProtocol,
+		Regions:             do.Regions,
+		Cluster:             &do.Cluster,
+		InvokeHTTPInfo:      HttpInfoDO2DTO(do.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: HttpInfoDO2DTO(do.AsyncInvokeHTTPInfo),
+		NeedSearchTarget:    do.NeedSearchTarget,
+		SearchHTTPInfo:      HttpInfoDO2DTO(do.SearchHTTPInfo),
+		CustomEvalTarget:    CustomEvalTargetDO2DTO(do.CustomEvalTarget),
+		IsAsync:             do.IsAsync,
+		ExecRegion:          gptr.Of(do.ExecRegion),
+		ExecEnv:             do.ExecEnv,
+		Timeout:             do.Timeout,
+		AsyncTimeout:        do.AsyncTimeout,
+		Ext:                 do.Ext,
+	}
 }
 
 func CustomRPCServerDTO2DO(dto *dto.CustomRPCServer) (doRes *do.CustomRPCServer) {
