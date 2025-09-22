@@ -126,6 +126,10 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "taskRunstat:%v", taskRunstat)
 	// 遍历任务
 	for _, taskInfo := range tasks {
+		if taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0 {
+			// 历史回溯任务待处理
+			continue
+		}
 		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
 		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt()*int64(time.Millisecond))
 		proc, err := processor.NewProcessor(ctx, taskInfo.TaskType)
