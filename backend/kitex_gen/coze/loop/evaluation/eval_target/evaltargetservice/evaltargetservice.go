@@ -76,6 +76,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"AsyncExecuteEvalTarget": kitex.NewMethodInfo(
+		asyncExecuteEvalTargetHandler,
+		newEvalTargetServiceAsyncExecuteEvalTargetArgs,
+		newEvalTargetServiceAsyncExecuteEvalTargetResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetEvalTargetRecord": kitex.NewMethodInfo(
 		getEvalTargetRecordHandler,
 		newEvalTargetServiceGetEvalTargetRecordArgs,
@@ -308,6 +315,25 @@ func newEvalTargetServiceExecuteEvalTargetResult() interface{} {
 	return eval_target.NewEvalTargetServiceExecuteEvalTargetResult()
 }
 
+func asyncExecuteEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceAsyncExecuteEvalTargetArgs)
+	realResult := result.(*eval_target.EvalTargetServiceAsyncExecuteEvalTargetResult)
+	success, err := handler.(eval_target.EvalTargetService).AsyncExecuteEvalTarget(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceAsyncExecuteEvalTargetArgs() interface{} {
+	return eval_target.NewEvalTargetServiceAsyncExecuteEvalTargetArgs()
+}
+
+func newEvalTargetServiceAsyncExecuteEvalTargetResult() interface{} {
+	return eval_target.NewEvalTargetServiceAsyncExecuteEvalTargetResult()
+}
+
 func getEvalTargetRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_target.EvalTargetServiceGetEvalTargetRecordArgs)
 	realResult := result.(*eval_target.EvalTargetServiceGetEvalTargetRecordResult)
@@ -481,6 +507,16 @@ func (p *kClient) ExecuteEvalTarget(ctx context.Context, request *eval_target.Ex
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceExecuteEvalTargetResult
 	if err = p.c.Call(ctx, "ExecuteEvalTarget", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AsyncExecuteEvalTarget(ctx context.Context, request *eval_target.AsyncExecuteEvalTargetRequest) (r *eval_target.AsyncExecuteEvalTargetResponse, err error) {
+	var _args eval_target.EvalTargetServiceAsyncExecuteEvalTargetArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceAsyncExecuteEvalTargetResult
+	if err = p.c.Call(ctx, "AsyncExecuteEvalTarget", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

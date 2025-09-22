@@ -89,6 +89,14 @@ struct ExecuteEvalTargetResponse {
     255: base.BaseResp BaseResp
 }
 
+typedef ExecuteEvalTargetRequest AsyncExecuteEvalTargetRequest
+
+struct AsyncExecuteEvalTargetResponse {
+    1: optional i64 invoke_id
+
+    255: base.BaseResp BaseResp
+}
+
 struct ListEvalTargetRecordRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: required i64 eval_target_id (api.js_conv="true", go.tag = 'json:"eval_target_id"')
@@ -265,6 +273,7 @@ service EvalTargetService {
 
     // 执行
     ExecuteEvalTargetResponse ExecuteEvalTarget(1: ExecuteEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/:eval_target_id/versions/:eval_target_version_id/execute")
+    AsyncExecuteEvalTargetResponse AsyncExecuteEvalTarget(1: AsyncExecuteEvalTargetRequest request)
     GetEvalTargetRecordResponse GetEvalTargetRecord(1: GetEvalTargetRecordRequest request) (api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_records/:eval_target_record_id")
     BatchGetEvalTargetRecordsResponse BatchGetEvalTargetRecords(1: BatchGetEvalTargetRecordsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_records/batch_get")
 

@@ -324,6 +324,28 @@ func (e EvalTargetApplicationImpl) ExecuteEvalTarget(ctx context.Context, reques
 	return resp, nil
 }
 
+func (e EvalTargetApplicationImpl) AsyncExecuteEvalTarget(ctx context.Context, request *eval_target.AsyncExecuteEvalTargetRequest) (r *eval_target.AsyncExecuteEvalTargetResponse, err error) {
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.EvalTargetID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	record, err := e.evalTargetService.AsyncExecuteTarget(ctx, request.WorkspaceID, request.EvalTargetID, request.EvalTargetVersionID, &entity.ExecuteTargetCtx{
+		ExperimentRunID: request.ExperimentRunID,
+	}, target.InputDTO2ToDO(request.InputData))
+	if err != nil {
+		return nil, err
+	}
+
+	return &eval_target.AsyncExecuteEvalTargetResponse{
+		InvokeID: gptr.Of(record.ID),
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
 func (e EvalTargetApplicationImpl) GetEvalTargetRecord(ctx context.Context, request *eval_target.GetEvalTargetRecordRequest) (r *eval_target.GetEvalTargetRecordResponse, err error) {
 	if request == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))

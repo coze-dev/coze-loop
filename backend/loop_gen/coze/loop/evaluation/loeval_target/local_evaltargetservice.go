@@ -227,6 +227,27 @@ func (l *LocalEvalTargetService) ExecuteEvalTarget(ctx context.Context, request 
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvalTargetService) AsyncExecuteEvalTarget(ctx context.Context, request *eval_target.AsyncExecuteEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.AsyncExecuteEvalTargetResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceAsyncExecuteEvalTargetArgs)
+		result := out.(*eval_target.EvalTargetServiceAsyncExecuteEvalTargetResult)
+		resp, err := l.impl.AsyncExecuteEvalTarget(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceAsyncExecuteEvalTargetArgs{Request: request}
+	result := &eval_target.EvalTargetServiceAsyncExecuteEvalTargetResult{}
+	ctx = l.injectRPCInfo(ctx, "AsyncExecuteEvalTarget")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvalTargetService) GetEvalTargetRecord(ctx context.Context, request *eval_target.GetEvalTargetRecordRequest, callOptions ...callopt.Option) (*eval_target.GetEvalTargetRecordResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_target.EvalTargetServiceGetEvalTargetRecordArgs)

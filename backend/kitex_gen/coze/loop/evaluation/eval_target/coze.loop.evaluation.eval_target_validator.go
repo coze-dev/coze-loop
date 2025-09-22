@@ -129,6 +129,14 @@ func (p *ExecuteEvalTargetResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *AsyncExecuteEvalTargetResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ListEvalTargetRecordRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
