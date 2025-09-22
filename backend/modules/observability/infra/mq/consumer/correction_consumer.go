@@ -40,6 +40,7 @@ func (e *CorrectionConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfi
 		ConsumerGroup:        cfg.ConsumerGroup,
 		ConsumeTimeout:       time.Duration(cfg.Timeout) * time.Millisecond,
 		ConsumeGoroutineNums: cfg.WorkerNum,
+		EnablePPE:            cfg.EnablePPE,
 	}
 	return res, nil
 }
