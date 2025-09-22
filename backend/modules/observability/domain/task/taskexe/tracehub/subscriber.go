@@ -9,11 +9,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -30,6 +36,7 @@ type spanSubscriber struct {
 	taskRepo         repo.ITaskRepo
 	taskRunRepo      repo.ITaskRunRepo
 	runType          task.TaskRunType
+	buildHelper      service.TraceFilterProcessorBuilder
 }
 
 // Sampled 根据采样率计算是否被采样；采样数量将在 flush 时强制校验。
@@ -57,9 +64,94 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	if task == nil || task.Rule == nil {
 		return false, nil
 	}
+	var customFilterFields, obsFilterFields, filterFields []*loop_span.FilterField
+	platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(context.Background(), loop_span.PlatformType(task.Rule.SpanFilters.GetPlatformType()))
+	if err != nil {
+		return false, err
+	}
+	builtinFilter, err := buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+		WorkspaceID:  task.GetWorkspaceID(),
+		SpanListType: loop_span.SpanListType(task.GetRule().GetSpanFilters().GetSpanListType()),
+	})
+	if err != nil {
+		return false, err
+	}
+	if builtinFilter == nil {
+		return false, err
+	}
+	for _, v := range builtinFilter.FilterFields {
+		obsFilterFields = append(obsFilterFields, &loop_span.FilterField{
+			FieldName:  v.FieldName,
+			FieldType:  v.FieldType,
+			Values:     v.Values,
+			QueryType:  v.QueryType,
+			QueryAndOr: v.QueryAndOr,
+			SubFilter:  v.SubFilter,
+		})
+	}
+	filterFields = append(filterFields, obsFilterFields...)
+	for _, v := range task.Rule.SpanFilters.Filters.FilterFields {
+		customFilterFields = append(customFilterFields, &loop_span.FilterField{
+			FieldName:  v.GetFieldName(),
+			FieldType:  loop_span.FieldType(v.GetFieldType()),
+			Values:     v.Values,
+			QueryType:  ptr.Of(loop_span.QueryTypeEnum(v.GetQueryType())),
+			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnum(v.GetQueryAndOr())),
+		})
+	}
+	filterFields = append(filterFields, customFilterFields...)
+	filter := &loop_span.FilterFields{
+		FilterFields: filterFields,
+		QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
+	}
+	if !filter.Satisfied(span) {
+		return false, nil
+	}
 
 	return true, nil
 }
+func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
+	filters := make([]*loop_span.FilterField, 0)
+	env := &span_filter.SpanEnv{
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+	}
+	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
+	if err != nil {
+		return nil, err
+	} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
+		return nil, nil
+	}
+	filters = append(filters, basicFilter...)
+	switch req.SpanListType {
+	case loop_span.SpanListTypeRootSpan:
+		subFilter, err := f.BuildRootSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, subFilter...)
+	case loop_span.SpanListTypeLLMSpan:
+		subFilter, err := f.BuildLLMSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, subFilter...)
+	case loop_span.SpanListTypeAllSpan:
+		subFilter, err := f.BuildALLSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, subFilter...)
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span list type: %s"))
+	}
+	filterAggr := &loop_span.FilterFields{
+		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+		FilterFields: filters,
+	}
+	return filterAggr, nil
+}
+
 func (s *spanSubscriber) Creative(ctx context.Context) error {
 	err := s.processor.OnChangeProcessor(ctx, &taskexe.Config{
 		Task: s.t,

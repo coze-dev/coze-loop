@@ -173,6 +173,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 			taskRepo:         h.taskRepo,
 			runType:          task.TaskRunTypeNewData,
 			taskRunRepo:      h.taskRunRepo,
+			buildHelper:      h.buildHelper,
 		})
 	}
 
