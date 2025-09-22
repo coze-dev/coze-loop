@@ -189,6 +189,48 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"InsightAnalysisExperiment": kitex.NewMethodInfo(
+		insightAnalysisExperimentHandler,
+		newExperimentServiceInsightAnalysisExperimentArgs,
+		newExperimentServiceInsightAnalysisExperimentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExptInsightAnalysisRecord": kitex.NewMethodInfo(
+		listExptInsightAnalysisRecordHandler,
+		newExperimentServiceListExptInsightAnalysisRecordArgs,
+		newExperimentServiceListExptInsightAnalysisRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteExptInsightAnalysisRecord": kitex.NewMethodInfo(
+		deleteExptInsightAnalysisRecordHandler,
+		newExperimentServiceDeleteExptInsightAnalysisRecordArgs,
+		newExperimentServiceDeleteExptInsightAnalysisRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetExptInsightAnalysisRecord": kitex.NewMethodInfo(
+		getExptInsightAnalysisRecordHandler,
+		newExperimentServiceGetExptInsightAnalysisRecordArgs,
+		newExperimentServiceGetExptInsightAnalysisRecordResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"FeedbackExptInsightAnalysisReport": kitex.NewMethodInfo(
+		feedbackExptInsightAnalysisReportHandler,
+		newExperimentServiceFeedbackExptInsightAnalysisReportArgs,
+		newExperimentServiceFeedbackExptInsightAnalysisReportResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExptInsightAnalysisComment": kitex.NewMethodInfo(
+		listExptInsightAnalysisCommentHandler,
+		newExperimentServiceListExptInsightAnalysisCommentArgs,
+		newExperimentServiceListExptInsightAnalysisCommentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -697,6 +739,120 @@ func newExperimentServiceGetExptResultExportRecordResult() interface{} {
 	return expt.NewExperimentServiceGetExptResultExportRecordResult()
 }
 
+func insightAnalysisExperimentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceInsightAnalysisExperimentArgs)
+	realResult := result.(*expt.ExperimentServiceInsightAnalysisExperimentResult)
+	success, err := handler.(expt.ExperimentService).InsightAnalysisExperiment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceInsightAnalysisExperimentArgs() interface{} {
+	return expt.NewExperimentServiceInsightAnalysisExperimentArgs()
+}
+
+func newExperimentServiceInsightAnalysisExperimentResult() interface{} {
+	return expt.NewExperimentServiceInsightAnalysisExperimentResult()
+}
+
+func listExptInsightAnalysisRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListExptInsightAnalysisRecordArgs)
+	realResult := result.(*expt.ExperimentServiceListExptInsightAnalysisRecordResult)
+	success, err := handler.(expt.ExperimentService).ListExptInsightAnalysisRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListExptInsightAnalysisRecordArgs() interface{} {
+	return expt.NewExperimentServiceListExptInsightAnalysisRecordArgs()
+}
+
+func newExperimentServiceListExptInsightAnalysisRecordResult() interface{} {
+	return expt.NewExperimentServiceListExptInsightAnalysisRecordResult()
+}
+
+func deleteExptInsightAnalysisRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceDeleteExptInsightAnalysisRecordArgs)
+	realResult := result.(*expt.ExperimentServiceDeleteExptInsightAnalysisRecordResult)
+	success, err := handler.(expt.ExperimentService).DeleteExptInsightAnalysisRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceDeleteExptInsightAnalysisRecordArgs() interface{} {
+	return expt.NewExperimentServiceDeleteExptInsightAnalysisRecordArgs()
+}
+
+func newExperimentServiceDeleteExptInsightAnalysisRecordResult() interface{} {
+	return expt.NewExperimentServiceDeleteExptInsightAnalysisRecordResult()
+}
+
+func getExptInsightAnalysisRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceGetExptInsightAnalysisRecordArgs)
+	realResult := result.(*expt.ExperimentServiceGetExptInsightAnalysisRecordResult)
+	success, err := handler.(expt.ExperimentService).GetExptInsightAnalysisRecord(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceGetExptInsightAnalysisRecordArgs() interface{} {
+	return expt.NewExperimentServiceGetExptInsightAnalysisRecordArgs()
+}
+
+func newExperimentServiceGetExptInsightAnalysisRecordResult() interface{} {
+	return expt.NewExperimentServiceGetExptInsightAnalysisRecordResult()
+}
+
+func feedbackExptInsightAnalysisReportHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceFeedbackExptInsightAnalysisReportArgs)
+	realResult := result.(*expt.ExperimentServiceFeedbackExptInsightAnalysisReportResult)
+	success, err := handler.(expt.ExperimentService).FeedbackExptInsightAnalysisReport(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceFeedbackExptInsightAnalysisReportArgs() interface{} {
+	return expt.NewExperimentServiceFeedbackExptInsightAnalysisReportArgs()
+}
+
+func newExperimentServiceFeedbackExptInsightAnalysisReportResult() interface{} {
+	return expt.NewExperimentServiceFeedbackExptInsightAnalysisReportResult()
+}
+
+func listExptInsightAnalysisCommentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListExptInsightAnalysisCommentArgs)
+	realResult := result.(*expt.ExperimentServiceListExptInsightAnalysisCommentResult)
+	success, err := handler.(expt.ExperimentService).ListExptInsightAnalysisComment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListExptInsightAnalysisCommentArgs() interface{} {
+	return expt.NewExperimentServiceListExptInsightAnalysisCommentArgs()
+}
+
+func newExperimentServiceListExptInsightAnalysisCommentResult() interface{} {
+	return expt.NewExperimentServiceListExptInsightAnalysisCommentResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -954,6 +1110,66 @@ func (p *kClient) GetExptResultExportRecord(ctx context.Context, req *expt.GetEx
 	_args.Req = req
 	var _result expt.ExperimentServiceGetExptResultExportRecordResult
 	if err = p.c.Call(ctx, "GetExptResultExportRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest) (r *expt.InsightAnalysisExperimentResponse, err error) {
+	var _args expt.ExperimentServiceInsightAnalysisExperimentArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceInsightAnalysisExperimentResult
+	if err = p.c.Call(ctx, "InsightAnalysisExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest) (r *expt.ListExptInsightAnalysisRecordResponse, err error) {
+	var _args expt.ExperimentServiceListExptInsightAnalysisRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListExptInsightAnalysisRecordResult
+	if err = p.c.Call(ctx, "ListExptInsightAnalysisRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest) (r *expt.DeleteExptInsightAnalysisRecordResponse, err error) {
+	var _args expt.ExperimentServiceDeleteExptInsightAnalysisRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceDeleteExptInsightAnalysisRecordResult
+	if err = p.c.Call(ctx, "DeleteExptInsightAnalysisRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest) (r *expt.GetExptInsightAnalysisRecordResponse, err error) {
+	var _args expt.ExperimentServiceGetExptInsightAnalysisRecordArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceGetExptInsightAnalysisRecordResult
+	if err = p.c.Call(ctx, "GetExptInsightAnalysisRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error) {
+	var _args expt.ExperimentServiceFeedbackExptInsightAnalysisReportArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceFeedbackExptInsightAnalysisReportResult
+	if err = p.c.Call(ctx, "FeedbackExptInsightAnalysisReport", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest) (r *expt.ListExptInsightAnalysisCommentResponse, err error) {
+	var _args expt.ExperimentServiceListExptInsightAnalysisCommentArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListExptInsightAnalysisCommentResult
+	if err = p.c.Call(ctx, "ListExptInsightAnalysisComment", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

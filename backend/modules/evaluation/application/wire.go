@@ -9,6 +9,7 @@ package application
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/google/wire"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
@@ -55,6 +56,7 @@ import (
 	iredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem/redis"
 	targetrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
@@ -78,6 +80,7 @@ var (
 		domainservice.NewExptRecordEvalService,
 		domainservice.NewExptAnnotateService,
 		domainservice.NewExptResultExportService,
+		domainservice.NewInsightAnalysisService,
 		domainservice.NewSchedulerModeFactory,
 		experiment.NewExptRepo,
 		experiment.NewExptStatsRepo,
@@ -88,6 +91,7 @@ var (
 		experiment.NewExptTurnResultFilterRepo,
 		experiment.NewExptAnnotateRepo,
 		experiment.NewExptResultExportRecordRepo,
+		experiment.NewExptInsightAnalysisRecordRepo,
 		experiment.NewQuotaService,
 		idem.NewIdempotentService,
 		exptmysql.NewExptDAO,
@@ -103,6 +107,9 @@ var (
 		exptmysql.NewAnnotateRecordDAO,
 		exptmysql.NewExptTurnResultTagRefDAO,
 		exptmysql.NewExptResultExportRecordDAO,
+		exptmysql.NewExptInsightAnalysisRecordDAO,
+		exptmysql.NewExptInsightAnalysisFeedbackVoteDAO,
+		exptmysql.NewExptInsightAnalysisFeedbackCommentDAO,
 		exptredis.NewQuotaDAO,
 		iredis.NewIdemDAO,
 		exptck.NewExptTurnResultFilterDAO,
@@ -113,6 +120,8 @@ var (
 		foundation.NewAuthRPCProvider,
 		foundation.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
+		agent.NewAgentAdapter,
+		notify.NewNotifyRPCAdapter,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		evalSetDomainService,
