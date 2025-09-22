@@ -160,12 +160,16 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 			}
 			statusErr, ok := errorx.FromStatusError(err)
 			if ok {
-				outputData.EvalTargetRunError.Code = statusErr.Code()
-				outputData.EvalTargetRunError.Message = statusErr.Error()
+				outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+					Code:    statusErr.Code(),
+					Message: statusErr.Error(),
+				}
 				spanParam.ErrCode = strconv.FormatInt(int64(statusErr.Code()), 10)
 			} else {
-				outputData.EvalTargetRunError.Code = errno.CommonInternalErrorCode
-				outputData.EvalTargetRunError.Message = err.Error()
+				outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+					Code:    errno.CommonInternalErrorCode,
+					Message: err.Error(),
+				}
 			}
 		}
 
@@ -323,11 +327,15 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		status = entity.EvalTargetRunStatusFail
 		statusErr, ok := errorx.FromStatusError(err)
 		if ok {
-			outputData.EvalTargetRunError.Code = statusErr.Code()
-			outputData.EvalTargetRunError.Message = statusErr.Error()
+			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+				Code:    statusErr.Code(),
+				Message: statusErr.Error(),
+			}
 		} else {
-			outputData.EvalTargetRunError.Code = errno.CommonInternalErrorCode
-			outputData.EvalTargetRunError.Message = err.Error()
+			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+				Code:    errno.CommonInternalErrorCode,
+				Message: err.Error(),
+			}
 		}
 	}
 
@@ -397,11 +405,15 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 		status = entity.EvalTargetRunStatusFail
 		statusErr, ok := errorx.FromStatusError(err)
 		if ok {
-			outputData.EvalTargetRunError.Code = statusErr.Code()
-			outputData.EvalTargetRunError.Message = statusErr.Error()
+			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+				Code:    statusErr.Code(),
+				Message: statusErr.Error(),
+			}
 		} else {
-			outputData.EvalTargetRunError.Code = errno.CommonInternalErrorCode
-			outputData.EvalTargetRunError.Message = err.Error()
+			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+				Code:    errno.CommonInternalErrorCode,
+				Message: err.Error(),
+			}
 		}
 	}
 
