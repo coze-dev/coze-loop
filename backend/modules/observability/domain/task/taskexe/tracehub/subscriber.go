@@ -80,21 +80,21 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 		return false, nil
 	}
 	//var customFilterFields, obsFilterFields, filterFields []*loop_span.FilterField
-	platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(context.Background(), loop_span.PlatformType(task.Rule.SpanFilters.GetPlatformType()))
-	if err != nil {
-		return false, err
-	}
-	builtinFilter, err := buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
-		WorkspaceID:  task.GetWorkspaceID(),
-		SpanListType: loop_span.SpanListType(task.GetRule().GetSpanFilters().GetSpanListType()),
-	})
-	if err != nil {
-		return false, err
-	}
-	if builtinFilter == nil {
-		return false, err
-	}
-	filters := combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(task.GetRule().GetSpanFilters().GetFilters()))
+	//platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(context.Background(), loop_span.PlatformType(task.Rule.SpanFilters.GetPlatformType()))
+	//if err != nil {
+	//	return false, err
+	//}
+	//builtinFilter, err := buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+	//	WorkspaceID:  task.GetWorkspaceID(),
+	//	SpanListType: loop_span.SpanListType(task.GetRule().GetSpanFilters().GetSpanListType()),
+	//})
+	//if err != nil {
+	//	return false, err
+	//}
+	//if builtinFilter == nil {
+	//	return false, err
+	//}
+	//filters := combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(task.GetRule().GetSpanFilters().GetFilters()))
 
 	//for _, v := range builtinFilter.FilterFields {
 	//	obsFilterFields = append(obsFilterFields, &loop_span.FilterField{
@@ -121,11 +121,31 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	//	FilterFields: filterFields,
 	//	QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
 	//}
+	filters := s.buildSpanFilters(ctx, task)
 	if !filters.Satisfied(span) {
 		return false, nil
 	}
 
 	return true, nil
+}
+func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
+	// 可以根据任务配置构建更复杂的过滤条件
+	// 这里简化处理，返回 nil 表示不添加额外过滤
+
+	platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(taskConfig.GetRule().GetSpanFilters().GetPlatformType()))
+	if err != nil {
+		return nil
+	}
+	builtinFilter, err := buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+		WorkspaceID:  taskConfig.GetWorkspaceID(),
+		SpanListType: loop_span.SpanListType(taskConfig.GetRule().GetSpanFilters().GetSpanListType()),
+	})
+	if err != nil {
+		return nil
+	}
+	filters := combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
+
+	return filters
 }
 func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
 	filters := make([]*loop_span.FilterField, 0)
