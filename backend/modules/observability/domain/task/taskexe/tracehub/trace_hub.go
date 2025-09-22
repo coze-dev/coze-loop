@@ -260,7 +260,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				continue
 			}
 		}
-		endTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli())
+		endTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 		// 达到任务时间期限
 		if time.Now().After(endTime) {
 			if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
@@ -269,7 +269,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 		if sampler.GetIsCycle() {
-			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli())
+			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 			// 达到单次任务时间期限
 			if time.Now().After(cycleEndTime) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
