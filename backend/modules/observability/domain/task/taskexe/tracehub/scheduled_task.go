@@ -173,8 +173,9 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 				{
 					FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
 					Values: []string{
-						string(task.TaskStatusUnstarted),
+						string(task.TaskStatusPending),
 						string(task.TaskStatusRunning),
+						string(task.TaskStatusSuccess),
 					},
 					QueryType: ptr.Of(filter.QueryTypeIn),
 					FieldType: ptr.Of(filter.FieldTypeString),

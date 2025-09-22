@@ -48,7 +48,7 @@ func NewTraceHubImpl(
 	processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo, tRunRepo)
 	// 创建两个不同间隔的独立定时器
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // 任务状态生命周期管理 - 5分钟间隔
-	syncTaskTicker := time.NewTicker(1 * time.Minute)      // 数据同步 - 1分钟间隔
+	syncTaskTicker := time.NewTicker(2 * time.Minute)      // 数据同步 - 1分钟间隔
 	impl := &TraceHubServiceImpl{
 		taskRepo:            tRepo,
 		taskRunRepo:         tRunRepo,
