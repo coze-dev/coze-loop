@@ -492,6 +492,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	}
 
 	record.EvalTargetOutputData = param.OutputData
+	record.Status = gptr.Of(param.Status)
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record); err != nil {
 		return err
 	}

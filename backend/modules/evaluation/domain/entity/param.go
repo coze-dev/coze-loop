@@ -293,6 +293,7 @@ type SearchCustomEvalTargetParam struct {
 type ReportTargetRecordParam struct {
 	SpaceID    int64
 	RecordID   int64
+	Status     EvalTargetRunStatus
 	OutputData *EvalTargetOutputData
 
 	Session *Session

@@ -44,6 +44,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
+		Status:     target.ToTargetRunStatsDO(req.GetStatus()),
 		Session:    actx.Session,
 	}); err != nil {
 		return nil, err

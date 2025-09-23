@@ -315,6 +315,17 @@ func toSPIContentTypeDO(spiContentType spi.ContentType) entity.ContentType {
 	}
 }
 
+func ToTargetRunStatsDO(status spi.InvokeEvalTargetStatus) entity.EvalTargetRunStatus {
+	switch status {
+	case spi.InvokeEvalTargetStatus_FAILED:
+		return entity.EvalTargetRunStatusFail
+	case spi.InvokeEvalTargetStatus_SUCCESS:
+		return entity.EvalTargetRunStatusSuccess
+	default:
+		return entity.EvalTargetRunStatusUnknown
+	}
+}
+
 func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *entity.EvalTargetOutputData {
 	switch req.GetStatus() {
 	case spi.InvokeEvalTargetStatus_SUCCESS:
