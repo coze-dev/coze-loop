@@ -149,7 +149,7 @@ func ShouldTriggerBackfill(taskDO *task.Task) bool {
 		backfillTime.GetStartAt() < backfillTime.GetEndAt()
 }
 
-func ShouldTriggerNewData(taskDO *task.Task) bool {
+func ShouldTriggerNewData(ctx context.Context, taskDO *task.Task) bool {
 	// 检查任务类型
 	taskType := taskDO.GetTaskType()
 	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
@@ -164,6 +164,7 @@ func ShouldTriggerNewData(taskDO *task.Task) bool {
 	if effectiveTime == nil {
 		return false
 	}
+	logs.CtxInfo(ctx, "[auto_task] ShouldTriggerNewData, endAt:%d, startAt:%d", effectiveTime.GetEndAt(), effectiveTime.GetStartAt())
 
 	return effectiveTime.GetEndAt() > 0 &&
 		effectiveTime.GetStartAt() > 0 &&
@@ -228,7 +229,7 @@ func (p *DataReflowProcessor) OnCreateTaskChange(ctx context.Context, currentTas
 			return err
 		}
 	}
-	if ShouldTriggerNewData(currentTask) {
+	if ShouldTriggerNewData(ctx, currentTask) {
 		var runStartAt, runEndAt int64
 		runStartAt = currentTask.GetRule().GetEffectiveTime().GetStartAt()
 		if !currentTask.GetRule().GetSampler().GetIsCycle() {

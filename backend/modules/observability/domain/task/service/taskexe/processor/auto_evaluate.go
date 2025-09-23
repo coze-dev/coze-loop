@@ -462,7 +462,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 			return err
 		}
 	}
-	if ShouldTriggerNewData(currentTask) {
+	if ShouldTriggerNewData(ctx, currentTask) {
 		var runStartAt, runEndAt int64
 		runStartAt = currentTask.GetRule().GetEffectiveTime().GetStartAt()
 		if !currentTask.GetRule().GetSampler().GetIsCycle() {
