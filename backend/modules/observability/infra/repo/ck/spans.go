@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/samber/lo"
 	"regexp"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ type QueryParam struct {
 	Filters          *loop_span.FilterFields
 	Limit            int32
 	OrderByStartTime bool
+	SelectColumns    []string
 	OmitColumns      []string // omit specific columns
 }
 
@@ -133,8 +135,13 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableN
 	if err != nil {
 		return nil, err
 	}
+	queryColumns := lo.Ternary(
+		len(param.SelectColumns) == 0,
+		getColumnStr(spanColumns, param.OmitColumns),
+		getColumnStr(param.SelectColumns, param.OmitColumns),
+	)
 	sqlQuery = db.
-		Table(tableName).
+		Table(tableName).Select(queryColumns).
 		Where(sqlQuery).
 		Where("start_time >= ?", param.StartTime).
 		Where("start_time <= ?", param.EndTime)
@@ -279,9 +286,36 @@ func (s *SpansCkDaoImpl) getSuperFieldsMap(ctx context.Context) map[string]bool 
 	return defSuperFieldsMap
 }
 
+// convertFieldName IsCustom > IsSystem > superField, default custom
 func (s *SpansCkDaoImpl) convertFieldName(ctx context.Context, filter *loop_span.FilterField) (string, error) {
 	if !isSafeColumnName(filter.FieldName) {
 		return "", fmt.Errorf("filter field name %s is not safe", filter.FieldName)
+	}
+	if filter.IsCustom {
+		switch filter.FieldType {
+		case loop_span.FieldTypeString:
+			return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeLong:
+			return fmt.Sprintf("tags_long['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeDouble:
+			return fmt.Sprintf("tags_float['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeBool:
+			return fmt.Sprintf("tags_bool['%s']", filter.FieldName), nil
+		default: // not expected to be here
+			return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		}
+	}
+	if filter.IsSystem {
+		switch filter.FieldType {
+		case loop_span.FieldTypeString:
+			return fmt.Sprintf("system_tags_string['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeLong:
+			return fmt.Sprintf("system_tags_long['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeDouble:
+			return fmt.Sprintf("system_tags_float['%s']", filter.FieldName), nil
+		default: // not expected to be here
+			return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		}
 	}
 	superFieldsMap := s.getSuperFieldsMap(ctx)
 	if superFieldsMap[filter.FieldName] {
@@ -380,6 +414,35 @@ func quoteSQLName(data string) string {
 	return buf.String()
 }
 
+var spanColumns = []string{
+	"start_time",
+	"logid",
+	"span_id",
+	"trace_id",
+	"parent_id",
+	"duration",
+	"psm",
+	"call_type",
+	"space_id",
+	"span_type",
+	"span_name",
+	"method",
+	"status_code",
+	"input",
+	"output",
+	"object_storage",
+	"system_tags_string",
+	"system_tags_long",
+	"system_tags_float",
+	"tags_string",
+	"tags_long",
+	"tags_bool",
+	"tags_float",
+	"tags_byte",
+	"reserve_create_time",
+	"logic_delete_date",
+}
+
 var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldStartTime:       true,
 	loop_span.SpanFieldSpanId:          true,
@@ -399,8 +462,15 @@ var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldObjectStorage:   true,
 	loop_span.SpanFieldLogicDeleteDate: true,
 }
+
+var spanColumnStr string
+
 var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
+}
+
+func init() {
+	spanColumnStr = strings.Join(spanColumns, ", ")
 }

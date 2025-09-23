@@ -2849,6 +2849,8 @@ type SearchTraceOApiRequest struct {
 	EndTime      int64                `thrift:"end_time,5,required" frugal:"5,required,i64" json:"end_time" form:"end_time,required" `
 	Limit        int32                `thrift:"limit,6,required" frugal:"6,required,i32" form:"limit,required" json:"limit,required"`
 	PlatformType *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	WithDetail   *bool                `thrift:"with_detail,10,optional" frugal:"10,optional,bool" json:"with_detail,omitempty" query:"with_detail"`
+	Filters      *filter.FilterFields `thrift:"filters,11,optional" frugal:"11,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -2923,6 +2925,30 @@ func (p *SearchTraceOApiRequest) GetPlatformType() (v common.PlatformType) {
 	return *p.PlatformType
 }
 
+var SearchTraceOApiRequest_WithDetail_DEFAULT bool
+
+func (p *SearchTraceOApiRequest) GetWithDetail() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWithDetail() {
+		return SearchTraceOApiRequest_WithDetail_DEFAULT
+	}
+	return *p.WithDetail
+}
+
+var SearchTraceOApiRequest_Filters_DEFAULT *filter.FilterFields
+
+func (p *SearchTraceOApiRequest) GetFilters() (v *filter.FilterFields) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilters() {
+		return SearchTraceOApiRequest_Filters_DEFAULT
+	}
+	return p.Filters
+}
+
 var SearchTraceOApiRequest_Base_DEFAULT *base.Base
 
 func (p *SearchTraceOApiRequest) GetBase() (v *base.Base) {
@@ -2955,6 +2981,12 @@ func (p *SearchTraceOApiRequest) SetLimit(val int32) {
 func (p *SearchTraceOApiRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
+func (p *SearchTraceOApiRequest) SetWithDetail(val *bool) {
+	p.WithDetail = val
+}
+func (p *SearchTraceOApiRequest) SetFilters(val *filter.FilterFields) {
+	p.Filters = val
+}
 func (p *SearchTraceOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -2967,6 +2999,8 @@ var fieldIDToName_SearchTraceOApiRequest = map[int16]string{
 	5:   "end_time",
 	6:   "limit",
 	8:   "platform_type",
+	10:  "with_detail",
+	11:  "filters",
 	255: "Base",
 }
 
@@ -2980,6 +3014,14 @@ func (p *SearchTraceOApiRequest) IsSetTraceID() bool {
 
 func (p *SearchTraceOApiRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
+}
+
+func (p *SearchTraceOApiRequest) IsSetWithDetail() bool {
+	return p.WithDetail != nil
+}
+
+func (p *SearchTraceOApiRequest) IsSetFilters() bool {
+	return p.Filters != nil
 }
 
 func (p *SearchTraceOApiRequest) IsSetBase() bool {
@@ -3063,6 +3105,22 @@ func (p *SearchTraceOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3203,6 +3261,25 @@ func (p *SearchTraceOApiRequest) ReadField8(iprot thrift.TProtocol) error {
 	p.PlatformType = _field
 	return nil
 }
+func (p *SearchTraceOApiRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WithDetail = _field
+	return nil
+}
+func (p *SearchTraceOApiRequest) ReadField11(iprot thrift.TProtocol) error {
+	_field := filter.NewFilterFields()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filters = _field
+	return nil
+}
 func (p *SearchTraceOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -3244,6 +3321,14 @@ func (p *SearchTraceOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3386,6 +3471,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *SearchTraceOApiRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWithDetail() {
+		if err = oprot.WriteFieldBegin("with_detail", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WithDetail); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *SearchTraceOApiRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilters() {
+		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filters.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *SearchTraceOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -3438,6 +3559,12 @@ func (p *SearchTraceOApiRequest) DeepEqual(ano *SearchTraceOApiRequest) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.PlatformType) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.WithDetail) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.Filters) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -3506,6 +3633,25 @@ func (p *SearchTraceOApiRequest) Field8DeepEqual(src *common.PlatformType) bool 
 		return false
 	}
 	if strings.Compare(*p.PlatformType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SearchTraceOApiRequest) Field10DeepEqual(src *bool) bool {
+
+	if p.WithDetail == src {
+		return true
+	} else if p.WithDetail == nil || src == nil {
+		return false
+	}
+	if *p.WithDetail != *src {
+		return false
+	}
+	return true
+}
+func (p *SearchTraceOApiRequest) Field11DeepEqual(src *filter.FilterFields) bool {
+
+	if !p.Filters.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -487,7 +487,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 		errCode = obErrorx.CommonRequestRateLimitCode
 		return nil, err
 	}
-	sReq, err := o.buildSearchTraceReq(ctx, req)
+	sReq, err := o.buildSearchTraceOApiReq(ctx, req)
 	if err != nil {
 		errCode = obErrorx.CommonInternalErrorCode
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("search trace req is invalid"))
@@ -539,7 +539,7 @@ func (o *OpenAPIApplication) validateSearchOApiTraceReq(ctx context.Context, req
 	return nil
 }
 
-func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *openapi.SearchTraceOApiRequest) (*service.SearchTraceOApiReq, error) {
+func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *openapi.SearchTraceOApiRequest) (*service.SearchTraceOApiReq, error) {
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
 		platformType = loop_span.PlatformCozeLoop
@@ -555,10 +555,17 @@ func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *opena
 		EndTime:               req.GetEndTime(),
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
+		WithDetail:            req.GetWithDetail(),
 	}
 	if len(ret.Tenants) == 0 {
 		logs.CtxError(ctx, "fail to get platform tenants")
 		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	if req.Filters != nil {
+		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		if err := ret.Filters.Validate(); err != nil {
+			return nil, err
+		}
 	}
 	return ret, nil
 }

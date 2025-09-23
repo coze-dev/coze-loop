@@ -54,6 +54,11 @@ func (p *TraceAdvanceInfo) IsValid() error {
 	return nil
 }
 func (p *GetTraceRequest) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

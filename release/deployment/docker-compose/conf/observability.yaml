@@ -288,3 +288,14 @@ query_trace_rate_limit_config:
   default_max_qps: 10
   space_max_qps:
     123456: 100
+
+key_columns:
+  - "start_time"
+  - "span_id"
+  - "parent_id"
+  - "duration"
+  - "span_type"
+  - "span_name"
+  - "status_code"
+  - "tags_long"
+  - "logic_delete_date"

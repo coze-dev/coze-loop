@@ -17,6 +17,7 @@ type Settings struct {
 	QueryStartTime        int64 // ms
 	QueryEndTime          int64 // ms
 	Tenant                string
+	SpanDoubleCheck       bool
 }
 
 type Factory interface {

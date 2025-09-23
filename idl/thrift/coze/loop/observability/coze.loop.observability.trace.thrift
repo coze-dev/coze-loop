@@ -48,6 +48,8 @@ struct GetTraceRequest {
     4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.query="end_time") // ms
     8: optional common.PlatformType platform_type (api.query="platform_type")
     9: optional list<string> span_ids (api.query="span_ids")
+    10: optional bool with_detail (api.query="with_detail")
+    11: optional filter.FilterFields filters (api.body="filters")
 
     255: optional base.Base Base
 }
@@ -109,6 +111,7 @@ struct GetTracesMetaInfoRequest {
 
 struct GetTracesMetaInfoResponse {
     1: required map<string, FieldMeta> field_metas
+    2: optional list<string> key_span_type
 
     255: optional base.BaseResp BaseResp
 }

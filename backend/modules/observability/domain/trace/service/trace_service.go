@@ -57,6 +57,8 @@ type GetTraceReq struct {
 	EndTime      int64 // ms
 	PlatformType loop_span.PlatformType
 	SpanIDs      []string
+	WithDetail   bool
+	Filters      *loop_span.FilterFields
 }
 
 type GetTraceResp struct {
@@ -74,6 +76,8 @@ type SearchTraceOApiReq struct {
 	EndTime               int64 // ms
 	Limit                 int32
 	PlatformType          loop_span.PlatformType
+	WithDetail            bool
+	Filters               *loop_span.FilterFields
 }
 
 type SearchTraceOApiResp struct {
@@ -252,15 +256,22 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if err != nil {
 		return nil, err
 	}
+	selectColumns := make([]string, 0)
+	if req.WithDetail {
+		selectColumns = r.traceConfig.GetKeyColumns(ctx)
+	}
 	st := time.Now()
+
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-		Tenants: tenants,
-		LogID:   req.LogID,
-		TraceID: req.TraceID,
-		StartAt: req.StartTime,
-		EndAt:   req.EndTime,
-		Limit:   1000,
-		SpanIDs: req.SpanIDs,
+		Tenants:       tenants,
+		LogID:         req.LogID,
+		TraceID:       req.TraceID,
+		StartAt:       req.StartTime,
+		EndAt:         req.EndTime,
+		Limit:         1000,
+		SpanIDs:       req.SpanIDs,
+		Filters:       req.Filters,
+		SelectColumns: selectColumns,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -345,6 +356,11 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 }
 
 func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
+	selectColumns := make([]string, 0)
+	if req.WithDetail {
+		selectColumns = r.traceConfig.GetKeyColumns(ctx)
+	}
+
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
@@ -353,6 +369,8 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		EndAt:              req.EndTime,
 		Limit:              req.Limit,
 		NotQueryAnnotation: false,
+		Filters:            req.Filters,
+		SelectColumns:      selectColumns,
 	})
 	if err != nil {
 		return nil, err

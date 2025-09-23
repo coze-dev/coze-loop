@@ -2237,6 +2237,34 @@ func (p *SearchTraceOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -2388,6 +2416,32 @@ func (p *SearchTraceOApiRequest) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SearchTraceOApiRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithDetail = _field
+	return offset, nil
+}
+
+func (p *SearchTraceOApiRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilterFields()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Filters = _field
+	return offset, nil
+}
+
 func (p *SearchTraceOApiRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -2411,9 +2465,11 @@ func (p *SearchTraceOApiRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -2430,6 +2486,8 @@ func (p *SearchTraceOApiRequest) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field8Length()
+		l += p.field10Length()
+		l += p.field11Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2487,6 +2545,24 @@ func (p *SearchTraceOApiRequest) fastWriteField8(buf []byte, w thrift.NocopyWrit
 	if p.IsSetPlatformType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
+	}
+	return offset
+}
+
+func (p *SearchTraceOApiRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithDetail() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 10)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithDetail)
+	}
+	return offset
+}
+
+func (p *SearchTraceOApiRequest) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilters() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
+		offset += p.Filters.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -2555,6 +2631,24 @@ func (p *SearchTraceOApiRequest) field8Length() int {
 	return l
 }
 
+func (p *SearchTraceOApiRequest) field10Length() int {
+	l := 0
+	if p.IsSetWithDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *SearchTraceOApiRequest) field11Length() int {
+	l := 0
+	if p.IsSetFilters() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Filters.BLength()
+	}
+	return l
+}
+
 func (p *SearchTraceOApiRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -2598,6 +2692,20 @@ func (p *SearchTraceOApiRequest) DeepCopy(s interface{}) error {
 		tmp := *src.PlatformType
 		p.PlatformType = &tmp
 	}
+
+	if src.WithDetail != nil {
+		tmp := *src.WithDetail
+		p.WithDetail = &tmp
+	}
+
+	var _filters *filter.FilterFields
+	if src.Filters != nil {
+		_filters = &filter.FilterFields{}
+		if err := _filters.DeepCopy(src.Filters); err != nil {
+			return err
+		}
+	}
+	p.Filters = _filters
 
 	var _base *base.Base
 	if src.Base != nil {

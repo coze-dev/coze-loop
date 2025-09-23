@@ -188,7 +188,10 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
 	}
-	sReq := t.buildGetTraceSvcReq(req)
+	sReq, err := t.buildGetTraceSvcReq(req)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Get trace req is invalid"))
+	}
 	sResp, err := t.traceService.GetTrace(ctx, sReq)
 	if err != nil {
 		return nil, err
@@ -237,20 +240,27 @@ func (t *TraceApplication) validateGetTraceReq(ctx context.Context, req *trace.G
 	return nil
 }
 
-func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) *service.GetTraceReq {
+func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*service.GetTraceReq, error) {
 	ret := &service.GetTraceReq{
 		WorkspaceID: req.GetWorkspaceID(),
 		TraceID:     req.GetTraceID(),
 		StartTime:   req.GetStartTime(),
 		EndTime:     req.GetEndTime(),
 		SpanIDs:     req.GetSpanIds(),
+		WithDetail:  req.GetWithDetail(),
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
 		platformType = loop_span.PlatformCozeLoop
 	}
 	ret.PlatformType = platformType
-	return ret
+	if req.Filters != nil {
+		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		if err := ret.Filters.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
 }
 
 func (t *TraceApplication) BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest) (*trace.BatchGetTracesAdvanceInfoResponse, error) {
