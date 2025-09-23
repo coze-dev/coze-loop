@@ -171,7 +171,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 					CurrentTask: taskInfo,
-					RunType:     task.TaskRunTypeBackFill,
+					RunType:     task.TaskRunTypeNewData,
 					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
 				})
