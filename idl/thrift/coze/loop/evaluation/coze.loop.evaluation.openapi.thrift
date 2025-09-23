@@ -8,7 +8,9 @@ include "domain_openapi/experiment.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
-// ===============================// 1.1 创建评测集
+// ===============================
+
+// 1.1 创建评测集
 struct CreateEvaluationSetOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string name (vt.min_size = "1", vt.max_size = "255")
@@ -29,7 +31,9 @@ struct CreateEvaluationSetOpenAPIResponse {
 
 struct CreateEvaluationSetOpenAPIData {
     1: optional string evaluation_set_id (api.js_conv="true")
-}// 1.2 获取评测集详情
+}
+
+// 1.2 获取评测集详情
 struct GetEvaluationSetOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path = "evaluation_set_id")
@@ -48,7 +52,9 @@ struct GetEvaluationSetOpenAPIResponse {
 
 struct GetEvaluationSetOpenAPIData {
     1: optional eval_set.EvaluationSet evaluation_set
-}// 1.3 查询评测集列表
+}
+
+// 1.3 查询评测集列表
 struct ListEvaluationSetsOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional string name
@@ -72,7 +78,9 @@ struct ListEvaluationSetsOpenAPIData {
     2: optional bool has_more
     3: optional string next_page_token
     4: optional i64 total
-}// 1.4 创建评测集版本
+}
+
+// 1.4 创建评测集版本
 struct CreateEvaluationSetVersionOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path = "evaluation_set_id")
@@ -92,7 +100,9 @@ struct CreateEvaluationSetVersionOpenAPIResponse {
 
 struct CreateEvaluationSetVersionOpenAPIData {
     1: optional string version_id (api.js_conv="true")
-}// 1.5 批量添加评测集数据
+}
+
+// 1.5 批量添加评测集数据
 struct BatchCreateEvaluationSetItemsOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path='evaluation_set_id')
@@ -114,7 +124,9 @@ struct BatchCreateEvaluationSetItemsOpenAPIResponse {
 struct BatchCreateEvaluationSetItemsOpenAPIData {
     1: optional map<i64, string> added_items
     2: optional list<eval_set.ItemErrorGroup> errors
-}// 1.6 批量更新评测集数据
+}
+
+// 1.6 批量更新评测集数据
 struct BatchUpdateEvaluationSetItemsOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path='evaluation_set_id')
@@ -135,7 +147,9 @@ struct BatchUpdateEvaluationSetItemsOpenAPIResponse {
 struct BatchUpdateEvaluationSetItemsOpenAPIData {
     1: optional map<i64, string> updated_items
     2: optional list<eval_set.ItemErrorGroup> errors
-}// 1.7 批量删除评测集数据
+}
+
+// 1.7 批量删除评测集数据
 struct BatchDeleteEvaluationSetItemsOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path = "evaluation_set_id")
@@ -154,7 +168,9 @@ struct BatchDeleteEvaluationSetItemsOpenAPIResponse {
 
 struct BatchDeleteEvaluationSetItemsOpenAPIData {
     1: optional i32 deleted_count
-}// 1.8 清空评测集草稿数据
+}
+
+// 1.8 清空评测集草稿数据
 struct ClearEvaluationSetDraftItemsOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path = "evaluation_set_id")
@@ -172,7 +188,9 @@ struct ClearEvaluationSetDraftItemsOpenAPIResponse {
 
 struct ClearEvaluationSetDraftItemsOpenAPIData {
     1: optional i32 cleared_count
-}// 1.9 查询评测集特定版本数据
+}
+
+// 1.9 查询评测集特定版本数据
 struct ListEvaluationSetVersionItemsOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluation_set_id (api.path = "evaluation_set_id")
@@ -200,7 +218,9 @@ struct ListEvaluationSetVersionItemsOpenAPIData {
 
 // ===============================
 // 评估器相关接口 (5个接口)
-// ===============================// 2.1 创建评估器
+// ===============================
+
+// 2.1 创建评估器
 struct CreateEvaluatorOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required evaluator.Evaluator evaluator
@@ -218,7 +238,9 @@ struct CreateEvaluatorOpenAPIResponse {
 
 struct CreateEvaluatorOpenAPIData {
     1: optional string evaluator_id (api.js_conv='true')
-}// 2.2 提交评估器版本
+}
+
+// 2.2 提交评估器版本
 struct SubmitEvaluatorVersionOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_id (api.path='evaluator_id')
@@ -238,7 +260,9 @@ struct SubmitEvaluatorVersionOpenAPIResponse {
 
 struct SubmitEvaluatorVersionOpenAPIData {
     1: optional evaluator.Evaluator evaluator
-}// 2.3 获取评估器版本详情
+}
+
+// 2.3 获取评估器版本详情
 struct GetEvaluatorVersionOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_version_id (api.path='evaluator_version_id')
@@ -257,7 +281,9 @@ struct GetEvaluatorVersionOpenAPIResponse {
 
 struct GetEvaluatorVersionOpenAPIData {
     1: optional evaluator.Evaluator evaluator
-}// 2.4 执行评估器
+}
+
+// 2.4 执行评估器
 struct RunEvaluatorOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_version_id (api.path='evaluator_version_id')
@@ -277,7 +303,9 @@ struct RunEvaluatorOpenAPIResponse {
 
 struct RunEvaluatorOpenAPIData {
     1: required evaluator.EvaluatorRecord record
-}// 2.5 获取评估器执行结果
+}
+
+// 2.5 获取评估器执行结果
 struct GetEvaluatorRecordOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_record_id (api.path='evaluator_record_id')
@@ -300,7 +328,9 @@ struct GetEvaluatorRecordOpenAPIData {
 
 // ===============================
 // 评测实验相关接口 (2个接口)
-// ===============================// 3.1 创建评测实验
+// ===============================
+
+// 3.1 创建评测实验
 struct CreateExperimentOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional string eval_set_version_id
@@ -326,7 +356,9 @@ struct CreateExperimentOpenAPIResponse {
 
 struct CreateExperimentOpenAPIData {
     1: optional experiment.Experiment experiment
-}// 3.2 获取评测实验结果
+}
+
+// 3.2 获取评测实验结果
 struct GetExperimentResultOpenAPIRequest {
     1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string experiment_id (api.path = "experiment_id")
@@ -359,24 +391,40 @@ struct GetExperimentResultOpenAPIData {
 
 service EvaluationOpenAPIService {
     // 评测集接口 (9个)
+    // 1.1 创建评测集
     CreateEvaluationSetOpenAPIResponse CreateEvaluationSet(1: CreateEvaluationSetOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets")
+    // 1.2 获取评测集详情
     GetEvaluationSetOpenAPIResponse GetEvaluationSet(1: GetEvaluationSetOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id")
+    // 1.3 查询评测集列表
     ListEvaluationSetsOpenAPIResponse ListEvaluationSets(1: ListEvaluationSetsOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluation_sets")
+    // 1.4 创建评测集版本
     CreateEvaluationSetVersionOpenAPIResponse CreateEvaluationSetVersion(1: CreateEvaluationSetVersionOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/versions")
+    // 1.5 批量添加评测集数据
     BatchCreateEvaluationSetItemsOpenAPIResponse BatchCreateEvaluationSetItems(1: BatchCreateEvaluationSetItemsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items")
+    // 1.6 批量更新评测集数据
     BatchUpdateEvaluationSetItemsOpenAPIResponse BatchUpdateEvaluationSetItems(1: BatchUpdateEvaluationSetItemsOpenAPIRequest req) (api.put = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items")
+    // 1.7 批量删除评测集数据
     BatchDeleteEvaluationSetItemsOpenAPIResponse BatchDeleteEvaluationSetItems(1: BatchDeleteEvaluationSetItemsOpenAPIRequest req) (api.delete = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items")
+    // 1.8 清空评测集草稿数据
     ClearEvaluationSetDraftItemsOpenAPIResponse ClearEvaluationSetDraftItems(1: ClearEvaluationSetDraftItemsOpenAPIRequest req) (api.delete = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/draft")
+    // 1.9 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOpenAPIResponse ListEvaluationSetVersionItems(1: ListEvaluationSetVersionItemsOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/versions/:version_id/items")
 
     // 评估器接口 (5个)
+    // 2.1 创建评估器
     CreateEvaluatorOpenAPIResponse CreateEvaluator(1: CreateEvaluatorOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluators")
+    // 2.2 提交评估器版本
     SubmitEvaluatorVersionOpenAPIResponse SubmitEvaluatorVersion(1: SubmitEvaluatorVersionOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluators/:evaluator_id/versions")
+    // 2.3 获取评估器版本详情
     GetEvaluatorVersionOpenAPIResponse GetEvaluatorVersion(1: GetEvaluatorVersionOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluators/versions/:evaluator_version_id")
+    // 2.4 执行评估器
     RunEvaluatorOpenAPIResponse RunEvaluator(1: RunEvaluatorOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluators/versions/:evaluator_version_id/run")
+    // 2.5 获取评估器执行结果
     GetEvaluatorRecordOpenAPIResponse GetEvaluatorRecord(1: GetEvaluatorRecordOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluator_records/:evaluator_record_id")
 
     // 评测实验接口 (2个)
+    // 3.1 创建评测实验
     CreateExperimentOpenAPIResponse CreateExperiment(1: CreateExperimentOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/experiments")
+    // 3.2 获取评测实验结果
     GetExperimentResultOpenAPIResponse GetExperimentResult(1: GetExperimentResultOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/experiments/:experiment_id/results")
 }
