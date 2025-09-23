@@ -139,7 +139,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 达到任务时间期限
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
-		if (taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 && time.Now().After(endTime)) && taskRunstat[taskInfo.GetID()] {
+		if (time.Now().After(endTime) || taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0) && taskRunstat[taskInfo.GetID()] {
 
 			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:    taskInfo,
