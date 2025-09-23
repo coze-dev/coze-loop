@@ -346,6 +346,8 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		return nil, execErr
 	}
 
+	logs.CtxInfo(ctx, "AsyncExecute with invoke_id: %v", invokeID)
+
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	record = &entity.EvalTargetRecord{
 		ID:                   invokeID,

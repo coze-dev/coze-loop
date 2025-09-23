@@ -102,12 +102,12 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 
 		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).Eval(ctx, etec)
 
-		if turnRunRes.AsyncAbort {
-			return true, nil
-		}
-
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
 			return false, err
+		}
+
+		if turnRunRes.AsyncAbort {
+			return true, nil
 		}
 
 		if err := turnRunRes.GetEvalErr(); err != nil {
