@@ -221,7 +221,6 @@ struct DebugEvalTargetRequest {
     10: optional string param    // 执行参数：如果type=6,则传spi request json序列化结果
     11: optional common.RuntimeParam target_runtime_param    // 动态参数
     12: optional string env    // 环境
-    13: optional map<string, common.Content> input_fields
 
     50: optional eval_target.CustomRPCServer custom_rpc_server    // 如果type=6,需要前端传入自定义服务相关信息
 
@@ -241,7 +240,6 @@ struct AsyncDebugEvalTargetRequest {
     10: optional string param    // 执行参数：如果type=6,则传spi request json序列化结果
     11: optional common.RuntimeParam target_runtime_param    // 动态参数
     12: optional string env    // 环境
-    13: optional map<string, common.Content> input_fields
 
     50: optional eval_target.CustomRPCServer custom_rpc_server    // 如果type=6,需要前端传入自定义服务相关信息
 

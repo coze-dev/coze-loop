@@ -209,6 +209,7 @@ enum EvalTargetRunStatus {
     Unknown = 0
     Success = 1
     Fail = 2
+    AsyncInvoking = 3
 }
 
 struct EvalTargetInputData {
