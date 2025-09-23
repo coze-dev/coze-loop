@@ -272,7 +272,10 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("[ExecuteTarget]outputData is nil"))
 	}
 	// setSpan
-	setSpanInputOutput(ctx, spanParam, evalTargetDO, inputData, outputData)
+	spanParam.TargetType = evalTargetDO.EvalTargetType.String()
+	spanParam.TargetID = strconv.FormatInt(targetID, 10)
+	spanParam.TargetVersion = strconv.FormatInt(targetVersionID, 10)
+	setSpanInputOutput(ctx, spanParam, inputData, outputData)
 
 	return record, nil
 }
@@ -507,21 +510,26 @@ func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *ent
 		return nil
 	}
 
-	evalTargetDO, err := e.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID, false)
-	if err != nil {
-		return err
-	}
-
 	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(record.SpaceID, 10)))
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
 
 	spanParam := &targetSpanTagsParams{
-		Error:    nil,
-		ErrCode:  "",
-		CallType: "eval_target",
+		Error:         nil,
+		ErrCode:       "",
+		CallType:      "eval_target",
+		TargetID:      strconv.FormatInt(record.TargetID, 10),
+		TargetVersion: strconv.FormatInt(record.TargetVersionID, 10),
 	}
-	setSpanInputOutput(ctx, spanParam, evalTargetDO, record.EvalTargetInputData, record.EvalTargetOutputData)
+	setSpanInputOutput(ctx, spanParam, record.EvalTargetInputData, record.EvalTargetOutputData)
+
+	if record.TargetVersionID > 0 {
+		evalTargetDO, err := e.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID, false)
+		if err != nil {
+			return err
+		}
+		spanParam.TargetType = evalTargetDO.EvalTargetType.String()
+	}
 
 	if record.EvalTargetOutputData.EvalTargetRunError != nil {
 		span.SetError(ctx, fmt.Errorf("code: %v, msg: %v", record.EvalTargetOutputData.EvalTargetRunError.Code, record.EvalTargetOutputData.EvalTargetRunError.Message))
@@ -563,11 +571,7 @@ func (e *EvalTargetServiceImpl) sourceTargetOperator(targetType entity.EvalTarge
 	return o, nil
 }
 
-func setSpanInputOutput(ctx context.Context, spanParam *targetSpanTagsParams, do *entity.EvalTarget, inputData *entity.EvalTargetInputData, outputData *entity.EvalTargetOutputData) {
-	spanParam.TargetType = do.EvalTargetType.String()
-	spanParam.TargetID = do.SourceTargetID
-	spanParam.TargetVersion = do.EvalTargetVersion.SourceTargetVersion
-
+func setSpanInputOutput(ctx context.Context, spanParam *targetSpanTagsParams, inputData *entity.EvalTargetInputData, outputData *entity.EvalTargetOutputData) {
 	if inputData != nil {
 		spanParam.Inputs = map[string][]*tracespec.ModelMessagePart{}
 		for key, content := range inputData.InputFields {
