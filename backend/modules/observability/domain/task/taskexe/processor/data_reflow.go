@@ -168,7 +168,7 @@ func ShouldTriggerNewData(taskDO *task.Task) bool {
 	return effectiveTime.GetEndAt() > 0 &&
 		effectiveTime.GetStartAt() > 0 &&
 		effectiveTime.GetStartAt() < effectiveTime.GetEndAt() &&
-		time.Now().After(time.Unix(effectiveTime.GetStartAt(), 0))
+		time.Now().After(time.UnixMilli(effectiveTime.GetStartAt()))
 }
 
 func (p *DataReflowProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
