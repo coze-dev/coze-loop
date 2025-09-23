@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -548,7 +549,38 @@ func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *l
 	// 根据任务类型执行相应的处理逻辑
 	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 		span.SpanID, span.TraceID, h.task.GetID())
-
+	taskRunConfig, err := h.taskRunRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.taskID)
+	if err != nil {
+		logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
+		return err
+	}
+	taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
+	taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
+	sampler := sub.t.GetRule().GetSampler()
+	if taskCount+1 > sampler.GetSampleSize() {
+		if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			Task:     sub.t,
+			TaskRun:  taskRunConfig,
+			IsFinish: true,
+		}); err != nil {
+			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
+			return err
+		}
+	}
+	if sampler.GetIsCycle() {
+		// 达到单次任务上限
+		if taskRunCount+1 > sampler.GetCycleCount() {
+			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				Task:     sub.t,
+				TaskRun:  taskRunConfig,
+				IsFinish: false,
+			}); err != nil {
+				logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
+				return err
+			}
+		}
+	}
+	logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
 	if err := h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
 		return err
 	}
