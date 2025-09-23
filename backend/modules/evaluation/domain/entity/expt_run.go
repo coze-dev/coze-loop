@@ -432,6 +432,7 @@ func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
 
 	// target async exec, with no record
 	if expt.AsyncCallTarget() && gptr.Indirect(e.TargetResult.Status) == EvalTargetRunStatusAsyncInvoking {
+		e.AsyncAbort = true
 		return true
 	}
 
