@@ -14,7 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"

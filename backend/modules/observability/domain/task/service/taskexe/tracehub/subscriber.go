@@ -13,7 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"

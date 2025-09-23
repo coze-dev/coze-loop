@@ -19,7 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"

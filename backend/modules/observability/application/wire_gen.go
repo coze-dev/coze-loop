@@ -26,7 +26,7 @@ import (
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"

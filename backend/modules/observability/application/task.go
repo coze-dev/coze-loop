@@ -11,7 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/tracehub"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
