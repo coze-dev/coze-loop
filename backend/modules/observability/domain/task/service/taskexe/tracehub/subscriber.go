@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -120,10 +121,10 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	//	QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
 	//}
 
-	filters := s.buildSpanFilters(ctx, task)
-	if !filters.Satisfied(span) {
-		return false, nil
-	}
+	//filters := s.buildSpanFilters(ctx, task)
+	//if !filters.Satisfied(span) {
+	//	return false, nil
+	//}
 
 	return true, nil
 }
@@ -142,9 +143,9 @@ func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskConfig *task.
 	if err != nil {
 		return nil
 	}
-	//filters := combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
+	filters := combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
 
-	return builtinFilter
+	return filters
 }
 func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
 	filters := make([]*loop_span.FilterField, 0)
