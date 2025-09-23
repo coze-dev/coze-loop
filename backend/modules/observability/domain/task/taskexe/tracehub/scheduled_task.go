@@ -127,12 +127,8 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "taskRunstat:%v", taskRunstat)
 	// 遍历任务
 	for _, taskInfo := range tasks {
-		if taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0 {
-			// 历史回溯任务待处理
-			continue
-		}
-		endTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetEndAt()*int64(time.Millisecond))
-		startTime := time.Unix(0, taskInfo.GetRule().GetEffectiveTime().GetStartAt()*int64(time.Millisecond))
+		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
+		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc, err := processor.NewProcessor(ctx, taskInfo.TaskType)
 		if err != nil {
 			logs.CtxError(ctx, "NewProcessor err:%v", err)
@@ -142,7 +138,10 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if time.Now().After(endTime) {
-			//OnFinishChangeProcessor
+			if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() == 0 {
+				// 历史回溯任务待处理
+				continue
+			}
 			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task: taskInfo,
 			})
@@ -153,7 +152,6 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		}
 		// 如果任务状态为unstarted，到任务开始时间就开始create
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
-
 			err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 				CurrentTask: taskInfo,
 				RunType:     task.TaskRunTypeBackFill,
