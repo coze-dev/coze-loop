@@ -28,7 +28,7 @@ export default function ExperimentContrast() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   useBreadcrumb({
-    text: I18n.t('compare_x_experiments', { num: experimentIds.length }),
+    text: `${I18n.t('compare_placeholder1_experiments', { placeholder1: experimentIds.length })}`,
   });
 
   const service = useRequest(

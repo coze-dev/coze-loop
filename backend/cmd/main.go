@@ -185,17 +185,18 @@ func newComponent(ctx context.Context) (*component, error) {
 	}
 
 	db, err := db.NewDBFromConfig(&db.Config{
-		DBHostname:   getMysqlDomain(),
-		DBPort:       getMysqlPort(),
-		User:         getMysqlUser(),
-		Password:     getMysqlPassword(),
-		DBName:       getMysqlDatabase(),
-		Loc:          "Local",
-		DBCharset:    "utf8mb4",
-		Timeout:      time.Minute,
-		ReadTimeout:  time.Minute,
-		WriteTimeout: time.Minute,
-		DSNParams:    url.Values{"clientFoundRows": []string{"true"}},
+		DBHostname:    getMysqlDomain(),
+		DBPort:        getMysqlPort(),
+		User:          getMysqlUser(),
+		Password:      getMysqlPassword(),
+		DBName:        getMysqlDatabase(),
+		Loc:           "Local",
+		DBCharset:     "utf8mb4",
+		Timeout:       time.Minute,
+		ReadTimeout:   time.Minute,
+		WriteTimeout:  time.Minute,
+		DSNParams:     url.Values{"clientFoundRows": []string{"true"}},
+		WithReturning: true,
 	})
 	if err != nil {
 		return nil, err

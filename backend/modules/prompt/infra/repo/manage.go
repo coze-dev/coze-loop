@@ -162,7 +162,7 @@ func (d *ManageRepoImpl) GetPrompt(ctx context.Context, param repo.GetPromptPara
 				return err
 			}
 			if commitPO == nil {
-				return errorx.New("Get with commit, but it's not found, prompt id = %d, commit version = %s", param.PromptID, param.CommitVersion)
+				return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("Get with commit, but it's not found, prompt id = %d, commit version = %s", param.PromptID, param.CommitVersion)))
 			}
 		}
 
@@ -496,7 +496,7 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 				return err
 			}
 			if baseCommitPO == nil {
-				return errorx.New("Draft's base prompt commit is not found, prompt id = %d, base commit version = %s", promptDO.ID, savingBaseVersion)
+				return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("Draft's base prompt commit is not found, prompt id = %d, base commit version = %s", promptDO.ID, savingBaseVersion)))
 			}
 		}
 
@@ -591,7 +591,7 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 			return err
 		}
 		if basicPO == nil {
-			return errorx.New("Prompt is not found, prompt id = %d", param.PromptID)
+			return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("Prompt is not found, prompt id = %d", param.PromptID)))
 		}
 		spaceID = basicPO.SpaceID
 		promptKey = basicPO.PromptKey
@@ -602,7 +602,7 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 			return err
 		}
 		if draftPO == nil {
-			return errorx.New("Prompt draft is not found, prompt id = %d, user id = %s", param.PromptID, param.UserID)
+			return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("Prompt draft is not found, prompt id = %d, user id = %s", param.PromptID, param.UserID)))
 		}
 
 		draftDO := convertor.DraftPO2DO(draftPO)

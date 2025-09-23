@@ -15,7 +15,6 @@ import { usePromptStore } from '@/store/use-prompt-store';
 import { usePromptMockDataStore } from '@/store/use-mockdata-store';
 
 import styles from './index.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface FunctionItemProps {
   style?: CSSProperties;
@@ -49,7 +48,7 @@ export function FunctionItem({
       </Typography.Text>
       <div className="flex gap-1 overflow-hidden w-full items-center">
         <Typography.Text size="small" type="tertiary" className="shrink-0">
-          {I18n.t('input')}
+          输入
         </Typography.Text>
         <Typography.Text
           ellipsis={{
@@ -73,7 +72,7 @@ export function FunctionItem({
       </div>
       <div className="flex gap-1 overflow-hidden w-full items-center">
         <Typography.Text size="small" type="tertiary" className="shrink-0">
-          {I18n.t('output')}
+          输出
         </Typography.Text>
         {!(active && stepDebugger) ? (
           <Typography.Text
@@ -99,9 +98,7 @@ export function FunctionItem({
           <Input
             onChange={onOutputChange}
             defaultValue={item.mock_response}
-            placeholder={I18n.t('please_input', {
-              field: I18n.t('mock_value'),
-            })}
+            placeholder="请输入模拟值"
             autoFocus
             className="w-full"
             borderless
@@ -162,7 +159,8 @@ export function FunctionList({
   const groupToolByTraceKey = useMemo(
     () =>
       toolCalls.reduce<Record<string, DebugToolCall[]>>((acc, tool) => {
-        const key = tool.debug_trace_key || '';
+        //TODO: 临时处理，后续移除 tool?.tool_call?.id
+        const key = tool.debug_trace_key || tool?.tool_call?.id || '';
         acc[key] = acc[key] || [];
         acc[key].push(tool);
         return acc;
@@ -188,7 +186,7 @@ export function FunctionList({
           />
         }
       >
-        {I18n.t('function_call')}
+        函数调用
       </Tag>
       {isExpand ? (
         <div className="flex flex-col gap-2">

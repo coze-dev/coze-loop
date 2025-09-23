@@ -44,7 +44,7 @@ function EvaluatorCreatePage() {
       Modal.warning({
         title: I18n.t('information_unsaved'),
         content: I18n.t('leave_page_tip'),
-        cancelText: I18n.t('Cancel'),
+        cancelText: I18n.t('cancel'),
         onCancel: blocker.reset,
         okText: I18n.t('confirm'),
         onOk: blocker.proceed,
@@ -117,15 +117,12 @@ function EvaluatorCreatePage() {
         <FormInput
           label={I18n.t('name')}
           field="name"
-          placeholder={I18n.t('please_input', { field: I18n.t('name') })}
+          placeholder={I18n.t('please_input', { field: '' })}
           required
           maxLength={50}
           trigger="blur"
           rules={[
-            {
-              required: true,
-              message: I18n.t('please_input', { field: I18n.t('name') }),
-            },
+            { required: true, message: I18n.t('please_input_name') },
             { max: 50 },
             { validator: sourceNameRuleValidator },
             {
@@ -136,9 +133,7 @@ function EvaluatorCreatePage() {
                     name: value,
                   });
                   if (pass === false) {
-                    throw new Error(
-                      I18n.t('field_exists', { field: I18n.t('name') }),
-                    );
+                    throw new Error(I18n.t('name_already_exists'));
                   }
                 }
               },
@@ -148,7 +143,7 @@ function EvaluatorCreatePage() {
         <FormTextArea
           label={I18n.t('description')}
           field="description"
-          placeholder={I18n.t('please_input', { field: I18n.t('description') })}
+          placeholder={I18n.t('please_input_description')}
           fieldStyle={{ paddingTop: 8 }}
           maxCount={200}
           maxLength={200}

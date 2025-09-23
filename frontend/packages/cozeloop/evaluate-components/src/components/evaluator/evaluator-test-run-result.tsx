@@ -37,10 +37,12 @@ export function EvaluatorTestRunResult({
       {!isError ? (
         <div className="mb-2 text-[16px] leading-[28px] coz-fg-primary font-medium">
           <span className="coz-fg-primary font-bold text-xxl">
-            {I18n.t('x_score', { num: evaluatorResult?.score ?? '-' })}
+            {I18n.t('cozeloop_open_evaluate_score_placeholder1', {
+              placeholder1: evaluatorResult?.score,
+            })}
           </span>
           <span className="coz-fg-dim text-[13px] ml-2">
-            {I18n.t('score_only_for_preview')}
+            {I18n.t('scores_only_previews_not_actual_results')}
           </span>
         </div>
       ) : null}
@@ -52,7 +54,7 @@ export function EvaluatorTestRunResult({
         }}
       >
         {errorMsg ||
-          I18n.t('reason_is', { reason: evaluatorResult?.reasoning ?? '-' })}
+          `${I18n.t('reason')}：${evaluatorResult?.reasoning ?? '-'}`}
       </Typography.Text>
     </div>
   );

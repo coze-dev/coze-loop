@@ -42,7 +42,7 @@ export const SubmitVersion = ({
         version: values?.version,
         desc: values?.desc,
       });
-      Toast.success(I18n.t('version_submit_success'));
+      Toast.success(I18n.t('submitted_successfully'));
       setVisible(false);
       onSubmit();
     } finally {
@@ -111,9 +111,7 @@ export const SubmitVersion = ({
               {
                 validator: (_, value, callback) => {
                   if (!value) {
-                    callback(
-                      I18n.t('field_not_empty', { field: I18n.t('version') }),
-                    );
+                    callback(I18n.t('version_cannot_be_empty'));
                     return false;
                   }
                   if (
@@ -121,7 +119,7 @@ export const SubmitVersion = ({
                       value,
                     )
                   ) {
-                    callback(I18n.t('eval_version_number_format'));
+                    callback(I18n.t('version_number_format_tips'));
                     return false;
                   }
                   if (
@@ -131,11 +129,7 @@ export const SubmitVersion = ({
                       datasetDetail?.latest_version || '',
                     ) <= 0
                   ) {
-                    callback(
-                      I18n.t('eval_version_number_gt_current', {
-                        version: datasetDetail?.latest_version || '',
-                      }),
-                    );
+                    callback(`${I18n.t('new_version_greater_than_current')}`);
                     return false;
                   }
                   return true;

@@ -21250,7 +21250,7 @@ func (p *GetExptResultExportRecordRequest) Field255DeepEqual(src *base.Base) boo
 }
 
 type GetExptResultExportRecordResponse struct {
-	ExptResultExportRecord *expt.ExptResultExportRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_record" json:"expt_result_export_record,omitempty" query:"expt_result_export_record"`
+	ExptResultExportRecord *expt.ExptResultExportRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_records" json:"expt_result_export_records,omitempty"`
 	BaseResp               *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -21489,6 +21489,4591 @@ func (p *GetExptResultExportRecordResponse) Field255DeepEqual(src *base.BaseResp
 	return true
 }
 
+type GetExptInsightAnalysisRecordRequest struct {
+	WorkspaceID             int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID                  int64           `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	InsightAnalysisRecordID int64           `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
+	Session                 *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base                    *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetExptInsightAnalysisRecordRequest() *GetExptInsightAnalysisRecordRequest {
+	return &GetExptInsightAnalysisRecordRequest{}
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) InitDefault() {
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) GetExptID() (v int64) {
+	if p != nil {
+		return p.ExptID
+	}
+	return
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) GetInsightAnalysisRecordID() (v int64) {
+	if p != nil {
+		return p.InsightAnalysisRecordID
+	}
+	return
+}
+
+var GetExptInsightAnalysisRecordRequest_Session_DEFAULT *common.Session
+
+func (p *GetExptInsightAnalysisRecordRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return GetExptInsightAnalysisRecordRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var GetExptInsightAnalysisRecordRequest_Base_DEFAULT *base.Base
+
+func (p *GetExptInsightAnalysisRecordRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return GetExptInsightAnalysisRecordRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *GetExptInsightAnalysisRecordRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *GetExptInsightAnalysisRecordRequest) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *GetExptInsightAnalysisRecordRequest) SetInsightAnalysisRecordID(val int64) {
+	p.InsightAnalysisRecordID = val
+}
+func (p *GetExptInsightAnalysisRecordRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *GetExptInsightAnalysisRecordRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_GetExptInsightAnalysisRecordRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "expt_id",
+	3:   "insight_analysis_record_id",
+	200: "session",
+	255: "Base",
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExptID bool = false
+	var issetInsightAnalysisRecordID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetInsightAnalysisRecordID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExptID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetInsightAnalysisRecordID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetExptInsightAnalysisRecordRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetExptInsightAnalysisRecordRequest[fieldId]))
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *GetExptInsightAnalysisRecordRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *GetExptInsightAnalysisRecordRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsightAnalysisRecordID = _field
+	return nil
+}
+func (p *GetExptInsightAnalysisRecordRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *GetExptInsightAnalysisRecordRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetExptInsightAnalysisRecordRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetExptInsightAnalysisRecordRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExptID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetExptInsightAnalysisRecordRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insight_analysis_record_id", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.InsightAnalysisRecordID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *GetExptInsightAnalysisRecordRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *GetExptInsightAnalysisRecordRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetExptInsightAnalysisRecordRequest(%+v)", *p)
+
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) DeepEqual(ano *GetExptInsightAnalysisRecordRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.InsightAnalysisRecordID) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *GetExptInsightAnalysisRecordRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *GetExptInsightAnalysisRecordRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *GetExptInsightAnalysisRecordRequest) Field3DeepEqual(src int64) bool {
+
+	if p.InsightAnalysisRecordID != src {
+		return false
+	}
+	return true
+}
+func (p *GetExptInsightAnalysisRecordRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *GetExptInsightAnalysisRecordRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetExptInsightAnalysisRecordResponse struct {
+	ExptInsightAnalysisRecord *expt.ExptInsightAnalysisRecord `thrift:"expt_insight_analysis_record,1,optional" frugal:"1,optional,expt.ExptInsightAnalysisRecord" form:"expt_insight_analysis_record" json:"expt_insight_analysis_record,omitempty" query:"expt_insight_analysis_record"`
+	BaseResp                  *base.BaseResp                  `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewGetExptInsightAnalysisRecordResponse() *GetExptInsightAnalysisRecordResponse {
+	return &GetExptInsightAnalysisRecordResponse{}
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) InitDefault() {
+}
+
+var GetExptInsightAnalysisRecordResponse_ExptInsightAnalysisRecord_DEFAULT *expt.ExptInsightAnalysisRecord
+
+func (p *GetExptInsightAnalysisRecordResponse) GetExptInsightAnalysisRecord() (v *expt.ExptInsightAnalysisRecord) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptInsightAnalysisRecord() {
+		return GetExptInsightAnalysisRecordResponse_ExptInsightAnalysisRecord_DEFAULT
+	}
+	return p.ExptInsightAnalysisRecord
+}
+
+var GetExptInsightAnalysisRecordResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *GetExptInsightAnalysisRecordResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return GetExptInsightAnalysisRecordResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *GetExptInsightAnalysisRecordResponse) SetExptInsightAnalysisRecord(val *expt.ExptInsightAnalysisRecord) {
+	p.ExptInsightAnalysisRecord = val
+}
+func (p *GetExptInsightAnalysisRecordResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_GetExptInsightAnalysisRecordResponse = map[int16]string{
+	1:   "expt_insight_analysis_record",
+	255: "BaseResp",
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) IsSetExptInsightAnalysisRecord() bool {
+	return p.ExptInsightAnalysisRecord != nil
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetExptInsightAnalysisRecordResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) ReadField1(iprot thrift.TProtocol) error {
+	_field := expt.NewExptInsightAnalysisRecord()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptInsightAnalysisRecord = _field
+	return nil
+}
+func (p *GetExptInsightAnalysisRecordResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetExptInsightAnalysisRecordResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptInsightAnalysisRecord() {
+		if err = oprot.WriteFieldBegin("expt_insight_analysis_record", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptInsightAnalysisRecord.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetExptInsightAnalysisRecordResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetExptInsightAnalysisRecordResponse(%+v)", *p)
+
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) DeepEqual(ano *GetExptInsightAnalysisRecordResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ExptInsightAnalysisRecord) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *GetExptInsightAnalysisRecordResponse) Field1DeepEqual(src *expt.ExptInsightAnalysisRecord) bool {
+
+	if !p.ExptInsightAnalysisRecord.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *GetExptInsightAnalysisRecordResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type InsightAnalysisExperimentRequest struct {
+	WorkspaceID int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID      int64           `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	Session     *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base        *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewInsightAnalysisExperimentRequest() *InsightAnalysisExperimentRequest {
+	return &InsightAnalysisExperimentRequest{}
+}
+
+func (p *InsightAnalysisExperimentRequest) InitDefault() {
+}
+
+func (p *InsightAnalysisExperimentRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *InsightAnalysisExperimentRequest) GetExptID() (v int64) {
+	if p != nil {
+		return p.ExptID
+	}
+	return
+}
+
+var InsightAnalysisExperimentRequest_Session_DEFAULT *common.Session
+
+func (p *InsightAnalysisExperimentRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return InsightAnalysisExperimentRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var InsightAnalysisExperimentRequest_Base_DEFAULT *base.Base
+
+func (p *InsightAnalysisExperimentRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return InsightAnalysisExperimentRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *InsightAnalysisExperimentRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *InsightAnalysisExperimentRequest) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *InsightAnalysisExperimentRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *InsightAnalysisExperimentRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_InsightAnalysisExperimentRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "expt_id",
+	200: "session",
+	255: "Base",
+}
+
+func (p *InsightAnalysisExperimentRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *InsightAnalysisExperimentRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *InsightAnalysisExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExptID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExptID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_InsightAnalysisExperimentRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_InsightAnalysisExperimentRequest[fieldId]))
+}
+
+func (p *InsightAnalysisExperimentRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *InsightAnalysisExperimentRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *InsightAnalysisExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *InsightAnalysisExperimentRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *InsightAnalysisExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("InsightAnalysisExperimentRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *InsightAnalysisExperimentRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *InsightAnalysisExperimentRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExptID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *InsightAnalysisExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *InsightAnalysisExperimentRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *InsightAnalysisExperimentRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("InsightAnalysisExperimentRequest(%+v)", *p)
+
+}
+
+func (p *InsightAnalysisExperimentRequest) DeepEqual(ano *InsightAnalysisExperimentRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *InsightAnalysisExperimentRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *InsightAnalysisExperimentRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *InsightAnalysisExperimentRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *InsightAnalysisExperimentRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type InsightAnalysisExperimentResponse struct {
+	InsightAnalysisRecordID int64          `thrift:"insight_analysis_record_id,1,required" frugal:"1,required,i64" json:"insight_analysis_record_id" form:"insight_analysis_record_id,required" `
+	BaseResp                *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewInsightAnalysisExperimentResponse() *InsightAnalysisExperimentResponse {
+	return &InsightAnalysisExperimentResponse{}
+}
+
+func (p *InsightAnalysisExperimentResponse) InitDefault() {
+}
+
+func (p *InsightAnalysisExperimentResponse) GetInsightAnalysisRecordID() (v int64) {
+	if p != nil {
+		return p.InsightAnalysisRecordID
+	}
+	return
+}
+
+var InsightAnalysisExperimentResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *InsightAnalysisExperimentResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return InsightAnalysisExperimentResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *InsightAnalysisExperimentResponse) SetInsightAnalysisRecordID(val int64) {
+	p.InsightAnalysisRecordID = val
+}
+func (p *InsightAnalysisExperimentResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_InsightAnalysisExperimentResponse = map[int16]string{
+	1:   "insight_analysis_record_id",
+	255: "BaseResp",
+}
+
+func (p *InsightAnalysisExperimentResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *InsightAnalysisExperimentResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetInsightAnalysisRecordID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetInsightAnalysisRecordID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetInsightAnalysisRecordID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_InsightAnalysisExperimentResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_InsightAnalysisExperimentResponse[fieldId]))
+}
+
+func (p *InsightAnalysisExperimentResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsightAnalysisRecordID = _field
+	return nil
+}
+func (p *InsightAnalysisExperimentResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *InsightAnalysisExperimentResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("InsightAnalysisExperimentResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *InsightAnalysisExperimentResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insight_analysis_record_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.InsightAnalysisRecordID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *InsightAnalysisExperimentResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *InsightAnalysisExperimentResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("InsightAnalysisExperimentResponse(%+v)", *p)
+
+}
+
+func (p *InsightAnalysisExperimentResponse) DeepEqual(ano *InsightAnalysisExperimentResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.InsightAnalysisRecordID) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *InsightAnalysisExperimentResponse) Field1DeepEqual(src int64) bool {
+
+	if p.InsightAnalysisRecordID != src {
+		return false
+	}
+	return true
+}
+func (p *InsightAnalysisExperimentResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListExptInsightAnalysisRecordRequest struct {
+	WorkspaceID int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID      int64           `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	PageNumber  *int32          `thrift:"page_number,3,optional" frugal:"3,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	PageSize    *int32          `thrift:"page_size,4,optional" frugal:"4,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	Session     *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base        *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListExptInsightAnalysisRecordRequest() *ListExptInsightAnalysisRecordRequest {
+	return &ListExptInsightAnalysisRecordRequest{}
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) InitDefault() {
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) GetExptID() (v int64) {
+	if p != nil {
+		return p.ExptID
+	}
+	return
+}
+
+var ListExptInsightAnalysisRecordRequest_PageNumber_DEFAULT int32
+
+func (p *ListExptInsightAnalysisRecordRequest) GetPageNumber() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageNumber() {
+		return ListExptInsightAnalysisRecordRequest_PageNumber_DEFAULT
+	}
+	return *p.PageNumber
+}
+
+var ListExptInsightAnalysisRecordRequest_PageSize_DEFAULT int32
+
+func (p *ListExptInsightAnalysisRecordRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListExptInsightAnalysisRecordRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListExptInsightAnalysisRecordRequest_Session_DEFAULT *common.Session
+
+func (p *ListExptInsightAnalysisRecordRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return ListExptInsightAnalysisRecordRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var ListExptInsightAnalysisRecordRequest_Base_DEFAULT *base.Base
+
+func (p *ListExptInsightAnalysisRecordRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListExptInsightAnalysisRecordRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListExptInsightAnalysisRecordRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *ListExptInsightAnalysisRecordRequest) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *ListExptInsightAnalysisRecordRequest) SetPageNumber(val *int32) {
+	p.PageNumber = val
+}
+func (p *ListExptInsightAnalysisRecordRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListExptInsightAnalysisRecordRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *ListExptInsightAnalysisRecordRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListExptInsightAnalysisRecordRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "expt_id",
+	3:   "page_number",
+	4:   "page_size",
+	200: "session",
+	255: "Base",
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) IsSetPageNumber() bool {
+	return p.PageNumber != nil
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExptID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExptID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExptInsightAnalysisRecordRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListExptInsightAnalysisRecordRequest[fieldId]))
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageNumber = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisRecordRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExptID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageNumber() {
+		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExptInsightAnalysisRecordRequest(%+v)", *p)
+
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) DeepEqual(ano *ListExptInsightAnalysisRecordRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.PageNumber) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExptInsightAnalysisRecordRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordRequest) Field3DeepEqual(src *int32) bool {
+
+	if p.PageNumber == src {
+		return true
+	} else if p.PageNumber == nil || src == nil {
+		return false
+	}
+	if *p.PageNumber != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordRequest) Field4DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListExptInsightAnalysisRecordResponse struct {
+	ExptInsightAnalysisRecords []*expt.ExptInsightAnalysisRecord `thrift:"expt_insight_analysis_records,1,required" frugal:"1,required,list<expt.ExptInsightAnalysisRecord>" form:"expt_insight_analysis_records,required" json:"expt_insight_analysis_records,required" query:"expt_insight_analysis_records,required"`
+	Total                      *int64                            `thrift:"total,20,optional" frugal:"20,optional,i64" json:"total" form:"total" `
+	BaseResp                   *base.BaseResp                    `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewListExptInsightAnalysisRecordResponse() *ListExptInsightAnalysisRecordResponse {
+	return &ListExptInsightAnalysisRecordResponse{}
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) InitDefault() {
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) GetExptInsightAnalysisRecords() (v []*expt.ExptInsightAnalysisRecord) {
+	if p != nil {
+		return p.ExptInsightAnalysisRecords
+	}
+	return
+}
+
+var ListExptInsightAnalysisRecordResponse_Total_DEFAULT int64
+
+func (p *ListExptInsightAnalysisRecordResponse) GetTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return ListExptInsightAnalysisRecordResponse_Total_DEFAULT
+	}
+	return *p.Total
+}
+
+var ListExptInsightAnalysisRecordResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListExptInsightAnalysisRecordResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListExptInsightAnalysisRecordResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListExptInsightAnalysisRecordResponse) SetExptInsightAnalysisRecords(val []*expt.ExptInsightAnalysisRecord) {
+	p.ExptInsightAnalysisRecords = val
+}
+func (p *ListExptInsightAnalysisRecordResponse) SetTotal(val *int64) {
+	p.Total = val
+}
+func (p *ListExptInsightAnalysisRecordResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListExptInsightAnalysisRecordResponse = map[int16]string{
+	1:   "expt_insight_analysis_records",
+	20:  "total",
+	255: "BaseResp",
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) IsSetTotal() bool {
+	return p.Total != nil
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetExptInsightAnalysisRecords bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptInsightAnalysisRecords = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetExptInsightAnalysisRecords {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExptInsightAnalysisRecordResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListExptInsightAnalysisRecordResponse[fieldId]))
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*expt.ExptInsightAnalysisRecord, 0, size)
+	values := make([]expt.ExptInsightAnalysisRecord, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ExptInsightAnalysisRecords = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordResponse) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisRecordResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisRecordResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_insight_analysis_records", thrift.LIST, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptInsightAnalysisRecords)); err != nil {
+		return err
+	}
+	for _, v := range p.ExptInsightAnalysisRecords {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordResponse) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I64, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisRecordResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExptInsightAnalysisRecordResponse(%+v)", *p)
+
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) DeepEqual(ano *ListExptInsightAnalysisRecordResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ExptInsightAnalysisRecords) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.Total) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExptInsightAnalysisRecordResponse) Field1DeepEqual(src []*expt.ExptInsightAnalysisRecord) bool {
+
+	if len(p.ExptInsightAnalysisRecords) != len(src) {
+		return false
+	}
+	for i, v := range p.ExptInsightAnalysisRecords {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordResponse) Field20DeepEqual(src *int64) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisRecordResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type DeleteExptInsightAnalysisRecordRequest struct {
+	WorkspaceID             int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID                  int64           `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	InsightAnalysisRecordID int64           `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
+	Session                 *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base                    *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewDeleteExptInsightAnalysisRecordRequest() *DeleteExptInsightAnalysisRecordRequest {
+	return &DeleteExptInsightAnalysisRecordRequest{}
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) InitDefault() {
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) GetExptID() (v int64) {
+	if p != nil {
+		return p.ExptID
+	}
+	return
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) GetInsightAnalysisRecordID() (v int64) {
+	if p != nil {
+		return p.InsightAnalysisRecordID
+	}
+	return
+}
+
+var DeleteExptInsightAnalysisRecordRequest_Session_DEFAULT *common.Session
+
+func (p *DeleteExptInsightAnalysisRecordRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return DeleteExptInsightAnalysisRecordRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var DeleteExptInsightAnalysisRecordRequest_Base_DEFAULT *base.Base
+
+func (p *DeleteExptInsightAnalysisRecordRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return DeleteExptInsightAnalysisRecordRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) SetInsightAnalysisRecordID(val int64) {
+	p.InsightAnalysisRecordID = val
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_DeleteExptInsightAnalysisRecordRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "expt_id",
+	3:   "insight_analysis_record_id",
+	200: "session",
+	255: "Base",
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExptID bool = false
+	var issetInsightAnalysisRecordID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetInsightAnalysisRecordID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExptID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetInsightAnalysisRecordID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DeleteExptInsightAnalysisRecordRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_DeleteExptInsightAnalysisRecordRequest[fieldId]))
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsightAnalysisRecordID = _field
+	return nil
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DeleteExptInsightAnalysisRecordRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExptID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insight_analysis_record_id", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.InsightAnalysisRecordID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeleteExptInsightAnalysisRecordRequest(%+v)", *p)
+
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) DeepEqual(ano *DeleteExptInsightAnalysisRecordRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.InsightAnalysisRecordID) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *DeleteExptInsightAnalysisRecordRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) Field3DeepEqual(src int64) bool {
+
+	if p.InsightAnalysisRecordID != src {
+		return false
+	}
+	return true
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *DeleteExptInsightAnalysisRecordRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type DeleteExptInsightAnalysisRecordResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewDeleteExptInsightAnalysisRecordResponse() *DeleteExptInsightAnalysisRecordResponse {
+	return &DeleteExptInsightAnalysisRecordResponse{}
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) InitDefault() {
+}
+
+var DeleteExptInsightAnalysisRecordResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *DeleteExptInsightAnalysisRecordResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return DeleteExptInsightAnalysisRecordResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *DeleteExptInsightAnalysisRecordResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_DeleteExptInsightAnalysisRecordResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DeleteExptInsightAnalysisRecordResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DeleteExptInsightAnalysisRecordResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeleteExptInsightAnalysisRecordResponse(%+v)", *p)
+
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) DeepEqual(ano *DeleteExptInsightAnalysisRecordResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *DeleteExptInsightAnalysisRecordResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FeedbackExptInsightAnalysisReportRequest struct {
+	WorkspaceID             int64                   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID                  int64                   `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	InsightAnalysisRecordID int64                   `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
+	FeedbackActionType      expt.FeedbackActionType `thrift:"feedback_action_type,4,required" frugal:"4,required,string" form:"feedback_action_type,required" json:"feedback_action_type,required" query:"feedback_action_type,required"`
+	Comment                 *string                 `thrift:"comment,5,optional" frugal:"5,optional,string" form:"comment" json:"comment,omitempty" query:"comment"`
+	// 用于更新comment
+	CommentID *int64          `thrift:"comment_id,6,optional" frugal:"6,optional,i64" json:"comment_id" form:"comment_id" `
+	Session   *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base      *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewFeedbackExptInsightAnalysisReportRequest() *FeedbackExptInsightAnalysisReportRequest {
+	return &FeedbackExptInsightAnalysisReportRequest{}
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) InitDefault() {
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetExptID() (v int64) {
+	if p != nil {
+		return p.ExptID
+	}
+	return
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetInsightAnalysisRecordID() (v int64) {
+	if p != nil {
+		return p.InsightAnalysisRecordID
+	}
+	return
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetFeedbackActionType() (v expt.FeedbackActionType) {
+	if p != nil {
+		return p.FeedbackActionType
+	}
+	return
+}
+
+var FeedbackExptInsightAnalysisReportRequest_Comment_DEFAULT string
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetComment() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetComment() {
+		return FeedbackExptInsightAnalysisReportRequest_Comment_DEFAULT
+	}
+	return *p.Comment
+}
+
+var FeedbackExptInsightAnalysisReportRequest_CommentID_DEFAULT int64
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetCommentID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCommentID() {
+		return FeedbackExptInsightAnalysisReportRequest_CommentID_DEFAULT
+	}
+	return *p.CommentID
+}
+
+var FeedbackExptInsightAnalysisReportRequest_Session_DEFAULT *common.Session
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return FeedbackExptInsightAnalysisReportRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var FeedbackExptInsightAnalysisReportRequest_Base_DEFAULT *base.Base
+
+func (p *FeedbackExptInsightAnalysisReportRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return FeedbackExptInsightAnalysisReportRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetInsightAnalysisRecordID(val int64) {
+	p.InsightAnalysisRecordID = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetFeedbackActionType(val expt.FeedbackActionType) {
+	p.FeedbackActionType = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetComment(val *string) {
+	p.Comment = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetCommentID(val *int64) {
+	p.CommentID = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_FeedbackExptInsightAnalysisReportRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "expt_id",
+	3:   "insight_analysis_record_id",
+	4:   "feedback_action_type",
+	5:   "comment",
+	6:   "comment_id",
+	200: "session",
+	255: "Base",
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) IsSetComment() bool {
+	return p.Comment != nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) IsSetCommentID() bool {
+	return p.CommentID != nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExptID bool = false
+	var issetInsightAnalysisRecordID bool = false
+	var issetFeedbackActionType bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetInsightAnalysisRecordID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetFeedbackActionType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExptID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetInsightAnalysisRecordID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetFeedbackActionType {
+		fieldId = 4
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FeedbackExptInsightAnalysisReportRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_FeedbackExptInsightAnalysisReportRequest[fieldId]))
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsightAnalysisRecordID = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field expt.FeedbackActionType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.FeedbackActionType = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Comment = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommentID = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("FeedbackExptInsightAnalysisReportRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExptID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insight_analysis_record_id", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.InsightAnalysisRecordID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("feedback_action_type", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.FeedbackActionType); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetComment() {
+		if err = oprot.WriteFieldBegin("comment", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Comment); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommentID() {
+		if err = oprot.WriteFieldBegin("comment_id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CommentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FeedbackExptInsightAnalysisReportRequest(%+v)", *p)
+
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) DeepEqual(ano *FeedbackExptInsightAnalysisReportRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.InsightAnalysisRecordID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.FeedbackActionType) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Comment) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.CommentID) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *FeedbackExptInsightAnalysisReportRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field3DeepEqual(src int64) bool {
+
+	if p.InsightAnalysisRecordID != src {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field4DeepEqual(src expt.FeedbackActionType) bool {
+
+	if strings.Compare(p.FeedbackActionType, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field5DeepEqual(src *string) bool {
+
+	if p.Comment == src {
+		return true
+	} else if p.Comment == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Comment, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.CommentID == src {
+		return true
+	} else if p.CommentID == nil || src == nil {
+		return false
+	}
+	if *p.CommentID != *src {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *FeedbackExptInsightAnalysisReportRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FeedbackExptInsightAnalysisReportResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewFeedbackExptInsightAnalysisReportResponse() *FeedbackExptInsightAnalysisReportResponse {
+	return &FeedbackExptInsightAnalysisReportResponse{}
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) InitDefault() {
+}
+
+var FeedbackExptInsightAnalysisReportResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *FeedbackExptInsightAnalysisReportResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return FeedbackExptInsightAnalysisReportResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *FeedbackExptInsightAnalysisReportResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_FeedbackExptInsightAnalysisReportResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FeedbackExptInsightAnalysisReportResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("FeedbackExptInsightAnalysisReportResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FeedbackExptInsightAnalysisReportResponse(%+v)", *p)
+
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) DeepEqual(ano *FeedbackExptInsightAnalysisReportResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *FeedbackExptInsightAnalysisReportResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListExptInsightAnalysisCommentRequest struct {
+	WorkspaceID             int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID                  int64           `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	InsightAnalysisRecordID int64           `thrift:"insight_analysis_record_id,3,required" frugal:"3,required,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id,required" `
+	PageNumber              *int32          `thrift:"page_number,4,optional" frugal:"4,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	PageSize                *int32          `thrift:"page_size,5,optional" frugal:"5,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	Session                 *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base                    *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListExptInsightAnalysisCommentRequest() *ListExptInsightAnalysisCommentRequest {
+	return &ListExptInsightAnalysisCommentRequest{}
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) InitDefault() {
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) GetExptID() (v int64) {
+	if p != nil {
+		return p.ExptID
+	}
+	return
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) GetInsightAnalysisRecordID() (v int64) {
+	if p != nil {
+		return p.InsightAnalysisRecordID
+	}
+	return
+}
+
+var ListExptInsightAnalysisCommentRequest_PageNumber_DEFAULT int32
+
+func (p *ListExptInsightAnalysisCommentRequest) GetPageNumber() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageNumber() {
+		return ListExptInsightAnalysisCommentRequest_PageNumber_DEFAULT
+	}
+	return *p.PageNumber
+}
+
+var ListExptInsightAnalysisCommentRequest_PageSize_DEFAULT int32
+
+func (p *ListExptInsightAnalysisCommentRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListExptInsightAnalysisCommentRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListExptInsightAnalysisCommentRequest_Session_DEFAULT *common.Session
+
+func (p *ListExptInsightAnalysisCommentRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return ListExptInsightAnalysisCommentRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var ListExptInsightAnalysisCommentRequest_Base_DEFAULT *base.Base
+
+func (p *ListExptInsightAnalysisCommentRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListExptInsightAnalysisCommentRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetExptID(val int64) {
+	p.ExptID = val
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetInsightAnalysisRecordID(val int64) {
+	p.InsightAnalysisRecordID = val
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetPageNumber(val *int32) {
+	p.PageNumber = val
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *ListExptInsightAnalysisCommentRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListExptInsightAnalysisCommentRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "expt_id",
+	3:   "insight_analysis_record_id",
+	4:   "page_number",
+	5:   "page_size",
+	200: "session",
+	255: "Base",
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) IsSetPageNumber() bool {
+	return p.PageNumber != nil
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExptID bool = false
+	var issetInsightAnalysisRecordID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetInsightAnalysisRecordID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExptID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetInsightAnalysisRecordID {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExptInsightAnalysisCommentRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListExptInsightAnalysisCommentRequest[fieldId]))
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsightAnalysisRecordID = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageNumber = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisCommentRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExptID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insight_analysis_record_id", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.InsightAnalysisRecordID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageNumber() {
+		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExptInsightAnalysisCommentRequest(%+v)", *p)
+
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) DeepEqual(ano *ListExptInsightAnalysisCommentRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.InsightAnalysisRecordID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.PageNumber) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExptInsightAnalysisCommentRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentRequest) Field3DeepEqual(src int64) bool {
+
+	if p.InsightAnalysisRecordID != src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentRequest) Field4DeepEqual(src *int32) bool {
+
+	if p.PageNumber == src {
+		return true
+	} else if p.PageNumber == nil || src == nil {
+		return false
+	}
+	if *p.PageNumber != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentRequest) Field5DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListExptInsightAnalysisCommentResponse struct {
+	ExptInsightAnalysisFeedbackComments []*expt.ExptInsightAnalysisFeedbackComment `thrift:"expt_insight_analysis_feedback_comments,1,required" frugal:"1,required,list<expt.ExptInsightAnalysisFeedbackComment>" form:"expt_insight_analysis_feedback_comments,required" json:"expt_insight_analysis_feedback_comments,required" query:"expt_insight_analysis_feedback_comments,required"`
+	Total                               *int64                                     `thrift:"total,20,optional" frugal:"20,optional,i64" json:"total" form:"total" `
+	BaseResp                            *base.BaseResp                             `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewListExptInsightAnalysisCommentResponse() *ListExptInsightAnalysisCommentResponse {
+	return &ListExptInsightAnalysisCommentResponse{}
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) InitDefault() {
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) GetExptInsightAnalysisFeedbackComments() (v []*expt.ExptInsightAnalysisFeedbackComment) {
+	if p != nil {
+		return p.ExptInsightAnalysisFeedbackComments
+	}
+	return
+}
+
+var ListExptInsightAnalysisCommentResponse_Total_DEFAULT int64
+
+func (p *ListExptInsightAnalysisCommentResponse) GetTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return ListExptInsightAnalysisCommentResponse_Total_DEFAULT
+	}
+	return *p.Total
+}
+
+var ListExptInsightAnalysisCommentResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListExptInsightAnalysisCommentResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListExptInsightAnalysisCommentResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListExptInsightAnalysisCommentResponse) SetExptInsightAnalysisFeedbackComments(val []*expt.ExptInsightAnalysisFeedbackComment) {
+	p.ExptInsightAnalysisFeedbackComments = val
+}
+func (p *ListExptInsightAnalysisCommentResponse) SetTotal(val *int64) {
+	p.Total = val
+}
+func (p *ListExptInsightAnalysisCommentResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListExptInsightAnalysisCommentResponse = map[int16]string{
+	1:   "expt_insight_analysis_feedback_comments",
+	20:  "total",
+	255: "BaseResp",
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) IsSetTotal() bool {
+	return p.Total != nil
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetExptInsightAnalysisFeedbackComments bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExptInsightAnalysisFeedbackComments = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetExptInsightAnalysisFeedbackComments {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExptInsightAnalysisCommentResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListExptInsightAnalysisCommentResponse[fieldId]))
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*expt.ExptInsightAnalysisFeedbackComment, 0, size)
+	values := make([]expt.ExptInsightAnalysisFeedbackComment, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ExptInsightAnalysisFeedbackComments = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentResponse) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
+func (p *ListExptInsightAnalysisCommentResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisCommentResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("expt_insight_analysis_feedback_comments", thrift.LIST, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptInsightAnalysisFeedbackComments)); err != nil {
+		return err
+	}
+	for _, v := range p.ExptInsightAnalysisFeedbackComments {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentResponse) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I64, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *ListExptInsightAnalysisCommentResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExptInsightAnalysisCommentResponse(%+v)", *p)
+
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) DeepEqual(ano *ListExptInsightAnalysisCommentResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ExptInsightAnalysisFeedbackComments) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.Total) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExptInsightAnalysisCommentResponse) Field1DeepEqual(src []*expt.ExptInsightAnalysisFeedbackComment) bool {
+
+	if len(p.ExptInsightAnalysisFeedbackComments) != len(src) {
+		return false
+	}
+	for i, v := range p.ExptInsightAnalysisFeedbackComments {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentResponse) Field20DeepEqual(src *int64) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExptInsightAnalysisCommentResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type ExperimentService interface {
 	CheckExperimentName(ctx context.Context, req *CheckExperimentNameRequest) (r *CheckExperimentNameResponse, err error)
 	// CreateExperiment 只创建，不提交运行
@@ -21539,6 +26124,18 @@ type ExperimentService interface {
 	ListExptResultExportRecord(ctx context.Context, req *ListExptResultExportRecordRequest) (r *ListExptResultExportRecordResponse, err error)
 
 	GetExptResultExportRecord(ctx context.Context, req *GetExptResultExportRecordRequest) (r *GetExptResultExportRecordResponse, err error)
+	// 报告分析
+	InsightAnalysisExperiment(ctx context.Context, req *InsightAnalysisExperimentRequest) (r *InsightAnalysisExperimentResponse, err error)
+
+	ListExptInsightAnalysisRecord(ctx context.Context, req *ListExptInsightAnalysisRecordRequest) (r *ListExptInsightAnalysisRecordResponse, err error)
+
+	DeleteExptInsightAnalysisRecord(ctx context.Context, req *DeleteExptInsightAnalysisRecordRequest) (r *DeleteExptInsightAnalysisRecordResponse, err error)
+
+	GetExptInsightAnalysisRecord(ctx context.Context, req *GetExptInsightAnalysisRecordRequest) (r *GetExptInsightAnalysisRecordResponse, err error)
+
+	FeedbackExptInsightAnalysisReport(ctx context.Context, req *FeedbackExptInsightAnalysisReportRequest) (r *FeedbackExptInsightAnalysisReportResponse, err error)
+
+	ListExptInsightAnalysisComment(ctx context.Context, req *ListExptInsightAnalysisCommentRequest) (r *ListExptInsightAnalysisCommentResponse, err error)
 }
 
 type ExperimentServiceClient struct {
@@ -21792,6 +26389,60 @@ func (p *ExperimentServiceClient) GetExptResultExportRecord(ctx context.Context,
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *ExperimentServiceClient) InsightAnalysisExperiment(ctx context.Context, req *InsightAnalysisExperimentRequest) (r *InsightAnalysisExperimentResponse, err error) {
+	var _args ExperimentServiceInsightAnalysisExperimentArgs
+	_args.Req = req
+	var _result ExperimentServiceInsightAnalysisExperimentResult
+	if err = p.Client_().Call(ctx, "InsightAnalysisExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ExperimentServiceClient) ListExptInsightAnalysisRecord(ctx context.Context, req *ListExptInsightAnalysisRecordRequest) (r *ListExptInsightAnalysisRecordResponse, err error) {
+	var _args ExperimentServiceListExptInsightAnalysisRecordArgs
+	_args.Req = req
+	var _result ExperimentServiceListExptInsightAnalysisRecordResult
+	if err = p.Client_().Call(ctx, "ListExptInsightAnalysisRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ExperimentServiceClient) DeleteExptInsightAnalysisRecord(ctx context.Context, req *DeleteExptInsightAnalysisRecordRequest) (r *DeleteExptInsightAnalysisRecordResponse, err error) {
+	var _args ExperimentServiceDeleteExptInsightAnalysisRecordArgs
+	_args.Req = req
+	var _result ExperimentServiceDeleteExptInsightAnalysisRecordResult
+	if err = p.Client_().Call(ctx, "DeleteExptInsightAnalysisRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ExperimentServiceClient) GetExptInsightAnalysisRecord(ctx context.Context, req *GetExptInsightAnalysisRecordRequest) (r *GetExptInsightAnalysisRecordResponse, err error) {
+	var _args ExperimentServiceGetExptInsightAnalysisRecordArgs
+	_args.Req = req
+	var _result ExperimentServiceGetExptInsightAnalysisRecordResult
+	if err = p.Client_().Call(ctx, "GetExptInsightAnalysisRecord", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ExperimentServiceClient) FeedbackExptInsightAnalysisReport(ctx context.Context, req *FeedbackExptInsightAnalysisReportRequest) (r *FeedbackExptInsightAnalysisReportResponse, err error) {
+	var _args ExperimentServiceFeedbackExptInsightAnalysisReportArgs
+	_args.Req = req
+	var _result ExperimentServiceFeedbackExptInsightAnalysisReportResult
+	if err = p.Client_().Call(ctx, "FeedbackExptInsightAnalysisReport", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ExperimentServiceClient) ListExptInsightAnalysisComment(ctx context.Context, req *ListExptInsightAnalysisCommentRequest) (r *ListExptInsightAnalysisCommentResponse, err error) {
+	var _args ExperimentServiceListExptInsightAnalysisCommentArgs
+	_args.Req = req
+	var _result ExperimentServiceListExptInsightAnalysisCommentResult
+	if err = p.Client_().Call(ctx, "ListExptInsightAnalysisComment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type ExperimentServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -21838,6 +26489,12 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	self.AddToProcessorMap("ExportExptResult", &experimentServiceProcessorExportExptResult_{handler: handler})
 	self.AddToProcessorMap("ListExptResultExportRecord", &experimentServiceProcessorListExptResultExportRecord{handler: handler})
 	self.AddToProcessorMap("GetExptResultExportRecord", &experimentServiceProcessorGetExptResultExportRecord{handler: handler})
+	self.AddToProcessorMap("InsightAnalysisExperiment", &experimentServiceProcessorInsightAnalysisExperiment{handler: handler})
+	self.AddToProcessorMap("ListExptInsightAnalysisRecord", &experimentServiceProcessorListExptInsightAnalysisRecord{handler: handler})
+	self.AddToProcessorMap("DeleteExptInsightAnalysisRecord", &experimentServiceProcessorDeleteExptInsightAnalysisRecord{handler: handler})
+	self.AddToProcessorMap("GetExptInsightAnalysisRecord", &experimentServiceProcessorGetExptInsightAnalysisRecord{handler: handler})
+	self.AddToProcessorMap("FeedbackExptInsightAnalysisReport", &experimentServiceProcessorFeedbackExptInsightAnalysisReport{handler: handler})
+	self.AddToProcessorMap("ListExptInsightAnalysisComment", &experimentServiceProcessorListExptInsightAnalysisComment{handler: handler})
 	return self
 }
 func (p *ExperimentServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -23041,6 +27698,294 @@ func (p *experimentServiceProcessorGetExptResultExportRecord) Process(ctx contex
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetExptResultExportRecord", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorInsightAnalysisExperiment struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorInsightAnalysisExperiment) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceInsightAnalysisExperimentArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("InsightAnalysisExperiment", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceInsightAnalysisExperimentResult{}
+	var retval *InsightAnalysisExperimentResponse
+	if retval, err2 = p.handler.InsightAnalysisExperiment(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing InsightAnalysisExperiment: "+err2.Error())
+		oprot.WriteMessageBegin("InsightAnalysisExperiment", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("InsightAnalysisExperiment", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorListExptInsightAnalysisRecord struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorListExptInsightAnalysisRecord) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceListExptInsightAnalysisRecordArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListExptInsightAnalysisRecord", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceListExptInsightAnalysisRecordResult{}
+	var retval *ListExptInsightAnalysisRecordResponse
+	if retval, err2 = p.handler.ListExptInsightAnalysisRecord(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListExptInsightAnalysisRecord: "+err2.Error())
+		oprot.WriteMessageBegin("ListExptInsightAnalysisRecord", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListExptInsightAnalysisRecord", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorDeleteExptInsightAnalysisRecord struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorDeleteExptInsightAnalysisRecord) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceDeleteExptInsightAnalysisRecordArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("DeleteExptInsightAnalysisRecord", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceDeleteExptInsightAnalysisRecordResult{}
+	var retval *DeleteExptInsightAnalysisRecordResponse
+	if retval, err2 = p.handler.DeleteExptInsightAnalysisRecord(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing DeleteExptInsightAnalysisRecord: "+err2.Error())
+		oprot.WriteMessageBegin("DeleteExptInsightAnalysisRecord", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("DeleteExptInsightAnalysisRecord", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorGetExptInsightAnalysisRecord struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorGetExptInsightAnalysisRecord) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceGetExptInsightAnalysisRecordArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetExptInsightAnalysisRecord", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceGetExptInsightAnalysisRecordResult{}
+	var retval *GetExptInsightAnalysisRecordResponse
+	if retval, err2 = p.handler.GetExptInsightAnalysisRecord(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetExptInsightAnalysisRecord: "+err2.Error())
+		oprot.WriteMessageBegin("GetExptInsightAnalysisRecord", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetExptInsightAnalysisRecord", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorFeedbackExptInsightAnalysisReport struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorFeedbackExptInsightAnalysisReport) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceFeedbackExptInsightAnalysisReportArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("FeedbackExptInsightAnalysisReport", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceFeedbackExptInsightAnalysisReportResult{}
+	var retval *FeedbackExptInsightAnalysisReportResponse
+	if retval, err2 = p.handler.FeedbackExptInsightAnalysisReport(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing FeedbackExptInsightAnalysisReport: "+err2.Error())
+		oprot.WriteMessageBegin("FeedbackExptInsightAnalysisReport", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("FeedbackExptInsightAnalysisReport", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorListExptInsightAnalysisComment struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorListExptInsightAnalysisComment) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceListExptInsightAnalysisCommentArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListExptInsightAnalysisComment", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceListExptInsightAnalysisCommentResult{}
+	var retval *ListExptInsightAnalysisCommentResponse
+	if retval, err2 = p.handler.ListExptInsightAnalysisComment(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListExptInsightAnalysisComment: "+err2.Error())
+		oprot.WriteMessageBegin("ListExptInsightAnalysisComment", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListExptInsightAnalysisComment", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -31651,6 +36596,2070 @@ func (p *ExperimentServiceGetExptResultExportRecordResult) DeepEqual(ano *Experi
 }
 
 func (p *ExperimentServiceGetExptResultExportRecordResult) Field0DeepEqual(src *GetExptResultExportRecordResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceInsightAnalysisExperimentArgs struct {
+	Req *InsightAnalysisExperimentRequest `thrift:"req,1" frugal:"1,default,InsightAnalysisExperimentRequest"`
+}
+
+func NewExperimentServiceInsightAnalysisExperimentArgs() *ExperimentServiceInsightAnalysisExperimentArgs {
+	return &ExperimentServiceInsightAnalysisExperimentArgs{}
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) InitDefault() {
+}
+
+var ExperimentServiceInsightAnalysisExperimentArgs_Req_DEFAULT *InsightAnalysisExperimentRequest
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) GetReq() (v *InsightAnalysisExperimentRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceInsightAnalysisExperimentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) SetReq(val *InsightAnalysisExperimentRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceInsightAnalysisExperimentArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceInsightAnalysisExperimentArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewInsightAnalysisExperimentRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("InsightAnalysisExperiment_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceInsightAnalysisExperimentArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) DeepEqual(ano *ExperimentServiceInsightAnalysisExperimentArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentArgs) Field1DeepEqual(src *InsightAnalysisExperimentRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceInsightAnalysisExperimentResult struct {
+	Success *InsightAnalysisExperimentResponse `thrift:"success,0,optional" frugal:"0,optional,InsightAnalysisExperimentResponse"`
+}
+
+func NewExperimentServiceInsightAnalysisExperimentResult() *ExperimentServiceInsightAnalysisExperimentResult {
+	return &ExperimentServiceInsightAnalysisExperimentResult{}
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) InitDefault() {
+}
+
+var ExperimentServiceInsightAnalysisExperimentResult_Success_DEFAULT *InsightAnalysisExperimentResponse
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) GetSuccess() (v *InsightAnalysisExperimentResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceInsightAnalysisExperimentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceInsightAnalysisExperimentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*InsightAnalysisExperimentResponse)
+}
+
+var fieldIDToName_ExperimentServiceInsightAnalysisExperimentResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceInsightAnalysisExperimentResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewInsightAnalysisExperimentResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("InsightAnalysisExperiment_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceInsightAnalysisExperimentResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) DeepEqual(ano *ExperimentServiceInsightAnalysisExperimentResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceInsightAnalysisExperimentResult) Field0DeepEqual(src *InsightAnalysisExperimentResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceListExptInsightAnalysisRecordArgs struct {
+	Req *ListExptInsightAnalysisRecordRequest `thrift:"req,1" frugal:"1,default,ListExptInsightAnalysisRecordRequest"`
+}
+
+func NewExperimentServiceListExptInsightAnalysisRecordArgs() *ExperimentServiceListExptInsightAnalysisRecordArgs {
+	return &ExperimentServiceListExptInsightAnalysisRecordArgs{}
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) InitDefault() {
+}
+
+var ExperimentServiceListExptInsightAnalysisRecordArgs_Req_DEFAULT *ListExptInsightAnalysisRecordRequest
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) GetReq() (v *ListExptInsightAnalysisRecordRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceListExptInsightAnalysisRecordArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) SetReq(val *ListExptInsightAnalysisRecordRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceListExptInsightAnalysisRecordArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceListExptInsightAnalysisRecordArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListExptInsightAnalysisRecordRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisRecord_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceListExptInsightAnalysisRecordArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) DeepEqual(ano *ExperimentServiceListExptInsightAnalysisRecordArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordArgs) Field1DeepEqual(src *ListExptInsightAnalysisRecordRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceListExptInsightAnalysisRecordResult struct {
+	Success *ListExptInsightAnalysisRecordResponse `thrift:"success,0,optional" frugal:"0,optional,ListExptInsightAnalysisRecordResponse"`
+}
+
+func NewExperimentServiceListExptInsightAnalysisRecordResult() *ExperimentServiceListExptInsightAnalysisRecordResult {
+	return &ExperimentServiceListExptInsightAnalysisRecordResult{}
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) InitDefault() {
+}
+
+var ExperimentServiceListExptInsightAnalysisRecordResult_Success_DEFAULT *ListExptInsightAnalysisRecordResponse
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) GetSuccess() (v *ListExptInsightAnalysisRecordResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceListExptInsightAnalysisRecordResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListExptInsightAnalysisRecordResponse)
+}
+
+var fieldIDToName_ExperimentServiceListExptInsightAnalysisRecordResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceListExptInsightAnalysisRecordResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListExptInsightAnalysisRecordResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisRecord_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceListExptInsightAnalysisRecordResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) DeepEqual(ano *ExperimentServiceListExptInsightAnalysisRecordResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisRecordResult) Field0DeepEqual(src *ListExptInsightAnalysisRecordResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceDeleteExptInsightAnalysisRecordArgs struct {
+	Req *DeleteExptInsightAnalysisRecordRequest `thrift:"req,1" frugal:"1,default,DeleteExptInsightAnalysisRecordRequest"`
+}
+
+func NewExperimentServiceDeleteExptInsightAnalysisRecordArgs() *ExperimentServiceDeleteExptInsightAnalysisRecordArgs {
+	return &ExperimentServiceDeleteExptInsightAnalysisRecordArgs{}
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) InitDefault() {
+}
+
+var ExperimentServiceDeleteExptInsightAnalysisRecordArgs_Req_DEFAULT *DeleteExptInsightAnalysisRecordRequest
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) GetReq() (v *DeleteExptInsightAnalysisRecordRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceDeleteExptInsightAnalysisRecordArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) SetReq(val *DeleteExptInsightAnalysisRecordRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceDeleteExptInsightAnalysisRecordArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceDeleteExptInsightAnalysisRecordArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewDeleteExptInsightAnalysisRecordRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DeleteExptInsightAnalysisRecord_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceDeleteExptInsightAnalysisRecordArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) DeepEqual(ano *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordArgs) Field1DeepEqual(src *DeleteExptInsightAnalysisRecordRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceDeleteExptInsightAnalysisRecordResult struct {
+	Success *DeleteExptInsightAnalysisRecordResponse `thrift:"success,0,optional" frugal:"0,optional,DeleteExptInsightAnalysisRecordResponse"`
+}
+
+func NewExperimentServiceDeleteExptInsightAnalysisRecordResult() *ExperimentServiceDeleteExptInsightAnalysisRecordResult {
+	return &ExperimentServiceDeleteExptInsightAnalysisRecordResult{}
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) InitDefault() {
+}
+
+var ExperimentServiceDeleteExptInsightAnalysisRecordResult_Success_DEFAULT *DeleteExptInsightAnalysisRecordResponse
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) GetSuccess() (v *DeleteExptInsightAnalysisRecordResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceDeleteExptInsightAnalysisRecordResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) SetSuccess(x interface{}) {
+	p.Success = x.(*DeleteExptInsightAnalysisRecordResponse)
+}
+
+var fieldIDToName_ExperimentServiceDeleteExptInsightAnalysisRecordResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceDeleteExptInsightAnalysisRecordResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewDeleteExptInsightAnalysisRecordResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DeleteExptInsightAnalysisRecord_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceDeleteExptInsightAnalysisRecordResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) DeepEqual(ano *ExperimentServiceDeleteExptInsightAnalysisRecordResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceDeleteExptInsightAnalysisRecordResult) Field0DeepEqual(src *DeleteExptInsightAnalysisRecordResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceGetExptInsightAnalysisRecordArgs struct {
+	Req *GetExptInsightAnalysisRecordRequest `thrift:"req,1" frugal:"1,default,GetExptInsightAnalysisRecordRequest"`
+}
+
+func NewExperimentServiceGetExptInsightAnalysisRecordArgs() *ExperimentServiceGetExptInsightAnalysisRecordArgs {
+	return &ExperimentServiceGetExptInsightAnalysisRecordArgs{}
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) InitDefault() {
+}
+
+var ExperimentServiceGetExptInsightAnalysisRecordArgs_Req_DEFAULT *GetExptInsightAnalysisRecordRequest
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) GetReq() (v *GetExptInsightAnalysisRecordRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceGetExptInsightAnalysisRecordArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) SetReq(val *GetExptInsightAnalysisRecordRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceGetExptInsightAnalysisRecordArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceGetExptInsightAnalysisRecordArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetExptInsightAnalysisRecordRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetExptInsightAnalysisRecord_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceGetExptInsightAnalysisRecordArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) DeepEqual(ano *ExperimentServiceGetExptInsightAnalysisRecordArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordArgs) Field1DeepEqual(src *GetExptInsightAnalysisRecordRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceGetExptInsightAnalysisRecordResult struct {
+	Success *GetExptInsightAnalysisRecordResponse `thrift:"success,0,optional" frugal:"0,optional,GetExptInsightAnalysisRecordResponse"`
+}
+
+func NewExperimentServiceGetExptInsightAnalysisRecordResult() *ExperimentServiceGetExptInsightAnalysisRecordResult {
+	return &ExperimentServiceGetExptInsightAnalysisRecordResult{}
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) InitDefault() {
+}
+
+var ExperimentServiceGetExptInsightAnalysisRecordResult_Success_DEFAULT *GetExptInsightAnalysisRecordResponse
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) GetSuccess() (v *GetExptInsightAnalysisRecordResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceGetExptInsightAnalysisRecordResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetExptInsightAnalysisRecordResponse)
+}
+
+var fieldIDToName_ExperimentServiceGetExptInsightAnalysisRecordResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceGetExptInsightAnalysisRecordResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetExptInsightAnalysisRecordResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetExptInsightAnalysisRecord_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceGetExptInsightAnalysisRecordResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) DeepEqual(ano *ExperimentServiceGetExptInsightAnalysisRecordResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceGetExptInsightAnalysisRecordResult) Field0DeepEqual(src *GetExptInsightAnalysisRecordResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceFeedbackExptInsightAnalysisReportArgs struct {
+	Req *FeedbackExptInsightAnalysisReportRequest `thrift:"req,1" frugal:"1,default,FeedbackExptInsightAnalysisReportRequest"`
+}
+
+func NewExperimentServiceFeedbackExptInsightAnalysisReportArgs() *ExperimentServiceFeedbackExptInsightAnalysisReportArgs {
+	return &ExperimentServiceFeedbackExptInsightAnalysisReportArgs{}
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) InitDefault() {
+}
+
+var ExperimentServiceFeedbackExptInsightAnalysisReportArgs_Req_DEFAULT *FeedbackExptInsightAnalysisReportRequest
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) GetReq() (v *FeedbackExptInsightAnalysisReportRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceFeedbackExptInsightAnalysisReportArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) SetReq(val *FeedbackExptInsightAnalysisReportRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceFeedbackExptInsightAnalysisReportArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceFeedbackExptInsightAnalysisReportArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewFeedbackExptInsightAnalysisReportRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("FeedbackExptInsightAnalysisReport_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceFeedbackExptInsightAnalysisReportArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) DeepEqual(ano *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportArgs) Field1DeepEqual(src *FeedbackExptInsightAnalysisReportRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceFeedbackExptInsightAnalysisReportResult struct {
+	Success *FeedbackExptInsightAnalysisReportResponse `thrift:"success,0,optional" frugal:"0,optional,FeedbackExptInsightAnalysisReportResponse"`
+}
+
+func NewExperimentServiceFeedbackExptInsightAnalysisReportResult() *ExperimentServiceFeedbackExptInsightAnalysisReportResult {
+	return &ExperimentServiceFeedbackExptInsightAnalysisReportResult{}
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) InitDefault() {
+}
+
+var ExperimentServiceFeedbackExptInsightAnalysisReportResult_Success_DEFAULT *FeedbackExptInsightAnalysisReportResponse
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) GetSuccess() (v *FeedbackExptInsightAnalysisReportResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceFeedbackExptInsightAnalysisReportResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) SetSuccess(x interface{}) {
+	p.Success = x.(*FeedbackExptInsightAnalysisReportResponse)
+}
+
+var fieldIDToName_ExperimentServiceFeedbackExptInsightAnalysisReportResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceFeedbackExptInsightAnalysisReportResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewFeedbackExptInsightAnalysisReportResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("FeedbackExptInsightAnalysisReport_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceFeedbackExptInsightAnalysisReportResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) DeepEqual(ano *ExperimentServiceFeedbackExptInsightAnalysisReportResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceFeedbackExptInsightAnalysisReportResult) Field0DeepEqual(src *FeedbackExptInsightAnalysisReportResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceListExptInsightAnalysisCommentArgs struct {
+	Req *ListExptInsightAnalysisCommentRequest `thrift:"req,1" frugal:"1,default,ListExptInsightAnalysisCommentRequest"`
+}
+
+func NewExperimentServiceListExptInsightAnalysisCommentArgs() *ExperimentServiceListExptInsightAnalysisCommentArgs {
+	return &ExperimentServiceListExptInsightAnalysisCommentArgs{}
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) InitDefault() {
+}
+
+var ExperimentServiceListExptInsightAnalysisCommentArgs_Req_DEFAULT *ListExptInsightAnalysisCommentRequest
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) GetReq() (v *ListExptInsightAnalysisCommentRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceListExptInsightAnalysisCommentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) SetReq(val *ListExptInsightAnalysisCommentRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceListExptInsightAnalysisCommentArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceListExptInsightAnalysisCommentArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListExptInsightAnalysisCommentRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisComment_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceListExptInsightAnalysisCommentArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) DeepEqual(ano *ExperimentServiceListExptInsightAnalysisCommentArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentArgs) Field1DeepEqual(src *ListExptInsightAnalysisCommentRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceListExptInsightAnalysisCommentResult struct {
+	Success *ListExptInsightAnalysisCommentResponse `thrift:"success,0,optional" frugal:"0,optional,ListExptInsightAnalysisCommentResponse"`
+}
+
+func NewExperimentServiceListExptInsightAnalysisCommentResult() *ExperimentServiceListExptInsightAnalysisCommentResult {
+	return &ExperimentServiceListExptInsightAnalysisCommentResult{}
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) InitDefault() {
+}
+
+var ExperimentServiceListExptInsightAnalysisCommentResult_Success_DEFAULT *ListExptInsightAnalysisCommentResponse
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) GetSuccess() (v *ListExptInsightAnalysisCommentResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceListExptInsightAnalysisCommentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListExptInsightAnalysisCommentResponse)
+}
+
+var fieldIDToName_ExperimentServiceListExptInsightAnalysisCommentResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceListExptInsightAnalysisCommentResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListExptInsightAnalysisCommentResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExptInsightAnalysisComment_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceListExptInsightAnalysisCommentResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) DeepEqual(ano *ExperimentServiceListExptInsightAnalysisCommentResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceListExptInsightAnalysisCommentResult) Field0DeepEqual(src *ListExptInsightAnalysisCommentResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

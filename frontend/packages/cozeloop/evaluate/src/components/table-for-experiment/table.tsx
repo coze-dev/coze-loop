@@ -7,6 +7,7 @@ import {
   type PaginationResult,
 } from 'ahooks/lib/usePagination/types';
 import { useSize } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { getStoragePageSize, LoopTable } from '@cozeloop/components';
 import { IconCozIllusAdd } from '@coze-arch/coze-design/illustrations';
 import {
@@ -87,7 +88,7 @@ export default function TableForExperiment<RecordItem>(
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusAdd />}
-              title="暂无数据"
+              title={I18n.t('no_data')}
             />
           }
           {...props}

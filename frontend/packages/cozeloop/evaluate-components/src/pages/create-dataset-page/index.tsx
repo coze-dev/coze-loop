@@ -11,7 +11,7 @@ import { DatasetCreateForm } from '../../components/dataset-create-form';
 export const CreateDatasetPage = () => {
   const navigate = useNavigateModule();
   useBreadcrumb({
-    text: I18n.t('new_evaluation_set'),
+    text: I18n.t('create_evaluation_set'),
   });
 
   return (
@@ -24,7 +24,7 @@ export const CreateDatasetPage = () => {
               heading={6}
               className="!coz-fg-plus !font-medium !text-[18px] !leading-[20px]"
             >
-              {I18n.t('new_evaluation_set')}
+              {I18n.t('create_evaluation_set')}
             </Typography.Title>
           </div>
         }

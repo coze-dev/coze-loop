@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from 'react';
 
-import { cloneDeep } from 'lodash-es';
 import { type PaginationResult } from 'ahooks/lib/usePagination/types';
 import { safeJsonParse } from '@cozeloop/toolkit';
 import { I18n } from '@cozeloop/i18n-adapter';
@@ -16,6 +15,7 @@ import {
 import { Tooltip, type ColumnProps } from '@coze-arch/coze-design';
 
 import { getDatasetColumns } from '@/utils/experiment';
+import { type ColumnInfo } from '@/types/experiment/experiment-contrast';
 import styles from '@/styles/table-row-hover-show-icon.module.less';
 import { useExperimentDetailStore } from '@/hooks/use-experiment-detail-store';
 import { useExperimentDetailActiveItem } from '@/hooks/use-experiment-detail-active-item';
@@ -69,7 +69,12 @@ export default function ExperimentContrastTable({
   onExperimentChange?: (experiments: Experiment[]) => void;
 }) {
   const [columns, setColumns] = useState<ColumnProps[]>([]);
+  // 数据表头
   const [fieldSchemas, setFieldSchemas] = useState<FieldSchema[]>([]);
+
+  const [columnInfosMap, setColumnInfosMap] = useState<
+    Record<string, ColumnInfo[]>
+  >({});
 
   const columnManageStorageKey = `experiment_contrast_detail_column_manage_${experimentIds?.[0]}`;
 
@@ -91,22 +96,54 @@ export default function ExperimentContrastTable({
     experimentIds,
     logicFilter,
     experimentResultToRecordItems,
+    defaultTotal: service.data?.result?.total || 0,
   });
   const { activeItem, setActiveItem, onItemStepChange } = activeItemStore;
 
   useEffect(() => {
     const res = service.data?.result;
     setFieldSchemas(res?.column_eval_set_fields ?? []);
+
+    const result = (experimentIds || []).reduce(
+      (prev, cur) => {
+        prev[cur] = [];
+        return prev;
+      },
+      {} as unknown as Record<string, ColumnInfo[]>,
+    );
+
+    res?.expt_column_evaluators?.forEach(item => {
+      result[item.experiment_id || ''].push(
+        ...(item.column_evaluators || []).map(evaluator => ({
+          type: 'evaluator' as const,
+          key: evaluator.evaluator_version_id || '',
+          name: evaluator.name || '',
+          data: evaluator,
+        })),
+      );
+    });
+
+    res?.expt_column_annotations?.forEach(item => {
+      result[item.experiment_id || ''].push(
+        ...(item.column_annotations || []).map(annotation => ({
+          type: 'annotation' as const,
+          key: annotation.tag_key_id || '',
+          name: annotation.tag_key_name || '',
+          data: annotation,
+        })),
+      );
+    });
+    setColumnInfosMap(result);
   }, [service.data?.result]);
 
   useEffect(() => {
-    const newExperiments = cloneDeep(experiments);
-    newExperiments.forEach(experiment => {
-      experiment.evaluators = experiment.evaluators?.filter(
-        evaluator =>
-          !hiddenExperimentFieldMap[evaluator?.current_version?.id ?? ''],
+    const newColumnInfosMap: Record<string, ColumnInfo[]> = {};
+    for (const [key, value] of Object.entries(columnInfosMap)) {
+      newColumnInfosMap[key] = value.filter(
+        info => !hiddenExperimentFieldMap[info.key],
       );
-    });
+    }
+
     const newColumns: ColumnProps<ExperimentContrastItem>[] = [
       {
         title: 'ID',
@@ -125,7 +162,8 @@ export default function ExperimentContrastTable({
           canManage: true,
         }),
       ),
-      ...getExperimentContrastColumns(newExperiments, {
+      ...getExperimentContrastColumns(experiments, {
+        columnInfosMap: newColumnInfosMap,
         expand,
         spaceID,
         enableDelete: true,
@@ -148,7 +186,7 @@ export default function ExperimentContrastTable({
             actions={[
               {
                 label: (
-                  <Tooltip content={I18n.t('view_detail')} theme="dark">
+                  <Tooltip content={I18n.t('detail')} theme="dark">
                     {I18n.t('detail')}
                   </Tooltip>
                 ),
@@ -165,6 +203,7 @@ export default function ExperimentContrastTable({
   }, [
     spaceID,
     experiments,
+    columnInfosMap,
     expand,
     fieldSchemas,
     hiddenColumnMap,
@@ -192,6 +231,7 @@ export default function ExperimentContrastTable({
         header={
           <ExperimentContrastTableHeader
             experiments={experiments}
+            columnInfosMap={columnInfosMap}
             columnManageStorageKey={columnManageStorageKey}
             columns={columns}
             logicFilter={logicFilter}
@@ -224,6 +264,7 @@ export default function ExperimentContrastTable({
       {activeItem ? (
         <ExperimentContrastItemDetail
           experiments={experiments}
+          columnInfosMap={columnInfosMap}
           datasetFieldSchemas={fieldSchemas}
           activeItemStore={activeItemStore}
           spaceID={spaceID}

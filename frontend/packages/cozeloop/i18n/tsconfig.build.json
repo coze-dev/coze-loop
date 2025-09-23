@@ -12,12 +12,6 @@
   "include": ["./src", "./src/resource/**/*.json", "./src/override/**/*.json"],
   "references": [
     {
-      "path": "../intl/tsconfig.build.json"
-    },
-    {
-      "path": "../resources/loop-lng/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -25,6 +19,12 @@
     },
     {
       "path": "../../../config/vitest-config/tsconfig.build.json"
+    },
+    {
+      "path": "../intl/tsconfig.build.json"
+    },
+    {
+      "path": "../resources/loop-lng/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"

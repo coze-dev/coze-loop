@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-/* eslint-disable max-lines-per-function */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /* eslint-disable complexity */
@@ -60,6 +60,7 @@ export interface QueryTableProps {
   loadMore: () => void;
   loadingMore: boolean;
   traceListCode: number;
+  rowSelection?: any;
 }
 
 interface SelectedSpan {
@@ -88,6 +89,7 @@ export const QueryTable = ({
   loadMore,
   loadingMore,
   traceListCode,
+  rowSelection,
 }: QueryTableProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -326,13 +328,14 @@ export const QueryTable = ({
                 }
               },
             }),
-            rowKey: 'id',
+            rowKey: 'span_id',
             sticky: true,
             loading: loading || loadingMore,
             virtualized: spans?.length > 0 ? virtualized : false,
             dataSource: spans,
             columns: sizedColumns,
             pagination: false,
+            rowSelection,
             scroll: {
               x: width,
               y: height - TABLE_HEADER_HEIGHT - 13, // 13 是底部的 padding

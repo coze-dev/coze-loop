@@ -16,6 +16,7 @@ jobs:
       NODE_VERSION: '18'
       LARK_APP_ID: ${{ secrets.COZELOOP_LARK_APP_ID }}
       LARK_APP_SECRET: ${{ secrets.COZELOOP_LARK_APP_SECRET }}
+      PR_CR_BASE_URL: ${{ secrets.COZELOOP_PR_CR_BASE_URL }}
       REPO_NAME: ${{ github.repository }}
       PR_ACTION: ${{ github.event.action }}
       PR_URL: ${{ github.event.pull_request.html_url }}
@@ -36,7 +37,7 @@ jobs:
 
       - name: Install ci-tools
         run: |
-          npm install -g @cozeloop/ci-tools@0.0.4
+          npm install -g @cozeloop/ci-tools@0.0.5
 
       - name: Notify via lark
         run: |

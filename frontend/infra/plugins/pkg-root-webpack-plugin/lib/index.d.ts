@@ -4,4 +4,3 @@ declare class PkgRootWebpackPlugin extends OriginPkgRootWebpackPlugin {
     constructor(options?: Partial<PkgRootWebpackPluginOptions>);
 }
 export default PkgRootWebpackPlugin;
-export { PkgRootWebpackPlugin };

@@ -42,6 +42,7 @@ export interface EvalTargetContent {
   input_schemas?: common.ArgsSchema[],
   /** 输出schema */
   output_schemas?: common.ArgsSchema[],
+  runtime_param_json_demo?: string,
   /**
    * 101-200 EvalTarget类型
    * EvalTargetType=0 时，传参此字段。 评测对象为 CozeBot 时, 需要设置 CozeBot 信息
@@ -49,6 +50,10 @@ export interface EvalTargetContent {
   coze_bot?: CozeBot,
   /** EvalTargetType=1 时，传参此字段。 评测对象为 EvalPrompt 时, 需要设置 Prompt 信息 */
   prompt?: EvalPrompt,
+  /** EvalTargetType=4 时，传参此字段。 评测对象为 CozeWorkflow 时, 需要设置 CozeWorkflow 信息 */
+  coze_workflow?: CozeWorkflow,
+  /** EvalTargetType=5 时，传参此字段。 评测对象为 VolcengineAgent 时, 需要设置 VolcengineAgent 信息 */
+  volcengine_agent?: VolcengineAgent,
 }
 export enum EvalTargetType {
   /** CozeBot */
@@ -57,6 +62,35 @@ export enum EvalTargetType {
   CozeLoopPrompt = 2,
   /** Trace */
   Trace = 3,
+  CozeWorkflow = 4,
+  /** 火山智能体 */
+  VolcengineAgent = 5,
+}
+export interface VolcengineAgent {
+  /** 罗盘应用ID */
+  id?: string,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  /** DTO使用，不存数据库 */
+  volcengine_agent_endpoints?: VolcengineAgentEndpoint[],
+  base_info?: common.BaseInfo,
+}
+export interface VolcengineAgentEndpoint {
+  endpoint_id?: string,
+  api_key?: string,
+}
+export interface CozeWorkflow {
+  id?: string,
+  version?: string,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  avatar_url?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  base_info?: common.BaseInfo,
 }
 export interface EvalPrompt {
   prompt_id?: string,
@@ -175,4 +209,7 @@ export interface EvalTargetUsage {
 export interface EvalTargetRunError {
   code?: number,
   message?: string,
+}
+export interface PromptRuntimeParam {
+  model_config?: common.ModelConfig
 }

@@ -17,7 +17,7 @@ import {
   Prec,
   PromptBasicEditor,
 } from '@cozeloop/prompt-components';
-import { I18n } from '@cozeloop/i18n-adapter';
+import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { uploadFile } from '@cozeloop/biz-components-adapter';
 import {
@@ -54,21 +54,34 @@ import {
   type ContentPartLoop,
   usePromptMockDataStore,
 } from '@/store/use-mockdata-store';
-import { MAX_FILE_SIZE, MAX_FILE_SIZE_MB, MAX_IMAGE_FILE } from '@/consts';
+import { useBasicStore } from '@/store/use-basic-store';
+import {
+  MAX_FILE_SIZE,
+  MAX_FILE_SIZE_MB,
+  MAX_IMAGE_FILE,
+  MessageListGroupType,
+} from '@/consts';
+
+import { GroupSelect } from './group-select';
 
 import styles from './index.module.less';
 
 interface SendMsgAreaProps {
   streaming?: boolean;
+  isSingleRound?: boolean;
   onMessageSend?: (queryMsg?: Message) => void;
   stopStreaming?: () => void;
+  onClearHistory?: () => void;
 }
 
 export function SendMsgArea({
   streaming,
   onMessageSend,
   stopStreaming,
+  onClearHistory,
+  isSingleRound,
 }: SendMsgAreaProps) {
+  const globalDisabled = useGuard({ point: GuardPoint['pe.prompt.global'] });
   const { spaceID } = useSpace();
   const [editorActive, setEditorActive] = useState(false);
 
@@ -76,6 +89,15 @@ export function SendMsgArea({
     role: Role.User,
   });
   const [queryMsgKey, setQueryMsgKey] = useState<string>(nanoid());
+
+  const { groupType, executeDisabled } = useBasicStore(
+    useShallow(state => ({
+      groupType: state.groupType,
+      executeDisabled: state.executeDisabled,
+    })),
+  );
+
+  const isSingleGroup = groupType === MessageListGroupType.Single;
 
   const { variables, currentModel } = usePromptStore(
     useShallow(state => ({
@@ -125,7 +147,12 @@ export function SendMsgArea({
 
   const inputReadonly = streaming;
 
-  const executeDisabled = streaming || fileUploading || !currentModel?.model_id;
+  const currentExecuteDisabled =
+    streaming ||
+    fileUploading ||
+    !currentModel?.model_id ||
+    globalDisabled.data.readonly ||
+    executeDisabled;
 
   const isMultiModal = currentModel?.ability?.multi_modal;
   const isMultiModalRef = useLatest(isMultiModal);
@@ -188,7 +215,7 @@ export function SendMsgArea({
       }));
     } catch (error) {
       console.info('error', error);
-      Toast.error(I18n.t('image_upload_error'));
+      Toast.error('图片上传失败，请稍后重试');
       setQueryMsg(v => ({
         ...v,
         parts: (v?.parts || []).filter((it: ContentPartLoop) => it.uid !== uid),
@@ -197,7 +224,7 @@ export function SendMsgArea({
   };
 
   const handleSendMessage = () => {
-    if (executeDisabled) {
+    if (currentExecuteDisabled) {
       return;
     }
 
@@ -212,19 +239,13 @@ export function SendMsgArea({
       for (const item of Array.from(items)) {
         if (item.type.includes('image')) {
           if (isMaxImgSizeRef.current) {
-            Toast.warning(
-              I18n.t('max_upload_picture_num', { num: MAX_IMAGE_FILE }),
-            );
+            Toast.warning(`最多上传${MAX_IMAGE_FILE}张图片`);
             return;
           }
           const file = item.getAsFile();
           if (file) {
             if (file.size / 1024 > MAX_FILE_SIZE) {
-              Toast.error(
-                I18n.t('image_size_not_exceed_num_mb', {
-                  num: MAX_FILE_SIZE_MB,
-                }),
-              );
+              Toast.error(`图片大小不能超过${MAX_FILE_SIZE_MB}MB`);
               return;
             }
             uploadRef.current?.insert([file], 0);
@@ -238,6 +259,7 @@ export function SendMsgArea({
   const clearHistoricChat = () => {
     setHistoricMessage([]);
     compareConfig?.groups?.forEach((_, idx) => setHistoricMessageById(idx, []));
+    onClearHistory?.();
   };
 
   const extensions: Extension[] = useMemo(
@@ -297,8 +319,9 @@ export function SendMsgArea({
   return (
     <div className={styles['send-msg-area']}>
       <div className="flex items-center justify-end">
+        {isCompare ? null : <GroupSelect streaming={streaming} />}
         <div className="flex-1 flex items-center justify-center">
-          {streaming && stopStreaming ? (
+          {streaming && stopStreaming && isSingleGroup ? (
             <Space align="center">
               <Button
                 color="primary"
@@ -306,13 +329,13 @@ export function SendMsgArea({
                 size="mini"
                 onClick={stopStreaming}
               >
-                {I18n.t('stop_respond')}
+                停止响应
               </Button>
             </Space>
           ) : null}
         </div>
         {isCompare ? null : (
-          <Tooltip content={I18n.t('clear_history_messages')} theme="dark">
+          <Tooltip content="清空历史消息" theme="dark">
             <IconButton
               icon={<IconCozBroom />}
               onClick={clearHistoricChat}
@@ -321,135 +344,141 @@ export function SendMsgArea({
             />
           </Tooltip>
         )}
-      </div>
-      <div
-        className={cn(styles['send-msg-area-content'], {
-          [styles['editor-active']]: editorActive,
-        })}
-      >
-        {imgParts?.length ? (
-          <ImagePreview closable className={styles['msg-files']}>
-            {imgParts?.map((it: ContentPartLoop) => (
-              <Badge
-                className={styles['msg-files-badge']}
-                count={
-                  <IconCozCrossCircleFillPalette
-                    className={styles['msg-files-badge-icon']}
-                    onClick={() => removePart(it)}
-                  />
-                }
-                key={it.image_url?.url || it.image_url?.uri || it.uid}
-              >
-                <Spin
-                  style={{ width: 45, height: 45 }}
-                  spinning={it.status === 'uploading'}
-                  size="small"
-                >
-                  <Image
-                    width={45}
-                    height={45}
-                    src={it.image_url?.url}
-                    imgStyle={{ objectFit: 'contain' }}
-                  />
-                </Spin>
-              </Badge>
-            ))}
-          </ImagePreview>
-        ) : null}
-        <div className={cn('w-full flex-1 gap-0.5')}>
-          <PromptBasicEditor
-            key={queryMsgKey}
-            defaultValue={queryMsg?.content}
-            onChange={value =>
-              setQueryMsg(v => ({
-                ...v,
-                content: value,
-              }))
-            }
-            height={44}
-            variables={variables?.filter(it => it.type === VariableType.String)}
-            readOnly={streaming || inputReadonly}
-            linePlaceholder={I18n.t('input_question_tip')}
-            customExtensions={extensions}
-            onFocus={() => setEditorActive(true)}
-            onBlur={() => setEditorActive(false)}
-          />
-        </div>
-        <div className="flex items-center justify-between w-full gap-0.5 px-3">
-          <div className="flex items-center gap-2">
-            {isCompare ? (
-              <Tooltip content={I18n.t('clear_history_messages')} theme="dark">
-                <IconButton
-                  icon={<IconCozBroom />}
-                  onClick={clearHistoricChat}
-                  color="secondary"
-                  disabled={streaming}
-                />
-              </Tooltip>
-            ) : null}
-            <Upload
-              key={queryMsgKey}
-              ref={uploadRef}
-              action=""
-              customRequest={handleUploadFile}
-              accept="image/*"
-              showUploadList={false}
-              maxSize={MAX_FILE_SIZE}
-              limit={canUploadFileSize}
-              onSizeError={() =>
-                Toast.error(
-                  Toast.error(
-                    I18n.t('image_size_not_exceed_num_mb', {
-                      num: MAX_FILE_SIZE_MB,
-                    }),
-                  ),
-                )
-              }
-              onExceed={() =>
-                Toast.warning(
-                  I18n.t('max_upload_picture_num', { num: MAX_IMAGE_FILE }),
-                )
-              }
-              multiple
-              fileList={imgParts.map(it => ({
-                uid: it.uid || '',
-                url: it.image_url?.url,
-                status: it.status || 'success',
-                name: it.uid || '',
-                size: '0',
-              }))}
-            >
-              <IconButton
-                icon={<IconCozImage />}
-                color="primary"
-                disabled={streaming || isMaxImgSize || !isMultiModal}
-              />
-            </Upload>
-            {isMultiModal ? (
-              <Typography.Text size="small" type="tertiary">
-                {imgCount} / 20
-              </Typography.Text>
-            ) : (
-              <Typography.Text
-                size="small"
-                type="tertiary"
-                icon={<IconCozInfoCircle />}
-              >
-                {I18n.t('model_not_support_picture')}
-              </Typography.Text>
-            )}
-          </div>
+        {isSingleRound ? (
           <Button
             icon={<IconCozPlayCircle />}
             onClick={handleSendMessage}
-            disabled={executeDisabled}
+            disabled={currentExecuteDisabled}
+            size="small"
           >
-            {I18n.t('run')}
+            运行
           </Button>
-        </div>
+        ) : null}
       </div>
+      {isSingleRound ? null : (
+        <div
+          className={cn(styles['send-msg-area-content'], {
+            [styles['editor-active']]: editorActive,
+          })}
+        >
+          {imgParts?.length ? (
+            <ImagePreview closable className={styles['msg-files']}>
+              {imgParts?.map((it: ContentPartLoop) => (
+                <Badge
+                  className={styles['msg-files-badge']}
+                  count={
+                    <IconCozCrossCircleFillPalette
+                      className={styles['msg-files-badge-icon']}
+                      onClick={() => removePart(it)}
+                    />
+                  }
+                  key={it.image_url?.url || it.image_url?.uri || it.uid}
+                >
+                  <Spin
+                    style={{ width: 45, height: 45 }}
+                    spinning={it.status === 'uploading'}
+                    size="small"
+                  >
+                    <Image
+                      width={45}
+                      height={45}
+                      src={it.image_url?.url}
+                      imgStyle={{ objectFit: 'contain' }}
+                    />
+                  </Spin>
+                </Badge>
+              ))}
+            </ImagePreview>
+          ) : null}
+          <div className={cn('w-full flex-1 gap-0.5')}>
+            <PromptBasicEditor
+              key={queryMsgKey}
+              defaultValue={queryMsg?.content}
+              onChange={value =>
+                setQueryMsg(v => ({
+                  ...v,
+                  content: value,
+                }))
+              }
+              height={44}
+              variables={variables?.filter(
+                it => it.type === VariableType.String,
+              )}
+              readOnly={streaming || inputReadonly}
+              linePlaceholder="请输入问题测试大模型回复，回车发送，Shift+回车换行"
+              customExtensions={extensions}
+              onFocus={() => setEditorActive(true)}
+              onBlur={() => setEditorActive(false)}
+            />
+          </div>
+          <div className="flex items-center justify-between w-full gap-0.5 px-3">
+            <div className="flex items-center gap-2">
+              {isCompare ? (
+                <Tooltip content="清空历史消息" theme="dark">
+                  <IconButton
+                    icon={<IconCozBroom />}
+                    onClick={clearHistoricChat}
+                    color="secondary"
+                    disabled={streaming}
+                  />
+                </Tooltip>
+              ) : null}
+              <Upload
+                key={queryMsgKey}
+                ref={uploadRef}
+                action=""
+                customRequest={handleUploadFile}
+                accept="image/*"
+                showUploadList={false}
+                maxSize={MAX_FILE_SIZE}
+                limit={canUploadFileSize}
+                onSizeError={() =>
+                  Toast.error(`图片大小不能超过${MAX_FILE_SIZE_MB}MB`)
+                }
+                onExceed={() =>
+                  Toast.warning(`最多上传${MAX_IMAGE_FILE}张图片`)
+                }
+                multiple
+                fileList={imgParts.map(it => ({
+                  uid: it.uid || '',
+                  url: it.image_url?.url,
+                  status: it.status || 'success',
+                  name: it.uid || '',
+                  size: '0',
+                }))}
+              >
+                <IconButton
+                  icon={<IconCozImage />}
+                  color="primary"
+                  disabled={streaming || isMaxImgSize || !isMultiModal}
+                />
+              </Upload>
+              {isMultiModal ? (
+                <Typography.Text size="small" type="tertiary">
+                  {imgCount} / 20
+                </Typography.Text>
+              ) : (
+                <Typography.Text
+                  size="small"
+                  type="tertiary"
+                  icon={<IconCozInfoCircle />}
+                >
+                  该模型不支持上传图片
+                </Typography.Text>
+              )}
+            </div>
+            <Button
+              icon={<IconCozPlayCircle />}
+              onClick={handleSendMessage}
+              disabled={currentExecuteDisabled}
+            >
+              运行
+            </Button>
+          </div>
+        </div>
+      )}
       <Typography.Text size="small" type="tertiary" className="text-center">
-        {I18n.t('generated_by_ai_tip')}
+        内容由AI生成，无法确保真实准确，仅供参考。
       </Typography.Text>
     </div>
   );

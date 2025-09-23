@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type SVGAttributes } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import { Tooltip } from '@coze-arch/coze-design';
 
 import IconButtonContainer from '../id-render/icon-button-container';
@@ -53,11 +52,11 @@ export default function LoopTableSortIcon({
 }: {
   sortOrder?: 'ascend' | 'descend' | boolean;
 }) {
-  let tooltip = I18n.t('click_ascending');
+  let tooltip = '点击升序';
   if (sortOrder === 'ascend') {
-    tooltip = I18n.t('click_descending');
+    tooltip = '点击降序';
   } else if (sortOrder === 'descend') {
-    tooltip = I18n.t('restore_default_sort');
+    tooltip = '点击恢复默认排序';
   }
   return (
     <Tooltip theme="dark" content={tooltip}>

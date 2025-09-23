@@ -3,11 +3,17 @@
 import { useRef } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
-import { Form, type FormApi, Modal } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
+import {
+  Form,
+  type FormApi,
+  Modal,
+  FormTextArea,
+  FormInput,
+} from '@coze-arch/coze-design';
 
 interface FormValues {
   name?: string;
@@ -52,7 +58,7 @@ export default function ExperimentInfoEditFormModal({
       initValues={{ name: experiment?.name, desc: experiment?.desc }}
       onSubmit={handleSubmit}
     >
-      <Form.Input
+      <FormInput
         field="name"
         label={I18n.t('experiment_name')}
         placeholder={I18n.t('please_input', { field: '' })}
@@ -62,7 +68,7 @@ export default function ExperimentInfoEditFormModal({
           { validator: sourceNameRuleValidator },
         ]}
       />
-      <Form.TextArea
+      <FormTextArea
         field="desc"
         label={I18n.t('experiment_description')}
         placeholder={I18n.t('please_input', { field: '' })}
@@ -77,7 +83,7 @@ export default function ExperimentInfoEditFormModal({
       visible={visible}
       title={I18n.t('edit_experiment')}
       okText={I18n.t('confirm')}
-      cancelText={I18n.t('Cancel')}
+      cancelText={I18n.t('cancel')}
       okButtonProps={{ loading }}
       onOk={() => formRef.current?.submitForm()}
       onCancel={onClose}

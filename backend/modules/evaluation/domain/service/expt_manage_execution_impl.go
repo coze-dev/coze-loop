@@ -36,9 +36,7 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 
 	checkers := []ExptCheckFn{
 		e.CheckExpt,
-		e.CheckTarget,
 		e.CheckEvalSet,
-		e.CheckEvaluators,
 		e.CheckConnector,
 	}
 
@@ -105,26 +103,6 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 	return nil
 }
 
-func (e *ExptMangerImpl) CheckTarget(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt.EvalConf == nil || expt.EvalConf.ConnectorConf.TargetConf == nil {
-		return nil
-	}
-	if expt.TargetID == 0 || expt.TargetVersionID == 0 || expt.Target == nil {
-		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid target, target_id= %d target_version_id= %d", expt.TargetID, expt.TargetVersionID)))
-	}
-	return nil
-}
-
-func (e *ExptMangerImpl) CheckEvaluators(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt.EvalConf == nil || expt.EvalConf.ConnectorConf.EvaluatorsConf == nil || len(expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf) == 0 {
-		return nil
-	}
-	if len(expt.EvaluatorVersionRef) == 0 || len(expt.Evaluators) != len(expt.EvaluatorVersionRef) {
-		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid evaluators %v", expt.EvaluatorVersionRef)))
-	}
-	return nil
-}
-
 func (e *ExptMangerImpl) CheckConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
 	if expt.EvalConf == nil {
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is nil"))
@@ -148,7 +126,12 @@ func (e *ExptMangerImpl) checkTargetConnector(ctx context.Context, expt *entity.
 	}
 
 	e.fixTargetConf(expt)
+
 	connectorConf := expt.EvalConf.ConnectorConf
+	if connectorConf.TargetConf.TargetVersionID != expt.TargetVersionID {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("target config's version id not match"))
+	}
+
 	if err := connectorConf.TargetConf.Valid(ctx, expt.Target.EvalTargetType); err != nil {
 		return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid target connector"))
 	}
@@ -197,9 +180,19 @@ func (e *ExptMangerImpl) checkEvaluatorsConnector(ctx context.Context, expt *ent
 	if len(expt.Evaluators) == 0 {
 		return nil
 	}
+
 	connectorConf := expt.EvalConf.ConnectorConf
 	if err := connectorConf.EvaluatorsConf.Valid(ctx); err != nil {
 		return errorx.WrapByCode(err, errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid evaluator connector"))
+	}
+
+	evaluatorVersionIDs := gslice.ToMap(expt.EvaluatorVersionRef, func(t *entity.ExptEvaluatorVersionRef) (int64, bool) {
+		return t.EvaluatorVersionID, true
+	})
+	for _, conf := range connectorConf.EvaluatorsConf.EvaluatorConf {
+		if !evaluatorVersionIDs[conf.EvaluatorVersionID] {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("evaluator version id not found %d", conf.EvaluatorVersionID)))
+		}
 	}
 
 	targetOutputSchema := lo.TernaryF(expt.Target == nil || expt.Target.EvalTargetVersion == nil || expt.Target.EvalTargetVersion.OutputSchema == nil, func() map[string]*entity.ArgsSchema {

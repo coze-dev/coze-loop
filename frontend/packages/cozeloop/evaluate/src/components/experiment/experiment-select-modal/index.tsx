@@ -193,7 +193,7 @@ export default function ExperimentSelectModal({
       visible={true}
       okButtonProps={{ disabled: selectedExperiments.length < 2 }}
       okText={I18n.t('run_experiment_comparison')}
-      cancelText={I18n.t('Cancel')}
+      cancelText={I18n.t('cancel')}
       onOk={() => {
         const experiments = mergeExperiments([
           ...(baseExperiment ? [baseExperiment] : []),
@@ -228,7 +228,7 @@ export default function ExperimentSelectModal({
         </Space>
 
         <div className="shrink-0 flex items-center gap-1">
-          <span className="font-medium">{I18n.t('selected')}:</span>
+          <span className="font-medium">{I18n.t('selected')}</span>
           <div className="flex items-center gap-1">
             {selectedExperiments.map(experiment => (
               <Tag

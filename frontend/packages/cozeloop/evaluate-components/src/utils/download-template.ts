@@ -1,13 +1,14 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import Papa, { type UnparseObject } from 'papaparse';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 export const downloadCSVTemplate = () => {
   try {
     const fields = ['input', 'reference_output'];
     const data = [
-      ['世界上最大的动物是什么', '蓝鲸'],
-      ['告诉我一些这个动物的生活习性', '吃鱼'],
+      [I18n.t('evaluate_biggest_animal_world'), I18n.t('evaluate_blue_whale')],
+      [I18n.t('evaluate_living_habits_animal'), I18n.t('eat_fish')],
     ];
     const templateJson: UnparseObject<string[]> = {
       fields,
@@ -33,3 +34,20 @@ export function downloadCsv(csv: string, fileName: string) {
     console.error(err);
   }
 }
+export const downloadWithUrl = async (src: string, filename: string) => {
+  try {
+    const response = await fetch(src);
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      link.remove();
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};

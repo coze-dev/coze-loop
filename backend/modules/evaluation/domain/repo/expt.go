@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IExptInsightAnalysisRecordRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
@@ -119,7 +119,7 @@ type IExptAnnotateRepo interface {
 	GetExptTurnResultTagRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
 	BatchGetExptTurnResultTagRefs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
 	GetTagRefByTagKeyID(ctx context.Context, exptID, spaceID, tagKeyID int64) (*entity.ExptTurnResultTagRef, error)
-	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) (int32, int32, error)
+	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
 	DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
 
 	SaveAnnotateRecord(ctx context.Context, exptTurnResultID int64, record *entity.AnnotateRecord, opts ...db.Option) error
@@ -133,4 +133,23 @@ type IExptResultExportRecordRepo interface {
 	Update(ctx context.Context, exportRecord *entity.ExptResultExportRecord, opts ...db.Option) error
 	List(ctx context.Context, spaceID, exptID int64, page entity.Page, csvExportStatus *int32) ([]*entity.ExptResultExportRecord, int64, error)
 	Get(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)
+}
+
+type IExptInsightAnalysisRecordRepo interface {
+	CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) (int64, error)
+	UpdateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error
+	GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64) (*entity.ExptInsightAnalysisRecord, error)
+	ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*entity.ExptInsightAnalysisRecord, int64, error)
+	DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error
+
+	CreateFeedbackComment(ctx context.Context, feedbackComment *entity.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
+	UpdateFeedbackComment(ctx context.Context, feedbackComment *entity.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
+	GetFeedbackCommentByRecordID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackComment, error)
+	DeleteFeedbackComment(ctx context.Context, spaceID, exptID, commentID int64) error
+	List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*entity.ExptInsightAnalysisFeedbackComment, int64, error)
+
+	CreateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
+	UpdateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
+	GetFeedbackVoteByUser(ctx context.Context, spaceID, exptID, recordID int64, userID string, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackVote, error)
+	CountFeedbackVote(ctx context.Context, spaceID, exptID, recordID int64) (int64, int64, error)
 }

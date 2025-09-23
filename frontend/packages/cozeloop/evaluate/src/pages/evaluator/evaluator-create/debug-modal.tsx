@@ -8,7 +8,7 @@ import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint, useGuard } from '@cozeloop/guard';
 import {
   EvaluatorTestRunResult,
-  extractDoubleBraceFields,
+  parseMessagesVariables,
 } from '@cozeloop/evaluate-components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -16,6 +16,7 @@ import {
   BenefitBannerScene,
   BenefitBaseBanner,
 } from '@cozeloop/biz-components-adapter';
+import { VariableType, type VariableDef } from '@cozeloop/api-schema/prompt';
 import {
   type EvaluatorInputData,
   type Evaluator,
@@ -35,11 +36,20 @@ import {
   Form,
   Modal,
   Tooltip,
+  FormInput,
+  withField,
 } from '@coze-arch/coze-design';
 
+import { MultiPartEdit } from './multi-part-editor';
 import { ConfigContent } from './config-content';
 
 import styles from './debug-modal.module.less';
+
+const FormMultiPartEdit = withField(MultiPartEdit);
+
+function hasMultipartVar(vars: VariableDef[]) {
+  return vars?.some(v => v.type === VariableType.MultiPart);
+}
 
 export function DebugModal({
   initValue,
@@ -53,7 +63,7 @@ export function DebugModal({
   const { spaceID } = useSpace();
   const evaluatorFormRef = useRef<Form<Evaluator>>(null);
   const inputFormRef = useRef<Form<EvaluatorInputData>>(null);
-  const [variables, setVariables] = useState<string[]>([]);
+  const [variables, setVariables] = useState<VariableDef[]>([]);
 
   const guard = useGuard({
     point: GuardPoint['eval.evaluator_create.debug'],
@@ -69,14 +79,14 @@ export function DebugModal({
       const messageList =
         evaluator?.current_version?.evaluator_content?.prompt_evaluator
           ?.message_list;
-      const strSet = new Set<string>();
-      messageList?.forEach(message => {
-        const str = message?.content?.text;
-        if (str) {
-          extractDoubleBraceFields(str).forEach(item => strSet.add(item));
+      const newVariables = parseMessagesVariables(messageList ?? []);
+      setVariables(originVars => {
+        // 存在多部分变量，但是新的变量中没有多部分变量，触发一次表单校验校验
+        if (hasMultipartVar(originVars) && !hasMultipartVar(newVariables)) {
+          evaluatorFormRef.current?.formApi?.validate();
         }
+        return newVariables;
       });
-      setVariables(Array.from(strSet));
     },
     { wait: 500 },
   );
@@ -93,10 +103,14 @@ export function DebugModal({
 
         Object.entries(inputData || {}).forEach(([key, value]) => {
           if (key && value) {
-            inputFields[key] = {
-              content_type: ContentType.Text,
-              text: value,
-            };
+            if (value?.content_type) {
+              inputFields[key] = value;
+            } else {
+              inputFields[key] = {
+                content_type: ContentType.Text,
+                text: value,
+              };
+            }
           }
         });
 
@@ -179,19 +193,28 @@ export function DebugModal({
                   className={styles['input-form']}
                   disabled={guard2.data.readonly}
                 >
-                  {variables.map(variable => (
-                    <Form.Input
-                      key={variable}
-                      label={
-                        <div className="text-xs coz-fg-plus font-bold ml-3">
-                          {variable}
-                        </div>
-                      }
-                      labelPosition="inset"
-                      field={variable}
-                      className="w-full"
-                    />
-                  ))}
+                  {variables.map(variable =>
+                    variable?.type === VariableType.MultiPart ? (
+                      <FormMultiPartEdit
+                        key={variable?.key}
+                        variable={variable}
+                        field={variable?.key ?? ''}
+                        noLabel
+                      />
+                    ) : (
+                      <FormInput
+                        key={variable?.key}
+                        label={
+                          <div className="text-xs coz-fg-plus font-bold ml-3">
+                            {variable?.key}
+                          </div>
+                        }
+                        labelPosition="inset"
+                        field={variable?.key ?? ''}
+                        className="w-full"
+                      />
+                    ),
+                  )}
                 </Form>
               </div>
               <div className="p-4 flex-shrink-0 flex-grow flex flex-col pt-0 pb-2">

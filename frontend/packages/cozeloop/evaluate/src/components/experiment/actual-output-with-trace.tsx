@@ -5,7 +5,6 @@ import {
   TraceTrigger,
   useGlobalEvalConfig,
 } from '@cozeloop/evaluate-components';
-import { Tooltip } from '@coze-arch/coze-design';
 
 import { CellContentRender } from '@/utils/experiment';
 import { type DatasetCellContent } from '@/types';
@@ -19,6 +18,7 @@ export default function ActualOutputWithTrace({
   endTime,
   enableTrace = true,
   displayFormat = false,
+  className,
 }: {
   content: DatasetCellContent | undefined;
   traceID: Int64 | undefined;
@@ -27,8 +27,10 @@ export default function ActualOutputWithTrace({
   expand?: boolean;
   enableTrace?: boolean;
   displayFormat?: boolean;
+  className?: string;
 }) {
   const { traceEvalTargetPlatformType } = useGlobalEvalConfig();
+
   return (
     <div
       className="group flex leading-5 w-full min-h-[20px] overflow-hidden"
@@ -45,20 +47,23 @@ export default function ActualOutputWithTrace({
         expand={expand}
         content={content}
         displayFormat={displayFormat}
+        className={className}
       />
 
       {enableTrace && traceID ? (
-        <Tooltip theme="dark" content={I18n.t('view_actual_output_trace')}>
-          <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
-            <TraceTrigger
-              className="ml-1 invisible group-hover:visible"
-              traceID={traceID ?? ''}
-              platformType={traceEvalTargetPlatformType}
-              startTime={startTime}
-              endTime={endTime}
-            />
-          </div>
-        </Tooltip>
+        <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
+          <TraceTrigger
+            className="ml-1 invisible group-hover:visible"
+            traceID={traceID ?? ''}
+            platformType={traceEvalTargetPlatformType}
+            startTime={startTime}
+            endTime={endTime}
+            tooltipProps={{
+              content: I18n.t('view_actual_output_trace'),
+              theme: 'dark',
+            }}
+          />
+        </div>
       ) : null}
     </div>
   );

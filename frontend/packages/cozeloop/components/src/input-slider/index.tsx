@@ -27,7 +27,7 @@ interface InputSliderProps {
   className?: string;
 }
 
-const formateDecimalPlacesString = (
+export const formateDecimalPlacesString = (
   value: string | number,
   prevValue?: number,
   decimalPlaces?: number,
@@ -73,6 +73,7 @@ function getDecimalPlaces(num) {
   }
   return 0; // 如果没有小数点，返回0
 }
+
 const formateDecimalPlacesNumber = (
   value: number,
   prevValue?: number,

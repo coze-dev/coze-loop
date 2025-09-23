@@ -127,7 +127,6 @@ export default function ExperimentCreatePage() {
       // 用户有自定义转换
       const transform = currentEvaluatorForValidation?.transformCreateValues;
       const payload = transform ? transform(filteredValues) : filteredValues;
-
       const res = await submitExperiment({
         ...payload,
         workspace_id: spaceID,
@@ -183,7 +182,7 @@ export default function ExperimentCreatePage() {
             .catch(e => console.warn(e));
         } catch (e) {
           setNextStepLoading(false);
-          console.error(e);
+          console.error('xxx 遇到问题e', e);
         }
         // 普通下一步
 
@@ -206,6 +205,10 @@ export default function ExperimentCreatePage() {
     });
   };
 
+  const handleOnClickSkip = () => {
+    goNext();
+  };
+
   return (
     <div className="h-full overflow-hidden flex flex-col">
       <ErrorBoundary fallback={<PageError />}>
@@ -215,76 +218,97 @@ export default function ExperimentCreatePage() {
           <BackComponent />
           {/* 步骤指示器 */}
           <StepIndicator steps={STEPS} currentStep={step} />
-          {/* 表单内容 */}
-          <div className="flex-1 overflow-y-auto p-6 pt-[20px] styled-scrollbar pr-[18px]">
-            <div className="flex-1 w-[800px] mx-auto">
-              <Form ref={formRef} onValueChange={() => setBlockLeave(true)}>
-                {initLoading ? (
-                  <Spin spinning={true} wrapperClassName="w-full h-96" />
-                ) : (
-                  <>
-                    {/* 基础信息 */}
-                    <StepVisibleWrapper
-                      visible={step === ExtCreateStep.BASE_INFO}
-                    >
-                      <BaseInfoForm />
-                    </StepVisibleWrapper>
-                    {/* 评测集 */}
-                    <StepVisibleWrapper
-                      visible={step === ExtCreateStep.EVAL_SET}
-                    >
-                      <EvaluateSetForm
-                        formRef={formRef}
-                        createExperimentValues={createExperimentValues}
-                        setCreateExperimentValues={setCreateExperimentValues}
-                        setNextStepLoading={setNextStepLoading}
-                      />
-                    </StepVisibleWrapper>
-                    {/* 评测对象 */}
-                    <StepVisibleWrapper
-                      visible={step === ExtCreateStep.EVAL_TARGET}
-                    >
-                      <EvaluateTargetForm
-                        formRef={formRef}
-                        createExperimentValues={createExperimentValues}
-                        setCreateExperimentValues={setCreateExperimentValues}
-                      />
-                    </StepVisibleWrapper>
-                    {/* 评估器 */}
-                    <StepVisibleWrapper
-                      visible={step === ExtCreateStep.EVALUATOR}
-                    >
-                      <EvaluatorForm
-                        initValue={
-                          createExperimentValues.evaluatorProList || [{}]
-                        }
-                        evaluationSetVersionDetail={
-                          createExperimentValues?.evaluationSetVersionDetail ||
-                          {}
-                        }
-                      />
-                    </StepVisibleWrapper>
-                    {/* 创建实验 */}
-                    <StepVisibleWrapper
-                      visible={step === ExtCreateStep.CREATE_EXPERIMENT}
-                    >
-                      <ViewSubmitForm
-                        createExperimentValues={createExperimentValues}
-                      />
-                    </StepVisibleWrapper>
-                  </>
-                )}
-              </Form>
-            </div>
-          </div>
-          {/* 步骤控制器 */}
-          <StepControls
-            currentStep={step}
-            steps={STEPS}
-            onNext={handleOnClickNextStep}
-            onPrevious={handleOnClickPreStep}
-            isNextLoading={nextStepLoading}
-          />
+          <Form
+            ref={formRef}
+            className="flex-1 min-h-0 flex flex-col"
+            onValueChange={v => {
+              setBlockLeave(true);
+            }}
+          >
+            {({ formState }) => (
+              <>
+                <div className="flex-1 overflow-y-auto p-6 pt-[20px] styled-scrollbar pr-[18px]">
+                  <div className="flex-1 w-[800px] mx-auto">
+                    {initLoading ? (
+                      <Spin spinning={true} wrapperClassName="w-full h-96" />
+                    ) : (
+                      <>
+                        {/* 基础信息 */}
+                        <StepVisibleWrapper
+                          visible={step === ExtCreateStep.BASE_INFO}
+                        >
+                          <BaseInfoForm />
+                        </StepVisibleWrapper>
+                        {/* 评测集 */}
+                        <StepVisibleWrapper
+                          visible={step === ExtCreateStep.EVAL_SET}
+                        >
+                          <EvaluateSetForm
+                            formRef={formRef}
+                            createExperimentValues={createExperimentValues}
+                            setCreateExperimentValues={
+                              setCreateExperimentValues
+                            }
+                            setNextStepLoading={setNextStepLoading}
+                          />
+                        </StepVisibleWrapper>
+                        {/* 评测对象 */}
+                        <StepVisibleWrapper
+                          visible={step === ExtCreateStep.EVAL_TARGET}
+                        >
+                          <EvaluateTargetForm
+                            formRef={formRef}
+                            createExperimentValues={createExperimentValues}
+                            setCreateExperimentValues={
+                              setCreateExperimentValues
+                            }
+                          />
+                        </StepVisibleWrapper>
+                        {/* 评估器 */}
+                        <StepVisibleWrapper
+                          visible={step === ExtCreateStep.EVALUATOR}
+                        >
+                          <EvaluatorForm
+                            initValue={
+                              createExperimentValues.evaluatorProList || []
+                            }
+                            evaluationSetVersionDetail={
+                              createExperimentValues?.evaluationSetVersionDetail ||
+                              {}
+                            }
+                            evalTargetVersionDetail={
+                              createExperimentValues?.evalTargetVersionDetail ||
+                              {}
+                            }
+                          />
+                        </StepVisibleWrapper>
+                        {/* 创建实验，预览里仅展示没有可修改表单值的表单项，仅在该步骤时再渲染即可  */}
+                        {step === ExtCreateStep.CREATE_EXPERIMENT ? (
+                          <ViewSubmitForm
+                            createExperimentValues={createExperimentValues}
+                          />
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <StepControls
+                  currentStep={step}
+                  steps={STEPS}
+                  onNext={handleOnClickNextStep}
+                  onPrevious={handleOnClickPreStep}
+                  onSkip={handleOnClickSkip}
+                  isSkipDisabled={
+                    (step === ExtCreateStep.EVAL_TARGET &&
+                      Boolean(createExperimentValues?.evalTargetType)) ||
+                    (step === ExtCreateStep.EVALUATOR &&
+                      Boolean(formState.values.evaluatorProList?.length))
+                  }
+                  isNextLoading={nextStepLoading}
+                />
+              </>
+            )}
+          </Form>
         </ExptCreateFormCtx.Provider>
       </ErrorBoundary>
     </div>

@@ -8,17 +8,19 @@ import { I18n } from '@cozeloop/i18n-adapter';
 import { type FieldMeta } from '@cozeloop/api-schema/observation';
 import { type OptionProps, Select } from '@coze-arch/coze-design';
 
+import { type Left } from './logic-expr';
 import {
   LOGIC_OPERATOR_RECORDS,
   SELECT_MULTIPLE_RENDER_CMP_OP_LIST,
   SELECT_RENDER_CMP_OP_LIST,
 } from './consts';
+import { MANUAL_FEEDBACK, MANUAL_FEEDBACK_OPERATORS } from './const';
 
 import styles from './index.module.less';
 
 interface OperatorRendererProps {
   expr: {
-    left?: string;
+    left?: Left;
     operator?: number | string;
     right?: string | number | string[] | number[];
   };
@@ -29,7 +31,7 @@ interface OperatorRendererProps {
   tagFilterRecord: Record<string, FieldMeta>;
   disabled?: boolean;
   defaultImmutableKeys?: string[];
-  checkIsInvalidateExpr: (expr: string) => boolean;
+  checkIsInvalidateExpr: (expr: Left | undefined) => boolean;
 }
 
 export const OperatorRenderer = ({
@@ -40,11 +42,14 @@ export const OperatorRenderer = ({
   defaultImmutableKeys,
   checkIsInvalidateExpr,
 }: OperatorRendererProps) => {
-  const { left = '', operator, right } = expr;
+  const { left, operator, right } = expr;
 
   const tagOperatorOption: OptionProps[] = useMemo(
     () =>
-      tagFilterRecord[left]?.filter_types?.map(item => ({
+      (
+        MANUAL_FEEDBACK_OPERATORS[left?.extraInfo?.content_type ?? ''] ??
+        tagFilterRecord[left?.type ?? '']?.filter_types
+      )?.map((item: string) => ({
         label: I18n.unsafeT(LOGIC_OPERATOR_RECORDS[item]?.label ?? ''),
         value: item,
       })) ?? [],
@@ -53,10 +58,10 @@ export const OperatorRenderer = ({
 
   const valueOperator = useMemo(
     () =>
-      !isEmpty(tagOperatorOption) && !operator
+      !isEmpty(tagOperatorOption) && !operator && left?.type !== MANUAL_FEEDBACK
         ? tagOperatorOption[0].value
         : operator,
-    [tagOperatorOption, operator],
+    [tagOperatorOption, operator, left?.type],
   ) as string | undefined;
 
   const handleChange = useCallback(
@@ -80,11 +85,12 @@ export const OperatorRenderer = ({
 
   // ---------------- 这里实现了默认填充下拉框第一个 start ----------------
   useEffect(() => {
-    if (!left) {
+    if (!left?.type) {
       return;
     }
+
     handleChange(valueOperator);
-  }, [left, valueOperator]);
+  }, [left?.type, valueOperator]);
   // ----------------  这里实现了默认填充下拉框第一个 end ----------------
 
   const isInvalidateExpr = checkIsInvalidateExpr(left);
@@ -94,10 +100,12 @@ export const OperatorRenderer = ({
         [styles['expr-op-item-content-invalidate']]: isInvalidateExpr,
       })}
     >
-      {left ? (
+      {left?.type ? (
         <Select
           style={{ width: '100%' }}
-          disabled={disabled || defaultImmutableKeys?.includes(left)}
+          disabled={
+            disabled || defaultImmutableKeys?.includes(left?.type ?? '')
+          }
           value={valueOperator}
           onChange={handleChange}
           optionList={tagOperatorOption}

@@ -12,7 +12,7 @@ import {
 } from './schema';
 import { PromptDataRender } from './render';
 export type Input = Pick<PromptInputSchema, 'arguments' | 'templates'> | string;
-export type Output = { role: string; content?: string }[] | string;
+export type Output = { role: string; content?: string | null }[] | string;
 
 const getInputAndTools = (input: string) => {
   const parsedInput = safeJsonParse(input);
@@ -90,7 +90,7 @@ const getOutputAndReasoningContent = (output: string) => {
 
   const prompts = validateOutput.data;
 
-  let promptsContent: { role: string; content?: string }[] = [];
+  let promptsContent: { role: string; content?: string | null }[] = [];
 
   if (Array.isArray(prompts)) {
     promptsContent = prompts;

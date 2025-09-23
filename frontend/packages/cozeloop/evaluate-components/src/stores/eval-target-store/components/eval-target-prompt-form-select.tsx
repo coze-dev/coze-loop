@@ -18,13 +18,8 @@ const PromptEvalTargetFormSelect: React.FC<
     remote
     onChangeWithObject
     label="Prompt key"
-    rules={[
-      {
-        required: true,
-        message: I18n.t('please_select', { field: I18n.t('prompt_key') }),
-      },
-    ]}
-    placeholder={I18n.t('please_select', { field: I18n.t('prompt_key') })}
+    rules={[{ required: true, message: I18n.t('please_select_prompt_key') }]}
+    placeholder={I18n.t('please_select_prompt_key')}
     showCreateBtn={true}
     {...props}
   />

@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable security/detect-non-literal-regexp */
 import React, {
   useCallback,
   useEffect,
@@ -13,6 +14,7 @@ import {
   transformerCreator,
 } from '@coze-editor/editor/preset-code';
 import { json } from '@coze-editor/editor/language-json';
+import { EditorView } from '@codemirror/view';
 
 import { CodeEditor } from './code-editor';
 
@@ -29,12 +31,25 @@ interface BaseJsonEditorProps {
   editerHeight?: string | number;
   padding?: string | number;
   borderRadius?: string | number;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 interface Match {
   match: string;
   range: [number, number];
 }
+
+const extensions = [
+  EditorView.theme({
+    '.cm-activeLineGutter': {
+      backgroundColor: 'transparent !important',
+    },
+    '.cm-activeLine': {
+      backgroundColor: 'transparent !important',
+    },
+  }),
+];
 
 function findAllMatches(inputString: string, regex: RegExp): Match[] {
   const globalRegex = new RegExp(
@@ -89,6 +104,8 @@ export const BaseJsonEditor = React.forwardRef(
       editerHeight,
       padding,
       borderRadius,
+      onFocus,
+      onBlur,
     } = props;
 
     const apiRef = useRef<EditorAPI | null>(null);
@@ -157,6 +174,9 @@ export const BaseJsonEditor = React.forwardRef(
               lineHeight: 20,
             }}
             didMount={api => (apiRef.current = api)}
+            extensions={extensions}
+            onFocus={onFocus}
+            onBlur={onBlur}
           />
         </div>
       </EditorProvider>

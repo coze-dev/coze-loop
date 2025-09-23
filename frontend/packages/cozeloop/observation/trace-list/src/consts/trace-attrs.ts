@@ -16,6 +16,7 @@ export const QUERY_PROPERTY = {
   PromptKey: 'prompt_key',
   LogicDeleteDate: 'logic_delete_date',
   StartTime: 'start_time',
+  Feedback: 'feedback',
 } as const;
 
 export const FILTER_INVALIDATE = {

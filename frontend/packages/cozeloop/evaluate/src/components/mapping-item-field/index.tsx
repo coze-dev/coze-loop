@@ -30,6 +30,11 @@ import styles from './index.module.less';
 
 const separator = '--';
 
+function getGroupKey(group: OptionGroup) {
+  const childrenNames = group.children?.map(e => e.name)?.join(',') ?? '';
+  return group.schemaSourceType + childrenNames;
+}
+
 export interface MappingItemProps {
   keyTitle?: string;
   keySchema?: FieldSchema;
@@ -81,7 +86,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
             schemaSourceTypeMap[value.schemaSourceType]
           }
           suffix={
-            value?.content_type && (
+            value?.fieldType && (
               <Tag size="mini" color="primary">
                 {getTypeText(value)}
               </Tag>
@@ -103,7 +108,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
                   {schemaSourceTypeMap[group.schemaSourceType]}
                 </div>
               }
-              key={group.schemaSourceType}
+              key={getGroupKey(group)}
             >
               {group.children.map(option => (
                 <Select.Option

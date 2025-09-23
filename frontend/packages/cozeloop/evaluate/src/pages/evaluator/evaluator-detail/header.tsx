@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import dayjs from 'dayjs';
 import { type Result } from 'ahooks/lib/useRequest/src/types';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { CozeUser } from '@cozeloop/evaluate-components';
 import { RouteBackAction, EditIconButton } from '@cozeloop/components';
@@ -19,7 +20,6 @@ import {
   type DebugButtonProps,
 } from '../evaluator-create/debug-button';
 import { type BaseInfo, BaseInfoModal } from './base-info-modal';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export function Header({
   evaluator,
@@ -60,11 +60,7 @@ export function Header({
     } else if (autoSaveService.error) {
       tagContent = I18n.t('draft_auto_save_failed');
     } else if (autoSaveService.data?.lastSaveTime) {
-      tagContent = I18n.t('draft_auto_saved_date', {
-        date: dayjs(Number(autoSaveService.data.lastSaveTime)).format(
-          'YYYY-MM-DD HH:mm:ss',
-        ),
-      });
+      tagContent = `${I18n.t('draft_auto_saved_in')} ${dayjs(Number(autoSaveService.data.lastSaveTime)).format('YYYY-MM-DD HH:mm:ss')}`;
     }
 
     if (tagContent) {
@@ -140,7 +136,7 @@ export function Header({
           </div>
           <div className="h-6 flex flex-row items-center">
             <div className="text-xs font-normal !coz-fg-secondary max-w-[240px] overflow-hidden text-ellipsis whitespace-nowrap leading-4">
-              {I18n.t('description')}: {evaluator?.description || '-'}
+              {I18n.t('description')}：{evaluator?.description || '-'}
             </div>
             <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" />
             {renderExtra()}

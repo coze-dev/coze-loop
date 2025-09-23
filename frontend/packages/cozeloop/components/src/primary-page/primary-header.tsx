@@ -21,19 +21,21 @@ export const PrimaryPage = ({
 }: PrimaryPageHeaderProps) => (
   <div
     className={classNames(
-      'pt-4 pb-6 h-full max-h-full flex flex-col',
+      'pt-2 pb-3 h-full max-h-full flex flex-col',
       className,
     )}
   >
-    <div className="flex items-center justify-between">
-      <div className="text-[20px] font-medium leading-6 coz-fg-plus pt-2 pb-4 px-6">
+    <div className="flex items-center justify-between py-4 px-6">
+      <div className="text-[20px] font-medium leading-6 coz-fg-plus ">
         {pageTitle}
       </div>
       <div>{titleSlot}</div>
     </div>
-    <div className="box-border coz-fg-secondary pt-1 pb-3 px-6">
-      {filterSlot}
-    </div>
+    {filterSlot ? (
+      <div className="box-border coz-fg-secondary pt-1 pb-3 px-6">
+        {filterSlot}
+      </div>
+    ) : null}
     <div
       className={classNames(
         'flex-1 h-full max-h-full overflow-hidden px-6',

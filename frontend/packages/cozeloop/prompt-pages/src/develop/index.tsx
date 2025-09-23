@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
+import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
 
 import { usePromptStore } from '@/store/use-prompt-store';
@@ -13,6 +14,7 @@ import { usePrompt } from '@/hooks/use-prompt';
 import { PromptDev } from '@/components/prompt-dev';
 
 export function PromptDevelop() {
+  const globalDisabled = useGuard({ point: GuardPoint['pe.prompt.global'] });
   const { promptID } = useParams<{
     promptID: string;
   }>();
@@ -20,7 +22,7 @@ export function PromptDevelop() {
   const queryVersion = searchParams.get('version') || undefined;
   const [getPromptLoading, setGetPromptLoading] = useState(true);
 
-  const { getPromptByVersion } = usePrompt({ promptID, registerSub: true });
+  const { getPromptByVersion } = usePrompt({ promptID, regiesterSub: true });
   const { clearStore: clearPromptStore, promptInfo } = usePromptStore(
     useShallow(state => ({
       clearStore: state.clearStore,
@@ -28,13 +30,16 @@ export function PromptDevelop() {
     })),
   );
 
-  const { clearStore: clearBasicStore } = useBasicStore(
-    useShallow(state => ({ clearStore: state.clearStore })),
+  const { clearStore: clearBasicStore, setBasicReadonly } = useBasicStore(
+    useShallow(state => ({
+      clearStore: state.clearStore,
+      setBasicReadonly: state.setReadonly,
+    })),
   );
 
-  const { clearMockDataStore } = usePromptMockDataStore(
+  const { clearMockdataStore } = usePromptMockDataStore(
     useShallow(state => ({
-      clearMockDataStore: state.clearMockDataStore,
+      clearMockdataStore: state.clearMockdataStore,
     })),
   );
 
@@ -44,16 +49,21 @@ export function PromptDevelop() {
 
   useEffect(() => {
     if (promptID) {
-      getPromptByVersion(queryVersion, true).then(() => {
-        setGetPromptLoading(false);
-      });
+      getPromptByVersion(queryVersion, true, globalDisabled.data.readonly).then(
+        () => {
+          setGetPromptLoading(false);
+          setBasicReadonly(
+            globalDisabled.data.readonly || Boolean(queryVersion),
+          );
+        },
+      );
     }
     return () => {
       clearPromptStore();
       clearBasicStore();
-      clearMockDataStore();
+      clearMockdataStore();
     };
-  }, [promptID, queryVersion]);
+  }, [promptID, queryVersion, globalDisabled.data.readonly]);
 
   return <PromptDev getPromptLoading={getPromptLoading} />;
 }

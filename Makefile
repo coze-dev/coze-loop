@@ -7,6 +7,7 @@ DOCKER_COMPOSE_DIR := ./release/deployment/docker-compose
 HELM_CHART_DIR := ./release/deployment/helm-chart/umbrella
 HELM_NAMESPACE := coze-loop
 HELM_RELEASE := coze-loop
+COZE_LOOP_NGINX_DATA_VOLUME_NAME := $(or $(COZE_LOOP_NGINX_DATA_VOLUME_NAME),coze-loop-nginx-data)
 
 .PHONY: image mini-start mini-tunnel
 
@@ -49,32 +50,8 @@ image%:
 
 compose%:
 	@case "$*" in \
-	  -up) \
-	    docker compose \
-	      -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
-	      --env-file $(DOCKER_COMPOSE_DIR)/.env \
-	      --profile "*" \
-	      up ;; \
-	  -restart-*) \
-	    svc="$*"; \
-	    svc="$${svc#-restart-}"; \
-	    docker compose \
-	      -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
-	      --env-file $(DOCKER_COMPOSE_DIR)/.env \
-	      restart "$$svc" ;; \
-	  -down) \
-	    docker compose \
-	      -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
-	      --env-file $(DOCKER_COMPOSE_DIR)/.env \
-	      --profile "*" \
-	      down ;; \
-	  -down-v) \
-	    docker compose \
-	      -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
-	      --env-file $(DOCKER_COMPOSE_DIR)/.env \
-	      --profile "*" \
-	      down -v ;; \
 	  -up-dev) \
+	    docker volume rm ${COZE_LOOP_NGINX_DATA_VOLUME_NAME} 2>/dev/null || true; \
 	    docker compose \
 	      -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
 	      -f $(DOCKER_COMPOSE_DIR)/docker-compose-dev.yml \
@@ -104,6 +81,7 @@ compose%:
 	      --profile "*" \
 	      down -v ;; \
 	  -up-debug) \
+	    docker volume rm ${COZE_LOOP_NGINX_DATA_VOLUME_NAME} 2>/dev/null || true; \
 	    docker compose \
 	      -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
 	      -f $(DOCKER_COMPOSE_DIR)/docker-compose-debug.yml \
@@ -132,6 +110,32 @@ compose%:
 	      --env-file $(DOCKER_COMPOSE_DIR)/.env \
 	      --profile "*" \
 	      down -v ;; \
+	  -up) \
+        docker volume rm ${COZE_LOOP_NGINX_DATA_VOLUME_NAME} 2>/dev/null || true; \
+        docker compose \
+          -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
+          --env-file $(DOCKER_COMPOSE_DIR)/.env \
+          --profile "*" \
+          up ;; \
+      -restart-*) \
+        svc="$*"; \
+        svc="$${svc#-restart-}"; \
+        docker compose \
+          -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
+          --env-file $(DOCKER_COMPOSE_DIR)/.env \
+          restart "$$svc" ;; \
+      -down) \
+        docker compose \
+          -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
+          --env-file $(DOCKER_COMPOSE_DIR)/.env \
+          --profile "*" \
+          down ;; \
+      -down-v) \
+        docker compose \
+          -f $(DOCKER_COMPOSE_DIR)/docker-compose.yml \
+          --env-file $(DOCKER_COMPOSE_DIR)/.env \
+          --profile "*" \
+          down -v ;; \
 	  -help|*) \
       	echo "Usage:"; \
       	echo "  # Stable profile"; \

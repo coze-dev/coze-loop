@@ -173,9 +173,9 @@ type EvaluatorsConf struct {
 }
 
 func (e *EvaluatorsConf) Valid(ctx context.Context) error {
-	//if e == nil || len(e.EvaluatorConf) == 0 {
-	//	return fmt.Errorf("invalid EvaluatorConf: %v", json.Jsonify(e))
-	//}
+	if e == nil {
+		return fmt.Errorf("nil EvaluatorConf")
+	}
 	for _, conf := range e.EvaluatorConf {
 		if err := conf.Valid(ctx); err != nil {
 			return err

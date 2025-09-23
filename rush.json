@@ -163,6 +163,11 @@
       "tags": ["team-devops", "level-3"]
     },
     {
+      "packageName": "@cozeloop/biz-config-adapter",
+      "projectFolder": "frontend/packages/cozeloop/biz-config",
+      "tags": ["team-devops", "level-3"]
+    },
+    {
       "packageName": "@cozeloop/toolkit",
       "projectFolder": "frontend/packages/cozeloop/toolkit",
       "tags": ["team-devops", "level-3"]
@@ -175,6 +180,11 @@
     {
       "packageName": "@cozeloop/account",
       "projectFolder": "frontend/packages/cozeloop/account",
+      "tags": ["team-devops", "level-3"]
+    },
+    {
+      "packageName": "@cozeloop/adapter-interfaces",
+      "projectFolder": "frontend/packages/cozeloop/adapter-interfaces",
       "tags": ["team-devops", "level-3"]
     },
     {
@@ -193,8 +203,23 @@
       "tags": ["team-devops", "level-3"]
     },
     {
-      "packageName": "@cozeloop/observation-component-adapter",
+      "packageName": "@cozeloop/tag-components",
+      "projectFolder": "frontend/packages/cozeloop/tag-components",
+      "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/tag-pages",
+      "projectFolder": "frontend/packages/cozeloop/tag-pages",
+      "tags": ["team-devops", "level-3"]
+    },
+    {
+      "packageName": "@cozeloop/observation-component",
       "projectFolder": "frontend/packages/cozeloop/observation/trace-detail",
+      "tags": ["team-devops", "level-3"]
+    },
+    {
+      "packageName": "@cozeloop/observation-component-adapter",
+      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail-open",
       "tags": ["team-devops", "level-3"]
     },
     {
@@ -305,6 +330,11 @@
     {
       "packageName": "@cozeloop/intl",
       "projectFolder": "frontend/packages/cozeloop/intl",
+      "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/evaluate-adapter",
+      "projectFolder": "frontend/packages/cozeloop/evaluate-adapter",
       "tags": ["level-3"]
     }
   ]

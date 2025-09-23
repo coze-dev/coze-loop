@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
@@ -15,12 +16,14 @@ import (
 )
 
 type ExptExportConsumer struct {
-	exptResultExportService service.IExptResultExportService
+	exptResultExportService    service.IExptResultExportService
+	exptInsightAnalysisService service.IExptInsightAnalysisService
 }
 
-func NewExptExportConsumer(exptResultExportService service.IExptResultExportService) mq.IConsumerHandler {
+func NewExptExportConsumer(exptResultExportService service.IExptResultExportService, exptInsightAnalysisService service.IExptInsightAnalysisService) mq.IConsumerHandler {
 	return &ExptExportConsumer{
-		exptResultExportService: exptResultExportService,
+		exptResultExportService:    exptResultExportService,
+		exptInsightAnalysisService: exptInsightAnalysisService,
 	}
 }
 
@@ -40,15 +43,28 @@ func (e *ExptExportConsumer) HandleMessage(ctx context.Context, ext *mq.MessageE
 
 	logs.CtxInfo(ctx, "ExptExportConsumer consume message, event: %v, msg_id: %v", string(body), ext.MsgID)
 
+	if event.Session != nil && len(event.Session.UserID) > 0 { // 链路中调用接口会依赖 ctx userID 鉴权
+		ctx = session.WithCtxUser(ctx, &session.User{ID: event.Session.UserID})
+	}
+
 	return e.handleEvent(ctx, event)
 }
 
 func (e *ExptExportConsumer) handleEvent(ctx context.Context, event *entity.ExportCSVEvent) (err error) {
-	err = e.exptResultExportService.DoExportCSV(ctx, event.SpaceID, event.ExperimentID, event.ExportID)
-	if err != nil {
-		// 不进行重试
-		logs.CtxError(ctx, "ExptExportConsumer DoExportCSV fail, expt_id:%v, err: %v", event.ExperimentID, err)
-		return nil
+	switch event.ExportScene {
+	case entity.ExportSceneInsightAnalysis:
+		err = e.exptInsightAnalysisService.GenAnalysisReport(ctx, event.SpaceID, event.ExperimentID, event.ExportID, event.CreatedAt)
+		if err != nil {
+			logs.CtxError(ctx, "ExptExportConsumer GenAnalysisReport fail, expt_id:%v, err: %v", event.ExperimentID, err)
+			return nil
+		}
+	default:
+		err = e.exptResultExportService.HandleExportEvent(ctx, event.SpaceID, event.ExperimentID, event.ExportID)
+		if err != nil {
+			// 不进行重试
+			logs.CtxError(ctx, "ExptExportConsumer DoExportCSV fail, expt_id:%v, err: %v", event.ExperimentID, err)
+			return nil
+		}
 	}
 
 	return nil

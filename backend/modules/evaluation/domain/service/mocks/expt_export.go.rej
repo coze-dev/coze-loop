@@ -1,0 +1,12 @@
+diff a/backend/modules/evaluation/domain/service/mocks/expt_export.go b/backend/modules/evaluation/domain/service/mocks/expt_export.go	(rejected hunks)
+@@ -8,9 +8,8 @@ import (
+ 	context "context"
+ 	reflect "reflect"
+ 
+-	gomock "go.uber.org/mock/gomock"
+-
+ 	entity "code.byted.org/flowdevops/cozeloop/backend/modules/evaluation/domain/entity"
++	"go.uber.org/mock/gomock"
+ )
+ 
+ // MockIExptResultExportService is a mock of IExptResultExportService interface.

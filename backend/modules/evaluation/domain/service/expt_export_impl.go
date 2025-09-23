@@ -9,6 +9,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -27,8 +28,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+	"github.com/coze-dev/coze-loop/backend/pkg/localos"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -120,6 +123,7 @@ func (e ExptResultExportService) ExportCSV(ctx context.Context, spaceID, exptID 
 		ExportID:     exportID,
 		ExperimentID: exptID,
 		SpaceID:      spaceID,
+		Session:      session,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, nil)
 	if err != nil {
@@ -140,12 +144,26 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		var ttl int64 = 24 * 60 * 60
 		signOpt := fileserver.SignWithTTL(time.Duration(ttl) * time.Second)
 
-		url, _, err := e.fileClient.SignDownloadReq(ctx, exportRecord.FilePath, signOpt)
+		signURL, _, err := e.fileClient.SignDownloadReq(ctx, exportRecord.FilePath, signOpt)
 		if err != nil {
 			return nil, err
 		}
 
-		exportRecord.URL = ptr.Of(url)
+		unescaped, err := url.QueryUnescape(conv.UnescapeUnicode(signURL))
+		if err != nil {
+			logs.CtxWarn(ctx, "QueryUnescape fail, raw: %v", signURL)
+		} else {
+			signURL = unescaped
+		}
+
+		parsedURL, err := url.Parse(signURL)
+		if err == nil {
+			if parsedURL.Host == localos.GetLocalOSHost() {
+				signURL = fmt.Sprintf("%s?%s", parsedURL.Path, parsedURL.RawQuery)
+			}
+		}
+
+		exportRecord.URL = ptr.Of(signURL)
 	}
 
 	exportRecord.Expired = isExportRecordExpired(exportRecord.StartAt)
@@ -186,7 +204,7 @@ func (e ExptResultExportService) ListExportRecord(ctx context.Context, spaceID, 
 	return records, total, nil
 }
 
-func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptID, exportID int64) (err error) {
+func (e ExptResultExportService) HandleExportEvent(ctx context.Context, spaceID, exptID, exportID int64) (err error) {
 	var fileName string
 	defer func() {
 		record := &entity.ExptResultExportRecord{
@@ -217,10 +235,30 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 
 		err1 := e.repo.Update(ctx, record)
 		if err1 != nil {
-			return
+			if err == nil {
+				err = err1
+			}
 		}
 	}()
 
+	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return err
+	}
+	fileName, err = e.getFileName(ctx, expt.Name, exportID)
+	if err != nil {
+		return err
+	}
+
+	err = e.DoExportCSV(ctx, spaceID, exptID, fileName, false)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptID int64, fileName string, withLogID bool) (err error) {
 	var (
 		pageNum  = 1
 		pageSize = 100
@@ -266,19 +304,10 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		pageNum++
 	}
 
-	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
-	if err != nil {
-		return err
-	}
-	fileName, err = e.getFileName(ctx, expt.Name, exportID)
-	if err != nil {
-		return err
-	}
-
 	exportHelper := &exportCSVHelper{
-		exportID:           exportID,
 		exptID:             exptID,
 		spaceID:            spaceID,
+		withLogID:          withLogID,
 		exptRepo:           e.exptRepo,
 		exptTurnResultRepo: e.exptTurnResultRepo,
 		exptPublisher:      e.exptPublisher,
@@ -301,10 +330,10 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 }
 
 type exportCSVHelper struct {
-	exportID int64
-	spaceID  int64
-	exptID   int64
-	fileName string
+	spaceID   int64
+	exptID    int64
+	fileName  string
+	withLogID bool
 
 	colEvaluators    []*entity.ColumnEvaluator
 	colEvalSetFields []*entity.ColumnEvalSetField
@@ -346,8 +375,10 @@ func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
 }
 
 const (
-	columnNameID     = "ID"
-	columnNameStatus = "status"
+	columnNameID            = "ID"
+	columnNameStatus        = "status"
+	columnNameLogID         = "logID"
+	columnNameTargetTraceID = "targetTraceID"
 )
 
 func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
@@ -383,6 +414,12 @@ func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 
 		columns = append(columns, colAnnotation.TagName)
 
+	}
+
+	// logID for analysis report
+	if e.withLogID {
+		columns = append(columns, columnNameLogID)
+		columns = append(columns, columnNameTargetTraceID)
 	}
 
 	return columns, nil
@@ -472,6 +509,22 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 					annotateRecord := annotateRecords[colAnnotation.TagKeyID]
 					rowData = append(rowData, getAnnotationData(annotateRecord, colAnnotation))
 				}
+			}
+
+			// logID
+			if e.withLogID {
+				logID := ""
+				if payload.SystemInfo != nil {
+					logID = ptr.From(payload.SystemInfo.LogID)
+				}
+				traceID := ""
+				if payload.TargetOutput != nil &&
+					payload.TargetOutput.EvalTargetRecord != nil {
+					traceID = payload.TargetOutput.EvalTargetRecord.TraceID
+				}
+				rowData = append(rowData, logID)
+				rowData = append(rowData, traceID)
+
 			}
 
 			rows = append(rows, rowData)

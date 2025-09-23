@@ -95,6 +95,8 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx) (*entity.EvalTargetRecord, error) {
+	// Whether target is called is determined by the target info bound in expt;
+	// ConnectorConf.TargetConf serves as the config info for executing the target, and CheckConnector completes the validity check when creating experiment.
 	if e.skipTargetNode(etec.Expt) {
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
@@ -111,7 +113,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 }
 
 func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) bool {
-	if expt.EvalConf.ConnectorConf.TargetConf == nil {
+	if expt.TargetVersionID == 0 {
 		return true
 	}
 	if expt.ExptType == entity.ExptType_Online {
