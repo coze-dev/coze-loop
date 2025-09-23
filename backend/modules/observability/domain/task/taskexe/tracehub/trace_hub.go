@@ -223,71 +223,119 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		}
 		// 第一步task状态变更的锁
 		// taskrun的状态
+		var runStartAt, runEndAt int64
 		if sub.t.GetTaskStatus() == task.TaskStatusUnstarted {
 			logs.CtxWarn(ctx, "task is unstarted, need sub.Creative")
-			if err := sub.Creative(ctx); err != nil {
+			runStartAt = sub.t.GetRule().GetEffectiveTime().GetStartAt()
+			if !sub.t.GetRule().GetSampler().GetIsCycle() {
+				runEndAt = sub.t.GetRule().GetEffectiveTime().GetEndAt()
+			} else {
+				switch *sub.t.GetRule().GetSampler().CycleTimeUnit {
+				case task.TimeUnitDay:
+					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*24*time.Hour.Milliseconds()
+				case task.TimeUnitWeek:
+					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*7*24*time.Hour.Milliseconds()
+				default:
+					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*10*time.Minute.Milliseconds()
+				}
+			}
+			if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
 				needDispatchSubs = append(needDispatchSubs, sub)
 				continue
 			}
-		}
-		//获取对应的taskconfig
-		taskConfig, _ := h.taskRepo.GetTask(ctx, sub.taskID, nil, nil)
-		if taskConfig == nil {
-			logs.CtxWarn(ctx, "task config not found, task_id=%d", sub.taskID)
-		}
-		var taskRunConfig *entity.TaskRun
-		if taskConfig != nil {
-			var latestStartAt int64
-			for _, run := range taskConfig.TaskRuns {
-				if run.RunStartAt.UnixMilli() > latestStartAt {
-					latestStartAt = run.RunStartAt.UnixMilli()
-					taskRunConfig = run
-				}
+			if err := sub.processor.OnUpdateTaskChange(ctx, sub.t, task.TaskStatusRunning); err != nil {
+				logs.CtxWarn(ctx, "OnUpdateTaskChange, task_id=%d, err=%v", sub.taskID, err)
+				continue
 			}
 		}
-		if taskRunConfig == nil {
+		//获取对应的taskconfig
+		taskRunConfig, err := h.taskRunRepo.GetLatestNewDataTaskRun(ctx, sub.t.WorkspaceID, sub.taskID)
+		if err != nil {
+			logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
 			continue
+		}
+		if taskRunConfig == nil {
+			logs.CtxWarn(ctx, "task run config not found, task_id=%d", sub.taskID)
+			runStartAt = sub.t.GetRule().GetEffectiveTime().GetStartAt()
+			if !sub.t.GetRule().GetSampler().GetIsCycle() {
+				runEndAt = sub.t.GetRule().GetEffectiveTime().GetEndAt()
+			} else {
+				switch *sub.t.GetRule().GetSampler().CycleTimeUnit {
+				case task.TimeUnitDay:
+					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*24*time.Hour.Milliseconds()
+				case task.TimeUnitWeek:
+					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*7*24*time.Hour.Milliseconds()
+				default:
+					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*10*time.Minute.Milliseconds()
+				}
+			}
+			if err = sub.Creative(ctx, runStartAt, runEndAt); err != nil {
+				merr = multierror.Append(merr, errors.WithMessagef(err, "task run config not found,creative processor, task_id=%d", sub.taskID))
+				needDispatchSubs = append(needDispatchSubs, sub)
+				continue
+			}
 		}
 		sampler := sub.t.GetRule().GetSampler()
 		//获取对应的taskcount和subtaskcount
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
 		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
-		if taskRunConfig == nil {
-			logs.CtxWarn(ctx, "task run config not found, task_id=%d", sub.taskID)
-			if err := sub.Creative(ctx); err != nil {
-				merr = multierror.Append(merr, errors.WithMessagef(err, "task run config not found,creative processor, task_id=%d", sub.taskID))
-				needDispatchSubs = append(needDispatchSubs, sub)
-				continue
-			}
-		}
 		endTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 		// 达到任务时间期限
 		if time.Now().After(endTime) {
-			if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
+			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				Task:     sub.t,
+				TaskRun:  taskRunConfig,
+				IsFinish: true,
+			}); err != nil {
 				logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
+			//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
+			//	logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
+			//	merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
+			//	continue
+			//}
 		}
 		// 达到任务上限
 		if taskCount+1 > sampler.GetSampleSize() {
-			if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
-				logs.CtxWarn(ctx, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID)
-				merr = multierror.Append(merr, errors.WithMessagef(err, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID))
+			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				Task:     sub.t,
+				TaskRun:  taskRunConfig,
+				IsFinish: true,
+			}); err != nil {
+				logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
+				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
+			//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
+			//	logs.CtxWarn(ctx, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID)
+			//	merr = multierror.Append(merr, errors.WithMessagef(err, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID))
+			//	continue
+			//}
 		}
 		if sampler.GetIsCycle() {
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 			// 达到单次任务时间期限
 			if time.Now().After(cycleEndTime) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
-				if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: false}); err != nil {
-					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID))
+				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+					Task:     sub.t,
+					TaskRun:  taskRunConfig,
+					IsFinish: false,
+				}); err != nil {
+					logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
+					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
+					continue
 				}
-				if err := sub.Creative(ctx); err != nil {
+				//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: false}); err != nil {
+				//	merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID))
+				//}
+				runStartAt = taskRunConfig.RunEndAt.UnixMilli()
+				runEndAt = taskRunConfig.RunEndAt.UnixMilli() + (taskRunConfig.RunEndAt.UnixMilli() - taskRunConfig.RunStartAt.UnixMilli())
+				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(cycleEndTime) creative processor, task_id=%d", sub.taskID))
 					needDispatchSubs = append(needDispatchSubs, sub)
 					continue
@@ -295,10 +343,19 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			// 达到单次任务上限
 			if taskRunCount+1 > sampler.GetCycleCount() {
-				if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: false}); err != nil {
-					merr = multierror.Append(merr, errors.WithMessagef(err, "subTaskCount > sampler.GetCycleCount()+1 Finish processor, task_id=%d", sub.taskID))
+				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+					Task:     sub.t,
+					TaskRun:  taskRunConfig,
+					IsFinish: false,
+				}); err != nil {
+					logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
+					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}
+				//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: false}); err != nil {
+				//	merr = multierror.Append(merr, errors.WithMessagef(err, "subTaskCount > sampler.GetCycleCount()+1 Finish processor, task_id=%d", sub.taskID))
+				//	continue
+				//}
 			}
 		}
 	}

@@ -189,10 +189,13 @@ func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpa
 	return filterAggr, nil
 }
 
-func (s *spanSubscriber) Creative(ctx context.Context) error {
-	err := s.processor.OnChangeProcessor(ctx, &taskexe.Config{
-		Task: s.t,
-	}, false)
+func (s *spanSubscriber) Creative(ctx context.Context, runStartAt, runEndAt int64) error {
+	err := s.processor.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+		CurrentTask: s.t,
+		RunType:     s.runType,
+		RunStartAt:  runStartAt,
+		RunEndAt:    runEndAt,
+	})
 	if err != nil {
 		return err
 	}

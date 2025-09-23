@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -142,17 +143,26 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if time.Now().After(endTime) {
 			//OnFinishChangeProcessor
-			err = proc.OnUpdateChangeProcessor(ctx, taskInfo, task.TaskStatusSuccess)
+			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				Task: taskInfo,
+			})
 			if err != nil {
-				logs.CtxError(ctx, "OnUpdateChangeProcessor err:%v", err)
+				logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
 				continue
 			}
 		}
 		// 如果任务状态为unstarted，到任务开始时间就开始create
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
-			err = proc.OnCreateChangeProcessor(ctx, taskInfo)
+
+			err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+				CurrentTask: taskInfo,
+				RunType:     task.TaskRunTypeBackFill,
+				RunStartAt:  taskInfo.GetRule().GetEffectiveTime().GetStartAt(),
+				RunEndAt:    taskInfo.GetRule().GetEffectiveTime().GetEndAt(),
+			})
+			err = proc.OnUpdateTaskChange(ctx, taskInfo, task.TaskStatusRunning)
 			if err != nil {
-				logs.CtxError(ctx, "OnChangeProcessor err:%v", err)
+				logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
 				continue
 			}
 		}

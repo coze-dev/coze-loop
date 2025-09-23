@@ -124,20 +124,6 @@ func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.Fiel
 
 	return result
 }
-func (p *DataReflowProcessor) Finish(ctx context.Context, config any, trigger *taskexe.Trigger) error {
-	taskRun, ok := config.(*task_entity.TaskRun)
-	if !ok {
-		return taskexe.ErrInvalidConfig
-	}
-	p.OnFinishTaskRunProcessor(ctx, taskRun)
-	if trigger.IsFinish {
-		if err := p.OnUpdateChangeProcessor(ctx, trigger.Task, task.TaskStatusSuccess); err != nil {
-			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", trigger.Task.GetID(), err)
-			return err
-		}
-	}
-	return nil
-}
 
 // shouldTriggerBackfill 判断是否需要发送历史回溯MQ
 func ShouldTriggerBackfill(taskDO *task.Task) bool {
@@ -185,8 +171,7 @@ func ShouldTriggerNewData(taskDO *task.Task) bool {
 		time.Now().After(time.Unix(effectiveTime.GetStartAt(), 0))
 }
 
-func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
-	logs.CtxInfo(ctx, "[auto_task] DataReflowProcessor OnChangeProcessor, taskID:%d, task:%+v", currentTask.GetID(), currentTask)
+func (p *DataReflowProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
 	// 1、创建/更新数据集
 	session := getSession(ctx, currentTask)
 	category := getCategory(currentTask.TaskType)
@@ -213,40 +198,58 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 		if err != nil {
 			return err
 		}
-		logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
+		taskPO := tconv.TaskDTO2PO(ctx, currentTask, "")
+		err = p.taskRepo.UpdateTask(ctx, taskPO)
+		if err != nil {
+			logs.CtxError(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, UpdateTask err, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
+		currentTask.TaskConfig.DataReflowConfig[0].DatasetID = ptr.Of(datasetID)
 	}
-
 	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err
 	}
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
-		err = p.OnChangeProcessor(ctx, &taskexe.Config{
-			Task:      currentTask,
-			DatasetID: &datasetID,
-		}, true)
+		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+			CurrentTask: currentTask,
+			RunType:     task.TaskRunTypeBackFill,
+			RunStartAt:  time.Now().UnixMilli(),
+			RunEndAt:    time.Now().UnixMilli() + (currentTask.GetRule().GetBackfillEffectiveTime().GetEndAt() - currentTask.GetRule().GetBackfillEffectiveTime().GetStartAt()),
+		})
 		if err != nil {
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
 		}
-		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		err = p.OnUpdateTaskChange(ctx, currentTask, task.TaskStatusRunning)
 		if err != nil {
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
 		}
 	}
-
 	if ShouldTriggerNewData(currentTask) {
-		err = p.OnChangeProcessor(ctx, &taskexe.Config{
-			Task:      currentTask,
-			DatasetID: &datasetID,
-		}, false)
-		if err != nil {
-			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-			return err
+		var runStartAt, runEndAt int64
+		runStartAt = currentTask.GetRule().GetEffectiveTime().GetStartAt()
+		if !currentTask.GetRule().GetSampler().GetIsCycle() {
+			runEndAt = currentTask.GetRule().GetEffectiveTime().GetEndAt()
+		} else {
+			switch *currentTask.GetRule().GetSampler().CycleTimeUnit {
+			case task.TimeUnitDay:
+				runEndAt = runStartAt + (*currentTask.GetRule().GetSampler().CycleInterval)*24*time.Hour.Milliseconds()
+			case task.TimeUnitWeek:
+				runEndAt = runStartAt + (*currentTask.GetRule().GetSampler().CycleInterval)*7*24*time.Hour.Milliseconds()
+			default:
+				runEndAt = runStartAt + (*currentTask.GetRule().GetSampler().CycleInterval)*10*time.Minute.Milliseconds()
+			}
 		}
-		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+			CurrentTask: currentTask,
+			RunType:     task.TaskRunTypeNewData,
+			RunStartAt:  currentTask.GetRule().GetEffectiveTime().GetStartAt(),
+			RunEndAt:    runEndAt,
+		})
+		err = p.OnUpdateTaskChange(ctx, currentTask, task.TaskStatusRunning)
 		if err != nil {
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
@@ -255,57 +258,7 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 	return nil
 }
 
-func (p *DataReflowProcessor) OnChangeProcessor(ctx context.Context, config *taskexe.Config, isBackFill bool) error {
-	if config.Task == nil {
-		return taskexe.ErrInvalidConfig
-	}
-	currentTask := config.Task
-	// 2、更新任务配置
-	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
-	if err != nil {
-		return err
-	}
-	// 3、创建 taskrun：历史回溯生成一个taskRun,新数据生成一个taskRun
-	var taskRun *task_entity.TaskRun
-	var taskRunConfig *task.TaskRunConfig
-	var runType task.TaskRunType
-	if isBackFill {
-		runType = task.TaskRunTypeBackFill
-		taskRunConfig = &task.TaskRunConfig{
-			DataReflowRunConfig: &task.DataReflowRunConfig{
-				DatasetID:    *config.DatasetID,
-				EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
-				CycleStartAt: time.Now().UnixMilli(),
-				CycleEndAt:   time.Now().UnixMilli() + (currentTask.GetRule().GetBackfillEffectiveTime().GetEndAt() - currentTask.GetRule().GetBackfillEffectiveTime().GetStartAt()),
-				Status:       task.RunStatusRunning,
-			},
-		}
-	} else {
-		runType = task.TaskRunTypeNewData
-		taskRunConfig = &task.TaskRunConfig{
-			DataReflowRunConfig: &task.DataReflowRunConfig{
-				DatasetID:    *config.DatasetID,
-				EndAt:        currentTask.GetRule().GetEffectiveTime().GetEndAt(),
-				CycleStartAt: currentTask.GetRule().GetEffectiveTime().GetStartAt(),
-				CycleEndAt:   currentTask.GetRule().GetEffectiveTime().GetEndAt(),
-				Status:       task.RunStatusRunning,
-			},
-		}
-	}
-	taskRun, err = p.OnCreateTaskRunProcessor(ctx, currentTask, taskRunConfig, runType)
-	if err != nil {
-		return err
-	}
-	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-
-	err = p.taskRepo.UpdateTask(ctx, taskConfig)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
+func (p *DataReflowProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
 	switch taskOp {
 	case task.TaskStatusSuccess:
 		if currentTask.GetTaskStatus() != task.TaskStatusDisabled {
@@ -335,25 +288,45 @@ func (p *DataReflowProcessor) OnUpdateChangeProcessor(ctx context.Context, curre
 	}
 	return nil
 }
-func (p *DataReflowProcessor) OnFinishChangeProcessor(ctx context.Context, currentTask *task.Task) error {
-	// 更新任务配置
-	// 更新TaskRun
+
+func (p *DataReflowProcessor) OnFinishTaskChange(ctx context.Context, param taskexe.OnFinishTaskChangeReq) error {
+	err := p.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
+		Task:    param.Task,
+		TaskRun: param.TaskRun,
+	})
+	if err != nil {
+		logs.CtxError(ctx, "OnFinishTaskRunChange failed, taskRun:%+v, err:%v", param.TaskRun, err)
+		return err
+	}
+	if param.IsFinish {
+		if err := p.OnUpdateTaskChange(ctx, param.Task, task.TaskStatusSuccess); err != nil {
+			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.GetID(), err)
+			return err
+		}
+	}
 	return nil
 }
 
-func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) {
-	// 创建taskRun
-	cycleStartAt := runConfig.DataReflowRunConfig.CycleStartAt
-	cycleEndAt := runConfig.DataReflowRunConfig.CycleEndAt
-	var taskRun *task_entity.TaskRun
-	taskRunConfig := runConfig
-	taskRun = &task_entity.TaskRun{
+func (p *DataReflowProcessor) OnCreateTaskRunChange(ctx context.Context, param taskexe.OnCreateTaskRunChangeReq) error {
+	var taskRunConfig *task.TaskRunConfig
+	currentTask := param.CurrentTask
+
+	taskRunConfig = &task.TaskRunConfig{
+		DataReflowRunConfig: &task.DataReflowRunConfig{
+			DatasetID:    *currentTask.GetTaskConfig().GetDataReflowConfig()[0].DatasetID,
+			EndAt:        param.RunEndAt,
+			CycleStartAt: param.RunStartAt,
+			CycleEndAt:   param.RunEndAt,
+			Status:       task.RunStatusRunning,
+		},
+	}
+	taskRun := &task_entity.TaskRun{
 		TaskID:      currentTask.GetID(),
 		WorkspaceID: currentTask.GetWorkspaceID(),
-		TaskType:    runType,
+		TaskType:    param.RunType,
 		RunStatus:   task.RunStatusRunning,
-		RunStartAt:  time.UnixMilli(cycleStartAt),
-		RunEndAt:    time.UnixMilli(cycleEndAt),
+		RunStartAt:  time.UnixMilli(param.RunStartAt),
+		RunEndAt:    time.UnixMilli(param.RunEndAt),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
@@ -361,12 +334,22 @@ func (p *DataReflowProcessor) OnCreateTaskRunProcessor(ctx context.Context, curr
 	id, err := p.taskRepo.CreateTaskRun(ctx, taskRun)
 	if err != nil {
 		logs.CtxError(ctx, "[auto_task] OnCreateTaskRunProcessor, CreateTaskRun err, taskRun:%+v, err:%v", taskRun, err)
-		return nil, err
+		return err
 	}
 	taskRun.ID = id
-	return taskRun, nil
+	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
+	if err != nil {
+		return err
+	}
+	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
+	err = p.taskRepo.UpdateTask(ctx, taskConfig)
+	if err != nil {
+		return err
+	}
+	return nil
 }
-func (p *DataReflowProcessor) OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error {
+func (p *DataReflowProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
+	taskRun := param.TaskRun
 	// 设置taskRun状态为已完成
 	taskRun.RunStatus = task.RunStatusDone
 	// 更新taskRun

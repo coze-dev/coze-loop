@@ -36,18 +36,42 @@ const (
 	TaskOpFinish         TaskOp = "finish"
 )
 
+type OnCreateTaskRunChangeReq struct {
+	CurrentTask *task.Task
+	RunType     task.TaskRunType
+	RunStartAt  int64
+	RunEndAt    int64
+}
+type OnFinishTaskRunChangeReq struct {
+	Task    *task.Task
+	TaskRun *task_entity.TaskRun
+}
+type OnFinishTaskChangeReq struct {
+	Task     *task.Task
+	TaskRun  *task_entity.TaskRun
+	IsFinish bool
+}
+
 type Processor interface {
-	ValidateConfig(ctx context.Context, config any) error               // 校验配置项是否有效
-	Invoke(ctx context.Context, config any, trigger *Trigger) error     //根据不同类型进行执行，如rpc回调、mq投递等
-	OnCreateChangeProcessor(ctx context.Context, task *task.Task) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
-	Finish(ctx context.Context, config any, trigger *Trigger) error     //Finish
+	ValidateConfig(ctx context.Context, config any) error           // 校验配置项是否有效
+	Invoke(ctx context.Context, config any, trigger *Trigger) error // 根据不同类型进行执行，如rpc回调、mq投递等
 
-	OnChangeProcessor(ctx context.Context, config *Config, isBackFill bool) error                      //OnCreateChangeProcessor
-	OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error //OnUpdateChangeProcessor
-	OnFinishChangeProcessor(ctx context.Context, task *task.Task) error                                //OnFinishChangeProcessor
+	//Finish(ctx context.Context, config any, trigger *Trigger) error //Finish
+	//OnCreateChangeProcessor(ctx context.Context, task *task.Task) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
 
-	OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
-	OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                                            //OnFinishTaskRunProcessor
+	//OnChangeProcessor(ctx context.Context, config *Config, isBackFill bool) error //OnCreateChangeProcessor
+	//OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error //OnUpdateChangeProcessor
+	//OnFinishChangeProcessor(ctx context.Context, task *task.Task) error                                //OnFinishChangeProcessor
+
+	//OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
+	//OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                                            //OnFinishTaskRunProcessor
+
+	OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error
+	OnUpdateTaskChange(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error
+	OnFinishTaskChange(ctx context.Context, param OnFinishTaskChangeReq) error
+
+	OnCreateTaskRunChange(ctx context.Context, param OnCreateTaskRunChangeReq) error
+	OnFinishTaskRunChange(ctx context.Context, param OnFinishTaskRunChangeReq) error
 }
 
 type ProcessorUnion interface {
