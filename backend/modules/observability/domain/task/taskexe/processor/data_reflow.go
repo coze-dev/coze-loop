@@ -182,7 +182,7 @@ func ShouldTriggerNewData(taskDO *task.Task) bool {
 	return effectiveTime.GetEndAt() > 0 &&
 		effectiveTime.GetStartAt() > 0 &&
 		effectiveTime.GetStartAt() < effectiveTime.GetEndAt() &&
-		time.Now().Before(time.Unix(effectiveTime.GetStartAt(), 0))
+		time.Now().After(time.Unix(effectiveTime.GetStartAt(), 0))
 }
 
 func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, currentTask *task.Task) error {
@@ -246,11 +246,11 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
 		}
-		//err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
-		//if err != nil {
-		//	logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-		//	return err
-		//}
+		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+			return err
+		}
 	}
 	return nil
 }
