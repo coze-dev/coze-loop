@@ -324,19 +324,20 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	if execErr != nil {
 		logs.CtxError(ctx, "async execute target failed, spaceID=%v, targetID=%d, targetVersionID=%d, param=%v, inputData=%v, err=%v",
 			spaceID, targetID, targetVersionID, json.Jsonify(param), json.Jsonify(inputData), execErr)
-		status = entity.EvalTargetRunStatusFail
-		statusErr, ok := errorx.FromStatusError(execErr)
-		if ok {
-			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
-				Code:    statusErr.Code(),
-				Message: statusErr.Error(),
-			}
-		} else {
-			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
-				Code:    errno.CommonInternalErrorCode,
-				Message: execErr.Error(),
-			}
-		}
+		//status = entity.EvalTargetRunStatusFail
+		//statusErr, ok := errorx.FromStatusError(execErr)
+		//if ok {
+		//	outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+		//		Code:    statusErr.Code(),
+		//		Message: statusErr.Error(),
+		//	}
+		//} else {
+		//	outputData.EvalTargetRunError = &entity.EvalTargetRunError{
+		//		Code:    errno.CommonInternalErrorCode,
+		//		Message: execErr.Error(),
+		//	}
+		//}
+		return nil, execErr
 	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
@@ -394,7 +395,7 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 		EvalTarget: param.PatchyTarget,
 	})
 	if execErr != nil {
-		logs.CtxError(ctx, "async execute target failed, param=%v, err=%v", json.Jsonify(param), execErr)
+		logs.CtxError(ctx, "execute target failed, param=%v, err=%v", json.Jsonify(param), execErr)
 		status = entity.EvalTargetRunStatusFail
 		outputData = &entity.EvalTargetOutputData{
 			OutputFields:       map[string]*entity.Content{},
