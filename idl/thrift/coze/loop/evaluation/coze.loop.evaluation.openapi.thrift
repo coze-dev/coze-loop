@@ -23,5 +23,5 @@ struct ReportEvalTargetInvokeResultResponse {
 }
 
 service EvaluationOpenAPIService {
-    ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/eval_targets/result")
+    ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/eval_targets/result")
 }
