@@ -121,10 +121,10 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	//	QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
 	//}
 
-	//filters := s.buildSpanFilters(ctx, task)
-	//if !filters.Satisfied(span) {
-	//	return false, nil
-	//}
+	filters := s.buildSpanFilters(ctx, task)
+	if !filters.Satisfied(span) {
+		return false, nil
+	}
 
 	return true, nil
 }
