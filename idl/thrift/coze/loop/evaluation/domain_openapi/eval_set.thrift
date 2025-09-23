@@ -9,12 +9,11 @@ const EvaluationSetStatus EvaluationSetStatus_Archived = "archived"
 
 // 字段Schema
 struct FieldSchema {
-    1: optional string key
-    2: optional string name
-    3: optional string description
-    4: optional common.ContentType content_type
-    5: optional bool is_required
-    6: optional string text_schema  // JSON Schema字符串
+    1: optional string name
+    2: optional string description
+    3: optional common.ContentType content_type
+    4: optional bool is_required
+    5: optional string text_schema  // JSON Schema字符串
 }
 
 // 评测集Schema
@@ -48,9 +47,8 @@ struct EvaluationSet {
 
 // 字段数据
 struct FieldData {
-    1: optional string key
-    2: optional string name
-    3: optional common.Content content
+    1: optional string name
+    2: optional common.Content content
 }
 
 // 轮次数据

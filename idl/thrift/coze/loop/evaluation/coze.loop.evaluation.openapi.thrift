@@ -58,8 +58,6 @@ struct ListEvaluationSetsOpenAPIRequest {
     2: optional list<string> creators
     3: optional string page_token
     4: optional i32 page_size (vt.gt = "0", vt.le = "200")
-    5: optional string sort_field
-    6: optional string sort_order
     
     255: optional base.Base Base
 }
@@ -350,8 +348,6 @@ struct GetExperimentResultOpenAPIRequest {
     1: required string experiment_id (api.path = "experiment_id")
     2: optional string page_token
     3: optional i32 page_size (vt.gt = "0", vt.le = "200")
-    4: optional string sort_field
-    5: optional string sort_order
     
     255: optional base.Base Base
 }
