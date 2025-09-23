@@ -275,14 +275,14 @@ func Test_ExptItemEvalCtxExecutor_EvalTurns(t *testing.T) {
 
 	t.Run("参数校验失败-EvalSetItem为nil", func(t *testing.T) {
 		execCtx := &entity.ExptItemEvalCtx{EvalSetItem: nil}
-		err := executor.EvalTurns(context.Background(), execCtx)
+		_, err := executor.EvalTurns(context.Background(), execCtx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid empty eval_set_item")
 	})
 
 	t.Run("正常流程-无turns", func(t *testing.T) {
 		execCtx := &entity.ExptItemEvalCtx{EvalSetItem: &entity.EvaluationSetItem{Turns: []*entity.Turn{}}}
-		err := executor.EvalTurns(context.Background(), execCtx)
+		_, err := executor.EvalTurns(context.Background(), execCtx)
 		assert.NoError(t, err)
 	})
 }

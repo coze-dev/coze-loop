@@ -318,7 +318,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		TimeConsumingMS: gptr.Of(int64(0)),
 	}
 
-	execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+	invokeID, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      target.SourceTargetID,
@@ -347,13 +347,8 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
-	recordID, err := e.idgen.GenID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	record = &entity.EvalTargetRecord{
-		ID:                   recordID,
+		ID:                   invokeID,
 		SpaceID:              spaceID,
 		TargetID:             targetID,
 		TargetVersionID:      targetVersionID,
