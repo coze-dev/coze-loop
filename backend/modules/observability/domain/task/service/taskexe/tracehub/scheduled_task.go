@@ -145,16 +145,29 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		}
 		// 如果任务状态为unstarted，到任务开始时间就开始create
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
-			err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-				CurrentTask: taskInfo,
-				RunType:     task.TaskRunTypeBackFill,
-				RunStartAt:  taskInfo.GetRule().GetEffectiveTime().GetStartAt(),
-				RunEndAt:    taskInfo.GetRule().GetEffectiveTime().GetEndAt(),
-			})
-			err = proc.OnUpdateTaskChange(ctx, taskInfo, task.TaskStatusRunning)
-			if err != nil {
-				logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
-				continue
+			if !taskInfo.GetRule().GetSampler().GetIsCycle() {
+				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+					CurrentTask: taskInfo,
+					RunType:     task.TaskRunTypeNewData,
+					RunStartAt:  taskInfo.GetRule().GetEffectiveTime().GetStartAt(),
+					RunEndAt:    taskInfo.GetRule().GetEffectiveTime().GetEndAt(),
+				})
+				err = proc.OnUpdateTaskChange(ctx, taskInfo, task.TaskStatusRunning)
+				if err != nil {
+					logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
+					continue
+				}
+			} else {
+				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+					CurrentTask: taskInfo,
+					RunType:     task.TaskRunTypeNewData,
+					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
+					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					continue
+				}
 			}
 		}
 		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetRule().GetSampler().GetIsCycle() {
