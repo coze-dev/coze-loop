@@ -314,7 +314,7 @@ func TestAuthProviderImpl_CheckQueryPermission_UsesCorrectAction(t *testing.T) {
 	// Test that CheckQueryPermission uses the correct action
 	mockClient.EXPECT().MCheckPermission(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, req *auth.MCheckPermissionRequest, opts ...interface{}) (*auth.MCheckPermissionResponse, error) {
-			assert.Equal(t, rpc.AuthActionTraceRead, *req.Auths[0].Action)
+			assert.Equal(t, rpc.AuthActionTraceList, *req.Auths[0].Action)
 			return &auth.MCheckPermissionResponse{
 				BaseResp: &base.BaseResp{StatusCode: 0},
 				AuthRes: []*authentity.SubjectActionObjectAuthRes{
