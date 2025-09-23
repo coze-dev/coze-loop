@@ -100,10 +100,6 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return existRecord, nil
 	}
 
-	if existResult := etec.ExptTurnRunResult.TargetResult; existResult != nil && existResult.Status != nil && *existResult.Status == entity.EvalTargetRunStatusSuccess {
-		return existResult, nil
-	}
-
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
 		return nil, err
 	}

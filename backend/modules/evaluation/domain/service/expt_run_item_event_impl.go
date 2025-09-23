@@ -387,6 +387,15 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 	//	return err
 	// }
 
+	got, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+	if err != nil {
+		return err
+	}
+
+	for _, turnResult := range got {
+		eiec.ExistItemEvalResult.TurnResultRunLogs[turnResult.TurnID] = turnResult
+	}
+
 	absentRunLogTurnIDs := make([]int64, 0, len(turns))
 	for _, turn := range turns {
 		if turn == nil {
@@ -422,19 +431,6 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 		if err := e.exptTurnResultRepo.BatchCreateNXRunLog(ctx, turnRunResults); err != nil {
 			return err
 		}
-
-		// turnRunLogDOs := make([]*entity.ExptTurnResultRunLog, 0, len(turnRunResults))
-		// for _, trr := range turnRunResults {
-		//	_, err := convert2.NewExptTurnResultRunLogConvertor().ConvertModelToEntity(trr)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	turnRunLogDOs = append(turnRunLogDOs, nil)
-		// }
-		//
-		// eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunLogDOs, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
-		//	return t.TurnID, t
-		// })
 
 		eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunResults, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
 			return t.TurnID, t
