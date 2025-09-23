@@ -386,6 +386,7 @@ type ExptTurnRunResult struct {
 	TargetResult     *EvalTargetRecord
 	EvaluatorResults map[int64]*EvaluatorRecord
 	EvalErr          error
+	AsyncAbort       bool
 }
 
 func (e *ExptTurnRunResult) SetTargetResult(er *EvalTargetRecord) *ExptTurnRunResult {
