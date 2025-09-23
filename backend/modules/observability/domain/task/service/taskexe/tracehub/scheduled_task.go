@@ -135,8 +135,9 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		if (time.Now().After(endTime) || taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0) && allRunsDone {
 
 			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:    taskInfo,
-				TaskRun: taskRun,
+				Task:     taskInfo,
+				TaskRun:  taskRun,
+				IsFinish: true,
 			})
 			if err != nil {
 				logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
@@ -175,8 +176,9 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			if time.Now().After(taskRun.RunEndAt) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:    taskInfo,
-					TaskRun: taskRun,
+					Task:     taskInfo,
+					TaskRun:  taskRun,
+					IsFinish: false,
 				})
 				if err != nil {
 					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
