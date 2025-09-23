@@ -211,7 +211,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		Ext:             ext,
 	}
 
-	if etec.Expt.AsyncCallTarget() {
+	if !etec.Expt.AsyncCallTarget() {
 		return e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
 	}
 
