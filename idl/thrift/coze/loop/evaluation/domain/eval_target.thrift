@@ -104,8 +104,8 @@ const Region Region_I18N = "i18n"
 typedef string AccessProtocol (ts.enum="true")
 const AccessProtocol AccessProtocol_RPC = "rpc"
 const AccessProtocol AccessProtocol_RPCOld = "rpc_old"
-const AccessProtocol AccessProtocol_faasHTTP = "faas_http"
-const AccessProtocol AccessProtocol_faasHTTPOld = "faas_http_old"
+const AccessProtocol AccessProtocol_FaasHTTP = "faas_http"
+const AccessProtocol AccessProtocol_FaasHTTPOld = "faas_http_old"
 
 typedef string HTTPMethod (ts.enum="true")
 const HTTPMethod HTTPMethod_Get = "get"
