@@ -155,6 +155,11 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				logs.CtxError(ctx, "OnChangeProcessor err:%v", err)
 				continue
 			}
+			err = proc.OnUpdateChangeProcessor(ctx, taskInfo, task.TaskStatusRunning)
+			if err != nil {
+				logs.CtxError(ctx, "OnUpdateChangeProcessor err:%v", err)
+				continue
+			}
 		}
 	}
 }

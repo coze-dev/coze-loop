@@ -246,11 +246,11 @@ func (p *DataReflowProcessor) OnCreateChangeProcessor(ctx context.Context, curre
 			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
 		}
-		err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
-		if err != nil {
-			logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
-			return err
-		}
+		//err = p.OnUpdateChangeProcessor(ctx, currentTask, task.TaskStatusRunning)
+		//if err != nil {
+		//	logs.CtxError(ctx, "OnCreateChangeProcessor failed, taskID:%d, err:%v", currentTask.GetID(), err)
+		//	return err
+		//}
 	}
 	return nil
 }
