@@ -38,6 +38,7 @@ func NewExptItemEvaluation(
 	evaluatorRecordService EvaluatorRecordService,
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) ExptItemEvaluation {
 	return &ExptItemEvalCtxExecutor{
 		TurnResultRepo:         turnResultRepo,
@@ -48,6 +49,7 @@ func NewExptItemEvaluation(
 		evaluatorRecordService: evaluatorRecordService,
 		evaluatorService:       evaluatorService,
 		benefitService:         benefitService,
+		evalAsyncRepo:          evalAsyncRepo,
 	}
 }
 
@@ -60,6 +62,7 @@ type ExptItemEvalCtxExecutor struct {
 	evaluatorService       EvaluatorService
 	evaluatorRecordService EvaluatorRecordService
 	benefitService         benefit.IBenefitService
+	evalAsyncRepo          repo.IEvalAsyncRepo
 }
 
 func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
@@ -90,7 +93,7 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck,SA1029
 
-		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService).Eval(ctx, etec)
+		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).Eval(ctx, etec)
 
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
 			return err

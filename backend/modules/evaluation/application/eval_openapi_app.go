@@ -24,16 +24,16 @@ type IEvalOpenAPIApplication = evaluation.EvalOpenAPIService
 
 type EvalOpenAPIApplication struct {
 	targetSvc service.IEvalTargetService
-	asyncRepo repo.IExptItemTurnEvalAsyncRepo
+	asyncRepo repo.IEvalAsyncRepo
 	publisher events.ExptEventPublisher
 }
 
-func NewEvalOpenAPIApplication(asyncRepo repo.IExptItemTurnEvalAsyncRepo, publisher events.ExptEventPublisher, targetSvc service.IEvalTargetService) IEvalOpenAPIApplication {
+func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher, targetSvc service.IEvalTargetService) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{asyncRepo: asyncRepo, publisher: publisher, targetSvc: targetSvc}
 }
 
 func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest) (r *openapi.ReportEvalTargetInvokeResultResponse, err error) {
-	actx, err := e.asyncRepo.GetAsyncCtx(ctx, strconv.FormatInt(req.GetInvokeID(), 10))
+	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(req.GetInvokeID(), 10))
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +44,15 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
-		Session:    actx.Event.Session,
+		Session:    actx.Session,
 	}); err != nil {
 		return nil, err
 	}
 
-	if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3)); err != nil {
-		return nil, err
+	if actx.Event != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3)); err != nil {
+			return nil, err
+		}
 	}
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil

@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -36,12 +37,14 @@ func NewExptTurnEvaluation(
 	evalTargetService IEvalTargetService,
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) ExptItemTurnEvaluation {
 	return &DefaultExptTurnEvaluationImpl{
 		metric:            metric,
 		evalTargetService: evalTargetService,
 		evaluatorService:  evaluatorService,
 		benefitService:    benefitService,
+		evalAsyncRepo:     evalAsyncRepo,
 	}
 }
 
@@ -50,6 +53,7 @@ type DefaultExptTurnEvaluationImpl struct {
 	evalTargetService IEvalTargetService
 	evaluatorService  EvaluatorService
 	benefitService    benefit.IBenefitService
+	evalAsyncRepo     repo.IEvalAsyncRepo
 }
 
 func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.ExptTurnEvalCtx) (trr *entity.ExptTurnRunResult) {
@@ -206,16 +210,24 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		InputFields:     fields,
 		Ext:             ext,
 	}
+
 	if etec.Expt.AsyncCallTarget() {
-		targetRecord, err = e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		targetRecord, err = e.evalTargetService.AsyncExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
-		if err != nil {
-			return nil, err
-		}
+		return e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
+	}
+
+	ts := time.Now()
+	targetRecord, err = e.evalTargetService.AsyncExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
+		Event:       etec.Event,
+		TurnID:      targetRecord.ID,
+		AsyncUnixMS: ts.UnixMilli(),
+		Session:     etec.Event.Session,
+	}); err != nil {
+		return nil, err
 	}
 
 	return targetRecord, nil

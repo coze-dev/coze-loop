@@ -8,10 +8,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
 )
 
-type ExptItemTurnEvalAsyncRepoImpl struct {
-	dao.IExptItemTurnEvalAsyncDAO
+type EvalAsyncRepoImpl struct {
+	dao.IEvalAsyncDAO
 }
 
-func NewExptItemTurnEvalAsyncRepo(dao dao.IExptItemTurnEvalAsyncDAO) repo.IExptItemTurnEvalAsyncRepo {
-	return &ExptItemTurnEvalAsyncRepoImpl{IExptItemTurnEvalAsyncDAO: dao}
+func NewEvalAsyncRepo(dao dao.IEvalAsyncDAO) repo.IEvalAsyncRepo {
+	return &EvalAsyncRepoImpl{IEvalAsyncDAO: dao}
 }

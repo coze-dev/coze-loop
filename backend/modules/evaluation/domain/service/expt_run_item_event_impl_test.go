@@ -47,6 +47,7 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		svcmocks.NewMockEvaluatorService(ctrl),
 		idgenmocks.NewMockIIDGenerator(ctrl),
 		benefitmocks.NewMockIBenefitService(ctrl),
+		repoMocks.NewMockIEvalAsyncRepo(ctrl),
 	)
 	assert.NotNil(t, service)
 }

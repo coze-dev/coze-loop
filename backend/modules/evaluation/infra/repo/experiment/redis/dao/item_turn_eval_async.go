@@ -15,26 +15,26 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
 
-type IExptItemTurnEvalAsyncDAO interface {
-	SetAsyncCtx(ctx context.Context, invokeID string, actx *entity.ExptItemTurnEvalAsyncCtx) error
-	GetAsyncCtx(ctx context.Context, invokeID string) (*entity.ExptItemTurnEvalAsyncCtx, error)
+type IEvalAsyncDAO interface {
+	SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error
+	GetEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
 }
 
-func NewExptItemTurnEvalAsyncDAO(cmdable redis.Cmdable) IExptItemTurnEvalAsyncDAO {
+func NewEvalAsyncDAO(cmdable redis.Cmdable) IEvalAsyncDAO {
 	const table = "experiment"
-	return &exptItemTurnEvalAsyncDAOImpl{cmdable: cmdable, table: table}
+	return &evalAsyncDAOImpl{cmdable: cmdable, table: table}
 }
 
-type exptItemTurnEvalAsyncDAOImpl struct {
+type evalAsyncDAOImpl struct {
 	cmdable redis.Cmdable
 	table   string
 }
 
-func (e *exptItemTurnEvalAsyncDAOImpl) makeExptItemTurnEvalAsyncCtxKey(invokeID string) string {
+func (e *evalAsyncDAOImpl) makeExptItemTurnEvalAsyncCtxKey(invokeID string) string {
 	return fmt.Sprintf("[%s]item_turn_eval_async_ctx:%s", e.table, invokeID)
 }
 
-func (e *exptItemTurnEvalAsyncDAOImpl) SetAsyncCtx(ctx context.Context, invokeID string, actx *entity.ExptItemTurnEvalAsyncCtx) error {
+func (e *evalAsyncDAOImpl) SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error {
 	bytes, err := convert.NewExptItemTurnEvalAsyncCtx().FromDO(actx)
 	if err != nil {
 		return err
@@ -46,10 +46,10 @@ func (e *exptItemTurnEvalAsyncDAOImpl) SetAsyncCtx(ctx context.Context, invokeID
 	return nil
 }
 
-func (e *exptItemTurnEvalAsyncDAOImpl) GetAsyncCtx(ctx context.Context, invokeID string) (*entity.ExptItemTurnEvalAsyncCtx, error) {
+func (e *evalAsyncDAOImpl) GetEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error) {
 	key := e.makeExptItemTurnEvalAsyncCtxKey(invokeID)
 	got, err := e.cmdable.Get(ctx, key).Result()
-	if err != nil && !redis.IsNilError(err) {
+	if err != nil {
 		return nil, errorx.Wrapf(err, "redis get fail, key: %v", key)
 	}
 	return convert.NewExptItemTurnEvalAsyncCtx().ToDO(conv.UnsafeStringToBytes(got))

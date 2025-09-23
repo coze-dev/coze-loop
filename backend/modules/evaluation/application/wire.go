@@ -119,6 +119,7 @@ var (
 		targetDomainService,
 		evaluatorDomainService,
 		flagSet,
+		evalAsyncRepoSet,
 	)
 
 	evaluatorDomainService = wire.NewSet(
@@ -186,6 +187,12 @@ var (
 		foundation.NewAuthRPCProvider,
 		targetDomainService,
 		flagSet,
+		evalAsyncRepoSet,
+	)
+
+	evalAsyncRepoSet = wire.NewSet(
+		experiment.NewEvalAsyncRepo,
+		exptredis.NewEvalAsyncDAO,
 	)
 
 	evalOpenAPISet = wire.NewSet(
@@ -194,8 +201,7 @@ var (
 		evaltargetmtr.NewEvalTargetMetrics,
 		flagSet,
 		rmqproducer.NewExptEventPublisher,
-		experiment.NewExptItemTurnEvalAsyncRepo,
-		exptredis.NewExptItemTurnEvalAsyncDAO,
+		evalAsyncRepoSet,
 	)
 )
 

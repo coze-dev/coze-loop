@@ -51,6 +51,7 @@ type ExptItemEventEvalServiceImpl struct {
 	evaluatorRecordService   EvaluatorRecordService
 	idgen                    idgen.IIDGenerator
 	benefitService           benefit.IBenefitService
+	evalAsyncRepo            repo.IEvalAsyncRepo
 }
 
 func NewExptRecordEvalService(
@@ -73,6 +74,7 @@ func NewExptRecordEvalService(
 	evaluatorService EvaluatorService,
 	idgen idgen.IIDGenerator,
 	benefitService benefit.IBenefitService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
 		manager:                  manager,
@@ -94,6 +96,7 @@ func NewExptRecordEvalService(
 		evaluatorService:         evaluatorService,
 		idgen:                    idgen,
 		benefitService:           benefitService,
+		evalAsyncRepo:            evalAsyncRepo,
 	}
 
 	i.endpoints = RecordEvalChain(
@@ -252,7 +255,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService).
+	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).
 		Eval(ctx, eiec); err != nil {
 		return err
 	}

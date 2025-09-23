@@ -17,16 +17,16 @@ func NewExptItemTurnEvalAsyncCtx() *ExptItemTurnEvalAsyncCtxConverter {
 
 type ExptItemTurnEvalAsyncCtxConverter struct{}
 
-func (ExptItemTurnEvalAsyncCtxConverter) FromDO(actx *entity.ExptItemTurnEvalAsyncCtx) ([]byte, error) {
+func (ExptItemTurnEvalAsyncCtxConverter) FromDO(actx *entity.EvalAsyncCtx) ([]byte, error) {
 	bytes, err := json.Marshal(actx)
 	if err != nil {
-		return nil, errorx.Wrapf(err, "ExptItemTurnEvalAsyncCtx json marshal failed")
+		return nil, errorx.Wrapf(err, "EvalAsyncCtx json marshal failed")
 	}
 	return bytes, nil
 }
 
-func (ExptItemTurnEvalAsyncCtxConverter) ToDO(b []byte) (*entity.ExptItemTurnEvalAsyncCtx, error) {
-	actx := &entity.ExptItemTurnEvalAsyncCtx{}
+func (ExptItemTurnEvalAsyncCtxConverter) ToDO(b []byte) (*entity.EvalAsyncCtx, error) {
+	actx := &entity.EvalAsyncCtx{}
 	bytes := toBytes(b)
 	if err := lo.TernaryF(
 		len(bytes) > 0,

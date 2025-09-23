@@ -454,8 +454,9 @@ type CKDBConfig struct {
 	DatasetItemsSnapshotDBName string `json:"dataset_items_snapshot_db_name" mapstructure:"dataset_items_snapshot_db_name"`
 }
 
-type ExptItemTurnEvalAsyncCtx struct {
+type EvalAsyncCtx struct {
 	Event       *ExptItemEvalEvent
 	TurnID      int64
 	AsyncUnixMS int64 // async call time with unix ms ts
+	Session     *Session
 }

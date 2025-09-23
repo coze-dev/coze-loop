@@ -32,6 +32,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 	mockMetric := metrics_mocks.NewMockEvalTargetMetrics(ctrl)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockEvalAsyncRepo := repo_mocks.NewMockIEvalAsyncRepo(ctrl)
 
 	// 定义测试用例
 	tests := []struct {
@@ -42,6 +43,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 		metric         metrics.EvalTargetMetrics
 		typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService
 		wantInstance   *EvalTargetServiceImpl
+		evalAsyncRepo  repo.IEvalAsyncRepo
 	}{
 		{
 			name:           "正常场景 - 所有参数有效",
@@ -59,6 +61,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 					entity.EvalTargetType(1): mockOperator,
 				},
 			},
+			evalAsyncRepo: mockEvalAsyncRepo,
 		},
 		{
 			name:           "边界场景 - typedOperators为空map",
@@ -72,6 +75,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 				metric:         mockMetric,
 				typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
 			},
+			evalAsyncRepo: mockEvalAsyncRepo,
 		},
 		{
 			name:           "边界场景 - typedOperators为nil",
@@ -85,6 +89,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 				metric:         mockMetric,
 				typedOperators: nil,
 			},
+			evalAsyncRepo: mockEvalAsyncRepo,
 		},
 		{
 			name:           "边界场景 - evalTargetRepo为nil",
@@ -102,6 +107,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 					entity.EvalTargetType(1): mockOperator,
 				},
 			},
+			evalAsyncRepo: mockEvalAsyncRepo,
 		},
 		{
 			name:           "边界场景 - idgen为nil",
@@ -119,6 +125,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 					entity.EvalTargetType(1): mockOperator,
 				},
 			},
+			evalAsyncRepo: mockEvalAsyncRepo,
 		},
 		{
 			name:           "边界场景 - metric为nil",
@@ -136,6 +143,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 					entity.EvalTargetType(1): mockOperator,
 				},
 			},
+			evalAsyncRepo: mockEvalAsyncRepo,
 		},
 	}
 
@@ -145,7 +153,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 				tt.mockSetup()
 			}
 
-			serviceInstance := NewEvalTargetServiceImpl(tt.evalTargetRepo, tt.idgen, tt.metric, tt.typedOperators)
+			serviceInstance := NewEvalTargetServiceImpl(tt.evalTargetRepo, tt.idgen, tt.metric, tt.typedOperators, tt.evalAsyncRepo)
 
 			actualInstance, ok := serviceInstance.(*EvalTargetServiceImpl)
 			assert.True(t, ok)
