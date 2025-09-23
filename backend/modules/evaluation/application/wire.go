@@ -278,7 +278,8 @@ func InitEvalTargetApplication(ctx context.Context,
 	executeClient promptexecuteservice.Client,
 	authClient authservice.Client,
 	cmdable redis.Cmdable,
-	meter metrics.Meter) evaluation.EvalTargetService {
+	meter metrics.Meter,
+) evaluation.EvalTargetService {
 	wire.Build(
 		evalTargetSet,
 	)
