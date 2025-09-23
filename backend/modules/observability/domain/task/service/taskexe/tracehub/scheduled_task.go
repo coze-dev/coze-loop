@@ -102,11 +102,9 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	}
 
 	var tasks []*task.Task
-	taskRunstat := make(map[int64]bool)
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
-	var taskRun *entity.TaskRun
 	for _, taskPO := range taskPOs {
-		tasks = append(tasks, tconv.TaskPO2DTO(ctx, taskPO, nil))
+		var taskRun *entity.TaskRun
 		// 计算 taskRunstat：只有当所有 run 都为 done 状态时才为 true
 		allRunsDone := true
 		if len(taskPO.TaskRuns) == 0 {
@@ -123,12 +121,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			}
 		}
 
-		taskRunstat[taskPO.ID] = allRunsDone
-	}
-	logs.CtxInfo(ctx, "taskPOs:%v", taskPOs)
-	logs.CtxInfo(ctx, "taskRunstat:%v", taskRunstat)
-	// 遍历任务
-	for _, taskInfo := range tasks {
+		taskInfo := tconv.TaskPO2DTO(ctx, taskPO, nil)
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
 		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc, err := processor.NewProcessor(ctx, taskInfo.TaskType)
@@ -139,7 +132,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 达到任务时间期限
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
-		if (time.Now().After(endTime) || taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0) && taskRunstat[taskInfo.GetID()] {
+		if (time.Now().After(endTime) || taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0) && allRunsDone {
 
 			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:    taskInfo,
@@ -164,7 +157,32 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				continue
 			}
 		}
+		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetRule().GetSampler().GetIsCycle() {
+			// 达到单次任务时间期限
+			if time.Now().After(taskRun.RunEndAt) {
+				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
+				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+					Task:    taskInfo,
+					TaskRun: taskRun,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					continue
+				}
+				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+					CurrentTask: taskInfo,
+					RunType:     task.TaskRunTypeBackFill,
+					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
+					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					continue
+				}
+			}
+		}
 	}
+
 }
 
 // syncTaskRunCounts 同步TaskRunCount到数据库
