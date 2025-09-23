@@ -241,9 +241,10 @@ func (p *ModelPlatform) Value() (driver.Value, error) {
 type EvalTargetRunStatus int64
 
 const (
-	EvalTargetRunStatus_Unknown EvalTargetRunStatus = 0
-	EvalTargetRunStatus_Success EvalTargetRunStatus = 1
-	EvalTargetRunStatus_Fail    EvalTargetRunStatus = 2
+	EvalTargetRunStatus_Unknown       EvalTargetRunStatus = 0
+	EvalTargetRunStatus_Success       EvalTargetRunStatus = 1
+	EvalTargetRunStatus_Fail          EvalTargetRunStatus = 2
+	EvalTargetRunStatus_AsyncInvoking EvalTargetRunStatus = 3
 )
 
 func (p EvalTargetRunStatus) String() string {
@@ -254,6 +255,8 @@ func (p EvalTargetRunStatus) String() string {
 		return "Success"
 	case EvalTargetRunStatus_Fail:
 		return "Fail"
+	case EvalTargetRunStatus_AsyncInvoking:
+		return "AsyncInvoking"
 	}
 	return "<UNSET>"
 }
@@ -266,6 +269,8 @@ func EvalTargetRunStatusFromString(s string) (EvalTargetRunStatus, error) {
 		return EvalTargetRunStatus_Success, nil
 	case "Fail":
 		return EvalTargetRunStatus_Fail, nil
+	case "AsyncInvoking":
+		return EvalTargetRunStatus_AsyncInvoking, nil
 	}
 	return EvalTargetRunStatus(0), fmt.Errorf("not a valid EvalTargetRunStatus string")
 }

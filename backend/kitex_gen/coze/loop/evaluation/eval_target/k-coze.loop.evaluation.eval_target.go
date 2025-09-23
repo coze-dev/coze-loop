@@ -7391,20 +7391,6 @@ func (p *DebugEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 13:
-			if fieldTypeId == thrift.MAP {
-				l, err = p.FastReadField13(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -7521,39 +7507,6 @@ func (p *DebugEvalTargetRequest) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DebugEvalTargetRequest) FastReadField13(buf []byte) (int, error) {
-	offset := 0
-
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make(map[string]*common.Content, size)
-	values := make([]common.Content, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_key = v
-		}
-
-		_val := &values[i]
-		_val.InitDefault()
-		if l, err := _val.FastRead(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-		}
-
-		_field[_key] = _val
-	}
-	p.InputFields = _field
-	return offset, nil
-}
-
 func (p *DebugEvalTargetRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := eval_target.NewCustomRPCServer()
@@ -7590,7 +7543,6 @@ func (p *DebugEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
-		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7606,7 +7558,6 @@ func (p *DebugEvalTargetRequest) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
-		l += p.field13Length()
 		l += p.field50Length()
 		l += p.field255Length()
 	}
@@ -7655,23 +7606,6 @@ func (p *DebugEvalTargetRequest) fastWriteField12(buf []byte, w thrift.NocopyWri
 	if p.IsSetEnv() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
-	}
-	return offset
-}
-
-func (p *DebugEvalTargetRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetInputFields() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 13)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
-		var length int
-		for k, v := range p.InputFields {
-			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			offset += v.FastWriteNocopy(buf[offset:], w)
-		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -7739,21 +7673,6 @@ func (p *DebugEvalTargetRequest) field12Length() int {
 	return l
 }
 
-func (p *DebugEvalTargetRequest) field13Length() int {
-	l := 0
-	if p.IsSetInputFields() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.InputFields {
-			_, _ = k, v
-
-			l += thrift.Binary.StringLengthNocopy(k)
-			l += v.BLength()
-		}
-	}
-	return l
-}
-
 func (p *DebugEvalTargetRequest) field50Length() int {
 	l := 0
 	if p.IsSetCustomRPCServer() {
@@ -7811,26 +7730,6 @@ func (p *DebugEvalTargetRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Env)
 		}
 		p.Env = &tmp
-	}
-
-	if src.InputFields != nil {
-		p.InputFields = make(map[string]*common.Content, len(src.InputFields))
-		for key, val := range src.InputFields {
-			var _key string
-			if key != "" {
-				_key = kutils.StringDeepCopy(key)
-			}
-
-			var _val *common.Content
-			if val != nil {
-				_val = &common.Content{}
-				if err := _val.DeepCopy(val); err != nil {
-					return err
-				}
-			}
-
-			p.InputFields[_key] = _val
-		}
 	}
 
 	var _customRPCServer *eval_target.CustomRPCServer
@@ -8111,20 +8010,6 @@ func (p *AsyncDebugEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 13:
-			if fieldTypeId == thrift.MAP {
-				l, err = p.FastReadField13(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -8241,39 +8126,6 @@ func (p *AsyncDebugEvalTargetRequest) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *AsyncDebugEvalTargetRequest) FastReadField13(buf []byte) (int, error) {
-	offset := 0
-
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make(map[string]*common.Content, size)
-	values := make([]common.Content, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_key = v
-		}
-
-		_val := &values[i]
-		_val.InitDefault()
-		if l, err := _val.FastRead(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-		}
-
-		_field[_key] = _val
-	}
-	p.InputFields = _field
-	return offset, nil
-}
-
 func (p *AsyncDebugEvalTargetRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := eval_target.NewCustomRPCServer()
@@ -8310,7 +8162,6 @@ func (p *AsyncDebugEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
-		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -8326,7 +8177,6 @@ func (p *AsyncDebugEvalTargetRequest) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
-		l += p.field13Length()
 		l += p.field50Length()
 		l += p.field255Length()
 	}
@@ -8375,23 +8225,6 @@ func (p *AsyncDebugEvalTargetRequest) fastWriteField12(buf []byte, w thrift.Noco
 	if p.IsSetEnv() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
-	}
-	return offset
-}
-
-func (p *AsyncDebugEvalTargetRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetInputFields() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 13)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
-		var length int
-		for k, v := range p.InputFields {
-			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			offset += v.FastWriteNocopy(buf[offset:], w)
-		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -8459,21 +8292,6 @@ func (p *AsyncDebugEvalTargetRequest) field12Length() int {
 	return l
 }
 
-func (p *AsyncDebugEvalTargetRequest) field13Length() int {
-	l := 0
-	if p.IsSetInputFields() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.InputFields {
-			_, _ = k, v
-
-			l += thrift.Binary.StringLengthNocopy(k)
-			l += v.BLength()
-		}
-	}
-	return l
-}
-
 func (p *AsyncDebugEvalTargetRequest) field50Length() int {
 	l := 0
 	if p.IsSetCustomRPCServer() {
@@ -8531,26 +8349,6 @@ func (p *AsyncDebugEvalTargetRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Env)
 		}
 		p.Env = &tmp
-	}
-
-	if src.InputFields != nil {
-		p.InputFields = make(map[string]*common.Content, len(src.InputFields))
-		for key, val := range src.InputFields {
-			var _key string
-			if key != "" {
-				_key = kutils.StringDeepCopy(key)
-			}
-
-			var _val *common.Content
-			if val != nil {
-				_val = &common.Content{}
-				if err := _val.DeepCopy(val); err != nil {
-					return err
-				}
-			}
-
-			p.InputFields[_key] = _val
-		}
 	}
 
 	var _customRPCServer *eval_target.CustomRPCServer

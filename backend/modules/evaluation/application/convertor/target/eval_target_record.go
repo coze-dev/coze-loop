@@ -268,7 +268,7 @@ func getInt32Value(ptr *int32) int32 {
 	return 0
 }
 
-func toSPIContentDO(spiContent *spi.Content) *entity.Content {
+func ToSPIContentDO(spiContent *spi.Content) *entity.Content {
 	if spiContent == nil {
 		return nil
 	}
@@ -290,7 +290,7 @@ func toSPIContentDO(spiContent *spi.Content) *entity.Content {
 	if spiContent.MultiPart != nil {
 		multiPart = make([]*entity.Content, 0, len(spiContent.MultiPart))
 		for _, part := range spiContent.MultiPart {
-			multiPart = append(multiPart, toSPIContentDO(part))
+			multiPart = append(multiPart, ToSPIContentDO(part))
 		}
 	}
 
@@ -323,7 +323,7 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 
 		outputFields := make(map[string]*entity.Content)
 		if output.ActualOutput != nil {
-			outputFields[consts.OutputSchemaKey] = toSPIContentDO(output.ActualOutput)
+			outputFields[consts.OutputSchemaKey] = ToSPIContentDO(output.ActualOutput)
 		}
 
 		var evalTargetUsage *entity.EvalTargetUsage

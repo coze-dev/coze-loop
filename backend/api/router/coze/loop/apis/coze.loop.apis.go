@@ -341,11 +341,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 		{
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
 			{
-				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)
-				{
-					_eval_targets0 := _evaluation0.Group("/eval_targets", _eval_targets0Mw(handler)...)
-					_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
-				}
+				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
+				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 			}
 			{
 				_files := _loop.Group("/files", _filesMw(handler)...)

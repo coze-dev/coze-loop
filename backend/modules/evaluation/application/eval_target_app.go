@@ -8,12 +8,14 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	eval_target_dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -21,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
@@ -487,6 +490,11 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 	//	return nil, err
 	//}
 
+	inputFields := make(map[string]*spi.Content)
+	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
+	}
+
 	switch request.GetEvalTargetType() {
 	case eval_target_dto.EvalTargetType_CustomRPCServer:
 		record, err := e.evalTargetService.DebugTarget(ctx, &entity.DebugTargetParam{
@@ -501,7 +509,9 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 				},
 			},
 			InputData: &entity.EvalTargetInputData{
-				InputFields: target.ContentDTO2DOs(request.GetInputFields()),
+				InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) {
+					return k, target.ToSPIContentDO(v)
+				}),
 				Ext: map[string]string{
 					consts.FieldAdapterBuiltinFieldNameRuntimeParam: request.GetTargetRuntimeParam().GetJSONValue(),
 				},
@@ -529,6 +539,11 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 	//	return nil, err
 	//}
 
+	inputFields := make(map[string]*spi.Content)
+	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
+	}
+
 	switch request.GetEvalTargetType() {
 	case eval_target_dto.EvalTargetType_CustomRPCServer:
 		record, err := e.evalTargetService.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
@@ -543,7 +558,9 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 				},
 			},
 			InputData: &entity.EvalTargetInputData{
-				InputFields: target.ContentDTO2DOs(request.GetInputFields()),
+				InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) {
+					return k, target.ToSPIContentDO(v)
+				}),
 				Ext: map[string]string{
 					consts.FieldAdapterBuiltinFieldNameRuntimeParam: request.GetTargetRuntimeParam().GetJSONValue(),
 				},
