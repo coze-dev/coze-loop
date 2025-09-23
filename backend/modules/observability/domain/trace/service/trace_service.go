@@ -278,10 +278,11 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		return nil, err
 	}
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		PlatformType:   req.PlatformType,
-		QueryStartTime: req.StartTime,
-		QueryEndTime:   req.EndTime,
+		WorkspaceId:     req.WorkspaceID,
+		PlatformType:    req.PlatformType,
+		QueryStartTime:  req.StartTime,
+		QueryEndTime:    req.EndTime,
+		SpanDoubleCheck: len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -381,6 +382,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		QueryStartTime:        req.StartTime,
 		QueryEndTime:          req.EndTime,
 		PlatformType:          req.PlatformType,
+		SpanDoubleCheck:       req.Filters != nil && len(req.Filters.FilterFields) > 0,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
