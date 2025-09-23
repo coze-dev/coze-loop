@@ -274,6 +274,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_views.DELETE("/:view_id", append(_deleteviewMw(handler), apis.DeleteView)...)
 				_views.PUT("/:view_id", append(_updateviewMw(handler), apis.UpdateView)...)
 				{
+					_metrics := _v14.Group("/metrics", _metricsMw(handler)...)
+					_metrics.POST("/list", append(_getmetricsMw(handler), apis.GetMetrics)...)
+				}
+				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
 				}

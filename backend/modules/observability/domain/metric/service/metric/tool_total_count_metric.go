@@ -15,7 +15,7 @@ import (
 // ToolTotalCountMetric 工具调用次数指标
 type ToolTotalCountMetric struct{}
 
-func (m *ToolTotalCountMetric) Name() entity.MetricName {
+func (m *ToolTotalCountMetric) Name() string {
 	return entity.MetricNameToolTotalCount
 }
 

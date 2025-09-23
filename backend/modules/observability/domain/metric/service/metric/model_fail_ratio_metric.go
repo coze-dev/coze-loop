@@ -14,7 +14,7 @@ import (
 // ModelFailRatioMetric 模型调用错误率指标
 type ModelFailRatioMetric struct{}
 
-func (m *ModelFailRatioMetric) Name() entity.MetricName {
+func (m *ModelFailRatioMetric) Name() string {
 	return entity.MetricNameModelFailRatio
 }
 

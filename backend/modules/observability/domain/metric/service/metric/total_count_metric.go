@@ -14,7 +14,7 @@ import (
 // TotalCountMetric 使用次数指标
 type TotalCountMetric struct{}
 
-func (m *TotalCountMetric) Name() entity.MetricName {
+func (m *TotalCountMetric) Name() string {
 	return entity.MetricNameTotalCount
 }
 

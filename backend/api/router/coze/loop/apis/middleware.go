@@ -1270,3 +1270,13 @@ func _listtracesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _metricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getmetricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

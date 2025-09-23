@@ -1,4 +1,12 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
+namespace go coze.loop.observability.domain.metric
 
-package domain
+struct Metric {
+    1: optional string Summary
+    2: optional map<string, string> Pie
+    3: optional map<string, list<MetricPoint>> TimeSeries
+}
+
+struct MetricPoint {
+    1: optional string Timestamp
+    2: optional string Value
+}

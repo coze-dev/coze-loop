@@ -15,7 +15,7 @@ import (
 // ToolFailRatioMetric 工具调用错误率指标
 type ToolFailRatioMetric struct{}
 
-func (m *ToolFailRatioMetric) Name() entity.MetricName {
+func (m *ToolFailRatioMetric) Name() string {
 	return entity.MetricNameToolFailRatio
 }
 

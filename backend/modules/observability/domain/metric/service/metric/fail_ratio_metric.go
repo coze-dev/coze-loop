@@ -14,7 +14,7 @@ import (
 // FailRatioMetric Span错误率指标
 type FailRatioMetric struct{}
 
-func (m *FailRatioMetric) Name() entity.MetricName {
+func (m *FailRatioMetric) Name() string {
 	return entity.MetricNameFailRatio
 }
 

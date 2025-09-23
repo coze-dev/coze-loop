@@ -10,7 +10,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-type MetricName string
 type MetricType string
 type MetricSource string
 type MetricGranularity string
@@ -26,14 +25,14 @@ const (
 	MetricsGranularity1Hour MetricGranularity = "1hour"
 	MetricsGranularity1Day  MetricGranularity = "1day"
 
-	MetricNameModelFailRatio   MetricName = "model_fail_ratio"
-	MetricNameToolFailRatio    MetricName = "tool_fail_ratio"
-	MetricNameModelLatencyAvg  MetricName = "model_latency_avg"
-	MetricNameModelTotalTokens MetricName = "model_total_tokens"
-	MetricNameToolLatencyAvg   MetricName = "tool_latency_avg"
-	MetricNameToolTotalCount   MetricName = "tool_total_count"
-	MetricNameTotalCount       MetricName = "total_count"
-	MetricNameFailRatio        MetricName = "fail_ratio"
+	MetricNameModelFailRatio   = "model_fail_ratio"
+	MetricNameToolFailRatio    = "tool_fail_ratio"
+	MetricNameModelLatencyAvg  = "model_latency_avg"
+	MetricNameModelTotalTokens = "model_total_tokens"
+	MetricNameToolLatencyAvg   = "tool_latency_avg"
+	MetricNameToolTotalCount   = "tool_total_count"
+	MetricNameTotalCount       = "total_count"
+	MetricNameFailRatio        = "fail_ratio"
 )
 
 type Dimension struct {
@@ -42,7 +41,7 @@ type Dimension struct {
 }
 
 type IMetricDefinition interface {
-	Name() MetricName                                                                                  // 指标名，全局唯一
+	Name() string                                                                                      // 指标名，全局唯一
 	Type() MetricType                                                                                  // 指标类型
 	Source() MetricSource                                                                              // 数据来源
 	Expression(MetricGranularity) string                                                               // 计算表达式

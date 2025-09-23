@@ -14,7 +14,7 @@ import (
 // ModelTotalTokensMetric 模型Tokens消耗指标
 type ModelTotalTokensMetric struct{}
 
-func (m *ModelTotalTokensMetric) Name() entity.MetricName {
+func (m *ModelTotalTokensMetric) Name() string {
 	return entity.MetricNameModelTotalTokens
 }
 

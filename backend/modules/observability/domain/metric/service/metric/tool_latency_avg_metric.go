@@ -15,7 +15,7 @@ import (
 // ToolLatencyAvgMetric 工具调用平均耗时指标
 type ToolLatencyAvgMetric struct{}
 
-func (m *ToolLatencyAvgMetric) Name() entity.MetricName {
+func (m *ToolLatencyAvgMetric) Name() string {
 	return entity.MetricNameToolLatencyAvg
 }
 

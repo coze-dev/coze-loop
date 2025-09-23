@@ -35,7 +35,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100"},
 						},
 					},
@@ -63,7 +63,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100"},
 							{Timestamp: "2023-01-01T01:00:00Z", Value: "200"},
 						},
@@ -95,7 +95,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100"},
 							{Timestamp: "2023-01-01T01:00:00Z", Value: "200"},
 						},
@@ -103,7 +103,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 				},
 				"metric2": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "50"},
 							{Timestamp: "2023-01-01T01:00:00Z", Value: "75"},
 						},
@@ -238,7 +238,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100"},
 						},
 					},
@@ -268,28 +268,28 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100"},
 						},
 					},
 				},
 				"metric2": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100.5"},
 						},
 					},
 				},
 				"metric3": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "string"},
 						},
 					},
 				},
 				"metric4": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"": {
+						"all": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: ""},
 						},
 					},
@@ -557,7 +557,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					Pie: map[string]string{
-						"": "100",
+						"all": "100",
 					},
 				},
 			},

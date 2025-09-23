@@ -25,7 +25,7 @@ import (
 type QueryMetricsReq struct {
 	PlatformType loop_span.PlatformType
 	WorkspaceID  int64
-	MetricsNames []entity.MetricName
+	MetricsNames []string
 	Granularity  entity.MetricGranularity
 	FilterFields *loop_span.FilterFields
 	StartTime    int64

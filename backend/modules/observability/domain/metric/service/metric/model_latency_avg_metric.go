@@ -14,7 +14,7 @@ import (
 // ModelLatencyAvgMetric 模型调用平均耗时指标
 type ModelLatencyAvgMetric struct{}
 
-func (m *ModelLatencyAvgMetric) Name() entity.MetricName {
+func (m *ModelLatencyAvgMetric) Name() string {
 	return entity.MetricNameModelLatencyAvg
 }
 

@@ -15,6 +15,7 @@ const (
 	AuthActionAnnotationCreate   = "createLoopTraceAnnotation"
 	AuthActionTraceExport        = "exportLoopTrace"
 	AuthActionTracePreviewExport = "previewExportLoopTrace"
+	AuthActionTraceMetricRead    = "readLoopIndictor"
 )
 
 //go:generate mockgen -destination=mocks/auth_provider.go -package=mocks . IAuthProvider

@@ -24,7 +24,7 @@ type GetMetricsResult struct {
 	Data []map[string]any
 }
 
-//go:generate mockgen -destination=mocks/metrics.go -package=mocks . IMetricsRepo
+//go:generate mockgen -destination=mocks/metrics.go -package=mocks . IMetricRepo
 type IMetricRepo interface {
 	GetMetrics(ctx context.Context, param *GetMetricsParam) (*GetMetricsResult, error)
 }
