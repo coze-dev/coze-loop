@@ -67,8 +67,8 @@ func (p *DataReflowProcessor) Invoke(ctx context.Context, config any, trigger *t
 	p.taskRepo.IncrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
 	p.taskRepo.IncrTaskRunSuccessCount(ctx, *trigger.Task.ID, taskRun.ID)
 
-	if (trigger.Task.GetRule().GetSampler().GetCycleCount() != 0 && taskRunCount > trigger.Task.GetRule().GetSampler().GetCycleCount()) ||
-		(taskCount > trigger.Task.GetRule().GetSampler().GetSampleSize()) {
+	if (trigger.Task.GetRule().GetSampler().GetCycleCount() != 0 && taskRunCount+1 > trigger.Task.GetRule().GetSampler().GetCycleCount()) ||
+		(taskCount+1 > trigger.Task.GetRule().GetSampler().GetSampleSize()) {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
 		p.taskRepo.DecrTaskCount(ctx, *trigger.Task.ID)
 		p.taskRepo.DecrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
