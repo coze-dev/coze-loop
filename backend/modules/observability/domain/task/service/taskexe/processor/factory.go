@@ -47,3 +47,28 @@ func InitProcessor(
 	autoEvaluteProc = NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo)
 	dataReflowProc = NewDataReflowProcessor(datasetServiceProvider, taskRepo, taskRunRepo)
 }
+
+type TaskProcessor struct {
+	taskProcessorMap map[task.TaskType]taskexe.Processor
+}
+
+func NewTaskProcessor() *TaskProcessor {
+	return &TaskProcessor{
+		taskProcessorMap: make(map[task.TaskType]taskexe.Processor),
+	}
+}
+
+func (t *TaskProcessor) Register(ctx context.Context, taskType task.TaskType, taskProcessor taskexe.Processor) {
+	if t.taskProcessorMap == nil {
+		t.taskProcessorMap = make(map[task.TaskType]taskexe.Processor)
+	}
+	t.taskProcessorMap[taskType] = taskProcessor
+}
+
+func (t *TaskProcessor) GetTaskProcessor(taskType task.TaskType) taskexe.Processor {
+	datasetProvider, ok := t.taskProcessorMap[taskType]
+	if !ok {
+		return NewNoopTaskProcessor()
+	}
+	return datasetProvider
+}

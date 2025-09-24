@@ -23,9 +23,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -116,7 +118,7 @@ var (
 	)
 	taskSet = wire.NewSet(
 		//NewDatasetServiceAdapter,
-		NewInitProcessor,
+		NewInitTaskProcessor,
 		tracehub.NewTraceHubImpl,
 		NewTaskApplication,
 		auth.NewAuthProvider,
@@ -197,14 +199,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 	return adapter
 }
 
-func NewInitProcessor(
-	datasetServiceProvider *service.DatasetServiceAdaptor,
-	evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter,
-	taskRepo repo.ITaskRepo,
-	taskRunRepo repo.ITaskRunRepo) {
-	autoEvaluteProc = task_processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo)
-	dataReflowProc = task_processor.NewDataReflowProcessor(datasetServiceProvider, taskRepo, taskRunRepo)
+func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo.ITaskRepo, taskRunRepo repo.ITaskRunRepo) taskexe.Processor {
+	taskProcessor := task_processor.NewTaskProcessor()
+	taskProcessor.Register(ctx, task.TaskType_AutoEvalute, task_processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo))
+	return taskProcessor
 }
 
 func InitTraceApplication(
