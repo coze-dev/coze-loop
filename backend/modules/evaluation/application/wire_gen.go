@@ -57,7 +57,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
@@ -90,8 +89,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
 	logger := NewLogger()
 	sandboxConfig := NewSandboxConfig()
-	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
-	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
+	iRuntimeFactory := NewStubRuntimeFactory(logger, sandboxConfig)
+	iRuntimeManager := NewStubRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
 	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
 	serviceEvaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
@@ -177,8 +176,8 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
 	logger := NewLogger()
 	sandboxConfig := NewSandboxConfig()
-	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
-	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
+	iRuntimeFactory := NewStubRuntimeFactory(logger, sandboxConfig)
+	iRuntimeManager := NewStubRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
 	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
 	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
@@ -243,7 +242,8 @@ var (
 		flagSet,
 	)
 
-	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, runtime.NewRuntimeFactory, NewRuntimeManagerFromFactory,
+	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, NewStubRuntimeFactory,
+		NewStubRuntimeManagerFromFactory,
 		NewSandboxConfig,
 		NewLogger, service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher,
 	)
@@ -288,9 +288,14 @@ func NewLogger() *logrus.Logger {
 	return logger
 }
 
-// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
-func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
-	return runtime.NewRuntimeManager(factory, logger)
+// NewStubRuntimeFactory 创建存根运行时工厂
+func NewStubRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
+	return service.NewStubRuntimeFactory(logger, sandboxConfig)
+}
+
+// NewStubRuntimeManagerFromFactory 从工厂创建存根运行时管理器
+func NewStubRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return service.NewStubRuntimeManager(factory, logger)
 }
 
 func NewEvaluatorSourceServices(
@@ -300,6 +305,9 @@ func NewEvaluatorSourceServices(
 	runtimeManager component.IRuntimeManager,
 	codeBuilderFactory service.CodeBuilderFactory,
 ) map[entity.EvaluatorType]service.EvaluatorSourceService {
+
+	codeBuilderFactory.SetRuntimeManager(runtimeManager)
+
 	services := []service.EvaluatorSourceService{service.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config), service.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric)}
 
 	serviceMap := make(map[entity.EvaluatorType]service.EvaluatorSourceService)
