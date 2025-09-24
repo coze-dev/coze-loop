@@ -70,15 +70,32 @@ func (p *EvaluatorContent) IsValid() error {
 	return nil
 }
 func (p *Evaluator) IsValid() error {
-	if p.BaseInfo != nil {
-		if err := p.BaseInfo.IsValid(); err != nil {
-			return fmt.Errorf("field BaseInfo not valid, %w", err)
-		}
+	if p.EvaluatorID == nil {
+		return fmt.Errorf("field EvaluatorID not_nil rule failed")
 	}
-	if p.CurrentVersion != nil {
-		if err := p.CurrentVersion.IsValid(); err != nil {
-			return fmt.Errorf("field CurrentVersion not valid, %w", err)
-		}
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if p.EvaluatorType == nil {
+		return fmt.Errorf("field EvaluatorType not_nil rule failed")
+	}
+	if p.Name == nil {
+		return fmt.Errorf("field Name not_nil rule failed")
+	}
+	if p.Description == nil {
+		return fmt.Errorf("field Description not_nil rule failed")
+	}
+	if p.BaseInfo == nil {
+		return fmt.Errorf("field BaseInfo not_nil rule failed")
+	}
+	if err := p.BaseInfo.IsValid(); err != nil {
+		return fmt.Errorf("field BaseInfo not valid, %w", err)
+	}
+	if p.CurrentVersion == nil {
+		return fmt.Errorf("field CurrentVersion not_nil rule failed")
+	}
+	if err := p.CurrentVersion.IsValid(); err != nil {
+		return fmt.Errorf("field CurrentVersion not valid, %w", err)
 	}
 	return nil
 }

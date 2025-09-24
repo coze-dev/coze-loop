@@ -22,23 +22,26 @@ var (
 )
 
 func (p *CreateEvaluationSetRequest) IsValid() error {
-	if p.Name != nil {
-		if len(*p.Name) < int(1) {
-			return fmt.Errorf("field Name min_len rule failed, current value: %d", len(*p.Name))
-		}
-		if len(*p.Name) > int(255) {
-			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
-		}
+	if p.Name == nil {
+		return fmt.Errorf("field Name not_nil rule failed")
 	}
-	if p.Description != nil {
-		if len(*p.Description) > int(2048) {
-			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
-		}
+	if len(*p.Name) < int(1) {
+		return fmt.Errorf("field Name min_len rule failed, current value: %d", len(*p.Name))
 	}
-	if p.EvaluationSetSchema != nil {
-		if err := p.EvaluationSetSchema.IsValid(); err != nil {
-			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
-		}
+	if len(*p.Name) > int(255) {
+		return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
+	}
+	if p.Description == nil {
+		return fmt.Errorf("field Description not_nil rule failed")
+	}
+	if len(*p.Description) > int(2048) {
+		return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+	}
+	if p.EvaluationSetSchema == nil {
+		return fmt.Errorf("field EvaluationSetSchema not_nil rule failed")
+	}
+	if err := p.EvaluationSetSchema.IsValid(); err != nil {
+		return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
 	}
 	if p.BizCategory != nil {
 		if len(*p.BizCategory) > int(128) {

@@ -74,10 +74,10 @@ struct Tool {
 
 
 struct BizParam {
-    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', vt.not_nil="true")
     2: optional string user_id
-    3: optional common.Scenario scenario // 使用场景
-    4: optional string scenario_entity_id // 场景实体id(非必填)
+    3: optional common.Scenario scenario  (vt.not_nil="true") // 使用场景
+    4: optional string scenario_entity_id  (vt.not_nil="true") // 场景实体id, prompt场景需要传prompt key
     5: optional string scenario_entity_version // 场景实体version(非必填)
     6: optional string scenario_entity_key // 场景实体key(非必填), prompt场景需要传prompt key
 }
