@@ -30,16 +30,21 @@ services:
 
         export ROCKETMQ_GO_LOG_LEVEL=error
 
-        print_banner "Starting Go Remote Debug Server..."
-        echo "调试服务将在端口40000上监听"
-        echo "IDE连接地址: localhost:40000"
-        
-        # 不等待healthcheck，直接启动调试器
-        # 因为healthcheck检查的是8888端口，但调试模式下我们使用40000端口
-        
-        exec dlv exec /coze-loop/bin/main \
-          --headless \
-          --listen=0.0.0.0:40000 \
-          --api-version=2 \
-          --accept-multiclient \
-          --log
+        (
+          while true; do
+            if sh /coze-loop/bootstrap/healthcheck.sh; then
+              print_banner "Completed!"
+              break
+            else
+              sleep 1
+            fi
+          done
+        )&
+
+        exec dlv \
+          exec /coze-loop/bin/main \
+            --headless \
+            --listen=:40000 \
+            --api-version=2 \
+            --accept-multiclient \
+            --log

@@ -14,6 +14,8 @@ import (
 type UserCodeBuilder interface {
 	// BuildCode 构建可执行代码
 	BuildCode(input *entity.EvaluatorInputData, codeVersion *entity.CodeEvaluatorVersion) (string, error)
+	// BuildSyntaxCheckCode 构建语法检查代码
+	BuildSyntaxCheckCode(userCode string) string
 	// GetLanguageType 获取支持的语言类型
 	GetLanguageType() entity.LanguageType
 	// SetRuntime 设置运行时实例（用于获取return_val函数）

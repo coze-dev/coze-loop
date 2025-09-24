@@ -1,6 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
+// SPDX-License-Identifier: Apache-2.0	return errorx.NewByCode(errno.RequiredFunctionNotFoundCode, errorx.WithExtraMsg("代码中必须定义 exec_evaluation 或 execEvaluation 函数。JavaScript 函数定义格式：function execEvaluation(turn, userInput, modelOutput, modelConfig, evaluatorConfig) { ... } 或 function exec_evaluation(turn, user_input, model_output, model_config, evaluator_config) { ... }"))
 package service
 
 import (
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -21,6 +21,159 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
+// MaliciousPatternCategory 恶意模式类别
+type MaliciousPatternCategory string
+
+const (
+	CategoryInfiniteLoop    MaliciousPatternCategory = "infinite_loop"     // 无限循环
+	CategoryProcessControl  MaliciousPatternCategory = "process_control"   // 进程控制
+	CategoryAsyncOperation  MaliciousPatternCategory = "async_operation"   // 异步操作
+	CategoryResourceAccess  MaliciousPatternCategory = "resource_access"   // 资源访问
+)
+
+// MaliciousPattern 恶意模式定义
+type MaliciousPattern struct {
+	Pattern     string                   // 正则表达式
+	Category    MaliciousPatternCategory // 威胁类型
+	Description string                   // 模式描述
+	Languages   []string                 // 适用语言
+	Severity    string                   // 严重程度
+	Risk        string                   // 风险说明
+	Suggestion  string                   // 修复建议
+}
+
+
+// 恶意模式定义映射表
+var maliciousPatternsMap = map[string][]MaliciousPattern{
+	"python": {
+		{
+			Pattern:     `while\s+True\s*:`,
+			Category:    CategoryInfiniteLoop,
+			Description: "Python while True 无限循环",
+			Languages:   []string{"python"},
+			Severity:    "high",
+			Risk:        "此模式可能导致程序无限运行，消耗系统资源，造成系统卡死",
+			Suggestion:  "请使用有明确终止条件的循环，如 for i in range(10): 或添加 break 条件",
+		},
+		{
+			Pattern:     `exit\s*\(`,
+			Category:    CategoryProcessControl,
+			Description: "Python exit() 进程退出",
+			Languages:   []string{"python"},
+			Severity:    "medium",
+			Risk:        "此函数会强制退出程序，可能导致评估过程异常终止",
+			Suggestion:  "请使用 return 语句正常返回结果，避免使用 exit() 函数",
+		},
+		{
+			Pattern:     `quit\s*\(`,
+			Category:    CategoryProcessControl,
+			Description: "Python quit() 进程退出",
+			Languages:   []string{"python"},
+			Severity:    "medium",
+			Risk:        "此函数会强制退出程序，可能导致评估过程异常终止",
+			Suggestion:  "请使用 return 语句正常返回结果，避免使用 quit() 函数",
+		},
+	},
+	"javascript": {
+		{
+			Pattern:     `while\s*\(\s*true\s*\)`,
+			Category:    CategoryInfiniteLoop,
+			Description: "JavaScript while(true) 无限循环",
+			Languages:   []string{"javascript", "typescript"},
+			Severity:    "high",
+			Risk:        "此模式可能导致程序无限运行，消耗系统资源，造成浏览器或系统卡死",
+			Suggestion:  "请使用有明确终止条件的循环，如 for(let i=0; i<10; i++) 或添加 break 条件",
+		},
+		{
+			Pattern:     `for\s*\(\s*;\s*;\s*\)`,
+			Category:    CategoryInfiniteLoop,
+			Description: "JavaScript for(;;) 无限循环",
+			Languages:   []string{"javascript", "typescript"},
+			Severity:    "high",
+			Risk:        "此模式会创建无限循环，消耗系统资源，可能导致程序无响应",
+			Suggestion:  "请为循环添加明确的初始化、条件和递增语句，如 for(let i=0; i<10; i++)",
+		},
+		{
+			Pattern:     `setInterval\s*\(`,
+			Category:    CategoryAsyncOperation,
+			Description: "JavaScript setInterval 定时器",
+			Languages:   []string{"javascript", "typescript"},
+			Severity:    "medium",
+			Risk:        "定时器可能导致异步操作持续执行，影响系统性能和资源管理",
+			Suggestion:  "请避免使用定时器，或确保在适当时机使用 clearInterval() 清理定时器",
+		},
+		{
+			Pattern:     `setTimeout\s*\(`,
+			Category:    CategoryAsyncOperation,
+			Description: "JavaScript setTimeout 延时器",
+			Languages:   []string{"javascript", "typescript"},
+			Severity:    "low",
+			Risk:        "延时器可能导致异步操作，影响评估结果的及时性",
+			Suggestion:  "请避免使用延时器，直接执行相关逻辑或使用同步方式",
+		},
+		{
+			Pattern:     `process\.exit`,
+			Category:    CategoryProcessControl,
+			Description: "Node.js process.exit 进程退出",
+			Languages:   []string{"javascript", "typescript"},
+			Severity:    "high",
+			Risk:        "此函数会强制退出 Node.js 进程，导致评估过程异常终止",
+			Suggestion:  "请使用 return 语句正常返回结果，避免使用 process.exit",
+		},
+	},
+	"java": {
+		{
+			Pattern:     `while\s*\(\s*true\s*\)`,
+			Category:    CategoryInfiniteLoop,
+			Description: "Java while(true) 无限循环",
+			Languages:   []string{"java"},
+			Severity:    "high",
+			Risk:        "此模式可能导致程序无限运行，消耗系统资源，造成 JVM 卡死",
+			Suggestion:  "请使用有明确终止条件的循环，如 for(int i=0; i<10; i++) 或添加 break 条件",
+		},
+		{
+			Pattern:     `System\.exit`,
+			Category:    CategoryProcessControl,
+			Description: "Java System.exit 系统退出",
+			Languages:   []string{"java"},
+			Severity:    "high",
+			Risk:        "此函数会强制退出 JVM，导致整个应用程序终止",
+			Suggestion:  "请使用 return 语句正常返回结果，避免使用 System.exit",
+		},
+	},
+	"go": {
+		{
+			Pattern:     `for\s*\{\s*\}`,
+			Category:    CategoryInfiniteLoop,
+			Description: "Go for{} 无限循环",
+			Languages:   []string{"go"},
+			Severity:    "high",
+			Risk:        "此模式会创建无限循环，消耗系统资源，可能导致程序无响应",
+			Suggestion:  "请为循环添加明确的终止条件，如 for i := 0; i < 10; i++ 或添加 break 条件",
+		},
+		{
+			Pattern:     `for\s*;\s*;\s*\{`,
+			Category:    CategoryInfiniteLoop,
+			Description: "Go for;;{} 无限循环",
+			Languages:   []string{"go"},
+			Severity:    "high",
+			Risk:        "此模式会创建无限循环，消耗系统资源，可能导致程序无响应",
+			Suggestion:  "请为循环添加明确的初始化、条件和递增语句，如 for i := 0; i < 10; i++",
+		},
+	},
+}
+
+// SecurityViolationDetails 安全违规详细信息
+type SecurityViolationDetails struct {
+	Category    MaliciousPatternCategory // 威胁类型
+	Pattern     string                   // 匹配的模式
+	Description string                   // 详细描述
+	Language    string                   // 检测语言
+	Risk        string                   // 风险说明
+	Suggestion  string                   // 修复建议
+}
+
 
 // EvaluatorSourceCodeServiceImpl Code评估器服务实现
 type EvaluatorSourceCodeServiceImpl struct {
@@ -52,11 +205,16 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 	var err error
 	var code string
 	startTime := time.Now()
-	rootSpan, ctx := newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
+	// 创建trace span
+	rootSpan, ctx := c.newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
 	traceID = rootSpan.GetTraceID()
-	
+
 	defer func() {
-		c.handleRunDefer(ctx, rootSpan, &output, &err, input, evaluator, code, runStatus)
+		var errInfo error
+		if err != nil {
+			errInfo = err
+		}
+		c.handleRunDefer(ctx, rootSpan, &output, &errInfo, input, evaluator, code, runStatus)
 	}()
 
 	// 1. 验证评估器
@@ -78,38 +236,39 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 }
 
 // handleRunDefer 处理Run方法的defer逻辑
-func (c *EvaluatorSourceCodeServiceImpl) handleRunDefer(ctx context.Context, rootSpan *evaluatorSpan, output **entity.EvaluatorOutputData, err *error, input *entity.EvaluatorInputData, evaluator *entity.Evaluator, code string, runStatus entity.EvaluatorRunStatus) {
+func (c *EvaluatorSourceCodeServiceImpl) handleRunDefer(ctx context.Context, rootSpan *codeEvaluatorSpan, output **entity.EvaluatorOutputData, errInfo *error, input *entity.EvaluatorInputData, evaluator *entity.Evaluator, code string, runStatus entity.EvaluatorRunStatus) {
 	if *output == nil {
 		*output = &entity.EvaluatorOutputData{
 			EvaluatorRunError: &entity.EvaluatorRunError{},
 		}
 	}
 
-	var errInfo error
-	if *err != nil {
+	if *errInfo != nil {
 		// 处理错误信息
 		if (*output).EvaluatorRunError == nil {
 			(*output).EvaluatorRunError = &entity.EvaluatorRunError{}
 		}
-		statusErr, ok := errorx.FromStatusError(*err)
+		statusErr, ok := errorx.FromStatusError(*errInfo)
 		if ok {
 			(*output).EvaluatorRunError.Code = statusErr.Code()
 			(*output).EvaluatorRunError.Message = statusErr.Error()
-			errInfo = statusErr
 		} else {
 			(*output).EvaluatorRunError.Code = errno.CodeExecutionFailedCode
-			(*output).EvaluatorRunError.Message = (*err).Error()
-			errInfo = *err
+			(*output).EvaluatorRunError.Message = (*errInfo).Error()
 		}
 	}
 
 	// 上报trace
+	var finalErr error
+	if errInfo != nil {
+		finalErr = *errInfo
+	}
 	rootSpan.reportCodeRootSpan(ctx, &ReportCodeRootSpanRequest{
 		input:            input,
 		output:           *output,
 		runStatus:        runStatus,
 		evaluatorVersion: evaluator.CodeEvaluatorVersion,
-		errInfo:          errInfo,
+		errInfo:          finalErr,
 		code:             code, // 构建后的完整代码
 	})
 }
@@ -129,26 +288,26 @@ func (c *EvaluatorSourceCodeServiceImpl) prepareAndExecuteCode(ctx context.Conte
 	// 1. 获取代码构建器
 	codeBuilder, err := c.codeBuilderFactory.CreateBuilder(codeVersion.LanguageType)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to get code builder for language %s: %v", codeVersion.LanguageType, err)
+		return "", nil, errorx.NewByCode(errno.CodeBuilderGetFailedCode, errorx.WithExtraMsg(fmt.Sprintf("language: %s, error: %v", codeVersion.LanguageType, err)))
 	}
 
 	// 2. 构建代码
 	code, err := codeBuilder.BuildCode(input, codeVersion)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to build code: %v", err)
+		return "", nil, errorx.NewByCode(errno.CodeBuildFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 3. 获取Runtime
 	runtime, err := c.runtimeManager.GetRuntime(codeVersion.LanguageType)
 	if err != nil {
-		return code, nil, fmt.Errorf("failed to get runtime for language %s: %v", codeVersion.LanguageType, err)
+		return code, nil, errorx.NewByCode(errno.RuntimeGetFailedCode, errorx.WithExtraMsg(fmt.Sprintf("language: %s, error: %v", codeVersion.LanguageType, err)))
 	}
 
 	// 4. 执行代码
 	ext := c.buildExtParams(evaluator)
 	result, err := runtime.RunCode(ctx, code, string(codeVersion.LanguageType), c.getTimeoutMS(), ext)
 	if err != nil {
-		return code, nil, fmt.Errorf("code execution failed: %v", err)
+		return code, nil, errorx.NewByCode(errno.CodeExecutionFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	return code, result, nil
@@ -158,10 +317,10 @@ func (c *EvaluatorSourceCodeServiceImpl) prepareAndExecuteCode(ctx context.Conte
 func (c *EvaluatorSourceCodeServiceImpl) processCodeExecutionResult(result *entity.ExecutionResult, startTime time.Time) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error) {
 	// 解析评估结果
 	evaluatorResult, retValErrorMsg := c.parseEvaluationExecutionResult(result)
-	
+
 	// 处理stdout和stderr
 	processedStdout, canIgnoreStderr := c.processStdoutAndStderr(result, evaluatorResult)
-	
+
 	// 检查是否有错误
 	if evaluatorRunError := c.checkExecutionErrors(result, retValErrorMsg, canIgnoreStderr); evaluatorRunError != nil {
 		return &entity.EvaluatorOutputData{
@@ -225,12 +384,12 @@ func (c *EvaluatorSourceCodeServiceImpl) checkExecutionErrors(result *entity.Exe
 	if result.Output != nil && !canIgnoreStderr {
 		// 构造错误消息：RetVal错误信息 + stderr
 		var errorMessage string
-		
+
 		// 优先添加 RetVal 中的错误信息
 		if retValErrorMsg != "" {
 			errorMessage = retValErrorMsg
 		}
-		
+
 		// 然后添加 stderr（如果存在）
 		if result.Output.Stderr != "" {
 			if errorMessage != "" {
@@ -239,7 +398,7 @@ func (c *EvaluatorSourceCodeServiceImpl) checkExecutionErrors(result *entity.Exe
 				errorMessage = result.Output.Stderr
 			}
 		}
-		
+
 		// 只有在有错误信息时才创建 EvaluatorRunError
 		if errorMessage != "" {
 			return &entity.EvaluatorRunError{
@@ -326,7 +485,7 @@ func (c *EvaluatorSourceCodeServiceImpl) PreHandle(ctx context.Context, evaluato
 func (c *EvaluatorSourceCodeServiceImpl) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
 	// 基础验证
 	if evaluator.EvaluatorType != entity.EvaluatorTypeCode || evaluator.CodeEvaluatorVersion == nil {
-		return fmt.Errorf("invalid evaluator type or code evaluator version is nil")
+		return errorx.NewByCode(errno.InvalidEvaluatorConfigurationCode, errorx.WithExtraMsg("invalid evaluator type or code evaluator version is nil"))
 	}
 
 	codeVersion := evaluator.CodeEvaluatorVersion
@@ -353,7 +512,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Validate(ctx context.Context, evaluator
 	case entity.LanguageTypeJS:
 		return c.validateJavaScriptCode(ctx, evaluator, codeVersion)
 	default:
-		return fmt.Errorf("unsupported language type: %s", codeVersion.LanguageType)
+		return errorx.NewByCode(errno.UnsupportedLanguageTypeCode, errorx.WithExtraMsg(fmt.Sprintf("language type: %s", codeVersion.LanguageType)))
 	}
 }
 
@@ -447,13 +606,13 @@ func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationStdoutJSON(stdout 
 	// 清理stdout，移除换行符和额外的空白字符
 	stdout = strings.TrimSpace(stdout)
 	if stdout == "" {
-		return nil, fmt.Errorf("empty stdout")
+		return nil, errorx.NewByCode(errno.ExecutionResultEmptyCode, errorx.WithExtraMsg("stdout is empty"))
 	}
 
 	// 尝试解析JSON
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse stdout JSON: %v", err)
+		return nil, errorx.NewByCode(errno.ExecutionResultParseFailedCode, errorx.WithExtraMsg(fmt.Sprintf("failed to parse stdout JSON: %v", err)))
 	}
 
 	// 解码错误信息中的Unicode转义字符
@@ -471,13 +630,13 @@ func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationRetValJSON(retVal 
 	// 清理retVal，移除换行符和额外的空白字符
 	retVal = strings.TrimSpace(retVal)
 	if retVal == "" {
-		return nil, fmt.Errorf("empty ret_val")
+		return nil, errorx.NewByCode(errno.ExecutionResultEmptyCode, errorx.WithExtraMsg("ret_val is empty"))
 	}
 
 	// 尝试解析JSON
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(retVal), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse ret_val JSON: %v", err)
+		return nil, errorx.NewByCode(errno.ExecutionResultParseFailedCode, errorx.WithExtraMsg(fmt.Sprintf("failed to parse ret_val JSON: %v", err)))
 	}
 
 	// 解码错误信息中的Unicode转义字符
@@ -493,7 +652,7 @@ func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationRetValJSON(retVal 
 // processExecutionResult 处理执行结果，仅保留decodeUnicodeEscapes的处理
 func (c *EvaluatorSourceCodeServiceImpl) processExecutionResult(result *entity.ExecutionResult) (*entity.ExecutionResult, error) {
 	if result == nil {
-		return nil, fmt.Errorf("execution result is nil")
+		return nil, errorx.NewByCode(errno.ExecutionResultNilCode, errorx.WithExtraMsg("execution result is nil"))
 	}
 
 	// 处理输出信息
@@ -530,8 +689,17 @@ func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationResult(data map[st
 	// 如果无效，获取错误信息
 	if !result.Valid {
 		if errorVal, ok := data["error"]; ok {
-			if errorMsg, ok := errorVal.(string); ok {
-				result.ErrorMsg = errorMsg
+			switch errorInfo := errorVal.(type) {
+			case string:
+				// 兼容旧格式：简单字符串错误信息
+				result.ErrorMsg = errorInfo
+			case map[string]interface{}:
+				// 新格式：包含详细行列号信息的对象
+				if fullMsg, ok := errorInfo["full_message"].(string); ok {
+					result.ErrorMsg = fullMsg
+				} else if msg, ok := errorInfo["message"].(string); ok {
+					result.ErrorMsg = msg
+				}
 			}
 		}
 	}
@@ -643,11 +811,11 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationRetVal(retVal string) (s
 		// 如果 JSON 解析失败，尝试 Python 字典格式
 		jsonStr, convertErr := c.convertPythonDictToJSON(cleanedRetVal)
 		if convertErr != nil {
-			return nil, "", fmt.Errorf("failed to parse RetVal: %v, jsonStr: %s", err, jsonStr)
+			return nil, "", errorx.NewByCode(errno.ExecutionResultParseFailedCode, errorx.WithExtraMsg(fmt.Sprintf("failed to parse RetVal: %v, jsonStr: %s", err, jsonStr)))
 		}
 
 		if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-			return nil, "", fmt.Errorf("failed to parse converted RetVal JSON: %v, jsonStr: %s", err, jsonStr)
+			return nil, "", errorx.NewByCode(errno.ExecutionResultParseFailedCode, errorx.WithExtraMsg(fmt.Sprintf("failed to parse converted RetVal JSON: %v, jsonStr: %s", err, jsonStr)))
 		}
 	}
 
@@ -704,7 +872,7 @@ func (c *EvaluatorSourceCodeServiceImpl) parseEvaluationExecutionResult(result *
 func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context, evaluator *entity.Evaluator, codeVersion *entity.CodeEvaluatorVersion) error {
 	// 基础检查
 	if codeVersion.CodeContent == "" {
-		return fmt.Errorf("python code is empty")
+		return errorx.NewByCode(errno.EmptyCodeContentCode, errorx.WithExtraMsg("python code is empty"))
 	}
 
 	// 额外的Python特定安全检查
@@ -715,7 +883,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context,
 	// 获取Runtime
 	runtime, err := c.runtimeManager.GetRuntime(entity.LanguageTypePython)
 	if err != nil {
-		return fmt.Errorf("failed to get python runtime for validation: %v", err)
+		return errorx.NewByCode(errno.RuntimeGetFailedCode, errorx.WithExtraMsg(fmt.Sprintf("failed to get python runtime for validation: %v", err)))
 	}
 
 	// 构建Python语法检查代码，参考pyodide客户端的AST验证方式
@@ -725,18 +893,18 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context,
 	ext := c.buildExtParams(evaluator)
 	result, err := runtime.RunCode(ctx, syntaxCheckCode, "python", 10000, ext) // 10秒超时用于语法验证
 	if err != nil {
-		return fmt.Errorf("python syntax validation failed: %w", err)
+		return errorx.NewByCode(errno.SyntaxValidationFailedCode, errorx.WithExtraMsg(fmt.Sprintf("python syntax validation failed: %v", err)))
 	}
 
 	// 处理执行结果并解析stdout中的JSON
 	valid, errorMsg, err := c.processSyntaxValidationExecutionResult(result)
 	if err != nil {
-		return fmt.Errorf("failed to process syntax validation result: %w", err)
+		return errorx.NewByCode(errno.SyntaxValidationResultParseFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 	// 直接使用 processSyntaxValidationExecutionResult 的验证结果
 	// 该方法已经完成了所有的 valid 字段解析和验证
 	if !valid {
-		return fmt.Errorf("python syntax error: %s", errorMsg)
+		return errorx.NewByCode(errno.SyntaxValidationFailedCode, errorx.WithExtraMsg(fmt.Sprintf("python syntax error: %s", errorMsg)))
 	}
 
 	return nil
@@ -746,7 +914,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonCode(ctx context.Context,
 func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Context, evaluator *entity.Evaluator, codeVersion *entity.CodeEvaluatorVersion) error {
 	// 基础检查
 	if codeVersion.CodeContent == "" {
-		return fmt.Errorf("javascript code is empty")
+		return errorx.NewByCode(errno.EmptyCodeContentCode, errorx.WithExtraMsg("javascript code is empty"))
 	}
 
 	// JavaScript特定安全检查
@@ -757,7 +925,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Cont
 	// 获取Runtime
 	runtime, err := c.runtimeManager.GetRuntime(entity.LanguageTypeJS)
 	if err != nil {
-		return fmt.Errorf("failed to get javascript runtime for validation: %v", err)
+		return errorx.NewByCode(errno.RuntimeGetFailedCode, errorx.WithExtraMsg(fmt.Sprintf("failed to get javascript runtime for validation: %v", err)))
 	}
 
 	// 构建JavaScript语法检查代码 (使用Builder模式)
@@ -767,19 +935,19 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Cont
 	ext := c.buildExtParams(evaluator)
 	result, err := runtime.RunCode(ctx, syntaxCheckCode, "js", 10000, ext) // 与Python保持一致的10秒超时
 	if err != nil {
-		return fmt.Errorf("javascript syntax validation failed: %w", err)
+		return errorx.NewByCode(errno.SyntaxValidationFailedCode, errorx.WithExtraMsg(fmt.Sprintf("javascript syntax validation failed: %v", err)))
 	}
 
 	// 使用统一的结果处理方法 (与Python保持一致)
 	valid, errorMsg, err := c.processSyntaxValidationExecutionResult(result)
 	if err != nil {
-		return fmt.Errorf("failed to process syntax validation result: %w", err)
+		return errorx.NewByCode(errno.SyntaxValidationResultParseFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 直接使用 processSyntaxValidationExecutionResult 的验证结果
 	// 该方法已经完成了所有的 valid 字段解析和验证
 	if !valid {
-		return fmt.Errorf("javascript syntax error: %s", errorMsg)
+		return errorx.NewByCode(errno.SyntaxValidationFailedCode, errorx.WithExtraMsg(fmt.Sprintf("javascript syntax error: %s", errorMsg)))
 	}
 
 	return nil
@@ -787,8 +955,15 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptCode(ctx context.Cont
 
 // buildPythonSyntaxCheckCode 构建Python语法检查代码
 func (c *EvaluatorSourceCodeServiceImpl) buildPythonSyntaxCheckCode(userCode string) string {
-	// 直接使用简单的构建方式
-	return c.buildSimplePythonSyntaxCheckCode(userCode)
+	// 使用CodeBuilderFactory创建PythonCodeBuilder
+	codeBuilder, err := c.codeBuilderFactory.CreateBuilder(entity.LanguageTypePython)
+	if err != nil {
+		// 如果创建失败，回退到简单构建方式以保持向后兼容
+		return c.buildSimplePythonSyntaxCheckCode(userCode)
+	}
+
+	// 使用Builder的BuildSyntaxCheckCode方法
+	return codeBuilder.BuildSyntaxCheckCode(userCode)
 }
 
 // buildSimplePythonSyntaxCheckCode 构建简单的Python语法检查代码（备用方案）
@@ -836,8 +1011,15 @@ print(json.dumps(result))
 
 // buildJavaScriptSyntaxCheckCode 构建JavaScript语法检查代码 (优化版本)
 func (c *EvaluatorSourceCodeServiceImpl) buildJavaScriptSyntaxCheckCode(userCode string) string {
-	// 直接使用简单的构建方式
-	return c.buildSimpleJavaScriptSyntaxCheckCode(userCode)
+	// 使用CodeBuilderFactory创建JavaScriptCodeBuilder
+	codeBuilder, err := c.codeBuilderFactory.CreateBuilder(entity.LanguageTypeJS)
+	if err != nil {
+		// 如果创建失败，回退到简单构建方式以保持向后兼容
+		return c.buildSimpleJavaScriptSyntaxCheckCode(userCode)
+	}
+
+	// 使用Builder的BuildSyntaxCheckCode方法
+	return codeBuilder.BuildSyntaxCheckCode(userCode)
 }
 
 // buildSimpleJavaScriptSyntaxCheckCode 构建简单的JavaScript语法检查代码（备用方案）
@@ -872,7 +1054,7 @@ try {
 // validateCodeSecurity 验证代码安全性
 func (c *EvaluatorSourceCodeServiceImpl) validateCodeSecurity(codeVersion *entity.CodeEvaluatorVersion) error {
 	if strings.TrimSpace(codeVersion.CodeContent) == "" {
-		return fmt.Errorf("代码不能为空")
+		return errorx.NewByCode(errno.EmptyCodeContentCode, errorx.WithExtraMsg("代码不能为空"))
 	}
 
 	// 转换语言类型
@@ -920,7 +1102,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonSpecificSecurity(code str
 
 	for _, pattern := range dangerousPatterns {
 		if matched, _ := regexp.MatchString(pattern, code); matched {
-			return fmt.Errorf("detected dangerous Python pattern")
+			return errorx.NewByCode(errno.DangerousImportDetectedCode, errorx.WithExtraMsg("detected dangerous Python pattern"))
 		}
 	}
 
@@ -939,7 +1121,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptSpecificSecurity(code
 
 	for _, pattern := range dangerousPatterns {
 		if matched, _ := regexp.MatchString(pattern, code); matched {
-			return fmt.Errorf("detected dangerous JavaScript pattern")
+			return errorx.NewByCode(errno.DangerousImportDetectedCode, errorx.WithExtraMsg("detected dangerous JavaScript pattern"))
 		}
 	}
 
@@ -964,7 +1146,7 @@ func (c *EvaluatorSourceCodeServiceImpl) checkDangerousFunctions(code, language 
 		// 创建正则表达式匹配函数调用
 		pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(fn) + `\s*\(`)
 		if pattern.MatchString(code) {
-			return fmt.Errorf("安全违规: 检测到危险函数调用: %s", fn)
+			return errorx.NewByCode(errno.DangerousFunctionDetectedCode, errorx.WithExtraMsg(fmt.Sprintf("detected function: %s", fn)))
 		}
 	}
 
@@ -1004,9 +1186,9 @@ func (c *EvaluatorSourceCodeServiceImpl) checkDangerousImports(code, language st
 
 		for _, pattern := range patterns {
 			regex := regexp.MustCompile(pattern)
-			if regex.MatchString(code) {
-				return fmt.Errorf("安全违规: 检测到危险模块导入: %s", imp)
-			}
+		if regex.MatchString(code) {
+			return errorx.NewByCode(errno.DangerousImportDetectedCode, errorx.WithExtraMsg(fmt.Sprintf("detected import: %s", imp)))
+		}
 		}
 	}
 
@@ -1015,33 +1197,116 @@ func (c *EvaluatorSourceCodeServiceImpl) checkDangerousImports(code, language st
 
 // checkMaliciousPatterns 检查恶意模式
 func (c *EvaluatorSourceCodeServiceImpl) checkMaliciousPatterns(code, language string) error {
-	// 通用恶意模式
-	maliciousPatterns := []string{
-		`while\s+True\s*:`,       // Python 无限循环
-		`while\s*\(\s*true\s*\)`, // JS 无限循环
-		`for\s*\(\s*;\s*;\s*\)`,  // JS 无限循环
-		`setInterval\s*\(`,       // JS 定时器
-		`setTimeout\s*\(`,        // JS 定时器
-		`process\.exit`,          // 进程退出
-		`System\.exit`,           // 系统退出
-		`exit\s*\(`,              // 退出函数
-		`quit\s*\(`,              // 退出函数
-	}
-
-	for _, pattern := range maliciousPatterns {
-		regex := regexp.MustCompile(pattern)
+	patterns := c.getMaliciousPatternsForLanguage(language)
+	
+	for _, pattern := range patterns {
+		regex := regexp.MustCompile(pattern.Pattern)
 		if regex.MatchString(code) {
-			return fmt.Errorf("安全违规: 检测到潜在恶意代码模式")
+			return c.createSecurityViolationError(pattern, language)
 		}
 	}
-
+	
 	return nil
+}
+
+// getMaliciousPatternsForLanguage 根据语言获取相应的恶意模式列表
+func (c *EvaluatorSourceCodeServiceImpl) getMaliciousPatternsForLanguage(language string) []MaliciousPattern {
+	// 标准化语言名称
+	normalizedLang := strings.ToLower(strings.TrimSpace(language))
+	
+	// 语言别名映射
+	langAliases := map[string]string{
+		"js":         "javascript",
+		"ts":         "javascript", // TypeScript 使用 JavaScript 的模式
+		"typescript": "javascript",
+		"py":         "python",
+		"golang":     "go",
+	}
+	
+	// 如果有别名，使用标准名称
+	if alias, exists := langAliases[normalizedLang]; exists {
+		normalizedLang = alias
+	}
+	
+	// 获取语言特定的模式
+	if patterns, exists := maliciousPatternsMap[normalizedLang]; exists {
+		return patterns
+	}
+	
+	// 如果没有找到特定语言的模式，返回通用模式（主要是进程控制相关）
+	return []MaliciousPattern{
+		{
+			Pattern:     `exit\s*\(`,
+			Category:    CategoryProcessControl,
+			Description: "进程退出函数调用",
+			Languages:   []string{"general"},
+			Severity:    "medium",
+			Risk:        "此函数会强制退出程序，可能导致评估过程异常终止",
+			Suggestion:  "请使用 return 语句正常返回结果，避免使用 exit() 函数",
+		},
+		{
+			Pattern:     `quit\s*\(`,
+			Category:    CategoryProcessControl,
+			Description: "程序退出函数调用",
+			Languages:   []string{"general"},
+			Severity:    "medium",
+			Risk:        "此函数会强制退出程序，可能导致评估过程异常终止",
+			Suggestion:  "请使用 return 语句正常返回结果，避免使用 quit() 函数",
+		},
+	}
+}
+
+// createSecurityViolationError 创建详细的安全违规错误信息
+func (c *EvaluatorSourceCodeServiceImpl) createSecurityViolationError(pattern MaliciousPattern, language string) error {
+	details := SecurityViolationDetails{
+		Category:    pattern.Category,
+		Pattern:     pattern.Pattern,
+		Description: pattern.Description,
+		Language:    language,
+		Risk:        pattern.Risk,
+		Suggestion:  pattern.Suggestion,
+	}
+	
+	// 构建详细的错误信息
+	errorMsg := c.formatSecurityViolationMessage(details)
+	
+	return errorx.NewByCode(errno.MaliciousCodePatternDetectedCode, errorx.WithExtraMsg(errorMsg))
+}
+
+// formatSecurityViolationMessage 格式化安全违规错误信息
+func (c *EvaluatorSourceCodeServiceImpl) formatSecurityViolationMessage(details SecurityViolationDetails) string {
+	// 威胁类型的中文映射
+	categoryNames := map[MaliciousPatternCategory]string{
+		CategoryInfiniteLoop:    "无限循环",
+		CategoryProcessControl:  "进程控制",
+		CategoryAsyncOperation:  "异步操作",
+		CategoryResourceAccess:  "资源访问",
+	}
+	
+	categoryName := categoryNames[details.Category]
+	if categoryName == "" {
+		categoryName = string(details.Category)
+	}
+	
+	return fmt.Sprintf(`安全违规：检测到恶意代码模式
+- 威胁类型：%s (%s)
+- 检测到的模式：%s
+- 编程语言：%s
+- 风险说明：%s
+- 修复建议：%s`,
+		categoryName,
+		details.Category,
+		details.Description,
+		details.Language,
+		details.Risk,
+		details.Suggestion,
+	)
 }
 
 // buildExtParams 构建扩展参数，包含 space_id
 func (c *EvaluatorSourceCodeServiceImpl) buildExtParams(evaluator *entity.Evaluator) map[string]string {
 	ext := make(map[string]string)
-	
+
 	// 添加 space_id
 	if evaluator != nil {
 		spaceID := evaluator.GetSpaceID()
@@ -1049,7 +1314,7 @@ func (c *EvaluatorSourceCodeServiceImpl) buildExtParams(evaluator *entity.Evalua
 			ext["space_id"] = strconv.FormatInt(spaceID, 10)
 		}
 	}
-	
+
 	return ext
 }
 
@@ -1067,7 +1332,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validateExecEvaluationFunction(codeVers
 	case entity.LanguageTypeJS:
 		return c.validateJavaScriptExecEvaluationFunction(codeVersion.CodeContent)
 	default:
-		return fmt.Errorf("unsupported language type for exec_evaluation validation: %s", codeVersion.LanguageType)
+		return errorx.NewByCode(errno.UnsupportedLanguageTypeCode, errorx.WithExtraMsg(fmt.Sprintf("unsupported language type for exec_evaluation validation: %s", codeVersion.LanguageType)))
 	}
 }
 
@@ -1078,7 +1343,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validatePythonExecEvaluationFunction(co
 	pattern := `(?m)^\s*def\s+exec_evaluation\s*\(`
 	regex := regexp.MustCompile(pattern)
 	if !regex.MatchString(code) {
-		return fmt.Errorf("代码中必须定义 exec_evaluation 函数。Python 函数定义格式：def exec_evaluation(turn_data):")
+		return errorx.NewByCode(errno.RequiredFunctionNotFoundCode, errorx.WithExtraMsg("代码中必须定义 exec_evaluation 函数。Python 函数定义格式：def exec_evaluation(turn_data):"))
 	}
 	return nil
 }
@@ -1110,7 +1375,7 @@ func (c *EvaluatorSourceCodeServiceImpl) validateJavaScriptExecEvaluationFunctio
 		}
 	}
 
-	return fmt.Errorf("代码中必须定义 exec_evaluation 或 execEvaluation 函数。JavaScript 函数定义格式：function exec_evaluation(turn_data) { ... }")
+	return errorx.NewByCode(errno.RequiredFunctionNotFoundCode, errorx.WithExtraMsg("代码中必须定义 exec_evaluation 或 execEvaluation 函数。JavaScript 函数定义格式：function exec_evaluation(turn_data) { ... }"))
 }
 
 // ReportCodeRootSpanRequest Code评估器专用的上报请求结构
@@ -1124,16 +1389,11 @@ type ReportCodeRootSpanRequest struct {
 }
 
 // reportCodeRootSpan 上报Code评估器的根节点trace
-func (e *evaluatorSpan) reportCodeRootSpan(ctx context.Context, request *ReportCodeRootSpanRequest) {
-	// 设置输入
+func (e *codeEvaluatorSpan) reportCodeRootSpan(ctx context.Context, request *ReportCodeRootSpanRequest) {
 	e.SetInput(ctx, tracer.Convert2TraceString(request.input))
-
-	// 设置输出
 	if request.output != nil {
 		e.SetOutput(ctx, tracer.Convert2TraceString(request.output.EvaluatorResult))
 	}
-
-	// 设置状态码和错误
 	switch request.runStatus {
 	case entity.EvaluatorRunStatusSuccess:
 		e.SetStatusCode(ctx, 0)
@@ -1141,24 +1401,37 @@ func (e *evaluatorSpan) reportCodeRootSpan(ctx context.Context, request *ReportC
 		e.SetStatusCode(ctx, int(entity.EvaluatorRunStatusFail))
 		e.SetError(ctx, request.errInfo)
 	default:
-		e.SetStatusCode(ctx, 0)
+		e.SetStatusCode(ctx, 0) // 默认为成功
 	}
-
-	// 设置标签（包含代码信息）
-	tags := make(map[string]interface{})
+	tags := make(map[string]interface{}, 0)
 	tags["evaluator_id"] = request.evaluatorVersion.EvaluatorID
 	tags["evaluator_version"] = request.evaluatorVersion.Version
-	tags["language_type"] = request.evaluatorVersion.LanguageType
-	tags["code_content"] = request.code // 评估器代码
-
+	tags["code_content"] = request.code // 添加代码内容到trace
 	e.SetCallType("Evaluator")
-
-	// 设置用户ID
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	if userIDInContext != "" {
 		e.SetUserID(ctx, userIDInContext)
 	}
-
 	e.SetTags(ctx, tags)
 	e.Finish(ctx)
+}
+
+// codeEvaluatorSpan Code评估器专用span结构体
+type codeEvaluatorSpan struct {
+	looptracer.Span
+}
+
+// newEvaluatorSpan 创建评估器span
+func (c *EvaluatorSourceCodeServiceImpl) newEvaluatorSpan(ctx context.Context, spanName, spanType, spaceID string, asyncChild bool) (*codeEvaluatorSpan, context.Context) {
+	var evalSpan looptracer.Span
+	var nctx context.Context
+	if asyncChild {
+		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, looptracer.WithSpanWorkspaceID(spaceID))
+	} else {
+		nctx, evalSpan = looptracer.GetTracer().StartSpan(ctx, spanName, spanType, looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(spaceID))
+	}
+
+	return &codeEvaluatorSpan{
+		Span: evalSpan,
+	}, nctx
 }

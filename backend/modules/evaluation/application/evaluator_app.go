@@ -743,14 +743,9 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *eva
 			if languageMap, exists := codeTemplates[templateKey]; exists {
 				if request.GetLanguageType() != "" {
 					// 指定了语言类型，查找对应的模板
-					template, ok = languageMap[string(request.GetLanguageType())]
+					template, ok = languageMap[request.GetLanguageType()]
 				} else {
-					// 未指定语言类型，返回第一个可用的模板
-					for _, t := range languageMap {
-						template = t
-						ok = true
-						break
-					}
+					template, ok = languageMap[evaluatordto.LanguageTypePython]
 				}
 			}
 		}
@@ -1034,7 +1029,7 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 
 	urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
 	if err != nil {
-		return fmt.Errorf("failed to get file URLs: %w", err)
+		return errorx.NewByCode(errno.FileURLRetrieveFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 回填URL到原始数据
@@ -1125,7 +1120,7 @@ func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *e
 	if err := evaluatorSourceService.Validate(ctx, evaluator); err != nil {
 		return &evaluatorservice.ValidateEvaluatorResponse{
 			Valid:        gptr.Of(false),
-			ErrorMessage: gptr.Of(err.Error()),
+			ErrorMessage: gptr.Of(errorx.ErrorWithoutStack(err)),
 		}, nil
 	}
 
@@ -1198,7 +1193,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 	// 创建并发池，并发度为10
 	pool, err := goroutine.NewPool(10)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create goroutine pool: %w", err)
+		return nil, errorx.NewByCode(errno.GoroutinePoolCreateFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 初始化结果数组
@@ -1224,7 +1219,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 			// 首先转换输出数据
 			if outputDataDO != nil {
 				results[index] = evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO)
-				
+
 				// 检查是否需要使用debugErr作为EvaluatorRunError
 				if results[index].EvaluatorRunError == nil && debugErr != nil {
 					results[index].EvaluatorRunError = &evaluatordto.EvaluatorRunError{
@@ -1249,7 +1244,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 	// 执行所有任务，使用ExecAll确保单个失败不影响其他任务
 	err = pool.ExecAll(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute batch debug tasks: %w", err)
+		return nil, errorx.NewByCode(errno.BatchTaskExecutionFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	return &evaluatorservice.BatchDebugEvaluatorResponse{

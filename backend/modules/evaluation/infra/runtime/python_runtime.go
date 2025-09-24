@@ -126,14 +126,17 @@ func (pr *PythonRuntime) GetReturnValFunction() string {
 # return_val函数实现
 def return_val(value):
     """
-    标准return_val函数实现 - 设置返回值到ret_val字段
+    标准return_val函数实现 - 通过特殊标记输出返回值
     Args:
         value: 要返回的值，通常是JSON字符串
     """
-    # 这里不使用print，而是设置一个全局变量
-    # 该变量会被FaaS服务器捕获到ret_val字段
+    # 设置全局变量（兼容性保留）
     global _return_val_output
-    _return_val_output = value
+    _return_val_output = str(value) if value is not None else ""
+    # 使用特殊的分隔符输出，供FaaS服务器提取
+    print(f"__COZE_RETURN_VAL_START__")
+    print(_return_val_output)
+    print(f"__COZE_RETURN_VAL_END__")
 `
 }
 
