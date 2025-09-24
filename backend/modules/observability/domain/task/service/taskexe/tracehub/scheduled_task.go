@@ -13,7 +13,6 @@ import (
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -124,11 +123,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		taskInfo := tconv.TaskPO2DTO(ctx, taskPO, nil)
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
 		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
-		proc, err := processor.NewProcessor(ctx, taskInfo.TaskType)
-		if err != nil {
-			logs.CtxError(ctx, "NewProcessor err:%v", err)
-			continue
-		}
+		proc := h.taskProcessor.GetTaskProcessor(taskInfo.TaskType)
 		// 达到任务时间期限
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)

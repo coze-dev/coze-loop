@@ -14,7 +14,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -38,14 +37,11 @@ type ITraceHubService interface {
 func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
 	tRunRepo repo.ITaskRunRepo,
-	datasetServiceProvider *service.DatasetServiceAdaptor,
-	evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter,
 	traceRepo trace_repo.ITraceRepo,
 	tenantProvider tenant.ITenantProvider,
 	buildHelper service.TraceFilterProcessorBuilder,
+	taskProcessor *processor.TaskProcessor,
 ) (ITraceHubService, error) {
-	//processor.InitProcessor(datasetServiceProvider, evalService, evaluationService, tRepo, tRunRepo)
 	// 创建两个不同间隔的独立定时器
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // 任务状态生命周期管理 - 5分钟间隔
 	syncTaskTicker := time.NewTicker(2 * time.Minute)      // 数据同步 - 1分钟间隔
@@ -58,6 +54,7 @@ func NewTraceHubImpl(
 		traceRepo:           traceRepo,
 		tenantProvider:      tenantProvider,
 		buildHelper:         buildHelper,
+		taskProcessor:       taskProcessor,
 	}
 
 	// 立即启动定时任务
@@ -75,6 +72,7 @@ type TraceHubServiceImpl struct {
 	taskRunRepo         repo.ITaskRunRepo
 	traceRepo           trace_repo.ITraceRepo
 	tenantProvider      tenant.ITenantProvider
+	taskProcessor       *processor.TaskProcessor
 
 	buildHelper  service.TraceFilterProcessorBuilder
 	task         *task.Task
@@ -158,10 +156,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	}
 	taskList := tconv.TaskPOs2DOs(ctx, tasksPOList, nil)
 	for _, taskDO := range taskList {
-		proc, err := processor.NewProcessor(ctx, taskDO.TaskType)
-		if err != nil {
-			return nil, err
-		}
+		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		subscribers = append(subscribers, &spanSubscriber{
 			taskID:           taskDO.GetID(),
 			RWMutex:          sync.RWMutex{},

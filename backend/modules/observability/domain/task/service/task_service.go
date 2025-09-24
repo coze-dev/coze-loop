@@ -82,6 +82,7 @@ func NewTaskServiceImpl(
 	userProvider rpc.IUserProvider,
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
+	taskProcessor processor.TaskProcessor,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
@@ -89,6 +90,7 @@ func NewTaskServiceImpl(
 		userProvider:     userProvider,
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
+		taskProcessor:    taskProcessor,
 	}, nil
 }
 
@@ -98,6 +100,7 @@ type TaskServiceImpl struct {
 	userProvider     rpc.IUserProvider
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer
+	taskProcessor    processor.TaskProcessor
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
@@ -114,11 +117,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		logs.CtxError(ctx, "task name exist")
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("task name exist"))
 	}
-	proc, err := processor.NewProcessor(ctx, req.Task.TaskType)
-	if err != nil {
-		logs.CtxError(ctx, "NewProcessor err:%v", err)
-		return nil, err
-	}
+	proc := t.taskProcessor.GetTaskProcessor(req.Task.GetTaskType())
 	// 校验配置项是否有效
 	if err = proc.ValidateConfig(ctx, req.Task); err != nil {
 		logs.CtxError(ctx, "ValidateConfig err:%v", err)
