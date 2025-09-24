@@ -73,9 +73,8 @@ type TraceHubServiceImpl struct {
 	traceRepo           trace_repo.ITraceRepo
 	tenantProvider      tenant.ITenantProvider
 	taskProcessor       *processor.TaskProcessor
+	buildHelper         service.TraceFilterProcessorBuilder
 
-	buildHelper  service.TraceFilterProcessorBuilder
-	task         *task.Task
 	flushCh      chan *flushReq
 	flushErrLock sync.Mutex
 	flushErr     []error
@@ -192,22 +191,6 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	return subscribers[:keep], merr.ErrorOrNil()
 }
 
-func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
-	merr := &multierror.Error{}
-	for _, sub := range subs {
-		if sub.t.GetTaskStatus() != task.TaskStatusRunning {
-			continue
-		}
-		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)
-		if err := sub.AddSpan(ctx, span); err != nil {
-			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, task_id=%d", sub.taskID))
-			continue
-		}
-		logs.CtxInfo(ctx, "add span to subscriber, task_id=%d, log_id=%s, trace_id=%s, span_id=%s", sub.taskID,
-			span.LogID, span.TraceID, span.SpanID)
-	}
-	return merr.ErrorOrNil()
-}
 func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	var needDispatchSubs []*spanSubscriber
@@ -338,6 +321,23 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		}
 	}
 	subs = needDispatchSubs
+	return merr.ErrorOrNil()
+}
+
+func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
+	merr := &multierror.Error{}
+	for _, sub := range subs {
+		if sub.t.GetTaskStatus() != task.TaskStatusRunning {
+			continue
+		}
+		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)
+		if err := sub.AddSpan(ctx, span); err != nil {
+			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, task_id=%d", sub.taskID))
+			continue
+		}
+		logs.CtxInfo(ctx, "add span to subscriber, task_id=%d, log_id=%s, trace_id=%s, span_id=%s", sub.taskID,
+			span.LogID, span.TraceID, span.SpanID)
+	}
 	return merr.ErrorOrNil()
 }
 

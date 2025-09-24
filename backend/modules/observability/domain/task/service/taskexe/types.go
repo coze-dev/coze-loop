@@ -52,6 +52,11 @@ type OnFinishTaskChangeReq struct {
 	IsFinish bool
 }
 
+type EndTaskError struct {
+	TaskID int64
+	Status task.TaskStatus
+	Reason string
+}
 type Processor interface {
 	ValidateConfig(ctx context.Context, config any) error           // 校验配置项是否有效
 	Invoke(ctx context.Context, config any, trigger *Trigger) error // 根据不同类型进行执行，如rpc回调、mq投递等

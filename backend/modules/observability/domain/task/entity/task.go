@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -49,4 +50,13 @@ type TaskRun struct {
 	RunConfig      *string   // 相关任务的配置信息
 	CreatedAt      time.Time // 创建时间
 	UpdatedAt      time.Time // 更新时间
+}
+
+func (t ObservabilityTask) IsFinished() bool {
+	switch t.TaskStatus {
+	case task.TaskStatusSuccess, task.TaskStatusDisabled, task.TaskStatusPending:
+		return true
+	default:
+		return false
+	}
 }
