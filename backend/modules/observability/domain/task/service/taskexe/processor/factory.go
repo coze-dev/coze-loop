@@ -13,9 +13,7 @@ type TaskProcessor struct {
 }
 
 func NewTaskProcessor() *TaskProcessor {
-	return &TaskProcessor{
-		taskProcessorMap: make(map[task.TaskType]taskexe.Processor),
-	}
+	return &TaskProcessor{}
 }
 
 func (t *TaskProcessor) Register(taskType task.TaskType, taskProcessor taskexe.Processor) {
