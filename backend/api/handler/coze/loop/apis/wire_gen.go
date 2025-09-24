@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -41,6 +40,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	application3 "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	application6 "github.com/coze-dev/coze-loop/backend/modules/observability/application"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	application2 "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
@@ -150,7 +150,7 @@ func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Prov
 	return dataHandler, nil
 }
 
-func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, evalSetClient evaluationsetservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, datasetClient datasetservice.Client, redis2 redis.Cmdable, experimentClient experimentservice.Client) (*ObservabilityHandler, error) {
+func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, evalSetClient evaluationsetservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, datasetClient datasetservice.Client, redis2 redis.Cmdable, experimentClient experimentservice.Client, taskProcessor processor.TaskProcessor) (*ObservabilityHandler, error) {
 	iTraceApplication, err := application6.InitTraceApplication(db2, ckDb, redis2, meter, mqFactory, configFactory, idgen2, fileClient, benefit2, authCli, userClient, evalClient, evalSetClient, tagClient, datasetClient)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, redis2, userClient, authCli, evalClient, evalSetClient, experimentClient)
+	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, ckDb, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, benefit2, fileClient, taskProcessor)
 	if err != nil {
 		return nil, err
 	}
