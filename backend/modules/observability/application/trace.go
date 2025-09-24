@@ -247,7 +247,9 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*ser
 		StartTime:   req.GetStartTime(),
 		EndTime:     req.GetEndTime(),
 		SpanIDs:     req.GetSpanIds(),
-		WithDetail:  req.GetWithDetail(),
+	}
+	if req.WithDetail == nil || req.GetWithDetail() {
+		ret.WithDetail = true
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {

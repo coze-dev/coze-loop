@@ -257,7 +257,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		return nil, err
 	}
 	selectColumns := make([]string, 0)
-	if req.WithDetail {
+	if !req.WithDetail {
 		selectColumns = r.traceConfig.GetKeyColumns(ctx)
 	}
 	st := time.Now()

@@ -555,7 +555,9 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		EndTime:               req.GetEndTime(),
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
-		WithDetail:            req.GetWithDetail(),
+	}
+	if req.WithDetail == nil || req.GetWithDetail() {
+		ret.WithDetail = true
 	}
 	if len(ret.Tenants) == 0 {
 		logs.CtxError(ctx, "fail to get platform tenants")
