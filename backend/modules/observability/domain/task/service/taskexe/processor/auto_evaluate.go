@@ -47,7 +47,7 @@ type AutoEvaluteProcessor struct {
 	taskRunRepo           repo.ITaskRunRepo
 }
 
-func newAutoEvaluteProcessor(
+func NewAutoEvaluteProcessor(
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,

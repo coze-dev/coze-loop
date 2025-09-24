@@ -26,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
@@ -115,6 +116,7 @@ var (
 	)
 	taskSet = wire.NewSet(
 		//NewDatasetServiceAdapter,
+		NewInitProcessor,
 		tracehub.NewTraceHubImpl,
 		NewTaskApplication,
 		auth.NewAuthProvider,
@@ -193,6 +195,16 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 	datasetProvider := dataset.NewDatasetProvider(datasetService)
 	adapter.Register(entity.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
 	return adapter
+}
+
+func NewInitProcessor(
+	datasetServiceProvider *service.DatasetServiceAdaptor,
+	evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter,
+	taskRepo repo.ITaskRepo,
+	taskRunRepo repo.ITaskRunRepo) {
+	autoEvaluteProc = task_processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo)
+	dataReflowProc = task_processor.NewDataReflowProcessor(datasetServiceProvider, taskRepo, taskRunRepo)
 }
 
 func InitTraceApplication(

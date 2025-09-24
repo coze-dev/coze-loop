@@ -33,7 +33,7 @@ type DataReflowProcessor struct {
 	taskRunRepo           repo.ITaskRunRepo
 }
 
-func newDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
+func NewDataReflowProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	taskRepo repo.ITaskRepo,
 	taskRunRepo repo.ITaskRunRepo) *DataReflowProcessor {
 	return &DataReflowProcessor{
