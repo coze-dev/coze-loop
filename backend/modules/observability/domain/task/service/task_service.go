@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -201,25 +202,23 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		if validTaskStatus != "" {
 			if validTaskStatus == task.TaskStatusDisabled {
 				// 禁用操作处理
-				//proc, err := processor.NewProcessor(ctx, task.TaskTypeAutoEval)
-				//if err != nil {
-				//	logs.CtxError(ctx, "CreateTask NewProcessor err:%v", err)
-				//	return err
-				//}
-				//taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
-				//taskRuns := tconv.TaskRunPOs2DOs(ctx, taskPO.TaskRuns, nil)
-				//var taskRun *task.TaskRun
-				//for _, tr := range taskRuns {
-				//	if tr.RunStatus == task.RunStatusRunning {
-				//		taskRun = tr
-				//		break
-				//	}
-				//}
-				//if err = proc.Finish(ctx, taskRun, &taskexe.Trigger{Task: taskConfig, Span: nil, IsFinish: false}); err != nil {
-				//	logs.CtxError(ctx, "proc Finish err:%v", err)
-				//	return err
-				//
-				//}
+				proc := t.taskProcessor.GetTaskProcessor(taskPO.TaskType)
+				taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
+				var taskRun *entity.TaskRun
+				for _, tr := range taskPO.TaskRuns {
+					if tr.RunStatus == task.RunStatusRunning {
+						taskRun = tr
+						break
+					}
+				}
+				if err = proc.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
+					Task:    taskConfig,
+					TaskRun: taskRun,
+				}); err != nil {
+					logs.CtxError(ctx, "proc Finish err:%v", err)
+					return err
+
+				}
 			}
 			taskPO.TaskStatus = *req.TaskStatus
 		}
