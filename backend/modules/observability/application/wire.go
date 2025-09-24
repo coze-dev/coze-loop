@@ -64,6 +64,7 @@ import (
 
 var (
 	taskDomainSet = wire.NewSet(
+		NewInitTaskProcessor,
 		taskSvc.NewTaskServiceImpl,
 		obrepo.NewTaskRepoImpl,
 		obrepo.NewTaskRunRepoImpl,
@@ -117,13 +118,10 @@ var (
 		traceDomainSet,
 	)
 	taskSet = wire.NewSet(
-		//NewDatasetServiceAdapter,
-		NewInitTaskProcessor,
 		tracehub.NewTraceHubImpl,
 		NewTaskApplication,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
-		//evaluator.NewEvaluatorRPCProvider,
 		evaluation.NewEvaluationRPCProvider,
 		traceDomainSet,
 	)
