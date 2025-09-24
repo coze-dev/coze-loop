@@ -386,6 +386,8 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		PlatformType:          req.PlatformType,
 		SpanDoubleCheck:       req.Filters != nil && len(req.Filters.FilterFields) > 0,
 		QueryTenants:          req.Tenants,
+		QueryTraceID:          req.TraceID,
+		QueryLogID:            req.LogID,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)

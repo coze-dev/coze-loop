@@ -18,6 +18,8 @@ type Settings struct {
 	QueryEndTime          int64 // ms
 	QueryTenants          []string
 	SpanDoubleCheck       bool
+	QueryTraceID          string
+	QueryLogID            string
 }
 
 type Factory interface {
