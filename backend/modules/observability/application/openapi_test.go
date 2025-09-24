@@ -3502,6 +3502,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 					StorageDuration: 3,
 				}, nil)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
@@ -3543,6 +3544,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 					StorageDuration: 3,
 				}, nil)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
@@ -3653,6 +3655,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -3696,6 +3699,7 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 					StorageDuration: 3,
 				}, nil)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
@@ -3778,6 +3782,7 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -3819,6 +3824,7 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 					StorageDuration: 3,
 				}, nil)
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
