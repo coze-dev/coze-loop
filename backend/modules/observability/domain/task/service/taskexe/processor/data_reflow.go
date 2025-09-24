@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
@@ -18,6 +19,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -171,6 +174,59 @@ func ShouldTriggerNewData(ctx context.Context, taskDO *task.Task) bool {
 		effectiveTime.GetStartAt() < effectiveTime.GetEndAt() &&
 		time.Now().After(time.UnixMilli(effectiveTime.GetStartAt()))
 }
+func (p *DataReflowProcessor) createOrUpdateDataset(ctx context.Context, workspaceID int64, category entity.DatasetCategory, dataReflowConfig *task.DataReflowConfig, session *common.Session) (*entity.Dataset, error) {
+	var err error
+	var datasetID int64
+
+	if dataReflowConfig.GetDatasetID() == 0 {
+		if dataReflowConfig.DatasetName == nil || *dataReflowConfig.DatasetName == "" {
+			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("task name exist"))
+		}
+		if len(dataReflowConfig.DatasetSchema.FieldSchemas) == 0 {
+			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("dataset schema is empty"))
+		}
+
+		schema := convertDatasetSchemaDTO2DO(dataReflowConfig.GetDatasetSchema())
+		datasetID, err = p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
+			0,
+			workspaceID,
+			dataReflowConfig.GetDatasetName(),
+			category,
+			schema,
+			session,
+		))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if dataReflowConfig.DatasetID == nil {
+			return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("dataset id is nil"))
+		}
+		datasetID = *dataReflowConfig.DatasetID
+		needUpdate := false
+		for _, schema := range dataReflowConfig.DatasetSchema.FieldSchemas {
+			if schema.Key == nil || *schema.Key == "" {
+				needUpdate = true
+				break
+			}
+		}
+		if needUpdate {
+			if err := p.datasetServiceAdaptor.GetDatasetProvider(category).UpdateDatasetSchema(ctx, entity.NewDataset(
+				datasetID,
+				workspaceID,
+				"",
+				category,
+				convertDatasetSchemaDTO2DO(dataReflowConfig.DatasetSchema),
+				nil,
+			)); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// 新增或修改评测集后，都需要重新查询一次，拿到fieldSchema里的key
+	return p.datasetServiceAdaptor.GetDatasetProvider(category).GetDataset(ctx, workspaceID, datasetID, category)
+}
 
 func (p *DataReflowProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
 	// 1、创建/更新数据集
@@ -180,24 +236,16 @@ func (p *DataReflowProcessor) OnCreateTaskChange(ctx context.Context, currentTas
 	var err error
 	// 1、创建数据集
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
-	var datasetID int64
 	for _, dataReflowConfig := range dataReflowConfigs {
-		if dataReflowConfig.DatasetID != nil {
-			datasetID = *dataReflowConfig.DatasetID
-			logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", dataReflowConfig.DatasetID)
-			continue
-		}
-		schema := convertDatasetSchemaDTO2DO(dataReflowConfig.GetDatasetSchema())
-		datasetID, err = p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
-			0,
-			currentTask.GetWorkspaceID(),
-			dataReflowConfig.GetDatasetName(),
-			category,
-			schema,
-			session,
-		))
+		dataset, err := p.createOrUpdateDataset(ctx, currentTask.GetWorkspaceID(), category, dataReflowConfig, session)
 		if err != nil {
 			return err
+		}
+		currentTask.TaskConfig.DataReflowConfig[0] = &task.DataReflowConfig{
+			DatasetID:     ptr.Of(dataset.ID),
+			DatasetName:   dataReflowConfig.DatasetName,
+			DatasetSchema: dataReflowConfig.DatasetSchema,
+			FieldMappings: dataReflowConfig.FieldMappings,
 		}
 		taskPO := tconv.TaskDTO2PO(ctx, currentTask, "")
 		err = p.taskRepo.UpdateTask(ctx, taskPO)
@@ -205,7 +253,6 @@ func (p *DataReflowProcessor) OnCreateTaskChange(ctx context.Context, currentTas
 			logs.CtxError(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, UpdateTask err, taskID:%d, err:%v", currentTask.GetID(), err)
 			return err
 		}
-		currentTask.TaskConfig.DataReflowConfig[0].DatasetID = ptr.Of(datasetID)
 	}
 	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
 	if err != nil {

@@ -293,11 +293,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
-			//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
-			//	logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
-			//	merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
-			//	continue
-			//}
 		}
 		// 达到任务上限
 		if taskCount+1 > sampler.GetSampleSize() {
@@ -310,11 +305,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
-			//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: true}); err != nil {
-			//	logs.CtxWarn(ctx, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID)
-			//	merr = multierror.Append(merr, errors.WithMessagef(err, "taskCount > sampler.GetSampleSize()+1 Finish processor, task_id=%d", sub.taskID))
-			//	continue
-			//}
 		}
 		if sampler.GetIsCycle() {
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
@@ -330,9 +320,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}
-				//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: false}); err != nil {
-				//	merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID))
-				//}
 				runStartAt = taskRunConfig.RunEndAt.UnixMilli()
 				runEndAt = taskRunConfig.RunEndAt.UnixMilli() + (taskRunConfig.RunEndAt.UnixMilli() - taskRunConfig.RunStartAt.UnixMilli())
 				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
@@ -352,10 +339,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}
-				//if err := sub.processor.Finish(ctx, taskRunConfig, &taskexe.Trigger{Task: sub.t, Span: span, IsFinish: false}); err != nil {
-				//	merr = multierror.Append(merr, errors.WithMessagef(err, "subTaskCount > sampler.GetCycleCount()+1 Finish processor, task_id=%d", sub.taskID))
-				//	continue
-				//}
 			}
 		}
 	}
