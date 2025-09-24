@@ -201,12 +201,12 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 }
 
 // Run 执行Code评估器
-func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
+func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
 	var err error
 	var code string
 	startTime := time.Now()
 	// 创建trace span
-	rootSpan, ctx := c.newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
+	rootSpan, ctx := c.newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), disableTracing)
 	traceID = rootSpan.GetTraceID()
 
 	defer func() {
@@ -462,7 +462,7 @@ func (c *EvaluatorSourceCodeServiceImpl) createErrorOutputFromError(err error, s
 // Debug 调试Code评估器
 func (c *EvaluatorSourceCodeServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, err error) {
 	// 调试模式下直接调用Run方法
-	output, runStatus, _ := c.Run(ctx, evaluator, input)
+	output, runStatus, _ := c.Run(ctx, evaluator, input, true)
 	if runStatus == entity.EvaluatorRunStatusFail {
 		if output.EvaluatorRunError != nil {
 			return output, errorx.NewByCode(errno.CodeExecutionFailedCode, errorx.WithExtraMsg(output.EvaluatorRunError.Message))
