@@ -6,6 +6,7 @@ package processor
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -27,4 +28,51 @@ func getSession(ctx context.Context, task *task.Task) *common.Session {
 		UserID: gptr.Of(userID),
 		//AppID:  gptr.Of(int32(717152)),
 	}
+}
+
+// shouldTriggerBackfill 判断是否需要发送历史回溯MQ
+func ShouldTriggerBackfill(taskDO *task.Task) bool {
+	// 检查任务类型
+	taskType := taskDO.GetTaskType()
+	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
+		return false
+	}
+
+	// 检查回填时间配置
+	rule := taskDO.GetRule()
+	if rule == nil {
+		return false
+	}
+
+	backfillTime := rule.GetBackfillEffectiveTime()
+	if backfillTime == nil {
+		return false
+	}
+
+	return backfillTime.GetStartAt() > 0 &&
+		backfillTime.GetEndAt() > 0 &&
+		backfillTime.GetStartAt() < backfillTime.GetEndAt()
+}
+
+func ShouldTriggerNewData(ctx context.Context, taskDO *task.Task) bool {
+	// 检查任务类型
+	taskType := taskDO.GetTaskType()
+	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
+		return false
+	}
+	rule := taskDO.GetRule()
+	if rule == nil {
+		return false
+	}
+
+	effectiveTime := rule.GetEffectiveTime()
+	if effectiveTime == nil {
+		return false
+	}
+	logs.CtxInfo(ctx, "[auto_task] ShouldTriggerNewData, endAt:%d, startAt:%d", effectiveTime.GetEndAt(), effectiveTime.GetStartAt())
+
+	return effectiveTime.GetEndAt() > 0 &&
+		effectiveTime.GetStartAt() > 0 &&
+		effectiveTime.GetStartAt() < effectiveTime.GetEndAt() &&
+		time.Now().After(time.UnixMilli(effectiveTime.GetStartAt()))
 }
