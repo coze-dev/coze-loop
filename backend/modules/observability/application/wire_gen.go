@@ -23,7 +23,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	entity2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
@@ -150,6 +152,40 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	return iObservabilityOpenAPIApplication, nil
 }
 
+func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client) (IMetricApplication, error) {
+	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
+	if err != nil {
+		return nil, err
+	}
+	iConfigLoader, err := NewTraceConfigLoader(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
+	iMetricRepo, err := repo.NewTraceMetricCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	if err != nil {
+		return nil, err
+	}
+	v := NewMetricDefinitions()
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
+	iFileProvider := file.NewFileRPCProvider(fileClient)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iMetricsService, err := service2.NewMetricsService(iMetricRepo, v, iTenantProvider, traceFilterProcessorBuilder)
+	if err != nil {
+		return nil, err
+	}
+	iAuthProvider := auth.NewAuthProvider(authClient)
+	iMetricApplication, err := NewMetricApplication(iMetricsService, iTenantProvider, iAuthProvider)
+	if err != nil {
+		return nil, err
+	}
+	return iMetricApplication, nil
+}
+
 func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
@@ -193,6 +229,10 @@ var (
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
+	metricsSet = wire.NewSet(
+		NewMetricApplication, service2.NewMetricsService, repo.NewTraceMetricCKRepoImpl, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, NewMetricDefinitions, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, file.NewFileRPCProvider,
+	)
 )
 
 func NewTraceProcessorBuilder(
@@ -214,6 +254,10 @@ func NewTraceProcessorBuilder(
 		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)})
 }
 
+func NewMetricDefinitions() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{}
+}
+
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo2.ITraceRepo) service.IngestionCollectorFactory {
 	return service.NewIngestionCollectorFactory(
 		[]receiver.Factory{rmqreceiver.NewFactory(mqFactory)},
@@ -229,6 +273,6 @@ func NewTraceConfigLoader(confFactory conf.IConfigLoaderFactory) (conf.IConfigLo
 func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datasetService datasetservice.Client) *service.DatasetServiceAdaptor {
 	adapter := service.NewDatasetServiceAdaptor()
 	datasetProvider := dataset.NewDatasetProvider(datasetService)
-	adapter.Register(entity.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
+	adapter.Register(entity2.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
 	return adapter
 }

@@ -150,7 +150,6 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsP
 	innerQuery = sql.ToSQL(func(tx *gorm.DB) *gorm.DB {
 		return tx.Find(nil)
 	})
-
 	if param.Granularity != "" {
 		ckTimeInterval := getTimeInterval(param.Granularity)
 		selectClauses = append(selectClauses,
@@ -165,9 +164,13 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsP
 			fmt.Sprintf("%s AS %s", dimension.Expression, dimension.Alias))
 	}
 	for _, dimension := range param.GroupBys {
+		fieldName, err := s.convertFieldName(ctx, dimension.Field)
+		if err != nil {
+			return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+		}
 		selectClauses = append(selectClauses,
-			fmt.Sprintf("%s AS %s", dimension.Expression, dimension.Alias))
-		groupByClauses = append(groupByClauses, dimension.Expression)
+			fmt.Sprintf("%s AS %s", fieldName, dimension.Alias))
+		groupByClauses = append(groupByClauses, fieldName)
 	}
 	wholeSql := fmt.Sprintf(metricsSqlTemplate,
 		strings.Join(selectClauses, ", "),

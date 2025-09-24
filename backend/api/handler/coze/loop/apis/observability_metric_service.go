@@ -6,22 +6,13 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	metric "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilitymetricservice"
 )
+
+var observabilityMetricClient observabilitymetricservice.Client
 
 // GetMetrics .
 // @router /api/observability/v1/metrics/list [POST]
 func GetMetrics(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req metric.GetMetricsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(metric.GetMetricsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityMetricClient.GetMetrics)
 }

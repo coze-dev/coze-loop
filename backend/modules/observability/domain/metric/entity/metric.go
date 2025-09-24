@@ -36,8 +36,9 @@ const (
 )
 
 type Dimension struct {
-	Expression string // 字段名或表达式
-	Alias      string // 别名
+	Expression string                 // 表达式
+	Field      *loop_span.FilterField // 字段名, 设计上用于聚合
+	Alias      string                 // 别名
 }
 
 type IMetricDefinition interface {

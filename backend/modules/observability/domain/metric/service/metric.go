@@ -23,13 +23,14 @@ import (
 )
 
 type QueryMetricsReq struct {
-	PlatformType loop_span.PlatformType
-	WorkspaceID  int64
-	MetricsNames []string
-	Granularity  entity.MetricGranularity
-	FilterFields *loop_span.FilterFields
-	StartTime    int64
-	EndTime      int64
+	PlatformType    loop_span.PlatformType
+	WorkspaceID     int64
+	MetricsNames    []string
+	Granularity     entity.MetricGranularity
+	FilterFields    *loop_span.FilterFields
+	DrillDownFields []*loop_span.FilterField
+	StartTime       int64
+	EndTime         int64
 }
 
 type QueryMetricsResp struct {
@@ -43,7 +44,7 @@ type IMetricsService interface {
 
 type MetricsService struct {
 	metricRepo     repo.IMetricRepo
-	metricDefMap   map[entity.MetricName]entity.IMetricDefinition
+	metricDefMap   map[string]entity.IMetricDefinition
 	buildHelper    trace_service.TraceFilterProcessorBuilder
 	tenantProvider tenant.ITenantProvider
 }
@@ -54,7 +55,7 @@ func NewMetricsService(
 	tenantProvider tenant.ITenantProvider,
 	buildHelper trace_service.TraceFilterProcessorBuilder,
 ) (IMetricsService, error) {
-	metricDefMap := make(map[entity.MetricName]entity.IMetricDefinition)
+	metricDefMap := make(map[string]entity.IMetricDefinition)
 	for _, def := range metricDefs {
 		if metricDefMap[def.Name()] != nil {
 			return nil, fmt.Errorf("duplicate metric name %s", def.Name())
@@ -69,6 +70,16 @@ func NewMetricsService(
 	}, nil
 }
 
+type metricQueryBuilder struct {
+	metricNames   []string                 // metric names
+	filter        span_filter.Filter       // platform filter
+	spanEnv       *span_filter.SpanEnv     // platform span env
+	requestFilter *loop_span.FilterFields  // request filter
+	granularity   entity.MetricGranularity // granularity
+	mInfo         *metricInfo              // aggregated metric info
+	mRepoReq      *repo.GetMetricsParam    // metric repo request
+}
+
 type metricInfo struct {
 	mType        entity.MetricType
 	mAggregation []*entity.Dimension
@@ -77,6 +88,22 @@ type metricInfo struct {
 }
 
 func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	mBuilder, err := s.buildMetricQuery(ctx, req)
+	if err != nil {
+		return nil, err
+	} else if mBuilder == nil {
+		return &QueryMetricsResp{}, nil // 不再查询...
+	}
+	result, err := s.metricRepo.GetMetrics(ctx, mBuilder.mRepoReq)
+	if err != nil {
+		return nil, err
+	}
+	return &QueryMetricsResp{
+		Metrics: s.formatMetrics(result.Data, mBuilder.mInfo),
+	}, nil
+}
+
+func (s *MetricsService) buildMetricQuery(ctx context.Context, req *QueryMetricsReq) (*metricQueryBuilder, error) {
 	filter, err := s.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -85,71 +112,95 @@ func (s *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 	if err != nil {
 		return nil, err
 	}
-	param := repo.GetMetricsParam{
+	param := &repo.GetMetricsParam{
 		Tenants:     tenants,
 		StartAt:     req.StartTime,
 		EndAt:       req.EndTime,
 		Granularity: req.Granularity,
 	}
-	spanEnv := &span_filter.SpanEnv{
-		WorkspaceID: req.WorkspaceID,
+	mBuilder := &metricQueryBuilder{
+		metricNames:   req.MetricsNames,
+		filter:        filter,
+		spanEnv:       &span_filter.SpanEnv{WorkspaceID: req.WorkspaceID},
+		requestFilter: req.FilterFields,
+		granularity:   req.Granularity,
 	}
-	metricInfos := make([]*metricInfo, 0)
-	for _, metricName := range req.MetricsNames {
+	if err := s.buildMetricInfo(ctx, mBuilder); err != nil {
+		return nil, err
+	}
+	mFilter, err := s.buildFilter(ctx, mBuilder)
+	if err != nil {
+		return nil, err
+	} else if mFilter == nil {
+		return nil, nil
+	}
+	param.Aggregations = mBuilder.mInfo.mAggregation
+	param.GroupBys = mBuilder.mInfo.mGroupBy
+	param.Filters = mFilter
+	for _, field := range req.DrillDownFields {
+		if field == nil {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+		}
+		param.GroupBys = append(param.GroupBys, &entity.Dimension{
+			Field: field,
+			Alias: field.FieldName,
+		})
+	}
+	mBuilder.mRepoReq = param
+	return mBuilder, nil
+}
+
+func (s *MetricsService) buildMetricInfo(ctx context.Context, builder *metricQueryBuilder) error {
+	var (
+		mInfos = make([]*metricInfo, 0)
+		err    error
+	)
+	for _, metricName := range builder.metricNames {
 		metricDef, ok := s.metricDefMap[metricName]
 		if !ok {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
 				errorx.WithExtraMsg(fmt.Sprintf("metric definition %s not found", metricName)))
 		}
 		mInfo := &metricInfo{}
 		mInfo.mType = metricDef.Type()
 		mInfo.mGroupBy = metricDef.GroupBy()
-		mInfo.mWhere, err = metricDef.Where(ctx, filter, spanEnv)
+		mInfo.mWhere, err = metricDef.Where(ctx, builder.filter, builder.spanEnv)
 		if err != nil {
-			return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+			return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 		}
 		mInfo.mAggregation = []*entity.Dimension{{
-			Expression: metricDef.Expression(req.Granularity),
-			Alias:      string(metricDef.Name()), // 聚合指标的别名是指标名，以此后续来拆分数据
+			Expression: metricDef.Expression(builder.granularity),
+			Alias:      metricDef.Name(), // 聚合指标的别名是指标名，以此后续来拆分数据
 		}}
-		metricInfos = append(metricInfos, mInfo)
+		mInfos = append(mInfos, mInfo)
 	}
-	mInfo, err := s.combineMetricInfos(metricInfos)
-	if err != nil {
-		return nil, err
+	if len(mInfos) == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	mFilter, err := s.buildMetricFilter(ctx, filter, spanEnv, mInfo.mWhere, req.FilterFields)
-	if err != nil {
-		return nil, err
-	} else if mFilter == nil {
-		return &QueryMetricsResp{}, nil
+	out := mInfos[0]
+	for i := 1; i < len(mInfos); i++ {
+		mInfo := mInfos[i]
+		if mInfo.mType != out.mType {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric types not the same"))
+		} else if !reflect.DeepEqual(out.mWhere, mInfo.mWhere) {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric condition not the same"))
+		} else if !reflect.DeepEqual(out.mGroupBy, mInfo.mGroupBy) {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric groupby not the same"))
+		}
+		out.mAggregation = append(out.mAggregation, mInfo.mAggregation...)
 	}
-	param.Aggregations = mInfo.mAggregation
-	param.GroupBys = mInfo.mGroupBy // todo 需要传group by,指标底层
-	param.Filters = mFilter
-	result, err := s.metricRepo.GetMetrics(ctx, &param)
-	if err != nil {
-		return nil, err
-	}
-	return &QueryMetricsResp{
-		Metrics: s.formatMetrics(result.Data, mInfo),
-	}, nil
+	builder.mInfo = out
+	return nil
 }
 
-// TODO: 怎么确定Basic Filter，统计能看到的还是总的？？
-func (s *MetricsService) buildMetricFilter(ctx context.Context,
-	filter span_filter.Filter,
-	spanEnv *span_filter.SpanEnv,
-	metricFilters []*loop_span.FilterField,
-	requestFilter *loop_span.FilterFields,
-) (*loop_span.FilterFields, error) {
-	basicFilter, forceQuery, err := filter.BuildBasicSpanFilter(ctx, spanEnv)
+func (s *MetricsService) buildFilter(ctx context.Context, mBuilder *metricQueryBuilder) (*loop_span.FilterFields, error) {
+	basicFilter, forceQuery, err := mBuilder.filter.BuildBasicSpanFilter(ctx, mBuilder.spanEnv)
 	if err != nil {
 		return nil, err
 	} else if len(basicFilter) == 0 && !forceQuery {
 		return nil, nil
 	}
-	basicFilter = append(basicFilter, metricFilters...)
+	basicFilter = append(basicFilter, mBuilder.mInfo.mWhere...)
 	return &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 		FilterFields: []*loop_span.FilterField{
@@ -159,29 +210,10 @@ func (s *MetricsService) buildMetricFilter(ctx context.Context,
 			},
 			{
 				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-				SubFilter:  requestFilter,
+				SubFilter:  mBuilder.requestFilter,
 			},
 		},
 	}, nil
-}
-
-func (s *MetricsService) combineMetricInfos(mInfos []*metricInfo) (*metricInfo, error) {
-	if len(mInfos) == 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
-	}
-	out := mInfos[0]
-	for i := 1; i < len(mInfos); i++ {
-		mInfo := mInfos[i]
-		if mInfo.mType != out.mType {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric types not the same"))
-		} else if !reflect.DeepEqual(out.mWhere, mInfo.mWhere) {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric condition not the same"))
-		} else if !reflect.DeepEqual(out.mGroupBy, mInfo.mGroupBy) {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("metric groupby not the same"))
-		}
-		out.mAggregation = append(out.mAggregation, mInfo.mAggregation...)
-	}
-	return out, nil
 }
 
 /*

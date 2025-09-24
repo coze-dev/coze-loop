@@ -337,14 +337,15 @@ func (p *GetMetricsRequest) FastReadField8(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make([]string, 0, size)
+	_field := make([]*filter.FilterField, 0, size)
+	values := make([]filter.FilterField, size)
 	for i := 0; i < size; i++ {
-		var _elem string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
-			_elem = v
 		}
 
 		_field = append(_field, _elem)
@@ -474,9 +475,9 @@ func (p *GetMetricsRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter) i
 		var length int
 		for _, v := range p.DrillDownFields {
 			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -556,7 +557,7 @@ func (p *GetMetricsRequest) field8Length() int {
 		l += thrift.Binary.ListBeginLength()
 		for _, v := range p.DrillDownFields {
 			_ = v
-			l += thrift.Binary.StringLengthNocopy(v)
+			l += v.BLength()
 		}
 	}
 	return l
@@ -617,12 +618,16 @@ func (p *GetMetricsRequest) DeepCopy(s interface{}) error {
 	}
 
 	if src.DrillDownFields != nil {
-		p.DrillDownFields = make([]string, 0, len(src.DrillDownFields))
+		p.DrillDownFields = make([]*filter.FilterField, 0, len(src.DrillDownFields))
 		for _, elem := range src.DrillDownFields {
-			var _elem string
-			if elem != "" {
-				_elem = kutils.StringDeepCopy(elem)
+			var _elem *filter.FilterField
+			if elem != nil {
+				_elem = &filter.FilterField{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
 			}
+
 			p.DrillDownFields = append(p.DrillDownFields, _elem)
 		}
 	}

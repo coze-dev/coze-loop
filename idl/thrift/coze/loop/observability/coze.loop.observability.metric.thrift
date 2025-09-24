@@ -14,7 +14,7 @@ struct GetMetricsRequest {
     5: optional string granularity (api.body="granularity")
     6: optional filter.FilterFields filters (api.body="filters")
     7: optional common.PlatformType platform_type (api.body="platform_type")
-    8: optional list<string> drill_down_fields (api.body="drill_down_fields")
+    8: optional list<filter.FilterField> drill_down_fields (api.body="drill_down_fields")
 
     255: optional base.Base Base
 }

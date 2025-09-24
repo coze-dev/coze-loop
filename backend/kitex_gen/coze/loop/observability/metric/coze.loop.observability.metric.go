@@ -14,15 +14,15 @@ import (
 )
 
 type GetMetricsRequest struct {
-	WorkspaceID     int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	StartTime       int64                `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
-	EndTime         int64                `thrift:"end_time,3,required" frugal:"3,required,i64" json:"end_time" form:"end_time,required" `
-	MetricNames     []string             `thrift:"metric_names,4,required" frugal:"4,required,list<string>" form:"metric_names,required" json:"metric_names,required"`
-	Granularity     *string              `thrift:"granularity,5,optional" frugal:"5,optional,string" form:"granularity" json:"granularity,omitempty"`
-	Filters         *filter.FilterFields `thrift:"filters,6,optional" frugal:"6,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
-	PlatformType    *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	DrillDownFields []string             `thrift:"drill_down_fields,8,optional" frugal:"8,optional,list<string>" form:"drill_down_fields" json:"drill_down_fields,omitempty"`
-	Base            *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID     int64                 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	StartTime       int64                 `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
+	EndTime         int64                 `thrift:"end_time,3,required" frugal:"3,required,i64" json:"end_time" form:"end_time,required" `
+	MetricNames     []string              `thrift:"metric_names,4,required" frugal:"4,required,list<string>" form:"metric_names,required" json:"metric_names,required"`
+	Granularity     *string               `thrift:"granularity,5,optional" frugal:"5,optional,string" form:"granularity" json:"granularity,omitempty"`
+	Filters         *filter.FilterFields  `thrift:"filters,6,optional" frugal:"6,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
+	PlatformType    *common.PlatformType  `thrift:"platform_type,7,optional" frugal:"7,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	DrillDownFields []*filter.FilterField `thrift:"drill_down_fields,8,optional" frugal:"8,optional,list<filter.FilterField>" form:"drill_down_fields" json:"drill_down_fields,omitempty"`
+	Base            *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetMetricsRequest() *GetMetricsRequest {
@@ -96,9 +96,9 @@ func (p *GetMetricsRequest) GetPlatformType() (v common.PlatformType) {
 	return *p.PlatformType
 }
 
-var GetMetricsRequest_DrillDownFields_DEFAULT []string
+var GetMetricsRequest_DrillDownFields_DEFAULT []*filter.FilterField
 
-func (p *GetMetricsRequest) GetDrillDownFields() (v []string) {
+func (p *GetMetricsRequest) GetDrillDownFields() (v []*filter.FilterField) {
 	if p == nil {
 		return
 	}
@@ -140,7 +140,7 @@ func (p *GetMetricsRequest) SetFilters(val *filter.FilterFields) {
 func (p *GetMetricsRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
-func (p *GetMetricsRequest) SetDrillDownFields(val []string) {
+func (p *GetMetricsRequest) SetDrillDownFields(val []*filter.FilterField) {
 	p.DrillDownFields = val
 }
 func (p *GetMetricsRequest) SetBase(val *base.Base) {
@@ -418,14 +418,14 @@ func (p *GetMetricsRequest) ReadField8(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make([]string, 0, size)
+	_field := make([]*filter.FilterField, 0, size)
+	values := make([]filter.FilterField, size)
 	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
 
-		var _elem string
-		if v, err := iprot.ReadString(); err != nil {
+		if err := _elem.Read(iprot); err != nil {
 			return err
-		} else {
-			_elem = v
 		}
 
 		_field = append(_field, _elem)
@@ -636,11 +636,11 @@ func (p *GetMetricsRequest) writeField8(oprot thrift.TProtocol) (err error) {
 		if err = oprot.WriteFieldBegin("drill_down_fields", thrift.LIST, 8); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.DrillDownFields)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DrillDownFields)); err != nil {
 			return err
 		}
 		for _, v := range p.DrillDownFields {
-			if err := oprot.WriteString(v); err != nil {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
@@ -785,14 +785,14 @@ func (p *GetMetricsRequest) Field7DeepEqual(src *common.PlatformType) bool {
 	}
 	return true
 }
-func (p *GetMetricsRequest) Field8DeepEqual(src []string) bool {
+func (p *GetMetricsRequest) Field8DeepEqual(src []*filter.FilterField) bool {
 
 	if len(p.DrillDownFields) != len(src) {
 		return false
 	}
 	for i, v := range p.DrillDownFields {
 		_src := src[i]
-		if strings.Compare(v, _src) != 0 {
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}

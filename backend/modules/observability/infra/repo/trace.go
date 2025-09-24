@@ -38,6 +38,18 @@ func NewTraceCKRepoImpl(
 	}, nil
 }
 
+func NewTraceMetricCKRepoImpl(
+	spanDao ck.ISpansDao,
+	annoDao ck.IAnnotationDao,
+	traceConfig config.ITraceConfig,
+) (metric_repo.IMetricRepo, error) {
+	return &TraceCkRepoImpl{
+		spansDao:    spanDao,
+		annoDao:     annoDao,
+		traceConfig: traceConfig,
+	}, nil
+}
+
 type TraceCkRepoImpl struct {
 	spansDao    ck.ISpansDao
 	annoDao     ck.IAnnotationDao

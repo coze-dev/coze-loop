@@ -23,12 +23,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/exporter/clickhouseexporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/processor/queueprocessor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/receiver/rmqreceiver"
@@ -96,6 +98,20 @@ var (
 		auth.NewAuthProvider,
 		traceDomainSet,
 	)
+	metricsSet = wire.NewSet(
+		NewMetricApplication,
+		metric_service.NewMetricsService,
+		obrepo.NewTraceMetricCKRepoImpl,
+		tenant.NewTenantProvider,
+		auth.NewAuthProvider,
+		NewTraceConfigLoader,
+		NewTraceProcessorBuilder,
+		obconfig.NewTraceConfigCenter,
+		NewMetricDefinitions,
+		ckdao.NewSpansCkDaoImpl,
+		ckdao.NewAnnotationCkDaoImpl,
+		file.NewFileRPCProvider,
+	)
 )
 
 func NewTraceProcessorBuilder(
@@ -141,6 +157,10 @@ func NewTraceProcessorBuilder(
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		})
+}
+
+func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
+	return []metrics_entity.IMetricDefinition{}
 }
 
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo.ITraceRepo) service.IngestionCollectorFactory {
@@ -199,6 +219,17 @@ func InitOpenAPIApplication(
 	meter metrics.Meter,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
+	return nil, nil
+}
+
+func InitMetricApplication(
+	ckDb ck.Provider,
+	configFactory conf.IConfigLoaderFactory,
+	fileClient fileservice.Client,
+	benefit benefit.IBenefitService,
+	authClient authservice.Client,
+) (IMetricApplication, error) {
+	wire.Build(metricsSet)
 	return nil, nil
 }
 
