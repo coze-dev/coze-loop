@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+//go:generate mockgen -destination=mocks/code_builder.go -package=mocks . CodeBuilderFactory,UserCodeBuilder
 // UserCodeBuilder 用户代码构建器接口
 type UserCodeBuilder interface {
 	// BuildCode 构建可执行代码
