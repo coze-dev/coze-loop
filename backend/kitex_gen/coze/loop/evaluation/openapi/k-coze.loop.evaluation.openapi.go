@@ -88,6 +88,20 @@ func (p *ReportEvalTargetInvokeResultRequest) FastRead(buf []byte) (int, error) 
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField10(buf[offset:])
@@ -206,6 +220,20 @@ func (p *ReportEvalTargetInvokeResultRequest) FastReadField3(buf []byte) (int, e
 	return offset, nil
 }
 
+func (p *ReportEvalTargetInvokeResultRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Callee = _field
+	return offset, nil
+}
+
 func (p *ReportEvalTargetInvokeResultRequest) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 	_field := spi.NewInvokeEvalTargetOutput()
@@ -266,6 +294,7 @@ func (p *ReportEvalTargetInvokeResultRequest) FastWriteNocopy(buf []byte, w thri
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
@@ -281,6 +310,7 @@ func (p *ReportEvalTargetInvokeResultRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field20Length()
@@ -313,6 +343,15 @@ func (p *ReportEvalTargetInvokeResultRequest) fastWriteField3(buf []byte, w thri
 	if p.IsSetStatus() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
 		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Status))
+	}
+	return offset
+}
+
+func (p *ReportEvalTargetInvokeResultRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCallee() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Callee)
 	}
 	return offset
 }
@@ -380,6 +419,15 @@ func (p *ReportEvalTargetInvokeResultRequest) field3Length() int {
 	return l
 }
 
+func (p *ReportEvalTargetInvokeResultRequest) field4Length() int {
+	l := 0
+	if p.IsSetCallee() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Callee)
+	}
+	return l
+}
+
 func (p *ReportEvalTargetInvokeResultRequest) field10Length() int {
 	l := 0
 	if p.IsSetOutput() {
@@ -435,6 +483,14 @@ func (p *ReportEvalTargetInvokeResultRequest) DeepCopy(s interface{}) error {
 	if src.Status != nil {
 		tmp := *src.Status
 		p.Status = &tmp
+	}
+
+	if src.Callee != nil {
+		var tmp string
+		if *src.Callee != "" {
+			tmp = kutils.StringDeepCopy(*src.Callee)
+		}
+		p.Callee = &tmp
 	}
 
 	var _output *spi.InvokeEvalTargetOutput

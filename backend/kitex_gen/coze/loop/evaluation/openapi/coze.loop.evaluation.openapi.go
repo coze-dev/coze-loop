@@ -15,6 +15,7 @@ type ReportEvalTargetInvokeResultRequest struct {
 	WorkspaceID *int64                      `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	InvokeID    *int64                      `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
 	Status      *spi.InvokeEvalTargetStatus `thrift:"status,3,optional" frugal:"3,optional,InvokeEvalTargetStatus" form:"status" json:"status,omitempty" query:"status"`
+	Callee      *string                     `thrift:"callee,4,optional" frugal:"4,optional,string" form:"callee" json:"callee,omitempty" query:"callee"`
 	// set output if status=SUCCESS
 	Output *spi.InvokeEvalTargetOutput `thrift:"output,10,optional" frugal:"10,optional,spi.InvokeEvalTargetOutput" form:"output" json:"output,omitempty" query:"output"`
 	// set output if status=SUCCESS
@@ -65,6 +66,18 @@ func (p *ReportEvalTargetInvokeResultRequest) GetStatus() (v spi.InvokeEvalTarge
 		return ReportEvalTargetInvokeResultRequest_Status_DEFAULT
 	}
 	return *p.Status
+}
+
+var ReportEvalTargetInvokeResultRequest_Callee_DEFAULT string
+
+func (p *ReportEvalTargetInvokeResultRequest) GetCallee() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCallee() {
+		return ReportEvalTargetInvokeResultRequest_Callee_DEFAULT
+	}
+	return *p.Callee
 }
 
 var ReportEvalTargetInvokeResultRequest_Output_DEFAULT *spi.InvokeEvalTargetOutput
@@ -123,6 +136,9 @@ func (p *ReportEvalTargetInvokeResultRequest) SetInvokeID(val *int64) {
 func (p *ReportEvalTargetInvokeResultRequest) SetStatus(val *spi.InvokeEvalTargetStatus) {
 	p.Status = val
 }
+func (p *ReportEvalTargetInvokeResultRequest) SetCallee(val *string) {
+	p.Callee = val
+}
 func (p *ReportEvalTargetInvokeResultRequest) SetOutput(val *spi.InvokeEvalTargetOutput) {
 	p.Output = val
 }
@@ -140,6 +156,7 @@ var fieldIDToName_ReportEvalTargetInvokeResultRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "invoke_id",
 	3:   "status",
+	4:   "callee",
 	10:  "output",
 	11:  "usage",
 	20:  "error_message",
@@ -156,6 +173,10 @@ func (p *ReportEvalTargetInvokeResultRequest) IsSetInvokeID() bool {
 
 func (p *ReportEvalTargetInvokeResultRequest) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *ReportEvalTargetInvokeResultRequest) IsSetCallee() bool {
+	return p.Callee != nil
 }
 
 func (p *ReportEvalTargetInvokeResultRequest) IsSetOutput() bool {
@@ -211,6 +232,14 @@ func (p *ReportEvalTargetInvokeResultRequest) Read(iprot thrift.TProtocol) (err 
 		case 3:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -311,6 +340,17 @@ func (p *ReportEvalTargetInvokeResultRequest) ReadField3(iprot thrift.TProtocol)
 	p.Status = _field
 	return nil
 }
+func (p *ReportEvalTargetInvokeResultRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Callee = _field
+	return nil
+}
 func (p *ReportEvalTargetInvokeResultRequest) ReadField10(iprot thrift.TProtocol) error {
 	_field := spi.NewInvokeEvalTargetOutput()
 	if err := _field.Read(iprot); err != nil {
@@ -363,6 +403,10 @@ func (p *ReportEvalTargetInvokeResultRequest) Write(oprot thrift.TProtocol) (err
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -452,6 +496,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ReportEvalTargetInvokeResultRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCallee() {
+		if err = oprot.WriteFieldBegin("callee", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Callee); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ReportEvalTargetInvokeResultRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutput() {
@@ -549,6 +611,9 @@ func (p *ReportEvalTargetInvokeResultRequest) DeepEqual(ano *ReportEvalTargetInv
 	if !p.Field3DeepEqual(ano.Status) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.Callee) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.Output) {
 		return false
 	}
@@ -596,6 +661,18 @@ func (p *ReportEvalTargetInvokeResultRequest) Field3DeepEqual(src *spi.InvokeEva
 		return false
 	}
 	if *p.Status != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetInvokeResultRequest) Field4DeepEqual(src *string) bool {
+
+	if p.Callee == src {
+		return true
+	} else if p.Callee == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Callee, *src) != 0 {
 		return false
 	}
 	return true
