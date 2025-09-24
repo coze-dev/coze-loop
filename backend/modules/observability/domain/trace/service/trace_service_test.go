@@ -2974,9 +2974,7 @@ func TestTraceFilterProcessorBuilderImpl_BuildIngestTraceProcessors_ErrorHandlin
 				nil,
 			)
 
-			got, err := builder.BuildIngestTraceProcessors(context.Background(), span_processor.Settings{
-				Tenant: "test-tenant",
-			})
+			got, err := builder.BuildIngestTraceProcessors(context.Background(), span_processor.Settings{})
 
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {

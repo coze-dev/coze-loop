@@ -283,6 +283,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		QueryStartTime:  req.StartTime,
 		QueryEndTime:    req.EndTime,
 		SpanDoubleCheck: len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
+		QueryTenants:    tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -339,6 +340,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		PlatformType:   req.PlatformType,
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
+		QueryTenants:   tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -383,6 +385,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		QueryEndTime:          req.EndTime,
 		PlatformType:          req.PlatformType,
 		SpanDoubleCheck:       req.Filters != nil && len(req.Filters.FilterFields) > 0,
+		QueryTenants:          req.Tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -436,6 +439,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 		WorkspaceId:    req.WorkspaceID,
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
+		QueryTenants:   req.Tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -454,9 +458,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 }
 
 func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesReq) error {
-	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{
-		Tenant: req.Tenant,
-	})
+	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
