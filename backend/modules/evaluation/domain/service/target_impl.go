@@ -489,6 +489,10 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
+	if gptr.Indirect(record.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %v", record.Status)))
+	}
+
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record); err != nil {
