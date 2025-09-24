@@ -1381,7 +1381,7 @@ func (p *OtelIngestTracesResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type CreateAnnotationRequest struct {
 	WorkspaceID         int64                 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	SpanID              string                `thrift:"span_id,2,required" frugal:"2,required,string" form:"span_id,required" json:"span_id,required"`
+	SpanID              *string               `thrift:"span_id,2,optional" frugal:"2,optional,string" form:"span_id" json:"span_id,omitempty"`
 	TraceID             string                `thrift:"trace_id,3,required" frugal:"3,required,string" form:"trace_id,required" json:"trace_id,required"`
 	AnnotationKey       string                `thrift:"annotation_key,4,required" frugal:"4,required,string" form:"annotation_key,required" json:"annotation_key,required"`
 	AnnotationValue     string                `thrift:"annotation_value,5,required" frugal:"5,required,string" form:"annotation_value,required" json:"annotation_value,required"`
@@ -1404,11 +1404,16 @@ func (p *CreateAnnotationRequest) GetWorkspaceID() (v int64) {
 	return
 }
 
+var CreateAnnotationRequest_SpanID_DEFAULT string
+
 func (p *CreateAnnotationRequest) GetSpanID() (v string) {
-	if p != nil {
-		return p.SpanID
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetSpanID() {
+		return CreateAnnotationRequest_SpanID_DEFAULT
+	}
+	return *p.SpanID
 }
 
 func (p *CreateAnnotationRequest) GetTraceID() (v string) {
@@ -1470,7 +1475,7 @@ func (p *CreateAnnotationRequest) GetBase() (v *base.Base) {
 func (p *CreateAnnotationRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *CreateAnnotationRequest) SetSpanID(val string) {
+func (p *CreateAnnotationRequest) SetSpanID(val *string) {
 	p.SpanID = val
 }
 func (p *CreateAnnotationRequest) SetTraceID(val string) {
@@ -1503,6 +1508,10 @@ var fieldIDToName_CreateAnnotationRequest = map[int16]string{
 	255: "Base",
 }
 
+func (p *CreateAnnotationRequest) IsSetSpanID() bool {
+	return p.SpanID != nil
+}
+
 func (p *CreateAnnotationRequest) IsSetAnnotationValueType() bool {
 	return p.AnnotationValueType != nil
 }
@@ -1519,7 +1528,6 @@ func (p *CreateAnnotationRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetSpanID bool = false
 	var issetTraceID bool = false
 	var issetAnnotationKey bool = false
 	var issetAnnotationValue bool = false
@@ -1552,7 +1560,6 @@ func (p *CreateAnnotationRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetSpanID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -1625,11 +1632,6 @@ func (p *CreateAnnotationRequest) Read(iprot thrift.TProtocol) (err error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetSpanID {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetTraceID {
 		fieldId = 3
 		goto RequiredFieldNotSetError
@@ -1675,11 +1677,11 @@ func (p *CreateAnnotationRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *CreateAnnotationRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field string
+	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.SpanID = _field
 	return nil
@@ -1821,14 +1823,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *CreateAnnotationRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("span_id", thrift.STRING, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.SpanID); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetSpanID() {
+		if err = oprot.WriteFieldBegin("span_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SpanID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -1987,9 +1991,14 @@ func (p *CreateAnnotationRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *CreateAnnotationRequest) Field2DeepEqual(src string) bool {
+func (p *CreateAnnotationRequest) Field2DeepEqual(src *string) bool {
 
-	if strings.Compare(p.SpanID, src) != 0 {
+	if p.SpanID == src {
+		return true
+	} else if p.SpanID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SpanID, *src) != 0 {
 		return false
 	}
 	return true
@@ -2221,8 +2230,8 @@ func (p *CreateAnnotationResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type DeleteAnnotationRequest struct {
-	WorkspaceID   int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	SpanID        string     `thrift:"span_id,2,required" frugal:"2,required,string" json:"span_id,required" query:"span_id,required"`
+	WorkspaceID   int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
+	SpanID        *string    `thrift:"span_id,2,optional" frugal:"2,optional,string" json:"span_id,omitempty" query:"span_id"`
 	TraceID       string     `thrift:"trace_id,4,required" frugal:"4,required,string" json:"trace_id,required" query:"trace_id,required"`
 	AnnotationKey string     `thrift:"annotation_key,3,required" frugal:"3,required,string" json:"annotation_key,required" query:"annotation_key,required"`
 	Base          *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -2242,11 +2251,16 @@ func (p *DeleteAnnotationRequest) GetWorkspaceID() (v int64) {
 	return
 }
 
+var DeleteAnnotationRequest_SpanID_DEFAULT string
+
 func (p *DeleteAnnotationRequest) GetSpanID() (v string) {
-	if p != nil {
-		return p.SpanID
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetSpanID() {
+		return DeleteAnnotationRequest_SpanID_DEFAULT
+	}
+	return *p.SpanID
 }
 
 func (p *DeleteAnnotationRequest) GetTraceID() (v string) {
@@ -2277,7 +2291,7 @@ func (p *DeleteAnnotationRequest) GetBase() (v *base.Base) {
 func (p *DeleteAnnotationRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *DeleteAnnotationRequest) SetSpanID(val string) {
+func (p *DeleteAnnotationRequest) SetSpanID(val *string) {
 	p.SpanID = val
 }
 func (p *DeleteAnnotationRequest) SetTraceID(val string) {
@@ -2298,6 +2312,10 @@ var fieldIDToName_DeleteAnnotationRequest = map[int16]string{
 	255: "Base",
 }
 
+func (p *DeleteAnnotationRequest) IsSetSpanID() bool {
+	return p.SpanID != nil
+}
+
 func (p *DeleteAnnotationRequest) IsSetBase() bool {
 	return p.Base != nil
 }
@@ -2306,7 +2324,6 @@ func (p *DeleteAnnotationRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetSpanID bool = false
 	var issetTraceID bool = false
 	var issetAnnotationKey bool = false
 
@@ -2338,7 +2355,6 @@ func (p *DeleteAnnotationRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetSpanID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -2386,11 +2402,6 @@ func (p *DeleteAnnotationRequest) Read(iprot thrift.TProtocol) (err error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetSpanID {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetTraceID {
 		fieldId = 4
 		goto RequiredFieldNotSetError
@@ -2431,11 +2442,11 @@ func (p *DeleteAnnotationRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *DeleteAnnotationRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field string
+	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.SpanID = _field
 	return nil
@@ -2532,14 +2543,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *DeleteAnnotationRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("span_id", thrift.STRING, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.SpanID); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetSpanID() {
+		if err = oprot.WriteFieldBegin("span_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SpanID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -2637,9 +2650,14 @@ func (p *DeleteAnnotationRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *DeleteAnnotationRequest) Field2DeepEqual(src string) bool {
+func (p *DeleteAnnotationRequest) Field2DeepEqual(src *string) bool {
 
-	if strings.Compare(p.SpanID, src) != 0 {
+	if p.SpanID == src {
+		return true
+	} else if p.SpanID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SpanID, *src) != 0 {
 		return false
 	}
 	return true

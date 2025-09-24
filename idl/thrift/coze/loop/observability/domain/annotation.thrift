@@ -7,9 +7,12 @@ const AnnotationType AnnotationType_AutoEvaluate = "auto_evaluate"
 const AnnotationType AnnotationType_EvaluationSet = "manual_evaluation_set"
 const AnnotationType AnnotationType_ManualFeedback = "manual_feedback"
 const AnnotationType AnnotationType_CozeFeedback = "coze_feedback"
+const AnnotationType AnnotationType_OpenAPIFeedback = "openapi_feedback"
 
 typedef string ValueType (ts.enum="true")
 const ValueType ValueType_String = "string"
+const ValueType ValueType_Category = "category"
+const ValueType ValueType_Number = "number"
 const ValueType ValueType_Long = "long"
 const ValueType ValueType_Double = "double"
 const ValueType ValueType_Bool = "bool"

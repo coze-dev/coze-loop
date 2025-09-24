@@ -395,7 +395,7 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation_value"))
 		}
 		val = loop_span.NewLongValue(i)
-	case loop_span.AnnotationValueTypeString:
+	case loop_span.AnnotationValueTypeString, loop_span.AnnotationValueTypeCategory:
 		val = loop_span.NewStringValue(req.AnnotationValue)
 	case loop_span.AnnotationValueTypeBool:
 		b, err := strconv.ParseBool(req.AnnotationValue)
@@ -403,7 +403,7 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation_value"))
 		}
 		val = loop_span.NewBoolValue(b)
-	case loop_span.AnnotationValueTypeDouble:
+	case loop_span.AnnotationValueTypeDouble, loop_span.AnnotationValueTypeNumber:
 		f, err := strconv.ParseFloat(req.AnnotationValue, 64)
 		if err != nil {
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation_value"))
@@ -411,6 +411,11 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 		val = loop_span.NewDoubleValue(f)
 	default:
 		val = loop_span.NewStringValue(req.AnnotationValue)
+	}
+	if err := o.auth.CheckWorkspacePermission(ctx,
+		rpc.AuthActionAnnotationCreate,
+		strconv.FormatInt(req.WorkspaceID, 10), true); err != nil {
+		return nil, err
 	}
 	res, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 		ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
@@ -436,6 +441,11 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 }
 
 func (o *OpenAPIApplication) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest) (*openapi.DeleteAnnotationResponse, error) {
+	if err := o.auth.CheckWorkspacePermission(ctx,
+		rpc.AuthActionAnnotationCreate,
+		strconv.FormatInt(req.WorkspaceID, 10), true); err != nil {
+		return nil, err
+	}
 	res, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 		ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
 		SpaceID:      req.WorkspaceID,
@@ -495,10 +505,8 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	if sResp != nil {
-		spansSize = loop_span.SizeofSpans(sResp.Spans)
-		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
-	}
+	spansSize = loop_span.SizeofSpans(sResp.Spans)
+	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
 			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
@@ -594,10 +602,8 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 		errCode = obErrorx.CommonInternalErrorCode
 		return nil, err
 	}
-	if sResp != nil {
-		logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
-		spansSize = loop_span.SizeofSpans(sResp.Spans)
-	}
+	logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
+	spansSize = loop_span.SizeofSpans(sResp.Spans)
 
 	resp.Data = &openapi.ListSpansOApiData{
 		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
