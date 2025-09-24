@@ -180,6 +180,7 @@ func (t *TraceApplication) buildListSpansSvcReq(req *trace.ListSpansRequest) (*s
 }
 
 func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequest) (*trace.GetTraceResponse, error) {
+	logs.CtxInfo(ctx, "Get trace req: %v", req)
 	if err := t.validateGetTraceReq(ctx, req); err != nil {
 		return nil, err
 	}
