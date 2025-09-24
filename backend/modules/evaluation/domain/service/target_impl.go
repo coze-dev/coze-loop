@@ -489,8 +489,8 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
-	if gptr.Indirect(record.Status) != entity.EvalTargetRunStatusAsyncInvoking {
-		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %v", record.Status)))
+	if status := gptr.Indirect(record.Status); status != entity.EvalTargetRunStatusAsyncInvoking {
+		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
 	}
 
 	record.EvalTargetOutputData = param.OutputData
