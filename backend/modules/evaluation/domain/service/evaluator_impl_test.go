@@ -1496,7 +1496,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
 				session.WithCtxUser(ctx, &session.User{ID: defaultUserID})
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData, defaultRequest.DisableTracing).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, record *entity.EvaluatorRecord) error {
@@ -1520,6 +1520,104 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 				EvaluatorOutputData: defaultOutputData,
 				Status:              defaultRunStatus,
 				Ext:                 defaultRequest.Ext,
+				BaseInfo: &entity.BaseInfo{
+					CreatedBy: &entity.UserInfo{UserID: gptr.Of(defaultUserID)},
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "成功运行评估器_DisableTracing为true",
+			request: &entity.RunEvaluatorRequest{
+				SpaceID:            1,
+				EvaluatorVersionID: 101,
+				InputData:          &entity.EvaluatorInputData{},
+				ExperimentID:       201,
+				ItemID:             301,
+				TurnID:             401,
+				Ext:                map[string]string{"key": "value"},
+				DisableTracing:     true,
+			},
+			setupMocks: func(mockEvaluatorSourceService *mocks.MockEvaluatorSourceService) {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), gomock.Any(), []int64{101}, false).Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(1)).Return(true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
+				session.WithCtxUser(ctx, &session.User{ID: defaultUserID})
+				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
+				// 验证DisableTracing参数正确传递给EvaluatorSourceService.Run方法
+				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), true).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, record *entity.EvaluatorRecord) error {
+						assert.Equal(t, record.ID, defaultRecordID)
+						assert.Equal(t, record.SpaceID, int64(1))
+						assert.Equal(t, record.EvaluatorVersionID, int64(101))
+						assert.Equal(t, record.Status, defaultRunStatus)
+						return nil
+					})
+			},
+			expectedRecord: &entity.EvaluatorRecord{
+				ID:                  defaultRecordID,
+				SpaceID:             1,
+				ExperimentID:        201,
+				ExperimentRunID:     0,
+				ItemID:              301,
+				TurnID:              401,
+				EvaluatorVersionID:  101,
+				LogID:               defaultLogID,
+				EvaluatorInputData:  &entity.EvaluatorInputData{},
+				EvaluatorOutputData: defaultOutputData,
+				Status:              defaultRunStatus,
+				Ext:                 map[string]string{"key": "value"},
+				BaseInfo: &entity.BaseInfo{
+					CreatedBy: &entity.UserInfo{UserID: gptr.Of(defaultUserID)},
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "成功运行评估器_DisableTracing为false",
+			request: &entity.RunEvaluatorRequest{
+				SpaceID:            1,
+				EvaluatorVersionID: 101,
+				InputData:          &entity.EvaluatorInputData{},
+				ExperimentID:       201,
+				ItemID:             301,
+				TurnID:             401,
+				Ext:                map[string]string{"key": "value"},
+				DisableTracing:     false,
+			},
+			setupMocks: func(mockEvaluatorSourceService *mocks.MockEvaluatorSourceService) {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), gomock.Any(), []int64{101}, false).Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(1)).Return(true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
+				session.WithCtxUser(ctx, &session.User{ID: defaultUserID})
+				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
+				// 验证DisableTracing参数正确传递给EvaluatorSourceService.Run方法
+				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, record *entity.EvaluatorRecord) error {
+						assert.Equal(t, record.ID, defaultRecordID)
+						assert.Equal(t, record.SpaceID, int64(1))
+						assert.Equal(t, record.EvaluatorVersionID, int64(101))
+						assert.Equal(t, record.Status, defaultRunStatus)
+						return nil
+					})
+			},
+			expectedRecord: &entity.EvaluatorRecord{
+				ID:                  defaultRecordID,
+				SpaceID:             1,
+				ExperimentID:        201,
+				ExperimentRunID:     0,
+				ItemID:              301,
+				TurnID:              401,
+				EvaluatorVersionID:  101,
+				LogID:               defaultLogID,
+				EvaluatorInputData:  &entity.EvaluatorInputData{},
+				EvaluatorOutputData: defaultOutputData,
+				Status:              defaultRunStatus,
+				Ext:                 map[string]string{"key": "value"},
 				BaseInfo: &entity.BaseInfo{
 					CreatedBy: &entity.UserInfo{UserID: gptr.Of(defaultUserID)},
 				},
@@ -1687,4 +1785,109 @@ func Test_EvaluatorServiceImpl_injectUserInfo(t *testing.T) {
 	assert.NotNil(t, mockEvaluator.BaseInfo.UpdatedBy.UserID)
 	assert.NotNil(t, mockEvaluator.BaseInfo.UpdatedAt)
 	assert.NotNil(t, mockEvaluator.BaseInfo.CreatedAt)
+}
+
+// TestEvaluatorServiceImpl_RunEvaluator_DisableTracing 测试EvaluatorServiceImpl.RunEvaluator中DisableTracing参数传递
+func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+
+	s := &EvaluatorServiceImpl{
+		evaluatorRepo:       mockEvaluatorRepo,
+		limiter:             mockLimiter,
+		idgen:               mockIDGen,
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+			entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
+		},
+	}
+
+	ctx := context.Background()
+	session.WithCtxUser(ctx, &session.User{ID: "test-user"})
+
+	defaultEvaluatorDO := &entity.Evaluator{
+		ID:            100,
+		SpaceID:       1,
+		Name:          "Test Evaluator",
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:                100,
+			EvaluatorID:       100,
+			SpaceID:           1,
+			PromptTemplateKey: "test-template-key",
+			PromptSuffix:      "test-prompt-suffix",
+			ModelConfig: &entity.ModelConfig{
+				ModelID: 1,
+			},
+			ParseType: entity.ParseTypeFunctionCall,
+		},
+	}
+
+	defaultOutputData := &entity.EvaluatorOutputData{
+		EvaluatorResult: &entity.EvaluatorResult{
+			Score:     gptr.Of(0.85),
+			Reasoning: "Test reasoning",
+		},
+	}
+	defaultRunStatus := entity.EvaluatorRunStatusSuccess
+	defaultRecordID := int64(999)
+
+	tests := []struct {
+		name           string
+		disableTracing bool
+		setupMocks     func()
+	}{
+		{
+			name:           "DisableTracing为true时正确传递给EvaluatorSourceService.Run",
+			disableTracing: true,
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), gomock.Any(), []int64{101}, false).Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(1)).Return(true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
+				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
+				// 关键验证：确保DisableTracing参数正确传递
+				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), true).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name:           "DisableTracing为false时正确传递给EvaluatorSourceService.Run",
+			disableTracing: false,
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), gomock.Any(), []int64{101}, false).Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(1)).Return(true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
+				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
+				// 关键验证：确保DisableTracing参数正确传递
+				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMocks()
+
+			request := &entity.RunEvaluatorRequest{
+				SpaceID:            1,
+				EvaluatorVersionID: 101,
+				InputData:          &entity.EvaluatorInputData{},
+				DisableTracing:     tt.disableTracing,
+			}
+
+			record, err := s.RunEvaluator(ctx, request)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, record)
+			assert.Equal(t, defaultRecordID, record.ID)
+			assert.Equal(t, defaultRunStatus, record.Status)
+		})
+	}
 }
