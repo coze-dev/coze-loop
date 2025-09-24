@@ -23,13 +23,16 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
+	processor2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
 	repo2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
@@ -194,7 +197,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, redis2 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client, benefit2 benefit.IBenefitService, fileClient fileservice.Client) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, redis2 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client, benefit2 benefit.IBenefitService, fileClient fileservice.Client, taskProcessor processor.TaskProcessor) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := dao.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
@@ -211,14 +214,13 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	if err != nil {
 		return nil, err
 	}
-	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iTaskRunRepo, iUserProvider, idgen2, iBackfillProducer)
+	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iTaskRunRepo, iUserProvider, idgen2, iBackfillProducer, taskProcessor)
 	if err != nil {
 		return nil, err
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
-	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -234,7 +236,9 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTaskRunRepo, datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder)
+	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
+	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo, iTaskRunRepo)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTaskRunRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +267,10 @@ var (
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
 	)
-	taskSet = wire.NewSet(tracehub.NewTraceHubImpl, NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluation.NewEvaluationRPCProvider, traceDomainSet)
+	taskSet = wire.NewSet(
+
+		NewInitTaskProcessor, tracehub.NewTraceHubImpl, NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluation.NewEvaluationRPCProvider, traceDomainSet,
+	)
 )
 
 func NewTraceProcessorBuilder(
@@ -288,7 +295,7 @@ func NewTraceProcessorBuilder(
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo2.ITraceRepo) service.IngestionCollectorFactory {
 	return service.NewIngestionCollectorFactory(
 		[]receiver.Factory{rmqreceiver.NewFactory(mqFactory)},
-		[]processor.Factory{queueprocessor.NewFactory()},
+		[]processor2.Factory{queueprocessor.NewFactory()},
 		[]exporter.Factory{clickhouseexporter.NewFactory(traceRepo)},
 	)
 }
@@ -302,4 +309,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 	datasetProvider := dataset.NewDatasetProvider(datasetService)
 	adapter.Register(entity.DatasetCategory_Evaluation, evaluationset.NewEvaluationSetProvider(evalSetService, datasetProvider))
 	return adapter
+}
+
+func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo3.ITaskRepo, taskRunRepo repo3.ITaskRunRepo) *processor.TaskProcessor {
+	taskProcessor := processor.NewTaskProcessor()
+	taskProcessor.Register(task.TaskTypeAutoEval, processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo))
+	return taskProcessor
 }
