@@ -4158,6 +4158,7 @@ func (p *ExecuteEvalTargetResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type AsyncExecuteEvalTargetResponse struct {
 	InvokeID *int64         `thrift:"invoke_id,1,optional" frugal:"1,optional,i64" form:"invoke_id" json:"invoke_id,omitempty" query:"invoke_id"`
+	Callee   *string        `thrift:"callee,2,optional" frugal:"2,optional,string" form:"callee" json:"callee,omitempty" query:"callee"`
 	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -4180,6 +4181,18 @@ func (p *AsyncExecuteEvalTargetResponse) GetInvokeID() (v int64) {
 	return *p.InvokeID
 }
 
+var AsyncExecuteEvalTargetResponse_Callee_DEFAULT string
+
+func (p *AsyncExecuteEvalTargetResponse) GetCallee() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCallee() {
+		return AsyncExecuteEvalTargetResponse_Callee_DEFAULT
+	}
+	return *p.Callee
+}
+
 var AsyncExecuteEvalTargetResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *AsyncExecuteEvalTargetResponse) GetBaseResp() (v *base.BaseResp) {
@@ -4194,17 +4207,25 @@ func (p *AsyncExecuteEvalTargetResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *AsyncExecuteEvalTargetResponse) SetInvokeID(val *int64) {
 	p.InvokeID = val
 }
+func (p *AsyncExecuteEvalTargetResponse) SetCallee(val *string) {
+	p.Callee = val
+}
 func (p *AsyncExecuteEvalTargetResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_AsyncExecuteEvalTargetResponse = map[int16]string{
 	1:   "invoke_id",
+	2:   "callee",
 	255: "BaseResp",
 }
 
 func (p *AsyncExecuteEvalTargetResponse) IsSetInvokeID() bool {
 	return p.InvokeID != nil
+}
+
+func (p *AsyncExecuteEvalTargetResponse) IsSetCallee() bool {
+	return p.Callee != nil
 }
 
 func (p *AsyncExecuteEvalTargetResponse) IsSetBaseResp() bool {
@@ -4232,6 +4253,14 @@ func (p *AsyncExecuteEvalTargetResponse) Read(iprot thrift.TProtocol) (err error
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4285,6 +4314,17 @@ func (p *AsyncExecuteEvalTargetResponse) ReadField1(iprot thrift.TProtocol) erro
 	p.InvokeID = _field
 	return nil
 }
+func (p *AsyncExecuteEvalTargetResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Callee = _field
+	return nil
+}
 func (p *AsyncExecuteEvalTargetResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -4302,6 +4342,10 @@ func (p *AsyncExecuteEvalTargetResponse) Write(oprot thrift.TProtocol) (err erro
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -4344,6 +4388,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *AsyncExecuteEvalTargetResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCallee() {
+		if err = oprot.WriteFieldBegin("callee", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Callee); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *AsyncExecuteEvalTargetResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -4378,6 +4440,9 @@ func (p *AsyncExecuteEvalTargetResponse) DeepEqual(ano *AsyncExecuteEvalTargetRe
 	if !p.Field1DeepEqual(ano.InvokeID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Callee) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -4392,6 +4457,18 @@ func (p *AsyncExecuteEvalTargetResponse) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncExecuteEvalTargetResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Callee == src {
+		return true
+	} else if p.Callee == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Callee, *src) != 0 {
 		return false
 	}
 	return true
