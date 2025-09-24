@@ -113,7 +113,7 @@ func (e *ExptItemEventEvalServiceImpl) Eval(ctx context.Context, event *entity.E
 	ctx = ctxcache.Init(ctx)
 
 	if err := e.endpoints(ctx, event); err != nil {
-		logs.CtxError(ctx, "[ExptRecordEval] expt record eval fail, event: %v, err: %v", json.Jsonify(event), err)
+		logs.CtxError(ctx, "[ExptTurnEval] expt record eval fail, event: %v, err: %v", json.Jsonify(event), err)
 		return err
 	}
 
@@ -164,7 +164,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			e.metric.EmitItemExecResult(event.SpaceID, int64(event.ExptRunMode), nextErr != nil, needRetry, stable, int64(code), event.CreateAt)
 		}()
 
-		logs.CtxInfo(ctx, "[ExptRecordEval] handle event done, success: %v, retry: %v, retry_times: %v, err: %v, indebt: %v, event: %v",
+		logs.CtxInfo(ctx, "[ExptTurnEval] handle event done, success: %v, retry: %v, retry_times: %v, err: %v, indebt: %v, event: %v",
 			nextErr == nil, needRetry, retryConf.GetRetryTimes(), nextErr, retryConf.IsInDebt, json.Jsonify(event))
 
 		if nextErr == nil {

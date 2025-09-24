@@ -97,6 +97,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	}
 
 	if existRecord := e.existedTargetRecord(etec); existRecord != nil {
+		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
 		return existRecord, nil
 	}
 
@@ -212,7 +213,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 
 	ts := time.Now()
-	targetRecord, err = e.evalTargetService.AsyncExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
+	targetRecord, callee, err := e.evalTargetService.AsyncExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +223,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		TurnID:      targetRecord.ID,
 		AsyncUnixMS: ts.UnixMilli(),
 		Session:     etec.Event.Session,
+		Callee:      callee,
 	}); err != nil {
 		return nil, err
 	}

@@ -461,4 +461,5 @@ type EvalAsyncCtx struct {
 	TurnID      int64
 	AsyncUnixMS int64 // async call time with unix ms ts
 	Session     *Session
+	Callee      string
 }

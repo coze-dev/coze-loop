@@ -57,12 +57,13 @@ func (mr *MockIEvalTargetServiceMockRecorder) AsyncDebugTarget(ctx, param any) *
 }
 
 // AsyncExecuteTarget mocks base method.
-func (m *MockIEvalTargetService) AsyncExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+func (m *MockIEvalTargetService) AsyncExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AsyncExecuteTarget", ctx, spaceID, targetID, targetVersionID, param, inputData)
 	ret0, _ := ret[0].(*entity.EvalTargetRecord)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // AsyncExecuteTarget indicates an expected call of AsyncExecuteTarget.

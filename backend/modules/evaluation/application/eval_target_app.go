@@ -336,7 +336,7 @@ func (e EvalTargetApplicationImpl) AsyncExecuteEvalTarget(ctx context.Context, r
 		return nil, err
 	}
 
-	record, err := e.evalTargetService.AsyncExecuteTarget(ctx, request.WorkspaceID, request.EvalTargetID, request.EvalTargetVersionID, &entity.ExecuteTargetCtx{
+	record, _, err := e.evalTargetService.AsyncExecuteTarget(ctx, request.WorkspaceID, request.EvalTargetID, request.EvalTargetVersionID, &entity.ExecuteTargetCtx{
 		ExperimentRunID: request.ExperimentRunID,
 	}, target.InputDTO2ToDO(request.InputData))
 	if err != nil {

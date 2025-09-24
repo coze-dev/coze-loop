@@ -281,21 +281,21 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 }
 
 func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64,
-	param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
+	param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, callee string, err error) {
 	if inputData == nil || param == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("AsyncExecuteTarget with invalid param"))
+		return nil, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("AsyncExecuteTarget with invalid param"))
 	}
 
 	evalTargetDO, err := e.GetEvalTargetVersion(ctx, spaceID, targetVersionID, false)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	return e.asyncExecuteTarget(ctx, spaceID, evalTargetDO, param, inputData)
 }
 
 func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID int64, target *entity.EvalTarget, param *entity.ExecuteTargetCtx,
-	inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
+	inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, callee string, err error) {
 	defer func(st time.Time) { e.metric.EmitRun(spaceID, err, st) }(time.Now()) // todo(@liushengyang): mtr
 	defer goroutine.Recovery(ctx)
 
@@ -304,11 +304,11 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 
 	operator := e.typedOperators[target.EvalTargetType]
 	if operator == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+		return nil, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
 
 	if err := operator.ValidateInput(ctx, spaceID, target.EvalTargetVersion.InputSchema, inputData); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	status := entity.EvalTargetRunStatusAsyncInvoking
@@ -318,7 +318,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		TimeConsumingMS: gptr.Of(int64(0)),
 	}
 
-	invokeID, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      target.SourceTargetID,
@@ -343,10 +343,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		//		Message: execErr.Error(),
 		//	}
 		//}
-		return nil, execErr
+		return nil, callee, execErr
 	}
 
-	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v", invokeID)
+	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v, callee: %v, target_id: %v, target_version_id: %v", invokeID, callee, targetID, targetVersionID)
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	record = &entity.EvalTargetRecord{
@@ -373,10 +373,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		},
 	}
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
-		return nil, err
+		return nil, callee, err
 	}
 
-	return record, nil
+	return record, callee, nil
 }
 
 func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error) {
@@ -454,7 +454,7 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error) {
 	st := time.Now()
 
-	record, err = e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
+	record, callee, err := e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
 	if err != nil {
 		return nil, err
 	}
@@ -463,6 +463,7 @@ func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *ent
 		TurnID:      record.ID,
 		AsyncUnixMS: st.UnixMilli(),
 		Session:     &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		Callee:      callee,
 	}); err != nil {
 		return nil, err
 	}

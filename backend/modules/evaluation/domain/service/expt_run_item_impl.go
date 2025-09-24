@@ -107,6 +107,7 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		}
 
 		if turnRunRes.AsyncAbort {
+			logs.CtxInfo(ctx, "[ExptTurnEval] eval async abort, expt_id: %v, item_id: %v, turn_id: %v", eiec.Event.ExptID, eiec.Event.EvalSetItemID, turn.ID)
 			return true, nil
 		}
 
@@ -273,11 +274,11 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	}
 
 	if e.evalErrNeedTerminateExpt(ctx, event.SpaceID, evalErr) {
-		logs.CtxWarn(ctx, "[ExptRecordEval] found error which should terminate expt, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, evalErr)
+		logs.CtxWarn(ctx, "[ExptTurnEval] found error which should terminate expt, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, evalErr)
 		return evalErr
 	}
 
-	logs.CtxInfo(ctx, "[ExptRecordEval] expt item eval finished, expt_id: %v, expt_run_id: %v, success: %v, update_fields: %v", event.ExptID, event.ExptRunID, evalErr == nil, ufields)
+	logs.CtxInfo(ctx, "[ExptTurnEval] expt item eval finished, expt_id: %v, expt_run_id: %v, success: %v, update_fields: %v", event.ExptID, event.ExptRunID, evalErr == nil, ufields)
 	time.Sleep(time.Second * 2) // 确保日志落库
 	return nil
 }
