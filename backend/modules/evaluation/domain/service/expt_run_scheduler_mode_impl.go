@@ -532,6 +532,7 @@ func (e *ExptFailRetryExec) NextTick(ctx context.Context, event *entity.ExptSche
 
 func (e *ExptFailRetryExec) PublishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
 	if event.ExptType != entity.ExptType_Offline { // 不等于offline用于兼容历史数据，不带type的都先放行
+		logs.CtxInfo(ctx, "[ExptEval] ExptFailRetryExec publishResult, expt_id: %v, event: %v", event.ExptID, event)
 		return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).publishResult(ctx, turnEvaluatorRefs, event)
 	}
 	return nil
@@ -660,6 +661,7 @@ func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptSchedul
 }
 
 func (e *ExptAppendExec) PublishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
+	logs.CtxInfo(ctx, "[ExptEval] ExptAppendExec publishResult, expt_id: %v, event: %v", event.ExptID, event)
 	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).publishResult(ctx, turnEvaluatorRefs, event)
 }
 
@@ -772,6 +774,7 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 }
 
 func (e *exptBaseExec) publishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
+	logs.CtxInfo(ctx, "[ExptEval] publishResult, expt_id: %v, event: %v", event.ExptID, event)
 	if len(turnEvaluatorRefs) == 0 {
 		return nil
 	}
