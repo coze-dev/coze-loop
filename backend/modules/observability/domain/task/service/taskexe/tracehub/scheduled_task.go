@@ -103,7 +103,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	var tasks []*task.Task
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
 	for _, taskPO := range taskPOs {
-		var taskRun *entity.TaskRun
+		var taskRun entity.TaskRun
 		// 计算 taskRunstat：只有当所有 run 都为 done 状态时才为 true
 		allRunsDone := true
 		if len(taskPO.TaskRuns) == 0 {
@@ -113,7 +113,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			// 检查所有 TaskRuns 是否都为 done 状态
 			for _, taskRunPO := range taskPO.TaskRuns {
 				if taskRunPO.RunStatus != task.RunStatusDone {
-					taskRun = taskRunPO
+					taskRun = *taskRunPO
 					allRunsDone = false
 					break
 				}
@@ -131,7 +131,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 
 			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     taskInfo,
-				TaskRun:  taskRun,
+				TaskRun:  &taskRun,
 				IsFinish: true,
 			})
 			if err != nil {
@@ -172,7 +172,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
-					TaskRun:  taskRun,
+					TaskRun:  &taskRun,
 					IsFinish: false,
 				})
 				if err != nil {
