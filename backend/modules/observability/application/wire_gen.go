@@ -214,13 +214,15 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	if err != nil {
 		return nil, err
 	}
-	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iTaskRunRepo, iUserProvider, idgen2, iBackfillProducer, taskProcessor)
+	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
+	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
+	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
+	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo, iTaskRunRepo)
+	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iTaskRunRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor)
 	if err != nil {
 		return nil, err
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
-	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
-	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -236,8 +238,6 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
-	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo, iTaskRunRepo)
 	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTaskRunRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor)
 	if err != nil {
 		return nil, err

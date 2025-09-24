@@ -82,7 +82,7 @@ func NewTaskServiceImpl(
 	userProvider rpc.IUserProvider,
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
-	taskProcessor processor.TaskProcessor,
+	taskProcessor *processor.TaskProcessor,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
@@ -90,7 +90,7 @@ func NewTaskServiceImpl(
 		userProvider:     userProvider,
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
-		taskProcessor:    taskProcessor,
+		taskProcessor:    *taskProcessor,
 	}, nil
 }
 
