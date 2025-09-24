@@ -454,7 +454,6 @@ volumes:
   rmq_broker_data:
     name: coze-loop_rocketmq_broker_data
   nginx_data:
-<<<<<<< HEAD
     name: coze-loop_nginx_data
   python_faas_workspace:
     name: coze-loop_python_faas_workspace

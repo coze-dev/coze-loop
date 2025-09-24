@@ -42,7 +42,6 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 	mockSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 
-
 	// 这里需要传递一个 EvaluatorSourceService 的 slice
 	service := NewEvaluatorServiceImpl(
 		mockIdgen,
@@ -1373,7 +1372,6 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 			mockEvalRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
 
-
 			s := &EvaluatorServiceImpl{
 				evaluatorRepo: mockEvalRepo,
 				idem:          mockIdemService,
@@ -1787,7 +1785,6 @@ func Test_EvaluatorServiceImpl_injectUserInfo(t *testing.T) {
 	assert.NotNil(t, mockEvaluator.BaseInfo.UpdatedBy.UserID)
 	assert.NotNil(t, mockEvaluator.BaseInfo.UpdatedAt)
 	assert.NotNil(t, mockEvaluator.BaseInfo.CreatedAt)
-<<<<<<< HEAD
 }
 
 // TestEvaluatorServiceImpl_RunEvaluator_DisableTracing 测试EvaluatorServiceImpl.RunEvaluator中DisableTracing参数传递
@@ -1894,6 +1891,3 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 		})
 	}
 }
-=======
-}
->>>>>>> ca3ba705 (feat: [Coda] 合并commit直到33dad8fe5d80edc80fd72562d8b51cfca3ee0a36 - 完整实现Code Evaluator功能模块，包含运行时环境、代码构建器、模板系统、JSON mock数据生成、Python/JavaScript语法检查、FaaS集成等完整功能)

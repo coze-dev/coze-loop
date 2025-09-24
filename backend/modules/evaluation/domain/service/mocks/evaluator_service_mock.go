@@ -145,8 +145,6 @@ func (mr *MockEvaluatorServiceMockRecorder) GetEvaluator(ctx, spaceID, evaluator
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).GetEvaluator), ctx, spaceID, evaluatorID, includeDeleted)
 }
 
-
-
 // GetEvaluatorVersion mocks base method.
 func (m *MockEvaluatorService) GetEvaluatorVersion(ctx context.Context, evaluatorVersionID int64, includeDeleted bool) (*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
@@ -249,6 +247,5 @@ func (m *MockEvaluatorService) UpdateEvaluatorMeta(ctx context.Context, id, spac
 // UpdateEvaluatorMeta indicates an expected call of UpdateEvaluatorMeta.
 func (mr *MockEvaluatorServiceMockRecorder) UpdateEvaluatorMeta(ctx, id, spaceID, name, description, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-<<<<<<< HEAD
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorMeta", reflect.TypeOf((*MockEvaluatorService)(nil).UpdateEvaluatorMeta), ctx, id, spaceID, name, description, userID)
 }

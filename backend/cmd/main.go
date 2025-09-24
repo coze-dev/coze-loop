@@ -16,7 +16,7 @@ import (
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/coze-dev/cozeloop-go"
 	goredis "github.com/redis/go-redis/v9"
-	
+
 	"github.com/coze-dev/coze-loop/backend/api"
 	"github.com/coze-dev/coze-loop/backend/api/handler/coze/loop/apis"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"

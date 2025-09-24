@@ -26,10 +26,10 @@ import (
 type MaliciousPatternCategory string
 
 const (
-	CategoryInfiniteLoop    MaliciousPatternCategory = "infinite_loop"     // 无限循环
-	CategoryProcessControl  MaliciousPatternCategory = "process_control"   // 进程控制
-	CategoryAsyncOperation  MaliciousPatternCategory = "async_operation"   // 异步操作
-	CategoryResourceAccess  MaliciousPatternCategory = "resource_access"   // 资源访问
+	CategoryInfiniteLoop   MaliciousPatternCategory = "infinite_loop"   // 无限循环
+	CategoryProcessControl MaliciousPatternCategory = "process_control" // 进程控制
+	CategoryAsyncOperation MaliciousPatternCategory = "async_operation" // 异步操作
+	CategoryResourceAccess MaliciousPatternCategory = "resource_access" // 资源访问
 )
 
 // MaliciousPattern 恶意模式定义
@@ -42,7 +42,6 @@ type MaliciousPattern struct {
 	Risk        string                   // 风险说明
 	Suggestion  string                   // 修复建议
 }
-
 
 // 恶意模式定义映射表
 var maliciousPatternsMap = map[string][]MaliciousPattern{
@@ -173,7 +172,6 @@ type SecurityViolationDetails struct {
 	Risk        string                   // 风险说明
 	Suggestion  string                   // 修复建议
 }
-
 
 // EvaluatorSourceCodeServiceImpl Code评估器服务实现
 type EvaluatorSourceCodeServiceImpl struct {
@@ -1186,9 +1184,9 @@ func (c *EvaluatorSourceCodeServiceImpl) checkDangerousImports(code, language st
 
 		for _, pattern := range patterns {
 			regex := regexp.MustCompile(pattern)
-		if regex.MatchString(code) {
-			return errorx.NewByCode(errno.DangerousImportDetectedCode, errorx.WithExtraMsg(fmt.Sprintf("detected import: %s", imp)))
-		}
+			if regex.MatchString(code) {
+				return errorx.NewByCode(errno.DangerousImportDetectedCode, errorx.WithExtraMsg(fmt.Sprintf("detected import: %s", imp)))
+			}
 		}
 	}
 
@@ -1198,14 +1196,14 @@ func (c *EvaluatorSourceCodeServiceImpl) checkDangerousImports(code, language st
 // checkMaliciousPatterns 检查恶意模式
 func (c *EvaluatorSourceCodeServiceImpl) checkMaliciousPatterns(code, language string) error {
 	patterns := c.getMaliciousPatternsForLanguage(language)
-	
+
 	for _, pattern := range patterns {
 		regex := regexp.MustCompile(pattern.Pattern)
 		if regex.MatchString(code) {
 			return c.createSecurityViolationError(pattern, language)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -1213,7 +1211,7 @@ func (c *EvaluatorSourceCodeServiceImpl) checkMaliciousPatterns(code, language s
 func (c *EvaluatorSourceCodeServiceImpl) getMaliciousPatternsForLanguage(language string) []MaliciousPattern {
 	// 标准化语言名称
 	normalizedLang := strings.ToLower(strings.TrimSpace(language))
-	
+
 	// 语言别名映射
 	langAliases := map[string]string{
 		"js":         "javascript",
@@ -1222,17 +1220,17 @@ func (c *EvaluatorSourceCodeServiceImpl) getMaliciousPatternsForLanguage(languag
 		"py":         "python",
 		"golang":     "go",
 	}
-	
+
 	// 如果有别名，使用标准名称
 	if alias, exists := langAliases[normalizedLang]; exists {
 		normalizedLang = alias
 	}
-	
+
 	// 获取语言特定的模式
 	if patterns, exists := maliciousPatternsMap[normalizedLang]; exists {
 		return patterns
 	}
-	
+
 	// 如果没有找到特定语言的模式，返回通用模式（主要是进程控制相关）
 	return []MaliciousPattern{
 		{
@@ -1266,10 +1264,10 @@ func (c *EvaluatorSourceCodeServiceImpl) createSecurityViolationError(pattern Ma
 		Risk:        pattern.Risk,
 		Suggestion:  pattern.Suggestion,
 	}
-	
+
 	// 构建详细的错误信息
 	errorMsg := c.formatSecurityViolationMessage(details)
-	
+
 	return errorx.NewByCode(errno.MaliciousCodePatternDetectedCode, errorx.WithExtraMsg(errorMsg))
 }
 
@@ -1277,17 +1275,17 @@ func (c *EvaluatorSourceCodeServiceImpl) createSecurityViolationError(pattern Ma
 func (c *EvaluatorSourceCodeServiceImpl) formatSecurityViolationMessage(details SecurityViolationDetails) string {
 	// 威胁类型的中文映射
 	categoryNames := map[MaliciousPatternCategory]string{
-		CategoryInfiniteLoop:    "无限循环",
-		CategoryProcessControl:  "进程控制",
-		CategoryAsyncOperation:  "异步操作",
-		CategoryResourceAccess:  "资源访问",
+		CategoryInfiniteLoop:   "无限循环",
+		CategoryProcessControl: "进程控制",
+		CategoryAsyncOperation: "异步操作",
+		CategoryResourceAccess: "资源访问",
 	}
-	
+
 	categoryName := categoryNames[details.Category]
 	if categoryName == "" {
 		categoryName = string(details.Category)
 	}
-	
+
 	return fmt.Sprintf(`安全违规：检测到恶意代码模式
 - 威胁类型：%s (%s)
 - 检测到的模式：%s
