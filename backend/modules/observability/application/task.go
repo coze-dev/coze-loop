@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -34,6 +35,7 @@ func NewTaskApplication(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	userService rpc.IUserProvider,
 	tracehubSvc tracehub.ITraceHubService,
+	taskProcessor task_processor.TaskProcessor,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:       taskService,
@@ -42,6 +44,7 @@ func NewTaskApplication(
 		evaluationSvc: evaluationService,
 		userSvc:       userService,
 		tracehubSvc:   tracehubSvc,
+		taskProcessor: taskProcessor,
 	}, nil
 }
 
@@ -52,6 +55,7 @@ type TaskApplication struct {
 	evaluationSvc rpc.IEvaluationRPCAdapter
 	userSvc       rpc.IUserProvider
 	tracehubSvc   tracehub.ITraceHubService
+	taskProcessor task_processor.TaskProcessor
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
