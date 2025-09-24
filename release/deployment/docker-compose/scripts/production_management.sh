@@ -9,7 +9,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
-PRODUCTION_COMPOSE_FILE="$PROJECT_ROOT/docker-compose-production.yml"
 ENV_FILE="$PROJECT_ROOT/.env.production"
 
 # 颜色定义
@@ -70,7 +69,7 @@ load_env() {
 
 # Docker Compose 命令包装
 dc() {
-    docker-compose -f "$COMPOSE_FILE" -f "$PRODUCTION_COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
 }
 
 # 服务健康检查
