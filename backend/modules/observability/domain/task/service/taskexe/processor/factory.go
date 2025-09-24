@@ -58,7 +58,7 @@ func NewTaskProcessor() *TaskProcessor {
 	}
 }
 
-func (t *TaskProcessor) Register(ctx context.Context, taskType task.TaskType, taskProcessor taskexe.Processor) {
+func (t *TaskProcessor) Register(taskType task.TaskType, taskProcessor taskexe.Processor) {
 	if t.taskProcessorMap == nil {
 		t.taskProcessorMap = make(map[task.TaskType]taskexe.Processor)
 	}
