@@ -347,6 +347,7 @@ func (p *DataReflowProcessor) OnFinishTaskChange(ctx context.Context, param task
 		return err
 	}
 	if param.IsFinish {
+		logs.CtxWarn(ctx, "OnFinishTaskChange, taskID:%d, taskRun:%+v", param.Task.GetID(), param.TaskRun)
 		if err := p.OnUpdateTaskChange(ctx, param.Task, task.TaskStatusSuccess); err != nil {
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.GetID(), err)
 			return err
