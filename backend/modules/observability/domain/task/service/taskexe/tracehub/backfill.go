@@ -29,6 +29,7 @@ import (
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 设置当前任务上下文
 	// 不
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
 		return err
