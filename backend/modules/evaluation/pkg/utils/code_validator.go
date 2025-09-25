@@ -173,19 +173,19 @@ func (v *CodeValidator) ValidateCompilation(code, language string) error {
 	if err := v.Validate(code, language); err != nil {
 		return err
 	}
-	
+
 	// 基础语法检查
 	if err := v.checkBasicSyntax(code, language); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 // checkBasicSyntax 检查基础语法
 func (v *CodeValidator) checkBasicSyntax(code, language string) error {
 	normalizedLang := strings.ToLower(strings.TrimSpace(language))
-	
+
 	switch normalizedLang {
 	case "python", "py":
 		return v.checkPythonBasicSyntax(code)
@@ -208,12 +208,12 @@ func (v *CodeValidator) checkPythonBasicSyntax(code string) error {
 	if !v.checkBracketMatching(code, []rune{'{', '}'}) {
 		return errors.NewInvalidCodeError("Python代码花括号不匹配")
 	}
-	
+
 	// 检查缩进一致性（简单检查）
 	if err := v.checkPythonIndentation(code); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -229,7 +229,7 @@ func (v *CodeValidator) checkJavaScriptBasicSyntax(code string) error {
 	if !v.checkBracketMatching(code, []rune{'{', '}'}) {
 		return errors.NewInvalidCodeError("JavaScript代码花括号不匹配")
 	}
-	
+
 	return nil
 }
 
@@ -238,12 +238,12 @@ func (v *CodeValidator) checkBracketMatching(code string, brackets []rune) bool 
 	if len(brackets) != 2 {
 		return true
 	}
-	
+
 	open, close := brackets[0], brackets[1]
 	stack := 0
 	inString := false
 	var stringChar rune
-	
+
 	for i, char := range code {
 		// 处理字符串
 		if char == '"' || char == '\'' || char == '`' {
@@ -258,11 +258,11 @@ func (v *CodeValidator) checkBracketMatching(code string, brackets []rune) bool 
 			}
 			continue
 		}
-		
+
 		if inString {
 			continue
 		}
-		
+
 		if char == open {
 			stack++
 		} else if char == close {
@@ -272,7 +272,7 @@ func (v *CodeValidator) checkBracketMatching(code string, brackets []rune) bool 
 			}
 		}
 	}
-	
+
 	return stack == 0
 }
 
@@ -281,13 +281,13 @@ func (v *CodeValidator) checkPythonIndentation(code string) error {
 	lines := strings.Split(code, "\n")
 	indentStack := []int{0} // 缩进栈
 	expectIndent := false   // 是否期待下一行有缩进
-	
+
 	for lineNum, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue // 跳过空行和注释行
 		}
-		
+
 		// 计算缩进级别
 		indent := 0
 		for _, char := range line {
@@ -299,7 +299,7 @@ func (v *CodeValidator) checkPythonIndentation(code string) error {
 				break
 			}
 		}
-		
+
 		// 检查缩进逻辑
 		if expectIndent {
 			// 上一行以冒号结尾，期待缩进增加
@@ -321,19 +321,19 @@ func (v *CodeValidator) checkPythonIndentation(code string) error {
 					break
 				}
 			}
-			
+
 			if !validIndent {
 				return errors.NewInvalidCodeError(
 					fmt.Sprintf("第%d行缩进错误：缩进级别不匹配", lineNum+1),
 				)
 			}
 		}
-		
+
 		// 检查这一行是否以冒号结尾
 		if strings.HasSuffix(trimmed, ":") {
 			expectIndent = true
 		}
 	}
-	
+
 	return nil
 }

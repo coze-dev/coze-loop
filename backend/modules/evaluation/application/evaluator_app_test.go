@@ -1397,6 +1397,7 @@ func TestBuildTemplateKeys_PromptOnly(t *testing.T) {
 	codeResult := buildTemplateKeys(origins, evaluatordto.TemplateType_Code)
 	assert.Len(t, codeResult, 0) // Code类型现在不应该被处理
 }
+
 func TestEvaluatorHandlerImpl_GetCodeEvaluatorTemplateConf(t *testing.T) {
 	// 这个测试验证GetCodeEvaluatorTemplateConf方法的转换逻辑
 	// 我们直接测试configer的实现，而不是mock

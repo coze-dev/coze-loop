@@ -12,6 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	auditMocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"

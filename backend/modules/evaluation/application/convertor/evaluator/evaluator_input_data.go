@@ -45,7 +45,7 @@ func ConvertEvaluatorInputDataDTO2DO(dto *evaluatordto.EvaluatorInputData) *eval
 	}
 
 	return &evaluatorentity.EvaluatorInputData{
-		HistoryMessages:       historyMessages,
+		HistoryMessages:      historyMessages,
 		InputFields:          inputFields,
 		FromEvalSetFields:    fromEvalSetFields,
 		FromEvalTargetFields: fromEvalTargetFields,
@@ -88,7 +88,7 @@ func ConvertEvaluatorInputDataDO2DTO(do *evaluatorentity.EvaluatorInputData) *ev
 	}
 
 	return &evaluatordto.EvaluatorInputData{
-		HistoryMessages:       historyMessages,
+		HistoryMessages:      historyMessages,
 		InputFields:          inputFields,
 		FromEvalSetFields:    fromEvalSetFields,
 		FromEvalTargetFields: fromEvalTargetFields,

@@ -108,24 +108,24 @@ func TestPromptEvaluatorVersion_GetSetMethods(t *testing.T) {
 func TestEvaluator_DescriptionMethods(t *testing.T) {
 	// 测试 Evaluator 本身的描述
 	evaluator := &Evaluator{
-		Description: "evaluator desc",
+		Description:   "evaluator desc",
 		EvaluatorType: EvaluatorTypePrompt,
 		PromptEvaluatorVersion: &PromptEvaluatorVersion{
 			Description: "version desc",
 		},
 	}
-	
+
 	// 测试获取评估器描述
 	assert.Equal(t, "evaluator desc", evaluator.GetEvaluatorDescription())
-	
+
 	// 测试设置评估器描述
 	evaluator.SetEvaluatorDescription("new evaluator desc")
 	assert.Equal(t, "new evaluator desc", evaluator.GetEvaluatorDescription())
 	assert.Equal(t, "new evaluator desc", evaluator.Description)
-	
+
 	// 测试获取评估器版本描述
 	assert.Equal(t, "version desc", evaluator.GetEvaluatorVersionDescription())
-	
+
 	// 测试设置评估器版本描述
 	evaluator.SetEvaluatorVersionDescription("new version desc")
 	assert.Equal(t, "new version desc", evaluator.GetEvaluatorVersionDescription())

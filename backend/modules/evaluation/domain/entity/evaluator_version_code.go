@@ -13,13 +13,13 @@ import (
 
 // CodeEvaluatorVersion Code评估器版本实体
 type CodeEvaluatorVersion struct {
-	ID                 int64         `json:"id"`
-	SpaceID            int64         `json:"space_id"`
-	EvaluatorType      EvaluatorType `json:"evaluator_type"`
-	EvaluatorID        int64         `json:"evaluator_id"`
-	Description        string        `json:"description"`
-	Version            string        `json:"version"`
-	BaseInfo           *BaseInfo     `json:"base_info"`
+	ID            int64         `json:"id"`
+	SpaceID       int64         `json:"space_id"`
+	EvaluatorType EvaluatorType `json:"evaluator_type"`
+	EvaluatorID   int64         `json:"evaluator_id"`
+	Description   string        `json:"description"`
+	Version       string        `json:"version"`
+	BaseInfo      *BaseInfo     `json:"base_info"`
 
 	// Code评估器特有字段
 	CodeTemplateKey  *string      `json:"code_template_key"`
@@ -138,13 +138,13 @@ func (do *CodeEvaluatorVersion) ValidateBaseInfo() error {
 	if do.CodeContent == "" {
 		return errorx.NewByCode(errno.InvalidCodeContentCode, errorx.WithExtraMsg("code content is empty"))
 	}
-	
+
 	// 标准化语言类型（转换为小写）
 	normalizedLangType := normalizeLanguageType(do.LanguageType)
 	if _, ok := LanguageTypeSet[normalizedLangType]; !ok {
 		return errorx.NewByCode(errno.InvalidLanguageTypeCode, errorx.WithExtraMsg(fmt.Sprintf("invalid language type: %s", do.LanguageType)))
 	}
-	
+
 	// 将标准化后的语言类型设置回去
 	do.LanguageType = normalizedLangType
 	return nil
@@ -154,9 +154,9 @@ func (do *CodeEvaluatorVersion) ValidateBaseInfo() error {
 func normalizeLanguageType(langType LanguageType) LanguageType {
 	switch strings.ToLower(string(langType)) {
 	case "python":
-		return LanguageTypePython  // "Python"
+		return LanguageTypePython // "Python"
 	case "js", "javascript":
-		return LanguageTypeJS      // "JS"
+		return LanguageTypeJS // "JS"
 	default:
 		// 对于未知类型，转换为首字母大写格式
 		if len(langType) > 0 {
@@ -168,13 +168,12 @@ func normalizeLanguageType(langType LanguageType) LanguageType {
 
 // ExecutionRequest 代码执行请求
 
-
 // ExecutionRequest 代码执行请求
 type ExecutionRequest struct {
-	Code         string                 `json:"code"`
-	Language     string                 `json:"language"`
-	InputData    map[string]interface{} `json:"input_data"`
-	TimeoutMS    int64                  `json:"timeout_ms"`
+	Code      string                 `json:"code"`
+	Language  string                 `json:"language"`
+	InputData map[string]interface{} `json:"input_data"`
+	TimeoutMS int64                  `json:"timeout_ms"`
 }
 
 // ExecutionResult 代码执行结果 - 匹配远程沙箱服务的响应格式

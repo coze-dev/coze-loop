@@ -48,7 +48,7 @@ func (d *EvaluationSetItemServiceImpl) UpdateEvaluationSetItem(ctx context.Conte
 	return d.datasetRPCAdapter.UpdateDatasetItem(ctx, spaceID, evaluationSetID, itemID, turns)
 }
 
-func (d *EvaluationSetItemServiceImpl) BatchDeleteEvaluationSetItems(ctx context.Context, spaceID int64, evaluationSetID int64, itemIDs []int64) (err error) {
+func (d *EvaluationSetItemServiceImpl) BatchDeleteEvaluationSetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error) {
 	return d.datasetRPCAdapter.BatchDeleteDatasetItems(ctx, spaceID, evaluationSetID, itemIDs)
 }
 

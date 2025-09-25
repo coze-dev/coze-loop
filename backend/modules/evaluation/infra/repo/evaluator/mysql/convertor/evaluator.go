@@ -79,7 +79,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 }
 
 func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVersion, error) {
-	if do == nil || 
+	if do == nil ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) {
 		return nil, nil
@@ -136,7 +136,7 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Code evaluator不需要InputSchema，设置为nil
 		po.InputSchema = nil
 		po.Metainfo = ptr.Of(metaInfoByte)

@@ -7,9 +7,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/sirupsen/logrus"
 )
 
 // StubRuntime 是一个简单的运行时存根实现，用于替代被删除的 runtime 包
@@ -25,7 +26,7 @@ func NewStubRuntime(languageType entity.LanguageType) *StubRuntime {
 }
 
 // RunCode 在沙箱中执行文本格式的代码（存根实现）
-func (r *StubRuntime) RunCode(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
+func (r *StubRuntime) RunCode(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
 	// 这是一个存根实现，实际的代码执行功能已被移除
 	return &entity.ExecutionResult{
 		Output: &entity.ExecutionOutput{
@@ -120,12 +121,12 @@ func (m *StubRuntimeManager) GetRuntime(languageType entity.LanguageType) (compo
 	if runtime, exists := m.cache[languageType]; exists {
 		return runtime, nil
 	}
-	
+
 	runtime, err := m.factory.CreateRuntime(languageType)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	m.cache[languageType] = runtime
 	return runtime, nil
 }

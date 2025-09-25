@@ -1189,7 +1189,6 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 
 // batchDebugWithConcurrency 使用并发池进行批量调试
 func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
-
 	// 创建并发池，并发度为10
 	pool, err := goroutine.NewPool(10)
 	if err != nil {

@@ -164,9 +164,9 @@ func (e *EvalTargetRepoImpl) GetEvalTargetVersion(ctx context.Context, spaceID, 
 	return targetDO, nil
 }
 
-func (e *EvalTargetRepoImpl) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID string, sourceTargetVersion string, targetType entity.EvalTargetType) (targetDO *entity.EvalTarget, err error) {
+func (e *EvalTargetRepoImpl) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType) (targetDO *entity.EvalTarget, err error) {
 	var opts []db.Option
-	
+
 	// 第一步：根据sourceTargetID查找target，获取targetID，使用传入的targetType
 	targetPO, err := e.evalTargetDao.GetEvalTargetBySourceID(ctx, spaceID, sourceTargetID, int32(targetType), opts...)
 	if err != nil {
@@ -175,14 +175,14 @@ func (e *EvalTargetRepoImpl) GetEvalTargetVersionBySourceTarget(ctx context.Cont
 	if targetPO == nil {
 		return nil, nil // 没有找到对应的target
 	}
-	
+
 	// 第二步：根据targetID和sourceTargetVersion查找版本信息
 	var versionOpts []db.Option
 	if e.lwt.CheckWriteFlagByID(ctx, platestwrite.ResourceTypeTargetVersion, targetPO.ID) {
 		versionOpts = append(versionOpts, db.WithMaster())
 		logs.CtxInfo(ctx, "GetEvalTargetVersionBySourceTarget CheckWriteFlagByID true")
 	}
-	
+
 	versionPO, err := e.evalTargetVersionDao.GetEvalTargetVersionByTarget(ctx, spaceID, targetPO.ID, sourceTargetVersion, versionOpts...)
 	if err != nil {
 		return nil, err
@@ -190,12 +190,12 @@ func (e *EvalTargetRepoImpl) GetEvalTargetVersionBySourceTarget(ctx context.Cont
 	if versionPO == nil {
 		return nil, nil // 没有找到对应的版本
 	}
-	
+
 	// 转换为DO对象
 	targetDO = convertor.EvalTargetPO2DO(targetPO)
 	versionDO := convertor.EvalTargetVersionPO2DO(versionPO, targetDO.EvalTargetType)
 	targetDO.EvalTargetVersion = versionDO
-	
+
 	return targetDO, nil
 }
 
@@ -210,7 +210,7 @@ func (e *EvalTargetRepoImpl) BatchGetEvalTargetBySource(ctx context.Context, par
 	return convertor.EvalTargetPO2DOs(targets), nil
 }
 
-func (e *EvalTargetRepoImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID int64, targetID int64, sourceTargetVersion string) (targetDO *entity.EvalTarget, err error) {
+func (e *EvalTargetRepoImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string) (targetDO *entity.EvalTarget, err error) {
 	var versionOpts []db.Option
 	if e.lwt.CheckWriteFlagByID(ctx, platestwrite.ResourceTypeTargetVersion, targetID) {
 		versionOpts = append(versionOpts, db.WithMaster())
@@ -242,7 +242,6 @@ func (e *EvalTargetRepoImpl) GetEvalTargetVersionByTarget(ctx context.Context, s
 
 	return targetDO, nil
 }
-
 
 func (e *EvalTargetRepoImpl) BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64) (dos []*entity.EvalTarget, err error) {
 	versions, err := e.evalTargetVersionDao.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
@@ -295,7 +294,7 @@ func (e *EvalTargetRepoImpl) CreateEvalTargetRecord(ctx context.Context, record 
 	return id, nil
 }
 
-func (e *EvalTargetRepoImpl) GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
+func (e *EvalTargetRepoImpl) GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error) {
 	recordPO, err := e.evalTargetRecordDao.GetByIDAndSpaceID(ctx, recordID, spaceID)
 	if err != nil {
 		return nil, err

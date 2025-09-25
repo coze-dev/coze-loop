@@ -14,7 +14,7 @@ import (
 // IRuntime 代码执行沙箱接口
 type IRuntime interface {
 	// RunCode 在沙箱中执行文本格式的代码
-	RunCode(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error)
+	RunCode(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error)
 	// GetLanguageType 获取支持的语言类型
 	GetLanguageType() entity.LanguageType
 	// GetReturnValFunction 获取语言特定的return_val函数实现

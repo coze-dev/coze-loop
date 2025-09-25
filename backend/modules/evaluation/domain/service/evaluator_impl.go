@@ -68,8 +68,6 @@ type EvaluatorServiceImpl struct {
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService
 }
 
-
-
 // ListEvaluator 按查询条件查询 evaluator_version
 func (e *EvaluatorServiceImpl) ListEvaluator(ctx context.Context, request *entity.ListEvaluatorRequest) ([]*entity.Evaluator, int64, error) {
 	repoReq, err := buildListEvaluatorRequest(ctx, request)
@@ -161,7 +159,7 @@ func (e *EvaluatorServiceImpl) BatchGetEvaluator(ctx context.Context, spaceID in
 }
 
 // GetEvaluator 按 id 单个查询 evaluator元信息和草稿
-func (e *EvaluatorServiceImpl) GetEvaluator(ctx context.Context, spaceID int64, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error) {
+func (e *EvaluatorServiceImpl) GetEvaluator(ctx context.Context, spaceID, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error) {
 	// 修改参数处理方式
 	if evaluatorID == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluatorID id is nil"))
@@ -345,7 +343,7 @@ func (e *EvaluatorServiceImpl) SubmitEvaluatorVersion(ctx context.Context, evalu
 	if err = evaluatorDO.ValidateBaseInfo(); err != nil {
 		return nil, err
 	}
-	
+
 	// 新增：获取evaluatorSourceService并执行验证
 	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
 	if ok {
@@ -355,7 +353,7 @@ func (e *EvaluatorServiceImpl) SubmitEvaluatorVersion(ctx context.Context, evalu
 			return nil, err
 		}
 	}
-	
+
 	versionExist, err := e.evaluatorRepo.CheckVersionExist(ctx, evaluatorDO.ID, version)
 	if err != nil {
 		return nil, err

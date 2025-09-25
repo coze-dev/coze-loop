@@ -47,7 +47,7 @@ func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	return singletonEvalTargetService
 }
 
-func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, opts ...entity.Option) (id int64, versionID int64, err error) {
+func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, opts ...entity.Option) (id, versionID int64, err error) {
 	defer func() {
 		e.metric.EmitCreate(spaceID, err)
 	}()
@@ -70,7 +70,7 @@ func (e *EvalTargetServiceImpl) GetEvalTarget(ctx context.Context, targetID int6
 	return e.evalTargetRepo.GetEvalTarget(ctx, targetID)
 }
 
-func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceID int64, versionID int64, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64, needSourceInfo bool) (do *entity.EvalTarget, err error) {
 	do, err = e.evalTargetRepo.GetEvalTargetVersion(ctx, spaceID, versionID)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 	return do, nil
 }
 
-func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID string, sourceTargetVersion string, targetType entity.EvalTargetType, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, needSourceInfo bool) (do *entity.EvalTarget, err error) {
 	do, err = e.evalTargetRepo.GetEvalTargetVersionBySourceTarget(ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.C
 	return do, nil
 }
 
-func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context, spaceID int64, targetID int64, sourceVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context, spaceID, targetID int64, sourceVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
 	// 根据spaceID、targetID和sourceVersion查询版本
 	versions, err := e.evalTargetRepo.BatchGetEvalTargetBySource(ctx, &repo.BatchGetEvalTargetBySourceParam{
 		SpaceID:        spaceID,
@@ -113,7 +113,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 遍历版本，找到匹配的sourceVersion
 	for _, version := range versions {
 		if version.EvalTargetVersion != nil && version.EvalTargetVersion.SourceTargetVersion == sourceVersion {
@@ -129,11 +129,11 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context
 			return version, nil
 		}
 	}
-	
+
 	return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval target version not found for source version: "+sourceVersion))
 }
 
-func (e *EvalTargetServiceImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID int64, targetID int64, sourceTargetVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+func (e *EvalTargetServiceImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
 	do, err = e.evalTargetRepo.GetEvalTargetVersionByTarget(ctx, spaceID, targetID, sourceTargetVersion)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,6 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionByTarget(ctx context.Context
 	}
 	return do, nil
 }
-
 
 func (e *EvalTargetServiceImpl) BatchGetEvalTargetBySource(ctx context.Context, param *entity.BatchGetEvalTargetBySourceParam) (dos []*entity.EvalTarget, err error) {
 	return e.evalTargetRepo.BatchGetEvalTargetBySource(ctx, &repo.BatchGetEvalTargetBySourceParam{
@@ -176,7 +175,7 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, s
 	return versions, nil
 }
 
-func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
+func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
 	startTime := time.Now()
 	defer func() {
 		e.metric.EmitRun(spaceID, err, startTime)
@@ -340,7 +339,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 	return record, nil
 }
 
-func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
+func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error) {
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
 

@@ -603,7 +603,7 @@ func (e *ExptMangerImpl) Create(ctx context.Context, expt *entity.Experiment, se
 	return nil
 }
 
-func (e *ExptMangerImpl) Get(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) (*entity.Experiment, error) {
+func (e *ExptMangerImpl) Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error) {
 	expts, err := e.MGet(ctx, []int64{exptID}, spaceID, session)
 	if err != nil {
 		return nil, err
@@ -690,7 +690,7 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 	return e.exptRepo.Update(ctx, expt)
 }
 
-func (e *ExptMangerImpl) Delete(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) error {
+func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
 	logs.CtxInfo(ctx, "delete expt, expt_id: %v", exptID)
 	return e.exptRepo.Delete(ctx, exptID, spaceID)
 }

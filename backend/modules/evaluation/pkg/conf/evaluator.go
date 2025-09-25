@@ -38,6 +38,7 @@ func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
 		loader: loader,
 	}
 }
+
 func (c *evaluatorConfiger) GetEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
 	const key = "evaluator_template_conf"
 
@@ -53,6 +54,7 @@ func (c *evaluatorConfiger) GetEvaluatorTemplateConf(ctx context.Context) (etf m
 func DefaultEvaluatorTemplateConf() map[string]map[string]*evaluatordto.EvaluatorContent {
 	return map[string]map[string]*evaluatordto.EvaluatorContent{}
 }
+
 func (c *evaluatorConfiger) GetEvaluatorToolConf(ctx context.Context) (etf map[string]*evaluatordto.Tool) {
 	const key = "evaluator_tool_conf"
 
@@ -68,6 +70,7 @@ func (c *evaluatorConfiger) GetEvaluatorToolConf(ctx context.Context) (etf map[s
 func DefaultEvaluatorToolConf() map[string]*evaluatordto.Tool {
 	return make(map[string]*evaluatordto.Tool, 0)
 }
+
 func (c *evaluatorConfiger) GetRateLimiterConf(ctx context.Context) (rlc []limiter.Rule) {
 	const key = "rate_limiter_conf"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &rlc) == nil, rlc, DefaultRateLimiterConf())
@@ -76,6 +79,7 @@ func (c *evaluatorConfiger) GetRateLimiterConf(ctx context.Context) (rlc []limit
 func DefaultRateLimiterConf() []limiter.Rule {
 	return make([]limiter.Rule, 0)
 }
+
 func (c *evaluatorConfiger) GetEvaluatorToolMapping(ctx context.Context) (etf map[string]string) {
 	const key = "evaluator_tool_mapping"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &etf) == nil, etf, DefaultEvaluatorToolMapping())
@@ -84,6 +88,7 @@ func (c *evaluatorConfiger) GetEvaluatorToolMapping(ctx context.Context) (etf ma
 func DefaultEvaluatorToolMapping() map[string]string {
 	return make(map[string]string)
 }
+
 func (c *evaluatorConfiger) GetEvaluatorPromptSuffix(ctx context.Context) (suffix map[string]string) {
 	const key = "evaluator_prompt_suffix"
 
@@ -99,6 +104,7 @@ func (c *evaluatorConfiger) GetEvaluatorPromptSuffix(ctx context.Context) (suffi
 func DefaultEvaluatorPromptSuffix() map[string]string {
 	return make(map[string]string)
 }
+
 func (c *evaluatorConfiger) GetEvaluatorPromptSuffixMapping(ctx context.Context) (suffix map[string]string) {
 	const key = "evaluator_prompt_mapping"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &suffix) == nil, suffix, DefaultEvaluatorPromptMapping())
@@ -107,6 +113,7 @@ func (c *evaluatorConfiger) GetEvaluatorPromptSuffixMapping(ctx context.Context)
 func DefaultEvaluatorPromptMapping() map[string]string {
 	return make(map[string]string)
 }
+
 func (c *evaluatorConfiger) GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
 	const key = "code_evaluator_template_conf"
 	if c.loader.UnmarshalKey(ctx, key, &etf) == nil && len(etf) > 0 {

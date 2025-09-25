@@ -83,9 +83,9 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 func normalizeLanguageType(langType evaluatordo.LanguageType) evaluatordo.LanguageType {
 	switch strings.ToLower(string(langType)) {
 	case "python":
-		return evaluatordo.LanguageTypePython  // "Python"
+		return evaluatordo.LanguageTypePython // "Python"
 	case "js", "javascript":
-		return evaluatordo.LanguageTypeJS      // "JS"
+		return evaluatordo.LanguageTypeJS // "JS"
 	default:
 		// 对于未知类型，转换为首字母大写格式
 		if len(langType) > 0 {
@@ -108,11 +108,11 @@ func ConvertCodeEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluato
 	}
 
 	codeEvaluator := dto.EvaluatorContent.CodeEvaluator
-	
+
 	// 标准化语言类型
 	languageType := evaluatordo.LanguageType(codeEvaluator.GetLanguageType())
 	normalizedLangType := normalizeLanguageType(languageType)
-	
+
 	return &evaluatordo.CodeEvaluatorVersion{
 		ID:               dto.GetID(),
 		SpaceID:          spaceID,
@@ -165,11 +165,11 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 		if content.PromptEvaluator == nil {
 			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("prompt evaluator content is nil"))
 		}
-		
+
 		promptVersion := &evaluatordo.PromptEvaluatorVersion{
-			EvaluatorType:     evaluatordo.EvaluatorTypePrompt,
-			PromptSourceType:  evaluatordo.PromptSourceType(content.PromptEvaluator.GetPromptSourceType()),
-			PromptTemplateKey: content.PromptEvaluator.GetPromptTemplateKey(),
+			EvaluatorType:      evaluatordo.EvaluatorTypePrompt,
+			PromptSourceType:   evaluatordo.PromptSourceType(content.PromptEvaluator.GetPromptSourceType()),
+			PromptTemplateKey:  content.PromptEvaluator.GetPromptTemplateKey(),
 			ReceiveChatHistory: content.ReceiveChatHistory,
 		}
 
@@ -210,7 +210,7 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 		// 标准化语言类型
 		languageType := evaluatordo.LanguageType(content.CodeEvaluator.GetLanguageType())
 		normalizedLangType := normalizeLanguageType(languageType)
-		
+
 		codeVersion := &evaluatordo.CodeEvaluatorVersion{
 			EvaluatorType:    evaluatordo.EvaluatorTypeCode,
 			CodeTemplateKey:  content.CodeEvaluator.CodeTemplateKey,

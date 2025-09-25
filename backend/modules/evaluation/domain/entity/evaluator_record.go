@@ -22,11 +22,11 @@ type EvaluatorRecord struct {
 }
 
 type EvaluatorInputData struct {
-	HistoryMessages        []*Message          `json:"history_messages,omitempty"`
-	InputFields           map[string]*Content `json:"input_fields,omitempty"`
-	FromEvalSetFields     map[string]*Content `json:"from_eval_set_fields,omitempty"`
-	FromEvalTargetFields  map[string]*Content `json:"from_eval_target_fields,omitempty"`
-	Ext                   map[string]string   `json:"ext,omitempty"`
+	HistoryMessages      []*Message          `json:"history_messages,omitempty"`
+	InputFields          map[string]*Content `json:"input_fields,omitempty"`
+	FromEvalSetFields    map[string]*Content `json:"from_eval_set_fields,omitempty"`
+	FromEvalTargetFields map[string]*Content `json:"from_eval_target_fields,omitempty"`
+	Ext                  map[string]string   `json:"ext,omitempty"`
 }
 
 type EvaluatorOutputData struct {

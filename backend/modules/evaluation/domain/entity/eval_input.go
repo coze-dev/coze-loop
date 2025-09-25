@@ -17,11 +17,11 @@ type RunData struct {
 
 // EvalContent 评估内容结构
 type EvalContent struct {
-	ContentType string          `json:"content_type"`
-	Text        string          `json:"text,omitempty"`
-	Image       *EvalImageInfo  `json:"image,omitempty"`
-	Audio       *EvalAudioInfo  `json:"audio,omitempty"`
-	MultiPart   []EvalContent   `json:"multi_part,omitempty"`
+	ContentType string         `json:"content_type"`
+	Text        string         `json:"text,omitempty"`
+	Image       *EvalImageInfo `json:"image,omitempty"`
+	Audio       *EvalAudioInfo `json:"audio,omitempty"`
+	MultiPart   []EvalContent  `json:"multi_part,omitempty"`
 }
 
 // EvalImageInfo 图片信息
