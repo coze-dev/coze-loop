@@ -142,7 +142,7 @@ func (d *EvaluationSetProvider) GetDataset(ctx context.Context, workspaceID, dat
 }
 
 // SearchDatasets 搜索数据集
-func (d *EvaluationSetProvider) SearchDatasets(ctx context.Context, workspaceID int64, datasetID *int64, category entity.DatasetCategory, name *string) ([]*entity.Dataset, error) {
+func (d *EvaluationSetProvider) SearchDatasets(ctx context.Context, workspaceID int64, datasetID int64, category entity.DatasetCategory, name string) ([]*entity.Dataset, error) {
 	return nil, nil
 }
 
