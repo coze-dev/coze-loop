@@ -109,6 +109,11 @@ func (p *ExecuteEvalTargetRequest) IsValid() error {
 			return fmt.Errorf("field InputData not valid, %w", err)
 		}
 	}
+	if p.EvalTarget != nil {
+		if err := p.EvalTarget.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTarget not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

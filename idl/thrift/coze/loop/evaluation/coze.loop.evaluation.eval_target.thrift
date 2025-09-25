@@ -79,6 +79,8 @@ struct ExecuteEvalTargetRequest {
     4: required eval_target.EvalTargetInputData input_data
     5: optional i64 experiment_run_id (api.js_conv="true", go.tag = 'json:"experiment_run_id"')
 
+    10: optional eval_target.EvalTarget eval_target
+
     255: optional base.Base Base
 
 }

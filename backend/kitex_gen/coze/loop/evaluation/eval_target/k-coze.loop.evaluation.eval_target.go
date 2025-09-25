@@ -2542,6 +2542,20 @@ func (p *ExecuteEvalTargetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -2663,6 +2677,18 @@ func (p *ExecuteEvalTargetRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExecuteEvalTargetRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewEvalTarget()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalTarget = _field
+	return offset, nil
+}
+
 func (p *ExecuteEvalTargetRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -2687,6 +2713,7 @@ func (p *ExecuteEvalTargetRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -2701,6 +2728,7 @@ func (p *ExecuteEvalTargetRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field10Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2740,6 +2768,15 @@ func (p *ExecuteEvalTargetRequest) fastWriteField5(buf []byte, w thrift.NocopyWr
 	if p.IsSetExperimentRunID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.ExperimentRunID)
+	}
+	return offset
+}
+
+func (p *ExecuteEvalTargetRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalTarget() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
+		offset += p.EvalTarget.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -2790,6 +2827,15 @@ func (p *ExecuteEvalTargetRequest) field5Length() int {
 	return l
 }
 
+func (p *ExecuteEvalTargetRequest) field10Length() int {
+	l := 0
+	if p.IsSetEvalTarget() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalTarget.BLength()
+	}
+	return l
+}
+
 func (p *ExecuteEvalTargetRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -2824,6 +2870,15 @@ func (p *ExecuteEvalTargetRequest) DeepCopy(s interface{}) error {
 		tmp := *src.ExperimentRunID
 		p.ExperimentRunID = &tmp
 	}
+
+	var _evalTarget *eval_target.EvalTarget
+	if src.EvalTarget != nil {
+		_evalTarget = &eval_target.EvalTarget{}
+		if err := _evalTarget.DeepCopy(src.EvalTarget); err != nil {
+			return err
+		}
+	}
+	p.EvalTarget = _evalTarget
 
 	var _base *base.Base
 	if src.Base != nil {

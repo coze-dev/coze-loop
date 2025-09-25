@@ -3387,6 +3387,7 @@ type ExecuteEvalTargetRequest struct {
 	EvalTargetVersionID int64                            `thrift:"eval_target_version_id,3,required" frugal:"3,required,i64" json:"eval_target_version_id" path:"eval_target_version_id,required" `
 	InputData           *eval_target.EvalTargetInputData `thrift:"input_data,4,required" frugal:"4,required,eval_target.EvalTargetInputData" form:"input_data,required" json:"input_data,required" query:"input_data,required"`
 	ExperimentRunID     *int64                           `thrift:"experiment_run_id,5,optional" frugal:"5,optional,i64" json:"experiment_run_id" form:"experiment_run_id" query:"experiment_run_id"`
+	EvalTarget          *eval_target.EvalTarget          `thrift:"eval_target,10,optional" frugal:"10,optional,eval_target.EvalTarget" form:"eval_target" json:"eval_target,omitempty" query:"eval_target"`
 	Base                *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -3442,6 +3443,18 @@ func (p *ExecuteEvalTargetRequest) GetExperimentRunID() (v int64) {
 	return *p.ExperimentRunID
 }
 
+var ExecuteEvalTargetRequest_EvalTarget_DEFAULT *eval_target.EvalTarget
+
+func (p *ExecuteEvalTargetRequest) GetEvalTarget() (v *eval_target.EvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTarget() {
+		return ExecuteEvalTargetRequest_EvalTarget_DEFAULT
+	}
+	return p.EvalTarget
+}
+
 var ExecuteEvalTargetRequest_Base_DEFAULT *base.Base
 
 func (p *ExecuteEvalTargetRequest) GetBase() (v *base.Base) {
@@ -3468,6 +3481,9 @@ func (p *ExecuteEvalTargetRequest) SetInputData(val *eval_target.EvalTargetInput
 func (p *ExecuteEvalTargetRequest) SetExperimentRunID(val *int64) {
 	p.ExperimentRunID = val
 }
+func (p *ExecuteEvalTargetRequest) SetEvalTarget(val *eval_target.EvalTarget) {
+	p.EvalTarget = val
+}
 func (p *ExecuteEvalTargetRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -3478,6 +3494,7 @@ var fieldIDToName_ExecuteEvalTargetRequest = map[int16]string{
 	3:   "eval_target_version_id",
 	4:   "input_data",
 	5:   "experiment_run_id",
+	10:  "eval_target",
 	255: "Base",
 }
 
@@ -3487,6 +3504,10 @@ func (p *ExecuteEvalTargetRequest) IsSetInputData() bool {
 
 func (p *ExecuteEvalTargetRequest) IsSetExperimentRunID() bool {
 	return p.ExperimentRunID != nil
+}
+
+func (p *ExecuteEvalTargetRequest) IsSetEvalTarget() bool {
+	return p.EvalTarget != nil
 }
 
 func (p *ExecuteEvalTargetRequest) IsSetBase() bool {
@@ -3554,6 +3575,14 @@ func (p *ExecuteEvalTargetRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3669,6 +3698,14 @@ func (p *ExecuteEvalTargetRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.ExperimentRunID = _field
 	return nil
 }
+func (p *ExecuteEvalTargetRequest) ReadField10(iprot thrift.TProtocol) error {
+	_field := eval_target.NewEvalTarget()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalTarget = _field
+	return nil
+}
 func (p *ExecuteEvalTargetRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -3702,6 +3739,10 @@ func (p *ExecuteEvalTargetRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3808,6 +3849,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExecuteEvalTargetRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTarget() {
+		if err = oprot.WriteFieldBegin("eval_target", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalTarget.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *ExecuteEvalTargetRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -3856,6 +3915,9 @@ func (p *ExecuteEvalTargetRequest) DeepEqual(ano *ExecuteEvalTargetRequest) bool
 	if !p.Field5DeepEqual(ano.ExperimentRunID) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.EvalTarget) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -3898,6 +3960,13 @@ func (p *ExecuteEvalTargetRequest) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExperimentRunID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExecuteEvalTargetRequest) Field10DeepEqual(src *eval_target.EvalTarget) bool {
+
+	if !p.EvalTarget.DeepEqual(src) {
 		return false
 	}
 	return true
