@@ -139,6 +139,20 @@ func (mr *MockIEvalTargetServiceMockRecorder) CreateEvalTarget(ctx, spaceID, sou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvalTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).CreateEvalTarget), varargs...)
 }
 
+// CreateRecord mocks base method.
+func (m *MockIEvalTargetService) CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRecord", ctx, record)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateRecord indicates an expected call of CreateRecord.
+func (mr *MockIEvalTargetServiceMockRecorder) CreateRecord(ctx, record any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockIEvalTargetService)(nil).CreateRecord), ctx, record)
+}
+
 // DebugTarget mocks base method.
 func (m *MockIEvalTargetService) DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (*entity.EvalTargetRecord, error) {
 	m.ctrl.T.Helper()

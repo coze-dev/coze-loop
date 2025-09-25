@@ -470,6 +470,11 @@ func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *ent
 	return record, callee, nil
 }
 
+func (e *EvalTargetServiceImpl) CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	_, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record)
+	return err
+}
+
 func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
