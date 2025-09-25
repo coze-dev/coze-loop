@@ -262,6 +262,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		endTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 		// 达到任务时间期限
 		if time.Now().After(endTime) {
+			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     sub.t,
 				TaskRun:  taskRunConfig,
@@ -274,12 +275,12 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		}
 		// 达到任务上限
 		if taskCount+1 > sampler.GetSampleSize() {
+			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     sub.t,
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
 			}); err != nil {
-				logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
@@ -288,13 +289,12 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 			// 达到单次任务时间期限
 			if time.Now().After(cycleEndTime) {
-				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
+				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     sub.t,
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
-					logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}
@@ -308,12 +308,12 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			// 达到单次任务上限
 			if taskRunCount+1 > sampler.GetCycleCount() {
+				logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     sub.t,
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
-					logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
 					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}

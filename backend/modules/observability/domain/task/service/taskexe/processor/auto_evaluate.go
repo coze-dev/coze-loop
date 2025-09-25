@@ -248,7 +248,7 @@ func (p *AutoEvaluteProcessor) OnFinishTaskChange(ctx context.Context, param tas
 		return err
 	}
 	if param.IsFinish {
-		logs.CtxWarn(ctx, "OnFinishTaskChange, taskID:%d, taskRun:%+v", param.Task.GetID(), param.TaskRun)
+		logs.CtxWarn(ctx, "OnFinishTaskChange, taskID:%d, taskRun:%+v，isFinish:%v", param.Task.GetID(), param.TaskRun, param.IsFinish)
 		if err := p.OnUpdateTaskChange(ctx, param.Task, task.TaskStatusSuccess); err != nil {
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.GetID(), err)
 			return err
