@@ -5,7 +5,6 @@ package application
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -19,8 +18,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -43,10 +40,6 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(req.GetInvokeID(), 10))
 	if err != nil {
 		return nil, err
-	}
-
-	if req.GetCallee() != actx.Callee {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("callee not match: %v", req.GetCallee())))
 	}
 
 	outputData := target.ToInvokeOutputDataDO(req)

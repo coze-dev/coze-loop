@@ -169,22 +169,34 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return t.Name, t.Content
 	})
 
-	fieldConfs := targetConf.IngressConf.EvalSetAdapter.FieldConfs
-	fields := make(map[string]*entity.Content, len(fieldConfs))
-	for _, fc := range fieldConfs {
-		firstField, err := json.GetFirstJSONPathField(fc.FromField)
-		if err != nil {
-			return nil, err
-		}
-		if firstField == fc.FromField { // 没有下钻字段
-			fields[fc.FieldName] = turnFields[fc.FromField]
-		} else {
-			content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
-			if err != nil {
-				return nil, err
+	buildInputFields := func(fieldConfs []*entity.FieldConf) (map[string]*entity.Content, error) {
+		fields := make(map[string]*entity.Content, len(fieldConfs))
+		switch etec.Expt.Target.EvalTargetType {
+		case entity.EvalTargetTypeCustomRPCServer:
+			return turnFields, nil
+		default:
+			for _, fc := range fieldConfs {
+				firstField, err := json.GetFirstJSONPathField(fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				if firstField == fc.FromField { // 没有下钻字段
+					fields[fc.FieldName] = turnFields[fc.FromField]
+				} else {
+					content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
+					if err != nil {
+						return nil, err
+					}
+					fields[fc.FieldName] = content
+				}
 			}
-			fields[fc.FieldName] = content
 		}
+		return fields, nil
+	}
+
+	inputFields, err := buildInputFields(targetConf.IngressConf.EvalSetAdapter.FieldConfs)
+	if err != nil {
+		return nil, err
 	}
 
 	ext := gmap.Clone(etec.Ext)
@@ -204,7 +216,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 	etid := &entity.EvalTargetInputData{
 		HistoryMessages: history,
-		InputFields:     fields,
+		InputFields:     inputFields,
 		Ext:             ext,
 	}
 
