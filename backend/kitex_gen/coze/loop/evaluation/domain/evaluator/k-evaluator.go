@@ -4504,7 +4504,7 @@ func (p *EvaluatorInputData) FastReadField3(buf []byte) (int, error) {
 
 		_field[_key] = _val
 	}
-	p.FromEvalSetFields = _field
+	p.EvaluateDatasetFields = _field
 	return offset, nil
 }
 
@@ -4537,7 +4537,7 @@ func (p *EvaluatorInputData) FastReadField4(buf []byte) (int, error) {
 
 		_field[_key] = _val
 	}
-	p.FromEvalTargetFields = _field
+	p.EvaluateTargetOutputFields = _field
 	return offset, nil
 }
 
@@ -4638,12 +4638,12 @@ func (p *EvaluatorInputData) fastWriteField2(buf []byte, w thrift.NocopyWriter) 
 
 func (p *EvaluatorInputData) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetFromEvalSetFields() {
+	if p.IsSetEvaluateDatasetFields() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 3)
 		mapBeginOffset := offset
 		offset += thrift.Binary.MapBeginLength()
 		var length int
-		for k, v := range p.FromEvalSetFields {
+		for k, v := range p.EvaluateDatasetFields {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
 			offset += v.FastWriteNocopy(buf[offset:], w)
@@ -4655,12 +4655,12 @@ func (p *EvaluatorInputData) fastWriteField3(buf []byte, w thrift.NocopyWriter) 
 
 func (p *EvaluatorInputData) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetFromEvalTargetFields() {
+	if p.IsSetEvaluateTargetOutputFields() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 4)
 		mapBeginOffset := offset
 		offset += thrift.Binary.MapBeginLength()
 		var length int
-		for k, v := range p.FromEvalTargetFields {
+		for k, v := range p.EvaluateTargetOutputFields {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
 			offset += v.FastWriteNocopy(buf[offset:], w)
@@ -4717,10 +4717,10 @@ func (p *EvaluatorInputData) field2Length() int {
 
 func (p *EvaluatorInputData) field3Length() int {
 	l := 0
-	if p.IsSetFromEvalSetFields() {
+	if p.IsSetEvaluateDatasetFields() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.FromEvalSetFields {
+		for k, v := range p.EvaluateDatasetFields {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
@@ -4732,10 +4732,10 @@ func (p *EvaluatorInputData) field3Length() int {
 
 func (p *EvaluatorInputData) field4Length() int {
 	l := 0
-	if p.IsSetFromEvalTargetFields() {
+	if p.IsSetEvaluateTargetOutputFields() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.FromEvalTargetFields {
+		for k, v := range p.EvaluateTargetOutputFields {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
@@ -4801,9 +4801,9 @@ func (p *EvaluatorInputData) DeepCopy(s interface{}) error {
 		}
 	}
 
-	if src.FromEvalSetFields != nil {
-		p.FromEvalSetFields = make(map[string]*common.Content, len(src.FromEvalSetFields))
-		for key, val := range src.FromEvalSetFields {
+	if src.EvaluateDatasetFields != nil {
+		p.EvaluateDatasetFields = make(map[string]*common.Content, len(src.EvaluateDatasetFields))
+		for key, val := range src.EvaluateDatasetFields {
 			var _key string
 			if key != "" {
 				_key = kutils.StringDeepCopy(key)
@@ -4817,13 +4817,13 @@ func (p *EvaluatorInputData) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.FromEvalSetFields[_key] = _val
+			p.EvaluateDatasetFields[_key] = _val
 		}
 	}
 
-	if src.FromEvalTargetFields != nil {
-		p.FromEvalTargetFields = make(map[string]*common.Content, len(src.FromEvalTargetFields))
-		for key, val := range src.FromEvalTargetFields {
+	if src.EvaluateTargetOutputFields != nil {
+		p.EvaluateTargetOutputFields = make(map[string]*common.Content, len(src.EvaluateTargetOutputFields))
+		for key, val := range src.EvaluateTargetOutputFields {
 			var _key string
 			if key != "" {
 				_key = kutils.StringDeepCopy(key)
@@ -4837,7 +4837,7 @@ func (p *EvaluatorInputData) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.FromEvalTargetFields[_key] = _val
+			p.EvaluateTargetOutputFields[_key] = _val
 		}
 	}
 

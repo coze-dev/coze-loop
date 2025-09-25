@@ -6227,11 +6227,11 @@ func (p *EvaluatorRunError) Field2DeepEqual(src *string) bool {
 }
 
 type EvaluatorInputData struct {
-	HistoryMessages      []*common.Message          `thrift:"history_messages,1,optional" frugal:"1,optional,list<common.Message>" form:"history_messages" json:"history_messages,omitempty" query:"history_messages"`
-	InputFields          map[string]*common.Content `thrift:"input_fields,2,optional" frugal:"2,optional,map<string:common.Content>" form:"input_fields" json:"input_fields,omitempty" query:"input_fields"`
-	FromEvalSetFields    map[string]*common.Content `thrift:"from_eval_set_fields,3,optional" frugal:"3,optional,map<string:common.Content>" form:"from_eval_set_fields" json:"from_eval_set_fields,omitempty" query:"from_eval_set_fields"`
-	FromEvalTargetFields map[string]*common.Content `thrift:"from_eval_target_fields,4,optional" frugal:"4,optional,map<string:common.Content>" form:"from_eval_target_fields" json:"from_eval_target_fields,omitempty" query:"from_eval_target_fields"`
-	Ext                  map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	HistoryMessages            []*common.Message          `thrift:"history_messages,1,optional" frugal:"1,optional,list<common.Message>" form:"history_messages" json:"history_messages,omitempty" query:"history_messages"`
+	InputFields                map[string]*common.Content `thrift:"input_fields,2,optional" frugal:"2,optional,map<string:common.Content>" form:"input_fields" json:"input_fields,omitempty" query:"input_fields"`
+	EvaluateDatasetFields      map[string]*common.Content `thrift:"evaluate_dataset_fields,3,optional" frugal:"3,optional,map<string:common.Content>" form:"evaluate_dataset_fields" json:"evaluate_dataset_fields,omitempty" query:"evaluate_dataset_fields"`
+	EvaluateTargetOutputFields map[string]*common.Content `thrift:"evaluate_target_output_fields,4,optional" frugal:"4,optional,map<string:common.Content>" form:"evaluate_target_output_fields" json:"evaluate_target_output_fields,omitempty" query:"evaluate_target_output_fields"`
+	Ext                        map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewEvaluatorInputData() *EvaluatorInputData {
@@ -6265,28 +6265,28 @@ func (p *EvaluatorInputData) GetInputFields() (v map[string]*common.Content) {
 	return p.InputFields
 }
 
-var EvaluatorInputData_FromEvalSetFields_DEFAULT map[string]*common.Content
+var EvaluatorInputData_EvaluateDatasetFields_DEFAULT map[string]*common.Content
 
-func (p *EvaluatorInputData) GetFromEvalSetFields() (v map[string]*common.Content) {
+func (p *EvaluatorInputData) GetEvaluateDatasetFields() (v map[string]*common.Content) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetFromEvalSetFields() {
-		return EvaluatorInputData_FromEvalSetFields_DEFAULT
+	if !p.IsSetEvaluateDatasetFields() {
+		return EvaluatorInputData_EvaluateDatasetFields_DEFAULT
 	}
-	return p.FromEvalSetFields
+	return p.EvaluateDatasetFields
 }
 
-var EvaluatorInputData_FromEvalTargetFields_DEFAULT map[string]*common.Content
+var EvaluatorInputData_EvaluateTargetOutputFields_DEFAULT map[string]*common.Content
 
-func (p *EvaluatorInputData) GetFromEvalTargetFields() (v map[string]*common.Content) {
+func (p *EvaluatorInputData) GetEvaluateTargetOutputFields() (v map[string]*common.Content) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetFromEvalTargetFields() {
-		return EvaluatorInputData_FromEvalTargetFields_DEFAULT
+	if !p.IsSetEvaluateTargetOutputFields() {
+		return EvaluatorInputData_EvaluateTargetOutputFields_DEFAULT
 	}
-	return p.FromEvalTargetFields
+	return p.EvaluateTargetOutputFields
 }
 
 var EvaluatorInputData_Ext_DEFAULT map[string]string
@@ -6306,11 +6306,11 @@ func (p *EvaluatorInputData) SetHistoryMessages(val []*common.Message) {
 func (p *EvaluatorInputData) SetInputFields(val map[string]*common.Content) {
 	p.InputFields = val
 }
-func (p *EvaluatorInputData) SetFromEvalSetFields(val map[string]*common.Content) {
-	p.FromEvalSetFields = val
+func (p *EvaluatorInputData) SetEvaluateDatasetFields(val map[string]*common.Content) {
+	p.EvaluateDatasetFields = val
 }
-func (p *EvaluatorInputData) SetFromEvalTargetFields(val map[string]*common.Content) {
-	p.FromEvalTargetFields = val
+func (p *EvaluatorInputData) SetEvaluateTargetOutputFields(val map[string]*common.Content) {
+	p.EvaluateTargetOutputFields = val
 }
 func (p *EvaluatorInputData) SetExt(val map[string]string) {
 	p.Ext = val
@@ -6319,8 +6319,8 @@ func (p *EvaluatorInputData) SetExt(val map[string]string) {
 var fieldIDToName_EvaluatorInputData = map[int16]string{
 	1:   "history_messages",
 	2:   "input_fields",
-	3:   "from_eval_set_fields",
-	4:   "from_eval_target_fields",
+	3:   "evaluate_dataset_fields",
+	4:   "evaluate_target_output_fields",
 	100: "ext",
 }
 
@@ -6332,12 +6332,12 @@ func (p *EvaluatorInputData) IsSetInputFields() bool {
 	return p.InputFields != nil
 }
 
-func (p *EvaluatorInputData) IsSetFromEvalSetFields() bool {
-	return p.FromEvalSetFields != nil
+func (p *EvaluatorInputData) IsSetEvaluateDatasetFields() bool {
+	return p.EvaluateDatasetFields != nil
 }
 
-func (p *EvaluatorInputData) IsSetFromEvalTargetFields() bool {
-	return p.FromEvalTargetFields != nil
+func (p *EvaluatorInputData) IsSetEvaluateTargetOutputFields() bool {
+	return p.EvaluateTargetOutputFields != nil
 }
 
 func (p *EvaluatorInputData) IsSetExt() bool {
@@ -6509,7 +6509,7 @@ func (p *EvaluatorInputData) ReadField3(iprot thrift.TProtocol) error {
 	if err := iprot.ReadMapEnd(); err != nil {
 		return err
 	}
-	p.FromEvalSetFields = _field
+	p.EvaluateDatasetFields = _field
 	return nil
 }
 func (p *EvaluatorInputData) ReadField4(iprot thrift.TProtocol) error {
@@ -6538,7 +6538,7 @@ func (p *EvaluatorInputData) ReadField4(iprot thrift.TProtocol) error {
 	if err := iprot.ReadMapEnd(); err != nil {
 		return err
 	}
-	p.FromEvalTargetFields = _field
+	p.EvaluateTargetOutputFields = _field
 	return nil
 }
 func (p *EvaluatorInputData) ReadField100(iprot thrift.TProtocol) error {
@@ -6671,14 +6671,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *EvaluatorInputData) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetFromEvalSetFields() {
-		if err = oprot.WriteFieldBegin("from_eval_set_fields", thrift.MAP, 3); err != nil {
+	if p.IsSetEvaluateDatasetFields() {
+		if err = oprot.WriteFieldBegin("evaluate_dataset_fields", thrift.MAP, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.FromEvalSetFields)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.EvaluateDatasetFields)); err != nil {
 			return err
 		}
-		for k, v := range p.FromEvalSetFields {
+		for k, v := range p.EvaluateDatasetFields {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
@@ -6700,14 +6700,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *EvaluatorInputData) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetFromEvalTargetFields() {
-		if err = oprot.WriteFieldBegin("from_eval_target_fields", thrift.MAP, 4); err != nil {
+	if p.IsSetEvaluateTargetOutputFields() {
+		if err = oprot.WriteFieldBegin("evaluate_target_output_fields", thrift.MAP, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.FromEvalTargetFields)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.EvaluateTargetOutputFields)); err != nil {
 			return err
 		}
-		for k, v := range p.FromEvalTargetFields {
+		for k, v := range p.EvaluateTargetOutputFields {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
@@ -6778,10 +6778,10 @@ func (p *EvaluatorInputData) DeepEqual(ano *EvaluatorInputData) bool {
 	if !p.Field2DeepEqual(ano.InputFields) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.FromEvalSetFields) {
+	if !p.Field3DeepEqual(ano.EvaluateDatasetFields) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.FromEvalTargetFields) {
+	if !p.Field4DeepEqual(ano.EvaluateTargetOutputFields) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -6818,10 +6818,10 @@ func (p *EvaluatorInputData) Field2DeepEqual(src map[string]*common.Content) boo
 }
 func (p *EvaluatorInputData) Field3DeepEqual(src map[string]*common.Content) bool {
 
-	if len(p.FromEvalSetFields) != len(src) {
+	if len(p.EvaluateDatasetFields) != len(src) {
 		return false
 	}
-	for k, v := range p.FromEvalSetFields {
+	for k, v := range p.EvaluateDatasetFields {
 		_src := src[k]
 		if !v.DeepEqual(_src) {
 			return false
@@ -6831,10 +6831,10 @@ func (p *EvaluatorInputData) Field3DeepEqual(src map[string]*common.Content) boo
 }
 func (p *EvaluatorInputData) Field4DeepEqual(src map[string]*common.Content) bool {
 
-	if len(p.FromEvalTargetFields) != len(src) {
+	if len(p.EvaluateTargetOutputFields) != len(src) {
 		return false
 	}
-	for k, v := range p.FromEvalTargetFields {
+	for k, v := range p.EvaluateTargetOutputFields {
 		_src := src[k]
 		if !v.DeepEqual(_src) {
 			return false

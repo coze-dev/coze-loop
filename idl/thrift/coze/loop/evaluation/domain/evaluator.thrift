@@ -140,8 +140,8 @@ struct EvaluatorRunError {
 struct EvaluatorInputData {
     1: optional list<common.Message> history_messages
     2: optional map<string, common.Content> input_fields
-    3: optional map<string, common.Content> from_eval_set_fields
-    4: optional map<string, common.Content> from_eval_target_fields
+    3: optional map<string, common.Content> evaluate_dataset_fields
+    4: optional map<string, common.Content> evaluate_target_output_fields
 
     100: optional map<string, string> ext
 }
