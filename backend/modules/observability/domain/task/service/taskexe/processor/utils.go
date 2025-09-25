@@ -212,6 +212,14 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.
 			Text:        gptr.Of(span.SpanID),
 		},
 	})
+	fieldDatas = append(fieldDatas, &eval_set.FieldData{
+		Key:  gptr.Of("run_id"),
+		Name: gptr.Of("run_id"),
+		Content: &common.Content{
+			ContentType: gptr.Of(common.ContentTypeText),
+			Text:        gptr.Of(span.SpanID),
+		},
+	})
 	for _, mapping := range fieldMappings {
 		// 前端传入的是Name，评测集需要的是key，需要做一下mapping
 		if mapping.EvalSetName == nil {

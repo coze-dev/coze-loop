@@ -6,7 +6,6 @@ package processor
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/apaxa-go/helper/strconvh"
@@ -138,12 +137,12 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 		AllowPartialAdd:  gptr.Of(true),
 		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
 		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
-		Ext: map[string]string{"workspace_id": strconv.FormatInt(workspaceID, 10),
-			"span_id": trigger.Span.SpanID, "trace_id": trigger.Span.TraceID,
-			"start_time":    strconvh.FormatInt64(trigger.Span.StartTime),
-			"task_id":       strconvh.FormatInt64(trigger.Task.GetID()),
-			"task_run_id":   strconvh.FormatInt64(taskRun.ID),
-			"platform_type": trigger.Task.GetRule().GetSpanFilters().GetPlatformType()},
+		//Ext: map[string]string{"workspace_id": strconv.FormatInt(workspaceID, 10),
+		//	"span_id": trigger.Span.SpanID, "trace_id": trigger.Span.TraceID,
+		//	"start_time":    strconvh.FormatInt64(trigger.Span.StartTime),
+		//	"task_id":       strconvh.FormatInt64(trigger.Task.GetID()),
+		//	"task_run_id":   strconvh.FormatInt64(taskRun.ID),
+		//	"platform_type": trigger.Task.GetRule().GetSpanFilters().GetPlatformType()},
 		Session: session,
 	})
 	if err != nil {
@@ -265,7 +264,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
 	var evaluatorFieldMappings []*expt.EvaluatorFieldMapping
-	evaluationSetColumns = append(evaluationSetColumns, "span_id", "trace_id")
+	evaluationSetColumns = append(evaluationSetColumns, "span_id", "trace_id", "run_id")
 	autoEvaluateConfigs := currentTask.GetTaskConfig().GetAutoEvaluateConfigs()
 	evaluationSetSchema, fromEvalSet := getBasicEvaluationSetSchema(evaluationSetColumns)
 	for _, autoEvaluateConfig := range autoEvaluateConfigs {

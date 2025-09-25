@@ -42,9 +42,9 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	if err != nil {
 		return err
 	}
-	//todo：loopspan下
-	platform_type := event.Ext["platform_type"]
-	tenants, err := h.getTenants(ctx, loop_span.PlatformType(platform_type))
+	////todo：loopspan下
+	//platform_type := event.Ext["platform_type"]
+	tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
 	if err != nil {
 		return err
 	}
@@ -126,8 +126,8 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			return err
 		}
 		workspaceIDStr := turn.Ext["workspace_id"]
-		platform_type := turn.Ext["platform_type"]
-		tenants, err := h.getTenants(ctx, loop_span.PlatformType(platform_type))
+		//platform_type := turn.Ext["platform_type"]
+		tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
 		if err != nil {
 			return err
 		}
@@ -136,7 +136,7 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			[]string{spanID},
 			traceID,
 			workspaceIDStr,
-			startTime/1000-5*time.Second.Milliseconds(),
+			startTime/1000-24*7*time.Hour.Milliseconds(),
 			startTime/1000+5*time.Second.Milliseconds(),
 		)
 		if len(spans) == 0 {
@@ -234,7 +234,7 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 // updateTaskRunStatusCount 根据Status更新Redis计数
 func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult) error {
 	// 从Ext中获取taskRunID
-	taskRunIDStr := turn.Ext["task_run_id"]
+	taskRunIDStr := turn.Ext["run_id"]
 	if taskRunIDStr == "" {
 		return fmt.Errorf("task_run_id not found in ext")
 	}
@@ -243,7 +243,6 @@ func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, task
 	if err != nil {
 		return fmt.Errorf("invalid task_run_id: %s, err: %v", taskRunIDStr, err)
 	}
-
 	// 根据Status增加相应计数
 	switch turn.Status {
 	case entity.EvaluatorRunStatus_Success:
