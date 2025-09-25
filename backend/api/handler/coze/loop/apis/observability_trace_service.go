@@ -120,3 +120,35 @@ func PreviewExportTracesToDataset(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// GetTraceV2 .
+// @router /api/observability/v2/traces/search [GET]
+func GetTraceV2(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.GetTraceV2Request
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.GetTraceResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// SearchTraceTree .
+// @router /api/observability/v2/trace_tree/search [GET]
+func SearchTraceTree(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.SearchTraceTreeRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.GetTraceResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

@@ -299,6 +299,13 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
 				}
 			}
+			{
+				_v2 := _observability.Group("/v2", _v2Mw(handler)...)
+				{
+					_trace_tree := _v2.Group("/trace_tree", _trace_treeMw(handler)...)
+					_trace_tree.POST("/search", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
+				}
+			}
 		}
 		{
 			_prompt := _api.Group("/prompt", _promptMw(handler)...)

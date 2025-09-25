@@ -180,7 +180,6 @@ func (t *TraceApplication) buildListSpansSvcReq(req *trace.ListSpansRequest) (*s
 }
 
 func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequest) (*trace.GetTraceResponse, error) {
-	logs.CtxInfo(ctx, "Get trace req: %v", req)
 	if err := t.validateGetTraceReq(ctx, req); err != nil {
 		return nil, err
 	}
@@ -248,9 +247,84 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*ser
 		StartTime:   req.GetStartTime(),
 		EndTime:     req.GetEndTime(),
 		SpanIDs:     req.GetSpanIds(),
+		WithDetail:  true,
 	}
-	if req.WithDetail == nil || req.GetWithDetail() {
-		ret.WithDetail = true
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	ret.PlatformType = platformType
+	return ret, nil
+}
+
+func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest) (*trace.SearchTraceTreeResponse, error) {
+	if err := t.validateSearchTraceTreeReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		return nil, err
+	}
+	sReq, err := t.buildSearchTraceTreeSvcReq(req)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Get trace req is invalid"))
+	}
+	sResp, err := t.traceService.GetTrace(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+	inTokens, outTokens, err := sResp.Spans.Stat(ctx)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	logs.CtxInfo(ctx, "SearchTraceTree successfully, spans count %d", len(sResp.Spans))
+	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
+		req.GetWorkspaceID(),
+		sResp.Spans.GetUserIDs(),
+		sResp.Spans.GetEvaluatorVersionIDs(),
+		sResp.Spans.GetAnnotationTagIDs())
+	return &trace.SearchTraceTreeResponse{
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+			TraceID: sResp.TraceId,
+			Tokens: &trace.TokenCost{
+				Input:  inTokens,
+				Output: outTokens,
+			},
+		},
+	}, nil
+}
+
+func (t *TraceApplication) validateSearchTraceTreeReq(ctx context.Context, req *trace.SearchTraceTreeRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.GetTraceID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return err
+	}
+	req.SetStartTime(newStartTime)
+	req.SetEndTime(newEndTime)
+	return nil
+}
+
+func (t *TraceApplication) buildSearchTraceTreeSvcReq(req *trace.SearchTraceTreeRequest) (*service.GetTraceReq, error) {
+	ret := &service.GetTraceReq{
+		WorkspaceID: req.GetWorkspaceID(),
+		TraceID:     req.GetTraceID(),
+		StartTime:   req.GetStartTime(),
+		EndTime:     req.GetEndTime(),
+		WithDetail:  false,
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
