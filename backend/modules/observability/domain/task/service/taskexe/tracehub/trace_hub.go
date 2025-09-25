@@ -259,7 +259,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
 		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
-		endTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
+		endTime := time.UnixMilli(sub.t.GetRule().GetEffectiveTime().GetEndAt())
 		// 达到任务时间期限
 		if time.Now().After(endTime) {
 			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
