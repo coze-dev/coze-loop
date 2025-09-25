@@ -43,7 +43,11 @@ func EvalTargetRecordDO2DTO(src *entity.EvalTargetRecord) *eval_target.EvalTarge
 			DeletedAt: src.BaseInfo.DeletedAt,
 		},
 	}
-
+	if src.BaseInfo != nil {
+		res.BaseInfo.CreatedAt = src.BaseInfo.CreatedAt
+		res.BaseInfo.UpdatedAt = src.BaseInfo.UpdatedAt
+		res.BaseInfo.DeletedAt = src.BaseInfo.DeletedAt
+	}
 	return res
 }
 
@@ -53,7 +57,7 @@ func RecordDTO2DO(src *eval_target.EvalTargetRecord) *entity.EvalTargetRecord {
 		return nil
 	}
 
-	return &entity.EvalTargetRecord{
+	record := &entity.EvalTargetRecord{
 		ID:                   getInt64Value(src.ID),
 		SpaceID:              getInt64Value(src.WorkspaceID),
 		TargetID:             getInt64Value(src.TargetID),
@@ -66,15 +70,14 @@ func RecordDTO2DO(src *eval_target.EvalTargetRecord) *entity.EvalTargetRecord {
 		EvalTargetInputData:  InputDTO2ToDO(src.EvalTargetInputData),
 		EvalTargetOutputData: OutputDTO2ToDO(src.EvalTargetOutputData),
 		Status:               StatusDTO2DO(src.Status),
-		BaseInfo: &entity.BaseInfo{
-			// todo
-			// CreatedBy: src.GetBaseInfo().GetCreatedBy(),
-			// UpdatedBy: src.GetBaseInfo().GetUpdatedBy(),
-			CreatedAt: src.BaseInfo.CreatedAt,
-			UpdatedAt: src.BaseInfo.UpdatedAt,
-			DeletedAt: src.BaseInfo.DeletedAt,
-		},
+		BaseInfo:             &entity.BaseInfo{},
 	}
+	if src.BaseInfo != nil {
+		record.BaseInfo.CreatedAt = src.BaseInfo.CreatedAt
+		record.BaseInfo.UpdatedAt = src.BaseInfo.UpdatedAt
+		record.BaseInfo.DeletedAt = src.BaseInfo.DeletedAt
+	}
+	return record
 }
 
 func UnixMsPtr2Time(ms *int64) time.Time {
