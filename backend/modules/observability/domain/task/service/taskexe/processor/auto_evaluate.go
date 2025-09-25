@@ -105,7 +105,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
 	}
-	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema())
+	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema(), taskRun.ID)
 	if len(turns) == 0 {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, turns is empty")
 		return nil

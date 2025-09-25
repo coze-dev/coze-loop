@@ -178,10 +178,10 @@ func convertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task.EvaluateFieldMapping,
-	evaluationSetSchema string) (turns []*eval_set.Turn) {
+	evaluationSetSchema string, taskRunID string) (turns []*eval_set.Turn) {
 	turns = make([]*eval_set.Turn, 0, len(spans))
 	for _, span := range spans {
-		fieldData := buildItem(ctx, span, fieldMappings, evaluationSetSchema)
+		fieldData := buildItem(ctx, span, fieldMappings, evaluationSetSchema, taskRunID)
 		if len(fieldData) == 0 {
 			continue
 		}
@@ -194,7 +194,7 @@ func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*t
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.EvaluateFieldMapping,
-	evaluationSetSchema string) []*eval_set.FieldData {
+	evaluationSetSchema string, taskRunID string) []*eval_set.FieldData {
 	var fieldDatas []*eval_set.FieldData
 	fieldDatas = append(fieldDatas, &eval_set.FieldData{
 		Key:  gptr.Of("trace_id"),
@@ -217,7 +217,7 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.
 		Name: gptr.Of("run_id"),
 		Content: &common.Content{
 			ContentType: gptr.Of(common.ContentTypeText),
-			Text:        gptr.Of(span.SpanID),
+			Text:        gptr.Of(taskRunID),
 		},
 	})
 	for _, mapping := range fieldMappings {
