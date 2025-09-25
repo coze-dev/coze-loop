@@ -224,10 +224,10 @@ func (b *JavaScriptCodeBuilder) validateInputData(inputData map[string]interface
 func (b *JavaScriptCodeBuilder) buildInputData(input *entity.EvaluatorInputData) (map[string]interface{}, error) {
 	inputData := make(map[string]interface{})
 
-	// 处理FromEvalSetFields - 直接映射到from_eval_set_fields
-	if len(input.FromEvalSetFields) > 0 {
+	// 处理EvaluateDatasetFields - 直接映射到evaluate_dataset_fields
+	if len(input.EvaluateDatasetFields) > 0 {
 		fromEvalSetFields := make(map[string]interface{})
-		for key, content := range input.FromEvalSetFields {
+		for key, content := range input.EvaluateDatasetFields {
 			if content != nil {
 				if mockFormat := b.convertContentToMockFormat(content); mockFormat != nil {
 					fromEvalSetFields[key] = mockFormat
@@ -235,14 +235,14 @@ func (b *JavaScriptCodeBuilder) buildInputData(input *entity.EvaluatorInputData)
 			}
 		}
 		if len(fromEvalSetFields) > 0 {
-			inputData["from_eval_set_fields"] = fromEvalSetFields
+			inputData["evaluate_dataset_fields"] = fromEvalSetFields
 		}
 	}
 
-	// 处理FromEvalTargetFields - 直接映射到from_eval_target_fields
-	if len(input.FromEvalTargetFields) > 0 {
+	// 处理EvaluateTargetOutputFields - 直接映射到evaluate_target_output_fields
+	if len(input.EvaluateTargetOutputFields) > 0 {
 		fromEvalTargetFields := make(map[string]interface{})
-		for key, content := range input.FromEvalTargetFields {
+		for key, content := range input.EvaluateTargetOutputFields {
 			if content != nil {
 				if mockFormat := b.convertContentToMockFormat(content); mockFormat != nil {
 					fromEvalTargetFields[key] = mockFormat
@@ -250,7 +250,7 @@ func (b *JavaScriptCodeBuilder) buildInputData(input *entity.EvaluatorInputData)
 			}
 		}
 		if len(fromEvalTargetFields) > 0 {
-			inputData["from_eval_target_fields"] = fromEvalTargetFields
+			inputData["evaluate_target_output_fields"] = fromEvalTargetFields
 		}
 	}
 
@@ -402,10 +402,10 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 func (b *PythonCodeBuilder) buildInputData(input *entity.EvaluatorInputData) (map[string]interface{}, error) {
 	inputData := make(map[string]interface{})
 
-	// 处理FromEvalSetFields - 直接映射到from_eval_set_fields
-	if len(input.FromEvalSetFields) > 0 {
+	// 处理EvaluateDatasetFields - 直接映射到evaluate_dataset_fields
+	if len(input.EvaluateDatasetFields) > 0 {
 		fromEvalSetFields := make(map[string]interface{})
-		for key, content := range input.FromEvalSetFields {
+		for key, content := range input.EvaluateDatasetFields {
 			if content != nil {
 				if mockFormat := b.convertContentToMockFormat(content); mockFormat != nil {
 					fromEvalSetFields[key] = mockFormat
@@ -413,14 +413,14 @@ func (b *PythonCodeBuilder) buildInputData(input *entity.EvaluatorInputData) (ma
 			}
 		}
 		if len(fromEvalSetFields) > 0 {
-			inputData["from_eval_set_fields"] = fromEvalSetFields
+			inputData["evaluate_dataset_fields"] = fromEvalSetFields
 		}
 	}
 
-	// 处理FromEvalTargetFields - 直接映射到from_eval_target_fields
-	if len(input.FromEvalTargetFields) > 0 {
+	// 处理EvaluateTargetOutputFields - 直接映射到evaluate_target_output_fields
+	if len(input.EvaluateTargetOutputFields) > 0 {
 		fromEvalTargetFields := make(map[string]interface{})
-		for key, content := range input.FromEvalTargetFields {
+		for key, content := range input.EvaluateTargetOutputFields {
 			if content != nil {
 				if mockFormat := b.convertContentToMockFormat(content); mockFormat != nil {
 					fromEvalTargetFields[key] = mockFormat
@@ -428,7 +428,7 @@ func (b *PythonCodeBuilder) buildInputData(input *entity.EvaluatorInputData) (ma
 			}
 		}
 		if len(fromEvalTargetFields) > 0 {
-			inputData["from_eval_target_fields"] = fromEvalTargetFields
+			inputData["evaluate_target_output_fields"] = fromEvalTargetFields
 		}
 	}
 

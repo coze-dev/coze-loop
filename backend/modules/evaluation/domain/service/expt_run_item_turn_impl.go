@@ -336,21 +336,21 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(
 ) (*entity.EvaluatorInputData, error) {
 	if evaluatorType == entity.EvaluatorTypeCode {
 		// Code评估器：分离字段数据源
-		fromEvalSetFields, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
+		evaluateDatasetFields, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
 		if err != nil {
 			return nil, err
 		}
 
-		fromEvalTargetFields, err := e.buildFieldsFromSource(ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
+		evaluateTargetOutputFields, err := e.buildFieldsFromSource(ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
 		if err != nil {
 			return nil, err
 		}
 
 		return &entity.EvaluatorInputData{
-			HistoryMessages:      nil,
-			InputFields:          make(map[string]*entity.Content),
-			FromEvalSetFields:    fromEvalSetFields,
-			FromEvalTargetFields: fromEvalTargetFields,
+			HistoryMessages:            nil,
+			InputFields:                make(map[string]*entity.Content),
+			EvaluateDatasetFields:      evaluateDatasetFields,
+			EvaluateTargetOutputFields: evaluateTargetOutputFields,
 		}, nil
 	} else {
 		// Prompt评估器：保持现有逻辑，合并所有字段到InputFields

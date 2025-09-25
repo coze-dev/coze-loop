@@ -30,26 +30,26 @@ func ConvertEvaluatorInputDataDTO2DO(dto *evaluatordto.EvaluatorInputData) *eval
 		inputFields[key] = contentDO
 	}
 
-	// 转换 FromEvalSetFields
-	fromEvalSetFields := make(map[string]*evaluatorentity.Content)
-	for key, contentDTO := range dto.FromEvalSetFields {
+	// 转换 EvaluateDatasetFields
+	evaluateDatasetFields := make(map[string]*evaluatorentity.Content)
+	for key, contentDTO := range dto.EvaluateDatasetFields {
 		contentDO := commonconvertor.ConvertContentDTO2DO(contentDTO)
-		fromEvalSetFields[key] = contentDO
+		evaluateDatasetFields[key] = contentDO
 	}
 
-	// 转换 FromEvalTargetFields
-	fromEvalTargetFields := make(map[string]*evaluatorentity.Content)
-	for key, contentDTO := range dto.FromEvalTargetFields {
+	// 转换 EvaluateTargetOutputFields
+	evaluateTargetOutputFields := make(map[string]*evaluatorentity.Content)
+	for key, contentDTO := range dto.EvaluateTargetOutputFields {
 		contentDO := commonconvertor.ConvertContentDTO2DO(contentDTO)
-		fromEvalTargetFields[key] = contentDO
+		evaluateTargetOutputFields[key] = contentDO
 	}
 
 	return &evaluatorentity.EvaluatorInputData{
-		HistoryMessages:      historyMessages,
-		InputFields:          inputFields,
-		FromEvalSetFields:    fromEvalSetFields,
-		FromEvalTargetFields: fromEvalTargetFields,
-		Ext:                  dto.Ext,
+		HistoryMessages:            historyMessages,
+		InputFields:                inputFields,
+		EvaluateDatasetFields:      evaluateDatasetFields,
+		EvaluateTargetOutputFields: evaluateTargetOutputFields,
+		Ext:                        dto.Ext,
 	}
 }
 
@@ -73,25 +73,25 @@ func ConvertEvaluatorInputDataDO2DTO(do *evaluatorentity.EvaluatorInputData) *ev
 		inputFields[key] = contentDTO
 	}
 
-	// 转换 FromEvalSetFields
-	fromEvalSetFields := make(map[string]*commondto.Content)
-	for key, contentDO := range do.FromEvalSetFields {
+	// 转换 EvaluateDatasetFields
+	evaluateDatasetFields := make(map[string]*commondto.Content)
+	for key, contentDO := range do.EvaluateDatasetFields {
 		contentDTO := commonconvertor.ConvertContentDO2DTO(contentDO)
-		fromEvalSetFields[key] = contentDTO
+		evaluateDatasetFields[key] = contentDTO
 	}
 
-	// 转换 FromEvalTargetFields
-	fromEvalTargetFields := make(map[string]*commondto.Content)
-	for key, contentDO := range do.FromEvalTargetFields {
+	// 转换 EvaluateTargetOutputFields
+	evaluateTargetOutputFields := make(map[string]*commondto.Content)
+	for key, contentDO := range do.EvaluateTargetOutputFields {
 		contentDTO := commonconvertor.ConvertContentDO2DTO(contentDO)
-		fromEvalTargetFields[key] = contentDTO
+		evaluateTargetOutputFields[key] = contentDTO
 	}
 
 	return &evaluatordto.EvaluatorInputData{
-		HistoryMessages:      historyMessages,
-		InputFields:          inputFields,
-		FromEvalSetFields:    fromEvalSetFields,
-		FromEvalTargetFields: fromEvalTargetFields,
-		Ext:                  do.Ext,
+		HistoryMessages:            historyMessages,
+		InputFields:                inputFields,
+		EvaluateDatasetFields:      evaluateDatasetFields,
+		EvaluateTargetOutputFields: evaluateTargetOutputFields,
+		Ext:                        do.Ext,
 	}
 }
