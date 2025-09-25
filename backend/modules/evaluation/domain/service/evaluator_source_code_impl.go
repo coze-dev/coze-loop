@@ -720,6 +720,8 @@ func (c *EvaluatorSourceCodeServiceImpl) processSyntaxValidationExecutionResult(
 			// 使用通用方法解析验证结果
 			validationResult := c.parseSyntaxValidationResult(retValData)
 			return validationResult.Valid, validationResult.ErrorMsg, nil
+		} else {
+			return false, processed.Output.RetVal, nil
 		}
 	}
 
@@ -729,6 +731,8 @@ func (c *EvaluatorSourceCodeServiceImpl) processSyntaxValidationExecutionResult(
 			// 使用通用方法解析验证结果
 			validationResult := c.parseSyntaxValidationResult(parsedOutput)
 			return validationResult.Valid, validationResult.ErrorMsg, nil
+		} else {
+			return false, processed.Output.Stdout, nil
 		}
 	}
 
