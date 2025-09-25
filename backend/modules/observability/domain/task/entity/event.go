@@ -127,6 +127,7 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		s.Tags["fornax_space_id"] = ""
 	}
 	spaceID := s.Tags["fornax_space_id"].(string)
+	spanType := s.Tags["span_type"].(string)
 
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs / 1000,
@@ -139,7 +140,7 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		CallType:         callType,
 		WorkspaceID:      spaceID,
 		SpanName:         s.SpanName,
-		SpanType:         s.SpanType,
+		SpanType:         spanType,
 		Method:           s.Method,
 		StatusCode:       s.StatusCode,
 		Input:            s.SensitiveTags.Input,
