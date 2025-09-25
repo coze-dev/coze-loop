@@ -67,6 +67,65 @@ type PromptOpenAPIApplicationImpl struct {
 	collector        collector.ICollectorProvider
 }
 
+func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
+	r = openapi.NewListPromptBasicResponse()
+	if req.GetWorkspaceID() == 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	defer func() {
+		if err != nil {
+			logs.CtxError(ctx, "openapi list prompt basic failed, err=%v", err)
+		}
+	}()
+
+	// 限流检查
+	if !p.promptHubAllowBySpace(ctx, req.GetWorkspaceID()) {
+		return r, errorx.NewByCode(prompterr.PromptHubQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
+
+	// 构建查询参数
+	param := repo.ListPromptParam{
+		SpaceID:       req.GetWorkspaceID(),
+		KeyWord:       req.GetKeyWord(),
+		CommittedOnly: true, // 只查询已提交的prompts
+		PageNum:       int(req.GetPageNumber()),
+		PageSize:      int(req.GetPageSize()),
+	}
+	if req.GetCreator() != "" {
+		param.CreatedBys = []string{req.GetCreator()}
+	}
+
+	// 查询prompts
+	result, err := p.promptManageRepo.ListPrompt(ctx, param)
+	if err != nil {
+		return r, err
+	}
+
+	// 执行权限检查
+	var promptIDs []int64
+	for _, prompt := range result.PromptDOs {
+		promptIDs = append(promptIDs, prompt.ID)
+	}
+	if len(promptIDs) > 0 {
+		if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), promptIDs, consts.ActionLoopPromptRead); err != nil {
+			return r, err
+		}
+	}
+
+	// 构建响应
+	r.Data = openapi.NewListPromptBasicData()
+	r.Data.Total = ptr.Of(int32(result.Total))
+	r.Data.Prompts = make([]*openapi.PromptBasic, 0, len(result.PromptDOs))
+	for _, promptDO := range result.PromptDOs {
+		promptBasic := convertor.OpenAPIPromptBasicDO2DTO(promptDO)
+		if promptBasic != nil {
+			r.Data.Prompts = append(r.Data.Prompts, promptBasic)
+		}
+	}
+
+	return r, nil
+}
+
 func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
 	r = openapi.NewBatchGetPromptByPromptKeyResponse()
 	if req.GetWorkspaceID() == 0 {
