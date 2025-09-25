@@ -17,23 +17,10 @@ type Trigger struct {
 	Span     *loop_span.Span
 	IsFinish bool
 }
-type Config struct {
-	DatasetID *int64 `json:"dataset_id"`
-	Task      *task.Task
-}
 
 var (
 	ErrInvalidConfig  = errors.New("invalid config")
 	ErrInvalidTrigger = errors.New("invalid span trigger")
-)
-
-type TaskOp string
-
-const (
-	TaskOpUndefined      TaskOp = "undefined"
-	TaskOpCreateBackfill TaskOp = "create_backfill"
-	TaskOpNewData        TaskOp = "create_new_data"
-	TaskOpFinish         TaskOp = "finish"
 )
 
 type OnCreateTaskRunChangeReq struct {
@@ -52,24 +39,9 @@ type OnFinishTaskChangeReq struct {
 	IsFinish bool
 }
 
-type EndTaskError struct {
-	TaskID int64
-	Status task.TaskStatus
-	Reason string
-}
 type Processor interface {
 	ValidateConfig(ctx context.Context, config any) error           // 校验配置项是否有效
 	Invoke(ctx context.Context, config any, trigger *Trigger) error // 根据不同类型进行执行，如rpc回调、mq投递等
-
-	//Finish(ctx context.Context, config any, trigger *Trigger) error //Finish
-	//OnCreateChangeProcessor(ctx context.Context, task *task.Task) error //OnchangeProcessor 调用 evaluation 接口进行前期物料准备
-
-	//OnChangeProcessor(ctx context.Context, config *Config, isBackFill bool) error //OnCreateChangeProcessor
-	//OnUpdateChangeProcessor(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error //OnUpdateChangeProcessor
-	//OnFinishChangeProcessor(ctx context.Context, task *task.Task) error                                //OnFinishChangeProcessor
-
-	//OnCreateTaskRunProcessor(ctx context.Context, currentTask *task.Task, runConfig *task.TaskRunConfig, runType task.TaskRunType) (*task_entity.TaskRun, error) //OnCreateTaskRunProcessor
-	//OnFinishTaskRunProcessor(ctx context.Context, taskRun *task_entity.TaskRun) error                                                                            //OnFinishTaskRunProcessor
 
 	OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error
 	OnUpdateTaskChange(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error

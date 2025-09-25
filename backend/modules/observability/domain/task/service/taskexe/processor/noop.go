@@ -24,31 +24,25 @@ func (p *NoopTaskProcessor) ValidateConfig(ctx context.Context, config any) erro
 }
 
 func (p *NoopTaskProcessor) Invoke(ctx context.Context, config any, trigger *taskexe.Trigger) error {
-
 	return nil
 }
 
 func (p *NoopTaskProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
-
 	return nil
 }
 
 func (p *NoopTaskProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error {
-
 	return nil
 }
 
 func (p *NoopTaskProcessor) OnFinishTaskChange(ctx context.Context, param taskexe.OnFinishTaskChangeReq) error {
-
 	return nil
 }
 
 func (p *NoopTaskProcessor) OnCreateTaskRunChange(ctx context.Context, param taskexe.OnCreateTaskRunChangeReq) error {
-
 	return nil
 }
 
 func (p *NoopTaskProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
-
 	return nil
 }
