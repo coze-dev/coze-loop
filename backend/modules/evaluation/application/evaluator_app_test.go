@@ -541,6 +541,11 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 						}, nil
 					}).
 					Times(1)
+				
+				ctx := context.Background()
+				_, err := handler.CreateEvaluator(ctx, request)
+				assert.Error(t, err)
+				
 				// 验证错误类型
 				statusErr, ok := errorx.FromStatusError(err)
 				assert.True(t, ok)
@@ -950,6 +955,7 @@ func TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions(t *testing.T) {
 				// 测试各种 nil 请求
 				_, err1 := handler.CreateEvaluator(ctx, nil)
 				assert.Error(t, err1)
+			},
 		},
 		{
 			name: "超长字符串处理",
@@ -1045,12 +1051,24 @@ func TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions(t *testing.T) {
 				mockMetrics.EXPECT().
 					EmitCreate(gomock.Any(), gomock.Any()).
 					Times(1)
+
+				ctx := context.Background()
+				resp, err := handler.CreateEvaluator(ctx, request)
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
 			},
 		},
 		{
 			name: "上下文取消和超时处理",
 			testFunc: func(t *testing.T) {
 				t.Parallel()
+				
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+				
 				handler := &EvaluatorHandlerImpl{
 					auth:             mockAuth,
 					evaluatorService: mockEvaluatorService,
@@ -1092,6 +1110,11 @@ func TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions(t *testing.T) {
 func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	handler := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
 
 	// 模拟新的Code配置数据结构
 	codeTemplateConf := map[string]map[string]*evaluatordto.EvaluatorContent{
@@ -1172,9 +1195,12 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 
 func TestEvaluatorHandlerImpl_GetTemplateInfo_Code(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()						ModelConfig: &common.ModelConfig{
-							ModelID: gptr.Of(int64(1)),
-						},
+	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	handler := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
 
 	// 模拟配置数据
 	codeTemplateConf := map[string]map[string]*evaluatordto.EvaluatorContent{
@@ -1474,15 +1500,7 @@ func TestEvaluatorHandlerImpl_ValidateEvaluator(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 
-	app := &EvaluatorHandlerImpl{
-		auth:                    mockAuth,
-		evaluatorSourceServices: map[entity.EvaluatorType]service.EvaluatorSourceService{
-			entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
-			entity.EvaluatorTypeCode:   mockEvaluatorSourceService,
-		},
-	}
 
-	ctx := context.Background()
 	validWorkspaceID := int64(123)
 
 	tests := []struct {
@@ -1666,18 +1684,76 @@ func TestEvaluatorHandlerImpl_ValidateEvaluator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 为每个测试用例创建独立的 mock
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+
+			app := &EvaluatorHandlerImpl{
+				auth:                    mockAuth,
+				evaluatorSourceServices: map[entity.EvaluatorType]service.EvaluatorSourceService{
+					entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
+					entity.EvaluatorTypeCode:   mockEvaluatorSourceService,
+				},
+			}
+			
+			tt.mockSetup = func() {
+				switch tt.name {
+				case "success - valid prompt evaluator":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), &rpc.AuthorizationParam{
+							ObjectID:      strconv.FormatInt(validWorkspaceID, 10),
+							SpaceID:       validWorkspaceID,
+							ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+						}).
+						Return(nil)
+
+					mockEvaluatorSourceService.EXPECT().
+						Validate(gomock.Any(), gomock.Any()).
+						Return(nil)
+				case "success - valid code evaluator":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockEvaluatorSourceService.EXPECT().
+						Validate(gomock.Any(), gomock.Any()).
+						Return(nil)
+				case "failure - auth error":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+				case "failure - unsupported evaluator type":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+				case "failure - validation error from source service":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockEvaluatorSourceService.EXPECT().
+						Validate(gomock.Any(), gomock.Any()).
+						Return(errors.New("syntax error in evaluator code"))
+				case "failure - convert evaluator content error":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+				}
+			}
+			
 			tt.mockSetup()
 
-			resp, err := app.ValidateEvaluator(ctx, tt.req)
+			resp, err := app.ValidateEvaluator(context.Background(), tt.req)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.wantErrCode != 0 {
-									if codeErr, ok := err.(*errorx.CodeError); ok {
-					assert.Equal(t, tt.wantErrCode, codeErr.Code())
-				}
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
 				}
 			} else {
 				assert.NoError(t, err)
@@ -1710,7 +1786,6 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 		fileProvider:     mockFileProvider,
 	}
 
-	ctx := context.Background()
 	validWorkspaceID := int64(123)
 
 	tests := []struct {
@@ -1767,17 +1842,17 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
-							Score:  gptr.Of(0.8),
-							Reason: gptr.Of("good result"),
+							Score:     gptr.Of(0.8),
+							Reasoning: "good result",
 						},
 					}, nil)
 			},
 			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
 				EvaluatorOutputData: []*evaluatordto.EvaluatorOutputData{
 					{
-						EvaluatorResult_: &common.EvaluatorResult{
-							Score:  gptr.Of(0.8),
-							Reason: gptr.Of("good result"),
+EvaluatorResult_: &evaluatordto.EvaluatorResult_{
+					Score:     gptr.Of(0.8),
+					Reasoning: gptr.Of("good result"),
 						},
 					},
 				},
@@ -1825,31 +1900,31 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
-							Score:  gptr.Of(0.9),
-							Reason: gptr.Of("result 1"),
+							Score:     gptr.Of(0.9),
+							Reasoning: "result 1",
 						},
 					}, nil).Times(1)
 
 				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
-							Score:  gptr.Of(0.7),
-							Reason: gptr.Of("result 2"),
+							Score:     gptr.Of(0.7),
+							Reasoning: "result 2",
 						},
 					}, nil).Times(1)
 			},
 			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
 				EvaluatorOutputData: []*evaluatordto.EvaluatorOutputData{
 					{
-						EvaluatorResult_: &common.EvaluatorResult{
-							Score:  gptr.Of(0.9),
-							Reason: gptr.Of("result 1"),
+EvaluatorResult_: &evaluatordto.EvaluatorResult_{
+					Score:     gptr.Of(0.9),
+					Reasoning: gptr.Of("result 1"),
 						},
 					},
 					{
-						EvaluatorResult_: &common.EvaluatorResult{
-							Score:  gptr.Of(0.7),
-							Reason: gptr.Of("result 2"),
+EvaluatorResult_: &evaluatordto.EvaluatorResult_{
+					Score:     gptr.Of(0.7),
+					Reasoning: gptr.Of("result 2"),
 						},
 					},
 				},
@@ -1934,7 +2009,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				// Mock benefit check denied
 				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).Return(
 					&benefit.CheckEvaluatorBenefitResult{
-						DenyReason: gptr.Of("quota exceeded"),
+						DenyReason: gptr.Of(benefit.DenyReason(1)),
 					}, nil)
 			},
 			wantErr:     true,
@@ -2023,8 +2098,8 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
-							Score:  gptr.Of(0.8),
-							Reason: gptr.Of("success result"),
+							Score:     gptr.Of(0.8),
+							Reasoning: "success result",
 						},
 					}, nil).Times(1)
 
@@ -2034,9 +2109,9 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
 				EvaluatorOutputData: []*evaluatordto.EvaluatorOutputData{
 					{
-						EvaluatorResult_: &common.EvaluatorResult{
-							Score:  gptr.Of(0.8),
-							Reason: gptr.Of("success result"),
+EvaluatorResult_: &evaluatordto.EvaluatorResult_{
+					Score:     gptr.Of(0.8),
+					Reasoning: gptr.Of("success result"),
 						},
 					},
 					{
@@ -2088,20 +2163,157 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+		for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// 为每个测试用例创建独立的 mock
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+			mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+	validWorkspaceID := int64(123)
+			tt.mockSetup = func() {
+				switch tt.name {
+				case "success - single input data":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), &rpc.AuthorizationParam{
+							ObjectID:      strconv.FormatInt(validWorkspaceID, 10),
+							SpaceID:       validWorkspaceID,
+							ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+						}).
+						Return(nil)
+
+					mockBenefitService.EXPECT().
+						CheckEvaluatorBenefit(gomock.Any(), &benefit.CheckEvaluatorBenefitParams{
+							ConnectorUID: "",
+							SpaceID:      validWorkspaceID,
+						}).
+						Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+					mockFileProvider.EXPECT().
+						MGetFileURL(gomock.Any(), gomock.Any()).
+						Return(map[string]string{}, nil).
+						AnyTimes()
+
+					mockEvaluatorService.EXPECT().
+						DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score:     gptr.Of(0.85),
+								Reasoning: "Good evaluation result 1",
+							},
+							TimeConsumingMS: 100,
+						}, nil)
+				case "success - multiple input data":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockBenefitService.EXPECT().
+						CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+						Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+					mockFileProvider.EXPECT().
+						MGetFileURL(gomock.Any(), gomock.Any()).
+						Return(map[string]string{}, nil).
+						AnyTimes()
+
+					mockEvaluatorService.EXPECT().
+						DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score:     gptr.Of(0.85),
+								Reasoning: "Good evaluation result 1",
+							},
+							TimeConsumingMS: 100,
+						}, nil).
+						Times(1)
+
+					mockEvaluatorService.EXPECT().
+						DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score:     gptr.Of(0.92),
+								Reasoning: "Good evaluation result 2",
+							},
+							TimeConsumingMS: 120,
+						}, nil).
+						Times(1)
+				case "failure - auth error":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+				case "failure - benefit check denied":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockBenefitService.EXPECT().
+						CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+						Return(&benefit.CheckEvaluatorBenefitResult{
+							DenyReason: gptr.Of(benefit.DenyReason(1)),
+						}, nil)
+				case "failure - benefit check service error":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockBenefitService.EXPECT().
+						CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+						Return(nil, errors.New("benefit service unavailable"))
+				case "success - partial failures in batch":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockBenefitService.EXPECT().
+						CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+						Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+					mockFileProvider.EXPECT().
+						MGetFileURL(gomock.Any(), gomock.Any()).
+						Return(map[string]string{}, nil).
+						AnyTimes()
+
+					// 第一个成功
+					mockEvaluatorService.EXPECT().
+						DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&entity.EvaluatorOutputData{
+							EvaluatorResult: &entity.EvaluatorResult{
+								Score:     gptr.Of(0.8),
+								Reasoning: "success result",
+							},
+						}, nil).
+						Times(1)
+
+					// 第二个失败
+					mockEvaluatorService.EXPECT().
+						DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil, errors.New("evaluation failed")).
+						Times(1)
+				case "success - empty input data":
+					mockAuth.EXPECT().
+						Authorization(gomock.Any(), gomock.Any()).
+						Return(nil)
+
+					mockBenefitService.EXPECT().
+						CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+						Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				}
+			}
+			
 			tt.mockSetup()
 
-			resp, err := app.BatchDebugEvaluator(ctx, tt.req)
+			resp, err := app.BatchDebugEvaluator(context.Background(), tt.req)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.wantErrCode != 0 {
-									if codeErr, ok := err.(*errorx.CodeError); ok {
-					assert.Equal(t, tt.wantErrCode, codeErr.Code())
-				}
+									statusErr, ok := errorx.FromStatusError(err)
+				assert.True(t, ok)
+				assert.Equal(t, tt.wantErrCode, statusErr.Code())
 				}
 			} else {
 				assert.NoError(t, err)
@@ -2114,7 +2326,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				if expectedOutput.EvaluatorResult_ != nil {
 					assert.NotNil(t, actualOutput.EvaluatorResult_)
 					assert.Equal(t, expectedOutput.EvaluatorResult_.GetScore(), actualOutput.EvaluatorResult_.GetScore())
-					assert.Equal(t, expectedOutput.EvaluatorResult_.GetReason(), actualOutput.EvaluatorResult_.GetReason())
+					assert.Equal(t, expectedOutput.EvaluatorResult_.GetReasoning(), actualOutput.EvaluatorResult_.GetReasoning())
 				}
 
 					if expectedOutput.EvaluatorRunError != nil {
