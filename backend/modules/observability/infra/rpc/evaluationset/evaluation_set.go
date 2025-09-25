@@ -141,6 +141,11 @@ func (d *EvaluationSetProvider) GetDataset(ctx context.Context, workspaceID, dat
 	return dataset, nil
 }
 
+// SearchDatasets 搜索数据集
+func (d *EvaluationSetProvider) SearchDatasets(ctx context.Context, workspaceID int64, datasetID *int64, category entity.DatasetCategory, name *string) ([]*entity.Dataset, error) {
+	return nil, nil
+}
+
 // ClearDatasetItems 清空数据集项
 func (d *EvaluationSetProvider) ClearDatasetItems(ctx context.Context, workspaceID, datasetID int64, category entity.DatasetCategory) error {
 	if workspaceID == 0 {
