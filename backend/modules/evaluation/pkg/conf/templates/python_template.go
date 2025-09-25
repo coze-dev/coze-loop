@@ -76,7 +76,7 @@ def check_syntax(code):
         # 捕获语法错误并返回详细的错误信息，包含行列号
         error_msg = f"语法错误: {e.msg}"
         if e.lineno is not None:
-            error_msg += f" (行号: {e.lineno}"
+            error_msg += f" (行号: {e.lineno - 14}"
             if e.offset is not None:
                 error_msg += f", 列号: {e.offset}"
             error_msg += ")"
@@ -84,7 +84,7 @@ def check_syntax(code):
         # 构建详细的错误结果
         error_detail = {
             "message": e.msg,
-            "line": e.lineno,
+            "line": e.lineno - 14,
             "column": e.offset,
             "full_message": error_msg
         }
