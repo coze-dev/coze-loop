@@ -70,6 +70,7 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 				Description:  targetVersionDTO.GetEvalTargetContent().GetPrompt().GetDescription(),
 			}
 		}
+		targetVersionDO.CustomRPCServer = CustomRPCServerDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomRPCServer())
 		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
 
