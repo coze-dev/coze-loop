@@ -122,8 +122,6 @@ interface I18nTranslateFn {
   (key: 'password', fallbackText?: string): string;
   /** 永久 */
   (key: 'permanent', fallbackText?: string): string;
-    /** 永久 */
-  (key: 'permanent_duration', fallbackText?: string): string;
   /** 请添加{field} */
   (
     key: 'please_add',
