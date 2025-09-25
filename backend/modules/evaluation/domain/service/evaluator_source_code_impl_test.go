@@ -15,8 +15,8 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
@@ -149,7 +149,7 @@ func TestEvaluatorSourceCodeServiceImpl_Run(t *testing.T) {
 
 	t.Run("成功执行Python代码评估器", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -213,7 +213,7 @@ func TestEvaluatorSourceCodeServiceImpl_Run(t *testing.T) {
 
 	t.Run("评估器类型验证失败", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -259,7 +259,7 @@ func TestEvaluatorSourceCodeServiceImpl_Run(t *testing.T) {
 
 	t.Run("代码构建失败", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -312,7 +312,7 @@ func TestEvaluatorSourceCodeServiceImpl_Run(t *testing.T) {
 
 	t.Run("Runtime获取失败", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -371,7 +371,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 
 	t.Run("成功调试代码评估器", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -435,7 +435,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 
 	t.Run("调试失败场景", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -502,7 +502,7 @@ func TestEvaluatorSourceCodeServiceImpl_PreHandle(t *testing.T) {
 
 	t.Run("成功预处理代码评估器", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -538,7 +538,7 @@ func TestEvaluatorSourceCodeServiceImpl_PreHandle(t *testing.T) {
 
 	t.Run("评估器类型错误", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -573,7 +573,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 
 	t.Run("Python代码验证成功", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -624,7 +624,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 
 	t.Run("评估器类型错误", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -654,7 +654,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 
 	t.Run("不支持的语言类型", func(t *testing.T) {
 		t.Parallel()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -693,7 +693,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 // TestEvaluatorSourceCodeServiceImpl_EvaluatorType 测试 EvaluatorType 方法
 func TestEvaluatorSourceCodeServiceImpl_EvaluatorType(t *testing.T) {
 	t.Parallel()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -714,7 +714,7 @@ func TestEvaluatorSourceCodeServiceImpl_EvaluatorType(t *testing.T) {
 // TestNewEvaluatorSourceCodeServiceImpl 测试构造函数
 func TestNewEvaluatorSourceCodeServiceImpl(t *testing.T) {
 	t.Parallel()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

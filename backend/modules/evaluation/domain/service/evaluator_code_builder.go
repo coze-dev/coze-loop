@@ -10,8 +10,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate mockgen -destination=mocks/code_builder.go -package=mocks . CodeBuilderFactory,UserCodeBuilder
 // UserCodeBuilder 用户代码构建器接口
+//
+//go:generate mockgen -destination=mocks/code_builder.go -package=mocks . CodeBuilderFactory,UserCodeBuilder
 type UserCodeBuilder interface {
 	// BuildCode 构建可执行代码
 	BuildCode(input *entity.EvaluatorInputData, codeVersion *entity.CodeEvaluatorVersion) (string, error)
@@ -34,7 +35,7 @@ type CodeBuilderFactory interface {
 }
 
 // CodeBuilderFactoryImpl 代码构建器工厂实现
-type CodeBuilderFactoryImpl struct{
+type CodeBuilderFactoryImpl struct {
 	runtimeManager component.IRuntimeManager // 运行时管理器，用于获取runtime实例
 }
 
@@ -52,7 +53,7 @@ func (f *CodeBuilderFactoryImpl) SetRuntimeManager(manager component.IRuntimeMan
 func (f *CodeBuilderFactoryImpl) CreateBuilder(languageType entity.LanguageType) (UserCodeBuilder, error) {
 	var builder UserCodeBuilder
 	var err error
-	
+
 	switch languageType {
 	case entity.LanguageTypePython:
 		builder = NewPythonCodeBuilder()
@@ -61,7 +62,7 @@ func (f *CodeBuilderFactoryImpl) CreateBuilder(languageType entity.LanguageType)
 	default:
 		return nil, fmt.Errorf("unsupported language type: %s", languageType)
 	}
-	
+
 	// 如果有runtimeManager，尝试获取对应的runtime并设置到builder中
 	if f.runtimeManager != nil {
 		if runtime, runtimeErr := f.runtimeManager.GetRuntime(languageType); runtimeErr == nil {
@@ -69,7 +70,7 @@ func (f *CodeBuilderFactoryImpl) CreateBuilder(languageType entity.LanguageType)
 		}
 		// 如果获取runtime失败，不影响builder的创建，只是无法使用runtime的return_val函数
 	}
-	
+
 	return builder, err
 }
 
