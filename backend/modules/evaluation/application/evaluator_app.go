@@ -1092,7 +1092,7 @@ func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *e
 	if err != nil {
 		return &evaluatorservice.ValidateEvaluatorResponse{
 			Valid:        gptr.Of(false),
-			ErrorMessage: gptr.Of(err.Error()),
+			ErrorMessage: gptr.Of(errorx.ErrorWithoutStack(err)),
 		}, nil
 	}
 
@@ -1103,7 +1103,7 @@ func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *e
 	if err := evaluator.ValidateBaseInfo(); err != nil {
 		return &evaluatorservice.ValidateEvaluatorResponse{
 			Valid:        gptr.Of(false),
-			ErrorMessage: gptr.Of(err.Error()),
+			ErrorMessage: gptr.Of(errorx.ErrorWithoutStack(err)),
 		}, nil
 	}
 
