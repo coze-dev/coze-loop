@@ -11,17 +11,18 @@ import (
 
 func TestEvaluator_GetSetEvaluatorVersion(t *testing.T) {
 	// Prompt类型
-	promptVer := &PromptEvaluatorVersion{Version: "v1"}
+	promptVer := &PromptEvaluatorVersion{Version: "v1", ID: 123}
 	promptEval := &Evaluator{
 		EvaluatorType:          EvaluatorTypePrompt,
 		PromptEvaluatorVersion: promptVer,
 	}
-	ver := promptEval.GetEvaluatorVersion()
-	assert.Equal(t, promptVer, ver)
+	assert.Equal(t, "v1", promptEval.GetVersion())
+	assert.Equal(t, int64(123), promptEval.GetEvaluatorVersionID())
 
 	// 非Prompt类型
 	codeEval := &Evaluator{EvaluatorType: EvaluatorTypeCode}
-	assert.Nil(t, codeEval.GetEvaluatorVersion())
+	assert.Equal(t, "", codeEval.GetVersion())
+	assert.Equal(t, int64(0), codeEval.GetEvaluatorVersionID())
 
 	// SetEvaluatorVersion
 	newPromptVer := &Evaluator{PromptEvaluatorVersion: &PromptEvaluatorVersion{Version: "v2"}, EvaluatorType: EvaluatorTypePrompt}
@@ -102,6 +103,33 @@ func TestPromptEvaluatorVersion_GetSetMethods(t *testing.T) {
 	assert.Equal(t, "suf", ver.PromptSuffix)
 	ver.SetParseType(ParseTypeFunctionCall)
 	assert.Equal(t, ParseTypeFunctionCall, ver.ParseType)
+}
+
+func TestEvaluator_DescriptionMethods(t *testing.T) {
+	// 测试 Evaluator 本身的描述
+	evaluator := &Evaluator{
+		Description: "evaluator desc",
+		EvaluatorType: EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &PromptEvaluatorVersion{
+			Description: "version desc",
+		},
+	}
+	
+	// 测试获取评估器描述
+	assert.Equal(t, "evaluator desc", evaluator.GetEvaluatorDescription())
+	
+	// 测试设置评估器描述
+	evaluator.SetEvaluatorDescription("new evaluator desc")
+	assert.Equal(t, "new evaluator desc", evaluator.GetEvaluatorDescription())
+	assert.Equal(t, "new evaluator desc", evaluator.Description)
+	
+	// 测试获取评估器版本描述
+	assert.Equal(t, "version desc", evaluator.GetEvaluatorVersionDescription())
+	
+	// 测试设置评估器版本描述
+	evaluator.SetEvaluatorVersionDescription("new version desc")
+	assert.Equal(t, "new version desc", evaluator.GetEvaluatorVersionDescription())
+	assert.Equal(t, "new version desc", evaluator.PromptEvaluatorVersion.Description)
 }
 
 func TestPromptEvaluatorVersion_GetPromptTemplateKey(t *testing.T) {

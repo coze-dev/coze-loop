@@ -296,12 +296,11 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 
 	versionID2Evaluator := make(map[int64]*entity.Evaluator)
 	for _, evaluator := range evaluatorVersionList {
-		evaluatorVersion := evaluator.GetEvaluatorVersion()
-		if evaluatorVersion == nil || !gslice.Contains(evaluatorVersionIDs, evaluatorVersion.GetID()) {
+		if (evaluator.EvaluatorType == entity.EvaluatorTypePrompt && evaluator.PromptEvaluatorVersion == nil) || (evaluator.EvaluatorType == entity.EvaluatorTypeCode && evaluator.CodeEvaluatorVersion == nil) || !gslice.Contains(evaluatorVersionIDs, evaluator.GetEvaluatorVersionID()) {
 			continue
 		}
 
-		versionID2Evaluator[evaluatorVersion.GetID()] = evaluator
+		versionID2Evaluator[evaluator.GetEvaluatorVersionID()] = evaluator
 	}
 
 	results := make([]*entity.ExptAggregateResult, 0, len(expt2AggrResults))
@@ -353,16 +352,11 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 				return nil, fmt.Errorf("failed to get evaluator by version_id %d", evaluatorVersionID)
 			}
 
-			evaluatorVersion := evaluator.PromptEvaluatorVersion
-			if evaluatorVersion == nil {
-				return nil, fmt.Errorf("failed to get evaluator version by version_id %d", evaluatorVersionID)
-			}
-
 			evaluatorAggrResult := entity.EvaluatorAggregateResult{
 				EvaluatorVersionID: evaluatorVersionID,
 				AggregatorResults:  aggregateResultDO.AggregatorResults,
 				Name:               gptr.Of(evaluator.Name),
-				Version:            gptr.Of(evaluatorVersion.Version),
+				Version:            gptr.Of(evaluator.GetVersion()),
 			}
 			evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
 

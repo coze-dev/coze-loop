@@ -22,7 +22,7 @@ func TestConfiger_GetEvaluatorPromptSuffix(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
-	c := &configer{loader: mockLoader}
+	c := &evaluatorConfiger{loader: mockLoader}
 
 	ctx := context.Background()
 	const key = "evaluator_prompt_suffix"
@@ -92,7 +92,7 @@ func TestConfiger_GetEvaluatorToolConf(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
-	c := &configer{loader: mockLoader}
+	c := &evaluatorConfiger{loader: mockLoader}
 
 	ctx := context.Background()
 	const key = "evaluator_tool_conf"
@@ -162,7 +162,7 @@ func TestConfiger_GetEvaluatorTemplateConf(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
-	c := &configer{loader: mockLoader}
+	c := &evaluatorConfiger{loader: mockLoader}
 
 	ctx := context.Background()
 	const key = "evaluator_template_conf"

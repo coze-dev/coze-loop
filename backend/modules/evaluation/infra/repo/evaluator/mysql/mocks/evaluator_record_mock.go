@@ -10,7 +10,7 @@ import (
 
 	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
-	"go.uber.org/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockEvaluatorRecordDAO is a mock of EvaluatorRecordDAO interface.

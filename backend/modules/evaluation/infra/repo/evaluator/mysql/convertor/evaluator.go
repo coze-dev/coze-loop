@@ -79,34 +79,36 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 }
 
 func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVersion, error) {
-	if do == nil || do.GetEvaluatorVersion() == nil {
+	if do == nil || 
+		(do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) {
 		return nil, nil
 	}
 
 	po := &model.EvaluatorVersion{
-		ID:            do.GetEvaluatorVersion().GetID(),
+		ID:            do.GetEvaluatorVersionID(),
 		SpaceID:       do.SpaceID,
-		Version:       do.GetEvaluatorVersion().GetVersion(),
+		Version:       do.GetVersion(),
 		EvaluatorType: ptr.Of(int32(do.EvaluatorType)),
 		EvaluatorID:   do.ID,
-		Description:   ptr.Of(do.GetEvaluatorVersion().GetDescription()),
+		Description:   ptr.Of(do.GetEvaluatorVersionDescription()),
 	}
-	if do.GetEvaluatorVersion().GetBaseInfo() != nil {
-		if do.GetEvaluatorVersion().GetBaseInfo().CreatedBy != nil {
-			po.CreatedBy = gptr.Indirect(do.GetEvaluatorVersion().GetBaseInfo().CreatedBy.UserID)
+	if do.GetBaseInfo() != nil {
+		if do.GetBaseInfo().CreatedBy != nil {
+			po.CreatedBy = gptr.Indirect(do.GetBaseInfo().CreatedBy.UserID)
 		}
-		if do.GetEvaluatorVersion().GetBaseInfo().UpdatedBy != nil {
-			po.UpdatedBy = gptr.Indirect(do.GetEvaluatorVersion().GetBaseInfo().UpdatedBy.UserID)
+		if do.GetBaseInfo().UpdatedBy != nil {
+			po.UpdatedBy = gptr.Indirect(do.GetBaseInfo().UpdatedBy.UserID)
 		}
-		if do.GetEvaluatorVersion().GetBaseInfo().CreatedAt != nil {
-			po.CreatedAt = time.UnixMilli(gptr.Indirect(do.GetEvaluatorVersion().GetBaseInfo().CreatedAt))
+		if do.GetBaseInfo().CreatedAt != nil {
+			po.CreatedAt = time.UnixMilli(gptr.Indirect(do.GetBaseInfo().CreatedAt))
 		}
-		if do.GetEvaluatorVersion().GetBaseInfo().UpdatedAt != nil {
-			po.UpdatedAt = time.UnixMilli(gptr.Indirect(do.GetEvaluatorVersion().GetBaseInfo().UpdatedAt))
+		if do.GetBaseInfo().UpdatedAt != nil {
+			po.UpdatedAt = time.UnixMilli(gptr.Indirect(do.GetBaseInfo().UpdatedAt))
 		}
-		if do.GetEvaluatorVersion().GetBaseInfo().DeletedAt != nil {
+		if do.GetBaseInfo().DeletedAt != nil {
 			po.DeletedAt = gorm.DeletedAt{
-				Time:  time.UnixMilli(gptr.Indirect(do.GetEvaluatorVersion().GetBaseInfo().DeletedAt)),
+				Time:  time.UnixMilli(gptr.Indirect(do.GetBaseInfo().DeletedAt)),
 				Valid: true,
 			}
 		}
@@ -128,6 +130,19 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 		po.Metainfo = ptr.Of(metaInfoByte)
 		po.ReceiveChatHistory = do.PromptEvaluatorVersion.ReceiveChatHistory
 		po.ID = do.PromptEvaluatorVersion.ID
+	case evaluatordo.EvaluatorTypeCode:
+		// 序列化Metainfo（整个CodeEvaluatorVersion）
+		metaInfoByte, err := json.Marshal(do.CodeEvaluatorVersion)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Code evaluator不需要InputSchema，设置为nil
+		po.InputSchema = nil
+		po.Metainfo = ptr.Of(metaInfoByte)
+		// Code evaluator不需要chat history，设置为nil
+		po.ReceiveChatHistory = nil
+		po.ID = do.CodeEvaluatorVersion.ID
 	}
 	return po, nil
 }
@@ -168,13 +183,21 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 				}
 			}
 		}
+	case evaluatordo.EvaluatorTypeCode:
+		do.CodeEvaluatorVersion = &evaluatordo.CodeEvaluatorVersion{}
+		// 反序列化Metainfo获取完整的CodeEvaluatorVersion对象
+		if po.Metainfo != nil {
+			if err := json.Unmarshal(*po.Metainfo, do.CodeEvaluatorVersion); err != nil {
+				return nil, err
+			}
+		}
 	}
-	do.GetEvaluatorVersion().SetID(po.ID)
-	do.GetEvaluatorVersion().SetVersion(po.Version)
-	do.GetEvaluatorVersion().SetSpaceID(po.SpaceID)
-	do.GetEvaluatorVersion().SetEvaluatorID(po.EvaluatorID)
+	do.SetEvaluatorVersionID(po.ID)
+	do.SetVersion(po.Version)
+	do.SetSpaceID(po.SpaceID)
+	do.SetEvaluatorID(po.EvaluatorID)
 	if po.Description != nil {
-		do.GetEvaluatorVersion().SetDescription(gptr.Indirect(po.Description))
+		do.SetEvaluatorVersionDescription(gptr.Indirect(po.Description))
 	}
 
 	baseInfo := &evaluatordo.BaseInfo{
@@ -190,7 +213,7 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 	if po.DeletedAt.Valid {
 		baseInfo.DeletedAt = ptr.Of(po.DeletedAt.Time.UnixMilli())
 	}
-	do.GetEvaluatorVersion().SetBaseInfo(baseInfo)
+	do.SetBaseInfo(baseInfo)
 
 	return do, nil
 }
