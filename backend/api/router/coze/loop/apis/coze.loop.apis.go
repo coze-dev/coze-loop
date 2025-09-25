@@ -291,19 +291,16 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
 				}
 				{
+					_trace_tree := _v14.Group("/trace_tree", _trace_treeMw(handler)...)
+					_trace_tree.POST("/search", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
+				}
+				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
-				}
-			}
-			{
-				_v2 := _observability.Group("/v2", _v2Mw(handler)...)
-				{
-					_trace_tree := _v2.Group("/trace_tree", _trace_treeMw(handler)...)
-					_trace_tree.POST("/search", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
 				}
 			}
 		}
