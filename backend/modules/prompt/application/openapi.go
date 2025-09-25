@@ -98,7 +98,7 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 	// 查询prompts
 	result, err := p.promptManageRepo.ListPrompt(ctx, param)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	// 执行权限检查
@@ -108,7 +108,7 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 	}
 	if len(promptIDs) > 0 {
 		if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), promptIDs, consts.ActionLoopPromptRead); err != nil {
-			return r, err
+			return nil, err
 		}
 	}
 
