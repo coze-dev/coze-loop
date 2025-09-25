@@ -79,49 +79,9 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	if task == nil || task.Rule == nil {
 		return false, nil
 	}
-	//var customFilterFields, obsFilterFields, filterFields []*loop_span.FilterField
-	//platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(context.Background(), loop_span.PlatformType(task.Rule.SpanFilters.GetPlatformType()))
-	//if err != nil {
-	//	return false, err
-	//}
-	//builtinFilter, err := buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
-	//	WorkspaceID:  task.GetWorkspaceID(),
-	//	SpanListType: loop_span.SpanListType(task.GetRule().GetSpanFilters().GetSpanListType()),
-	//})
-	//if err != nil {
-	//	return false, err
-	//}
-	//if builtinFilter == nil {
-	//	return false, err
-	//}
-	//
-	//for _, v := range builtinFilter.FilterFields {
-	//	obsFilterFields = append(obsFilterFields, &loop_span.FilterField{
-	//		FieldName:  v.FieldName,
-	//		FieldType:  v.FieldType,
-	//		Values:     v.Values,
-	//		QueryType:  v.QueryType,
-	//		QueryAndOr: v.QueryAndOr,
-	//		SubFilter:  v.SubFilter,
-	//	})
-	//}
-	//filterFields = append(filterFields, obsFilterFields...)
-	//for _, v := range task.Rule.SpanFilters.Filters.FilterFields {
-	//	customFilterFields = append(customFilterFields, &loop_span.FilterField{
-	//		FieldName:  v.GetFieldName(),
-	//		FieldType:  loop_span.FieldType(v.GetFieldType()),
-	//		Values:     v.Values,
-	//		QueryType:  ptr.Of(loop_span.QueryTypeEnum(v.GetQueryType())),
-	//		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnum(v.GetQueryAndOr())),
-	//	})
-	//}
-	//filterFields = append(filterFields, customFilterFields...)
-	//filter := &loop_span.FilterFields{
-	//	FilterFields: filterFields,
-	//	QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
-	//}
 
 	filters := s.buildSpanFilters(ctx, task)
+	logs.CtxInfo(ctx, "spanSubscriber Match, taskID: %d, span: %v, filters: %v", s.taskID, span, filters)
 	if !filters.Satisfied(span) {
 		return false, nil
 	}
