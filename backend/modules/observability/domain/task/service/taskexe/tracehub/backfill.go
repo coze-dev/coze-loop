@@ -29,10 +29,14 @@ const pageSize = 100
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. 设置当前任务上下文
 	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	logs.CtxInfo(ctx, "starting backfill task, event_task_id=%d", event.TaskID)
+	
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
+		logs.CtxError(ctx, "failed to set backfill task, event_task_id=%d, err=%v", event.TaskID, err)
 		return err
 	}
+	logs.CtxInfo(ctx, "backfill task setup completed, task_id=%d", sub.t.GetID())
 
 	// 2. 判断回溯任务是否已完成 - 避免重复执行
 	isDone, err := h.isBackfillDone(ctx, sub)
@@ -47,34 +51,46 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 
 	// 3. 创建并发控制机制 - 设置上下文和等待组
 	subCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	defer func() {
+		logs.CtxInfo(ctx, "cancelling backfill context, task_id=%d", sub.t.GetID())
+		cancel()
+	}()
 	wg := sync.WaitGroup{}
+	logs.CtxInfo(ctx, "created backfill context and wait group, task_id=%d", sub.t.GetID())
 
 	// 初始化 flushCh 通道和错误收集器
 	h.flushCh = make(chan *flushReq, 100) // 缓冲通道，避免阻塞
 	h.flushErrLock.Lock()
 	h.flushErr = nil // 重置错误收集器
 	h.flushErrLock.Unlock()
+	logs.CtxInfo(ctx, "initialized flush channel and error collector, task_id=%d", sub.t.GetID())
 
 	// 4. 启动异步刷新处理 - 通过 goroutine 实现并发处理
 	wg.Add(1)
+	logs.CtxInfo(ctx, "starting flush spans goroutine, task_id=%d", sub.t.GetID())
 	goroutine.Go(ctx, func() {
 		defer wg.Done()
 		h.flushSpans(subCtx, sub)
 	})
 
 	// 5. 获取 span 数据 - 从观测服务获取需要处理的数据
+	logs.CtxInfo(ctx, "starting to list spans, task_id=%d", sub.t.GetID())
 	listErr := h.listSpans(subCtx, sub)
 	if listErr != nil {
 		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.GetID(), listErr)
 		// continue on error，不中断处理流程
+	} else {
+		logs.CtxInfo(ctx, "completed listing spans, task_id=%d", sub.t.GetID())
 	}
 
 	// 关闭通道并等待处理完成
+	logs.CtxInfo(ctx, "closing flush channel and waiting for completion, task_id=%d", sub.t.GetID())
 	close(h.flushCh)
 	wg.Wait()
+	logs.CtxInfo(ctx, "all goroutines completed, task_id=%d", sub.t.GetID())
 
 	// 6. 同步等待完成 - 确保所有数据处理完毕
+	logs.CtxInfo(ctx, "handling backfill completion, task_id=%d", sub.t.GetID())
 	return h.onHandleDone(ctx, listErr, sub)
 }
 
@@ -252,13 +268,24 @@ func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields)
 // fetchAndSendSpans 分页获取并发送 span 数据
 func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) error {
 	totalCount := int64(0)
+	pageCount := 0
 	pageToken := listParam.PageToken
+	
+	logs.CtxInfo(ctx, "starting to fetch spans, initial_page_token=%s, task_id=%d", pageToken, sub.t.GetID())
+	
 	for {
+		pageCount++
+		logs.CtxDebug(ctx, "fetching page #%d, page_token=%s, task_id=%d", pageCount, pageToken, sub.t.GetID())
+		
 		result, err := h.traceRepo.ListSpans(ctx, listParam)
 		if err != nil {
-			logs.CtxError(ctx, "list spans failed, task_id=%d, page_token=%s, err=%v", sub.t.GetID(), pageToken, err)
+			logs.CtxError(ctx, "list spans failed, page #%d, task_id=%d, page_token=%s, err=%v", 
+				pageCount, sub.t.GetID(), pageToken, err)
 			return err
 		}
+
+		logs.CtxInfo(ctx, "fetched page #%d with %d spans, has_more=%t, task_id=%d", 
+			pageCount, len(result.Spans), result.HasMore, sub.t.GetID())
 
 		if len(result.Spans) > 0 {
 			// 发送到通道
@@ -272,44 +299,99 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 			select {
 			case h.flushCh <- flush:
 				totalCount += int64(len(result.Spans))
-				logs.CtxInfo(ctx, "sent %d spans to flush channel, total=%d, task_id=%d", len(result.Spans), totalCount, sub.t.GetID())
+				logs.CtxInfo(ctx, "sent page #%d (%d spans) to flush channel, total_spans=%d, task_id=%d", 
+					pageCount, len(result.Spans), totalCount, sub.t.GetID())
 			case <-ctx.Done():
-				logs.CtxWarn(ctx, "context cancelled while sending spans, task_id=%d", sub.t.GetID())
-				return ctx.Err()
+				ctxErr := ctx.Err()
+				logs.CtxWarn(ctx, "context cancelled while sending spans on page #%d, task_id=%d, context_error=%v, total_processed=%d", 
+					pageCount, sub.t.GetID(), ctxErr, totalCount)
+				
+				// 详细分析取消原因
+				if errors.Is(ctxErr, context.Canceled) {
+					logs.CtxWarn(ctx, "fetch operation cancelled manually, page #%d, task_id=%d", pageCount, sub.t.GetID())
+				} else if errors.Is(ctxErr, context.DeadlineExceeded) {
+					logs.CtxWarn(ctx, "fetch operation timed out, page #%d, task_id=%d", pageCount, sub.t.GetID())
+				}
+				return ctxErr
 			}
+		} else {
+			logs.CtxInfo(ctx, "page #%d returned no spans, task_id=%d", pageCount, sub.t.GetID())
 		}
 
 		if !result.HasMore {
-			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
+			logs.CtxInfo(ctx, "completed listing spans, total_pages=%d, total_spans=%d, task_id=%d", 
+				pageCount, totalCount, sub.t.GetID())
 			break
 		}
 
 		pageToken = result.PageToken
+		listParam.PageToken = pageToken
+		logs.CtxDebug(ctx, "continuing to next page, new_page_token=%s, task_id=%d", pageToken, sub.t.GetID())
 	}
 
 	return nil
 }
 
 func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, sub *spanSubscriber) {
+	logs.CtxInfo(ctx, "flush spans goroutine started, task_id=%d", sub.t.GetID())
+	defer logs.CtxInfo(ctx, "flush spans goroutine exited, task_id=%d", sub.t.GetID())
+	
+	processedCount := 0
 	for {
 		select {
 		case fr, ok := <-h.flushCh:
 			if !ok {
 				// 通道已关闭，退出
+				logs.CtxInfo(ctx, "flush channel closed, processed %d batches, task_id=%d", processedCount, sub.t.GetID())
 				return
 			}
 
+			processedCount++
+			logs.CtxDebug(ctx, "processing flush request #%d with %d spans, task_id=%d", 
+				processedCount, fr.retrievedSpanCount, sub.t.GetID())
+			
 			_, _, err := h.doFlush(ctx, fr, sub)
 			if err != nil {
-				logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
+				logs.CtxError(ctx, "flush spans failed, batch #%d, task_id=%d, err=%v", 
+					processedCount, sub.t.GetID(), err)
 				// 收集错误，继续处理
 				h.flushErrLock.Lock()
 				h.flushErr = append(h.flushErr, err)
 				h.flushErrLock.Unlock()
+			} else {
+				logs.CtxDebug(ctx, "successfully processed flush request #%d, task_id=%d", 
+					processedCount, sub.t.GetID())
 			}
 
 		case <-ctx.Done():
-			logs.CtxWarn(ctx, "flush spans context cancelled, task_id=%d", sub.t.GetID())
+			// 详细分析上下文取消的原因
+			ctxErr := ctx.Err()
+			logs.CtxWarn(ctx, "flush spans context cancelled, task_id=%d, processed_batches=%d, context_error=%v", 
+				sub.t.GetID(), processedCount, ctxErr)
+			
+			// 进一步区分取消原因
+			if errors.Is(ctxErr, context.Canceled) {
+				logs.CtxWarn(ctx, "context was manually cancelled (context.Canceled), task_id=%d, likely due to parent context cancellation or explicit cancel() call", 
+					sub.t.GetID())
+			} else if errors.Is(ctxErr, context.DeadlineExceeded) {
+				logs.CtxWarn(ctx, "context deadline exceeded (context.DeadlineExceeded), task_id=%d, operation timed out", 
+					sub.t.GetID())
+			} else {
+				logs.CtxWarn(ctx, "unknown context cancellation reason, task_id=%d, error=%v", 
+					sub.t.GetID(), ctxErr)
+			}
+			
+			// 检查是否还有待处理的数据
+			select {
+			case fr, ok := <-h.flushCh:
+				if ok {
+					logs.CtxWarn(ctx, "context cancelled but flush channel still has data, remaining_spans=%d, task_id=%d", 
+						fr.retrievedSpanCount, sub.t.GetID())
+				}
+			default:
+				logs.CtxInfo(ctx, "no remaining data in flush channel when context cancelled, task_id=%d", sub.t.GetID())
+			}
+			
 			return
 		}
 	}
@@ -317,37 +399,58 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, sub *spanSubscribe
 
 func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *spanSubscriber) (flushed, sampled int, _ error) {
 	if fr == nil || len(fr.spans) == 0 {
+		logs.CtxDebug(ctx, "flush request is empty, skipping, task_id=%d", sub.t.GetID())
 		return 0, 0, nil
 	}
 
-	logs.CtxInfo(ctx, "processing %d spans for backfill, task_id=%d", len(fr.spans), sub.t.GetID())
+	logs.CtxInfo(ctx, "starting to process %d spans for backfill, page_token=%s, no_more=%t, task_id=%d", 
+		len(fr.spans), fr.pageToken, fr.noMore, sub.t.GetID())
 
 	// 应用采样逻辑
+	logs.CtxDebug(ctx, "applying sampling logic, original_count=%d, task_id=%d", len(fr.spans), sub.t.GetID())
 	sampledSpans := h.applySampling(fr.spans, sub)
 	if len(sampledSpans) == 0 {
-		logs.CtxInfo(ctx, "no spans after sampling, task_id=%d", sub.t.GetID())
+		logs.CtxInfo(ctx, "no spans after sampling, original_count=%d, task_id=%d", len(fr.spans), sub.t.GetID())
 		return len(fr.spans), 0, nil
 	}
+	logs.CtxInfo(ctx, "sampling completed, sampled_count=%d, original_count=%d, task_id=%d", 
+		len(sampledSpans), len(fr.spans), sub.t.GetID())
 
 	// 执行具体的业务逻辑处理
+	logs.CtxDebug(ctx, "starting business logic processing, sampled_spans=%d, task_id=%d", 
+		len(sampledSpans), sub.t.GetID())
 	err := h.processSpansForBackfill(ctx, sampledSpans, sub)
 	if err != nil {
-		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		logs.CtxError(ctx, "process spans failed, sampled_spans=%d, task_id=%d, err=%v", 
+			len(sampledSpans), sub.t.GetID(), err)
 		return len(fr.spans), len(sampledSpans), err
 	}
+	logs.CtxDebug(ctx, "business logic processing completed, task_id=%d", sub.t.GetID())
+
+	// 更新任务运行状态
+	logs.CtxDebug(ctx, "updating task run with page token, page_token=%s, task_id=%d", 
+		fr.pageToken, sub.t.GetID())
 	taskRun, err := h.taskRunRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
+	if err != nil {
+		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		return len(fr.spans), len(sampledSpans), err
+	}
+	
 	taskRunDTO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
 	taskRunDTO.BackfillRunDetail.LastSpanPageToken = ptr.Of(fr.pageToken)
 	err = h.taskRunRepo.UpdateTaskRunWithOCC(ctx, taskRunDTO.ID, taskRunDTO.WorkspaceID, map[string]interface{}{
 		"backfill_detail": taskRunDTO.BackfillRunDetail,
 	})
 	if err != nil {
-		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		logs.CtxError(ctx, "update task run failed, task_run_id=%d, task_id=%d, err=%v", 
+			taskRunDTO.ID, sub.t.GetID(), err)
 		return len(fr.spans), len(sampledSpans), err
 	}
+	logs.CtxDebug(ctx, "task run updated successfully, page_token=%s, task_id=%d", 
+		fr.pageToken, sub.t.GetID())
 
-	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
-		len(sampledSpans), len(fr.spans), sub.t.GetID())
+	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), page_token=%s, task_id=%d",
+		len(sampledSpans), len(fr.spans), fr.pageToken, sub.t.GetID())
 
 	return len(fr.spans), len(sampledSpans), nil
 }
@@ -471,20 +574,32 @@ func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *l
 
 // onHandleDone 处理完成回调
 func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, sub *spanSubscriber) error {
+	logs.CtxInfo(ctx, "handling backfill completion, task_id=%d", sub.t.GetID())
+	
 	// 收集所有错误
 	h.flushErrLock.Lock()
 	allErrors := append([]error{}, h.flushErr...)
+	flushErrorCount := len(h.flushErr)
 	if listErr != nil {
 		allErrors = append(allErrors, listErr)
 	}
 	h.flushErrLock.Unlock()
 
 	if len(allErrors) > 0 {
-		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), sub.t.GetID())
+		logs.CtxWarn(ctx, "backfill completed with errors, total_errors=%d, flush_errors=%d, list_error=%v, task_id=%d", 
+			len(allErrors), flushErrorCount, listErr, sub.t.GetID())
+		
+		// 详细记录所有错误
+		for i, err := range allErrors {
+			logs.CtxError(ctx, "backfill error #%d: %v, task_id=%d", i+1, err, sub.t.GetID())
+		}
+		
 		// 返回第一个错误作为代表
+		logs.CtxError(ctx, "returning first error as representative, error=%v, task_id=%d", 
+			allErrors[0], sub.t.GetID())
 		return allErrors[0]
 	}
 
-	logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", sub.t.GetID())
+	logs.CtxInfo(ctx, "backfill completed successfully without errors, task_id=%d", sub.t.GetID())
 	return nil
 }
