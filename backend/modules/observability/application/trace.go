@@ -519,7 +519,8 @@ func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.Get
 		fMeta[k].FilterTypes = fTypes
 	}
 	return &trace.GetTracesMetaInfoResponse{
-		FieldMetas: fMeta,
+		FieldMetas:  fMeta,
+		KeySpanType: sResp.KeySpanTypeList,
 	}, nil
 }
 

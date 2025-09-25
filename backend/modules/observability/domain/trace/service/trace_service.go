@@ -139,7 +139,8 @@ type GetTracesMetaInfoReq struct {
 }
 
 type GetTracesMetaInfoResp struct {
-	FilesMetas map[string]*config.FieldMeta
+	FilesMetas      map[string]*config.FieldMeta
+	KeySpanTypeList []string
 }
 
 type CreateAnnotationReq struct {
@@ -579,8 +580,10 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 		}
 		fieldMetas[field] = fieldMta
 	}
+	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
 	return &GetTracesMetaInfoResp{
-		FilesMetas: fieldMetas,
+		FilesMetas:      fieldMetas,
+		KeySpanTypeList: spanTypeCfg,
 	}, nil
 }
 

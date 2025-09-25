@@ -25,6 +25,7 @@ const (
 	annotationSourceCfgKey     = "annotation_source_cfg"
 	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
 	keyColumnsCfgKey           = "key_columns"
+	keySpanTypeCfgKey          = "key_span_type"
 )
 
 type TraceConfigCenter struct {
@@ -156,6 +157,14 @@ func (t *TraceConfigCenter) GetKeyColumns(ctx context.Context) []string {
 	keyColumns := make([]string, 0)
 	if err := t.UnmarshalKey(ctx, keyColumnsCfgKey, &keyColumns); err != nil {
 		return []string{"start_time", "span_id", "parent_id", "duration", "span_type", "span_name", "status_code", "tags_long", "logic_delete_date"}
+	}
+	return keyColumns
+}
+
+func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) []string {
+	keyColumns := make([]string, 0)
+	if err := t.UnmarshalKey(ctx, keySpanTypeCfgKey, &keyColumns); err != nil {
+		return []string{"model", "tool", "prompt"}
 	}
 	return keyColumns
 }

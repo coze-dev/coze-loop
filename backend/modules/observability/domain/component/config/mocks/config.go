@@ -114,6 +114,20 @@ func (mr *MockITraceConfigMockRecorder) GetKeyColumns(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyColumns", reflect.TypeOf((*MockITraceConfig)(nil).GetKeyColumns), ctx)
 }
 
+// GetKeySpanTypes mocks base method.
+func (m *MockITraceConfig) GetKeySpanTypes(ctx context.Context) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeySpanTypes", ctx)
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetKeySpanTypes indicates an expected call of GetKeySpanTypes.
+func (mr *MockITraceConfigMockRecorder) GetKeySpanTypes(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySpanTypes", reflect.TypeOf((*MockITraceConfig)(nil).GetKeySpanTypes), ctx)
+}
+
 // GetPlatformSpansTrans mocks base method.
 func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
 	m.ctrl.T.Helper()

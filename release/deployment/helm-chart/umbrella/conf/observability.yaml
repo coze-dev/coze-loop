@@ -299,3 +299,11 @@ key_columns:
   - "status_code"
   - "tags_long"
   - "logic_delete_date"
+
+key_span_type:
+  - "UserInput"
+  - "UserInputV2"
+  - "LLMCall"
+  - "model"
+  - "tool"
+  - "prompt"

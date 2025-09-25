@@ -116,6 +116,7 @@ type ITraceConfig interface {
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
+	GetKeySpanTypes(ctx context.Context) []string
 	GetKeyColumns(ctx context.Context) []string
 
 	conf.IConfigLoader
