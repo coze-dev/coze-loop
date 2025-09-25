@@ -275,7 +275,8 @@ func TestGenerateString(t *testing.T) {
 				"maxLength": float64(10),
 			},
 			check: func(s string) bool {
-				return len(s) >= 5 && len(s) <= 10
+				runeCount := len([]rune(s))
+				return runeCount >= 5 && runeCount <= 10
 			},
 		},
 		{

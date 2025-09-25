@@ -1728,6 +1728,7 @@ func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 			},
 			setupMocks: func(mockEvaluatorSourceService *mocks.MockEvaluatorSourceService) {
 				mockEvaluatorSourceService.EXPECT().PreHandle(ctx, mockEvaluator).Return(nil)
+				mockEvaluatorSourceService.EXPECT().Validate(ctx, mockEvaluator).Return(nil)
 				mockEvaluatorSourceService.EXPECT().Debug(ctx, mockEvaluator, gomock.Any()).Return(defaultOutputData, nil)
 			},
 		},

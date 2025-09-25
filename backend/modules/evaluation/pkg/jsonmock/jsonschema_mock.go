@@ -126,26 +126,66 @@ func generateString(schema map[string]interface{}) string {
 	}
 
 	// 处理长度约束
+	baseStr := "这是一段文字"
+	
+	// 检查是否有长度约束
+	hasMinLength := false
+	hasMaxLength := false
 	minLength := 1
 	maxLength := 20
 
 	if min, exists := schema["minLength"]; exists {
 		if minVal, ok := min.(float64); ok {
 			minLength = int(minVal)
+			hasMinLength = true
 		}
 	}
 
 	if max, exists := schema["maxLength"]; exists {
 		if maxVal, ok := max.(float64); ok {
 			maxLength = int(maxVal)
+			hasMaxLength = true
 		}
+	}
+
+	// 如果没有任何长度约束，直接返回默认字符串
+	if !hasMinLength && !hasMaxLength {
+		return baseStr
 	}
 
 	if maxLength < minLength {
 		maxLength = minLength
 	}
 
-	return "这是一段文字"
+	// 根据长度约束生成字符串
+	targetLength := minLength
+	if maxLength > minLength {
+		targetLength = minLength + rand.Intn(maxLength-minLength+1)
+	}
+
+	// 生成指定长度的字符串
+	if targetLength <= 0 {
+		return ""
+	}
+
+	if targetLength <= len([]rune(baseStr)) {
+		// 如果目标长度小于等于基础字符串长度，直接截取
+		runes := []rune(baseStr)
+		return string(runes[:targetLength])
+	} else {
+		// 如果目标长度大于基础字符串长度，重复并截取
+		runes := []rune(baseStr)
+		result := make([]rune, 0, targetLength)
+		for len(result) < targetLength {
+			remaining := targetLength - len(result)
+			if remaining >= len(runes) {
+				result = append(result, runes...)
+			} else {
+				result = append(result, runes[:remaining]...)
+			}
+		}
+		return string(result)
+	}
 }
 
 // generateStringByPattern 根据正则模式生成字符串
