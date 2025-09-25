@@ -451,12 +451,11 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 	return record, nil
 }
 
-func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error) {
+func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error) {
 	st := time.Now()
-
-	record, callee, err := e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
+	record, callee, err = e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
@@ -465,10 +464,10 @@ func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *ent
 		Session:     &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
 		Callee:      callee,
 	}); err != nil {
-		return nil, err
+		return nil, callee, err
 	}
 
-	return record, err
+	return record, callee, nil
 }
 
 func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
