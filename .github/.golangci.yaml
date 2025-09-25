@@ -1,11 +1,29 @@
-version: "2"
-
 run:
   timeout: 10m
-  skip-dirs:
+  # 使用 issues.exclude-dirs 替代废弃的 skip-dirs
+  go: "1.21"
+
+# 排除目录配置
+issues:
+  exclude-dirs:
     - kitex_gen
     - loop_gen
     - gorm_gen
+  exclude-rules:
+    - path: "coze/loop/apis/middleware.go"
+      linters:
+        - unused
+  # 设置默认严重级别
+  severity-rules:
+    - linters:
+        - unconvert
+        - unused
+      severity: warning
+    - linters:
+        - govet
+        - ineffassign
+        - staticcheck
+      severity: error
 
 linters: # https://golangci-lint.run/usage/linters/
   disable-all: true
@@ -15,16 +33,8 @@ linters: # https://golangci-lint.run/usage/linters/
     - staticcheck
     - unused
     - unconvert
-  exclusions:
-    rules:
-      - path: "coze/loop/apis/middleware.go"
-        linters:
-          - unused
-
-formatters:
-  enable:
-    - goimports
     - gofmt
+    - goimports
     - gofumpt
 
 # Refer to https://golangci-lint.run/usage/linters
@@ -33,11 +43,8 @@ linters-settings:
     # Choose whether to use the extra rules.
     extra-rules: true
   goimports:
-
-severity:
-  default: error
-  rules:
-    - linters:
-        - unconvert
-        - unused
-      severity: warning
+    local-prefixes: "github.com/coze-dev/coze-loop"
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
