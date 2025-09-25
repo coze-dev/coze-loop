@@ -8,6 +8,7 @@ include "./domain/filter.thrift"
 include "./domain/view.thrift"
 include "./domain/annotation.thrift"
 include "./domain/export_dataset.thrift"
+include "./domain/task.thrift"
 
 struct ListSpansRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
@@ -289,6 +290,61 @@ struct PreviewExportTracesToDatasetResponse {
     257: optional string Msg (agw.key = "msg")    // 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg
 }
 
+struct ChangeEvaluatorScoreRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required string annotation_id (api.body="annotation_id", vt.min_size="1")
+    3: required string span_id (api.body="span_id", vt.min_size="1")
+    4: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
+    5: required annotation.Correction correction (api.body="correction")
+    6: optional common.PlatformType platform_type (api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct ChangeEvaluatorScoreResponse {
+    1: required annotation.Annotation annotation
+
+    255: optional base.BaseResp BaseResp
+}
+
+
+
+struct ListAnnotationEvaluatorsRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query="workspace_id", vt.gt="0")
+    2: optional string name (api.body = "name")
+
+    255: optional base.Base Base (api.none="true")
+}
+
+struct ListAnnotationEvaluatorsResponse {
+    1: required list<annotation.AnnotationEvaluator> evaluators
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ExtractSpanInfoRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required string trace_id (api.body = "trace_id" vt.min_size = "1")
+    3: required list<string> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
+    4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
+    5: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time", vt.gt="0")
+    6: optional common.PlatformType platform_type (api.body="platform_type")
+    7: optional list<export_dataset.FieldMapping> field_mappings (vt.min_size="1", vt.max_size="100")
+
+    255: optional base.Base Base (api.none="true")
+}
+
+struct SpanInfo {
+    1: required string span_id
+    2: required list<export_dataset.FieldData>  field_list
+}
+struct ExtractSpanInfoResponse {
+    1: required list<SpanInfo>  span_infos
+
+    255: optional base.BaseResp BaseResp
+}
+
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     GetTraceResponse GetTrace(1: GetTraceRequest req) (api.get = '/api/observability/v1/traces/:trace_id')
@@ -305,4 +361,7 @@ service TraceService {
     ListAnnotationsResponse ListAnnotations(1: ListAnnotationsRequest req) (api.post = '/api/observability/v1/annotations/list')
     ExportTracesToDatasetResponse ExportTracesToDataset(1: ExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/export_to_dataset')
     PreviewExportTracesToDatasetResponse PreviewExportTracesToDataset(1: PreviewExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/preview_export_to_dataset')
+    ChangeEvaluatorScoreResponse ChangeEvaluatorScore(1: ChangeEvaluatorScoreRequest req) (api.post = '/api/observability/v1/traces/change_eval_score')
+    ListAnnotationEvaluatorsResponse ListAnnotationEvaluators(1: ListAnnotationEvaluatorsRequest req) (api.get = '/api/observability/v1/annotation/list_evaluators')
+    ExtractSpanInfoResponse ExtractSpanInfo(1: ExtractSpanInfoRequest req) (api.post = '/api/observability/v1/trace/extract_span_info')
 }

@@ -42,20 +42,26 @@ func (d *EvaluationSetProvider) CreateDataset(ctx context.Context, dataset *enti
 	if dataset.Name == "" {
 		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("dataset name is required"))
 	}
-
-	userIDStr, _ := session.UserIDInCtx(ctx)
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("userid is required"))
+	var sessionInfo *common.Session
+	if dataset.Seesion == nil {
+		userIDStr, _ := session.UserIDInCtx(ctx)
+		userID, err := strconv.ParseInt(userIDStr, 10, 64)
+		if err != nil {
+			return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("userid is required"))
+		}
+		sessionInfo = &common.Session{
+			UserID: gptr.Of(userID),
+		}
+	} else {
+		sessionInfo = dataset.Seesion
 	}
+
 	// 构造请求
 	req := &eval_set.CreateEvaluationSetRequest{
 		WorkspaceID: dataset.WorkspaceID,
 		Name:        &dataset.Name,
 		Description: &dataset.Description,
-		Session: &common.Session{
-			UserID: lo.ToPtr(userID),
-		},
+		Session:     sessionInfo,
 	}
 
 	// 设置BizCategory
@@ -68,7 +74,6 @@ func (d *EvaluationSetProvider) CreateDataset(ctx context.Context, dataset *enti
 	if len(dataset.DatasetVersion.DatasetSchema.FieldSchemas) > 0 {
 		req.EvaluationSetSchema = datasetSchemaDO2DTO(&dataset.DatasetVersion.DatasetSchema)
 	}
-
 	resp, err := d.client.CreateEvaluationSet(ctx, req)
 	if err != nil {
 		logs.CtxError(ctx, "CreateEvaluationSet failed, workspace_id=%d, err=%#v", dataset.WorkspaceID, err)
@@ -134,6 +139,11 @@ func (d *EvaluationSetProvider) GetDataset(ctx context.Context, workspaceID, dat
 	dataset := evaluationSetDTO2DO(resp.EvaluationSet)
 	logs.CtxInfo(ctx, "GetDataset success, workspace_id=%d, dataset_id=%d", workspaceID, datasetID)
 	return dataset, nil
+}
+
+// SearchDatasets 搜索数据集
+func (d *EvaluationSetProvider) SearchDatasets(ctx context.Context, workspaceID int64, datasetID int64, category entity.DatasetCategory, name string) ([]*entity.Dataset, error) {
+	return nil, nil
 }
 
 // ClearDatasetItems 清空数据集项
