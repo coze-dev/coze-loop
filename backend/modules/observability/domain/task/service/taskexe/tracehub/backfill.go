@@ -150,7 +150,7 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber
 		return err
 	}
 	taskRunDTO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
-	if taskRunDTO.BackfillRunDetail.LastSpanPageToken != nil {
+	if taskRunDTO.BackfillRunDetail != nil && taskRunDTO.BackfillRunDetail.LastSpanPageToken != nil {
 		listParam.PageToken = *taskRunDTO.BackfillRunDetail.LastSpanPageToken
 	}
 	// 分页查询并发送数据
