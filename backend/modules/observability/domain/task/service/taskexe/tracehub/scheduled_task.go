@@ -167,6 +167,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			}
 		}
 		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetRule().GetSampler().GetIsCycle() {
+			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
 			// 达到单次任务时间期限
 			if time.Now().After(taskRun.RunEndAt) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
