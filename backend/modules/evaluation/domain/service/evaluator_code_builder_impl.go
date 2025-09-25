@@ -141,7 +141,6 @@ func (b *JavaScriptCodeBuilder) escapeCodeForTemplate(userCode string) string {
 	return escaped
 }
 
-
 // getReturnValFunctionFromRuntime 从runtime获取JavaScript return_val函数实现
 func (b *JavaScriptCodeBuilder) getReturnValFunctionFromRuntime() string {
 	// 如果有runtime实例，优先使用runtime提供的实现
@@ -204,17 +203,17 @@ func (b *JavaScriptCodeBuilder) validateInputData(inputData map[string]interface
 	hasEvalSetFields := false
 	hasEvalTargetFields := false
 
-	if _, exists := inputData["from_eval_set_fields"]; exists {
+	if _, exists := inputData["evaluate_dataset_fields"]; exists {
 		hasEvalSetFields = true
 	}
 
-	if _, exists := inputData["from_eval_target_fields"]; exists {
+	if _, exists := inputData["evaluate_target_output_fields"]; exists {
 		hasEvalTargetFields = true
 	}
 
 	// 至少需要有一个字段存在
 	if !hasEvalSetFields && !hasEvalTargetFields {
-		return fmt.Errorf("input data must contain either from_eval_set_fields or from_eval_target_fields")
+		return fmt.Errorf("input data must contain either evaluate_dataset_fields or evaluate_target_output_fields")
 	}
 
 	return nil
@@ -337,7 +336,6 @@ func (b *PythonCodeBuilder) BuildSyntaxCheckCode(userCode string) string {
 	return syntaxCheckCode
 }
 
-
 // getReturnValFunctionFromRuntime 从runtime获取Python return_val函数实现
 func (b *PythonCodeBuilder) getReturnValFunctionFromRuntime() string {
 	// 如果有runtime实例，优先使用runtime提供的实现
@@ -396,7 +394,6 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 
 	return result
 }
-
 
 // buildInputData 构建代码执行的输入数据
 func (b *PythonCodeBuilder) buildInputData(input *entity.EvaluatorInputData) (map[string]interface{}, error) {
