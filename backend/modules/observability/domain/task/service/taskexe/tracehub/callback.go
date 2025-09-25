@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -126,17 +127,34 @@ func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResu
 			return err
 		}
 		workspaceIDStr := turn.Ext["workspace_id"]
+		workspaceID, err := strconv.ParseInt(workspaceIDStr, 10, 64)
+		if err != nil {
+			return err
+		}
 		//platform_type := turn.Ext["platform_type"]
 		tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
 		if err != nil {
 			return err
 		}
+		var storageDuration int64 = 1
+		res, err := h.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
+			SpaceID:      workspaceID,
+		})
+		if err != nil {
+			logs.CtxWarn(ctx, "fail to check trace benefit, %v", err)
+		} else if res == nil {
+			logs.CtxWarn(ctx, "fail to get trace benefit, got nil response")
+		} else if res != nil {
+			storageDuration = res.StorageDuration
+		}
+
 		spans, err := h.getSpan(ctx,
 			tenants,
 			[]string{spanID},
 			traceID,
 			workspaceIDStr,
-			startTime/1000-24*7*time.Hour.Milliseconds(),
+			startTime/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
 			startTime/1000+5*time.Second.Milliseconds(),
 		)
 		if len(spans) == 0 {

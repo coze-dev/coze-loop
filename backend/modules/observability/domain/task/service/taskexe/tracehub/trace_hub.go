@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gslice"
+	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
@@ -41,6 +42,7 @@ func NewTraceHubImpl(
 	tenantProvider tenant.ITenantProvider,
 	buildHelper service.TraceFilterProcessorBuilder,
 	taskProcessor *processor.TaskProcessor,
+	benefitSvc benefit.IBenefitService,
 ) (ITraceHubService, error) {
 	// 创建两个不同间隔的独立定时器
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // 任务状态生命周期管理 - 5分钟间隔
@@ -55,6 +57,7 @@ func NewTraceHubImpl(
 		tenantProvider:      tenantProvider,
 		buildHelper:         buildHelper,
 		taskProcessor:       taskProcessor,
+		benefitSvc:          benefitSvc,
 	}
 
 	// 立即启动定时任务
@@ -74,6 +77,7 @@ type TraceHubServiceImpl struct {
 	tenantProvider      tenant.ITenantProvider
 	taskProcessor       *processor.TaskProcessor
 	buildHelper         service.TraceFilterProcessorBuilder
+	benefitSvc          benefit.IBenefitService
 
 	flushCh      chan *flushReq
 	flushErrLock sync.Mutex

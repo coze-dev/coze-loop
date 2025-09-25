@@ -255,6 +255,7 @@ func InitTaskApplication(
 	db db.Provider,
 	idgen idgen.IIDGenerator,
 	configFactory conf.IConfigLoaderFactory,
+	benefit benefit.IBenefitService,
 	ckDb ck.Provider,
 	redis redis.Cmdable,
 	mqFactory mq.IFactory,
