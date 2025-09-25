@@ -153,7 +153,7 @@ func Test_NewEvalTargetServiceImpl(t *testing.T) {
 				tt.mockSetup()
 			}
 
-			serviceInstance := NewEvalTargetServiceImpl(tt.evalTargetRepo, tt.idgen, tt.metric, tt.typedOperators, tt.evalAsyncRepo)
+			serviceInstance := NewEvalTargetServiceImpl(tt.evalTargetRepo, tt.idgen, tt.metric, tt.typedOperators)
 
 			actualInstance, ok := serviceInstance.(*EvalTargetServiceImpl)
 			assert.True(t, ok)

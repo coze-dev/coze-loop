@@ -546,7 +546,7 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 
 	switch request.GetEvalTargetType() {
 	case eval_target_dto.EvalTargetType_CustomRPCServer:
-		record, _, err := e.evalTargetService.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
+		record, callee, err := e.evalTargetService.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
 			SpaceID: request.GetWorkspaceID(),
 			PatchyTarget: &entity.EvalTarget{
 				SpaceID:        request.GetWorkspaceID(),
@@ -571,6 +571,7 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 		}
 		return &eval_target.AsyncDebugEvalTargetResponse{
 			InvokeID: record.ID,
+			Callee:   gptr.Of(callee),
 			BaseResp: base.NewBaseResp(),
 		}, err
 	default:

@@ -11698,6 +11698,7 @@ func (p *AsyncDebugEvalTargetRequest) Field255DeepEqual(src *base.Base) bool {
 
 type AsyncDebugEvalTargetResponse struct {
 	InvokeID int64          `thrift:"invoke_id,1,required" frugal:"1,required,i64" json:"invoke_id" form:"invoke_id,required" query:"invoke_id,required"`
+	Callee   *string        `thrift:"callee,2,optional" frugal:"2,optional,string" form:"callee" json:"callee,omitempty" query:"callee"`
 	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -11715,6 +11716,18 @@ func (p *AsyncDebugEvalTargetResponse) GetInvokeID() (v int64) {
 	return
 }
 
+var AsyncDebugEvalTargetResponse_Callee_DEFAULT string
+
+func (p *AsyncDebugEvalTargetResponse) GetCallee() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCallee() {
+		return AsyncDebugEvalTargetResponse_Callee_DEFAULT
+	}
+	return *p.Callee
+}
+
 var AsyncDebugEvalTargetResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *AsyncDebugEvalTargetResponse) GetBaseResp() (v *base.BaseResp) {
@@ -11729,13 +11742,21 @@ func (p *AsyncDebugEvalTargetResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *AsyncDebugEvalTargetResponse) SetInvokeID(val int64) {
 	p.InvokeID = val
 }
+func (p *AsyncDebugEvalTargetResponse) SetCallee(val *string) {
+	p.Callee = val
+}
 func (p *AsyncDebugEvalTargetResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_AsyncDebugEvalTargetResponse = map[int16]string{
 	1:   "invoke_id",
+	2:   "callee",
 	255: "BaseResp",
+}
+
+func (p *AsyncDebugEvalTargetResponse) IsSetCallee() bool {
+	return p.Callee != nil
 }
 
 func (p *AsyncDebugEvalTargetResponse) IsSetBaseResp() bool {
@@ -11767,6 +11788,14 @@ func (p *AsyncDebugEvalTargetResponse) Read(iprot thrift.TProtocol) (err error) 
 					goto ReadFieldError
 				}
 				issetInvokeID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -11824,6 +11853,17 @@ func (p *AsyncDebugEvalTargetResponse) ReadField1(iprot thrift.TProtocol) error 
 	p.InvokeID = _field
 	return nil
 }
+func (p *AsyncDebugEvalTargetResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Callee = _field
+	return nil
+}
 func (p *AsyncDebugEvalTargetResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -11841,6 +11881,10 @@ func (p *AsyncDebugEvalTargetResponse) Write(oprot thrift.TProtocol) (err error)
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -11881,6 +11925,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *AsyncDebugEvalTargetResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCallee() {
+		if err = oprot.WriteFieldBegin("callee", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Callee); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *AsyncDebugEvalTargetResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -11915,6 +11977,9 @@ func (p *AsyncDebugEvalTargetResponse) DeepEqual(ano *AsyncDebugEvalTargetRespon
 	if !p.Field1DeepEqual(ano.InvokeID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Callee) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -11924,6 +11989,18 @@ func (p *AsyncDebugEvalTargetResponse) DeepEqual(ano *AsyncDebugEvalTargetRespon
 func (p *AsyncDebugEvalTargetResponse) Field1DeepEqual(src int64) bool {
 
 	if p.InvokeID != src {
+		return false
+	}
+	return true
+}
+func (p *AsyncDebugEvalTargetResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Callee == src {
+		return true
+	} else if p.Callee == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Callee, *src) != 0 {
 		return false
 	}
 	return true

@@ -32,21 +32,18 @@ type EvalTargetServiceImpl struct {
 	metric         metrics.EvalTargetMetrics
 	evalTargetRepo repo.IEvalTargetRepo
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService
-	evalAsyncRepo  repo.IEvalAsyncRepo
 }
 
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService,
-	evalAsyncRepo repo.IEvalAsyncRepo,
 ) IEvalTargetService {
 	singletonEvalTargetService := &EvalTargetServiceImpl{
 		evalTargetRepo: evalTargetRepo,
 		idgen:          idgen,
 		metric:         metric,
 		typedOperators: typedOperators,
-		evalAsyncRepo:  evalAsyncRepo,
 	}
 	return singletonEvalTargetService
 }
@@ -452,22 +449,7 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 }
 
 func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error) {
-	st := time.Now()
-	record, callee, err = e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
-	if err != nil {
-		return nil, "", err
-	}
-
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
-		TurnID:      record.ID,
-		AsyncUnixMS: st.UnixMilli(),
-		Session:     &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
-		Callee:      callee,
-	}); err != nil {
-		return nil, callee, err
-	}
-
-	return record, callee, nil
+	return e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
 }
 
 func (e *EvalTargetServiceImpl) CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error {

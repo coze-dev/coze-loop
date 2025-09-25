@@ -251,6 +251,7 @@ struct AsyncDebugEvalTargetRequest {
 
 struct AsyncDebugEvalTargetResponse {
     1: required i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
+    2: optional string callee
 
     255: base.BaseResp BaseResp
 }
