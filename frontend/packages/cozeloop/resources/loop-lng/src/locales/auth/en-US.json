@@ -17,7 +17,6 @@
   "confirm": "Confirm",
   "x_days": "{num, plural, zero {0 day} one {1 day} other {# days}}",
   "permanent": "Permanent",
-  "permanent_duration": "Permanent",
   "register_or_login_failed": "Registration or login failed. Please check your email or password.",
   "last_used": "Last used",
   "active": "Active",
