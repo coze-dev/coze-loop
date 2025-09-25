@@ -488,6 +488,10 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
+	if record == nil {
+		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("target record not found %d, space_id %d", param.RecordID, param.SpaceID)))
+	}
+
 	if status := gptr.Indirect(record.Status); status != entity.EvalTargetRunStatusAsyncInvoking {
 		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
 	}
