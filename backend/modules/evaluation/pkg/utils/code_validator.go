@@ -263,9 +263,10 @@ func (v *CodeValidator) checkBracketMatching(code string, brackets []rune) bool 
 			continue
 		}
 
-		if char == open {
+		switch char {
+		case open:
 			stack++
-		} else if char == close {
+		case close:
 			stack--
 			if stack < 0 {
 				return false
@@ -291,11 +292,12 @@ func (v *CodeValidator) checkPythonIndentation(code string) error {
 		// 计算缩进级别
 		indent := 0
 		for _, char := range line {
-			if char == ' ' {
+			switch char {
+			case ' ':
 				indent++
-			} else if char == '\t' {
+			case '\t':
 				indent += 4 // 制表符按4个空格计算
-			} else {
+			default:
 				break
 			}
 		}

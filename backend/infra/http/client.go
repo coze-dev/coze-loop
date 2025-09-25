@@ -84,7 +84,11 @@ func (c *HTTPClient) DoHTTPRequest(ctx context.Context, requestParam *RequestPar
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			// 记录关闭错误，但不影响主流程
+		}
+	}()
 
 	// 检查HTTP状态码
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

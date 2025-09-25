@@ -727,7 +727,7 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *eva
 			if languageMap, exists := customTemplates[templateKey]; exists {
 				if request.GetLanguageType() != "" {
 					// 指定了语言类型，查找对应的模板
-					template, ok = languageMap[string(request.GetLanguageType())]
+					template, ok = languageMap[request.GetLanguageType()]
 				} else {
 					// 未指定语言类型，返回第一个可用的模板
 					for _, t := range languageMap {

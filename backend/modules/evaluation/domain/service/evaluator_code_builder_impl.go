@@ -141,11 +141,6 @@ func (b *JavaScriptCodeBuilder) escapeCodeForTemplate(userCode string) string {
 	return escaped
 }
 
-// getReturnValFunction 获取JavaScript return_val函数实现 - 已废弃，使用getReturnValFunctionFromRuntime
-func (b *JavaScriptCodeBuilder) getReturnValFunction() string {
-	// 为了向后兼容保留此方法，但建议使用getReturnValFunctionFromRuntime
-	return b.getReturnValFunctionFromRuntime()
-}
 
 // getReturnValFunctionFromRuntime 从runtime获取JavaScript return_val函数实现
 func (b *JavaScriptCodeBuilder) getReturnValFunctionFromRuntime() string {
@@ -342,11 +337,6 @@ func (b *PythonCodeBuilder) BuildSyntaxCheckCode(userCode string) string {
 	return syntaxCheckCode
 }
 
-// getReturnValFunction 获取Python return_val函数实现 - 已废弃，使用getReturnValFunctionFromRuntime
-func (b *PythonCodeBuilder) getReturnValFunction() string {
-	// 为了向后兼容保留此方法，但建议使用getReturnValFunctionFromRuntime
-	return b.getReturnValFunctionFromRuntime()
-}
 
 // getReturnValFunctionFromRuntime 从runtime获取Python return_val函数实现
 func (b *PythonCodeBuilder) getReturnValFunctionFromRuntime() string {
@@ -407,27 +397,6 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 	return result
 }
 
-// validateInputData 验证mockInput数据格式
-func (b *PythonCodeBuilder) validateInputData(inputData map[string]interface{}) error {
-	// 验证新数据结构的完整性
-	hasEvalSetFields := false
-	hasEvalTargetFields := false
-
-	if _, exists := inputData["from_eval_set_fields"]; exists {
-		hasEvalSetFields = true
-	}
-
-	if _, exists := inputData["from_eval_target_fields"]; exists {
-		hasEvalTargetFields = true
-	}
-
-	// 至少需要有一个字段存在
-	if !hasEvalSetFields && !hasEvalTargetFields {
-		return fmt.Errorf("input data must contain either from_eval_set_fields or from_eval_target_fields")
-	}
-
-	return nil
-}
 
 // buildInputData 构建代码执行的输入数据
 func (b *PythonCodeBuilder) buildInputData(input *entity.EvaluatorInputData) (map[string]interface{}, error) {

@@ -564,40 +564,6 @@ func (c *EvaluatorSourceCodeServiceImpl) cleanNestedJSON(input string) string {
 	return input
 }
 
-// cleanStdoutForUser 清理stdout输出，直接使用FaaS返回的stdout字段
-func (c *EvaluatorSourceCodeServiceImpl) cleanStdoutForUser(stdout string) string {
-	// 直接返回FaaS服务的stdout，不再做复杂解析
-	return stdout
-}
-
-// cleanStdoutForReasoning 清理stdout用作reasoning，移除冗余的系统信息
-func (c *EvaluatorSourceCodeServiceImpl) cleanStdoutForReasoning(stdout string) string {
-	if stdout == "" {
-		return ""
-	}
-
-	// 首先尝试从stdout中提取评估结果JSON
-	lines := strings.Split(stdout, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		// 尝试解析每一行，找到包含reason的JSON
-		var testResult map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &testResult); err == nil {
-			if reasonVal, hasReason := testResult["reason"]; hasReason {
-				if reasonStr, ok := reasonVal.(string); ok && reasonStr != "" {
-					return reasonStr
-				}
-			}
-		}
-	}
-
-	// 如果没有找到JSON格式的reason，返回清理后的用户输出
-	return c.cleanStdoutForUser(stdout)
-}
 
 // parseSyntaxValidationStdoutJSON 解析语法校验stdout中的JSON内容（语法校验链路）
 func (c *EvaluatorSourceCodeServiceImpl) parseSyntaxValidationStdoutJSON(stdout string) (map[string]interface{}, error) {

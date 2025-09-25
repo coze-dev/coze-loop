@@ -326,6 +326,5 @@ func generateObject(schema map[string]interface{}) map[string]interface{} {
 
 // init 初始化随机种子
 func init() {
-	rand.Seed(time.Now().UnixNano())
 	gofakeit.Seed(time.Now().UnixNano())
 }
