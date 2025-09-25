@@ -45,7 +45,7 @@ export function getExpirationOptions() {
     { label: I18n.t('x_days', { num: 90 }), value: DurationDay.Day90 },
     { label: I18n.t('x_days', { num: 180 }), value: DurationDay.Day180 },
     { label: I18n.t('x_days', { num: 365 }), value: DurationDay.Day365 },
-    { label: I18n.t('permanent'), value: DurationDay.Permanent },
+    { label: I18n.t('permanent_duration'), value: DurationDay.Permanent },
     { label: I18n.t('customize'), value: 'custom' },
   ];
   const newOptions = dataOptionsList.map(item => {
@@ -58,7 +58,7 @@ export function getExpirationOptions() {
     return {
       label:
         value === DurationDay.Permanent
-          ? 'Permanent'
+          ? I18n.t('permanent_duration')
           : I18n.t('expired_time_days', { num: Number(value), date }),
       value,
     };

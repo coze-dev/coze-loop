@@ -17,6 +17,7 @@
   "confirm": "确定",
   "x_days": "{num}天",
   "permanent": "永久",
+  "permanent_duration": "永久",
   "register_or_login_failed": "注册/登录失败，请检查邮箱或密码",
   "last_used": "最近使用",
   "active": "活跃",
