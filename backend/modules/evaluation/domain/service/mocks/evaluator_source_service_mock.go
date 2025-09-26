@@ -101,15 +101,15 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) Run(ctx, evaluator, input, dis
 }
 
 // Validate mocks base method.
-func (m *MockEvaluatorSourceService) Validate(arg0 context.Context, arg1 *entity.Evaluator) error {
+func (m *MockEvaluatorSourceService) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Validate", arg0, arg1)
+	ret := m.ctrl.Call(m, "Validate", ctx, evaluator)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Validate indicates an expected call of Validate.
-func (mr *MockEvaluatorSourceServiceMockRecorder) Validate(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) Validate(ctx, evaluator any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Validate), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Validate), ctx, evaluator)
 }
