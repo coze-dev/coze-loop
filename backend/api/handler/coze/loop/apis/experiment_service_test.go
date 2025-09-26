@@ -5,49 +5,52 @@ package apis
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/test/assert"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 )
 
-func TestCheckExperimentName(t *testing.T) {
-	t.Parallel()
-
-	// 跳过这个测试，因为它需要初始化localExptSvc
-	t.Skip("This test requires proper service initialization")
+// MockExperimentServiceClient 实现 experimentservice.Client 接口用于测试
+type MockExperimentServiceClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockExperimentServiceClientMockRecorder
 }
 
-func TestSubmitExperiment(t *testing.T) {
-	t.Parallel()
+type MockExperimentServiceClientMockRecorder struct {
+	mock *MockExperimentServiceClient
+}
 
-	tests := []struct {
-		name        string
-		requestBody string
-		wantStatus  int
-	}{
-		{
-			name:        "成功提交实验",
-			requestBody: `{"workspace_id": 123, "name": "test-experiment"}`,
-			wantStatus:  consts.StatusOK,
-		},
-		{
-			name:        "请求参数错误",
-			requestBody: `invalid json`,
-			wantStatus:  consts.StatusBadRequest,
-		},
-	}
+func NewMockExperimentServiceClient(ctrl *gomock.Controller) *MockExperimentServiceClient {
+	mock := &MockExperimentServiceClient{ctrl: ctrl}
+	mock.recorder = &MockExperimentServiceClientMockRecorder{mock}
+	return mock
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+func (m *MockExperimentServiceClient) EXPECT() *MockExperimentServiceClientMockRecorder {
+	return m.recorder
+}
 
-			// 创建测试上下文和请求
-			ctx := context.Background()
-			c := app.NewContext(0)
-			c.Request.SetBody([]byte(tt.requestBody))
+func (m *MockExperimentServiceClient) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (*expt.CheckExperimentNameResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckExperimentName", ctx, req)
+	ret0, _ := ret[0].(*expt.CheckExperimentNameResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockExperimentServiceClientMockRecorder) CheckExperimentName(ctx, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckExperimentName", gomock.Any(), ctx, req)
+}
 			c.Request.Header.Set("Content-Type", "application/json")
 			c.Request.Header.Set("Method", "POST")
 

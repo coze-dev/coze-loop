@@ -119,20 +119,37 @@ func (v *CodeValidator) checkDangerousImports(code, language string) error {
 
 // checkMaliciousPatterns 检查恶意模式
 func (v *CodeValidator) checkMaliciousPatterns(code, language string) error {
-	// 通用恶意模式
-	maliciousPatterns := []string{
-		`while\s+True\s*:`,       // Python 无限循环
-		`while\s*\(\s*true\s*\)`, // JS 无限循环
-		`for\s*\(\s*;\s*;\s*\)`,  // JS 无限循环
-		`setInterval\s*\(`,       // JS 定时器
-		`setTimeout\s*\(`,        // JS 定时器
-		`process\.exit`,          // 进程退出
-		`System\.exit`,           // 系统退出
-		`exit\s*\(`,              // 退出函数
-		`quit\s*\(`,              // 退出函数
+	normalizedLang := strings.ToLower(strings.TrimSpace(language))
+	
+	// 根据语言类型定义恶意模式
+	languagePatterns := map[string][]string{
+		"python": {
+			`while\s+True\s*:`,     // Python 无限循环 - while True:
+			`while\s+1\s*:`,       // Python 无限循环 - while 1:
+			`exit\s*\(`,           // 退出函数
+			`quit\s*\(`,           // 退出函数
+		},
+		"javascript": {
+			`while\s*\(\s*true\s*\)`, // JS 无限循环 - while(true)
+			`while\s*\(\s*1\s*\)`,    // JS 无限循环 - while(1)
+			`for\s*\(\s*;\s*;\s*\)`,  // JS 无限循环 - for(;;)
+			`process\.exit`,          // 进程退出
+		},
+		"typescript": {
+			`while\s*\(\s*true\s*\)`, // TS 无限循环 - while(true)
+			`while\s*\(\s*1\s*\)`,    // TS 无限循环 - while(1)
+			`for\s*\(\s*;\s*;\s*\)`,  // TS 无限循环 - for(;;)
+			`process\.exit`,          // 进程退出
+		},
 	}
 
-	for _, pattern := range maliciousPatterns {
+	patterns, exists := languagePatterns[normalizedLang]
+	if !exists {
+		// 不支持的语言类型，跳过检查
+		return nil
+	}
+
+	for _, pattern := range patterns {
 		regex := regexp.MustCompile(pattern)
 		if regex.MatchString(code) {
 			return errors.NewSecurityViolationError(

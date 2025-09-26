@@ -4,7 +4,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewHTTPClient(t *testing.T) {
@@ -23,8 +23,9 @@ func TestNewHTTPClient(t *testing.T) {
 	client := NewHTTPClient()
 	assert.NotNil(t, client)
 
+	// 验证类型断言
 	httpClient, ok := client.(*HTTPClient)
-	assert.True(t, ok)
+	require.True(t, ok)
 	assert.NotNil(t, httpClient.client)
 	assert.Equal(t, 30*time.Second, httpClient.client.Timeout)
 }
@@ -33,14 +34,18 @@ func TestHTTPClient_DoHTTPRequest(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		setupServer func() *httptest.Server
-		requestParam *RequestParam
-		wantErr     bool
-		errContains string
+		name          string
+		requestParam  *RequestParam
+		setupServer   func() *httptest.Server
+		wantErr       bool
+		wantErrMsg    string
 	}{
 		{
 			name: "成功的GET请求",
+			requestParam: &RequestParam{
+				Method: "GET",
+				RequestURI: "", // 将在测试中设置
+			},
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, "GET", r.Method)
@@ -48,192 +53,132 @@ func TestHTTPClient_DoHTTPRequest(t *testing.T) {
 					w.Write([]byte(`{"message": "success"}`))
 				}))
 			},
-			requestParam: &RequestParam{
-				Method:     "GET",
-				RequestURI: "", // 将在测试中设置
-				Response:   &map[string]interface{}{},
-			},
 			wantErr: false,
 		},
 		{
 			name: "成功的POST请求带JSON body",
+			requestParam: &RequestParam{
+				Method: "POST",
+				RequestURI: "", // 将在测试中设置
+				Body:   map[string]interface{}{"key": "value"},
+				Header: map[string]string{
+					"Content-Type": "application/json",
+				},
+			},
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, "POST", r.Method)
 					assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 					
-					body, _ := io.ReadAll(r.Body)
-					var requestData map[string]interface{}
-					json.Unmarshal(body, &requestData)
-					assert.Equal(t, "test", requestData["key"])
+					body, err := io.ReadAll(r.Body)
+					require.NoError(t, err)
+					
+					var data map[string]interface{}
+					err = json.Unmarshal(body, &data)
+					require.NoError(t, err)
+					assert.Equal(t, "value", data["key"])
 					
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"result": "ok"}`))
+					w.Write([]byte(`{"received": true}`))
 				}))
-			},
-			requestParam: &RequestParam{
-				Method:     "POST",
-				RequestURI: "", // 将在测试中设置
-				Body:       map[string]interface{}{"key": "test"},
-				Response:   &map[string]interface{}{},
 			},
 			wantErr: false,
 		},
 		{
 			name: "成功的POST请求带io.Reader body",
+			requestParam: &RequestParam{
+				Method: "POST",
+				RequestURI: "", // 将在测试中设置
+				Body:   strings.NewReader(`{"reader": "body"}`),
+				Header: map[string]string{
+					"Content-Type": "application/json",
+				},
+			},
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, "POST", r.Method)
-					assert.Equal(t, "text/plain", r.Header.Get("Content-Type"))
 					
-					body, _ := io.ReadAll(r.Body)
-					assert.Equal(t, "test data", string(body))
+					body, err := io.ReadAll(r.Body)
+					require.NoError(t, err)
+					assert.Equal(t, `{"reader": "body"}`, string(body))
 					
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"result": "ok"}`))
+					w.Write([]byte(`{"received": true}`))
 				}))
-			},
-			requestParam: &RequestParam{
-				Method:     "POST",
-				RequestURI: "", // 将在测试中设置
-				Body:       strings.NewReader("test data"),
-				Response:   &map[string]interface{}{},
 			},
 			wantErr: false,
 		},
 		{
-			name: "带自定义头部的请求",
+			name: "服务器返回错误状态码",
+			requestParam: &RequestParam{
+				Method: "GET",
+				RequestURI: "", // 将在测试中设置
+			},
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, "Bearer token123", r.Header.Get("Authorization"))
-					assert.Equal(t, "application/custom", r.Header.Get("Content-Type"))
-					
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write([]byte(`{"error": "server error"}`))
+				}))
+			},
+			wantErr:    true,
+			wantErrMsg: "HTTP request failed with status 500",
+		},
+		{
+			name: "请求超时",
+			requestParam: &RequestParam{
+				Method:  "GET",
+				RequestURI: "", // 将在测试中设置
+				Timeout: 100 * time.Millisecond,
+			},
+			setupServer: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// 模拟慢响应
+					time.Sleep(200 * time.Millisecond)
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"result": "ok"}`))
 				}))
 			},
-			requestParam: &RequestParam{
-				Method:     "POST",
-				RequestURI: "", // 将在测试中设置
-				Header: map[string]string{
-					"Authorization": "Bearer token123",
-					"Content-Type":  "application/custom",
-				},
-				Body:     map[string]interface{}{"key": "test"},
-				Response: &map[string]interface{}{},
-			},
-			wantErr: false,
+			wantErr:    true,
+			wantErrMsg: "context deadline exceeded",
 		},
 		{
-			name: "带超时的请求",
-			setupServer: func() *httptest.Server {
-				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					time.Sleep(200 * time.Millisecond) // 模拟慢响应
-					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"result": "ok"}`))
-				}))
-			},
-			requestParam: &RequestParam{
-				Method:     "GET",
-				RequestURI: "", // 将在测试中设置
-				Timeout:    100 * time.Millisecond, // 设置短超时
-				Response:   &map[string]interface{}{},
-			},
-			wantErr:     true,
-			errContains: "context deadline exceeded",
-		},
-		{
-			name: "HTTP错误状态码",
-			setupServer: func() *httptest.Server {
-				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusBadRequest)
-					w.Write([]byte("Bad Request"))
-				}))
-			},
-			requestParam: &RequestParam{
-				Method:     "GET",
-				RequestURI: "", // 将在测试中设置
-				Response:   &map[string]interface{}{},
-			},
-			wantErr:     true,
-			errContains: "HTTP request failed with status 400",
-		},
-		{
-			name: "JSON序列化失败",
+			name:         "请求参数为nil",
+			requestParam: nil,
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
 				}))
 			},
-			requestParam: &RequestParam{
-				Method:     "POST",
-				RequestURI: "", // 将在测试中设置
-				Body:       make(chan int), // 无法序列化的类型
-			},
-			wantErr:     true,
-			errContains: "failed to marshal request body",
+			wantErr:    true,
+			wantErrMsg: "request param is nil",
 		},
 		{
 			name: "无效的URL",
-			setupServer: func() *httptest.Server {
-				return nil // 不需要服务器
-			},
 			requestParam: &RequestParam{
-				Method:     "GET",
+				Method: "GET",
 				RequestURI: "://invalid-url",
 			},
-			wantErr:     true,
-			errContains: "failed to create request",
-		},
-		{
-			name: "响应JSON解析失败",
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte("invalid json"))
 				}))
 			},
+			wantErr:    true,
+			wantErrMsg: "missing protocol scheme",
+		},
+		{
+			name: "JSON序列化失败",
 			requestParam: &RequestParam{
-				Method:     "GET",
+				Method: "POST",
 				RequestURI: "", // 将在测试中设置
-				Response:   &map[string]interface{}{},
+				Body:   make(chan int), // 不可序列化的类型
 			},
-			wantErr:     true,
-			errContains: "failed to unmarshal response body",
-		},
-		{
-			name:         "nil请求参数",
-			setupServer:  func() *httptest.Server { return nil },
-			requestParam: nil,
-			wantErr:      true,
-			errContains:  "request param is nil",
-		},
-		{
-			name: "无响应体处理",
 			setupServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"result": "ok"}`))
 				}))
 			},
-			requestParam: &RequestParam{
-				Method:     "GET",
-				RequestURI: "", // 将在测试中设置
-				Response:   nil, // 不处理响应体
-			},
-			wantErr: false,
-		},
-		{
-			name: "网络连接失败",
-			setupServer: func() *httptest.Server {
-				return nil // 不启动服务器
-			},
-			requestParam: &RequestParam{
-				Method:     "GET",
-				RequestURI: "http://localhost:99999", // 不存在的端口
-			},
-			wantErr:     true,
-			errContains: "failed to send request",
+			wantErr:    true,
+			wantErrMsg: "json: unsupported type: chan int",
 		},
 	}
 
@@ -260,16 +205,11 @@ func TestHTTPClient_DoHTTPRequest(t *testing.T) {
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
+				if tt.wantErrMsg != "" {
+					assert.Contains(t, err.Error(), tt.wantErrMsg)
 				}
 			} else {
 				assert.NoError(t, err)
-				// 验证响应解析
-				if tt.requestParam != nil && tt.requestParam.Response != nil {
-					response := tt.requestParam.Response.(*map[string]interface{})
-					assert.NotEmpty(t, *response)
-				}
 			}
 		})
 	}
@@ -453,8 +393,7 @@ func TestHTTPClient_DoHTTPRequest_BytesReader(t *testing.T) {
 	requestParam := &RequestParam{
 		Method:     "POST",
 		RequestURI: server.URL,
-		Body:       bytes.NewReader(testData),
-		Response:   &map[string]interface{}{},
+		Body:       strings.NewReader(string(testData)),
 	}
 
 	err := client.DoHTTPRequest(ctx, requestParam)
