@@ -312,7 +312,7 @@ struct PreviewExportTracesToDatasetResponse {
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     GetTraceResponse GetTrace(1: GetTraceRequest req) (api.get = '/api/observability/v1/traces/:trace_id')
-    SearchTraceTreeResponse SearchTraceTree(1: SearchTraceTreeRequest req) (api.post = '/api/observability/v1/trace_tree/search')
+    SearchTraceTreeResponse SearchTraceTree(1: SearchTraceTreeRequest req) (api.post = '/api/observability/v1/traces/search_tree')
     BatchGetTracesAdvanceInfoResponse BatchGetTracesAdvanceInfo(1: BatchGetTracesAdvanceInfoRequest req) (api.post = '/api/observability/v1/traces/batch_get_advance_info')
     IngestTracesResponse IngestTracesInner(1: IngestTracesRequest req)
     GetTracesMetaInfoResponse GetTracesMetaInfo(1: GetTracesMetaInfoRequest req) (api.get = '/api/observability/v1/traces/meta_info')
