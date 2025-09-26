@@ -195,7 +195,7 @@ func TestPythonCodeBuilder_BuildCode(t *testing.T) {
 			wantErr: false,
 			validateCode: func(t *testing.T, code string) {
 				assert.Contains(t, code, "def return_val(value):")
-				assert.Contains(t, code, "_return_val_output")
+				assert.Contains(t, code, "global _return_val_output")
 				assert.Contains(t, code, "def exec_evaluation(turn):")
 			},
 		},
@@ -392,7 +392,7 @@ func TestPythonCodeBuilder_BuildSyntaxCheckCode(t *testing.T) {
 			validateCode: func(t *testing.T, code string) {
 				assert.Contains(t, code, "def return_val(value): pass")
 				assert.Contains(t, code, "def exec_evaluation(turn):")
-				assert.Contains(t, code, "compile(")
+				assert.Contains(t, code, "ast.parse(")
 			},
 		},
 		{

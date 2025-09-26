@@ -10,6 +10,7 @@ import sys
 import asyncio
 from dataclasses import dataclass
 
+{{RETURN_VAL_FUNCTION}}
 
 class Args:
     def __init__(self, params):
@@ -62,6 +63,7 @@ const PythonSyntaxCheckTemplate = `
 import ast
 import json
 
+{{RETURN_VAL_FUNCTION}}
 
 def check_syntax(code):
     """
