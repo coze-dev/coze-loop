@@ -986,28 +986,6 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetBySource(t *testing.T) {
 }
 
 func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
-	t.Parallel()
-	
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
-	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
-	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
-	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
-	mockDBProvider := dbmock.NewMockProvider(ctrl)
-	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
-
-	repo := &EvalTargetRepoImpl{
-		evalTargetDao:        mockEvalTargetDao,
-		evalTargetVersionDao: mockEvalTargetVersionDao,
-		evalTargetRecordDao:  mockEvalTargetRecordDao,
-		idgen:                mockIDGen,
-		dbProvider:           mockDBProvider,
-		lwt:                  mockLWT,
-	}
-
 	// Test data
 	validSpaceID := int64(123)
 	validTargetID := int64(456)
@@ -1021,7 +999,7 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 		spaceID              int64
 		targetID             int64
 		sourceTargetVersion  string
-		mockSetup            func()
+		mockSetup            func(*gomock.Controller) *EvalTargetRepoImpl
 		want                 *entity.EvalTarget
 		wantErr              bool
 		wantErrCode          int32
@@ -1031,7 +1009,14 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 			spaceID:             validSpaceID,
 			targetID:            validTargetID,
 			sourceTargetVersion: validSourceTargetVersion,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock latest write tracker check for version
 				mockLWT.EXPECT().
 					CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeTargetVersion, validTargetID).
@@ -1064,6 +1049,15 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 						SourceTargetID: validSourceTargetID,
 						TargetType:     validEvalTargetType,
 					}, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			want: &entity.EvalTarget{
 				ID:             validTargetID,
@@ -1084,7 +1078,14 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 			spaceID:             validSpaceID,
 			targetID:            validTargetID,
 			sourceTargetVersion: validSourceTargetVersion,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock latest write tracker check for version
 				mockLWT.EXPECT().
 					CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeTargetVersion, validTargetID).
@@ -1094,6 +1095,15 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 				mockEvalTargetVersionDao.EXPECT().
 					GetEvalTargetVersionByTarget(gomock.Any(), validSpaceID, validTargetID, validSourceTargetVersion, gomock.Any()).
 					Return(nil, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			want:    nil,
 			wantErr: false,
@@ -1103,7 +1113,14 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 			spaceID:             validSpaceID,
 			targetID:            validTargetID,
 			sourceTargetVersion: validSourceTargetVersion,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock latest write tracker check for version
 				mockLWT.EXPECT().
 					CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeTargetVersion, validTargetID).
@@ -1128,6 +1145,15 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 				mockEvalTargetDao.EXPECT().
 					GetEvalTarget(gomock.Any(), validTargetID, gomock.Any()).
 					Return(nil, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			want:        nil,
 			wantErr:     true,
@@ -1138,7 +1164,14 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 			spaceID:             validSpaceID,
 			targetID:            validTargetID,
 			sourceTargetVersion: validSourceTargetVersion,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock latest write tracker check for version
 				mockLWT.EXPECT().
 					CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeTargetVersion, validTargetID).
@@ -1148,6 +1181,15 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 				mockEvalTargetVersionDao.EXPECT().
 					GetEvalTargetVersionByTarget(gomock.Any(), validSpaceID, validTargetID, validSourceTargetVersion, gomock.Any()).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			want:        nil,
 			wantErr:     true,
@@ -1157,9 +1199,10 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			tt.mockSetup()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
+			repo := tt.mockSetup(ctrl)
 			got, err := repo.GetEvalTargetVersionByTarget(context.Background(), tt.spaceID, tt.targetID, tt.sourceTargetVersion)
 
 			if tt.wantErr {
@@ -1278,28 +1321,6 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionBySourceTarget(t *testing.T) {
 }
 
 func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
-	t.Parallel()
-	
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
-	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
-	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
-	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
-	mockDBProvider := dbmock.NewMockProvider(ctrl)
-	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
-
-	repo := &EvalTargetRepoImpl{
-		evalTargetDao:        mockEvalTargetDao,
-		evalTargetVersionDao: mockEvalTargetVersionDao,
-		evalTargetRecordDao:  mockEvalTargetRecordDao,
-		idgen:                mockIDGen,
-		dbProvider:           mockDBProvider,
-		lwt:                  mockLWT,
-	}
-
 	// Test data
 	validSpaceID := int64(123)
 	validVersionIDs := []int64{456, 789}
@@ -1347,7 +1368,7 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 		name        string
 		spaceID     int64
 		versionIDs  []int64
-		mockSetup   func()
+		mockSetup   func(*gomock.Controller) *EvalTargetRepoImpl
 		wantLen     int
 		wantErr     bool
 	}{
@@ -1355,7 +1376,14 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 			name:       "success - versions found",
 			spaceID:    validSpaceID,
 			versionIDs: validVersionIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock batch get versions
 				mockEvalTargetVersionDao.EXPECT().
 					BatchGetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionIDs).
@@ -1365,6 +1393,15 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 				mockEvalTargetDao.EXPECT().
 					BatchGetEvalTarget(gomock.Any(), validSpaceID, []int64{validTargetID1, validTargetID2}).
 					Return(validTargets, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 2,
 			wantErr: false,
@@ -1373,11 +1410,27 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 			name:       "success - no versions found",
 			spaceID:    validSpaceID,
 			versionIDs: validVersionIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock batch get versions returns empty
 				mockEvalTargetVersionDao.EXPECT().
 					BatchGetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionIDs).
 					Return([]*model.TargetVersion{}, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 0,
 			wantErr: false,
@@ -1386,7 +1439,14 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 			name:       "success - no targets found",
 			spaceID:    validSpaceID,
 			versionIDs: validVersionIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock batch get versions
 				mockEvalTargetVersionDao.EXPECT().
 					BatchGetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionIDs).
@@ -1396,6 +1456,15 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 				mockEvalTargetDao.EXPECT().
 					BatchGetEvalTarget(gomock.Any(), validSpaceID, []int64{validTargetID1, validTargetID2}).
 					Return([]*model.Target{}, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 0,
 			wantErr: false,
@@ -1404,7 +1473,14 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 			name:       "success - partial targets found",
 			spaceID:    validSpaceID,
 			versionIDs: validVersionIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock batch get versions
 				mockEvalTargetVersionDao.EXPECT().
 					BatchGetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionIDs).
@@ -1414,6 +1490,15 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 				mockEvalTargetDao.EXPECT().
 					BatchGetEvalTarget(gomock.Any(), validSpaceID, []int64{validTargetID1, validTargetID2}).
 					Return([]*model.Target{validTargets[0]}, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 1,
 			wantErr: false,
@@ -1422,11 +1507,27 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 			name:       "error - version dao error",
 			spaceID:    validSpaceID,
 			versionIDs: validVersionIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock batch get versions returns error
 				mockEvalTargetVersionDao.EXPECT().
 					BatchGetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionIDs).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 0,
 			wantErr: true,
@@ -1435,7 +1536,14 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 			name:       "error - target dao error",
 			spaceID:    validSpaceID,
 			versionIDs: validVersionIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock batch get versions
 				mockEvalTargetVersionDao.EXPECT().
 					BatchGetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionIDs).
@@ -1445,6 +1553,15 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 				mockEvalTargetDao.EXPECT().
 					BatchGetEvalTarget(gomock.Any(), validSpaceID, []int64{validTargetID1, validTargetID2}).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 0,
 			wantErr: true,
@@ -1453,9 +1570,10 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			tt.mockSetup()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
+			repo := tt.mockSetup(ctrl)
 			got, err := repo.BatchGetEvalTargetVersion(context.Background(), tt.spaceID, tt.versionIDs)
 
 			if tt.wantErr {
