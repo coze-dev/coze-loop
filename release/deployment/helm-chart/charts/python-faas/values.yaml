@@ -7,8 +7,8 @@ custom:
       enabled: true
 
 image:
-  repository: denoland/deno
-  tag: "1.45.5"
+  repository: python
+  tag: "3.11-slim"
   pullPolicy: IfNotPresent
 
 service:
@@ -45,21 +45,20 @@ env:
   FAAS_SECURITY_LEVEL: "production"
 
 securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: 1000
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+  fsGroup: 0
   seccompProfile:
     type: RuntimeDefault
 
 containerSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  allowPrivilegeEscalation: false
+  runAsNonRoot: false
+  runAsUser: 0
+  allowPrivilegeEscalation: true
   readOnlyRootFilesystem: false
   capabilities:
-    drop:
-    - ALL
+    drop: []
     add:
     - SETUID
     - SETGID
