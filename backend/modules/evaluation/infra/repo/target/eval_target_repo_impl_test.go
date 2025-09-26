@@ -1591,28 +1591,6 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 }
 
 func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
-	t.Parallel()
-	
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Setup mocks
-	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
-	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
-	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
-	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
-	mockDBProvider := dbmock.NewMockProvider(ctrl)
-	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
-
-	repo := &EvalTargetRepoImpl{
-		evalTargetDao:        mockEvalTargetDao,
-		evalTargetVersionDao: mockEvalTargetVersionDao,
-		evalTargetRecordDao:  mockEvalTargetRecordDao,
-		idgen:                mockIDGen,
-		dbProvider:           mockDBProvider,
-		lwt:                  mockLWT,
-	}
-
 	// Test data
 	validSpaceID := int64(123)
 	validRecordIDs := []int64{456, 789}
@@ -1642,7 +1620,7 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 		name        string
 		spaceID     int64
 		recordIDs   []int64
-		mockSetup   func()
+		mockSetup   func(*gomock.Controller) *EvalTargetRepoImpl
 		wantLen     int
 		wantErr     bool
 		wantErrCode int32
@@ -1651,11 +1629,27 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 			name:      "success - records found",
 			spaceID:   validSpaceID,
 			recordIDs: validRecordIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock list records
 				mockEvalTargetRecordDao.EXPECT().
 					ListByIDsAndSpaceID(gomock.Any(), validRecordIDs, validSpaceID).
 					Return(validRecords, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 2,
 			wantErr: false,
@@ -1664,11 +1658,27 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 			name:      "success - no records found",
 			spaceID:   validSpaceID,
 			recordIDs: validRecordIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock list records returns empty
 				mockEvalTargetRecordDao.EXPECT().
 					ListByIDsAndSpaceID(gomock.Any(), validRecordIDs, validSpaceID).
 					Return([]*model.TargetRecord{}, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen: 0,
 			wantErr: false,
@@ -1677,11 +1687,27 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 			name:      "error - dao error",
 			spaceID:   validSpaceID,
 			recordIDs: validRecordIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock list records returns error
 				mockEvalTargetRecordDao.EXPECT().
 					ListByIDsAndSpaceID(gomock.Any(), validRecordIDs, validSpaceID).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen:     0,
 			wantErr:     true,
@@ -1691,7 +1717,14 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 			name:      "error - convert to DO failed",
 			spaceID:   validSpaceID,
 			recordIDs: validRecordIDs,
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller) *EvalTargetRepoImpl {
+				mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+				mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+				mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+				mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+				mockDBProvider := dbmock.NewMockProvider(ctrl)
+				mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
 				// Mock list records returns invalid data
 				mockEvalTargetRecordDao.EXPECT().
 					ListByIDsAndSpaceID(gomock.Any(), validRecordIDs, validSpaceID).
@@ -1701,11 +1734,20 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 							SpaceID:         validSpaceID,
 							TargetID:        validTargetID,
 							TargetVersionID: validVersionID,
-							// Invalid data to trigger conversion error
-							InputData:  gptr.Of([]byte("1")),
-							OutputData: gptr.Of([]byte("1")),
+							// Invalid JSON data to trigger conversion error - using malformed JSON
+							InputData:  gptr.Of([]byte(`{"invalid": json}`)),
+							OutputData: gptr.Of([]byte(`{"malformed": json}`)),
 						},
 					}, nil)
+
+				return &EvalTargetRepoImpl{
+					evalTargetDao:        mockEvalTargetDao,
+					evalTargetVersionDao: mockEvalTargetVersionDao,
+					evalTargetRecordDao:  mockEvalTargetRecordDao,
+					idgen:                mockIDGen,
+					dbProvider:           mockDBProvider,
+					lwt:                  mockLWT,
+				}
 			},
 			wantLen:     0,
 			wantErr:     true,
@@ -1716,7 +1758,10 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			tt.mockSetup()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			
+			repo := tt.mockSetup(ctrl)
 
 			got, err := repo.ListEvalTargetRecordByIDsAndSpaceID(context.Background(), tt.spaceID, tt.recordIDs)
 
