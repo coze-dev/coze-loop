@@ -1372,8 +1372,11 @@ func (e *codeEvaluatorSpan) reportCodeRootSpan(ctx context.Context, request *Rep
 		e.SetStatusCode(ctx, 0) // 默认为成功
 	}
 	tags := make(map[string]interface{}, 0)
-	tags["evaluator_id"] = request.evaluatorVersion.EvaluatorID
-	tags["evaluator_version"] = request.evaluatorVersion.Version
+	// 防止空指针引用
+	if request.evaluatorVersion != nil {
+		tags["evaluator_id"] = request.evaluatorVersion.EvaluatorID
+		tags["evaluator_version"] = request.evaluatorVersion.Version
+	}
 	tags["code_content"] = request.code // 添加代码内容到trace
 	e.SetCallType("Evaluator")
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)

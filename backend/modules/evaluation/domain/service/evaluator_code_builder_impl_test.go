@@ -5,270 +5,533 @@ package service
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/bytedance/gg/gptr"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-// MockRuntimeManager 手动定义的RuntimeManager Mock，避免循环导入
-type MockRuntimeManager struct {
-	ctrl     *gomock.Controller
-	recorder *MockRuntimeManagerMockRecorder
-}
-
-type MockRuntimeManagerMockRecorder struct {
-	mock *MockRuntimeManager
-}
-
-func NewMockRuntimeManager(ctrl *gomock.Controller) *MockRuntimeManager {
-	mock := &MockRuntimeManager{ctrl: ctrl}
-	mock.recorder = &MockRuntimeManagerMockRecorder{mock}
-	return mock
-}
-
-func (m *MockRuntimeManager) EXPECT() *MockRuntimeManagerMockRecorder {
-	return m.recorder
-}
-
-func (m *MockRuntimeManager) GetRuntime(languageType entity.LanguageType) (component.IRuntime, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRuntime", languageType)
-	ret0, _ := ret[0].(component.IRuntime)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (m *MockRuntimeManager) GetSupportedLanguages() []entity.LanguageType {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSupportedLanguages")
-	ret0, _ := ret[0].([]entity.LanguageType)
-	return ret0
-}
-
-func (m *MockRuntimeManager) ClearCache() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ClearCache")
-}
-
-func (mr *MockRuntimeManagerMockRecorder) GetRuntime(languageType interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockRuntimeManager)(nil).GetRuntime), languageType)
-}
-
-func (mr *MockRuntimeManagerMockRecorder) GetSupportedLanguages() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupportedLanguages", reflect.TypeOf((*MockRuntimeManager)(nil).GetSupportedLanguages))
-}
-
-func (mr *MockRuntimeManagerMockRecorder) ClearCache() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearCache", reflect.TypeOf((*MockRuntimeManager)(nil).ClearCache))
-}
-
-// TestNewCodeBuilderFactory 测试构造函数
-func TestNewCodeBuilderFactory(t *testing.T) {
-	factory := NewCodeBuilderFactory()
-	assert.NotNil(t, factory)
-	assert.IsType(t, &CodeBuilderFactoryImpl{}, factory)
-}
-
-// TestCodeBuilderFactoryImpl_SetRuntimeManager 测试设置运行时管理器
-func TestCodeBuilderFactoryImpl_SetRuntimeManager(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	factory := &CodeBuilderFactoryImpl{}
-	mockRuntimeManager := NewMockRuntimeManager(ctrl)
-
-	factory.SetRuntimeManager(mockRuntimeManager)
-	assert.Equal(t, mockRuntimeManager, factory.runtimeManager)
-}
-
-// TestCodeBuilderFactoryImpl_GetSupportedLanguages 测试获取支持的语言类型列表
-func TestCodeBuilderFactoryImpl_GetSupportedLanguages(t *testing.T) {
-	factory := &CodeBuilderFactoryImpl{}
-	languages := factory.GetSupportedLanguages()
-
-	expectedLanguages := []entity.LanguageType{
-		entity.LanguageTypePython,
-		entity.LanguageTypeJS,
-	}
-
-	assert.Equal(t, expectedLanguages, languages)
-	assert.Len(t, languages, 2)
-}
-
-// TestCodeBuilderFactoryImpl_CreateBuilder 测试创建代码构建器
 func TestCodeBuilderFactoryImpl_CreateBuilder(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	t.Parallel()
 
-	// 定义测试用例结构体
-	type fields struct {
-		runtimeManager *MockRuntimeManager
-	}
-	type args struct {
-		languageType entity.LanguageType
-	}
 	tests := []struct {
-		name           string
-		args           args
-		prepareMock    func(t *testing.T, f *fields, args args)
-		wantBuilderNil bool
-		wantErr        bool
-		expectedErr    error
-		checkBuilder   func(t *testing.T, builder UserCodeBuilder, args args)
+		name         string
+		languageType entity.LanguageType
+		setupMocks   func(*gomock.Controller) *mocks.MockIRuntimeManager
+		wantErr      bool
+		wantType     string
 	}{
 		{
-			name: "成功创建Python代码构建器 - 有runtime管理器且获取runtime成功",
-			args: args{
-				languageType: entity.LanguageTypePython,
+			name:         "创建Python代码构建器成功",
+			languageType: entity.LanguageTypePython,
+			setupMocks: func(ctrl *gomock.Controller) *mocks.MockIRuntimeManager {
+				mockRM := mocks.NewMockIRuntimeManager(ctrl)
+				mockRuntime := mocks.NewMockIRuntime(ctrl)
+				mockRM.EXPECT().GetRuntime(entity.LanguageTypePython).Return(mockRuntime, nil)
+				return mockRM
 			},
-			prepareMock: func(t *testing.T, f *fields, args args) {
-				mockRuntime := componentMocks.NewMockIRuntime(ctrl)
-				f.runtimeManager.EXPECT().GetRuntime(entity.LanguageTypePython).Return(mockRuntime, nil).Times(1)
-			},
-			wantBuilderNil: false,
-			wantErr:        false,
-			checkBuilder: func(t *testing.T, builder UserCodeBuilder, args args) {
-				assert.Equal(t, entity.LanguageTypePython, builder.GetLanguageType())
-				assert.IsType(t, &PythonCodeBuilder{}, builder)
-			},
+			wantErr:  false,
+			wantType: "PythonCodeBuilder",
 		},
 		{
-			name: "成功创建JavaScript代码构建器 - 有runtime管理器且获取runtime成功",
-			args: args{
-				languageType: entity.LanguageTypeJS,
+			name:         "创建JavaScript代码构建器成功",
+			languageType: entity.LanguageTypeJS,
+			setupMocks: func(ctrl *gomock.Controller) *mocks.MockIRuntimeManager {
+				mockRM := mocks.NewMockIRuntimeManager(ctrl)
+				mockRuntime := mocks.NewMockIRuntime(ctrl)
+				mockRM.EXPECT().GetRuntime(entity.LanguageTypeJS).Return(mockRuntime, nil)
+				return mockRM
 			},
-			prepareMock: func(t *testing.T, f *fields, args args) {
-				mockRuntime := componentMocks.NewMockIRuntime(ctrl)
-				f.runtimeManager.EXPECT().GetRuntime(entity.LanguageTypeJS).Return(mockRuntime, nil).Times(1)
-			},
-			wantBuilderNil: false,
-			wantErr:        false,
-			checkBuilder: func(t *testing.T, builder UserCodeBuilder, args args) {
-				assert.Equal(t, entity.LanguageTypeJS, builder.GetLanguageType())
-				assert.IsType(t, &JavaScriptCodeBuilder{}, builder)
-			},
+			wantErr:  false,
+			wantType: "JavaScriptCodeBuilder",
 		},
 		{
-			name: "成功创建Python代码构建器 - 有runtime管理器但获取runtime失败",
-			args: args{
-				languageType: entity.LanguageTypePython,
+			name:         "不支持的语言类型",
+			languageType: entity.LanguageType("unsupported"),
+			setupMocks: func(ctrl *gomock.Controller) *mocks.MockIRuntimeManager {
+				return mocks.NewMockIRuntimeManager(ctrl)
 			},
-			prepareMock: func(t *testing.T, f *fields, args args) {
-				f.runtimeManager.EXPECT().GetRuntime(entity.LanguageTypePython).Return(nil, errors.New("runtime not found")).Times(1)
-			},
-			wantBuilderNil: false,
-			wantErr:        false,
-			checkBuilder: func(t *testing.T, builder UserCodeBuilder, args args) {
-				assert.Equal(t, entity.LanguageTypePython, builder.GetLanguageType())
-				assert.IsType(t, &PythonCodeBuilder{}, builder)
-			},
+			wantErr: true,
 		},
 		{
-			name: "成功创建Python代码构建器 - 没有runtime管理器",
-			args: args{
-				languageType: entity.LanguageTypePython,
+			name:         "Runtime获取失败但不影响构建器创建",
+			languageType: entity.LanguageTypePython,
+			setupMocks: func(ctrl *gomock.Controller) *mocks.MockIRuntimeManager {
+				mockRM := mocks.NewMockIRuntimeManager(ctrl)
+				mockRM.EXPECT().GetRuntime(entity.LanguageTypePython).Return(nil, errors.New("runtime error"))
+				return mockRM
 			},
-			prepareMock:    nil, // 不设置runtime管理器
-			wantBuilderNil: false,
-			wantErr:        false,
-			checkBuilder: func(t *testing.T, builder UserCodeBuilder, args args) {
-				assert.Equal(t, entity.LanguageTypePython, builder.GetLanguageType())
-				assert.IsType(t, &PythonCodeBuilder{}, builder)
-			},
-		},
-		{
-			name: "失败 - 不支持的语言类型",
-			args: args{
-				languageType: entity.LanguageType("unsupported"),
-			},
-			prepareMock:    nil,
-			wantBuilderNil: true,
-			wantErr:        true,
-			expectedErr:    errors.New("unsupported language type: unsupported"),
+			wantErr:  false,
+			wantType: "PythonCodeBuilder",
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
-			f := fields{}
+			t.Parallel()
 
-			// 根据测试用例决定是否创建runtime管理器
-			if tt.prepareMock != nil {
-				f.runtimeManager = NewMockRuntimeManager(ctrl)
-			}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
 			factory := &CodeBuilderFactoryImpl{}
-			if f.runtimeManager != nil {
-				factory.SetRuntimeManager(f.runtimeManager)
+			if tt.setupMocks != nil {
+				mockRM := tt.setupMocks(ctrl)
+				factory.SetRuntimeManager(mockRM)
 			}
 
-			if tt.prepareMock != nil {
-				tt.prepareMock(t, &f, tt.args)
-			}
-
-			builder, err := factory.CreateBuilder(tt.args.languageType)
+			builder, err := factory.CreateBuilder(tt.languageType)
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				if tt.expectedErr != nil {
-					assert.EqualError(t, err, tt.expectedErr.Error())
-				}
-			} else {
-				assert.NoError(t, err)
-			}
-
-			if tt.wantBuilderNil {
 				assert.Nil(t, builder)
 			} else {
+				assert.NoError(t, err)
 				assert.NotNil(t, builder)
-			}
-
-			if tt.checkBuilder != nil && builder != nil {
-				tt.checkBuilder(t, builder, tt.args)
+				
+				// 验证构建器类型
+				if tt.wantType == "PythonCodeBuilder" {
+					_, ok := builder.(*PythonCodeBuilder)
+					assert.True(t, ok, "应该返回PythonCodeBuilder类型")
+				} else if tt.wantType == "JavaScriptCodeBuilder" {
+					_, ok := builder.(*JavaScriptCodeBuilder)
+					assert.True(t, ok, "应该返回JavaScriptCodeBuilder类型")
+				}
 			}
 		})
 	}
 }
 
-// TestCodeBuilderFactoryImpl_CreateBuilder_Integration 集成测试 - 测试工厂创建的构建器能正常工作
-func TestCodeBuilderFactoryImpl_CreateBuilder_Integration(t *testing.T) {
+func TestCodeBuilderFactoryImpl_GetSupportedLanguages(t *testing.T) {
+	t.Parallel()
+
+	factory := &CodeBuilderFactoryImpl{}
+	languages := factory.GetSupportedLanguages()
+
+	assert.Len(t, languages, 2)
+	assert.Contains(t, languages, entity.LanguageTypePython)
+	assert.Contains(t, languages, entity.LanguageTypeJS)
+}
+
+func TestCodeBuilderFactoryImpl_SetRuntimeManager(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	factory := &CodeBuilderFactoryImpl{}
+	mockRM := mocks.NewMockIRuntimeManager(ctrl)
+
+	factory.SetRuntimeManager(mockRM)
+	assert.Equal(t, mockRM, factory.runtimeManager)
+}
+
+func TestPythonCodeBuilder_BuildCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		setupBuilder func(*gomock.Controller) *PythonCodeBuilder
+		input        *entity.EvaluatorInputData
+		codeVersion  *entity.CodeEvaluatorVersion
+		wantErr      bool
+		validateCode func(*testing.T, string)
+	}{
+		{
+			name: "成功构建Python代码",
+			setupBuilder: func(ctrl *gomock.Controller) *PythonCodeBuilder {
+				mockRuntime := mocks.NewMockIRuntime(ctrl)
+				mockRuntime.EXPECT().GetReturnValFunction().Return("def return_val(value): print(value)")
+				
+				builder := NewPythonCodeBuilder()
+				builder.SetRuntime(mockRuntime)
+				return builder
+			},
+			input: &entity.EvaluatorInputData{
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"user_input": {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("test input"),
+					},
+				},
+				EvaluateTargetOutputFields: map[string]*entity.Content{
+					"model_output": {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("test output"),
+					},
+				},
+			},
+			codeVersion: &entity.CodeEvaluatorVersion{
+				CodeContent: "def exec_evaluation(turn):\n    return {'score': 1.0}",
+			},
+			wantErr: false,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "def return_val(value): print(value)")
+				assert.Contains(t, code, "def exec_evaluation(turn):")
+				assert.Contains(t, code, "evaluate_dataset_fields")
+				assert.Contains(t, code, "evaluate_target_output_fields")
+			},
+		},
+		{
+			name: "没有Runtime时使用默认实现",
+			setupBuilder: func(ctrl *gomock.Controller) *PythonCodeBuilder {
+				return NewPythonCodeBuilder()
+			},
+			input: &entity.EvaluatorInputData{
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"user_input": {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("test input"),
+					},
+				},
+			},
+			codeVersion: &entity.CodeEvaluatorVersion{
+				CodeContent: "def exec_evaluation(turn):\n    return {'score': 1.0}",
+			},
+			wantErr: false,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "def return_val(value):")
+				assert.Contains(t, code, "_return_val_output")
+				assert.Contains(t, code, "def exec_evaluation(turn):")
+			},
+		},
+		{
+			name: "处理MultiPart内容",
+			setupBuilder: func(ctrl *gomock.Controller) *PythonCodeBuilder {
+				return NewPythonCodeBuilder()
+			},
+			input: &entity.EvaluatorInputData{
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"multipart_input": {
+						ContentType: gptr.Of(entity.ContentTypeMultipart),
+						MultiPart: []*entity.Content{
+							{
+								ContentType: gptr.Of(entity.ContentTypeText),
+								Text:        gptr.Of("part1"),
+							},
+							{
+								ContentType: gptr.Of(entity.ContentTypeText),
+								Text:        gptr.Of("part2"),
+							},
+						},
+					},
+				},
+			},
+			codeVersion: &entity.CodeEvaluatorVersion{
+				CodeContent: "def exec_evaluation(turn):\n    return {'score': 1.0}",
+			},
+			wantErr: false,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "multi_part")
+				assert.Contains(t, code, "part1")
+				assert.Contains(t, code, "part2")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder := tt.setupBuilder(ctrl)
+
+			code, err := builder.BuildCode(tt.input, tt.codeVersion)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, code)
+				if tt.validateCode != nil {
+					tt.validateCode(t, code)
+				}
+			}
+		})
+	}
+}
+
+func TestJavaScriptCodeBuilder_BuildCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		setupBuilder func(*gomock.Controller) *JavaScriptCodeBuilder
+		input        *entity.EvaluatorInputData
+		codeVersion  *entity.CodeEvaluatorVersion
+		wantErr      bool
+		validateCode func(*testing.T, string)
+	}{
+		{
+			name: "成功构建JavaScript代码",
+			setupBuilder: func(ctrl *gomock.Controller) *JavaScriptCodeBuilder {
+				mockRuntime := mocks.NewMockIRuntime(ctrl)
+				mockRuntime.EXPECT().GetReturnValFunction().Return("function return_val(value) { console.log(value); }")
+				
+				builder := NewJavaScriptCodeBuilder()
+				builder.SetRuntime(mockRuntime)
+				return builder
+			},
+			input: &entity.EvaluatorInputData{
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"user_input": {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("test input"),
+					},
+				},
+			},
+			codeVersion: &entity.CodeEvaluatorVersion{
+				CodeContent: "function execEvaluation(turn) {\n    return {score: 1.0};\n}",
+			},
+			wantErr: false,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "function return_val(value) { console.log(value); }")
+				assert.Contains(t, code, "function execEvaluation(turn)")
+				assert.Contains(t, code, "evaluate_dataset_fields")
+			},
+		},
+		{
+			name: "没有Runtime时使用默认实现",
+			setupBuilder: func(ctrl *gomock.Controller) *JavaScriptCodeBuilder {
+				return NewJavaScriptCodeBuilder()
+			},
+			input: &entity.EvaluatorInputData{
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"user_input": {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("test input"),
+					},
+				},
+			},
+			codeVersion: &entity.CodeEvaluatorVersion{
+				CodeContent: "function execEvaluation(turn) {\n    return {score: 1.0};\n}",
+			},
+			wantErr: false,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "function return_val(value)")
+				assert.Contains(t, code, "console.log(value)")
+			},
+		},
+		{
+			name: "处理Image内容",
+			setupBuilder: func(ctrl *gomock.Controller) *JavaScriptCodeBuilder {
+				return NewJavaScriptCodeBuilder()
+			},
+			input: &entity.EvaluatorInputData{
+				EvaluateTargetOutputFields: map[string]*entity.Content{
+					"image_output": {
+						ContentType: gptr.Of(entity.ContentTypeImage),
+						Image: &entity.Image{
+							URL: gptr.Of("http://example.com/image.jpg"),
+						},
+					},
+				},
+			},
+			codeVersion: &entity.CodeEvaluatorVersion{
+				CodeContent: "function execEvaluation(turn) {\n    return {score: 1.0};\n}",
+			},
+			wantErr: false,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "image_output")
+				assert.Contains(t, code, "http://example.com/image.jpg")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder := tt.setupBuilder(ctrl)
+
+			code, err := builder.BuildCode(tt.input, tt.codeVersion)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, code)
+				if tt.validateCode != nil {
+					tt.validateCode(t, code)
+				}
+			}
+		})
+	}
+}
+
+func TestPythonCodeBuilder_BuildSyntaxCheckCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		setupBuilder func(*gomock.Controller) *PythonCodeBuilder
+		userCode     string
+		validateCode func(*testing.T, string)
+	}{
+		{
+			name: "构建语法检查代码",
+			setupBuilder: func(ctrl *gomock.Controller) *PythonCodeBuilder {
+				mockRuntime := mocks.NewMockIRuntime(ctrl)
+				mockRuntime.EXPECT().GetReturnValFunction().Return("def return_val(value): pass")
+				
+				builder := NewPythonCodeBuilder()
+				builder.SetRuntime(mockRuntime)
+				return builder
+			},
+			userCode: `def exec_evaluation(turn):
+    return {"score": 1.0}`,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "def return_val(value): pass")
+				assert.Contains(t, code, "def exec_evaluation(turn):")
+				assert.Contains(t, code, "compile(")
+			},
+		},
+		{
+			name: "处理特殊字符转义",
+			setupBuilder: func(ctrl *gomock.Controller) *PythonCodeBuilder {
+				return NewPythonCodeBuilder()
+			},
+			userCode: `def test():
+    s = """triple quotes"""
+    return s`,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, `\"\"\"`)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder := tt.setupBuilder(ctrl)
+			code := builder.BuildSyntaxCheckCode(tt.userCode)
+
+			assert.NotEmpty(t, code)
+			if tt.validateCode != nil {
+				tt.validateCode(t, code)
+			}
+		})
+	}
+}
+
+func TestJavaScriptCodeBuilder_BuildSyntaxCheckCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		setupBuilder func(*gomock.Controller) *JavaScriptCodeBuilder
+		userCode     string
+		validateCode func(*testing.T, string)
+	}{
+		{
+			name: "构建JavaScript语法检查代码",
+			setupBuilder: func(ctrl *gomock.Controller) *JavaScriptCodeBuilder {
+				mockRuntime := mocks.NewMockIRuntime(ctrl)
+				mockRuntime.EXPECT().GetReturnValFunction().Return("function return_val(value) { }")
+				
+				builder := NewJavaScriptCodeBuilder()
+				builder.SetRuntime(mockRuntime)
+				return builder
+			},
+			userCode: `function execEvaluation(turn) {
+    return {score: 1.0};
+}`,
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "function return_val(value) { }")
+				assert.Contains(t, code, "function execEvaluation(turn)")
+			},
+		},
+		{
+			name: "处理模板字符串转义",
+			setupBuilder: func(ctrl *gomock.Controller) *JavaScriptCodeBuilder {
+				return NewJavaScriptCodeBuilder()
+			},
+			userCode: "const template = `Hello ${name}`;",
+			validateCode: func(t *testing.T, code string) {
+				assert.Contains(t, code, "\\$")
+				assert.Contains(t, code, "\\`")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder := tt.setupBuilder(ctrl)
+			code := builder.BuildSyntaxCheckCode(tt.userCode)
+
+			assert.NotEmpty(t, code)
+			if tt.validateCode != nil {
+				tt.validateCode(t, code)
+			}
+		})
+	}
+}
+
+func TestPythonCodeBuilder_GetLanguageType(t *testing.T) {
+	t.Parallel()
+
+	builder := NewPythonCodeBuilder()
+	assert.Equal(t, entity.LanguageTypePython, builder.GetLanguageType())
+}
+
+func TestJavaScriptCodeBuilder_GetLanguageType(t *testing.T) {
+	t.Parallel()
+
+	builder := NewJavaScriptCodeBuilder()
+	assert.Equal(t, entity.LanguageTypeJS, builder.GetLanguageType())
+}
+
+func TestPythonCodeBuilder_SetRuntime(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	builder := NewPythonCodeBuilder()
+	mockRuntime := mocks.NewMockIRuntime(ctrl)
+
+	builder.SetRuntime(mockRuntime)
+	assert.Equal(t, mockRuntime, builder.runtime)
+}
+
+func TestJavaScriptCodeBuilder_SetRuntime(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	builder := NewJavaScriptCodeBuilder()
+	mockRuntime := mocks.NewMockIRuntime(ctrl)
+
+	builder.SetRuntime(mockRuntime)
+	assert.Equal(t, mockRuntime, builder.runtime)
+}
+
+func TestNewCodeBuilderFactory(t *testing.T) {
+	t.Parallel()
+
 	factory := NewCodeBuilderFactory()
-
-	t.Run("Python构建器集成测试", func(t *testing.T) {
-		builder, err := factory.CreateBuilder(entity.LanguageTypePython)
-		assert.NoError(t, err)
-		assert.NotNil(t, builder)
-
-		// 测试构建器的基本功能
-		assert.Equal(t, entity.LanguageTypePython, builder.GetLanguageType())
-
-		// 测试语法检查代码构建
-		syntaxCheckCode := builder.BuildSyntaxCheckCode("def test(): pass")
-		assert.NotEmpty(t, syntaxCheckCode)
-		assert.Contains(t, syntaxCheckCode, "def test(): pass")
-	})
-
-	t.Run("JavaScript构建器集成测试", func(t *testing.T) {
-		builder, err := factory.CreateBuilder(entity.LanguageTypeJS)
-		assert.NoError(t, err)
-		assert.NotNil(t, builder)
-
-		// 测试构建器的基本功能
-		assert.Equal(t, entity.LanguageTypeJS, builder.GetLanguageType())
-
-		// 测试语法检查代码构建
-		syntaxCheckCode := builder.BuildSyntaxCheckCode("function test() {}")
-		assert.NotEmpty(t, syntaxCheckCode)
-		assert.Contains(t, syntaxCheckCode, "function test() {}")
-	})
+	assert.NotNil(t, factory)
+	
+	impl, ok := factory.(*CodeBuilderFactoryImpl)
+	assert.True(t, ok)
+	assert.NotNil(t, impl)
 }

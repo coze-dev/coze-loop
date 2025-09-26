@@ -184,3 +184,244 @@ func TestNewSyntaxValidationError(t *testing.T) {
 	assert.Contains(t, err.Error(), "第10行")
 	assert.Contains(t, err.Error(), "语法验证失败")
 }
+
+func TestNewValidationError(t *testing.T) {
+	t.Parallel()
+
+	err := NewValidationError("参数验证失败")
+	assert.Equal(t, ErrCodeInvalidCode, err.Code)
+	assert.Equal(t, "参数验证失败", err.Message)
+	assert.Nil(t, err.Cause)
+}
+
+func TestNewNotFoundError(t *testing.T) {
+	t.Parallel()
+
+	err := NewNotFoundError("资源未找到")
+	assert.Equal(t, "NOT_FOUND", err.Code)
+	assert.Equal(t, "资源未找到", err.Message)
+	assert.Nil(t, err.Cause)
+}
+
+func TestIsNotFoundError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "是NotFound错误",
+			err:      NewNotFoundError("资源未找到"),
+			expected: true,
+		},
+		{
+			name:     "不是NotFound错误",
+			err:      NewSandboxError("OTHER_CODE", "其他错误", nil),
+			expected: false,
+		},
+		{
+			name:     "非SandboxError类型",
+			err:      errors.New("普通错误"),
+			expected: false,
+		},
+		{
+			name:     "nil错误",
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := IsNotFoundError(tt.err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCompilationError_Error(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		err      *CompilationError
+		expected string
+	}{
+		{
+			name: "包含Details",
+			err: &CompilationError{
+				Message: "编译失败",
+				Details: "语法错误详情",
+			},
+			expected: "编译错误: 编译失败 - 语法错误详情",
+		},
+		{
+			name: "不包含Details",
+			err: &CompilationError{
+				Message: "编译失败",
+				Details: "",
+			},
+			expected: "编译错误: 编译失败",
+		},
+		{
+			name: "Details为空字符串",
+			err: &CompilationError{
+				Message: "编译失败",
+				Details: "",
+			},
+			expected: "编译错误: 编译失败",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := tt.err.Error()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestSyntaxValidationError_Error(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		err      *SyntaxValidationError
+		expected string
+	}{
+		{
+			name: "包含行号",
+			err: &SyntaxValidationError{
+				Language: "python",
+				Line:     10,
+				Message:  "语法错误",
+			},
+			expected: "语法错误 (python, 第10行): 语法错误",
+		},
+		{
+			name: "不包含行号",
+			err: &SyntaxValidationError{
+				Language: "javascript",
+				Line:     0,
+				Message:  "语法错误",
+			},
+			expected: "语法错误 (javascript): 语法错误",
+		},
+		{
+			name: "负数行号",
+			err: &SyntaxValidationError{
+				Language: "python",
+				Line:     -1,
+				Message:  "语法错误",
+			},
+			expected: "语法错误 (python): 语法错误",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := tt.err.Error()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestErrorConstants(t *testing.T) {
+	t.Parallel()
+
+	// 验证错误常量的值
+	assert.Equal(t, "UNSUPPORTED_LANGUAGE", ErrCodeUnsupportedLanguage)
+	assert.Equal(t, "EXECUTION_TIMEOUT", ErrCodeExecutionTimeout)
+	assert.Equal(t, "MEMORY_LIMIT_EXCEEDED", ErrCodeMemoryLimit)
+	assert.Equal(t, "SECURITY_VIOLATION", ErrCodeSecurityViolation)
+	assert.Equal(t, "RUNTIME_ERROR", ErrCodeRuntimeError)
+	assert.Equal(t, "INVALID_CODE", ErrCodeInvalidCode)
+	assert.Equal(t, "SYSTEM_ERROR", ErrCodeSystemError)
+	assert.Equal(t, "COMPILATION_ERROR", ErrCodeCompilationError)
+	assert.Equal(t, "SYNTAX_VALIDATION_ERROR", ErrCodeSyntaxValidation)
+}
+
+func TestSandboxErrorChaining(t *testing.T) {
+	t.Parallel()
+
+	// 测试错误链
+	rootCause := errors.New("root cause")
+	middleErr := NewRuntimeError("middle error", rootCause)
+	topErr := NewSystemError("top error", middleErr)
+
+	// 验证错误链
+	assert.Equal(t, middleErr, topErr.Unwrap())
+	assert.Equal(t, rootCause, middleErr.Unwrap())
+
+	// 验证错误消息包含完整链
+	assert.Contains(t, topErr.Error(), "top error")
+	assert.Contains(t, topErr.Error(), middleErr.Error())
+}
+
+func TestErrorEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		test func(t *testing.T)
+	}{
+		{
+			name: "空字符串参数",
+			test: func(t *testing.T) {
+				err := NewUnsupportedLanguageError("")
+				assert.Equal(t, ErrCodeUnsupportedLanguage, err.Code)
+				assert.Contains(t, err.Message, "不支持的编程语言:")
+			},
+		},
+		{
+			name: "零值内存限制",
+			test: func(t *testing.T) {
+				err := NewMemoryLimitError(0)
+				assert.Equal(t, ErrCodeMemoryLimit, err.Code)
+				assert.Contains(t, err.Message, "0MB")
+			},
+		},
+		{
+			name: "负数内存限制",
+			test: func(t *testing.T) {
+				err := NewMemoryLimitError(-1)
+				assert.Equal(t, ErrCodeMemoryLimit, err.Code)
+				assert.Contains(t, err.Message, "-1MB")
+			},
+		},
+		{
+			name: "空消息编译错误",
+			test: func(t *testing.T) {
+				err := NewCompilationError("", "")
+				assert.Equal(t, "", err.Message)
+				assert.Equal(t, "", err.Details)
+				assert.Equal(t, "编译错误: ", err.Error())
+			},
+		},
+		{
+			name: "空语言语法错误",
+			test: func(t *testing.T) {
+				err := NewSyntaxValidationError("", 0, "")
+				assert.Equal(t, "", err.Language)
+				assert.Equal(t, 0, err.Line)
+				assert.Equal(t, "", err.Message)
+				assert.Equal(t, "语法错误 (): ", err.Error())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tt.test(t)
+		})
+	}
+}
