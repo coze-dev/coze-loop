@@ -1999,13 +1999,12 @@ func TestEvaluatorSourceCodeServiceImpl_Validate_Extended(t *testing.T) {
 				mockRuntimeManager := componentmocks.NewMockIRuntimeManager(ctrl)
 				mockCodeBuilderFactory := NewMockCodeBuilderFactory(ctrl)
 				mockMetric := metricsmocks.NewMockEvaluatorExecMetrics(ctrl)
-				mockCodeBuilder := NewMockUserCodeBuilder(ctrl)
 
-				mockCodeBuilderFactory.EXPECT().CreateBuilder(entity.LanguageTypePython).Return(mockCodeBuilder, nil)
-				mockCodeBuilder.EXPECT().BuildSyntaxCheckCode(gomock.Any()).Return("syntax_check_code")
+				// 在validatePythonCode中会先获取Runtime，如果失败则直接返回错误
+				// 不会调用CreateBuilder和BuildSyntaxCheckCode
 				mockRuntimeManager.EXPECT().GetRuntime(entity.LanguageTypePython).Return(nil, errors.New("runtime not available"))
 
-				return mockRuntimeManager, mockCodeBuilderFactory, mockMetric, mockCodeBuilder, nil
+				return mockRuntimeManager, mockCodeBuilderFactory, mockMetric, nil, nil
 			},
 			evaluator: &entity.Evaluator{
 				ID:            107,
