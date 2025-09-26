@@ -24,18 +24,23 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/exporter/clickhouseexporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/processor/queueprocessor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/receiver/rmqreceiver"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	obconfig "github.com/coze-dev/coze-loop/backend/modules/observability/infra/config"
 	obmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/infra/metrics"
 	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq/producer"
@@ -160,7 +165,86 @@ func NewTraceProcessorBuilder(
 }
 
 func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
-	return []metrics_entity.IMetricDefinition{}
+	return []metrics_entity.IMetricDefinition{
+		metric.NewFailRatioMetric(),
+		metric.NewModelTotalTokensMetric(),
+		metric.NewToolTotalCountMetric(),
+		metric.NewModelLatencyAvgMetric(),
+		// General 指标概览
+		general.NewGeneralTotalCountMetric(),
+		general.NewGeneralFailRatioMetric(),
+		general.NewGeneralModelFailRatioMetric(),
+		general.NewGeneralModelLatencyAvgMetric(),
+		general.NewGeneralModelTotalTokensMetric(),
+		general.NewGeneralToolTotalCountMetric(),
+		general.NewGeneralToolFailRatioMetric(),
+		general.NewGeneralToolLatencyAvgMetric(),
+		// Model 模型统计指标
+		model.NewModelTokenCountMetric(),
+		model.NewModelInputTokenCountMetric(),
+		model.NewModelOutputTokenCountMetric(),
+		model.NewModelQPSMetric(),
+		model.NewModelQPMMetric(),
+		model.NewModelSuccessRatioMetric(),
+		model.NewModelTPSAvgMetric(),
+		model.NewModelTPSMinMetric(),
+		model.NewModelTPSMaxMetric(),
+		model.NewModelTPSPct50Metric(),
+		model.NewModelTPSPct90Metric(),
+		model.NewModelTPSPct99Metric(),
+		model.NewModelTPMAvgMetric(),
+		model.NewModelTPMMinMetric(),
+		model.NewModelTPMMaxMetric(),
+		model.NewModelTPMPct50Metric(),
+		model.NewModelTPMPct90Metric(),
+		model.NewModelTPMPct99Metric(),
+		model.NewModelDurationAvgMetric(),
+		model.NewModelDurationMinMetric(),
+		model.NewModelDurationMaxMetric(),
+		model.NewModelDurationPct50Metric(),
+		model.NewModelDurationPct90Metric(),
+		model.NewModelDurationPct99Metric(),
+		model.NewModelTTFTAvgMetric(),
+		model.NewModelTTFTMinMetric(),
+		model.NewModelTTFTMaxMetric(),
+		model.NewModelTTFTPct50Metric(),
+		model.NewModelTTFTPct90Metric(),
+		model.NewModelTTFTPct99Metric(),
+		model.NewModelTPOTAvgMetric(),
+		model.NewModelTPOTMinMetric(),
+		model.NewModelTPOTMaxMetric(),
+		model.NewModelTPOTPct50Metric(),
+		model.NewModelTPOTPct90Metric(),
+		model.NewModelTPOTPct99Metric(),
+		// Tool 工具统计指标
+		tool.NewToolTotalCountMetric(),
+		tool.NewToolDurationAvgMetric(),
+		tool.NewToolDurationMinMetric(),
+		tool.NewToolDurationMaxMetric(),
+		tool.NewToolDurationPct50Metric(),
+		tool.NewToolDurationPct90Metric(),
+		tool.NewToolDurationPct99Metric(),
+		tool.NewToolSuccessRatioMetric(),
+		// Service 服务调用指标
+		service.NewServiceTraceCountTotalMetric(),
+		service.NewServiceTraceCountMetric(),
+		service.NewServiceSpanCountMetric(),
+		service.NewServiceUserCountMetric(),
+		service.NewServiceMessageCountMetric(),
+		service.NewServiceQPSAllMetric(),
+		service.NewServiceQPSSuccessMetric(),
+		service.NewServiceQPSFailMetric(),
+		service.NewServiceQPMAllMetric(),
+		service.NewServiceQPMSuccessMetric(),
+		service.NewServiceQPMFailMetric(),
+		service.NewServiceDurationAvgMetric(),
+		service.NewServiceDurationMinMetric(),
+		service.NewServiceDurationMaxMetric(),
+		service.NewServiceDurationPct50Metric(),
+		service.NewServiceDurationPct90Metric(),
+		service.NewServiceDurationPct99Metric(),
+		service.NewServiceSuccessRatioMetric(),
+	}
 }
 
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo.ITraceRepo) service.IngestionCollectorFactory {
