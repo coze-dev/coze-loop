@@ -1,0 +1,88 @@
+custom:
+  image:
+    registry: "docker.io"
+    pullSecrets: "***"
+  faas:
+    python:
+      enabled: true
+
+image:
+  repository: denoland/deno
+  tag: "1.45.5"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+externalService:
+  enabled: true
+  type: NodePort
+  port: 8000
+  targetPort: 8000
+  nodePort: 30890
+
+resources:
+  limits:
+    memory: "4Gi"
+    cpu: "2"
+  requests:
+    memory: "2Gi"
+    cpu: "1"
+
+env:
+  DENO_DIR: "/tmp/.deno"
+  DENO_NO_UPDATE_CHECK: "1"
+  DENO_V8_FLAGS: "--max-old-space-size=2048"
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONPATH: ""
+  FAAS_WORKSPACE: "/tmp/faas-workspace"
+  FAAS_PORT: "8000"
+  FAAS_TIMEOUT: "30000"
+  FAAS_LANGUAGE: "python"
+  FAAS_SECURITY_LEVEL: "production"
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+    - ALL
+    add:
+    - SETUID
+    - SETGID
+
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+volumes:
+  tmp:
+    enabled: true
+    sizeLimit: "1Gi"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

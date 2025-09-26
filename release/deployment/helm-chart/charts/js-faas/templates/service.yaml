@@ -1,0 +1,38 @@
+{{- if .Values.custom.faas.javascript.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "js-faas.fullname" . }}
+  labels:
+    {{- include "js-faas.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "js-faas.selectorLabels" . | nindent 4 }}
+---
+{{- if .Values.externalService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "js-faas.fullname" . }}-external
+  labels:
+    {{- include "js-faas.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.externalService.type }}
+  ports:
+    - port: {{ .Values.externalService.port }}
+      targetPort: {{ .Values.externalService.targetPort }}
+      {{- if .Values.externalService.nodePort }}
+      nodePort: {{ .Values.externalService.nodePort }}
+      {{- end }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "js-faas.selectorLabels" . | nindent 4 }}
+{{- end }}
+{{- end }}

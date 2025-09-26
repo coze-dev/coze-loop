@@ -12,6 +12,11 @@ custom: &custom
     disabled: true
   rmq:
     disabled: true
+  faas:
+    python:
+      enabled: true
+    javascript:
+      enabled: true
 
 # 固定，不要动，用于传递全局变量
 coze-loop-app:
@@ -29,4 +34,8 @@ coze-loop-minio:
 coze-loop-rmq-namesrv:
   custom: *custom
 coze-loop-rmq-broker:
+  custom: *custom
+coze-loop-python-faas:
+  custom: *custom
+coze-loop-js-faas:
   custom: *custom

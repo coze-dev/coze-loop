@@ -1,0 +1,38 @@
+{{- if .Values.custom.faas.python.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "python-faas.fullname" . }}
+  labels:
+    {{- include "python-faas.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "python-faas.selectorLabels" . | nindent 4 }}
+---
+{{- if .Values.externalService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "python-faas.fullname" . }}-external
+  labels:
+    {{- include "python-faas.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.externalService.type }}
+  ports:
+    - port: {{ .Values.externalService.port }}
+      targetPort: {{ .Values.externalService.targetPort }}
+      {{- if .Values.externalService.nodePort }}
+      nodePort: {{ .Values.externalService.nodePort }}
+      {{- end }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "python-faas.selectorLabels" . | nindent 4 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,91 @@
+{{- if .Values.custom.faas.javascript.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "js-faas.fullname" . }}
+  labels:
+    {{- include "js-faas.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "js-faas.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "js-faas.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+      - name: js-faas
+        image: "{{ .Values.custom.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["deno", "run", "--allow-all", "/app/bootstrap/js_faas_server.ts"]
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range $key, $value := .Values.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        securityContext:
+          {{- toYaml .Values.containerSecurityContext | nindent 10 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+        - name: bootstrap
+          mountPath: /app/bootstrap
+          readOnly: true
+        {{- if .Values.volumes.tmp.enabled }}
+        - name: tmp-volume
+          mountPath: /tmp
+        {{- end }}
+        {{- if .Values.probes.liveness.enabled }}
+        livenessProbe:
+          exec:
+            command:
+            - deno
+            - eval
+            - "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"
+          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+        {{- end }}
+        {{- if .Values.probes.readiness.enabled }}
+        readinessProbe:
+          exec:
+            command:
+            - deno
+            - eval
+            - "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { Deno.exit(0); } else { Deno.exit(1); } } catch (e) { Deno.exit(1); }"
+          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+        {{- end }}
+      volumes:
+      - name: bootstrap
+        configMap:
+          name: {{ include "js-faas.fullname" . }}-configmap
+      {{- if .Values.volumes.tmp.enabled }}
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: {{ .Values.volumes.tmp.sizeLimit }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
