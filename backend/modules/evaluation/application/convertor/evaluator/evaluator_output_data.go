@@ -20,6 +20,7 @@ func ConvertEvaluatorOutputDataDTO2DO(dto *evaluatordto.EvaluatorOutputData) *ev
 		EvaluatorUsage:    ConvertEvaluatorUsageDTO2DO(dto.EvaluatorUsage),
 		EvaluatorRunError: ConvertEvaluatorRunErrorDTO2DO(dto.EvaluatorRunError),
 		TimeConsumingMS:   dto.GetTimeConsumingMs(),
+		Stdout:            dto.GetStdout(),
 	}
 }
 
@@ -33,6 +34,7 @@ func ConvertEvaluatorOutputDataDO2DTO(do *evaluatorentity.EvaluatorOutputData) *
 		EvaluatorUsage:    ConvertEvaluatorUsageDO2DTO(do.EvaluatorUsage),
 		EvaluatorRunError: ConvertEvaluatorRunErrorDO2DTO(do.EvaluatorRunError),
 		TimeConsumingMs:   gptr.Of(do.TimeConsumingMS),
+		Stdout:            gptr.Of(do.Stdout),
 	}
 }
 

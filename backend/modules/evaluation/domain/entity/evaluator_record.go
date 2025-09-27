@@ -22,8 +22,11 @@ type EvaluatorRecord struct {
 }
 
 type EvaluatorInputData struct {
-	HistoryMessages []*Message          `json:"history_messages,omitempty"`
-	InputFields     map[string]*Content `json:"input_fields,omitempty"`
+	HistoryMessages            []*Message          `json:"history_messages,omitempty"`
+	InputFields                map[string]*Content `json:"input_fields,omitempty"`
+	EvaluateDatasetFields      map[string]*Content `json:"evaluate_dataset_fields,omitempty"`
+	EvaluateTargetOutputFields map[string]*Content `json:"evaluate_target_output_fields,omitempty"`
+	Ext                        map[string]string   `json:"ext,omitempty"`
 }
 
 type EvaluatorOutputData struct {
@@ -31,6 +34,7 @@ type EvaluatorOutputData struct {
 	EvaluatorUsage    *EvaluatorUsage    `json:"evaluator_usage,omitempty"`
 	EvaluatorRunError *EvaluatorRunError `json:"evaluator_run_error,omitempty"`
 	TimeConsumingMS   int64              `json:"time_consuming_ms,omitempty"`
+	Stdout            string             `json:"stdout,omitempty"`
 }
 
 type Correction struct {

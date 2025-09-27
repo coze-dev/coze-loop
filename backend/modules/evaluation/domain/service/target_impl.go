@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/jsonmock"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -46,7 +47,7 @@ func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	return singletonEvalTargetService
 }
 
-func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, opts ...entity.Option) (id int64, versionID int64, err error) {
+func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, opts ...entity.Option) (id, versionID int64, err error) {
 	defer func() {
 		e.metric.EmitCreate(spaceID, err)
 	}()
@@ -69,8 +70,71 @@ func (e *EvalTargetServiceImpl) GetEvalTarget(ctx context.Context, targetID int6
 	return e.evalTargetRepo.GetEvalTarget(ctx, targetID)
 }
 
-func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceID int64, versionID int64, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64, needSourceInfo bool) (do *entity.EvalTarget, err error) {
 	do, err = e.evalTargetRepo.GetEvalTargetVersion(ctx, spaceID, versionID)
+	if err != nil {
+		return nil, err
+	}
+	// 包装source info信息
+	if needSourceInfo {
+		for _, op := range e.typedOperators {
+			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return do, nil
+}
+
+func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+	do, err = e.evalTargetRepo.GetEvalTargetVersionBySourceTarget(ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType)
+	if err != nil {
+		return nil, err
+	}
+	// 包装source info信息
+	if needSourceInfo {
+		for _, op := range e.typedOperators {
+			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return do, nil
+}
+
+func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context, spaceID, targetID int64, sourceVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+	// 根据spaceID、targetID和sourceVersion查询版本
+	versions, err := e.evalTargetRepo.BatchGetEvalTargetBySource(ctx, &repo.BatchGetEvalTargetBySourceParam{
+		SpaceID:        spaceID,
+		SourceTargetID: []string{strconv.FormatInt(targetID, 10)},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 遍历版本，找到匹配的sourceVersion
+	for _, version := range versions {
+		if version.EvalTargetVersion != nil && version.EvalTargetVersion.SourceTargetVersion == sourceVersion {
+			// 包装source info信息
+			if needSourceInfo {
+				for _, op := range e.typedOperators {
+					err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{version})
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			return version, nil
+		}
+	}
+
+	return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval target version not found for source version: "+sourceVersion))
+}
+
+func (e *EvalTargetServiceImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
+	do, err = e.evalTargetRepo.GetEvalTargetVersionByTarget(ctx, spaceID, targetID, sourceTargetVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +175,7 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, s
 	return versions, nil
 }
 
-func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
+func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, err error) {
 	startTime := time.Now()
 	defer func() {
 		e.metric.EmitRun(spaceID, err, startTime)
@@ -275,7 +339,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 	return record, nil
 }
 
-func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
+func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error) {
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
 
@@ -386,6 +450,30 @@ func Convert2TraceString(input any) string {
 	}
 
 	return str
+}
+
+// GenerateMockOutputData 根据输出schema生成mock数据
+func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error) {
+	if len(outputSchemas) == 0 {
+		return map[string]string{}, nil
+	}
+
+	result := make(map[string]string)
+
+	for _, schema := range outputSchemas {
+		if schema.Key != nil && schema.JsonSchema != nil {
+			// 使用jsonmock为每个schema生成独立的mock数据
+			mockData, err := jsonmock.GenerateMockData(*schema.JsonSchema)
+			if err != nil {
+				// 如果生成失败，使用默认值
+				result[*schema.Key] = "{}"
+			} else {
+				result[*schema.Key] = mockData
+			}
+		}
+	}
+
+	return result, nil
 }
 
 // buildPage 有的接口没有滚动分页，需要自己用page适配一下

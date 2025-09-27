@@ -19,6 +19,6 @@ type ExptItemEvalEvent interface {
 }
 
 type QuotaService interface {
-	AllowExptRun(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) error
-	ReleaseExptRun(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) error
+	AllowExptRun(ctx context.Context, exptID, spaceID int64, session *entity.Session) error
+	ReleaseExptRun(ctx context.Context, exptID, spaceID int64, session *entity.Session) error
 }

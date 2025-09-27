@@ -211,6 +211,106 @@ const (
 	AccessingEndpointErrorCode              = 601205027 // Accessing endpoint error
 	accessingEndpointErrorMessage           = "accessing endpoint error"
 	accessingEndpointErrorNoAffectStability = true
+
+	InvalidInputDataCode              = 601205029 // invalid input data
+	invalidInputDataMessage           = "invalid input data"
+	invalidInputDataNoAffectStability = true
+
+	InvalidCodeContentCode              = 601205030 // invalid code content
+	invalidCodeContentMessage           = "invalid code content"
+	invalidCodeContentNoAffectStability = true
+
+	InvalidLanguageTypeCode              = 601205031 // invalid language type
+	invalidLanguageTypeMessage           = "invalid language type"
+	invalidLanguageTypeNoAffectStability = true
+
+	CodeExecutionFailedCode              = 601205032 // code execution failed
+	codeExecutionFailedMessage           = "code execution failed"
+	codeExecutionFailedNoAffectStability = true
+
+	CodeValidationFailedCode              = 601205033 // code validation failed
+	codeValidationFailedMessage           = "code validation failed"
+	codeValidationFailedNoAffectStability = true
+
+	ResultParseFailedCode              = 601205034 // result parse failed
+	resultParseFailedMessage           = "result parse failed"
+	resultParseFailedNoAffectStability = true
+
+	InvalidEvaluatorTypeCode              = 601205028 // invalid evaluator type
+	invalidEvaluatorTypeMessage           = "invalid evaluator type"
+	invalidEvaluatorTypeNoAffectStability = true
+
+	MaliciousCodePatternDetectedCode              = 601205035 // detected specific malicious code pattern with detailed information
+	maliciousCodePatternDetectedMessage           = "malicious code pattern detected"
+	maliciousCodePatternDetectedNoAffectStability = true
+
+	FileURLRetrieveFailedCode              = 601205036 // failed to retrieve file URLs from file provider
+	fileURLRetrieveFailedMessage           = "failed to retrieve file URLs"
+	fileURLRetrieveFailedNoAffectStability = false
+
+	GoroutinePoolCreateFailedCode              = 601205037 // failed to create goroutine pool for concurrent execution
+	goroutinePoolCreateFailedMessage           = "failed to create goroutine pool"
+	goroutinePoolCreateFailedNoAffectStability = false
+
+	BatchTaskExecutionFailedCode              = 601205038 // failed to execute batch debug tasks in goroutine pool
+	batchTaskExecutionFailedMessage           = "failed to execute batch tasks"
+	batchTaskExecutionFailedNoAffectStability = false
+
+	CodeBuilderGetFailedCode              = 601205041 // failed to get code builder for specified language
+	codeBuilderGetFailedMessage           = "failed to get code builder"
+	codeBuilderGetFailedNoAffectStability = true
+
+	CodeBuildFailedCode              = 601205042 // failed to build user code with template
+	codeBuildFailedMessage           = "failed to build code"
+	codeBuildFailedNoAffectStability = true
+
+	RuntimeGetFailedCode              = 601205043 // failed to get runtime for specified language
+	runtimeGetFailedMessage           = "failed to get runtime"
+	runtimeGetFailedNoAffectStability = true
+
+	EmptyCodeContentCode              = 601205046 // user provided code content is empty
+	emptyCodeContentMessage           = "code content is empty"
+	emptyCodeContentNoAffectStability = true
+
+	SyntaxValidationFailedCode              = 601205047 // code syntax validation failed during execution
+	syntaxValidationFailedMessage           = "syntax validation failed"
+	syntaxValidationFailedNoAffectStability = true
+
+	SyntaxValidationResultParseFailedCode              = 601205048 // failed to parse syntax validation execution result
+	syntaxValidationResultParseFailedMessage           = "failed to parse syntax validation result"
+	syntaxValidationResultParseFailedNoAffectStability = true
+
+	DangerousFunctionDetectedCode              = 601205051 // detected dangerous function call in user code
+	dangerousFunctionDetectedMessage           = "dangerous function detected"
+	dangerousFunctionDetectedNoAffectStability = true
+
+	DangerousImportDetectedCode              = 601205052 // detected dangerous module import in user code
+	dangerousImportDetectedMessage           = "dangerous import detected"
+	dangerousImportDetectedNoAffectStability = true
+
+	RequiredFunctionNotFoundCode              = 601205053 // required function definition not found in user code
+	requiredFunctionNotFoundMessage           = "required function not found"
+	requiredFunctionNotFoundNoAffectStability = true
+
+	ExecutionResultEmptyCode              = 601205056 // execution result stdout or ret_val is empty
+	executionResultEmptyMessage           = "execution result is empty"
+	executionResultEmptyNoAffectStability = true
+
+	ExecutionResultParseFailedCode              = 601205057 // failed to parse execution result JSON format
+	executionResultParseFailedMessage           = "failed to parse execution result"
+	executionResultParseFailedNoAffectStability = true
+
+	UnsupportedLanguageTypeCode              = 601205058 // the specified language type is not supported
+	unsupportedLanguageTypeMessage           = "unsupported language type"
+	unsupportedLanguageTypeNoAffectStability = true
+
+	InvalidEvaluatorConfigurationCode              = 601205059 // evaluator configuration is invalid or incomplete
+	invalidEvaluatorConfigurationMessage           = "invalid evaluator configuration"
+	invalidEvaluatorConfigurationNoAffectStability = true
+
+	ExecutionResultNilCode              = 601205060 // execution result object is nil
+	executionResultNilMessage           = "execution result is nil"
+	executionResultNilNoAffectStability = true
 )
 
 func init() {
@@ -519,6 +619,156 @@ func init() {
 		AccessingEndpointErrorCode,
 		accessingEndpointErrorMessage,
 		code.WithAffectStability(!accessingEndpointErrorNoAffectStability),
+	)
+
+	code.Register(
+		InvalidInputDataCode,
+		invalidInputDataMessage,
+		code.WithAffectStability(!invalidInputDataNoAffectStability),
+	)
+
+	code.Register(
+		InvalidCodeContentCode,
+		invalidCodeContentMessage,
+		code.WithAffectStability(!invalidCodeContentNoAffectStability),
+	)
+
+	code.Register(
+		InvalidLanguageTypeCode,
+		invalidLanguageTypeMessage,
+		code.WithAffectStability(!invalidLanguageTypeNoAffectStability),
+	)
+
+	code.Register(
+		CodeExecutionFailedCode,
+		codeExecutionFailedMessage,
+		code.WithAffectStability(!codeExecutionFailedNoAffectStability),
+	)
+
+	code.Register(
+		CodeValidationFailedCode,
+		codeValidationFailedMessage,
+		code.WithAffectStability(!codeValidationFailedNoAffectStability),
+	)
+
+	code.Register(
+		ResultParseFailedCode,
+		resultParseFailedMessage,
+		code.WithAffectStability(!resultParseFailedNoAffectStability),
+	)
+
+	code.Register(
+		InvalidEvaluatorTypeCode,
+		invalidEvaluatorTypeMessage,
+		code.WithAffectStability(!invalidEvaluatorTypeNoAffectStability),
+	)
+
+	code.Register(
+		MaliciousCodePatternDetectedCode,
+		maliciousCodePatternDetectedMessage,
+		code.WithAffectStability(!maliciousCodePatternDetectedNoAffectStability),
+	)
+
+	code.Register(
+		FileURLRetrieveFailedCode,
+		fileURLRetrieveFailedMessage,
+		code.WithAffectStability(!fileURLRetrieveFailedNoAffectStability),
+	)
+
+	code.Register(
+		GoroutinePoolCreateFailedCode,
+		goroutinePoolCreateFailedMessage,
+		code.WithAffectStability(!goroutinePoolCreateFailedNoAffectStability),
+	)
+
+	code.Register(
+		BatchTaskExecutionFailedCode,
+		batchTaskExecutionFailedMessage,
+		code.WithAffectStability(!batchTaskExecutionFailedNoAffectStability),
+	)
+
+	code.Register(
+		CodeBuilderGetFailedCode,
+		codeBuilderGetFailedMessage,
+		code.WithAffectStability(!codeBuilderGetFailedNoAffectStability),
+	)
+
+	code.Register(
+		CodeBuildFailedCode,
+		codeBuildFailedMessage,
+		code.WithAffectStability(!codeBuildFailedNoAffectStability),
+	)
+
+	code.Register(
+		RuntimeGetFailedCode,
+		runtimeGetFailedMessage,
+		code.WithAffectStability(!runtimeGetFailedNoAffectStability),
+	)
+
+	code.Register(
+		EmptyCodeContentCode,
+		emptyCodeContentMessage,
+		code.WithAffectStability(!emptyCodeContentNoAffectStability),
+	)
+
+	code.Register(
+		SyntaxValidationFailedCode,
+		syntaxValidationFailedMessage,
+		code.WithAffectStability(!syntaxValidationFailedNoAffectStability),
+	)
+
+	code.Register(
+		SyntaxValidationResultParseFailedCode,
+		syntaxValidationResultParseFailedMessage,
+		code.WithAffectStability(!syntaxValidationResultParseFailedNoAffectStability),
+	)
+
+	code.Register(
+		DangerousFunctionDetectedCode,
+		dangerousFunctionDetectedMessage,
+		code.WithAffectStability(!dangerousFunctionDetectedNoAffectStability),
+	)
+
+	code.Register(
+		DangerousImportDetectedCode,
+		dangerousImportDetectedMessage,
+		code.WithAffectStability(!dangerousImportDetectedNoAffectStability),
+	)
+
+	code.Register(
+		RequiredFunctionNotFoundCode,
+		requiredFunctionNotFoundMessage,
+		code.WithAffectStability(!requiredFunctionNotFoundNoAffectStability),
+	)
+
+	code.Register(
+		ExecutionResultEmptyCode,
+		executionResultEmptyMessage,
+		code.WithAffectStability(!executionResultEmptyNoAffectStability),
+	)
+
+	code.Register(
+		ExecutionResultParseFailedCode,
+		executionResultParseFailedMessage,
+		code.WithAffectStability(!executionResultParseFailedNoAffectStability),
+	)
+
+	code.Register(
+		UnsupportedLanguageTypeCode,
+		unsupportedLanguageTypeMessage,
+		code.WithAffectStability(!unsupportedLanguageTypeNoAffectStability),
+	)
+
+	code.Register(
+		InvalidEvaluatorConfigurationCode,
+		invalidEvaluatorConfigurationMessage,
+		code.WithAffectStability(!invalidEvaluatorConfigurationNoAffectStability),
+	)
+
+	code.Register(
+		ExecutionResultNilCode,
+		executionResultNilMessage,
+		code.WithAffectStability(!executionResultNilNoAffectStability),
 	)
 
 }

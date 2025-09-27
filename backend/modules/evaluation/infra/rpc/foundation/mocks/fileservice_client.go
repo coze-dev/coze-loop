@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	file "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file"
 	callopt "github.com/cloudwego/kitex/client/callopt"
+	file "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file"
 	gomock "go.uber.org/mock/gomock"
 )
 

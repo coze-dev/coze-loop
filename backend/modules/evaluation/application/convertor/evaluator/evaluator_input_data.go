@@ -30,9 +30,26 @@ func ConvertEvaluatorInputDataDTO2DO(dto *evaluatordto.EvaluatorInputData) *eval
 		inputFields[key] = contentDO
 	}
 
+	// 转换 EvaluateDatasetFields
+	evaluateDatasetFields := make(map[string]*evaluatorentity.Content)
+	for key, contentDTO := range dto.EvaluateDatasetFields {
+		contentDO := commonconvertor.ConvertContentDTO2DO(contentDTO)
+		evaluateDatasetFields[key] = contentDO
+	}
+
+	// 转换 EvaluateTargetOutputFields
+	evaluateTargetOutputFields := make(map[string]*evaluatorentity.Content)
+	for key, contentDTO := range dto.EvaluateTargetOutputFields {
+		contentDO := commonconvertor.ConvertContentDTO2DO(contentDTO)
+		evaluateTargetOutputFields[key] = contentDO
+	}
+
 	return &evaluatorentity.EvaluatorInputData{
-		HistoryMessages: historyMessages,
-		InputFields:     inputFields,
+		HistoryMessages:            historyMessages,
+		InputFields:                inputFields,
+		EvaluateDatasetFields:      evaluateDatasetFields,
+		EvaluateTargetOutputFields: evaluateTargetOutputFields,
+		Ext:                        dto.Ext,
 	}
 }
 
@@ -56,8 +73,25 @@ func ConvertEvaluatorInputDataDO2DTO(do *evaluatorentity.EvaluatorInputData) *ev
 		inputFields[key] = contentDTO
 	}
 
+	// 转换 EvaluateDatasetFields
+	evaluateDatasetFields := make(map[string]*commondto.Content)
+	for key, contentDO := range do.EvaluateDatasetFields {
+		contentDTO := commonconvertor.ConvertContentDO2DTO(contentDO)
+		evaluateDatasetFields[key] = contentDTO
+	}
+
+	// 转换 EvaluateTargetOutputFields
+	evaluateTargetOutputFields := make(map[string]*commondto.Content)
+	for key, contentDO := range do.EvaluateTargetOutputFields {
+		contentDTO := commonconvertor.ConvertContentDO2DTO(contentDO)
+		evaluateTargetOutputFields[key] = contentDTO
+	}
+
 	return &evaluatordto.EvaluatorInputData{
-		HistoryMessages: historyMessages,
-		InputFields:     inputFields,
+		HistoryMessages:            historyMessages,
+		InputFields:                inputFields,
+		EvaluateDatasetFields:      evaluateDatasetFields,
+		EvaluateTargetOutputFields: evaluateTargetOutputFields,
+		Ext:                        do.Ext,
 	}
 }

@@ -1,0 +1,198 @@
+# Prometheus 告警规则
+# 用于监控 coze-loop Python FaaS 服务的关键指标
+
+groups:
+  - name: python-faas-alerts
+    rules:
+      # Python FaaS 服务不可用
+      - alert: PythonFaaSDown
+        expr: up{job="python-faas"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: python-faas
+        annotations:
+          summary: "Python FaaS service is down"
+          description: "Python FaaS service has been down for more than 1 minute"
+
+      # 高错误率
+      - alert: PythonFaaSHighErrorRate
+        expr: python_faas_error_rate > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: python-faas
+        annotations:
+          summary: "Python FaaS high error rate"
+          description: "Python FaaS error rate is {{ $value | humanizePercentage }} for more than 5 minutes"
+
+      # 高响应时间
+      - alert: PythonFaaSHighResponseTime
+        expr: python_faas_response_time_seconds_p95 > 5.0
+        for: 5m
+        labels:
+          severity: warning
+          service: python-faas
+        annotations:
+          summary: "Python FaaS high response time"
+          description: "Python FaaS P95 response time is {{ $value }}s for more than 5 minutes"
+
+      # 队列积压
+      - alert: PythonFaaSQueueBacklog
+        expr: python_faas_queue_size > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: python-faas
+        annotations:
+          summary: "Python FaaS queue backlog"
+          description: "Python FaaS queue size is {{ $value }} for more than 2 minutes"
+
+      # 实例利用率过高
+      - alert: PythonFaaSHighInstanceUtilization
+        expr: python_faas_instance_utilization > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: python-faas
+        annotations:
+          summary: "Python FaaS high instance utilization"
+          description: "Python FaaS instance utilization is {{ $value | humanizePercentage }} for more than 5 minutes"
+
+      # 内存使用过高
+      - alert: PythonFaaSHighMemoryUsage
+        expr: python_faas_memory_usage_bytes > 5000000000  # 5GB
+        for: 5m
+        labels:
+          severity: warning
+          service: python-faas
+        annotations:
+          summary: "Python FaaS high memory usage"
+          description: "Python FaaS memory usage is {{ $value | humanizeBytes }} for more than 5 minutes"
+
+      # 请求量异常低
+      - alert: PythonFaaSLowRequestRate
+        expr: rate(python_faas_requests_total[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: info
+          service: python-faas
+        annotations:
+          summary: "Python FaaS low request rate"
+          description: "Python FaaS request rate is {{ $value }} requests/second for more than 10 minutes"
+
+  - name: js-faas-alerts
+    rules:
+      # JavaScript FaaS 服务不可用
+      - alert: JSFaaSDown
+        expr: up{job="js-faas"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: js-faas
+        annotations:
+          summary: "JavaScript FaaS service is down"
+          description: "JavaScript FaaS service has been down for more than 1 minute"
+
+  - name: system-alerts
+    rules:
+      # 应用服务不可用
+      - alert: CozeLoopAppDown
+        expr: up{job="coze-loop-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: coze-loop-app
+        annotations:
+          summary: "Coze Loop application is down"
+          description: "Coze Loop application has been down for more than 1 minute"
+
+      # Redis 不可用
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute"
+
+      # MySQL 不可用
+      - alert: MySQLDown
+        expr: up{job="mysql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: mysql
+        annotations:
+          summary: "MySQL is down"
+          description: "MySQL has been down for more than 1 minute"
+
+      # ClickHouse 不可用
+      - alert: ClickHouseDown
+        expr: up{job="clickhouse"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: clickhouse
+        annotations:
+          summary: "ClickHouse is down"
+          description: "ClickHouse has been down for more than 1 minute"
+
+      # MinIO 不可用
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: minio
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO has been down for more than 1 minute"
+
+  - name: performance-alerts
+    rules:
+      # 系统负载过高
+      - alert: HighSystemLoad
+        expr: node_load1 > 4.0
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High system load"
+          description: "System load is {{ $value }} for more than 5 minutes"
+
+      # 内存使用率过高
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} for more than 5 minutes"
+
+      # 磁盘使用率过高
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value | humanizePercentage }} for more than 5 minutes"
+
+      # CPU 使用率过高
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% for more than 5 minutes"
