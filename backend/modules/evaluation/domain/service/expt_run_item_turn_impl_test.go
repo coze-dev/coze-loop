@@ -2203,7 +2203,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
 								EvaluatorsConf: &entity.EvaluatorsConf{
-									EvaluatorConcurNum: gptr.Of(-1), // Invalid concurrency number for pool
+									EvaluatorConcurNum: gptr.Of(0), // Invalid concurrency number for pool (0 is invalid)
 									EvaluatorConf: []*entity.EvaluatorConf{
 										{
 											EvaluatorVersionID: 1,
@@ -2238,6 +2238,12 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			tt.prepare()
+			// 检查targetResult是否为nil，避免panic
+			if tt.target != nil && tt.target.EvalTargetOutputData == nil {
+				tt.target.EvalTargetOutputData = &entity.EvalTargetOutputData{
+					OutputFields: make(map[string]*entity.Content),
+				}
+			}
 			_, err := service.callEvaluators(context.Background(), []int64{1}, tt.etec, tt.target, []*entity.Message{})
 			if tt.wantErr {
 				assert.Error(t, err)

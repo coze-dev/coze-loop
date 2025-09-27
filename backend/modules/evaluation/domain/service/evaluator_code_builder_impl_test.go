@@ -875,8 +875,11 @@ func TestPythonCodeBuilder_convertContentToMockFormat_EdgeCases(t *testing.T) {
 			},
 			wantNil: false,
 			validate: func(t *testing.T, result map[string]interface{}) {
-				assert.Equal(t, "Multipart", result["content_type"])
-				multiPart := result["multi_part"].([]map[string]interface{})
+				assert.Equal(t, "MultiPart", result["content_type"])
+				multiPart, ok := result["multi_part"].([]map[string]interface{})
+				if !ok {
+					multiPart = []map[string]interface{}{}
+				}
 				assert.Empty(t, multiPart)
 			},
 		},

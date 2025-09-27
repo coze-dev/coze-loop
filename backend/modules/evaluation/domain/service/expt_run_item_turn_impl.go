@@ -263,9 +263,14 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
 
-	turnFields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) {
-		return t.Name, t.Content
-	})
+	var turnFields map[string]*entity.Content
+	if turn != nil && turn.FieldDataList != nil {
+		turnFields = gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) {
+			return t.Name, t.Content
+		})
+	} else {
+		turnFields = make(map[string]*entity.Content)
+	}
 	targetFields := targetResult.EvalTargetOutputData.OutputFields
 
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
