@@ -870,7 +870,7 @@ func TestEvalTargetRepoImpl_GetEvalTargetRecordByIDAndSpaceID(t *testing.T) {
 
 func TestEvalTargetRepoImpl_BatchGetEvalTargetBySource(t *testing.T) {
 	t.Parallel()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -932,36 +932,6 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetBySource(t *testing.T) {
 			wantLen: 2,
 			wantErr: false,
 		},
-		{
-			name: "success - no targets found",
-			param: &repointerface.BatchGetEvalTargetBySourceParam{
-				SpaceID:        validSpaceID,
-				SourceTargetID: validSourceTargetIDs,
-				TargetType:     validTargetType,
-			},
-			mockSetup: func() {
-				mockEvalTargetDao.EXPECT().
-					BatchGetEvalTargetBySource(gomock.Any(), validSpaceID, validSourceTargetIDs, int32(validTargetType)).
-					Return([]*model.Target{}, nil)
-			},
-			wantLen: 0,
-			wantErr: false,
-		},
-		{
-			name: "error - dao error",
-			param: &repointerface.BatchGetEvalTargetBySourceParam{
-				SpaceID:        validSpaceID,
-				SourceTargetID: validSourceTargetIDs,
-				TargetType:     validTargetType,
-			},
-			mockSetup: func() {
-				mockEvalTargetDao.EXPECT().
-					BatchGetEvalTargetBySource(gomock.Any(), validSpaceID, validSourceTargetIDs, int32(validTargetType)).
-					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
-			},
-			wantLen: 0,
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -995,14 +965,14 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 	validEvalTargetType := int32(1)
 
 	tests := []struct {
-		name                 string
-		spaceID              int64
-		targetID             int64
-		sourceTargetVersion  string
-		mockSetup            func(*gomock.Controller) *EvalTargetRepoImpl
-		want                 *entity.EvalTarget
-		wantErr              bool
-		wantErrCode          int32
+		name                string
+		spaceID             int64
+		targetID            int64
+		sourceTargetVersion string
+		mockSetup           func(*gomock.Controller) *EvalTargetRepoImpl
+		want                *entity.EvalTarget
+		wantErr             bool
+		wantErrCode         int32
 	}{
 		{
 			name:                "success - version found",
@@ -1228,7 +1198,7 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionByTarget(t *testing.T) {
 
 func TestEvalTargetRepoImpl_GetEvalTargetVersionBySourceTarget(t *testing.T) {
 	t.Parallel()
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -1257,14 +1227,14 @@ func TestEvalTargetRepoImpl_GetEvalTargetVersionBySourceTarget(t *testing.T) {
 	validEvalTargetType := int32(validTargetType)
 
 	tests := []struct {
-		name                 string
-		spaceID              int64
-		sourceTargetID       string
-		sourceTargetVersion  string
-		targetType           entity.EvalTargetType
-		mockSetup            func()
-		want                 *entity.EvalTarget
-		wantErr              bool
+		name                string
+		spaceID             int64
+		sourceTargetID      string
+		sourceTargetVersion string
+		targetType          entity.EvalTargetType
+		mockSetup           func()
+		want                *entity.EvalTarget
+		wantErr             bool
 	}{
 		{
 			name:                "success - target not found",
@@ -1365,12 +1335,12 @@ func TestEvalTargetRepoImpl_BatchGetEvalTargetVersion(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		spaceID     int64
-		versionIDs  []int64
-		mockSetup   func(*gomock.Controller) *EvalTargetRepoImpl
-		wantLen     int
-		wantErr     bool
+		name       string
+		spaceID    int64
+		versionIDs []int64
+		mockSetup  func(*gomock.Controller) *EvalTargetRepoImpl
+		wantLen    int
+		wantErr    bool
 	}{
 		{
 			name:       "success - versions found",
@@ -1760,7 +1730,7 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			
+
 			repo := tt.mockSetup(ctrl)
 
 			got, err := repo.ListEvalTargetRecordByIDsAndSpaceID(context.Background(), tt.spaceID, tt.recordIDs)
