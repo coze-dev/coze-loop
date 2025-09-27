@@ -20,7 +20,7 @@ import (
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
-func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
+func TestEvaluatorTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -81,6 +81,71 @@ func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 			targetType:          99, // 不支持的类型
 			wantErr:             true,
 		},
+		{
+			name: "BuildBySource返回错误",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(nil, errors.New("build error"))
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantErr:             true,
+		},
+		{
+			name: "BuildBySource返回nil",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(nil, nil)
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantErr:             true,
+		},
+		{
+			name: "CreateEvalTarget失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				evalTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(evalTarget, nil)
+				mockRepo.EXPECT().CreateEvalTarget(gomock.Any(), evalTarget).Return(int64(0), int64(0), errors.New("repo error"))
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantErr:             true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -107,6 +172,265 @@ func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.wantID, id)
 				assert.Equal(t, tt.wantVersionID, versionID)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupMocks     func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService)
+		spaceID        int64
+		versionID      int64
+		needSourceInfo bool
+		want           *entity.EvalTarget
+		wantErr        bool
+	}{
+		{
+			name: "成功获取版本信息_不需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				return mockRepo, mockOperator
+			},
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "成功获取版本信息_需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(nil)
+
+				return mockRepo, mockOperator
+			},
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: true,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "获取版本失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(999)).Return(nil, errors.New("version not found"))
+				return mockRepo, mockOperator
+			},
+			spaceID:        1,
+			versionID:      999,
+			needSourceInfo: false,
+			wantErr:        true,
+		},
+		{
+			name: "打包源信息失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(errors.New("pack error"))
+
+				return mockRepo, mockOperator
+			},
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: true,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, mockOperator := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			typedOperators := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+				entity.EvalTargetTypeCozeBot: mockOperator,
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.GetEvalTargetVersion(context.Background(), tt.spaceID, tt.versionID, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_GetEvalTargetVersionBySourceTarget(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                string
+		setupMocks          func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService)
+		spaceID             int64
+		sourceTargetID      string
+		sourceTargetVersion string
+		targetType          entity.EvalTargetType
+		needSourceInfo      bool
+		want                *entity.EvalTarget
+		wantErr             bool
+	}{
+		{
+			name: "成功通过源目标获取版本_不需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "target_123", "v1.0", entity.EvalTargetTypeCozeBot).Return(expectedTarget, nil)
+				return mockRepo, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "成功通过源目标获取版本_需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "target_123", "v1.0", entity.EvalTargetTypeCozeBot).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(nil)
+
+				return mockRepo, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      true,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "通过源目标获取失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "invalid_target", "v1.0", entity.EvalTargetTypeCozeBot).Return(nil, errors.New("target not found"))
+				return mockRepo, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "invalid_target",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      false,
+			wantErr:             true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, mockOperator := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			typedOperators := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+				entity.EvalTargetTypeCozeBot: mockOperator,
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.GetEvalTargetVersionBySourceTarget(context.Background(), tt.spaceID, tt.sourceTargetID, tt.sourceTargetVersion, tt.targetType, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
 			}
 		})
 	}
@@ -263,7 +587,7 @@ func TestEvalTargetServiceImpl_GenerateMockOutputData(t *testing.T) {
 	}
 }
 
-func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
+func TestEvalTargetServiceImpl_EdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -419,7 +743,7 @@ func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
 	}
 }
 
-func TestEvalTargetServiceImpl_GetEvalTargetVersionBySourceTarget(t *testing.T) {
+func TestEvalTargetServiceImpl_MoreEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

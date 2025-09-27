@@ -2054,10 +2054,172 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "edge case - large number of concurrent inputs",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID:   validWorkspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_Code,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CodeEvaluator: &evaluatordto.CodeEvaluator{
+						CodeContent:  gptr.Of("def evaluate(input): return 1.0"),
+						LanguageType: gptr.Of(evaluatordto.LanguageTypePython),
+					},
+				},
+				InputData: func() []*evaluatordto.EvaluatorInputData {
+					// 创建100个输入数据来测试并发处理
+					inputs := make([]*evaluatordto.EvaluatorInputData, 100)
+					for i := 0; i < 100; i++ {
+						inputs[i] = &evaluatordto.EvaluatorInputData{
+							InputFields: map[string]*common.Content{
+								"input": {
+									ContentType: gptr.Of(common.ContentTypeText),
+									Text:        gptr.Of(fmt.Sprintf("test input %d", i)),
+								},
+							},
+						}
+					}
+					return inputs
+				}(),
+			},
+			mockSetup: func(mockAuth *rpcmocks.MockIAuthProvider, mockBenefitService *benefitmocks.MockIBenefitService, mockEvaluatorService *mocks.MockEvaluatorService, mockFileProvider *rpcmocks.MockIFileProvider) {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckEvaluatorBenefitResult{}, nil)
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
+
+				// Mock 100次调用
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score:     gptr.Of(0.8),
+							Reasoning: "concurrent result",
+						},
+					}, nil).Times(100)
+			},
+			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
+				EvaluatorOutputData: make([]*evaluatordto.EvaluatorOutputData, 100),
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "edge case - evaluator service returns nil output with error",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID:   validWorkspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_Code,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CodeEvaluator: &evaluatordto.CodeEvaluator{
+						CodeContent:  gptr.Of("invalid code"),
+						LanguageType: gptr.Of(evaluatordto.LanguageTypePython),
+					},
+				},
+				InputData: []*evaluatordto.EvaluatorInputData{
+					{
+						InputFields: map[string]*common.Content{
+							"input": {
+								ContentType: gptr.Of(common.ContentTypeText),
+								Text:        gptr.Of("test input"),
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func(mockAuth *rpcmocks.MockIAuthProvider, mockBenefitService *benefitmocks.MockIBenefitService, mockEvaluatorService *mocks.MockEvaluatorService, mockFileProvider *rpcmocks.MockIFileProvider) {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckEvaluatorBenefitResult{}, nil)
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
+
+				// 返回 nil output 和 error
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("code execution failed"))
+			},
+			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
+				EvaluatorOutputData: []*evaluatordto.EvaluatorOutputData{
+					{
+						EvaluatorRunError: &evaluatordto.EvaluatorRunError{
+							Code:    gptr.Of(int32(500)),
+							Message: gptr.Of("code execution failed"),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "edge case - mixed success and failure results",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID:   validWorkspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_Code,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CodeEvaluator: &evaluatordto.CodeEvaluator{
+						CodeContent:  gptr.Of("def evaluate(input): return 1.0"),
+						LanguageType: gptr.Of(evaluatordto.LanguageTypePython),
+					},
+				},
+				InputData: []*evaluatordto.EvaluatorInputData{
+					{
+						InputFields: map[string]*common.Content{
+							"input": {
+								ContentType: gptr.Of(common.ContentTypeText),
+								Text:        gptr.Of("success input"),
+							},
+						},
+					},
+					{
+						InputFields: map[string]*common.Content{
+							"input": {
+								ContentType: gptr.Of(common.ContentTypeText),
+								Text:        gptr.Of("error input"),
+							},
+						},
+					},
+					{
+						InputFields: map[string]*common.Content{
+							"input": {
+								ContentType: gptr.Of(common.ContentTypeText),
+								Text:        gptr.Of("another success input"),
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func(mockAuth *rpcmocks.MockIAuthProvider, mockBenefitService *benefitmocks.MockIBenefitService, mockEvaluatorService *mocks.MockEvaluatorService, mockFileProvider *rpcmocks.MockIFileProvider) {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckEvaluatorBenefitResult{}, nil)
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
+
+				// 第一个成功
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score:     gptr.Of(0.9),
+							Reasoning: "success",
+						},
+					}, nil).Times(1)
+
+				// 第二个失败 (nil output + error)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("processing error")).Times(1)
+
+				// 第三个成功但有 evaluator run error
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score:     gptr.Of(0.7),
+							Reasoning: "partial success",
+						},
+					}, errors.New("warning error")).Times(1)
+			},
+			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
+				EvaluatorOutputData: make([]*evaluatordto.EvaluatorOutputData, 3),
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			
 			// 为每个测试用例创建独立的 mock
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -2090,8 +2252,15 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				assert.NotNil(t, resp)
 				assert.Equal(t, len(tt.wantResp.EvaluatorOutputData), len(resp.EvaluatorOutputData))
 
-				// 简单验证结果数量即可，因为并发执行顺序不确定
+				// 验证结果数量
 				assert.Equal(t, len(tt.wantResp.EvaluatorOutputData), len(resp.EvaluatorOutputData))
+				
+				// 对于特定测试用例，验证错误处理逻辑
+				if tt.name == "edge case - evaluator service returns nil output with error" {
+					assert.NotNil(t, resp.EvaluatorOutputData[0].EvaluatorRunError)
+					assert.Equal(t, int32(500), *resp.EvaluatorOutputData[0].EvaluatorRunError.Code)
+					assert.Equal(t, "code execution failed", *resp.EvaluatorOutputData[0].EvaluatorRunError.Message)
+				}
 			}
 		})
 	}

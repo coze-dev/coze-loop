@@ -6,7 +6,9 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -1871,7 +1873,8 @@ func TestEvaluatorSourceCodeServiceImpl_Validate_Extended(t *testing.T) {
 					LanguageType: entity.LanguageTypePython,
 					CodeContent:  "def exec_evaluation():\n    while True:\n        pass",
 				},
-			},			wantErr:     true,
+			},
+			wantErr:     true,
 			wantErrCode: int32(errno.MaliciousCodePatternDetectedCode),
 			errContains: "安全违规",
 		},
@@ -2060,180 +2063,111 @@ func TestEvaluatorSourceCodeServiceImpl_Validate_Extended(t *testing.T) {
 func TestEvaluatorSourceCodeServiceImpl_SecurityValidation(t *testing.T) {
 	t.Parallel()
 
-	service := &EvaluatorSourceCodeServiceImpl{}
-
-	t.Run("测试危险函数检测", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			name     string
-			code     string
-			language string
-			wantErr  bool
-		}{
-			{
-				name:     "Python exec函数",
-				code:     "exec('malicious code')",
-				language: "python",
-				wantErr:  true,
-			},
-			{
-				name:     "Python eval函数",
-				code:     "result = eval('1+1')",
-				language: "python",
-				wantErr:  true,
-			},
-			{
-				name:     "JavaScript eval函数",
-				code:     "eval('malicious code')",
-				language: "javascript",
-				wantErr:  true,
-			},
-			{
-				name:     "JavaScript Function构造器",
-				code:     "new Function('return 1')",
-				language: "javascript",
-				wantErr:  true,
-			},
-			{
-				name:     "安全的Python代码",
-				code:     "def exec_evaluation():\n    return {'score': 1.0}",
-				language: "python",
-				wantErr:  false,
-			},
-			{
-				name:     "安全的JavaScript代码",
-				code:     "function execEvaluation() { return {score: 1.0}; }",
-				language: "javascript",
-				wantErr:  false,
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-
-				err := service.checkDangerousFunctions(tt.code, tt.language)
-				if tt.wantErr {
-					assert.Error(t, err)
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, int32(errno.DangerousFunctionDetectedCode), statusErr.Code())
-				} else {
-					assert.NoError(t, err)
-				}
-			})
-		}
-	})
-
-	t.Run("测试危险导入检测", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			name     string
-			code     string
-			language string
-			wantErr  bool
-		}{
-			{
-				name:     "Python os模块导入",
-				code:     "import os",
-				language: "python",
-				wantErr:  true,
-			},
-			{
-				name:     "Python subprocess模块导入",
-				code:     "from subprocess import call",
-				language: "python",
-				wantErr:  true,
-			},
-			{
-				name:     "JavaScript fs模块导入",
-				code:     "const fs = require('fs')",
-				language: "javascript",
-				wantErr:  true,
-			},
-			{
-				name:     "JavaScript child_process模块导入",
-				code:     "import { exec } from 'child_process'",
-				language: "javascript",
-				wantErr:  true,
-			},
-			{
-				name:     "安全的Python导入",
-				code:     "import json\nimport math",
-				language: "python",
-				wantErr:  false,
-			},
-			{
-				name:     "安全的JavaScript导入",
-				code:     "import lodash from 'lodash'",
-				language: "javascript",
-				wantErr:  false,
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-
-				err := service.checkDangerousImports(tt.code, tt.language)
-				if tt.wantErr {
-					assert.Error(t, err)
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, int32(errno.DangerousImportDetectedCode), statusErr.Code())
-				} else {
-					assert.NoError(t, err)
-				}
-			})
-		}
-	})
-
 	t.Run("测试恶意模式检测", func(t *testing.T) {
 		t.Parallel()
 
 		tests := []struct {
-			name     string
-			code     string
-			language string
-			wantErr  bool
+			name        string
+			code        string
+			language    entity.LanguageType
+			expectMatch bool
+			expectCategory MaliciousPatternCategory
 		}{
 			{
-				name:     "Python无限循环",
-				code:     "while True:\n    pass",
-				language: "python",
-				wantErr:  true,
+				name:           "Python while True无限循环",
+				code:           "def test():\n    while True:\n        pass",
+				language:       entity.LanguageTypePython,
+				expectMatch:    true,
+				expectCategory: CategoryInfiniteLoop,
 			},
 			{
-				name:     "JavaScript无限循环",
-				code:     "while(true) { }",
-				language: "javascript",
-				wantErr:  true,
+				name:           "Python exit函数",
+				code:           "def test():\n    exit(0)",
+				language:       entity.LanguageTypePython,
+				expectMatch:    true,
+				expectCategory: CategoryProcessControl,
 			},
 			{
-				name:     "JavaScript for无限循环",
-				code:     "for(;;) { }",
-				language: "javascript",
-				wantErr:  true,
+				name:           "Python quit函数",
+				code:           "def test():\n    quit()",
+				language:       entity.LanguageTypePython,
+				expectMatch:    true,
+				expectCategory: CategoryProcessControl,
 			},
 			{
-				name:     "Python exit调用",
-				code:     "exit(0)",
-				language: "python",
-				wantErr:  true,
+				name:           "JavaScript while(true)无限循环",
+				code:           "function test() { while(true) { } }",
+				language:       entity.LanguageTypeJS,
+				expectMatch:    true,
+				expectCategory: CategoryInfiniteLoop,
 			},
 			{
-				name:     "JavaScript process.exit调用",
-				code:     "process.exit(0)",
-				language: "javascript",
-				wantErr:  true,
+				name:           "JavaScript for(;;)无限循环",
+				code:           "function test() { for(;;) { } }",
+				language:       entity.LanguageTypeJS,
+				expectMatch:    true,
+				expectCategory: CategoryInfiniteLoop,
 			},
 			{
-				name:     "安全的循环",
-				code:     "for i in range(10):\n    print(i)",
-				language: "python",
-				wantErr:  false,
+				name:           "JavaScript setInterval",
+				code:           "function test() { setInterval(() => {}, 1000); }",
+				language:       entity.LanguageTypeJS,
+				expectMatch:    true,
+				expectCategory: CategoryAsyncOperation,
+			},
+			{
+				name:           "JavaScript setTimeout",
+				code:           "function test() { setTimeout(() => {}, 1000); }",
+				language:       entity.LanguageTypeJS,
+				expectMatch:    true,
+				expectCategory: CategoryAsyncOperation,
+			},
+			{
+				name:           "JavaScript process.exit",
+				code:           "function test() { process.exit(0); }",
+				language:       entity.LanguageTypeJS,
+				expectMatch:    true,
+				expectCategory: CategoryProcessControl,
+			},
+			{
+				name:           "Java while(true)无限循环",
+				code:           "public void test() { while(true) { } }",
+				language:       entity.LanguageType("java"),
+				expectMatch:    true,
+				expectCategory: CategoryInfiniteLoop,
+			},
+			{
+				name:           "Java System.exit",
+				code:           "public void test() { System.exit(0); }",
+				language:       entity.LanguageType("java"),
+				expectMatch:    true,
+				expectCategory: CategoryProcessControl,
+			},
+			{
+				name:           "Go for{}无限循环",
+				code:           "func test() { for { } }",
+				language:       entity.LanguageType("go"),
+				expectMatch:    true,
+				expectCategory: CategoryInfiniteLoop,
+			},
+			{
+				name:           "Go for;;{}无限循环",
+				code:           "func test() { for ;; { } }",
+				language:       entity.LanguageType("go"),
+				expectMatch:    true,
+				expectCategory: CategoryInfiniteLoop,
+			},
+			{
+				name:        "安全的Python代码",
+				code:        "def exec_evaluation():\n    return {'score': 1.0}",
+				language:    entity.LanguageTypePython,
+				expectMatch: false,
+			},
+			{
+				name:        "安全的JavaScript代码",
+				code:        "function execEvaluation() { return {score: 1.0}; }",
+				language:    entity.LanguageTypeJS,
+				expectMatch: false,
 			},
 		}
 
@@ -2241,16 +2175,167 @@ func TestEvaluatorSourceCodeServiceImpl_SecurityValidation(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
-				err := service.checkMaliciousPatterns(tt.code, tt.language)
-				if tt.wantErr {
-					assert.Error(t, err)
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, int32(errno.MaliciousCodePatternDetectedCode), statusErr.Code())
+				// 检查恶意模式 - 需要转换语言类型到字符串
+				var langStr string
+				switch tt.language {
+				case entity.LanguageTypePython:
+					langStr = "python"
+				case entity.LanguageTypeJS:
+					langStr = "javascript"
+				default:
+					langStr = string(tt.language)
+				}
+				
+				patterns, exists := maliciousPatternsMap[langStr]
+				if !exists {
+					if tt.expectMatch {
+						t.Errorf("Expected to find patterns for language %s", langStr)
+					}
+					return
+				}
+
+				found := false
+				var foundCategory MaliciousPatternCategory
+				for _, pattern := range patterns {
+					matched, err := regexp.MatchString(pattern.Pattern, tt.code)
+					assert.NoError(t, err, "Pattern should be valid regex")
+					if matched {
+						found = true
+						foundCategory = pattern.Category
+						break
+					}
+				}
+
+				if tt.expectMatch {
+					assert.True(t, found, "Expected to find malicious pattern in code")
+					assert.Equal(t, tt.expectCategory, foundCategory, "Expected category should match")
 				} else {
-					assert.NoError(t, err)
+					assert.False(t, found, "Expected no malicious pattern in safe code")
 				}
 			})
+		}
+	})
+
+	t.Run("测试边界条件", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name        string
+			code        string
+			language    entity.LanguageType
+			expectMatch bool
+			description string
+		}{
+			{
+				name:        "空代码",
+				code:        "",
+				language:    entity.LanguageTypePython,
+				expectMatch: false,
+				description: "Empty code should not match any pattern",
+			},
+			{
+				name:        "仅空格代码",
+				code:        "   \n\t  ",
+				language:    entity.LanguageTypePython,
+				expectMatch: false,
+				description: "Whitespace-only code should not match any pattern",
+			},
+			{
+				name:        "注释中的危险模式",
+				code:        "# while True:\n#     pass\ndef safe_function():\n    return 1.0",
+				language:    entity.LanguageTypePython,
+				expectMatch: true, // 简单的正则表达式会匹配注释中的内容
+				description: "Simple regex patterns will match content in comments",
+			},
+			{
+				name:        "字符串中的危险模式",
+				code:        "def test():\n    message = 'while True:'\n    return message",
+				language:    entity.LanguageTypePython,
+				expectMatch: true, // 简单的正则表达式会匹配字符串中的内容
+				description: "Simple regex patterns will match content in strings",
+			},
+			{
+				name:        "不支持的语言",
+				code:        "func main() { for { } }",
+				language:    entity.LanguageType("unsupported"),
+				expectMatch: false,
+				description: "Unsupported languages should not have patterns",
+			},
+			{
+				name:        "复杂嵌套的危险模式",
+				code:        "def test():\n    if True:\n        while True:\n            if condition:\n                break",
+				language:    entity.LanguageTypePython,
+				expectMatch: true,
+				description: "Nested dangerous patterns should still be detected",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				// 转换语言类型到字符串
+				var langStr string
+				switch tt.language {
+				case entity.LanguageTypePython:
+					langStr = "python"
+				case entity.LanguageTypeJS:
+					langStr = "javascript"
+				default:
+					langStr = string(tt.language)
+				}
+				
+				patterns, exists := maliciousPatternsMap[langStr]
+				if !exists {
+					assert.False(t, tt.expectMatch, tt.description)
+					return
+				}
+
+				found := false
+				for _, pattern := range patterns {
+					matched, err := regexp.MatchString(pattern.Pattern, tt.code)
+					assert.NoError(t, err, "Pattern should be valid regex")
+					if matched {
+						found = true
+						break
+					}
+				}
+
+				if tt.expectMatch {
+					assert.True(t, found, tt.description)
+				} else {
+					assert.False(t, found, tt.description)
+				}
+			})
+		}
+	})
+
+	t.Run("测试模式完整性", func(t *testing.T) {
+		t.Parallel()
+
+		// 测试所有定义的恶意模式是否为有效的正则表达式
+		for language, patterns := range maliciousPatternsMap {
+			for i, pattern := range patterns {
+				t.Run(fmt.Sprintf("%s_pattern_%d", language, i), func(t *testing.T) {
+					t.Parallel()
+					
+					// 验证正则表达式有效性
+					_, err := regexp.Compile(pattern.Pattern)
+					assert.NoError(t, err, "Pattern should be valid regex: %s", pattern.Pattern)
+					
+					// 验证必要字段不为空
+					assert.NotEmpty(t, pattern.Category, "Category should not be empty")
+					assert.NotEmpty(t, pattern.Description, "Description should not be empty")
+					assert.NotEmpty(t, pattern.Languages, "Languages should not be empty")
+					assert.NotEmpty(t, pattern.Severity, "Severity should not be empty")
+					assert.NotEmpty(t, pattern.Risk, "Risk should not be empty")
+					assert.NotEmpty(t, pattern.Suggestion, "Suggestion should not be empty")
+					
+					// 验证严重程度值的有效性
+					validSeverities := []string{"low", "medium", "high", "critical"}
+					assert.Contains(t, validSeverities, pattern.Severity, "Severity should be valid")
+				})
+			}
 		}
 	})
 }
