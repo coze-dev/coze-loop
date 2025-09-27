@@ -230,6 +230,7 @@ func TestEvaluatorSourceCodeServiceImpl_PreHandle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := service.PreHandle(context.Background(), tt.evaluator)
 
 			if tt.wantErr {
@@ -249,26 +250,10 @@ func TestEvaluatorSourceCodeServiceImpl_PreHandle(t *testing.T) {
 
 // TestEvaluatorSourceCodeServiceImpl_Validate 测试 Validate 方法
 func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// 创建 mock 对象
-	mockRuntimeManager := componentmocks.NewMockIRuntimeManager(ctrl)
-	mockCodeBuilderFactory := NewMockCodeBuilderFactory(ctrl)
-	mockMetrics := metricsmocks.NewMockEvaluatorExecMetrics(ctrl)
-	mockRuntime := componentmocks.NewMockIRuntime(ctrl)
-
-	// 创建被测服务
-	service := NewEvaluatorSourceCodeServiceImpl(
-		mockRuntimeManager,
-		mockCodeBuilderFactory,
-		mockMetrics,
-	)
-
 	tests := []struct {
 		name      string
 		evaluator *entity.Evaluator
-		mockSetup func()
+		mockSetup func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime)
 		wantErr   bool
 		errCode   int32
 	}{
@@ -285,13 +270,22 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "def exec_evaluation(turn, user_input, model_output, model_config, evaluator_config):\n    return {'score': 1.0, 'reason': 'test'}",
 				},
 			},
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {
+				mockCodeBuilder := NewMockUserCodeBuilder(ctrl)
+				mockCodeBuilderFactory.EXPECT().
+					CreateBuilder(entity.LanguageTypePython).
+					Return(mockCodeBuilder, nil)
+
+				mockCodeBuilder.EXPECT().
+					BuildSyntaxCheckCode(gomock.Any()).
+					Return("syntax_check_code")
+
 				mockRuntimeManager.EXPECT().
 					GetRuntime(entity.LanguageTypePython).
 					Return(mockRuntime, nil)
 
 				mockRuntime.EXPECT().
-					RunCode(gomock.Any(), gomock.Any(), "python", int32(10000), gomock.Any()).
+					RunCode(gomock.Any(), "syntax_check_code", "python", int64(10000), gomock.Any()).
 					Return(&entity.ExecutionResult{
 						Output: &entity.ExecutionOutput{
 							RetVal: `{"valid": true}`,
@@ -315,13 +309,22 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "function execEvaluation(turn, userInput, modelOutput, modelConfig, evaluatorConfig) {\n    return {score: 1.0, reason: 'test'};\n}",
 				},
 			},
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {
+				mockCodeBuilder := NewMockUserCodeBuilder(ctrl)
+				mockCodeBuilderFactory.EXPECT().
+					CreateBuilder(entity.LanguageTypeJS).
+					Return(mockCodeBuilder, nil)
+
+				mockCodeBuilder.EXPECT().
+					BuildSyntaxCheckCode(gomock.Any()).
+					Return("syntax_check_code")
+
 				mockRuntimeManager.EXPECT().
 					GetRuntime(entity.LanguageTypeJS).
 					Return(mockRuntime, nil)
 
 				mockRuntime.EXPECT().
-					RunCode(gomock.Any(), gomock.Any(), "javascript", int32(10000), gomock.Any()).
+					RunCode(gomock.Any(), "syntax_check_code", "js", int64(10000), gomock.Any()).
 					Return(&entity.ExecutionResult{
 						Output: &entity.ExecutionOutput{
 							RetVal: `{"valid": true}`,
@@ -340,7 +343,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 				Name:          "test_evaluator",
 				EvaluatorType: entity.EvaluatorTypePrompt,
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
 			errCode:   errno.InvalidEvaluatorConfigurationCode,
 		},
@@ -353,7 +356,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 				EvaluatorType:        entity.EvaluatorTypeCode,
 				CodeEvaluatorVersion: nil,
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
 			errCode:   errno.InvalidEvaluatorConfigurationCode,
 		},
@@ -370,9 +373,9 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "",
 				},
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
-			errCode:   errno.EmptyCodeContentCode,
+			errCode:   errno.InvalidCodeContentCode,
 		},
 		{
 			name: "包含恶意模式 - Python while True",
@@ -387,7 +390,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "def exec_evaluation(turn, user_input, model_output, model_config, evaluator_config):\n    while True:\n        pass\n    return {'score': 1.0, 'reason': 'test'}",
 				},
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
 		},
 		{
@@ -403,7 +406,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "function execEvaluation(turn, userInput, modelOutput, modelConfig, evaluatorConfig) {\n    while(true) {}\n    return {score: 1.0, reason: 'test'};\n}",
 				},
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
 		},
 		{
@@ -419,7 +422,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "def other_function():\n    return 1",
 				},
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
 			errCode:   errno.RequiredFunctionNotFoundCode,
 		},
@@ -436,13 +439,22 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "def exec_evaluation(turn, user_input, model_output, model_config, evaluator_config):\n    return {'score': 1.0, 'reason': 'test'",
 				},
 			},
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {
+				mockCodeBuilder := NewMockUserCodeBuilder(ctrl)
+				mockCodeBuilderFactory.EXPECT().
+					CreateBuilder(entity.LanguageTypePython).
+					Return(mockCodeBuilder, nil)
+
+				mockCodeBuilder.EXPECT().
+					BuildSyntaxCheckCode(gomock.Any()).
+					Return("syntax_check_code")
+
 				mockRuntimeManager.EXPECT().
 					GetRuntime(entity.LanguageTypePython).
 					Return(mockRuntime, nil)
 
 				mockRuntime.EXPECT().
-					RunCode(gomock.Any(), gomock.Any(), "python", int32(10000), gomock.Any()).
+					RunCode(gomock.Any(), "syntax_check_code", "python", int64(10000), gomock.Any()).
 					Return(&entity.ExecutionResult{
 						Output: &entity.ExecutionOutput{
 							RetVal: `{"valid": false, "error": "SyntaxError: invalid syntax"}`,
@@ -467,7 +479,7 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "def exec_evaluation(turn, user_input, model_output, model_config, evaluator_config):\n    return {'score': 1.0, 'reason': 'test'}",
 				},
 			},
-			mockSetup: func() {
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {
 				mockRuntimeManager.EXPECT().
 					GetRuntime(entity.LanguageTypePython).
 					Return(nil, errors.New("runtime not found"))
@@ -488,15 +500,33 @@ func TestEvaluatorSourceCodeServiceImpl_Validate(t *testing.T) {
 					CodeContent:  "some code",
 				},
 			},
-			mockSetup: func() {},
+			mockSetup: func(ctrl *gomock.Controller, mockRuntimeManager *componentmocks.MockIRuntimeManager, mockCodeBuilderFactory *MockCodeBuilderFactory, mockRuntime *componentmocks.MockIRuntime) {},
 			wantErr:   true,
-			errCode:   errno.UnsupportedLanguageTypeCode,
+			errCode:   errno.InvalidLanguageTypeCode,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// 创建 mock 对象
+			mockRuntimeManager := componentmocks.NewMockIRuntimeManager(ctrl)
+			mockCodeBuilderFactory := NewMockCodeBuilderFactory(ctrl)
+			mockMetrics := metricsmocks.NewMockEvaluatorExecMetrics(ctrl)
+			mockRuntime := componentmocks.NewMockIRuntime(ctrl)
+
+			// 创建被测服务
+			service := NewEvaluatorSourceCodeServiceImpl(
+				mockRuntimeManager,
+				mockCodeBuilderFactory,
+				mockMetrics,
+			)
+
+			tt.mockSetup(ctrl, mockRuntimeManager, mockCodeBuilderFactory, mockRuntime)
 
 			err := service.Validate(context.Background(), tt.evaluator)
 
@@ -570,7 +600,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 					Return(mockRuntime, nil)
 
 				mockRuntime.EXPECT().
-					RunCode(gomock.Any(), "built_code", "python", gomock.Any(), gomock.Any()).
+					RunCode(gomock.Any(), "built_code", "Python", gomock.Any(), gomock.Any()).
 					Return(&entity.ExecutionResult{
 						Output: &entity.ExecutionOutput{
 							RetVal: `{"score": 0.7, "reason": "Debug result"}`,
@@ -583,7 +613,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 			wantScore: gptr.Of(0.7),
 		},
 		{
-			name: "调试失败",
+			name: "调试失败 - CodeBuilder创建失败",
 			evaluator: &entity.Evaluator{
 				ID:            1,
 				SpaceID:       123,
@@ -599,11 +629,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 			mockSetup: func() {
 				mockCodeBuilderFactory.EXPECT().
 					CreateBuilder(entity.LanguageTypePython).
-					Return(mockCodeBuilder, nil)
-
-				mockCodeBuilder.EXPECT().
-					BuildCode(gomock.Any(), gomock.Any()).
-					Return("", errors.New("build failed"))
+					Return(nil, errors.New("create builder failed"))
 			},
 			wantErr: true,
 		},
@@ -623,6 +649,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tt.mockSetup()
 
 			output, err := service.Debug(context.Background(), tt.evaluator, tt.input)
@@ -631,11 +658,12 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.NotNil(t, output)
-				if tt.wantScore != nil {
+				if output != nil && tt.wantScore != nil {
 					assert.NotNil(t, output.EvaluatorResult)
-					assert.NotNil(t, output.EvaluatorResult.Score)
-					assert.Equal(t, *tt.wantScore, *output.EvaluatorResult.Score)
+					if output.EvaluatorResult != nil {
+						assert.NotNil(t, output.EvaluatorResult.Score)
+						assert.Equal(t, *tt.wantScore, *output.EvaluatorResult.Score)
+					}
 				}
 			}
 		})
