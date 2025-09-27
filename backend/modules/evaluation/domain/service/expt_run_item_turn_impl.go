@@ -162,6 +162,10 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return t.Name, t.Content
 	})
 
+	if targetConf.IngressConf == nil || targetConf.IngressConf.EvalSetAdapter == nil {
+		return nil, errorx.New("target config ingress conf or eval set adapter is nil")
+	}
+	
 	fieldConfs := targetConf.IngressConf.EvalSetAdapter.FieldConfs
 	fields := make(map[string]*entity.Content, len(fieldConfs))
 	for _, fc := range fieldConfs {
