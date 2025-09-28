@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
@@ -35,6 +36,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -50,34 +52,37 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	auditClient audit.IAuditService,
 	benefitService benefit.IBenefitService,
 	fileProvider rpc.IFileProvider,
+	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
-		idgen:                  idgen,
-		auth:                   auth,
-		auditClient:            auditClient,
-		configer:               configer,
-		evaluatorService:       evaluatorService,
-		evaluatorRecordService: evaluatorRecordService,
-		metrics:                metrics,
-		userInfoService:        userInfoService,
-		benefitService:         benefitService,
-		fileProvider:           fileProvider,
+		idgen:                   idgen,
+		auth:                    auth,
+		auditClient:             auditClient,
+		configer:                configer,
+		evaluatorService:        evaluatorService,
+		evaluatorRecordService:  evaluatorRecordService,
+		metrics:                 metrics,
+		userInfoService:         userInfoService,
+		benefitService:          benefitService,
+		fileProvider:            fileProvider,
+		evaluatorSourceServices: evaluatorSourceServices,
 	}
 	return handler
 }
 
 // EvaluatorHandlerImpl 实现 EvaluatorService 接口
 type EvaluatorHandlerImpl struct {
-	idgen                  idgen.IIDGenerator
-	auth                   rpc.IAuthProvider
-	auditClient            audit.IAuditService
-	configer               conf.IConfiger
-	evaluatorService       service.EvaluatorService
-	evaluatorRecordService service.EvaluatorRecordService
-	metrics                metrics.EvaluatorExecMetrics
-	userInfoService        userinfo.UserInfoService
-	benefitService         benefit.IBenefitService
-	fileProvider           rpc.IFileProvider
+	idgen                   idgen.IIDGenerator
+	auth                    rpc.IAuthProvider
+	auditClient             audit.IAuditService
+	configer                conf.IConfiger
+	evaluatorService        service.EvaluatorService
+	evaluatorRecordService  service.EvaluatorRecordService
+	metrics                 metrics.EvaluatorExecMetrics
+	userInfoService         userinfo.UserInfoService
+	benefitService          benefit.IBenefitService
+	fileProvider            rpc.IFileProvider
+	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -605,37 +610,158 @@ func (e *EvaluatorHandlerImpl) validateSubmitEvaluatorVersionRequest(ctx context
 
 // ListBuiltinTemplate 获取内置评估器模板列表
 func (e *EvaluatorHandlerImpl) ListTemplates(ctx context.Context, request *evaluatorservice.ListTemplatesRequest) (resp *evaluatorservice.ListTemplatesResponse, err error) {
-	builtinTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[strings.ToLower(request.GetBuiltinTemplateType().String())]
+	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
+
+	// 针对Code类型使用新的配置方法
+	if templateType == "code" {
+		codeTemplates := e.configer.GetCodeEvaluatorTemplateConf(ctx)
+
+		if codeTemplates == nil {
+			return &evaluatorservice.ListTemplatesResponse{
+				BuiltinTemplateKeys: make([]*evaluatordto.EvaluatorContent, 0),
+			}, nil
+		}
+
+		// 仅返回template_key构建的list结果，不进行language_type筛选
+		return &evaluatorservice.ListTemplatesResponse{
+			BuiltinTemplateKeys: buildCodeTemplateKeys(codeTemplates),
+		}, nil
+	}
+
+	// 其他类型保持原有逻辑
+	builtinTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
+
+	if builtinTemplates == nil {
+		return &evaluatorservice.ListTemplatesResponse{
+			BuiltinTemplateKeys: make([]*evaluatordto.EvaluatorContent, 0),
+		}, nil
+	}
+
 	return &evaluatorservice.ListTemplatesResponse{
-		BuiltinTemplateKeys: buildTemplateKeys(builtinTemplates),
+		BuiltinTemplateKeys: buildTemplateKeys(builtinTemplates, request.GetBuiltinTemplateType()),
 	}, nil
 }
 
-func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent) []*evaluatordto.EvaluatorContent {
+// buildTemplateKeys 构建Prompt类型的模板键列表
+// 注意：此函数只处理Prompt类型的Evaluator，Code类型请使用buildCodeTemplateKeys函数
+func buildTemplateKeys(origins map[string]*evaluatordto.EvaluatorContent, templateType evaluatordto.TemplateType) []*evaluatordto.EvaluatorContent {
 	keys := make([]*evaluatordto.EvaluatorContent, 0, len(origins))
+
 	for _, origin := range origins {
-		keys = append(keys, &evaluatordto.EvaluatorContent{
-			PromptEvaluator: &evaluatordto.PromptEvaluator{
+		evaluatorContent := &evaluatordto.EvaluatorContent{}
+
+		// 只处理Prompt类型的模板
+		if templateType == evaluatordto.TemplateType_Prompt && origin.GetPromptEvaluator() != nil {
+			evaluatorContent.PromptEvaluator = &evaluatordto.PromptEvaluator{
 				PromptTemplateKey:  origin.GetPromptEvaluator().PromptTemplateKey,
 				PromptTemplateName: origin.GetPromptEvaluator().PromptTemplateName,
-			},
-		})
+			}
+			keys = append(keys, evaluatorContent)
+		}
 	}
+
+	// 按PromptTemplateKey排序
 	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].GetPromptEvaluator().GetPromptTemplateKey() < keys[j].GetPromptEvaluator().GetPromptTemplateKey()
+		keyI := keys[i].GetPromptEvaluator().GetPromptTemplateKey()
+		keyJ := keys[j].GetPromptEvaluator().GetPromptTemplateKey()
+		return keyI < keyJ
 	})
+	return keys
+}
+
+func buildCodeTemplateKeys(codeTemplates map[string]map[string]*evaluatordto.EvaluatorContent) []*evaluatordto.EvaluatorContent {
+	// 用于去重的map，key为template_key
+	templateKeyMap := make(map[string]*evaluatordto.EvaluatorContent)
+
+	// 遍历所有模板，按template_key去重
+	for templateKey, languageMap := range codeTemplates {
+		if templateKey != "" {
+			// 如果已存在相同template_key，保留第一个
+			if _, exists := templateKeyMap[templateKey]; !exists {
+				// 取第一个语言类型的模板作为代表
+				for _, template := range languageMap {
+					if template.GetCodeEvaluator() != nil {
+						templateKeyMap[templateKey] = &evaluatordto.EvaluatorContent{
+							CodeEvaluator: &evaluatordto.CodeEvaluator{
+								CodeTemplateKey:  template.GetCodeEvaluator().CodeTemplateKey,
+								CodeTemplateName: template.GetCodeEvaluator().CodeTemplateName,
+								// 不包含LanguageType，因为只返回template_key
+							},
+						}
+						break // 只取第一个
+					}
+				}
+			}
+		}
+	}
+
+	// 转换为slice并排序
+	keys := make([]*evaluatordto.EvaluatorContent, 0, len(templateKeyMap))
+	for _, template := range templateKeyMap {
+		keys = append(keys, template)
+	}
+
+	// 按template_key排序
+	sort.Slice(keys, func(i, j int) bool {
+		keyI := keys[i].GetCodeEvaluator().GetCodeTemplateKey()
+		keyJ := keys[j].GetCodeEvaluator().GetCodeTemplateKey()
+		return keyI < keyJ
+	})
+
 	return keys
 }
 
 // GetEvaluatorTemplate 按 key 单个查询内置评估器模板详情
 func (e *EvaluatorHandlerImpl) GetTemplateInfo(ctx context.Context, request *evaluatorservice.GetTemplateInfoRequest) (resp *evaluatorservice.GetTemplateInfoResponse, err error) {
-	if template, ok := e.configer.GetEvaluatorTemplateConf(ctx)[strings.ToLower(request.GetBuiltinTemplateType().String())][request.GetBuiltinTemplateKey()]; !ok {
-		return nil, errorx.NewByCode(errno.TemplateNotFoundCode, errorx.WithExtraMsg("builtin template not found"))
+	templateType := strings.ToLower(request.GetBuiltinTemplateType().String())
+	templateKey := request.GetBuiltinTemplateKey()
+
+	var template *evaluatordto.EvaluatorContent
+	var ok bool
+
+	if templateType == "code" {
+		// 检查是否为custom类型
+		if templateKey == "custom" {
+			// 使用custom配置方法
+			customTemplates := e.configer.GetCustomCodeEvaluatorTemplateConf(ctx)
+			if languageMap, exists := customTemplates[templateKey]; exists {
+				if request.GetLanguageType() != "" {
+					// 指定了语言类型，查找对应的模板
+					template, ok = languageMap[request.GetLanguageType()]
+				} else {
+					// 未指定语言类型，返回第一个可用的模板
+					for _, t := range languageMap {
+						template = t
+						ok = true
+						break
+					}
+				}
+			}
+		} else {
+			// Code类型使用新的配置方法
+			codeTemplates := e.configer.GetCodeEvaluatorTemplateConf(ctx)
+			if languageMap, exists := codeTemplates[templateKey]; exists {
+				if request.GetLanguageType() != "" {
+					// 指定了语言类型，查找对应的模板
+					template, ok = languageMap[request.GetLanguageType()]
+				} else {
+					template, ok = languageMap[evaluatordto.LanguageTypePython]
+				}
+			}
+		}
 	} else {
-		return &evaluatorservice.GetTemplateInfoResponse{
-			EvaluatorContent: template,
-		}, nil
+		// 其他类型使用原有逻辑
+		allTemplates := e.configer.GetEvaluatorTemplateConf(ctx)[templateType]
+		template, ok = allTemplates[templateKey]
 	}
+
+	if !ok || template == nil {
+		return nil, errorx.NewByCode(errno.TemplateNotFoundCode, errorx.WithExtraMsg("builtin template not found"))
+	}
+
+	return &evaluatorservice.GetTemplateInfoResponse{
+		EvaluatorContent: template,
+	}, nil
 }
 
 // RunEvaluator evaluator_version 运行
@@ -903,7 +1029,7 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 
 	urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
 	if err != nil {
-		return fmt.Errorf("failed to get file URLs: %w", err)
+		return errorx.NewByCode(errno.FileURLRetrieveFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 回填URL到原始数据
@@ -947,4 +1073,180 @@ func (e *EvaluatorHandlerImpl) fillURLs(uriToContentMap map[string][]*evaluatorc
 			}
 		}
 	}
+}
+
+// ValidateEvaluator 验证评估器
+func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *evaluatorservice.ValidateEvaluatorRequest) (resp *evaluatorservice.ValidateEvaluatorResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换请求参数
+	evaluator, err := evaluatorconvertor.ConvertEvaluatorContent2DO(request.EvaluatorContent, request.EvaluatorType)
+	if err != nil {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(errorx.ErrorWithoutStack(err)),
+		}, nil
+	}
+
+	// 设置基本信息
+	evaluator.SpaceID = request.WorkspaceID
+
+	// 验证基本信息
+	if err := evaluator.ValidateBaseInfo(); err != nil {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(errorx.ErrorWithoutStack(err)),
+		}, nil
+	}
+
+	// 获取评估器源服务
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluator.EvaluatorType]
+	if !ok {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(fmt.Sprintf("unsupported evaluator type: %d", evaluator.EvaluatorType)),
+		}, nil
+	}
+
+	// 验证评估器（语法检查等）
+	if err := evaluatorSourceService.Validate(ctx, evaluator); err != nil {
+		return &evaluatorservice.ValidateEvaluatorResponse{
+			Valid:        gptr.Of(false),
+			ErrorMessage: gptr.Of(errorx.ErrorWithoutStack(err)),
+		}, nil
+	}
+
+	// 构造响应
+	response := &evaluatorservice.ValidateEvaluatorResponse{
+		Valid: gptr.Of(true),
+	}
+
+	return response, nil
+}
+
+// BatchDebugEvaluator 批量调试评估器
+func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request *evaluatorservice.BatchDebugEvaluatorRequest) (resp *evaluatorservice.BatchDebugEvaluatorResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+
+	// 权益检查
+	req := &benefit.CheckEvaluatorBenefitParams{
+		ConnectorUID: userID,
+		SpaceID:      request.GetWorkspaceID(),
+	}
+	result, err := e.benefitService.CheckEvaluatorBenefit(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "BatchDebugEvaluator CheckEvaluatorBenefit result: %v,", json.Jsonify(result))
+
+	if result != nil && result.DenyReason != nil {
+		return nil, errorx.NewByCode(errno.EvaluatorBenefitDenyCode)
+	}
+
+	// 批量URI转换处理
+	for _, inputData := range request.InputData {
+		if inputData != nil {
+			err = e.transformURIsToURLs(ctx, inputData.InputFields)
+			if err != nil {
+				logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+				return nil, err
+			}
+		}
+	}
+
+	// 构建评估器对象
+	dto := &evaluatordto.Evaluator{
+		WorkspaceID:   gptr.Of(request.WorkspaceID),
+		EvaluatorType: gptr.Of(request.EvaluatorType),
+		CurrentVersion: &evaluatordto.EvaluatorVersion{
+			EvaluatorContent: request.EvaluatorContent,
+		},
+	}
+	evaluatorDO := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+
+	// 并发调试处理
+	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData)
+}
+
+// batchDebugWithConcurrency 使用并发池进行批量调试
+func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
+	// 创建并发池，并发度为10
+	pool, err := goroutine.NewPool(10)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.GoroutinePoolCreateFailedCode, errorx.WithExtraMsg(err.Error()))
+	}
+
+	// 初始化结果数组
+	results := make([]*evaluatordto.EvaluatorOutputData, len(inputDataList))
+	var mutex sync.Mutex
+
+	// 为每个输入数据创建调试任务
+	for i, inputData := range inputDataList {
+		index := i
+		currentInputData := inputData
+
+		pool.Add(func() error {
+			// 转换输入数据
+			inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(currentInputData)
+
+			// 调用单个评估器调试逻辑
+			outputDataDO, debugErr := e.evaluatorService.DebugEvaluator(ctx, evaluatorDO, inputDataDO)
+
+			// 保护结果收集过程
+			mutex.Lock()
+			defer mutex.Unlock()
+
+			// 首先转换输出数据
+			if outputDataDO != nil {
+				results[index] = evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO)
+
+				// 检查是否需要使用debugErr作为EvaluatorRunError
+				if results[index].EvaluatorRunError == nil && debugErr != nil {
+					results[index].EvaluatorRunError = &evaluatordto.EvaluatorRunError{
+						Code:    gptr.Of(int32(500)),
+						Message: gptr.Of(errorx.ErrorWithoutStack(debugErr)),
+					}
+				}
+			} else if debugErr != nil {
+				// outputDataDO为nil但有debugErr的情况
+				results[index] = &evaluatordto.EvaluatorOutputData{
+					EvaluatorRunError: &evaluatordto.EvaluatorRunError{
+						Code:    gptr.Of(int32(500)),
+						Message: gptr.Of(errorx.ErrorWithoutStack(debugErr)),
+					},
+				}
+			}
+
+			return nil // 总是返回nil，确保单个失败不影响其他任务
+		})
+	}
+
+	// 执行所有任务，使用ExecAll确保单个失败不影响其他任务
+	err = pool.ExecAll(ctx)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.BatchTaskExecutionFailedCode, errorx.WithExtraMsg(err.Error()))
+	}
+
+	return &evaluatorservice.BatchDebugEvaluatorResponse{
+		EvaluatorOutputData: results,
+	}, nil
 }

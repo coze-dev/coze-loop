@@ -1127,3 +1127,257 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+
+	// Test data
+	validSpaceID := int64(123)
+	validSourceTargetID := int64(456)
+	validEvalTargetVersion := "v1.0"
+	validTargetType := domain_eval_target.EvalTargetType(1)
+	unsupportedTargetType := domain_eval_target.EvalTargetType(99)
+
+	validEvalTarget := &entity.EvalTarget{
+		ID:             1,
+		SpaceID:        validSpaceID,
+		SourceTargetID: "456",
+		EvalTargetType: 1,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  1,
+			SpaceID:             validSpaceID,
+			TargetID:            1,
+			SourceTargetVersion: validEvalTargetVersion,
+			OutputSchema: []*entity.ArgsSchema{
+				{
+					Key:        gptr.Of("output"),
+					JsonSchema: gptr.Of(`{"type": "string"}`),
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *eval_target.MockEvalTargetOutputRequest
+		mockSetup   func()
+		wantResp    *eval_target.MockEvalTargetOutputResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        validTargetType,
+			},
+			mockSetup: func() {
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, strconv.FormatInt(validSourceTargetID, 10), validEvalTargetVersion).
+					Return(validEvalTarget, nil)
+
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				mockEvalTargetService.EXPECT().
+					GenerateMockOutputData(validEvalTarget.EvalTargetVersion.OutputSchema).
+					Return(map[string]string{"output": "mock output"}, nil)
+			},
+			wantResp: &eval_target.MockEvalTargetOutputResponse{
+				EvalTarget: target.EvalTargetDO2DTO(validEvalTarget),
+				MockOutput: map[string]string{"output": "mock output"},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "error - nil request",
+			req:         nil,
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - unsupported target type",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        unsupportedTargetType,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        validTargetType,
+			},
+			mockSetup: func() {
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, strconv.FormatInt(validSourceTargetID, 10), validEvalTargetVersion).
+					Return(validEvalTarget, nil)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - build by source failed",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        validTargetType,
+			},
+			mockSetup: func() {
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, strconv.FormatInt(validSourceTargetID, 10), validEvalTargetVersion).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "error - build by source returns nil",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        validTargetType,
+			},
+			mockSetup: func() {
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, strconv.FormatInt(validSourceTargetID, 10), validEvalTargetVersion).
+					Return(nil, nil)
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - generate mock data failed",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        validTargetType,
+			},
+			mockSetup: func() {
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, strconv.FormatInt(validSourceTargetID, 10), validEvalTargetVersion).
+					Return(validEvalTarget, nil)
+
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+				mockEvalTargetService.EXPECT().
+					GenerateMockOutputData(validEvalTarget.EvalTargetVersion.OutputSchema).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "success - no output schema",
+			req: &eval_target.MockEvalTargetOutputRequest{
+				WorkspaceID:       validSpaceID,
+				SourceTargetID:    validSourceTargetID,
+				EvalTargetVersion: validEvalTargetVersion,
+				TargetType:        validTargetType,
+			},
+			mockSetup: func() {
+				evalTargetWithoutSchema := &entity.EvalTarget{
+					ID:             1,
+					SpaceID:        validSpaceID,
+					SourceTargetID: "456",
+					EvalTargetType: 1,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  1,
+						SpaceID:             validSpaceID,
+						TargetID:            1,
+						SourceTargetVersion: validEvalTargetVersion,
+						OutputSchema:        nil, // No output schema
+					},
+				}
+
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, strconv.FormatInt(validSourceTargetID, 10), validEvalTargetVersion).
+					Return(evalTargetWithoutSchema, nil)
+
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantResp: &eval_target.MockEvalTargetOutputResponse{
+				EvalTarget: target.EvalTargetDO2DTO(&entity.EvalTarget{
+					ID:             1,
+					SpaceID:        validSpaceID,
+					SourceTargetID: "456",
+					EvalTargetType: 1,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  1,
+						SpaceID:             validSpaceID,
+						TargetID:            1,
+						SourceTargetVersion: validEvalTargetVersion,
+						OutputSchema:        nil,
+					},
+				}),
+				MockOutput: map[string]string{},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.MockEvalTargetOutput(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.EvalTarget)
+				assert.NotNil(t, resp.MockOutput)
+				if tt.wantResp != nil {
+					assert.Equal(t, tt.wantResp.MockOutput, resp.MockOutput)
+				}
+			}
+		})
+	}
+}
