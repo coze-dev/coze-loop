@@ -179,6 +179,12 @@ var (
 		userinfo.NewUserInfoServiceImpl,
 	)
 
+	evaluationOpenAPISet = wire.NewSet(
+		NewEvaluationOpenApiApplicationImpl,
+		evalSetDomainService,
+		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
+	)
+
 	targetDomainService = wire.NewSet(
 		domainservice.NewEvalTargetServiceImpl,
 		NewSourceTargetOperators,
@@ -281,6 +287,15 @@ func InitEvalTargetApplication(ctx context.Context,
 	meter metrics.Meter) evaluation.EvalTargetService {
 	wire.Build(
 		evalTargetSet,
+	)
+	return nil
+}
+
+func InitEvaluationOpenAPIApplication(client datasetservice.Client,
+	meter metrics.Meter,
+) evaluation.EvaluationOpenAPIService {
+	wire.Build(
+		evaluationOpenAPISet,
 	)
 	return nil
 }

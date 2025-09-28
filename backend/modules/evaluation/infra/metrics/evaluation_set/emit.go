@@ -41,6 +41,12 @@ func NewEvaluationSetMetrics(meter metrics.Meter) eval_metrics.EvaluationSetMetr
 	return &EvaluationSetMetricsImpl{metric: metric}
 }
 
+func NewOpenAPIEvaluationSetMetrics(meter metrics.Meter) eval_metrics.OpenAPIEvaluationSetMetrics {
+	return &OpenAPIEvaluationSetMetricsImpl{
+		meter: meter,
+	}
+}
+
 type EvaluationSetMetricsImpl struct {
 	metric metrics.Metric
 }
@@ -55,4 +61,87 @@ func (e *EvaluationSetMetricsImpl) EmitCreate(spaceID int64, err error) {
 		{Name: tagIsErr, Value: strconv.FormatInt(isError, 10)},
 		{Name: tagCode, Value: strconv.FormatInt(code, 10)},
 	}, metrics.Counter(1, metrics.WithSuffix(createSuffix+throughputSuffix)))
+}
+
+type OpenAPIEvaluationSetMetricsImpl struct {
+	meter metrics.Meter
+}
+
+func (m *OpenAPIEvaluationSetMetricsImpl) EmitCreateEvaluationSet(spaceID int64, evaluationSetID *int64, err error) {
+	if m == nil || m.meter == nil {
+		return
+	}
+	
+	metric, mErr := m.meter.NewMetric("openapi_evaluation_set_create", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "evaluation_set_id", "method", "status"})
+	if mErr != nil {
+		return
+	}
+	
+	tags := []metrics.T{
+		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
+		{Name: "method", Value: "create_evaluation_set"},
+	}
+	
+	if evaluationSetID != nil {
+		tags = append(tags, metrics.T{Name: "evaluation_set_id", Value: strconv.FormatInt(*evaluationSetID, 10)})
+	} else {
+		tags = append(tags, metrics.T{Name: "evaluation_set_id", Value: ""})
+	}
+	
+	if err != nil {
+		tags = append(tags, metrics.T{Name: "status", Value: "error"})
+	} else {
+		tags = append(tags, metrics.T{Name: "status", Value: "success"})
+	}
+	
+	metric.Emit(tags, metrics.Counter(1))
+}
+
+func (m *OpenAPIEvaluationSetMetricsImpl) EmitGetEvaluationSet(spaceID int64, evaluationSetID int64, err error) {
+	if m == nil || m.meter == nil {
+		return
+	}
+	
+	metric, mErr := m.meter.NewMetric("openapi_evaluation_set_get", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "evaluation_set_id", "method", "status"})
+	if mErr != nil {
+		return
+	}
+	
+	tags := []metrics.T{
+		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
+		{Name: "evaluation_set_id", Value: strconv.FormatInt(evaluationSetID, 10)},
+		{Name: "method", Value: "get_evaluation_set"},
+	}
+	
+	if err != nil {
+		tags = append(tags, metrics.T{Name: "status", Value: "error"})
+	} else {
+		tags = append(tags, metrics.T{Name: "status", Value: "success"})
+	}
+	
+	metric.Emit(tags, metrics.Counter(1))
+}
+
+func (m *OpenAPIEvaluationSetMetricsImpl) EmitListEvaluationSets(spaceID int64, err error) {
+	if m == nil || m.meter == nil {
+		return
+	}
+	
+	metric, mErr := m.meter.NewMetric("openapi_evaluation_set_list", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "method", "status"})
+	if mErr != nil {
+		return
+	}
+	
+	tags := []metrics.T{
+		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
+		{Name: "method", Value: "list_evaluation_sets"},
+	}
+	
+	if err != nil {
+		tags = append(tags, metrics.T{Name: "status", Value: "error"})
+	} else {
+		tags = append(tags, metrics.T{Name: "status", Value: "success"})
+	}
+	
+	metric.Emit(tags, metrics.Counter(1))
 }
