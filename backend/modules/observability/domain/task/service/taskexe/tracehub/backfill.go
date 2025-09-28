@@ -108,7 +108,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 
 // isBackfillDone 检查回填任务是否已完成
 func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context, sub *spanSubscriber) (bool, error) {
-	taskRun, err := h.taskRunRepo.GetBackfillTaskRun(ctx, ptr.Of(sub.t.GetWorkspaceID()), sub.t.GetID())
+	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(sub.t.GetWorkspaceID()), sub.t.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
 		return true, err
@@ -144,7 +144,7 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber
 		DescByStartTime:    true,
 		NotQueryAnnotation: true, // 回填时不需要查询注解
 	}
-	taskRun, err := h.taskRunRepo.GetBackfillTaskRun(ctx, ptr.Of(sub.t.GetWorkspaceID()), sub.t.GetID())
+	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(sub.t.GetWorkspaceID()), sub.t.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
 		return err
@@ -335,10 +335,10 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
 		return len(fr.spans), len(sampledSpans), err
 	}
-	taskRun, err := h.taskRunRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
+	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
 	taskRunDTO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
 	taskRunDTO.BackfillRunDetail.LastSpanPageToken = ptr.Of(fr.pageToken)
-	err = h.taskRunRepo.UpdateTaskRunWithOCC(ctx, taskRunDTO.ID, taskRunDTO.WorkspaceID, map[string]interface{}{
+	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, taskRunDTO.ID, taskRunDTO.WorkspaceID, map[string]interface{}{
 		"backfill_detail": taskRunDTO.BackfillRunDetail,
 	})
 	if err != nil {
@@ -430,7 +430,7 @@ func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *l
 	// 根据任务类型执行相应的处理逻辑
 	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 		span.SpanID, span.TraceID, sub.t.GetID())
-	taskRunConfig, err := h.taskRunRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
+	taskRunConfig, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
 	if err != nil {
 		logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
 		return err

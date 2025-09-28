@@ -155,7 +155,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 }
 
 func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
-	taskRuns, err := p.taskRunRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
+	taskRuns, err := p.taskRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err

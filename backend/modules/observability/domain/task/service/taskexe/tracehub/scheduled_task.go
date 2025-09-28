@@ -79,8 +79,6 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	// 读取所有非终态（成功/禁用）任务
 	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
-		ReqLimit:  1000,
-		ReqOffset: 0,
 		TaskFilters: &filter.TaskFilterFields{
 			FilterFields: []*filter.TaskFilterField{
 				{
@@ -352,7 +350,7 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 	}
 
 	// 使用乐观锁更新
-	err = h.taskRunRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
+	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
 	if err != nil {
 		return errors.Wrap(err, "更新TaskRun失败")
 	}

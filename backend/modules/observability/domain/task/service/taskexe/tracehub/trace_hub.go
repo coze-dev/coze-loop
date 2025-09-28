@@ -226,7 +226,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 		//获取对应的taskconfig
-		taskRunConfig, err := h.taskRunRepo.GetLatestNewDataTaskRun(ctx, sub.t.WorkspaceID, sub.taskID)
+		taskRunConfig, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, sub.t.WorkspaceID, sub.taskID)
 		if err != nil {
 			logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
 			continue

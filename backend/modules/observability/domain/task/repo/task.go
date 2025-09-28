@@ -13,19 +13,21 @@ import (
 //go:generate mockgen -destination=mocks/Task.go -package=mocks . ITaskRepo
 type ITaskRepo interface {
 	// task
+	CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error)
+	UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error
+	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 	GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error)
 	ListTasks(ctx context.Context, param mysql.ListTaskParam) ([]*entity.ObservabilityTask, int64, error)
-	UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error
-	CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error)
 	DeleteTask(ctx context.Context, do *entity.ObservabilityTask) error
-	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 
 	// task run
-	GetTaskRun(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.TaskRun, error)
-	ListTaskRuns(ctx context.Context, taskID int64, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error)
-	UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error
 	CreateTaskRun(ctx context.Context, do *entity.TaskRun) (int64, error)
+	UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error
 	UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
+	GetTaskRun(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.TaskRun, error)
+	ListTaskRuns(ctx context.Context, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error)
+	GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error)
+	GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error)
 
 	// task count
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
@@ -38,17 +40,14 @@ type ITaskRepo interface {
 	DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
 
 	// task run success/fail count
+	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
 	DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
 	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
-	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 
 	//
 	ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error)
 	GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask)
 	ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) []*entity.ObservabilityTask
-
-	// 获取所有TaskRunCount键
-	GetAllTaskRunCountKeys(ctx context.Context) ([]string, error)
 }

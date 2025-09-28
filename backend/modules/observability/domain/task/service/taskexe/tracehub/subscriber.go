@@ -166,13 +166,13 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	var taskRunConfig *entity.TaskRun
 	var err error
 	if s.runType == task.TaskRunTypeNewData {
-		taskRunConfig, err = s.taskRunRepo.GetLatestNewDataTaskRun(ctx, nil, s.t.GetID())
+		taskRunConfig, err = s.taskRepo.GetLatestNewDataTaskRun(ctx, nil, s.t.GetID())
 		if err != nil {
 			logs.CtxWarn(ctx, "get latest new data task run failed, task_id=%d, err: %v", s.t.GetID(), err)
 			return err
 		}
 	} else {
-		taskRunConfig, err = s.taskRunRepo.GetBackfillTaskRun(ctx, nil, s.t.GetID())
+		taskRunConfig, err = s.taskRepo.GetBackfillTaskRun(ctx, nil, s.t.GetID())
 		if err != nil {
 			logs.CtxWarn(ctx, "get backfill task run failed, task_id=%d, err: %v", s.t.GetID(), err)
 			return err

@@ -334,7 +334,7 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 		logs.CtxError(ctx, "GetTasks tasks is nil")
 		return resp, nil
 	}
-	taskRunPOs, _, err := t.TaskRunRepo.ListTaskRuns(ctx, mysql.ListTaskRunParam{
+	taskRunPOs, _, err := t.TaskRepo.ListTaskRuns(ctx, mysql.ListTaskRunParam{
 		WorkspaceID: ptr.Of(req.WorkspaceID),
 		TaskID:      ptr.Of(req.TaskID),
 	})
