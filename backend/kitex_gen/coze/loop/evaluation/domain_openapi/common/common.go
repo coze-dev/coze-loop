@@ -26,8 +26,7 @@ type Content struct {
 	ContentType *ContentType `thrift:"content_type,1,optional" frugal:"1,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
 	Text        *string      `thrift:"text,2,optional" frugal:"2,optional,string" form:"text" json:"text,omitempty" query:"text"`
 	Image       *Image       `thrift:"image,3,optional" frugal:"3,optional,Image" form:"image" json:"image,omitempty" query:"image"`
-	Audio       *Audio       `thrift:"audio,4,optional" frugal:"4,optional,Audio" form:"audio" json:"audio,omitempty" query:"audio"`
-	MultiPart   []*Content   `thrift:"multi_part,5,optional" frugal:"5,optional,list<Content>" form:"multi_part" json:"multi_part,omitempty" query:"multi_part"`
+	MultiPart   []*Content   `thrift:"multi_part,10,optional" frugal:"10,optional,list<Content>" form:"multi_part" json:"multi_part,omitempty" query:"multi_part"`
 }
 
 func NewContent() *Content {
@@ -73,18 +72,6 @@ func (p *Content) GetImage() (v *Image) {
 	return p.Image
 }
 
-var Content_Audio_DEFAULT *Audio
-
-func (p *Content) GetAudio() (v *Audio) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetAudio() {
-		return Content_Audio_DEFAULT
-	}
-	return p.Audio
-}
-
 var Content_MultiPart_DEFAULT []*Content
 
 func (p *Content) GetMultiPart() (v []*Content) {
@@ -105,19 +92,15 @@ func (p *Content) SetText(val *string) {
 func (p *Content) SetImage(val *Image) {
 	p.Image = val
 }
-func (p *Content) SetAudio(val *Audio) {
-	p.Audio = val
-}
 func (p *Content) SetMultiPart(val []*Content) {
 	p.MultiPart = val
 }
 
 var fieldIDToName_Content = map[int16]string{
-	1: "content_type",
-	2: "text",
-	3: "image",
-	4: "audio",
-	5: "multi_part",
+	1:  "content_type",
+	2:  "text",
+	3:  "image",
+	10: "multi_part",
 }
 
 func (p *Content) IsSetContentType() bool {
@@ -130,10 +113,6 @@ func (p *Content) IsSetText() bool {
 
 func (p *Content) IsSetImage() bool {
 	return p.Image != nil
-}
-
-func (p *Content) IsSetAudio() bool {
-	return p.Audio != nil
 }
 
 func (p *Content) IsSetMultiPart() bool {
@@ -182,17 +161,9 @@ func (p *Content) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
+		case 10:
 			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField5(iprot); err != nil {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -257,15 +228,7 @@ func (p *Content) ReadField3(iprot thrift.TProtocol) error {
 	p.Image = _field
 	return nil
 }
-func (p *Content) ReadField4(iprot thrift.TProtocol) error {
-	_field := NewAudio()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Audio = _field
-	return nil
-}
-func (p *Content) ReadField5(iprot thrift.TProtocol) error {
+func (p *Content) ReadField10(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -307,12 +270,8 @@ func (p *Content) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 3
 			goto WriteFieldError
 		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -387,27 +346,9 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *Content) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAudio() {
-		if err = oprot.WriteFieldBegin("audio", thrift.STRUCT, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Audio.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-func (p *Content) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *Content) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMultiPart() {
-		if err = oprot.WriteFieldBegin("multi_part", thrift.LIST, 5); err != nil {
+		if err = oprot.WriteFieldBegin("multi_part", thrift.LIST, 10); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MultiPart)); err != nil {
@@ -427,9 +368,9 @@ func (p *Content) writeField5(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
 func (p *Content) String() string {
@@ -455,10 +396,7 @@ func (p *Content) DeepEqual(ano *Content) bool {
 	if !p.Field3DeepEqual(ano.Image) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.Audio) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.MultiPart) {
+	if !p.Field10DeepEqual(ano.MultiPart) {
 		return false
 	}
 	return true
@@ -495,14 +433,7 @@ func (p *Content) Field3DeepEqual(src *Image) bool {
 	}
 	return true
 }
-func (p *Content) Field4DeepEqual(src *Audio) bool {
-
-	if !p.Audio.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *Content) Field5DeepEqual(src []*Content) bool {
+func (p *Content) Field10DeepEqual(src []*Content) bool {
 
 	if len(p.MultiPart) != len(src) {
 		return false

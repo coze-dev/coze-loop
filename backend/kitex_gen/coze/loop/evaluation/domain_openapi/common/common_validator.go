@@ -27,11 +27,6 @@ func (p *Content) IsValid() error {
 			return fmt.Errorf("field Image not valid, %w", err)
 		}
 	}
-	if p.Audio != nil {
-		if err := p.Audio.IsValid(); err != nil {
-			return fmt.Errorf("field Audio not valid, %w", err)
-		}
-	}
 	return nil
 }
 func (p *Image) IsValid() error {

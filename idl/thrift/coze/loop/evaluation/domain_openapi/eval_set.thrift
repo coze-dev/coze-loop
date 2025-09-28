@@ -82,8 +82,17 @@ struct ItemError {
     3: optional string error_message
 }
 
+// 数据项错误分组信息
 struct ItemErrorGroup {
-    1: optional string error_code
+    1: optional i32 error_code
     2: optional string error_message
-    3: optional list<string> item_keys
+    3: optional i32 error_count                // 错误条数
+    4: optional list<ItemErrorDetail> details // 错误详情
+}
+
+struct ItemErrorDetail {
+    1: optional string message     // 错误信息
+    2: optional i32 index      // 单条错误数据在输入数据中的索引。从 0 开始，下同
+    3: optional i32 start_index // [startIndex, endIndex] 表示区间错误范围, 如 ExceedDatasetCapacity 错误时
+    4: optional i32 end_index
 }

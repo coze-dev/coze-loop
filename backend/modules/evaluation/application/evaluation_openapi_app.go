@@ -148,7 +148,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Contex
 	dtos := evaluation_set.OpenAPIEvaluationSetDO2DTOs(sets)
 
 	// 构建响应
-	hasMore := nextPageToken != nil && *nextPageToken != ""
+	hasMore := sets != nil && len(sets) == int(req.GetPageSize())
 	return &openapi.ListEvaluationSetsOpenAPIResponse{
 		Data: &openapi.ListEvaluationSetsOpenAPIData{
 			Items:         dtos,
@@ -183,8 +183,6 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetVersion(ctx contex
 	if err != nil {
 		return nil, err
 	}
-
-
 
 	// 构建响应
 	return &openapi.CreateEvaluationSetVersionOpenAPIResponse{
@@ -246,7 +244,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItems(ctx con
 	// 批量更新评测集项目
 	updatedItems := make(map[int64]string)
 	var allErrors []*entity.ItemErrorGroup
-	
+
 	for _, item := range req.Items {
 		if item.ID == nil {
 			allErrors = append(allErrors, &entity.ItemErrorGroup{
@@ -255,7 +253,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItems(ctx con
 			})
 			continue
 		}
-		
+
 		err := e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, *item.ID, evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
 		if err != nil {
 			if req.SkipInvalidItems != nil && *req.SkipInvalidItems {
@@ -267,7 +265,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItems(ctx con
 			}
 			return nil, err
 		}
-		
+
 		updatedItems[*item.ID] = "success"
 	}
 
@@ -353,7 +351,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItems(ctx con
 	dtos := evaluation_set.OpenAPIItemDO2DTOs(items)
 
 	// 构建响应
-	hasMore := nextPageToken != nil && *nextPageToken != ""
+	hasMore := items != nil && len(items) == int(req.GetPageSize())
 	return &openapi.ListEvaluationSetVersionItemsOpenAPIResponse{
 		Data: &openapi.ListEvaluationSetVersionItemsOpenAPIData{
 			Items:         dtos,

@@ -3428,10 +3428,14 @@ func (p *ItemError) Field3DeepEqual(src *string) bool {
 	return true
 }
 
+// 数据项错误分组信息
 type ItemErrorGroup struct {
-	ErrorCode    *string  `thrift:"error_code,1,optional" frugal:"1,optional,string" form:"error_code" json:"error_code,omitempty" query:"error_code"`
-	ErrorMessage *string  `thrift:"error_message,2,optional" frugal:"2,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
-	ItemKeys     []string `thrift:"item_keys,3,optional" frugal:"3,optional,list<string>" form:"item_keys" json:"item_keys,omitempty" query:"item_keys"`
+	ErrorCode    *int32  `thrift:"error_code,1,optional" frugal:"1,optional,i32" form:"error_code" json:"error_code,omitempty" query:"error_code"`
+	ErrorMessage *string `thrift:"error_message,2,optional" frugal:"2,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
+	// 错误条数
+	ErrorCount *int32 `thrift:"error_count,3,optional" frugal:"3,optional,i32" form:"error_count" json:"error_count,omitempty" query:"error_count"`
+	// 错误详情
+	Details []*ItemErrorDetail `thrift:"details,4,optional" frugal:"4,optional,list<ItemErrorDetail>" form:"details" json:"details,omitempty" query:"details"`
 }
 
 func NewItemErrorGroup() *ItemErrorGroup {
@@ -3441,9 +3445,9 @@ func NewItemErrorGroup() *ItemErrorGroup {
 func (p *ItemErrorGroup) InitDefault() {
 }
 
-var ItemErrorGroup_ErrorCode_DEFAULT string
+var ItemErrorGroup_ErrorCode_DEFAULT int32
 
-func (p *ItemErrorGroup) GetErrorCode() (v string) {
+func (p *ItemErrorGroup) GetErrorCode() (v int32) {
 	if p == nil {
 		return
 	}
@@ -3465,31 +3469,47 @@ func (p *ItemErrorGroup) GetErrorMessage() (v string) {
 	return *p.ErrorMessage
 }
 
-var ItemErrorGroup_ItemKeys_DEFAULT []string
+var ItemErrorGroup_ErrorCount_DEFAULT int32
 
-func (p *ItemErrorGroup) GetItemKeys() (v []string) {
+func (p *ItemErrorGroup) GetErrorCount() (v int32) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetItemKeys() {
-		return ItemErrorGroup_ItemKeys_DEFAULT
+	if !p.IsSetErrorCount() {
+		return ItemErrorGroup_ErrorCount_DEFAULT
 	}
-	return p.ItemKeys
+	return *p.ErrorCount
 }
-func (p *ItemErrorGroup) SetErrorCode(val *string) {
+
+var ItemErrorGroup_Details_DEFAULT []*ItemErrorDetail
+
+func (p *ItemErrorGroup) GetDetails() (v []*ItemErrorDetail) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDetails() {
+		return ItemErrorGroup_Details_DEFAULT
+	}
+	return p.Details
+}
+func (p *ItemErrorGroup) SetErrorCode(val *int32) {
 	p.ErrorCode = val
 }
 func (p *ItemErrorGroup) SetErrorMessage(val *string) {
 	p.ErrorMessage = val
 }
-func (p *ItemErrorGroup) SetItemKeys(val []string) {
-	p.ItemKeys = val
+func (p *ItemErrorGroup) SetErrorCount(val *int32) {
+	p.ErrorCount = val
+}
+func (p *ItemErrorGroup) SetDetails(val []*ItemErrorDetail) {
+	p.Details = val
 }
 
 var fieldIDToName_ItemErrorGroup = map[int16]string{
 	1: "error_code",
 	2: "error_message",
-	3: "item_keys",
+	3: "error_count",
+	4: "details",
 }
 
 func (p *ItemErrorGroup) IsSetErrorCode() bool {
@@ -3500,8 +3520,12 @@ func (p *ItemErrorGroup) IsSetErrorMessage() bool {
 	return p.ErrorMessage != nil
 }
 
-func (p *ItemErrorGroup) IsSetItemKeys() bool {
-	return p.ItemKeys != nil
+func (p *ItemErrorGroup) IsSetErrorCount() bool {
+	return p.ErrorCount != nil
+}
+
+func (p *ItemErrorGroup) IsSetDetails() bool {
+	return p.Details != nil
 }
 
 func (p *ItemErrorGroup) Read(iprot thrift.TProtocol) (err error) {
@@ -3523,7 +3547,7 @@ func (p *ItemErrorGroup) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -3539,8 +3563,16 @@ func (p *ItemErrorGroup) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3577,8 +3609,8 @@ ReadStructEndError:
 
 func (p *ItemErrorGroup) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -3598,18 +3630,29 @@ func (p *ItemErrorGroup) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *ItemErrorGroup) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorCount = _field
+	return nil
+}
+func (p *ItemErrorGroup) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make([]string, 0, size)
+	_field := make([]*ItemErrorDetail, 0, size)
+	values := make([]ItemErrorDetail, size)
 	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
 
-		var _elem string
-		if v, err := iprot.ReadString(); err != nil {
+		if err := _elem.Read(iprot); err != nil {
 			return err
-		} else {
-			_elem = v
 		}
 
 		_field = append(_field, _elem)
@@ -3617,7 +3660,7 @@ func (p *ItemErrorGroup) ReadField3(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.ItemKeys = _field
+	p.Details = _field
 	return nil
 }
 
@@ -3637,6 +3680,10 @@ func (p *ItemErrorGroup) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -3659,10 +3706,10 @@ WriteStructEndError:
 
 func (p *ItemErrorGroup) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetErrorCode() {
-		if err = oprot.WriteFieldBegin("error_code", thrift.STRING, 1); err != nil {
+		if err = oprot.WriteFieldBegin("error_code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.ErrorCode); err != nil {
+		if err := oprot.WriteI32(*p.ErrorCode); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3694,15 +3741,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ItemErrorGroup) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemKeys() {
-		if err = oprot.WriteFieldBegin("item_keys", thrift.LIST, 3); err != nil {
+	if p.IsSetErrorCount() {
+		if err = oprot.WriteFieldBegin("error_count", thrift.I32, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.ItemKeys)); err != nil {
+		if err := oprot.WriteI32(*p.ErrorCount); err != nil {
 			return err
 		}
-		for _, v := range p.ItemKeys {
-			if err := oprot.WriteString(v); err != nil {
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ItemErrorGroup) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDetails() {
+		if err = oprot.WriteFieldBegin("details", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Details)); err != nil {
+			return err
+		}
+		for _, v := range p.Details {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
@@ -3715,9 +3780,9 @@ func (p *ItemErrorGroup) writeField3(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
 func (p *ItemErrorGroup) String() string {
@@ -3740,20 +3805,23 @@ func (p *ItemErrorGroup) DeepEqual(ano *ItemErrorGroup) bool {
 	if !p.Field2DeepEqual(ano.ErrorMessage) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.ItemKeys) {
+	if !p.Field3DeepEqual(ano.ErrorCount) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Details) {
 		return false
 	}
 	return true
 }
 
-func (p *ItemErrorGroup) Field1DeepEqual(src *string) bool {
+func (p *ItemErrorGroup) Field1DeepEqual(src *int32) bool {
 
 	if p.ErrorCode == src {
 		return true
 	} else if p.ErrorCode == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.ErrorCode, *src) != 0 {
+	if *p.ErrorCode != *src {
 		return false
 	}
 	return true
@@ -3770,16 +3838,443 @@ func (p *ItemErrorGroup) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ItemErrorGroup) Field3DeepEqual(src []string) bool {
+func (p *ItemErrorGroup) Field3DeepEqual(src *int32) bool {
 
-	if len(p.ItemKeys) != len(src) {
+	if p.ErrorCount == src {
+		return true
+	} else if p.ErrorCount == nil || src == nil {
 		return false
 	}
-	for i, v := range p.ItemKeys {
+	if *p.ErrorCount != *src {
+		return false
+	}
+	return true
+}
+func (p *ItemErrorGroup) Field4DeepEqual(src []*ItemErrorDetail) bool {
+
+	if len(p.Details) != len(src) {
+		return false
+	}
+	for i, v := range p.Details {
 		_src := src[i]
-		if strings.Compare(v, _src) != 0 {
+		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+
+type ItemErrorDetail struct {
+	// 错误信息
+	Message *string `thrift:"message,1,optional" frugal:"1,optional,string" form:"message" json:"message,omitempty" query:"message"`
+	// 单条错误数据在输入数据中的索引。从 0 开始，下同
+	Index *int32 `thrift:"index,2,optional" frugal:"2,optional,i32" form:"index" json:"index,omitempty" query:"index"`
+	// [startIndex, endIndex] 表示区间错误范围, 如 ExceedDatasetCapacity 错误时
+	StartIndex *int32 `thrift:"start_index,3,optional" frugal:"3,optional,i32" form:"start_index" json:"start_index,omitempty" query:"start_index"`
+	EndIndex   *int32 `thrift:"end_index,4,optional" frugal:"4,optional,i32" form:"end_index" json:"end_index,omitempty" query:"end_index"`
+}
+
+func NewItemErrorDetail() *ItemErrorDetail {
+	return &ItemErrorDetail{}
+}
+
+func (p *ItemErrorDetail) InitDefault() {
+}
+
+var ItemErrorDetail_Message_DEFAULT string
+
+func (p *ItemErrorDetail) GetMessage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMessage() {
+		return ItemErrorDetail_Message_DEFAULT
+	}
+	return *p.Message
+}
+
+var ItemErrorDetail_Index_DEFAULT int32
+
+func (p *ItemErrorDetail) GetIndex() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIndex() {
+		return ItemErrorDetail_Index_DEFAULT
+	}
+	return *p.Index
+}
+
+var ItemErrorDetail_StartIndex_DEFAULT int32
+
+func (p *ItemErrorDetail) GetStartIndex() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartIndex() {
+		return ItemErrorDetail_StartIndex_DEFAULT
+	}
+	return *p.StartIndex
+}
+
+var ItemErrorDetail_EndIndex_DEFAULT int32
+
+func (p *ItemErrorDetail) GetEndIndex() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndIndex() {
+		return ItemErrorDetail_EndIndex_DEFAULT
+	}
+	return *p.EndIndex
+}
+func (p *ItemErrorDetail) SetMessage(val *string) {
+	p.Message = val
+}
+func (p *ItemErrorDetail) SetIndex(val *int32) {
+	p.Index = val
+}
+func (p *ItemErrorDetail) SetStartIndex(val *int32) {
+	p.StartIndex = val
+}
+func (p *ItemErrorDetail) SetEndIndex(val *int32) {
+	p.EndIndex = val
+}
+
+var fieldIDToName_ItemErrorDetail = map[int16]string{
+	1: "message",
+	2: "index",
+	3: "start_index",
+	4: "end_index",
+}
+
+func (p *ItemErrorDetail) IsSetMessage() bool {
+	return p.Message != nil
+}
+
+func (p *ItemErrorDetail) IsSetIndex() bool {
+	return p.Index != nil
+}
+
+func (p *ItemErrorDetail) IsSetStartIndex() bool {
+	return p.StartIndex != nil
+}
+
+func (p *ItemErrorDetail) IsSetEndIndex() bool {
+	return p.EndIndex != nil
+}
+
+func (p *ItemErrorDetail) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ItemErrorDetail[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ItemErrorDetail) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Message = _field
+	return nil
+}
+func (p *ItemErrorDetail) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Index = _field
+	return nil
+}
+func (p *ItemErrorDetail) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartIndex = _field
+	return nil
+}
+func (p *ItemErrorDetail) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndIndex = _field
+	return nil
+}
+
+func (p *ItemErrorDetail) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ItemErrorDetail"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ItemErrorDetail) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessage() {
+		if err = oprot.WriteFieldBegin("message", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Message); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ItemErrorDetail) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIndex() {
+		if err = oprot.WriteFieldBegin("index", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Index); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ItemErrorDetail) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartIndex() {
+		if err = oprot.WriteFieldBegin("start_index", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.StartIndex); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ItemErrorDetail) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndIndex() {
+		if err = oprot.WriteFieldBegin("end_index", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.EndIndex); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *ItemErrorDetail) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ItemErrorDetail(%+v)", *p)
+
+}
+
+func (p *ItemErrorDetail) DeepEqual(ano *ItemErrorDetail) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Message) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Index) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.StartIndex) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EndIndex) {
+		return false
+	}
+	return true
+}
+
+func (p *ItemErrorDetail) Field1DeepEqual(src *string) bool {
+
+	if p.Message == src {
+		return true
+	} else if p.Message == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Message, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemErrorDetail) Field2DeepEqual(src *int32) bool {
+
+	if p.Index == src {
+		return true
+	} else if p.Index == nil || src == nil {
+		return false
+	}
+	if *p.Index != *src {
+		return false
+	}
+	return true
+}
+func (p *ItemErrorDetail) Field3DeepEqual(src *int32) bool {
+
+	if p.StartIndex == src {
+		return true
+	} else if p.StartIndex == nil || src == nil {
+		return false
+	}
+	if *p.StartIndex != *src {
+		return false
+	}
+	return true
+}
+func (p *ItemErrorDetail) Field4DeepEqual(src *int32) bool {
+
+	if p.EndIndex == src {
+		return true
+	} else if p.EndIndex == nil || src == nil {
+		return false
+	}
+	if *p.EndIndex != *src {
+		return false
 	}
 	return true
 }

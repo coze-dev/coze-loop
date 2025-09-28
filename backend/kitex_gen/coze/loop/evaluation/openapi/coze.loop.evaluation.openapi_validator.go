@@ -228,19 +228,11 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) IsValid() error {
 	return nil
 }
 func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) IsValid() error {
-	if p.Data != nil {
-		if err := p.Data.IsValid(); err != nil {
-			return fmt.Errorf("field Data not valid, %w", err)
-		}
-	}
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
-	return nil
-}
-func (p *BatchDeleteEvaluationSetItemsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) IsValid() error {
@@ -252,19 +244,11 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) IsValid() error {
 	return nil
 }
 func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) IsValid() error {
-	if p.Data != nil {
-		if err := p.Data.IsValid(); err != nil {
-			return fmt.Errorf("field Data not valid, %w", err)
-		}
-	}
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
-	return nil
-}
-func (p *ClearEvaluationSetDraftItemsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *ListEvaluationSetVersionItemsOpenAPIRequest) IsValid() error {

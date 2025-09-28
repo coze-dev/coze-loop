@@ -78,3 +78,6 @@ func (p *ItemError) IsValid() error {
 func (p *ItemErrorGroup) IsValid() error {
 	return nil
 }
+func (p *ItemErrorDetail) IsValid() error {
+	return nil
+}

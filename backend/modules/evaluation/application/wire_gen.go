@@ -220,8 +220,10 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metrics.Meter) evaluation.EvaluationOpenAPIService {
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(client)
 	iEvaluationSetService := service.NewEvaluationSetServiceImpl(iDatasetRPCAdapter)
+	evaluationSetVersionService := service.NewEvaluationSetVersionServiceImpl(iDatasetRPCAdapter)
+	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	openAPIEvaluationSetMetrics := metrics4.NewOpenAPIEvaluationSetMetrics(meter)
-	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iEvaluationSetService, openAPIEvaluationSetMetrics)
+	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, openAPIEvaluationSetMetrics)
 	return evaluationOpenAPIService
 }
 
@@ -253,8 +255,7 @@ var (
 	)
 
 	evaluationOpenAPISet = wire.NewSet(
-		NewEvaluationOpenApiApplicationImpl,
-		evalSetDomainService, metrics4.NewOpenAPIEvaluationSetMetrics,
+		NewEvaluationOpenApiApplicationImpl, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, data.NewDatasetRPCAdapter, metrics4.NewOpenAPIEvaluationSetMetrics,
 	)
 
 	targetDomainService = wire.NewSet(service.NewEvalTargetServiceImpl, NewSourceTargetOperators, prompt.NewPromptRPCAdapter, target.NewEvalTargetRepo, mysql3.NewEvalTargetDAO, mysql3.NewEvalTargetRecordDAO, mysql3.NewEvalTargetVersionDAO)

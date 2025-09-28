@@ -12,8 +12,8 @@ struct Content {
     1: optional ContentType content_type
     2: optional string text
     3: optional Image image
-    4: optional Audio audio
-    5: optional list<Content> multi_part
+
+    10: optional list<Content> multi_part
 }
 
 // 图片结构

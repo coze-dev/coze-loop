@@ -29,13 +29,13 @@ struct CreateEvaluationSetOpenAPIResponse {
 }
 
 struct CreateEvaluationSetOpenAPIData {
-    1: optional i64 evaluation_set_id (api.js_conv="true")
+    1: optional i64 evaluation_set_id (api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 }
 
 // 1.2 获取评测集详情
 struct GetEvaluationSetOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     255: optional base.Base Base
 }
@@ -79,13 +79,13 @@ struct ListEvaluationSetsOpenAPIData {
 
     100: optional bool has_more
     101: optional string next_page_token
-    102: optional i64 total
+    102: optional i64 total (api.js_conv="true", go.tag='json:"total"'),
 }
 
 // 1.4 创建评测集版本
 struct CreateEvaluationSetVersionOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
     3: optional string version (vt.min_size = "1", vt.max_size="50")
     4: optional string description (vt.max_size = "400")
     
@@ -101,16 +101,16 @@ struct CreateEvaluationSetVersionOpenAPIResponse {
 }
 
 struct CreateEvaluationSetVersionOpenAPIData {
-    1: optional string version_id (api.js_conv="true")
+    1: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"')
 }
 
 // 1.5 批量添加评测集数据
 struct BatchCreateEvaluationSetItemsOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path='evaluation_set_id')
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"')
     3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100')
-    4: optional bool skip_invalid_items
-    5: optional bool allow_partial_add
+    4: optional bool skip_invalid_items // items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
+    5: optional bool allow_partial_add // 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
     
     255: optional base.Base Base
 }
@@ -124,14 +124,14 @@ struct BatchCreateEvaluationSetItemsOpenAPIResponse {
 }
 
 struct BatchCreateEvaluationSetItemsOpenAPIData {
-    1: optional map<i64, string> added_items
+    1: optional map<i64, i64> added_items (api.js_conv='true', go.tag='json:"added_items"') // key: item 在 items 中的索引，value: item_id
     2: optional list<eval_set.ItemErrorGroup> errors
 }
 
 // 1.6 批量更新评测集数据
 struct BatchUpdateEvaluationSetItemsOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path='evaluation_set_id')
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv="true", go.tag='json:"evaluation_set_id"')
     3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100')
     4: optional bool skip_invalid_items
     
@@ -147,15 +147,15 @@ struct BatchUpdateEvaluationSetItemsOpenAPIResponse {
 }
 
 struct BatchUpdateEvaluationSetItemsOpenAPIData {
-    1: optional map<i64, string> updated_items
+    1: optional map<i64, string> updated_items (api.js_conv="true", go.tag='json:"updated_items"')
     2: optional list<eval_set.ItemErrorGroup> errors
 }
 
 // 1.7 批量删除评测集数据
 struct BatchDeleteEvaluationSetItemsOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
-    3: optional list<string> item_ids
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
+    3: optional list<i64> item_ids (api.js_conv="true", go.tag='json:"item_ids"')
     
     255: optional base.Base Base
 }
@@ -163,19 +163,15 @@ struct BatchDeleteEvaluationSetItemsOpenAPIRequest {
 struct BatchDeleteEvaluationSetItemsOpenAPIResponse {
     1: optional i32 code
     2: optional string msg
-    3: optional BatchDeleteEvaluationSetItemsOpenAPIData data
-    
+
     255: base.BaseResp BaseResp
 }
 
-struct BatchDeleteEvaluationSetItemsOpenAPIData {
-    1: optional i32 deleted_count
-}
 
 // 1.8 清空评测集草稿数据
 struct ClearEvaluationSetDraftItemsOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
     
     255: optional base.Base Base
 }
@@ -183,22 +179,19 @@ struct ClearEvaluationSetDraftItemsOpenAPIRequest {
 struct ClearEvaluationSetDraftItemsOpenAPIResponse {
     1: optional i32 code
     2: optional string msg
-    3: optional ClearEvaluationSetDraftItemsOpenAPIData data
-    
-    255: base.BaseResp BaseResp
-}
 
-struct ClearEvaluationSetDraftItemsOpenAPIData {
-    1: optional i32 cleared_count
+    255: base.BaseResp BaseResp
 }
 
 // 1.9 查询评测集特定版本数据
 struct ListEvaluationSetVersionItemsOpenAPIRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
-    3: required string version_id (api.path = "version_id")
-    4: optional string page_token
-    5: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
+    3: required i64 version_id (api.js_conv="true", go.tag='json:"version_id"')
+
+    100: optional string page_token
+    101: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    102: optional list<common.OrderBy> order_bys,
     
     255: optional base.Base Base
 }
@@ -213,9 +206,10 @@ struct ListEvaluationSetVersionItemsOpenAPIResponse {
 
 struct ListEvaluationSetVersionItemsOpenAPIData {
     1: optional list<eval_set.EvaluationSetItem> items
-    2: optional bool has_more
-    3: optional string next_page_token
-    4: optional i64 total
+
+    100: optional bool has_more
+    101: optional string next_page_token
+    102: optional i64 total (api.js_conv="true", go.tag='json:"total"')
 }
 
 // ===============================
@@ -398,19 +392,19 @@ service EvaluationOpenAPIService {
     // 1.2 获取评测集详情
     GetEvaluationSetOpenAPIResponse GetEvaluationSet(1: GetEvaluationSetOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id")
     // 1.3 查询评测集列表
-    ListEvaluationSetsOpenAPIResponse ListEvaluationSets(1: ListEvaluationSetsOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluation_sets")
+    ListEvaluationSetsOpenAPIResponse ListEvaluationSets(1: ListEvaluationSetsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/list")
     // 1.4 创建评测集版本
     CreateEvaluationSetVersionOpenAPIResponse CreateEvaluationSetVersion(1: CreateEvaluationSetVersionOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/versions")
     // 1.5 批量添加评测集数据
-    BatchCreateEvaluationSetItemsOpenAPIResponse BatchCreateEvaluationSetItems(1: BatchCreateEvaluationSetItemsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items")
+    BatchCreateEvaluationSetItemsOpenAPIResponse BatchCreateEvaluationSetItems(1: BatchCreateEvaluationSetItemsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_create")
     // 1.6 批量更新评测集数据
-    BatchUpdateEvaluationSetItemsOpenAPIResponse BatchUpdateEvaluationSetItems(1: BatchUpdateEvaluationSetItemsOpenAPIRequest req) (api.put = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items")
+    BatchUpdateEvaluationSetItemsOpenAPIResponse BatchUpdateEvaluationSetItems(1: BatchUpdateEvaluationSetItemsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_update")
     // 1.7 批量删除评测集数据
-    BatchDeleteEvaluationSetItemsOpenAPIResponse BatchDeleteEvaluationSetItems(1: BatchDeleteEvaluationSetItemsOpenAPIRequest req) (api.delete = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items")
+    BatchDeleteEvaluationSetItemsOpenAPIResponse BatchDeleteEvaluationSetItems(1: BatchDeleteEvaluationSetItemsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_delete")
     // 1.8 清空评测集草稿数据
-    ClearEvaluationSetDraftItemsOpenAPIResponse ClearEvaluationSetDraftItems(1: ClearEvaluationSetDraftItemsOpenAPIRequest req) (api.delete = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/draft")
+    ClearEvaluationSetDraftItemsOpenAPIResponse ClearEvaluationSetDraftItems(1: ClearEvaluationSetDraftItemsOpenAPIRequest req) (api.delete = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/clear")
     // 1.9 查询评测集特定版本数据
-    ListEvaluationSetVersionItemsOpenAPIResponse ListEvaluationSetVersionItems(1: ListEvaluationSetVersionItemsOpenAPIRequest req) (api.get = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/versions/:version_id/items")
+    ListEvaluationSetVersionItemsOpenAPIResponse ListEvaluationSetVersionItems(1: ListEvaluationSetVersionItemsOpenAPIRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list")
 
     // 评估器接口 (5个)
     // 2.1 创建评估器

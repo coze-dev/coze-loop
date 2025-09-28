@@ -80,23 +80,9 @@ func (p *Content) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField4(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 5:
+		case 10:
 			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField5(buf[offset:])
+				l, err = p.FastReadField10(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -166,19 +152,7 @@ func (p *Content) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *Content) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-	_field := NewAudio()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Audio = _field
-	return offset, nil
-}
-
-func (p *Content) FastReadField5(buf []byte) (int, error) {
+func (p *Content) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -213,8 +187,7 @@ func (p *Content) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -226,8 +199,7 @@ func (p *Content) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
-		l += p.field4Length()
-		l += p.field5Length()
+		l += p.field10Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -260,19 +232,10 @@ func (p *Content) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *Content) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetAudio() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
-		offset += p.Audio.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
-func (p *Content) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+func (p *Content) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetMultiPart() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 5)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 10)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
@@ -312,16 +275,7 @@ func (p *Content) field3Length() int {
 	return l
 }
 
-func (p *Content) field4Length() int {
-	l := 0
-	if p.IsSetAudio() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Audio.BLength()
-	}
-	return l
-}
-
-func (p *Content) field5Length() int {
+func (p *Content) field10Length() int {
 	l := 0
 	if p.IsSetMultiPart() {
 		l += thrift.Binary.FieldBeginLength()
@@ -361,15 +315,6 @@ func (p *Content) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Image = _image
-
-	var _audio *Audio
-	if src.Audio != nil {
-		_audio = &Audio{}
-		if err := _audio.DeepCopy(src.Audio); err != nil {
-			return err
-		}
-	}
-	p.Audio = _audio
 
 	if src.MultiPart != nil {
 		p.MultiPart = make([]*Content, 0, len(src.MultiPart))
