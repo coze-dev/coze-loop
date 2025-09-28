@@ -1223,7 +1223,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 				if results[index].EvaluatorRunError == nil && debugErr != nil {
 					results[index].EvaluatorRunError = &evaluatordto.EvaluatorRunError{
 						Code:    gptr.Of(int32(500)),
-						Message: gptr.Of(debugErr.Error()),
+						Message: gptr.Of(errorx.ErrorWithoutStack(debugErr)),
 					}
 				}
 			} else if debugErr != nil {
@@ -1231,7 +1231,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 				results[index] = &evaluatordto.EvaluatorOutputData{
 					EvaluatorRunError: &evaluatordto.EvaluatorRunError{
 						Code:    gptr.Of(int32(500)),
-						Message: gptr.Of(debugErr.Error()),
+						Message: gptr.Of(errorx.ErrorWithoutStack(debugErr)),
 					},
 				}
 			}
