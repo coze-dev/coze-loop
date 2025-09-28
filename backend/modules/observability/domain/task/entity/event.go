@@ -127,6 +127,9 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		s.Tags["fornax_space_id"] = ""
 	}
 	spaceID := s.Tags["fornax_space_id"].(string)
+	if s.Tags["span_type"] == nil {
+		s.Tags["span_type"] = ""
+	}
 	spanType := s.Tags["span_type"].(string)
 
 	result := &loop_span.Span{
