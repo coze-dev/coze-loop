@@ -1,0 +1,14 @@
+FROM alpine:3.22.0
+
+WORKDIR /coze-loop
+
+# 复制编译好的二进制文件
+COPY coze-loop-app /coze-loop/bin/main
+
+# 设置执行权限
+RUN chmod +x /coze-loop/bin/main
+
+# 创建资源目录
+RUN mkdir -p /coze-loop/resources
+
+CMD ["/coze-loop/bin/main"]
