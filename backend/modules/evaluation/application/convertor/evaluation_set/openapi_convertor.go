@@ -13,6 +13,99 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+// convertOpenAPIContentTypeToDO 将OpenAPI的ContentType转换为Domain Entity的ContentType
+func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.ContentType {
+	if contentType == nil {
+		return entity.ContentTypeText // 默认值
+	}
+	
+	switch *contentType {
+	case common.ContentTypeText:
+		return entity.ContentTypeText
+	case common.ContentTypeImage:
+		return entity.ContentTypeImage
+	case common.ContentTypeAudio:
+		return entity.ContentTypeAudio
+	case common.ContentTypeMultiPart:
+		return entity.ContentTypeMultipart
+	default:
+		return entity.ContentTypeText // 默认使用Text类型
+	}
+}
+
+// convertDOContentTypeToOpenAPI 将Domain Entity的ContentType转换为OpenAPI的ContentType
+func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.ContentType {
+	if contentType == "" {
+		return nil
+	}
+	
+	switch contentType {
+	case entity.ContentTypeText:
+		ct := common.ContentTypeText
+		return &ct
+	case entity.ContentTypeImage:
+		ct := common.ContentTypeImage
+		return &ct
+	case entity.ContentTypeAudio:
+		ct := common.ContentTypeAudio
+		return &ct
+	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+		ct := common.ContentTypeMultiPart
+		return &ct
+	default:
+		// 默认使用text类型
+		ct := common.ContentTypeText
+		return &ct
+	}
+}
+
+// convertOpenAPIDisplayFormatToDO 将OpenAPI的DefaultDisplayFormat转换为Domain Entity的DefaultDisplayFormat
+func convertOpenAPIDisplayFormatToDO(format *openapi_eval_set.FieldDisplayFormat) entity.FieldDisplayFormat {
+	if format == nil {
+		return entity.FieldDisplayFormat_PlainText // 默认值
+	}
+	
+	switch *format {
+	case openapi_eval_set.FieldDisplayFormatPlainText:
+		return entity.FieldDisplayFormat_PlainText
+	case openapi_eval_set.FieldDisplayFormatMarkdown:
+		return entity.FieldDisplayFormat_Markdown
+	case openapi_eval_set.FieldDisplayFormatJSON:
+		return entity.FieldDisplayFormat_JSON
+	case openapi_eval_set.FieldDisplayFormateYAML:
+		return entity.FieldDisplayFormat_YAML
+	case openapi_eval_set.FieldDisplayFormateCode:
+		return entity.FieldDisplayFormat_Code
+	default:
+		return entity.FieldDisplayFormat_PlainText
+	}
+}
+
+// convertDODisplayFormatToOpenAPI 将Domain Entity的DefaultDisplayFormat转换为OpenAPI的DefaultDisplayFormat
+func convertDODisplayFormatToOpenAPI(format entity.FieldDisplayFormat) *openapi_eval_set.FieldDisplayFormat {
+	var displayFormat *openapi_eval_set.FieldDisplayFormat
+	
+	switch format {
+	case entity.FieldDisplayFormat_PlainText:
+		f := openapi_eval_set.FieldDisplayFormatPlainText
+		displayFormat = &f
+	case entity.FieldDisplayFormat_Markdown:
+		f := openapi_eval_set.FieldDisplayFormatMarkdown
+		displayFormat = &f
+	case entity.FieldDisplayFormat_JSON:
+		f := openapi_eval_set.FieldDisplayFormatJSON
+		displayFormat = &f
+	case entity.FieldDisplayFormat_YAML:
+		f := openapi_eval_set.FieldDisplayFormateYAML
+		displayFormat = &f
+	case entity.FieldDisplayFormat_Code:
+		f := openapi_eval_set.FieldDisplayFormateCode
+		displayFormat = &f
+	}
+	
+	return displayFormat
+}
+
 // OpenAPI Schema 转换
 func OpenAPISchemaDTO2DO(dto *openapi_eval_set.EvaluationSetSchema) *entity.EvaluationSetSchema {
 	if dto == nil {
@@ -49,42 +142,9 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 		textSchema = *dto.TextSchema
 	}
 	
-	var contentType entity.ContentType
-	if dto.ContentType != nil {
-		// 正确映射OpenAPI DTO的ContentType枚举值到entity的ContentType枚举值
-		switch *dto.ContentType {
-		case common.ContentTypeText:
-			contentType = entity.ContentTypeText
-		case common.ContentTypeImage:
-			contentType = entity.ContentTypeImage
-		case common.ContentTypeAudio:
-			contentType = entity.ContentTypeAudio
-		case common.ContentTypeMultiPart:
-			contentType = entity.ContentTypeMultipart
-		default:
-			// 默认使用Text类型
-			contentType = entity.ContentTypeText
-		}
-	}
+	contentType := convertOpenAPIContentTypeToDO(dto.ContentType)
 	
-	var displayFormat entity.FieldDisplayFormat
-	if dto.DefaultDisplayFormat != nil {
-		// 简单字符串映射，实际应根据具体枚举值映射
-		switch *dto.DefaultDisplayFormat {
-		case "plain_text":
-			displayFormat = entity.FieldDisplayFormat_PlainText
-		case "markdown":
-			displayFormat = entity.FieldDisplayFormat_Markdown
-		case "json":
-			displayFormat = entity.FieldDisplayFormat_JSON
-		case "yaml":
-			displayFormat = entity.FieldDisplayFormat_YAML
-		case "code":
-			displayFormat = entity.FieldDisplayFormat_Code
-		default:
-			displayFormat = entity.FieldDisplayFormat_PlainText
-		}
-	}
+	displayFormat := convertOpenAPIDisplayFormatToDO(dto.DefaultDisplayFormat)
 	
 	return &entity.FieldSchema{
 		Name:                 gptr.Indirect(dto.Name),
@@ -216,47 +276,9 @@ func FieldSchemaDO2OpenAPIDTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 		textSchema = &do.TextSchema
 	}
 	
-	var displayFormat *openapi_eval_set.FieldDisplayFormat
-	switch do.DefaultDisplayFormat {
-	case entity.FieldDisplayFormat_PlainText:
-		format := openapi_eval_set.FieldDisplayFormatPlainText
-		displayFormat = &format
-	case entity.FieldDisplayFormat_Markdown:
-		format := openapi_eval_set.FieldDisplayFormatMarkdown
-		displayFormat = &format
-	case entity.FieldDisplayFormat_JSON:
-		format := openapi_eval_set.FieldDisplayFormatJSON
-		displayFormat = &format
-	case entity.FieldDisplayFormat_YAML:
-		format := openapi_eval_set.FieldDisplayFormateYAML
-		displayFormat = &format
-	case entity.FieldDisplayFormat_Code:
-		format := openapi_eval_set.FieldDisplayFormateCode
-		displayFormat = &format
-	}
+	displayFormat := convertDODisplayFormatToOpenAPI(do.DefaultDisplayFormat)
 	
-	var contentType *common.ContentType
-	if do.ContentType != "" {
-		// 正确映射entity的ContentType枚举值到OpenAPI DTO的ContentType枚举值
-		switch do.ContentType {
-		case entity.ContentTypeText:
-			ct := common.ContentTypeText
-			contentType = &ct
-		case entity.ContentTypeImage:
-			ct := common.ContentTypeImage
-			contentType = &ct
-		case entity.ContentTypeAudio:
-			ct := common.ContentTypeAudio
-			contentType = &ct
-		case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
-			ct := common.ContentTypeMultiPart
-			contentType = &ct
-		default:
-			// 默认使用text类型
-			ct := common.ContentTypeText
-			contentType = &ct
-		}
-	}
+	contentType := convertDOContentTypeToOpenAPI(do.ContentType)
 	
 	return &openapi_eval_set.FieldSchema{
 		Name:                 gptr.Of(do.Name),
