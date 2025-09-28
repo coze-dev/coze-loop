@@ -1,0 +1,34 @@
+# Infrastructure configuration for coze-loop backend
+# This is a minimal configuration for testing
+
+# Database configuration - use SQLite for testing
+sqlite:
+  path: "/tmp/coze_loop.db"
+
+# Redis configuration - disabled for testing
+redis:
+  enabled: false
+
+# ClickHouse configuration - disabled for testing
+clickhouse:
+  enabled: false
+
+# Message Queue configuration - disabled for testing
+mq:
+  enabled: false
+  
+# File server configuration
+fileserver:
+  type: "local"
+  local:
+    root: "/tmp/coze-loop-files"
+
+# Logging configuration
+log:
+  level: "info"
+  format: "json"
+  
+# Server configuration
+server:
+  port: 8080
+  host: "0.0.0.0"

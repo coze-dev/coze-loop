@@ -29,7 +29,7 @@ type QuotaServiceImpl struct {
 	Configer  component.IConfiger
 }
 
-func (q *QuotaServiceImpl) ReleaseExptRun(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) error {
+func (q *QuotaServiceImpl) ReleaseExptRun(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
 	return q.QuotaRepo.CreateOrUpdate(ctx, spaceID, func(cur *entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error) {
 		if cur == nil || cur.ExptID2RunTime == nil {
 			return cur, false, nil
@@ -44,7 +44,7 @@ func (q *QuotaServiceImpl) ReleaseExptRun(ctx context.Context, exptID int64, spa
 	}, session)
 }
 
-func (q *QuotaServiceImpl) AllowExptRun(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) error {
+func (q *QuotaServiceImpl) AllowExptRun(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
 	var (
 		now             = time.Now().Unix()
 		zombineInterval = q.Configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()

@@ -286,7 +286,7 @@ func (s *Span) IsValidSpan() error {
 		return fmt.Errorf("invalid trace_id: %s", s.TraceID)
 	}
 	for _, c := range s.TraceID {
-		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') { //nolint:staticcheck,QF1001
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') { //nolint:staticcheck
 			return fmt.Errorf("invalid trace_id: %s", s.TraceID)
 		}
 	}
@@ -294,7 +294,7 @@ func (s *Span) IsValidSpan() error {
 		return fmt.Errorf("invalid span_id: %s", s.SpanID)
 	}
 	for _, c := range s.SpanID {
-		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') { //nolint:staticcheck,QF1001
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') { //nolint:staticcheck
 			return fmt.Errorf("invalid span_id: %s", s.SpanID)
 		}
 	}

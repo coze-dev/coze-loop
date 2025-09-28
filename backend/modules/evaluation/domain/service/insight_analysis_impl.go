@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"

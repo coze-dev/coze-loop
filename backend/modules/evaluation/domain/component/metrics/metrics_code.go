@@ -15,7 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func GetCode(err error) (code int64, isError int64) {
+func GetCode(err error) (code, isError int64) {
 	defer func() {
 		if r := recover(); r != nil {
 			buf := make([]byte, 0, 4096)

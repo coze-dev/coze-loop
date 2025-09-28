@@ -47,7 +47,7 @@ func (r *EvaluatorRepoImpl) SubmitEvaluatorVersion(ctx context.Context, evaluato
 	err := r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
 		opt := db.WithTransaction(tx)
 		// 更新Evaluator最新版本
-		err := r.evaluatorDao.UpdateEvaluatorLatestVersion(ctx, evaluator.ID, evaluator.GetEvaluatorVersion().GetVersion(), gptr.Indirect(evaluator.BaseInfo.UpdatedBy.UserID), opt)
+		err := r.evaluatorDao.UpdateEvaluatorLatestVersion(ctx, evaluator.ID, evaluator.GetVersion(), gptr.Indirect(evaluator.BaseInfo.UpdatedBy.UserID), opt)
 		if err != nil {
 			return err
 		}
@@ -130,6 +130,15 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorMap[evaluatorVersionPO.EvaluatorID])
 			evaluatorDO.PromptEvaluatorVersion = evaluatorVersionDO.PromptEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypePrompt
+			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
+		case int32(entity.EvaluatorTypeCode):
+			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorMap[evaluatorVersionPO.EvaluatorID])
+			evaluatorDO.CodeEvaluatorVersion = evaluatorVersionDO.CodeEvaluatorVersion
+			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCode
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		default:
 			continue
@@ -241,7 +250,7 @@ func (r *EvaluatorRepoImpl) CreateEvaluator(ctx context.Context, do *entity.Eval
 	evaluatorPO.ID = genIDs[0]
 	evaluatorID = evaluatorPO.ID
 	evaluatorPO.DraftSubmitted = gptr.Of(true) // 初始化创建时草稿统一已提交
-	evaluatorPO.LatestVersion = do.GetEvaluatorVersion().GetVersion()
+	evaluatorPO.LatestVersion = do.GetVersion()
 	evaluatorVersionPO, err := convertor.ConvertEvaluatorVersionDO2PO(do)
 	if err != nil {
 		return 0, err

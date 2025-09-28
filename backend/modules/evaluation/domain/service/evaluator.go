@@ -16,7 +16,7 @@ type EvaluatorService interface {
 	// BatchGetEvaluator 按 id 批量查询 evaluator_version
 	BatchGetEvaluator(ctx context.Context, spaceID int64, evaluatorIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	// GetEvaluator 按 id 单个查询 evaluator_version
-	GetEvaluator(ctx context.Context, spaceID int64, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error)
+	GetEvaluator(ctx context.Context, spaceID, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error)
 	// CreateEvaluator 创建 evaluator_version
 	CreateEvaluator(ctx context.Context, evaluator *entity.Evaluator, cid string) (int64, error)
 	// UpdateEvaluatorMeta 修改 evaluator_version
