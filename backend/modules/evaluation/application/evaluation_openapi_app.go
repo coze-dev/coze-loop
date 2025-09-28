@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 )
@@ -45,11 +46,12 @@ type EvaluationOpenApiApplicationImpl struct {
 }
 
 func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Context, req *openapi.CreateEvaluationSetOpenAPIRequest) (r *openapi.CreateEvaluationSetOpenAPIResponse, err error) {
-	var evaluationSetID *int64
+	var evaluationSetID int64
+	success := false
 	defer func() {
-		e.metric.EmitCreateEvaluationSet(req.GetWorkspaceID(), evaluationSetID, err)
+		method := kitexutil.GetTOMethod(ctx)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, method, success)
 	}()
-
 	// 参数校验
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
@@ -68,13 +70,12 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	
-	evaluationSetID = &id
+
+	evaluationSetID = id
+	success = true
 
 	// 构建响应
 	return &openapi.CreateEvaluationSetOpenAPIResponse{
-		Code: gptr.Of(int32(0)),
-		Msg:  gptr.Of("success"),
 		Data: &openapi.CreateEvaluationSetOpenAPIData{
 			EvaluationSetID: gptr.Of(id),
 		},
@@ -82,10 +83,12 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Conte
 }
 
 func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context, req *openapi.GetEvaluationSetOpenAPIRequest) (r *openapi.GetEvaluationSetOpenAPIResponse, err error) {
+	success := false
 	defer func() {
-		e.metric.EmitGetEvaluationSet(req.GetWorkspaceID(), req.GetEvaluationSetID(), err)
+		method := kitexutil.GetTOMethod(ctx)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), method, success)
 	}()
-	
+
 	// 参数校验
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
@@ -103,10 +106,10 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context,
 	// 数据转换
 	dto := evaluation_set.EvaluationSetDO2OpenAPIDTO(set)
 
+	success = true
+
 	// 构建响应
 	return &openapi.GetEvaluationSetOpenAPIResponse{
-		Code: gptr.Of(int32(0)),
-		Msg:  gptr.Of("success"),
 		Data: &openapi.GetEvaluationSetOpenAPIData{
 			EvaluationSet: dto,
 		},
@@ -114,10 +117,13 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context,
 }
 
 func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Context, req *openapi.ListEvaluationSetsOpenAPIRequest) (r *openapi.ListEvaluationSetsOpenAPIResponse, err error) {
+	success := false
 	defer func() {
-		e.metric.EmitListEvaluationSets(req.GetWorkspaceID(), err)
+		method := kitexutil.GetTOMethod(ctx)
+		// ListEvaluationSets没有单个evaluationSetID，使用0作为占位符
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, method, success)
 	}()
-	
+
 	// 参数校验
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
@@ -140,11 +146,11 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Contex
 	// 数据转换
 	dtos := evaluation_set.EvaluationSetDO2OpenAPIDTOs(sets)
 
+	success = true
+
 	// 构建响应
 	hasMore := nextPageToken != nil && *nextPageToken != ""
 	return &openapi.ListEvaluationSetsOpenAPIResponse{
-		Code: gptr.Of(int32(0)),
-		Msg:  gptr.Of("success"),
 		Data: &openapi.ListEvaluationSetsOpenAPIData{
 			Items:         dtos,
 			HasMore:       gptr.Of(hasMore),

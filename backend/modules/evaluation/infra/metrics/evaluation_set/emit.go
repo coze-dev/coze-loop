@@ -4,6 +4,7 @@
 package metrics
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
@@ -67,42 +68,12 @@ type OpenAPIEvaluationSetMetricsImpl struct {
 	meter metrics.Meter
 }
 
-func (m *OpenAPIEvaluationSetMetricsImpl) EmitCreateEvaluationSet(spaceID int64, evaluationSetID *int64, err error) {
+func (m *OpenAPIEvaluationSetMetricsImpl) EmitOpenAPIMetric(ctx context.Context, spaceID, evaluationSetID int64, method string, success bool) {
 	if m == nil || m.meter == nil {
 		return
 	}
 	
-	metric, mErr := m.meter.NewMetric("openapi_evaluation_set_create", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "evaluation_set_id", "method", "status"})
-	if mErr != nil {
-		return
-	}
-	
-	tags := []metrics.T{
-		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
-		{Name: "method", Value: "create_evaluation_set"},
-	}
-	
-	if evaluationSetID != nil {
-		tags = append(tags, metrics.T{Name: "evaluation_set_id", Value: strconv.FormatInt(*evaluationSetID, 10)})
-	} else {
-		tags = append(tags, metrics.T{Name: "evaluation_set_id", Value: ""})
-	}
-	
-	if err != nil {
-		tags = append(tags, metrics.T{Name: "status", Value: "error"})
-	} else {
-		tags = append(tags, metrics.T{Name: "status", Value: "success"})
-	}
-	
-	metric.Emit(tags, metrics.Counter(1))
-}
-
-func (m *OpenAPIEvaluationSetMetricsImpl) EmitGetEvaluationSet(spaceID int64, evaluationSetID int64, err error) {
-	if m == nil || m.meter == nil {
-		return
-	}
-	
-	metric, mErr := m.meter.NewMetric("openapi_evaluation_set_get", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "evaluation_set_id", "method", "status"})
+	metric, mErr := m.meter.NewMetric("openapi_evaluation_set", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "evaluation_set_id", "method", "status"})
 	if mErr != nil {
 		return
 	}
@@ -110,37 +81,13 @@ func (m *OpenAPIEvaluationSetMetricsImpl) EmitGetEvaluationSet(spaceID int64, ev
 	tags := []metrics.T{
 		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
 		{Name: "evaluation_set_id", Value: strconv.FormatInt(evaluationSetID, 10)},
-		{Name: "method", Value: "get_evaluation_set"},
+		{Name: "method", Value: method},
 	}
 	
-	if err != nil {
-		tags = append(tags, metrics.T{Name: "status", Value: "error"})
-	} else {
+	if success {
 		tags = append(tags, metrics.T{Name: "status", Value: "success"})
-	}
-	
-	metric.Emit(tags, metrics.Counter(1))
-}
-
-func (m *OpenAPIEvaluationSetMetricsImpl) EmitListEvaluationSets(spaceID int64, err error) {
-	if m == nil || m.meter == nil {
-		return
-	}
-	
-	metric, mErr := m.meter.NewMetric("openapi_evaluation_set_list", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "method", "status"})
-	if mErr != nil {
-		return
-	}
-	
-	tags := []metrics.T{
-		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
-		{Name: "method", Value: "list_evaluation_sets"},
-	}
-	
-	if err != nil {
-		tags = append(tags, metrics.T{Name: "status", Value: "error"})
 	} else {
-		tags = append(tags, metrics.T{Name: "status", Value: "success"})
+		tags = append(tags, metrics.T{Name: "status", Value: "error"})
 	}
 	
 	metric.Emit(tags, metrics.Counter(1))
