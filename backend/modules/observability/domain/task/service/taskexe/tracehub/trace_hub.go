@@ -104,8 +104,11 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		return nil
 	}
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	spaceList, botList := h.taskRepo.GetObjListWithTask(ctx)
-	logs.CtxInfo(ctx, "space list: %v, bot list: %v", spaceList, botList)
+	spaceList, botList, tasks, err := h.taskRepo.GetObjListWithTask(ctx)
+	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", spaceList, botList, tasks)
+	if err != nil {
+		return err
+	}
 	// 1.2 过滤掉不在 spaceList 中的 span
 	if !gslice.Contains(spaceList, span.WorkspaceID) && !gslice.Contains(botList, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
@@ -113,7 +116,7 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		return nil
 	}
 	// 2、读redis，获取rule信息，进行匹配，查询订阅者
-	subs, err := h.getSubscriberOfSpan(ctx, span)
+	subs, err := h.getSubscriberOfSpan(ctx, span, tasks)
 	if err != nil { // 继续执行，不阻塞。
 		logs.CtxWarn(ctx, "get subscriber of flow span failed, %s, err: %v", logSuffix, err)
 	}
@@ -148,16 +151,10 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	return nil
 }
 
-func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loop_span.Span) ([]*spanSubscriber, error) {
+func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loop_span.Span, tasks []*entity.ObservabilityTask) ([]*spanSubscriber, error) {
 	logs.CtxInfo(ctx, "getSubscriberOfSpan start")
 	var subscribers []*spanSubscriber
-	// 获取该空间非终态任务列表
-	tasksPOList := h.taskRepo.ListNonFinalTaskBySpaceID(ctx, span.WorkspaceID)
-	if len(tasksPOList) == 0 {
-		logs.CtxWarn(ctx, "no subscriber found for span, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
-		return nil, nil
-	}
-	taskList := tconv.TaskPOs2DOs(ctx, tasksPOList, nil)
+	taskList := tconv.TaskPOs2DOs(ctx, tasks, nil)
 	for _, taskDO := range taskList {
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		subscribers = append(subscribers, &spanSubscriber{

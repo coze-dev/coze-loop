@@ -47,7 +47,7 @@ type ITaskDao interface {
 	ListTasks(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error)
 	ListNonFinalTask(ctx context.Context) ([]*model.ObservabilityTask, error)
 	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
-	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
+	GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error)
 	ListNonFinalTaskBySpaceID(ctx context.Context, workspaceID int64) ([]*model.ObservabilityTask, error)
 }
 
@@ -386,7 +386,7 @@ func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspace
 	return nil
 }
 
-func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, error) {
+func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx))
 	qd := q.WithContext(ctx).ObservabilityTask
 
@@ -396,7 +396,7 @@ func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 
 	results, err := qd.Find()
 	if err != nil {
-		return nil, nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		return nil, nil, nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
 
 	// 转换为字符串数组
@@ -412,7 +412,7 @@ func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 
 	// botList暂时返回空数组，因为Task表中没有bot_id字段
 
-	return spaceList, botList, nil
+	return spaceList, botList, results, nil
 }
 
 // extractBotIDFromFilters 递归提取过滤器中的 bot_id 值，包括 SubFilter

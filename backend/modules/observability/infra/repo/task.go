@@ -293,20 +293,25 @@ func isNonFinalTaskStatus(status string) bool {
 	return true
 }
 
-func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string) {
+func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask) {
+	var tasks []*entity.ObservabilityTask
 	// 先查 Redis 缓存
-	spaceList, botList, err := v.TaskRedisDao.GetObjListWithTask(ctx)
-	if err != nil {
+	spaceList, botList, results, err := v.TaskRedisDao.GetObjListWithTask(ctx)
+	if err != nil || len(results) == 0 {
 		logs.CtxWarn(ctx, "failed to get obj list with task from redis cache", "err", err)
 		// Redis失败时从MySQL获取
-		spaceList, botList, err = v.TaskDao.GetObjListWithTask(ctx)
+		spaceList, botList, results, err = v.TaskDao.GetObjListWithTask(ctx)
 		if err != nil {
 			logs.CtxWarn(ctx, "failed to get obj list with task from mysql", "err", err)
-			return nil, nil
+			return nil, nil, nil
 		}
 	}
+	tasks = make([]*entity.ObservabilityTask, len(results))
+	for i, result := range results {
+		tasks[i] = convertor.TaskPO2DO(result)
+	}
 
-	return spaceList, botList
+	return spaceList, botList, tasks
 }
 
 func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, error) {

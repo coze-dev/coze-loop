@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -52,7 +53,8 @@ type ITaskDAO interface {
 	IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) (int64, error)
 	DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) (int64, error)
 
-	GetObjListWithTask(ctx context.Context) ([]string, []string, error)
+	// GetObjListWithTask 获取包含任务的空间列表缓存
+	GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error)
 
 	// SpaceListWithTask相关
 	GetSpaceListWithTask(ctx context.Context) ([]string, error)
@@ -353,32 +355,45 @@ func (p *TaskDAOImpl) DeleteTaskRunCount(ctx context.Context, taskID, taskRunID 
 	return nil
 }
 
-func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, error) {
+func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error) {
 	spaceKey := "spaceList"
 	botKey := "botList"
+	taskKey := "taskList"
 	gotSpaceList, err := p.cmdable.Get(ctx, spaceKey).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
-			return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey) // 缓存未命中
+			return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey) // 缓存未命中
 		}
-		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+		return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
 	}
 	var spaceList []string
 	if err = json.Unmarshal(conv.UnsafeStringToBytes(gotSpaceList), &spaceList); err != nil {
-		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+		return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
 	}
 	gotBotList, err := p.cmdable.Get(ctx, botKey).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
-			return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey) // 缓存未命中
+			return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey) // 缓存未命中
 		}
-		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey)
+		return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey)
 	}
 	var botList []string
 	if err = json.Unmarshal(conv.UnsafeStringToBytes(gotBotList), &botList); err != nil {
-		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+		return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey)
 	}
-	return spaceList, botList, nil
+	gotTaskList, err := p.cmdable.Get(ctx, taskKey).Result()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", taskKey) // 缓存未命中
+		}
+		return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", taskKey)
+	}
+	var tasks []*model.ObservabilityTask
+	if err = json.Unmarshal(conv.UnsafeStringToBytes(gotTaskList), &tasks); err != nil {
+		return nil, nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", taskKey)
+	}
+
+	return spaceList, botList, tasks, nil
 }
 
 // GetSpaceListWithTask 获取包含任务的空间列表缓存

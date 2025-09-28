@@ -46,7 +46,7 @@ type ITaskRepo interface {
 
 	//
 	ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error)
-	GetObjListWithTask(ctx context.Context) ([]string, []string)
+	GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask)
 	ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) []*entity.ObservabilityTask
 
 	// 获取所有TaskRunCount键
