@@ -65,7 +65,7 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Conte
 		SpaceID:             req.WorkspaceID,
 		Name:                req.Name,
 		Description:         req.Description,
-		EvaluationSetSchema: evaluation_set.OpenAPISchemaDTO2DO(req.EvaluationSetSchema),
+		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
 	})
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context,
 	}
 
 	// 数据转换
-	dto := evaluation_set.EvaluationSetDO2OpenAPIDTO(set)
+	dto := evaluation_set.OpenAPIEvaluationSetDO2DTO(set)
 
 	// 构建响应
 	return &openapi.GetEvaluationSetOpenAPIResponse{
@@ -132,14 +132,14 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Contex
 		Creators:         req.Creators,
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
-		OrderBys:         evaluation_set.ConvertOpenAPIOrderByDTO2DOs(req.OrderBys),
+		OrderBys:         evaluation_set.OrderByDTO2DOs(req.OrderBys),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	// 数据转换
-	dtos := evaluation_set.EvaluationSetDO2OpenAPIDTOs(sets)
+	dtos := evaluation_set.OpenAPIEvaluationSetDO2DTOs(sets)
 
 	// 构建响应
 	hasMore := nextPageToken != nil && *nextPageToken != ""

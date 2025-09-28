@@ -8,8 +8,8 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
-	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
+	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
@@ -18,7 +18,7 @@ func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.Conte
 	if contentType == nil {
 		return entity.ContentTypeText // 默认值
 	}
-	
+
 	switch *contentType {
 	case common.ContentTypeText:
 		return entity.ContentTypeText
@@ -38,7 +38,7 @@ func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.Conte
 	if contentType == "" {
 		return nil
 	}
-	
+
 	switch contentType {
 	case entity.ContentTypeText:
 		ct := common.ContentTypeText
@@ -64,7 +64,7 @@ func convertOpenAPIDisplayFormatToDO(format *openapi_eval_set.FieldDisplayFormat
 	if format == nil {
 		return entity.FieldDisplayFormat_PlainText // 默认值
 	}
-	
+
 	switch *format {
 	case openapi_eval_set.FieldDisplayFormatPlainText:
 		return entity.FieldDisplayFormat_PlainText
@@ -84,7 +84,7 @@ func convertOpenAPIDisplayFormatToDO(format *openapi_eval_set.FieldDisplayFormat
 // convertDODisplayFormatToOpenAPI 将Domain Entity的DefaultDisplayFormat转换为OpenAPI的DefaultDisplayFormat
 func convertDODisplayFormatToOpenAPI(format entity.FieldDisplayFormat) *openapi_eval_set.FieldDisplayFormat {
 	var displayFormat *openapi_eval_set.FieldDisplayFormat
-	
+
 	switch format {
 	case entity.FieldDisplayFormat_PlainText:
 		f := openapi_eval_set.FieldDisplayFormatPlainText
@@ -102,7 +102,7 @@ func convertDODisplayFormatToOpenAPI(format entity.FieldDisplayFormat) *openapi_
 		f := openapi_eval_set.FieldDisplayFormateCode
 		displayFormat = &f
 	}
-	
+
 	return displayFormat
 }
 
@@ -133,7 +133,7 @@ func convertOpenAPIStatusToDO(status openapi_eval_set.EvaluationSetStatus) entit
 }
 
 // OpenAPI Schema 转换
-func OpenAPISchemaDTO2DO(dto *openapi_eval_set.EvaluationSetSchema) *entity.EvaluationSetSchema {
+func OpenAPIEvaluationSetSchemaDTO2DO(dto *openapi_eval_set.EvaluationSetSchema) *entity.EvaluationSetSchema {
 	if dto == nil {
 		return nil
 	}
@@ -157,21 +157,21 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 	if dto == nil {
 		return nil
 	}
-	
+
 	var description string
 	if dto.Description != nil {
 		description = *dto.Description
 	}
-	
+
 	var textSchema string
 	if dto.TextSchema != nil {
 		textSchema = *dto.TextSchema
 	}
-	
+
 	contentType := convertOpenAPIContentTypeToDO(dto.ContentType)
-	
+
 	displayFormat := convertOpenAPIDisplayFormatToDO(dto.DefaultDisplayFormat)
-	
+
 	return &entity.FieldSchema{
 		Name:                 gptr.Indirect(dto.Name),
 		Description:          description,
@@ -183,22 +183,22 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 }
 
 // OpenAPI OrderBy 转换
-func ConvertOpenAPIOrderByDTO2DOs(dtos []*common.OrderBy) []*entity.OrderBy {
+func OrderByDTO2DOs(dtos []*common.OrderBy) []*entity.OrderBy {
 	if dtos == nil {
 		return nil
 	}
 	result := make([]*entity.OrderBy, 0)
 	for _, dto := range dtos {
-		result = append(result, ConvertOpenAPIOrderByDTO2DO(dto))
+		result = append(result, OrderByDTO2DO(dto))
 	}
 	return result
 }
 
-func ConvertOpenAPIOrderByDTO2DO(dto *common.OrderBy) *entity.OrderBy {
+func OrderByDTO2DO(dto *common.OrderBy) *entity.OrderBy {
 	if dto == nil {
 		return nil
 	}
-	
+
 	return &entity.OrderBy{
 		Field: dto.Field,
 		IsAsc: dto.IsAsc,
@@ -206,134 +206,115 @@ func ConvertOpenAPIOrderByDTO2DO(dto *common.OrderBy) *entity.OrderBy {
 }
 
 // 内部DTO转OpenAPI DTO
-func EvaluationSetDO2OpenAPIDTO(do *entity.EvaluationSet) *openapi_eval_set.EvaluationSet {
+func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.EvaluationSet {
 	if do == nil {
 		return nil
 	}
-
-	// 使用转换方法映射DatasetStatus到EvaluationSetStatus
-	status := convertDOStatusToOpenAPI(do.Status)
 
 	return &openapi_eval_set.EvaluationSet{
 		ID:                gptr.Of(do.ID),
 		Name:              gptr.Of(do.Name),
 		Description:       gptr.Of(do.Description),
-		Status:            gptr.Of(status),
+		Status:            gptr.Of(convertDOStatusToOpenAPI(do.Status)),
 		ItemCount:         gptr.Of(do.ItemCount),
 		LatestVersion:     gptr.Of(do.LatestVersion),
 		ChangeUncommitted: gptr.Of(do.ChangeUncommitted),
-		CurrentVersion:    EvaluationSetVersionDO2OpenAPIDTO(do.EvaluationSetVersion),
-		BaseInfo:          ConvertBaseInfoDO2OpenAPIDTO(do.BaseInfo),
+		CurrentVersion:    OpenAPIEvaluationSetVersionDO2DTO(do.EvaluationSetVersion),
+		BaseInfo:          OpenAPIBaseInfoDO2DTO(do.BaseInfo),
 	}
 }
 
-func EvaluationSetDO2OpenAPIDTOs(dos []*entity.EvaluationSet) []*openapi_eval_set.EvaluationSet {
+func OpenAPIEvaluationSetDO2DTOs(dos []*entity.EvaluationSet) []*openapi_eval_set.EvaluationSet {
 	if dos == nil {
 		return nil
 	}
 	result := make([]*openapi_eval_set.EvaluationSet, 0)
 	for _, do := range dos {
-		result = append(result, EvaluationSetDO2OpenAPIDTO(do))
+		result = append(result, OpenAPIEvaluationSetDO2DTO(do))
 	}
 	return result
 }
 
-func EvaluationSetVersionDO2OpenAPIDTO(do *entity.EvaluationSetVersion) *openapi_eval_set.EvaluationSetVersion {
+func OpenAPIEvaluationSetVersionDO2DTO(do *entity.EvaluationSetVersion) *openapi_eval_set.EvaluationSetVersion {
 	if do == nil {
 		return nil
 	}
-	
-	var description *string
-	if do.Description != "" {
-		description = &do.Description
-	}
-	
 	return &openapi_eval_set.EvaluationSetVersion{
-		ID:                   gptr.Of(do.ID),
-		Version:              gptr.Of(do.Version),
-		Description:          description,
-		EvaluationSetSchema:  EvaluationSetSchemaDO2OpenAPIDTO(do.EvaluationSetSchema),
-		ItemCount:            gptr.Of(do.ItemCount),
-		BaseInfo:             ConvertBaseInfoDO2OpenAPIDTO(do.BaseInfo),
+		ID:                  gptr.Of(do.ID),
+		Version:             gptr.Of(do.Version),
+		Description:         gptr.Of(do.Description),
+		EvaluationSetSchema: OpenAPIEvaluationSetSchemaDO2DTO(do.EvaluationSetSchema),
+		ItemCount:           gptr.Of(do.ItemCount),
+		BaseInfo:            OpenAPIBaseInfoDO2DTO(do.BaseInfo),
 	}
 }
 
-func EvaluationSetSchemaDO2OpenAPIDTO(do *entity.EvaluationSetSchema) *openapi_eval_set.EvaluationSetSchema {
+func OpenAPIEvaluationSetSchemaDO2DTO(do *entity.EvaluationSetSchema) *openapi_eval_set.EvaluationSetSchema {
 	if do == nil {
 		return nil
 	}
 	return &openapi_eval_set.EvaluationSetSchema{
-		FieldSchemas: FieldSchemaDO2OpenAPIDTOs(do.FieldSchemas),
+		FieldSchemas: OpenAPIFieldSchemaDO2DTOs(do.FieldSchemas),
 	}
 }
 
-func FieldSchemaDO2OpenAPIDTOs(dos []*entity.FieldSchema) []*openapi_eval_set.FieldSchema {
+func OpenAPIFieldSchemaDO2DTOs(dos []*entity.FieldSchema) []*openapi_eval_set.FieldSchema {
 	if dos == nil {
 		return nil
 	}
 	result := make([]*openapi_eval_set.FieldSchema, 0)
 	for _, do := range dos {
-		result = append(result, FieldSchemaDO2OpenAPIDTO(do))
+		result = append(result, OpenAPIFieldSchemaDO2DTO(do))
 	}
 	return result
 }
 
-func FieldSchemaDO2OpenAPIDTO(do *entity.FieldSchema) *openapi_eval_set.FieldSchema {
+func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSchema {
 	if do == nil {
 		return nil
 	}
-	
-	var description *string
-	if do.Description != "" {
-		description = &do.Description
-	}
-	
-	var textSchema *string
-	if do.TextSchema != "" {
-		textSchema = &do.TextSchema
-	}
-	
+
 	displayFormat := convertDODisplayFormatToOpenAPI(do.DefaultDisplayFormat)
-	
+
 	contentType := convertDOContentTypeToOpenAPI(do.ContentType)
-	
+
 	return &openapi_eval_set.FieldSchema{
 		Name:                 gptr.Of(do.Name),
-		Description:          description,
+		Description:          gptr.Of(do.Description),
 		ContentType:          contentType,
 		DefaultDisplayFormat: displayFormat,
 		IsRequired:           gptr.Of(do.IsRequired),
-		TextSchema:           textSchema,
+		TextSchema:           gptr.Of(do.TextSchema),
 	}
 }
 
-func ConvertBaseInfoDO2OpenAPIDTO(do *entity.BaseInfo) *common.BaseInfo {
+func OpenAPIBaseInfoDO2DTO(do *entity.BaseInfo) *common.BaseInfo {
 	if do == nil {
 		return nil
 	}
-	
+
 	var createdAt *string
 	if do.CreatedAt != nil {
 		// 将时间戳转换为ISO 8601格式字符串，这里简化处理
 		timestamp := fmt.Sprintf("%d", *do.CreatedAt)
 		createdAt = &timestamp
 	}
-	
+
 	var updatedAt *string
 	if do.UpdatedAt != nil {
 		timestamp := fmt.Sprintf("%d", *do.UpdatedAt)
 		updatedAt = &timestamp
 	}
-	
+
 	return &common.BaseInfo{
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
-		CreatedBy: ConvertUserInfoDO2OpenAPIDTO(do.CreatedBy),
-		UpdatedBy: ConvertUserInfoDO2OpenAPIDTO(do.UpdatedBy),
+		CreatedBy: OpenAPIUserInfoDO2DTO(do.CreatedBy),
+		UpdatedBy: OpenAPIUserInfoDO2DTO(do.UpdatedBy),
 	}
 }
 
-func ConvertUserInfoDO2OpenAPIDTO(do *entity.UserInfo) *common.UserInfo {
+func OpenAPIUserInfoDO2DTO(do *entity.UserInfo) *common.UserInfo {
 	if do == nil {
 		return nil
 	}
