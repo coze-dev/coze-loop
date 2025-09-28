@@ -73,10 +73,10 @@ func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 
 func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx := context.Background()
-	logs.CtxInfo(ctx, "定时任务开始执行...")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	logs.CtxInfo(ctx, "定时任务开始执行...")
 	// 读取所有非终态（成功/禁用）任务
 	var taskPOs []*entity.ObservabilityTask
 	var err error

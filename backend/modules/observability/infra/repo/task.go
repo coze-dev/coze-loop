@@ -107,8 +107,8 @@ func (v *TaskRepoImpl) ListTasks(ctx context.Context, param mysql.ListTaskParam)
 		taskRuns, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
 			WorkspaceID: ptr.Of(t.WorkspaceID),
 			TaskID:      ptr.Of(t.ID),
-			ReqLimit:    1000,
-			ReqOffset:   0,
+			ReqLimit:    param.ReqLimit,
+			ReqOffset:   param.ReqOffset,
 		})
 		if err != nil {
 			logs.CtxError(ctx, "ListTaskRuns err, taskID:%d, err:%v", t.ID, err)
