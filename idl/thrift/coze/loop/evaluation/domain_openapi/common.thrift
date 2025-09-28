@@ -41,8 +41,8 @@ struct UserInfo {
 struct BaseInfo {
     1: optional UserInfo created_by
     2: optional UserInfo updated_by
-    3: optional string created_at  // ISO 8601格式时间字符串
-    4: optional string updated_at  // ISO 8601格式时间字符串
+    3: optional i64 created_at
+    4: optional i64 updated_at
 }
 
 // 模型配置

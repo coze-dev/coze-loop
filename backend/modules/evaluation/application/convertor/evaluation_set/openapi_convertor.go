@@ -4,8 +4,6 @@
 package evaluation_set
 
 import (
-	"fmt"
-
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
@@ -220,7 +218,7 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		LatestVersion:     gptr.Of(do.LatestVersion),
 		ChangeUncommitted: gptr.Of(do.ChangeUncommitted),
 		CurrentVersion:    OpenAPIEvaluationSetVersionDO2DTO(do.EvaluationSetVersion),
-		BaseInfo:          OpenAPIBaseInfoDO2DTO(do.BaseInfo),
+		BaseInfo:          ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
 }
 
@@ -245,7 +243,7 @@ func OpenAPIEvaluationSetVersionDO2DTO(do *entity.EvaluationSetVersion) *openapi
 		Description:         gptr.Of(do.Description),
 		EvaluationSetSchema: OpenAPIEvaluationSetSchemaDO2DTO(do.EvaluationSetSchema),
 		ItemCount:           gptr.Of(do.ItemCount),
-		BaseInfo:            OpenAPIBaseInfoDO2DTO(do.BaseInfo),
+		BaseInfo:            ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
 }
 
@@ -288,29 +286,27 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 	}
 }
 
-func OpenAPIBaseInfoDO2DTO(do *entity.BaseInfo) *common.BaseInfo {
-	if do == nil {
+func ConvertBaseInfoDO2DTO(info *entity.BaseInfo) *common.BaseInfo {
+	if info == nil {
 		return nil
 	}
-
-	var createdAt *string
-	if do.CreatedAt != nil {
-		// 将时间戳转换为ISO 8601格式字符串，这里简化处理
-		timestamp := fmt.Sprintf("%d", *do.CreatedAt)
-		createdAt = &timestamp
-	}
-
-	var updatedAt *string
-	if do.UpdatedAt != nil {
-		timestamp := fmt.Sprintf("%d", *do.UpdatedAt)
-		updatedAt = &timestamp
-	}
-
 	return &common.BaseInfo{
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-		CreatedBy: OpenAPIUserInfoDO2DTO(do.CreatedBy),
-		UpdatedBy: OpenAPIUserInfoDO2DTO(do.UpdatedBy),
+		CreatedBy: ConvertUserInfoDO2DTO(info.CreatedBy),
+		UpdatedBy: ConvertUserInfoDO2DTO(info.UpdatedBy),
+		CreatedAt: info.CreatedAt,
+		UpdatedAt: info.UpdatedAt,
+	}
+}
+
+func ConvertUserInfoDO2DTO(info *entity.UserInfo) *common.UserInfo {
+	if info == nil {
+		return nil
+	}
+	return &common.UserInfo{
+		Name:      info.Name,
+		AvatarURL: info.AvatarURL,
+		UserID:    info.UserID,
+		Email:     info.Email,
 	}
 }
 
