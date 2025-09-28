@@ -321,3 +321,200 @@ func OpenAPIUserInfoDO2DTO(do *entity.UserInfo) *common.UserInfo {
 		Email:     do.Email,
 	}
 }
+
+// OpenAPI EvaluationSetItem 转换
+func OpenAPIItemDTO2DOs(dtos []*openapi_eval_set.EvaluationSetItem) []*entity.EvaluationSetItem {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.EvaluationSetItem, 0)
+	for _, dto := range dtos {
+		result = append(result, OpenAPIItemDTO2DO(dto))
+	}
+	return result
+}
+
+func OpenAPIItemDTO2DO(dto *openapi_eval_set.EvaluationSetItem) *entity.EvaluationSetItem {
+	if dto == nil {
+		return nil
+	}
+	return &entity.EvaluationSetItem{
+		ID:      gptr.Indirect(dto.ID),
+		ItemKey: gptr.Indirect(dto.ItemKey),
+		Turns:   OpenAPITurnDTO2DOs(dto.Turns),
+	}
+}
+
+func OpenAPITurnDTO2DOs(dtos []*openapi_eval_set.Turn) []*entity.Turn {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.Turn, 0)
+	for _, dto := range dtos {
+		result = append(result, OpenAPITurnDTO2DO(dto))
+	}
+	return result
+}
+
+func OpenAPITurnDTO2DO(dto *openapi_eval_set.Turn) *entity.Turn {
+	if dto == nil {
+		return nil
+	}
+	return &entity.Turn{
+		ID:            gptr.Indirect(dto.ID),
+		FieldDataList: OpenAPIFieldDataDTO2DOs(dto.FieldDataList),
+	}
+}
+
+func OpenAPIFieldDataDTO2DOs(dtos []*openapi_eval_set.FieldData) []*entity.FieldData {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.FieldData, 0)
+	for _, dto := range dtos {
+		result = append(result, OpenAPIFieldDataDTO2DO(dto))
+	}
+	return result
+}
+
+func OpenAPIFieldDataDTO2DO(dto *openapi_eval_set.FieldData) *entity.FieldData {
+	if dto == nil {
+		return nil
+	}
+	return &entity.FieldData{
+		Name:    gptr.Indirect(dto.Name),
+		Content: OpenAPIContentDTO2DO(dto.Content),
+	}
+}
+
+func OpenAPIContentDTO2DO(dto *common.Content) *entity.Content {
+	if dto == nil {
+		return nil
+	}
+	contentType := convertOpenAPIContentTypeToDO(dto.ContentType)
+	return &entity.Content{
+		Text:        dto.Text,
+		ContentType: &contentType,
+	}
+}
+
+func OpenAPIItemDO2DTOs(dos []*entity.EvaluationSetItem) []*openapi_eval_set.EvaluationSetItem {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.EvaluationSetItem, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIItemDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIItemDO2DTO(do *entity.EvaluationSetItem) *openapi_eval_set.EvaluationSetItem {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.EvaluationSetItem{
+		ID:       gptr.Of(do.ID),
+		ItemKey:  gptr.Of(do.ItemKey),
+		Turns:    OpenAPITurnDO2DTOs(do.Turns),
+		BaseInfo: ConvertBaseInfoDO2DTO(do.BaseInfo),
+	}
+}
+
+func OpenAPITurnDO2DTOs(dos []*entity.Turn) []*openapi_eval_set.Turn {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.Turn, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPITurnDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPITurnDO2DTO(do *entity.Turn) *openapi_eval_set.Turn {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.Turn{
+		ID:            gptr.Of(do.ID),
+		FieldDataList: OpenAPIFieldDataDO2DTOs(do.FieldDataList),
+	}
+}
+
+func OpenAPIFieldDataDO2DTOs(dos []*entity.FieldData) []*openapi_eval_set.FieldData {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.FieldData, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIFieldDataDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIFieldDataDO2DTO(do *entity.FieldData) *openapi_eval_set.FieldData {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.FieldData{
+		Name:    gptr.Of(do.Name),
+		Content: OpenAPIContentDO2DTO(do.Content),
+	}
+}
+
+func OpenAPIContentDO2DTO(do *entity.Content) *common.Content {
+	if do == nil {
+		return nil
+	}
+	return &common.Content{
+		Text:        do.Text,
+		ContentType: convertDOContentTypeToOpenAPI(gptr.Indirect(do.ContentType)),
+	}
+}
+
+func OpenAPIItemErrorGroupDO2DTOs(dos []*entity.ItemErrorGroup) []*openapi_eval_set.ItemErrorGroup {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.ItemErrorGroup, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIItemErrorGroupDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIItemErrorGroupDO2DTO(do *entity.ItemErrorGroup) *openapi_eval_set.ItemErrorGroup {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.ItemErrorGroup{
+		ErrorCode:    gptr.Of(int32(gptr.Indirect(do.Type))),
+		ErrorMessage: do.Summary,
+		ErrorCount:   do.ErrorCount,
+		Details:      OpenAPIItemErrorDetailDO2DTOs(do.Details),
+	}
+}
+
+func OpenAPIItemErrorDetailDO2DTOs(dos []*entity.ItemErrorDetail) []*openapi_eval_set.ItemErrorDetail {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.ItemErrorDetail, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIItemErrorDetailDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIItemErrorDetailDO2DTO(do *entity.ItemErrorDetail) *openapi_eval_set.ItemErrorDetail {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.ItemErrorDetail{
+		Message:    do.Message,
+		Index:      do.Index,
+		StartIndex: do.StartIndex,
+		EndIndex:   do.EndIndex,
+	}
+}

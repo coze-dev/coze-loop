@@ -181,7 +181,10 @@ var (
 
 	evaluationOpenAPISet = wire.NewSet(
 		NewEvaluationOpenApiApplicationImpl,
-		evalSetDomainService,
+		domainservice.NewEvaluationSetServiceImpl,
+		domainservice.NewEvaluationSetVersionServiceImpl,
+		domainservice.NewEvaluationSetItemServiceImpl,
+		data.NewDatasetRPCAdapter,
 		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
 	)
 
