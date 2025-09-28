@@ -14,12 +14,16 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -101,6 +105,7 @@ type TaskServiceImpl struct {
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer
 	taskProcessor    processor.TaskProcessor
+	buildHelper      service.TraceFilterProcessorBuilder
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
@@ -129,7 +134,12 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	}
 	// 创建task
 	req.Task.TaskStatus = ptr.Of(task.TaskStatusUnstarted)
-	taskPO := tconv.TaskDTO2PO(ctx, req.Task, userID)
+	spanFilers, err := t.buildSpanFilters(ctx, req.Task.GetRule().GetSpanFilters(), req.Task.GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
+
+	taskPO := tconv.TaskDTO2PO(ctx, req.Task, userID, spanFilers)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {
 		return nil, err
@@ -164,6 +174,55 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 
 	return &CreateTaskResp{TaskID: &id}, nil
 }
+
+func (t *TaskServiceImpl) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
+
+	switch spanFilterFields.GetPlatformType() {
+	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
+		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
+		if err != nil {
+			return nil, err
+		}
+		env := &span_filter.SpanEnv{
+			WorkspaceID: workspaceID,
+		}
+		basicFilter, forceQuery, err := platformFilter.BuildBasicSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
+			return nil, nil
+		}
+		basicFilterFields := &loop_span.FilterFields{
+			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+			FilterFields: basicFilter,
+		}
+		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields), spanFilterFields.Filters)
+		return &filter.SpanFilterFields{
+			Filters:      filters,
+			PlatformType: spanFilterFields.PlatformType,
+			SpanListType: spanFilterFields.SpanListType,
+		}, nil
+	default:
+		return spanFilterFields, nil
+	}
+}
+
+func combineFilters(filters ...*filter.FilterFields) *filter.FilterFields {
+	filterAggr := &filter.FilterFields{
+		QueryAndOr: ptr.Of(filter.QueryRelationAnd),
+	}
+	for _, f := range filters {
+		if f == nil {
+			continue
+		}
+		filterAggr.FilterFields = append(filterAggr.FilterFields, &filter.FilterField{
+			QueryAndOr: ptr.Of(filter.QueryRelationAnd),
+			SubFilter:  f,
+		})
+	}
+	return filterAggr
+}
+
 func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (err error) {
 	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
 	if err != nil {
