@@ -14,13 +14,13 @@ import (
 
 func main() {
 	db := initDB()
-	generateForPrompt(db)
-	generateForData(db)
-	generateForEvaluationTarget(db)
-	generateForEvaluationEvaluator(db)
-	generateForEvaluationExpt(db)
+	//generateForPrompt(db)
+	//generateForData(db)
+	//generateForEvaluationTarget(db)
+	//generateForEvaluationEvaluator(db)
+	//generateForEvaluationExpt(db)
 	generateForObservability(db)
-	generateForFoundation(db)
+	//generateForFoundation(db)
 }
 
 func initDB() *gorm.DB {
@@ -250,8 +250,12 @@ func generateForObservability(db *gorm.DB) {
 
 	// 为 observability_view 表添加软删除字段
 	observabilityView := g.GenerateModelAs("observability_view", "ObservabilityView")
+	observabilityTask := g.GenerateModelAs("task", "ObservabilityTask")
+	observabilityTaskRun := g.GenerateModelAs("auto_task_run", "ObservabilityTaskRun")
 
 	g.ApplyBasic(observabilityView)
+	g.ApplyBasic(observabilityTask)
+	g.ApplyBasic(observabilityTaskRun)
 	g.Execute()
 }
 

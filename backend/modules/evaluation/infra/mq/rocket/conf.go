@@ -33,6 +33,7 @@ type RMQConf struct {
 	ConsumerGroup  string        `mapstructure:"consumer_group"`
 	WorkerNum      int           `mapstructure:"worker_num"`
 	ConsumeTimeout time.Duration `mapstructure:"consume_timeout"`
+	EnablePPE      *bool         `mapstructure:"enable_ppe"`
 }
 
 func (c *RMQConf) Valid() bool {
@@ -57,5 +58,6 @@ func (c *RMQConf) ToConsumerCfg() mq.ConsumerConfig {
 		ConsumerGroup:        c.ConsumerGroup,
 		ConsumeGoroutineNums: c.WorkerNum,
 		ConsumeTimeout:       c.ConsumeTimeout,
+		EnablePPE:            c.EnablePPE,
 	}
 }

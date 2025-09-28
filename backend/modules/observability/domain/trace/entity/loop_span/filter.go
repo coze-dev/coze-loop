@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -471,4 +472,20 @@ func anyToFloat64(val any) (float64, error) {
 	default:
 		return 0, fmt.Errorf("invalid float")
 	}
+}
+
+func CombineFilters(filters ...*FilterFields) *FilterFields {
+	filterAggr := &FilterFields{
+		QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+	}
+	for _, f := range filters {
+		if f == nil {
+			continue
+		}
+		filterAggr.FilterFields = append(filterAggr.FilterFields, &FilterField{
+			QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+			SubFilter:  f,
+		})
+	}
+	return filterAggr
 }

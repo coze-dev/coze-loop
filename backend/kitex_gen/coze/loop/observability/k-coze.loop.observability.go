@@ -11,11 +11,13 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 )
 
 var (
 	_ = openapi.KitexUnusedProtection
+	_ = task.KitexUnusedProtection
 	_ = trace.KitexUnusedProtection
 )
 
