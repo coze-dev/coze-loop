@@ -94,7 +94,7 @@ type ExptResultServiceImpl struct {
 	publisher events.ExptEventPublisher
 }
 
-func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptID, itemID int64, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
+func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
 	turnResults, err := e.ExptTurnResultRepo.GetItemTurnResults(ctx, exptID, itemID, spaceID)
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 	return res, nil
 }
 
-func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID int64, itemID int64, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	itemRunLog, err := e.ExptItemResultRepo.GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID)
 	if err != nil {
 		return nil, err
@@ -532,17 +532,16 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 
 	columnEvaluators := make([]*entity.ColumnEvaluator, 0)
 	for _, e := range evaluatorVersions {
-		evaluatorVersion := e.GetEvaluatorVersion()
-		if evaluatorVersion == nil || !gslice.Contains(evaluatorVersionIDs, evaluatorVersion.GetID()) {
+		if (e.EvaluatorType == entity.EvaluatorTypePrompt && e.PromptEvaluatorVersion == nil) || (e.EvaluatorType == entity.EvaluatorTypeCode && e.CodeEvaluatorVersion == nil) || !gslice.Contains(evaluatorVersionIDs, e.GetEvaluatorVersionID()) {
 			continue
 		}
 
 		columnEvaluator := &entity.ColumnEvaluator{
-			EvaluatorVersionID: evaluatorVersion.GetID(),
+			EvaluatorVersionID: e.GetEvaluatorVersionID(),
 			EvaluatorID:        e.ID,
 			EvaluatorType:      e.EvaluatorType,
 			Name:               gptr.Of(e.Name),
-			Version:            gptr.Of(e.GetEvaluatorVersion().GetVersion()),
+			Version:            gptr.Of(e.GetVersion()),
 			Description:        gptr.Of(e.Description),
 		}
 		columnEvaluators = append(columnEvaluators, columnEvaluator)
@@ -576,7 +575,7 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 	return columnEvaluators, exptColumnEvaluators, nil
 }
 
-func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, spaceID int64, evalSetID, evalSetVersionID int64) ([]*entity.ColumnEvalSetField, error) {
+func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, spaceID, evalSetID, evalSetVersionID int64) ([]*entity.ColumnEvalSetField, error) {
 	var version *entity.EvaluationSetVersion
 	if evalSetID == evalSetVersionID {
 		evalSet, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(spaceID), evalSetID, gptr.Of(true))
@@ -1434,7 +1433,7 @@ func (e ExptResultServiceImpl) MGetStats(ctx context.Context, exptIDs []int64, s
 	return models, nil
 }
 
-func (e ExptResultServiceImpl) GetStats(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) (*entity.ExptStats, error) {
+func (e ExptResultServiceImpl) GetStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptStats, error) {
 	stats, err := e.MGetStats(ctx, []int64{exptID}, spaceID, session)
 	if err != nil {
 		return nil, err

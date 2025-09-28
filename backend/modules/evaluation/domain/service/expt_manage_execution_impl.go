@@ -766,7 +766,7 @@ func (e *ExptMangerImpl) Finish(ctx context.Context, expt *entity.Experiment, ex
 	return nil
 }
 
-func (e *ExptMangerImpl) PendRun(ctx context.Context, exptID, exptRunID int64, spaceID int64, session *entity.Session) error {
+func (e *ExptMangerImpl) PendRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
 	runLog, err := e.GetRunLog(ctx, exptID, exptRunID, spaceID, session)
 	if err != nil {
 		return err
