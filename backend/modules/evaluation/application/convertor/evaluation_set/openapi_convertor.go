@@ -51,7 +51,20 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 	
 	var contentType entity.ContentType
 	if dto.ContentType != nil {
-		contentType = entity.ContentType(*dto.ContentType)
+		// 正确映射OpenAPI DTO的ContentType枚举值到entity的ContentType枚举值
+		switch *dto.ContentType {
+		case common.ContentTypeText:
+			contentType = entity.ContentTypeText
+		case common.ContentTypeImage:
+			contentType = entity.ContentTypeImage
+		case common.ContentTypeAudio:
+			contentType = entity.ContentTypeAudio
+		case common.ContentTypeMultiPart:
+			contentType = entity.ContentTypeMultipart
+		default:
+			// 默认使用Text类型
+			contentType = entity.ContentTypeText
+		}
 	}
 	
 	var displayFormat entity.FieldDisplayFormat
@@ -112,11 +125,23 @@ func EvaluationSetDO2OpenAPIDTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		return nil
 	}
 
+	// 正确映射DatasetStatus到EvaluationSetStatus
+	var status openapi_eval_set.EvaluationSetStatus
+	switch do.Status {
+	case entity.DatasetStatus_Available:
+		status = openapi_eval_set.EvaluationSetStatusActive
+	case entity.DatasetStatus_Deleted, entity.DatasetStatus_Expired:
+		status = openapi_eval_set.EvaluationSetStatusArchived
+	default:
+		// 默认使用active状态
+		status = openapi_eval_set.EvaluationSetStatusActive
+	}
+
 	return &openapi_eval_set.EvaluationSet{
 		ID:                gptr.Of(do.ID),
 		Name:              gptr.Of(do.Name),
 		Description:       gptr.Of(do.Description),
-		Status:            gptr.Of(openapi_eval_set.EvaluationSetStatus(do.Status)),
+		Status:            gptr.Of(status),
 		ItemCount:         gptr.Of(do.ItemCount),
 		LatestVersion:     gptr.Of(do.LatestVersion),
 		ChangeUncommitted: gptr.Of(do.ChangeUncommitted),
@@ -212,8 +237,25 @@ func FieldSchemaDO2OpenAPIDTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 	
 	var contentType *common.ContentType
 	if do.ContentType != "" {
-		ct := common.ContentType(do.ContentType)
-		contentType = &ct
+		// 正确映射entity的ContentType枚举值到OpenAPI DTO的ContentType枚举值
+		switch do.ContentType {
+		case entity.ContentTypeText:
+			ct := common.ContentTypeText
+			contentType = &ct
+		case entity.ContentTypeImage:
+			ct := common.ContentTypeImage
+			contentType = &ct
+		case entity.ContentTypeAudio:
+			ct := common.ContentTypeAudio
+			contentType = &ct
+		case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+			ct := common.ContentTypeMultiPart
+			contentType = &ct
+		default:
+			// 默认使用text类型
+			ct := common.ContentTypeText
+			contentType = &ct
+		}
 	}
 	
 	return &openapi_eval_set.FieldSchema{
