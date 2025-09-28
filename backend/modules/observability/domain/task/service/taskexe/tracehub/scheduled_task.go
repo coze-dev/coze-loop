@@ -78,24 +78,45 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	// 读取所有非终态（成功/禁用）任务
-	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
-		TaskFilters: &filter.TaskFilterFields{
-			FilterFields: []*filter.TaskFilterField{
-				{
-					FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
-					Values: []string{
-						string(task.TaskStatusUnstarted),
-						string(task.TaskStatusRunning),
+	var taskPOs []*entity.ObservabilityTask
+	var err error
+	var offset int32 = 0
+	const limit int32 = 1000
+
+	// 分页循环读取所有任务
+	for {
+		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+			ReqLimit:  limit,
+			ReqOffset: offset,
+			TaskFilters: &filter.TaskFilterFields{
+				FilterFields: []*filter.TaskFilterField{
+					{
+						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+						Values: []string{
+							string(task.TaskStatusUnstarted),
+							string(task.TaskStatusRunning),
+						},
+						QueryType: ptr.Of(filter.QueryTypeIn),
+						FieldType: ptr.Of(filter.FieldTypeString),
 					},
-					QueryType: ptr.Of(filter.QueryTypeIn),
-					FieldType: ptr.Of(filter.FieldTypeString),
 				},
 			},
-		},
-	})
-	if err != nil {
-		logs.CtxError(ctx, "获取非终态任务列表失败", "err", err)
-		return
+		})
+		if err != nil {
+			logs.CtxError(ctx, "获取非终态任务列表失败", "err", err)
+			return
+		}
+
+		// 将当前页的任务添加到总列表中
+		taskPOs = append(taskPOs, tasklist...)
+
+		// 如果当前页返回的任务数量小于限制数量，说明已经是最后一页
+		if len(tasklist) < int(limit) {
+			break
+		}
+
+		// 继续下一页，offset增加1000
+		offset += limit
 	}
 
 	var tasks []*task.Task
