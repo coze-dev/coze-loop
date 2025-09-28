@@ -87,6 +87,7 @@ func NewTaskServiceImpl(
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
 	taskProcessor *processor.TaskProcessor,
+	buildHelper service.TraceFilterProcessorBuilder,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
@@ -95,6 +96,7 @@ func NewTaskServiceImpl(
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
 		taskProcessor:    *taskProcessor,
+		buildHelper:      buildHelper,
 	}, nil
 }
 

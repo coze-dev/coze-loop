@@ -218,7 +218,9 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo, iTaskRunRepo)
-	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iTaskRunRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor)
+	iFileProvider := file.NewFileRPCProvider(fileClient)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iTaskRunRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
@@ -236,8 +238,6 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iFileProvider := file.NewFileRPCProvider(fileClient)
-	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTaskRunRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2)
 	if err != nil {
 		return nil, err
