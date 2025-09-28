@@ -12,11 +12,10 @@ include "domain_openapi/experiment.thrift"
 
 // 1.1 创建评测集
 struct CreateEvaluationSetOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string name (vt.min_size = "1", vt.max_size = "255")
     3: optional string description (vt.max_size = "2048")
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema
-    5: optional string biz_category (vt.max_size = "128")
 
     255: optional base.Base Base
 }
@@ -30,14 +29,13 @@ struct CreateEvaluationSetOpenAPIResponse {
 }
 
 struct CreateEvaluationSetOpenAPIData {
-    1: optional string evaluation_set_id (api.js_conv="true")
+    1: optional i64 evaluation_set_id (api.js_conv="true")
 }
 
 // 1.2 获取评测集详情
 struct GetEvaluationSetOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path = "evaluation_set_id")
-    3: optional bool include_deleted
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
 
     255: optional base.Base Base
 }
@@ -56,11 +54,14 @@ struct GetEvaluationSetOpenAPIData {
 
 // 1.3 查询评测集列表
 struct ListEvaluationSetsOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional string name
     3: optional list<string> creators
-    4: optional string page_token
-    5: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    4: optional list<i64> evaluation_set_ids (api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
+
+    100: optional string page_token
+    101: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    103: optional list<common.OrderBy> order_bys,
     
     255: optional base.Base Base
 }
@@ -75,15 +76,16 @@ struct ListEvaluationSetsOpenAPIResponse {
 
 struct ListEvaluationSetsOpenAPIData {
     1: optional list<eval_set.EvaluationSet> items
-    2: optional bool has_more
-    3: optional string next_page_token
-    4: optional i64 total
+
+    100: optional bool has_more
+    101: optional string next_page_token
+    102: optional i64 total
 }
 
 // 1.4 创建评测集版本
 struct CreateEvaluationSetVersionOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path = "evaluation_set_id")
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
     3: optional string version (vt.min_size = "1", vt.max_size="50")
     4: optional string description (vt.max_size = "400")
     
@@ -104,8 +106,8 @@ struct CreateEvaluationSetVersionOpenAPIData {
 
 // 1.5 批量添加评测集数据
 struct BatchCreateEvaluationSetItemsOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path='evaluation_set_id')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id')
     3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100')
     4: optional bool skip_invalid_items
     5: optional bool allow_partial_add
@@ -128,8 +130,8 @@ struct BatchCreateEvaluationSetItemsOpenAPIData {
 
 // 1.6 批量更新评测集数据
 struct BatchUpdateEvaluationSetItemsOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path='evaluation_set_id')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id')
     3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100')
     4: optional bool skip_invalid_items
     
@@ -151,8 +153,8 @@ struct BatchUpdateEvaluationSetItemsOpenAPIData {
 
 // 1.7 批量删除评测集数据
 struct BatchDeleteEvaluationSetItemsOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path = "evaluation_set_id")
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
     3: optional list<string> item_ids
     
     255: optional base.Base Base
@@ -172,8 +174,8 @@ struct BatchDeleteEvaluationSetItemsOpenAPIData {
 
 // 1.8 清空评测集草稿数据
 struct ClearEvaluationSetDraftItemsOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path = "evaluation_set_id")
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
     
     255: optional base.Base Base
 }
@@ -192,8 +194,8 @@ struct ClearEvaluationSetDraftItemsOpenAPIData {
 
 // 1.9 查询评测集特定版本数据
 struct ListEvaluationSetVersionItemsOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: required string evaluation_set_id (api.path = "evaluation_set_id")
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    2: required i64 evaluation_set_id (api.path = "evaluation_set_id")
     3: required string version_id (api.path = "version_id")
     4: optional string page_token
     5: optional i32 page_size (vt.gt = "0", vt.le = "200")
@@ -222,7 +224,7 @@ struct ListEvaluationSetVersionItemsOpenAPIData {
 
 // 2.1 创建评估器
 struct CreateEvaluatorOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required evaluator.Evaluator evaluator
     
     255: optional base.Base Base
@@ -242,7 +244,7 @@ struct CreateEvaluatorOpenAPIData {
 
 // 2.2 提交评估器版本
 struct SubmitEvaluatorVersionOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_id (api.path='evaluator_id')
     3: required string version
     4: optional string description
@@ -264,7 +266,7 @@ struct SubmitEvaluatorVersionOpenAPIData {
 
 // 2.3 获取评估器版本详情
 struct GetEvaluatorVersionOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_version_id (api.path='evaluator_version_id')
     3: optional bool include_deleted
     
@@ -285,7 +287,7 @@ struct GetEvaluatorVersionOpenAPIData {
 
 // 2.4 执行评估器
 struct RunEvaluatorOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_version_id (api.path='evaluator_version_id')
     3: required evaluator.EvaluatorInputData input_data
     4: optional map<string, string> ext
@@ -307,7 +309,7 @@ struct RunEvaluatorOpenAPIData {
 
 // 2.5 获取评估器执行结果
 struct GetEvaluatorRecordOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string evaluator_record_id (api.path='evaluator_record_id')
     3: optional bool include_deleted
     
@@ -332,7 +334,7 @@ struct GetEvaluatorRecordOpenAPIData {
 
 // 3.1 创建评测实验
 struct CreateExperimentOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional string eval_set_version_id
     3: optional string target_version_id
     4: optional list<string> evaluator_version_ids
@@ -360,7 +362,7 @@ struct CreateExperimentOpenAPIData {
 
 // 3.2 获取评测实验结果
 struct GetExperimentResultOpenAPIRequest {
-    1: required string workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
     2: required string experiment_id (api.path = "experiment_id")
     3: optional string page_token
     4: optional i32 page_size (vt.gt = "0", vt.le = "200")

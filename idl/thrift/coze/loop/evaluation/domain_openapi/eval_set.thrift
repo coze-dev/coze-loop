@@ -7,13 +7,21 @@ typedef string EvaluationSetStatus(ts.enum="true")
 const EvaluationSetStatus EvaluationSetStatus_Active = "active"
 const EvaluationSetStatus EvaluationSetStatus_Archived = "archived"
 
+typedef string FieldDisplayFormat(ts.enum="true")
+const FieldDisplayFormat FieldDisplayFormat_PlainText = "plain_text"
+const FieldDisplayFormat FieldDisplayFormat_Markdown = "markdown"
+const FieldDisplayFormat FieldDisplayFormat_JSON = "json"
+const FieldDisplayFormat FieldDisplayFormate_YAML = "yaml"
+const FieldDisplayFormat FieldDisplayFormate_Code = "code"
+
 // 字段Schema
 struct FieldSchema {
     1: optional string name
     2: optional string description
     3: optional common.ContentType content_type
-    4: optional bool is_required
-    5: optional string text_schema  // JSON Schema字符串
+    4: optional FieldDisplayFormat default_display_format, // 默认渲染格式，如 code, json, etc.mai
+    5: optional bool is_required
+    6: optional string text_schema  // JSON Schema字符串
 }
 
 // 评测集Schema
@@ -23,26 +31,28 @@ struct EvaluationSetSchema {
 
 // 评测集版本
 struct EvaluationSetVersion {
-    1: optional string version_id
+    1: optional i64 id
     2: optional string version
     3: optional string description
     4: optional EvaluationSetSchema evaluation_set_schema
-    5: optional string item_count
-    6: optional common.BaseInfo base_info
+    5: optional i64 item_count
+
+    100: optional common.BaseInfo base_info
 }
 
 // 评测集
 struct EvaluationSet {
-    1: optional string evaluation_set_id
+    1: optional i64 id
     2: optional string name
     3: optional string description
     4: optional EvaluationSetStatus status
-    5: optional string item_count
+    5: optional i64 item_count
     6: optional string latest_version
     7: optional bool change_uncommitted
-    8: optional string biz_category
-    9: optional EvaluationSetVersion current_version
-    10: optional common.BaseInfo base_info
+
+    20: optional EvaluationSetVersion current_version
+
+    100: optional common.BaseInfo base_info
 }
 
 // 字段数据
@@ -53,16 +63,16 @@ struct FieldData {
 
 // 轮次数据
 struct Turn {
-    1: optional string turn_id
+    1: optional i64 id
     2: optional list<FieldData> field_data_list
 }
 
 // 评测集数据项
 struct EvaluationSetItem {
-    1: optional string item_id
+    1: optional i64 id
     2: optional string item_key
     3: optional list<Turn> turns
-    4: optional common.BaseInfo base_info
+    100: optional common.BaseInfo base_info
 }
 
 // 数据项错误信息

@@ -73,3 +73,8 @@ struct OpenAPIResponse {
     1: optional i32 code
     2: optional string msg
 }
+
+struct OrderBy {
+    1: optional string field,
+    2: optional bool is_asc,
+}
