@@ -235,7 +235,7 @@ func CheckTaskStatus(ctx context.Context, taskStatus task.TaskStatus, currentTas
 	return validTaskStatus, nil
 }
 
-func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.ObservabilityTask {
+func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string, spanFilters *filter.SpanFilterFields) *entity.ObservabilityTask {
 	if taskDO == nil {
 		return nil
 	}
@@ -257,6 +257,13 @@ func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.O
 			updatedBy = taskDO.GetBaseInfo().GetUpdatedBy().GetUserID()
 		}
 	}
+	var spanFilterDO *filter.SpanFilterFields
+	if spanFilters != nil {
+		spanFilterDO = spanFilters
+	} else {
+		spanFilterDO = taskDO.GetRule().GetSpanFilters()
+	}
+
 	return &entity.ObservabilityTask{
 		ID:                    taskDO.GetID(),
 		WorkspaceID:           taskDO.GetWorkspaceID(),
@@ -265,7 +272,7 @@ func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.O
 		TaskType:              taskDO.GetTaskType(),
 		TaskStatus:            taskDO.GetTaskStatus(),
 		TaskDetail:            ptr.Of(ToJSONString(ctx, taskDO.GetTaskDetail())),
-		SpanFilter:            SpanFilterDTO2PO(ctx, taskDO.GetRule().GetSpanFilters(), taskDO.GetWorkspaceID()),
+		SpanFilter:            SpanFilterDTO2PO(ctx, spanFilterDO),
 		EffectiveTime:         ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetEffectiveTime())),
 		Sampler:               ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetSampler())),
 		TaskConfig:            TaskConfigDTO2PO(ctx, taskDO.GetTaskConfig()),
@@ -276,7 +283,7 @@ func TaskDTO2PO(ctx context.Context, taskDO *task.Task, userID string) *entity.O
 		BackfillEffectiveTime: ptr.Of(ToJSONString(ctx, taskDO.GetRule().GetBackfillEffectiveTime())),
 	}
 }
-func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields, workspaceID int64) *string {
+func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields) *string {
 	var filtersDO *loop_span.FilterFields
 	if filters.GetFilters() != nil {
 		filtersDO = convertor.FilterFieldsDTO2DO(filters.GetFilters())
