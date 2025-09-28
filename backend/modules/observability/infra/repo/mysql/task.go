@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
@@ -391,7 +392,7 @@ func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 
 	// 查询非终态任务的workspace_id，使用DISTINCT去重
 	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn("success", "disabled"))
-	qd = qd.Select(q.ObservabilityTask.WorkspaceID).Distinct()
+	//qd = qd.Select(q.ObservabilityTask.WorkspaceID).Distinct()
 
 	results, err := qd.Find()
 	if err != nil {
@@ -400,12 +401,33 @@ func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 
 	// 转换为字符串数组
 	var spaceList []string
+	var botList []string
 	for _, task := range results {
 		spaceList = append(spaceList, strconv.FormatInt(task.WorkspaceID, 10))
+		spanFilter := tconv.SpanFilterPO2DO(ctx, task.SpanFilter)
+		if spanFilter != nil && spanFilter.Filters.FilterFields != nil {
+			extractBotIDFromFilters(spanFilter.Filters.FilterFields, &botList)
+		}
 	}
 
 	// botList暂时返回空数组，因为Task表中没有bot_id字段
-	var botList []string
 
 	return spaceList, botList, nil
+}
+
+// extractBotIDFromFilters 递归提取过滤器中的 bot_id 值，包括 SubFilter
+func extractBotIDFromFilters(filterFields []*filter.FilterField, botList *[]string) {
+	for _, filterField := range filterFields {
+		if filterField == nil {
+			continue
+		}
+		// 检查当前 FilterField 的 FieldName
+		if filterField.FieldName != nil && *filterField.FieldName == "bot_id" {
+			*botList = append(*botList, filterField.Values...)
+		}
+		// 递归处理 SubFilter
+		if filterField.SubFilter != nil && filterField.SubFilter.FilterFields != nil {
+			extractBotIDFromFilters(filterField.SubFilter.FilterFields, botList)
+		}
+	}
 }

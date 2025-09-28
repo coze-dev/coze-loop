@@ -370,9 +370,9 @@ func (p *TaskDAOImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 	gotBotList, err := p.cmdable.Get(ctx, botKey).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
-			return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey) // 缓存未命中
+			return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey) // 缓存未命中
 		}
-		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", spaceKey)
+		return nil, nil, errorx.Wrapf(err, "redis get fail, key: %v", botKey)
 	}
 	var botList []string
 	if err = json.Unmarshal(conv.UnsafeStringToBytes(gotBotList), &botList); err != nil {
@@ -569,19 +569,19 @@ func (p *TaskDAOImpl) IncrTaskCount(ctx context.Context, taskID int64, ttl time.
 		logs.CtxError(ctx, "redis incr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task count key: %v", key)
 	}
-	
+
 	// 设置TTL
 	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
 		logs.CtxWarn(ctx, "failed to set TTL for task count", "key", key, "err", err)
 	}
-	
+
 	return result, nil
 }
 
 // DecrTaskCount 原子减少任务计数，确保不会变为负数
 func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskCountCacheKey(taskID)
-	
+
 	// 先获取当前值
 	current, err := p.cmdable.Get(ctx, key).Int64()
 	if err != nil {
@@ -592,19 +592,19 @@ func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.
 		logs.CtxError(ctx, "redis get task count failed before decr", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis get task count key: %v", key)
 	}
-	
+
 	// 如果当前值已经是0或负数，不再减少
 	if current <= 0 {
 		return 0, nil
 	}
-	
+
 	// 执行减操作
 	result, err := p.cmdable.Decr(ctx, key).Result()
 	if err != nil {
 		logs.CtxError(ctx, "redis decr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis decr task count key: %v", key)
 	}
-	
+
 	// 如果减少后变为负数，重置为0
 	if result < 0 {
 		if err := p.cmdable.Set(ctx, key, 0, ttl).Err(); err != nil {
@@ -612,12 +612,12 @@ func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.
 		}
 		return 0, nil
 	}
-	
+
 	// 设置TTL
 	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
 		logs.CtxWarn(ctx, "failed to set TTL for task count", "key", key, "err", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -629,19 +629,19 @@ func (p *TaskDAOImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID in
 		logs.CtxError(ctx, "redis incr task run count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task run count key: %v", key)
 	}
-	
+
 	// 设置TTL
 	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
 		logs.CtxWarn(ctx, "failed to set TTL for task run count", "key", key, "err", err)
 	}
-	
+
 	return result, nil
 }
 
 // DecrTaskRunCount 原子减少任务运行计数，确保不会变为负数
 func (p *TaskDAOImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
-	
+
 	// 先获取当前值
 	current, err := p.cmdable.Get(ctx, key).Int64()
 	if err != nil {
@@ -652,19 +652,19 @@ func (p *TaskDAOImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID in
 		logs.CtxError(ctx, "redis get task run count failed before decr", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis get task run count key: %v", key)
 	}
-	
+
 	// 如果当前值已经是0或负数，不再减少
 	if current <= 0 {
 		return 0, nil
 	}
-	
+
 	// 执行减操作
 	result, err := p.cmdable.Decr(ctx, key).Result()
 	if err != nil {
 		logs.CtxError(ctx, "redis decr task run count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis decr task run count key: %v", key)
 	}
-	
+
 	// 如果减少后变为负数，重置为0
 	if result < 0 {
 		if err := p.cmdable.Set(ctx, key, 0, ttl).Err(); err != nil {
@@ -672,12 +672,12 @@ func (p *TaskDAOImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID in
 		}
 		return 0, nil
 	}
-	
+
 	// 设置TTL
 	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
 		logs.CtxWarn(ctx, "failed to set TTL for task run count", "key", key, "err", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -685,7 +685,7 @@ func (p *TaskDAOImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID in
 func (p *TaskDAOImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, error) {
 	pattern := "count_*_*" // 匹配 count_{taskID}_{taskRunID} 格式的键
 	var allKeys []string
-	
+
 	// 使用SCAN命令遍历匹配的键
 	iter := p.cmdable.Scan(ctx, 0, pattern, 100).Iterator()
 	for iter.Next(ctx) {
@@ -695,12 +695,12 @@ func (p *TaskDAOImpl) GetAllTaskRunCountKeys(ctx context.Context) ([]string, err
 			allKeys = append(allKeys, key)
 		}
 	}
-	
+
 	if err := iter.Err(); err != nil {
 		logs.CtxError(ctx, "scan task run count keys failed", "pattern", pattern, "err", err)
 		return nil, errorx.Wrapf(err, "scan task run count keys with pattern: %s", pattern)
 	}
-	
+
 	logs.CtxInfo(ctx, "found %d task run count keys", len(allKeys))
 	return allKeys, nil
 }

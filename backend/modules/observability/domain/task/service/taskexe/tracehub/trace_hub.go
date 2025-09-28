@@ -104,10 +104,10 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		return nil
 	}
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	spaceList, _ := h.taskRepo.GetObjListWithTask(ctx)
+	spaceList, botList := h.taskRepo.GetObjListWithTask(ctx)
 	logs.CtxInfo(ctx, "space list: %v", spaceList)
 	// 1.2 过滤掉不在 spaceList 中的 span
-	if !gslice.Contains(spaceList, span.WorkspaceID) {
+	if !gslice.Contains(spaceList, span.WorkspaceID) || !gslice.Contains(botList, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
 		logs.CtxInfo(ctx, "no space found for span, %s", logSuffix)
 		return nil
