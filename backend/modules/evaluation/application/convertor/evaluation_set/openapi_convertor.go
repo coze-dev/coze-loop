@@ -106,6 +106,32 @@ func convertDODisplayFormatToOpenAPI(format entity.FieldDisplayFormat) *openapi_
 	return displayFormat
 }
 
+// convertDOStatusToOpenAPI 将Domain Entity的DatasetStatus转换为OpenAPI的EvaluationSetStatus
+func convertDOStatusToOpenAPI(status entity.DatasetStatus) openapi_eval_set.EvaluationSetStatus {
+	switch status {
+	case entity.DatasetStatus_Available:
+		return openapi_eval_set.EvaluationSetStatusActive
+	case entity.DatasetStatus_Deleted, entity.DatasetStatus_Expired:
+		return openapi_eval_set.EvaluationSetStatusArchived
+	default:
+		// 默认使用active状态
+		return openapi_eval_set.EvaluationSetStatusActive
+	}
+}
+
+// convertOpenAPIStatusToDO 将OpenAPI的EvaluationSetStatus转换为Domain Entity的DatasetStatus
+func convertOpenAPIStatusToDO(status openapi_eval_set.EvaluationSetStatus) entity.DatasetStatus {
+	switch status {
+	case openapi_eval_set.EvaluationSetStatusActive:
+		return entity.DatasetStatus_Available
+	case openapi_eval_set.EvaluationSetStatusArchived:
+		return entity.DatasetStatus_Deleted
+	default:
+		// 默认使用Available状态
+		return entity.DatasetStatus_Available
+	}
+}
+
 // OpenAPI Schema 转换
 func OpenAPISchemaDTO2DO(dto *openapi_eval_set.EvaluationSetSchema) *entity.EvaluationSetSchema {
 	if dto == nil {
@@ -185,17 +211,8 @@ func EvaluationSetDO2OpenAPIDTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		return nil
 	}
 
-	// 正确映射DatasetStatus到EvaluationSetStatus
-	var status openapi_eval_set.EvaluationSetStatus
-	switch do.Status {
-	case entity.DatasetStatus_Available:
-		status = openapi_eval_set.EvaluationSetStatusActive
-	case entity.DatasetStatus_Deleted, entity.DatasetStatus_Expired:
-		status = openapi_eval_set.EvaluationSetStatusArchived
-	default:
-		// 默认使用active状态
-		status = openapi_eval_set.EvaluationSetStatusActive
-	}
+	// 使用转换方法映射DatasetStatus到EvaluationSetStatus
+	status := convertDOStatusToOpenAPI(do.Status)
 
 	return &openapi_eval_set.EvaluationSet{
 		ID:                gptr.Of(do.ID),
