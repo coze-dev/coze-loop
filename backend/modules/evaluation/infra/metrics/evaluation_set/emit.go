@@ -6,6 +6,7 @@ package metrics
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	eval_metrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -68,27 +69,32 @@ type OpenAPIEvaluationSetMetricsImpl struct {
 	meter metrics.Meter
 }
 
-func (m *OpenAPIEvaluationSetMetricsImpl) EmitOpenAPIMetric(ctx context.Context, spaceID, evaluationSetID int64, method string, success bool) {
+func (m *OpenAPIEvaluationSetMetricsImpl) EmitOpenAPIMetric(ctx context.Context, spaceID, evaluationSetID int64, method string, startTime int64, err error) {
 	if m == nil || m.meter == nil {
 		return
 	}
 	
-	metric, mErr := m.meter.NewMetric("openapi_evaluation_set", []metrics.MetricType{metrics.MetricTypeCounter}, []string{"space_id", "evaluation_set_id", "method", "status"})
+	metric, mErr := m.meter.NewMetric("openapi_evaluation_set", []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, []string{"space_id", "evaluation_set_id", "method", "is_error", "code"})
 	if mErr != nil {
 		return
 	}
+	
+	code, isError := eval_metrics.GetCode(err)
 	
 	tags := []metrics.T{
 		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
 		{Name: "evaluation_set_id", Value: strconv.FormatInt(evaluationSetID, 10)},
 		{Name: "method", Value: method},
+		{Name: "is_error", Value: strconv.FormatInt(isError, 10)},
+		{Name: "code", Value: strconv.FormatInt(code, 10)},
 	}
 	
-	if success {
-		tags = append(tags, metrics.T{Name: "status", Value: "success"})
-	} else {
-		tags = append(tags, metrics.T{Name: "status", Value: "error"})
-	}
-	
+	// 记录调用次数
 	metric.Emit(tags, metrics.Counter(1))
+	
+	// 记录响应时间
+	if startTime > 0 {
+		responseTime := time.Now().UnixNano()/int64(time.Millisecond) - startTime
+		metric.Emit(tags, metrics.Timer(responseTime))
+	}
 }

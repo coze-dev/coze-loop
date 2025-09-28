@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -47,10 +48,9 @@ type EvaluationOpenApiApplicationImpl struct {
 
 func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Context, req *openapi.CreateEvaluationSetOpenAPIRequest) (r *openapi.CreateEvaluationSetOpenAPIResponse, err error) {
 	var evaluationSetID int64
-	success := false
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		method := kitexutil.GetTOMethod(ctx)
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, method, success)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 	// 参数校验
 	if req == nil {
@@ -72,7 +72,6 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Conte
 	}
 
 	evaluationSetID = id
-	success = true
 
 	// 构建响应
 	return &openapi.CreateEvaluationSetOpenAPIResponse{
@@ -83,10 +82,9 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Conte
 }
 
 func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context, req *openapi.GetEvaluationSetOpenAPIRequest) (r *openapi.GetEvaluationSetOpenAPIResponse, err error) {
-	success := false
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		method := kitexutil.GetTOMethod(ctx)
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), method, success)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
 	// 参数校验
@@ -106,8 +104,6 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context,
 	// 数据转换
 	dto := evaluation_set.EvaluationSetDO2OpenAPIDTO(set)
 
-	success = true
-
 	// 构建响应
 	return &openapi.GetEvaluationSetOpenAPIResponse{
 		Data: &openapi.GetEvaluationSetOpenAPIData{
@@ -117,11 +113,10 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context,
 }
 
 func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Context, req *openapi.ListEvaluationSetsOpenAPIRequest) (r *openapi.ListEvaluationSetsOpenAPIResponse, err error) {
-	success := false
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		method := kitexutil.GetTOMethod(ctx)
 		// ListEvaluationSets没有单个evaluationSetID，使用0作为占位符
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, method, success)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
 	// 参数校验
@@ -145,8 +140,6 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Contex
 
 	// 数据转换
 	dtos := evaluation_set.EvaluationSetDO2OpenAPIDTOs(sets)
-
-	success = true
 
 	// 构建响应
 	hasMore := nextPageToken != nil && *nextPageToken != ""
