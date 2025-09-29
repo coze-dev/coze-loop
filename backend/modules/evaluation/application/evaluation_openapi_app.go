@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
@@ -242,39 +244,16 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItemsOApi(ctx
 	}
 
 	// 批量更新评测集项目
-	updatedItems := make(map[int64]string)
-	var allErrors []*entity.ItemErrorGroup
-
 	for _, item := range req.Items {
-		if item.ID == nil {
-			allErrors = append(allErrors, &entity.ItemErrorGroup{
-				Type:    gptr.Of(entity.ItemErrorType_MissingRequiredField),
-				Summary: gptr.Of("item id is required"),
-			})
-			continue
-		}
-
-		err := e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, *item.ID, evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
+		err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, *item.ID, evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
 		if err != nil {
-			if req.SkipInvalidItems != nil && *req.SkipInvalidItems {
-				allErrors = append(allErrors, &entity.ItemErrorGroup{
-					Type:    gptr.Of(entity.ItemErrorType_InternalError),
-					Summary: gptr.Of(err.Error()),
-				})
-				continue
-			}
-			return nil, err
+			logs.CtxError(ctx, "UpdateEvaluationSetItem, err=%v", err)
 		}
-
-		updatedItems[*item.ID] = "success"
 	}
 
 	// 构建响应
 	return &openapi.BatchUpdateEvaluationSetItemsOApiResponse{
-		Data: &openapi.BatchUpdateEvaluationSetItemsOpenAPIData{
-			UpdatedItems: updatedItems,
-			Errors:       evaluation_set.OpenAPIItemErrorGroupDO2DTOs(allErrors),
-		},
+		Data: &openapi.BatchUpdateEvaluationSetItemsOpenAPIData{},
 	}, nil
 }
 

@@ -4945,7 +4945,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) FastReadField1(buf []byte) (i
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[int64]string, size)
+	_field := make(map[int64]int64, size)
 	for i := 0; i < size; i++ {
 		var _key int64
 		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
@@ -4955,8 +4955,8 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) FastReadField1(buf []byte) (i
 			_key = v
 		}
 
-		var _val string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		var _val int64
+		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
@@ -5028,9 +5028,9 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) fastWriteField1(buf []byte, w
 		for k, v := range p.UpdatedItems {
 			length++
 			offset += thrift.Binary.WriteI64(buf[offset:], k)
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			offset += thrift.Binary.WriteI64(buf[offset:], v)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.STRING, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.I64, length)
 	}
 	return offset
 }
@@ -5056,12 +5056,8 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) field1Length() int {
 	if p.IsSetUpdatedItems() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.UpdatedItems {
-			_, _ = k, v
-
-			l += thrift.Binary.I64Length()
-			l += thrift.Binary.StringLengthNocopy(v)
-		}
+		l += (thrift.Binary.I64Length() +
+			thrift.Binary.I64Length()) * len(p.UpdatedItems)
 	}
 	return l
 }
@@ -5086,15 +5082,13 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) DeepCopy(s interface{}) error
 	}
 
 	if src.UpdatedItems != nil {
-		p.UpdatedItems = make(map[int64]string, len(src.UpdatedItems))
+		p.UpdatedItems = make(map[int64]int64, len(src.UpdatedItems))
 		for key, val := range src.UpdatedItems {
 			var _key int64
 			_key = key
 
-			var _val string
-			if val != "" {
-				_val = kutils.StringDeepCopy(val)
-			}
+			var _val int64
+			_val = val
 
 			p.UpdatedItems[_key] = _val
 		}

@@ -365,7 +365,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items2.POST("/batch_create", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)
 					_items2.POST("/batch_delete", append(_batchdeleteevaluationsetitemsoapiMw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
 					_items2.POST("/batch_update", append(_batchupdateevaluationsetitemsoapiMw(handler), apis.BatchUpdateEvaluationSetItemsOApi)...)
-					_items2.DELETE("/clear", append(_clearevaluationsetdraftitemsoapiMw(handler), apis.ClearEvaluationSetDraftItemsOApi)...)
+					_items2.POST("/clear", append(_clearevaluationsetdraftitemsoapiMw(handler), apis.ClearEvaluationSetDraftItemsOApi)...)
 					_items2.POST("/list", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
 				}
 				_evaluation_sets0.POST("/list", append(_listevaluationsetsoapiMw(handler), apis.ListEvaluationSetsOApi)...)

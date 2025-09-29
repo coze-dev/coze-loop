@@ -147,7 +147,7 @@ struct BatchUpdateEvaluationSetItemsOApiResponse {
 }
 
 struct BatchUpdateEvaluationSetItemsOpenAPIData {
-    1: optional map<i64, string> updated_items (api.js_conv="true", go.tag='json:"updated_items"')
+    1: optional map<i64, i64> updated_items (api.js_conv="true", go.tag='json:"updated_items"')  // key: item 在 items 中的索引，value: item_id
     2: optional list<eval_set.ItemErrorGroup> errors
 }
 

@@ -3090,6 +3090,7 @@ func (p *ListEvaluationSetsOApiResponse) Field255DeepEqual(src *base.BaseResp) b
 }
 
 type ListEvaluationSetsOpenAPIData struct {
+	// 列表
 	Sets          []*eval_set.EvaluationSet `thrift:"sets,1,optional" frugal:"1,optional,list<eval_set.EvaluationSet>" form:"sets" json:"sets,omitempty" query:"sets"`
 	HasMore       *bool                     `thrift:"has_more,100,optional" frugal:"100,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
 	NextPageToken *string                   `thrift:"next_page_token,101,optional" frugal:"101,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
@@ -6712,7 +6713,8 @@ func (p *BatchUpdateEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.
 }
 
 type BatchUpdateEvaluationSetItemsOpenAPIData struct {
-	UpdatedItems map[int64]string           `thrift:"updated_items,1,optional" frugal:"1,optional,map<i64:string>" json:"updated_items" form:"updated_items" query:"updated_items"`
+	// key: item 在 items 中的索引，value: item_id
+	UpdatedItems map[int64]int64            `thrift:"updated_items,1,optional" frugal:"1,optional,map<i64:i64>" json:"updated_items" form:"updated_items" query:"updated_items"`
 	Errors       []*eval_set.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<eval_set.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
 }
 
@@ -6723,9 +6725,9 @@ func NewBatchUpdateEvaluationSetItemsOpenAPIData() *BatchUpdateEvaluationSetItem
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) InitDefault() {
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIData_UpdatedItems_DEFAULT map[int64]string
+var BatchUpdateEvaluationSetItemsOpenAPIData_UpdatedItems_DEFAULT map[int64]int64
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) GetUpdatedItems() (v map[int64]string) {
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) GetUpdatedItems() (v map[int64]int64) {
 	if p == nil {
 		return
 	}
@@ -6746,7 +6748,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) GetErrors() (v []*eval_set.It
 	}
 	return p.Errors
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) SetUpdatedItems(val map[int64]string) {
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) SetUpdatedItems(val map[int64]int64) {
 	p.UpdatedItems = val
 }
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) SetErrors(val []*eval_set.ItemErrorGroup) {
@@ -6834,7 +6836,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) ReadField1(iprot thrift.TProt
 	if err != nil {
 		return err
 	}
-	_field := make(map[int64]string, size)
+	_field := make(map[int64]int64, size)
 	for i := 0; i < size; i++ {
 		var _key int64
 		if v, err := iprot.ReadI64(); err != nil {
@@ -6843,8 +6845,8 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) ReadField1(iprot thrift.TProt
 			_key = v
 		}
 
-		var _val string
-		if v, err := iprot.ReadString(); err != nil {
+		var _val int64
+		if v, err := iprot.ReadI64(); err != nil {
 			return err
 		} else {
 			_val = v
@@ -6919,14 +6921,14 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) writeField1(oprot thrift.TPro
 		if err = oprot.WriteFieldBegin("updated_items", thrift.MAP, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.STRING, len(p.UpdatedItems)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.I64, len(p.UpdatedItems)); err != nil {
 			return err
 		}
 		for k, v := range p.UpdatedItems {
 			if err := oprot.WriteI64(k); err != nil {
 				return err
 			}
-			if err := oprot.WriteString(v); err != nil {
+			if err := oprot.WriteI64(v); err != nil {
 				return err
 			}
 		}
@@ -6993,14 +6995,14 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) DeepEqual(ano *BatchUpdateEva
 	return true
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) Field1DeepEqual(src map[int64]string) bool {
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) Field1DeepEqual(src map[int64]int64) bool {
 
 	if len(p.UpdatedItems) != len(src) {
 		return false
 	}
 	for k, v := range p.UpdatedItems {
 		_src := src[k]
-		if strings.Compare(v, _src) != 0 {
+		if v != _src {
 			return false
 		}
 	}
