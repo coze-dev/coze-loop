@@ -28,7 +28,7 @@ func (m *ModelQPSMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelQPSMetric) Expression(granularity entity.MetricGranularity) string {
-	return fmt.Sprintf("count()/%s", granularity)
+	return fmt.Sprintf("count()/%d", entity.GranularityToSecond(granularity))
 }
 
 func (m *ModelQPSMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -28,7 +28,7 @@ func (m *ServiceQPMSuccessMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceQPMSuccessMetric) Expression(granularity entity.MetricGranularity) string {
-	return fmt.Sprintf("countIf(1, status_code = 0) * 60/%s", granularity)
+	return fmt.Sprintf("countIf(1, status_code = 0) * 60/%d", entity.GranularityToSecond(granularity))
 }
 
 func (m *ServiceQPMSuccessMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

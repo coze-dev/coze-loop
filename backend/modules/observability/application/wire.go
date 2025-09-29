@@ -25,6 +25,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	service_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -36,11 +40,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/receiver/rmqreceiver"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	obconfig "github.com/coze-dev/coze-loop/backend/modules/observability/infra/config"
 	obmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/infra/metrics"
 	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq/producer"
@@ -166,10 +165,6 @@ func NewTraceProcessorBuilder(
 
 func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 	return []metrics_entity.IMetricDefinition{
-		metric.NewFailRatioMetric(),
-		metric.NewModelTotalTokensMetric(),
-		metric.NewToolTotalCountMetric(),
-		metric.NewModelLatencyAvgMetric(),
 		// General 指标概览
 		general.NewGeneralTotalCountMetric(),
 		general.NewGeneralFailRatioMetric(),
@@ -226,24 +221,24 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		tool.NewToolDurationPct99Metric(),
 		tool.NewToolSuccessRatioMetric(),
 		// Service 服务调用指标
-		service.NewServiceTraceCountTotalMetric(),
-		service.NewServiceTraceCountMetric(),
-		service.NewServiceSpanCountMetric(),
-		service.NewServiceUserCountMetric(),
-		service.NewServiceMessageCountMetric(),
-		service.NewServiceQPSAllMetric(),
-		service.NewServiceQPSSuccessMetric(),
-		service.NewServiceQPSFailMetric(),
-		service.NewServiceQPMAllMetric(),
-		service.NewServiceQPMSuccessMetric(),
-		service.NewServiceQPMFailMetric(),
-		service.NewServiceDurationAvgMetric(),
-		service.NewServiceDurationMinMetric(),
-		service.NewServiceDurationMaxMetric(),
-		service.NewServiceDurationPct50Metric(),
-		service.NewServiceDurationPct90Metric(),
-		service.NewServiceDurationPct99Metric(),
-		service.NewServiceSuccessRatioMetric(),
+		service_metric.NewServiceTraceCountTotalMetric(),
+		service_metric.NewServiceTraceCountMetric(),
+		service_metric.NewServiceSpanCountMetric(),
+		service_metric.NewServiceUserCountMetric(),
+		service_metric.NewServiceMessageCountMetric(),
+		service_metric.NewServiceQPSAllMetric(),
+		service_metric.NewServiceQPSSuccessMetric(),
+		service_metric.NewServiceQPSFailMetric(),
+		service_metric.NewServiceQPMAllMetric(),
+		service_metric.NewServiceQPMSuccessMetric(),
+		service_metric.NewServiceQPMFailMetric(),
+		service_metric.NewServiceDurationAvgMetric(),
+		service_metric.NewServiceDurationMinMetric(),
+		service_metric.NewServiceDurationMaxMetric(),
+		service_metric.NewServiceDurationPct50Metric(),
+		service_metric.NewServiceDurationPct90Metric(),
+		service_metric.NewServiceDurationPct99Metric(),
+		service_metric.NewServiceSuccessRatioMetric(),
 	}
 }
 
