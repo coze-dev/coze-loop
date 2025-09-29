@@ -18,7 +18,7 @@ import (
 // 评测集相关接口 (9个接口)
 // ===============================
 // 1.1 创建评测集
-type CreateEvaluationSetOpenAPIRequest struct {
+type CreateEvaluationSetOApiRequest struct {
 	WorkspaceID         int64                         `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	Name                string                        `thrift:"name,2,required" frugal:"2,required,string" form:"name,required" json:"name,required" query:"name,required"`
 	Description         *string                       `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
@@ -26,79 +26,79 @@ type CreateEvaluationSetOpenAPIRequest struct {
 	Base                *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewCreateEvaluationSetOpenAPIRequest() *CreateEvaluationSetOpenAPIRequest {
-	return &CreateEvaluationSetOpenAPIRequest{}
+func NewCreateEvaluationSetOApiRequest() *CreateEvaluationSetOApiRequest {
+	return &CreateEvaluationSetOApiRequest{}
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) InitDefault() {
+func (p *CreateEvaluationSetOApiRequest) InitDefault() {
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *CreateEvaluationSetOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) GetName() (v string) {
+func (p *CreateEvaluationSetOApiRequest) GetName() (v string) {
 	if p != nil {
 		return p.Name
 	}
 	return
 }
 
-var CreateEvaluationSetOpenAPIRequest_Description_DEFAULT string
+var CreateEvaluationSetOApiRequest_Description_DEFAULT string
 
-func (p *CreateEvaluationSetOpenAPIRequest) GetDescription() (v string) {
+func (p *CreateEvaluationSetOApiRequest) GetDescription() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDescription() {
-		return CreateEvaluationSetOpenAPIRequest_Description_DEFAULT
+		return CreateEvaluationSetOApiRequest_Description_DEFAULT
 	}
 	return *p.Description
 }
 
-var CreateEvaluationSetOpenAPIRequest_EvaluationSetSchema_DEFAULT *eval_set.EvaluationSetSchema
+var CreateEvaluationSetOApiRequest_EvaluationSetSchema_DEFAULT *eval_set.EvaluationSetSchema
 
-func (p *CreateEvaluationSetOpenAPIRequest) GetEvaluationSetSchema() (v *eval_set.EvaluationSetSchema) {
+func (p *CreateEvaluationSetOApiRequest) GetEvaluationSetSchema() (v *eval_set.EvaluationSetSchema) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluationSetSchema() {
-		return CreateEvaluationSetOpenAPIRequest_EvaluationSetSchema_DEFAULT
+		return CreateEvaluationSetOApiRequest_EvaluationSetSchema_DEFAULT
 	}
 	return p.EvaluationSetSchema
 }
 
-var CreateEvaluationSetOpenAPIRequest_Base_DEFAULT *base.Base
+var CreateEvaluationSetOApiRequest_Base_DEFAULT *base.Base
 
-func (p *CreateEvaluationSetOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *CreateEvaluationSetOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return CreateEvaluationSetOpenAPIRequest_Base_DEFAULT
+		return CreateEvaluationSetOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *CreateEvaluationSetOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *CreateEvaluationSetOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *CreateEvaluationSetOpenAPIRequest) SetName(val string) {
+func (p *CreateEvaluationSetOApiRequest) SetName(val string) {
 	p.Name = val
 }
-func (p *CreateEvaluationSetOpenAPIRequest) SetDescription(val *string) {
+func (p *CreateEvaluationSetOApiRequest) SetDescription(val *string) {
 	p.Description = val
 }
-func (p *CreateEvaluationSetOpenAPIRequest) SetEvaluationSetSchema(val *eval_set.EvaluationSetSchema) {
+func (p *CreateEvaluationSetOApiRequest) SetEvaluationSetSchema(val *eval_set.EvaluationSetSchema) {
 	p.EvaluationSetSchema = val
 }
-func (p *CreateEvaluationSetOpenAPIRequest) SetBase(val *base.Base) {
+func (p *CreateEvaluationSetOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_CreateEvaluationSetOpenAPIRequest = map[int16]string{
+var fieldIDToName_CreateEvaluationSetOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "name",
 	3:   "description",
@@ -106,19 +106,19 @@ var fieldIDToName_CreateEvaluationSetOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) IsSetDescription() bool {
+func (p *CreateEvaluationSetOApiRequest) IsSetDescription() bool {
 	return p.Description != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) IsSetEvaluationSetSchema() bool {
+func (p *CreateEvaluationSetOApiRequest) IsSetEvaluationSetSchema() bool {
 	return p.EvaluationSetSchema != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) IsSetBase() bool {
+func (p *CreateEvaluationSetOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -208,7 +208,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -217,10 +217,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateEvaluationSetOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateEvaluationSetOApiRequest[fieldId]))
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -231,7 +231,7 @@ func (p *CreateEvaluationSetOpenAPIRequest) ReadField1(iprot thrift.TProtocol) e
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -242,7 +242,7 @@ func (p *CreateEvaluationSetOpenAPIRequest) ReadField2(iprot thrift.TProtocol) e
 	p.Name = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -253,7 +253,7 @@ func (p *CreateEvaluationSetOpenAPIRequest) ReadField3(iprot thrift.TProtocol) e
 	p.Description = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 	_field := eval_set.NewEvaluationSetSchema()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -261,7 +261,7 @@ func (p *CreateEvaluationSetOpenAPIRequest) ReadField4(iprot thrift.TProtocol) e
 	p.EvaluationSetSchema = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -270,9 +270,9 @@ func (p *CreateEvaluationSetOpenAPIRequest) ReadField255(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSetOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -314,7 +314,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -330,7 +330,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -346,7 +346,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDescription() {
 		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -364,7 +364,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluationSetSchema() {
 		if err = oprot.WriteFieldBegin("evaluation_set_schema", thrift.STRUCT, 4); err != nil {
 			goto WriteFieldBeginError
@@ -382,7 +382,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -401,15 +401,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) String() string {
+func (p *CreateEvaluationSetOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateEvaluationSetOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("CreateEvaluationSetOApiRequest(%+v)", *p)
 
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) DeepEqual(ano *CreateEvaluationSetOpenAPIRequest) bool {
+func (p *CreateEvaluationSetOApiRequest) DeepEqual(ano *CreateEvaluationSetOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -433,21 +433,21 @@ func (p *CreateEvaluationSetOpenAPIRequest) DeepEqual(ano *CreateEvaluationSetOp
 	return true
 }
 
-func (p *CreateEvaluationSetOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *CreateEvaluationSetOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIRequest) Field2DeepEqual(src string) bool {
+func (p *CreateEvaluationSetOApiRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.Name, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIRequest) Field3DeepEqual(src *string) bool {
+func (p *CreateEvaluationSetOApiRequest) Field3DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -459,14 +459,14 @@ func (p *CreateEvaluationSetOpenAPIRequest) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIRequest) Field4DeepEqual(src *eval_set.EvaluationSetSchema) bool {
+func (p *CreateEvaluationSetOApiRequest) Field4DeepEqual(src *eval_set.EvaluationSetSchema) bool {
 
 	if !p.EvaluationSetSchema.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *CreateEvaluationSetOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -474,104 +474,104 @@ func (p *CreateEvaluationSetOpenAPIRequest) Field255DeepEqual(src *base.Base) bo
 	return true
 }
 
-type CreateEvaluationSetOpenAPIResponse struct {
+type CreateEvaluationSetOApiResponse struct {
 	Code     *int32                          `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                         `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *CreateEvaluationSetOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,CreateEvaluationSetOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                  `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewCreateEvaluationSetOpenAPIResponse() *CreateEvaluationSetOpenAPIResponse {
-	return &CreateEvaluationSetOpenAPIResponse{}
+func NewCreateEvaluationSetOApiResponse() *CreateEvaluationSetOApiResponse {
+	return &CreateEvaluationSetOApiResponse{}
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) InitDefault() {
+func (p *CreateEvaluationSetOApiResponse) InitDefault() {
 }
 
-var CreateEvaluationSetOpenAPIResponse_Code_DEFAULT int32
+var CreateEvaluationSetOApiResponse_Code_DEFAULT int32
 
-func (p *CreateEvaluationSetOpenAPIResponse) GetCode() (v int32) {
+func (p *CreateEvaluationSetOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return CreateEvaluationSetOpenAPIResponse_Code_DEFAULT
+		return CreateEvaluationSetOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var CreateEvaluationSetOpenAPIResponse_Msg_DEFAULT string
+var CreateEvaluationSetOApiResponse_Msg_DEFAULT string
 
-func (p *CreateEvaluationSetOpenAPIResponse) GetMsg() (v string) {
+func (p *CreateEvaluationSetOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return CreateEvaluationSetOpenAPIResponse_Msg_DEFAULT
+		return CreateEvaluationSetOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var CreateEvaluationSetOpenAPIResponse_Data_DEFAULT *CreateEvaluationSetOpenAPIData
+var CreateEvaluationSetOApiResponse_Data_DEFAULT *CreateEvaluationSetOpenAPIData
 
-func (p *CreateEvaluationSetOpenAPIResponse) GetData() (v *CreateEvaluationSetOpenAPIData) {
+func (p *CreateEvaluationSetOApiResponse) GetData() (v *CreateEvaluationSetOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return CreateEvaluationSetOpenAPIResponse_Data_DEFAULT
+		return CreateEvaluationSetOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var CreateEvaluationSetOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var CreateEvaluationSetOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *CreateEvaluationSetOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *CreateEvaluationSetOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return CreateEvaluationSetOpenAPIResponse_BaseResp_DEFAULT
+		return CreateEvaluationSetOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *CreateEvaluationSetOpenAPIResponse) SetCode(val *int32) {
+func (p *CreateEvaluationSetOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *CreateEvaluationSetOpenAPIResponse) SetMsg(val *string) {
+func (p *CreateEvaluationSetOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *CreateEvaluationSetOpenAPIResponse) SetData(val *CreateEvaluationSetOpenAPIData) {
+func (p *CreateEvaluationSetOApiResponse) SetData(val *CreateEvaluationSetOpenAPIData) {
 	p.Data = val
 }
-func (p *CreateEvaluationSetOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *CreateEvaluationSetOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_CreateEvaluationSetOpenAPIResponse = map[int16]string{
+var fieldIDToName_CreateEvaluationSetOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) IsSetCode() bool {
+func (p *CreateEvaluationSetOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) IsSetMsg() bool {
+func (p *CreateEvaluationSetOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) IsSetData() bool {
+func (p *CreateEvaluationSetOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) IsSetBaseResp() bool {
+func (p *CreateEvaluationSetOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -640,7 +640,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -650,7 +650,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -661,7 +661,7 @@ func (p *CreateEvaluationSetOpenAPIResponse) ReadField1(iprot thrift.TProtocol) 
 	p.Code = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -672,7 +672,7 @@ func (p *CreateEvaluationSetOpenAPIResponse) ReadField2(iprot thrift.TProtocol) 
 	p.Msg = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewCreateEvaluationSetOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -680,7 +680,7 @@ func (p *CreateEvaluationSetOpenAPIResponse) ReadField3(iprot thrift.TProtocol) 
 	p.Data = _field
 	return nil
 }
-func (p *CreateEvaluationSetOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -689,9 +689,9 @@ func (p *CreateEvaluationSetOpenAPIResponse) ReadField255(iprot thrift.TProtocol
 	return nil
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSetOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -729,7 +729,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -747,7 +747,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -765,7 +765,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -783,7 +783,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateEvaluationSetOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -800,15 +800,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) String() string {
+func (p *CreateEvaluationSetOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateEvaluationSetOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("CreateEvaluationSetOApiResponse(%+v)", *p)
 
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) DeepEqual(ano *CreateEvaluationSetOpenAPIResponse) bool {
+func (p *CreateEvaluationSetOApiResponse) DeepEqual(ano *CreateEvaluationSetOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -829,7 +829,7 @@ func (p *CreateEvaluationSetOpenAPIResponse) DeepEqual(ano *CreateEvaluationSetO
 	return true
 }
 
-func (p *CreateEvaluationSetOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *CreateEvaluationSetOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -841,7 +841,7 @@ func (p *CreateEvaluationSetOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *CreateEvaluationSetOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -853,14 +853,14 @@ func (p *CreateEvaluationSetOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIResponse) Field3DeepEqual(src *CreateEvaluationSetOpenAPIData) bool {
+func (p *CreateEvaluationSetOApiResponse) Field3DeepEqual(src *CreateEvaluationSetOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *CreateEvaluationSetOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -1050,65 +1050,65 @@ func (p *CreateEvaluationSetOpenAPIData) Field1DeepEqual(src *int64) bool {
 }
 
 // 1.2 获取评测集详情
-type GetEvaluationSetOpenAPIRequest struct {
+type GetEvaluationSetOApiRequest struct {
 	WorkspaceID     int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64      `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetEvaluationSetOpenAPIRequest() *GetEvaluationSetOpenAPIRequest {
-	return &GetEvaluationSetOpenAPIRequest{}
+func NewGetEvaluationSetOApiRequest() *GetEvaluationSetOApiRequest {
+	return &GetEvaluationSetOApiRequest{}
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) InitDefault() {
+func (p *GetEvaluationSetOApiRequest) InitDefault() {
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *GetEvaluationSetOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *GetEvaluationSetOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-var GetEvaluationSetOpenAPIRequest_Base_DEFAULT *base.Base
+var GetEvaluationSetOApiRequest_Base_DEFAULT *base.Base
 
-func (p *GetEvaluationSetOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *GetEvaluationSetOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetEvaluationSetOpenAPIRequest_Base_DEFAULT
+		return GetEvaluationSetOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetEvaluationSetOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *GetEvaluationSetOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetEvaluationSetOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *GetEvaluationSetOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *GetEvaluationSetOpenAPIRequest) SetBase(val *base.Base) {
+func (p *GetEvaluationSetOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetEvaluationSetOpenAPIRequest = map[int16]string{
+var fieldIDToName_GetEvaluationSetOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	255: "Base",
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) IsSetBase() bool {
+func (p *GetEvaluationSetOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -1182,7 +1182,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluationSetOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluationSetOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -1191,10 +1191,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetEvaluationSetOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetEvaluationSetOApiRequest[fieldId]))
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -1205,7 +1205,7 @@ func (p *GetEvaluationSetOpenAPIRequest) ReadField1(iprot thrift.TProtocol) erro
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *GetEvaluationSetOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -1216,7 +1216,7 @@ func (p *GetEvaluationSetOpenAPIRequest) ReadField2(iprot thrift.TProtocol) erro
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *GetEvaluationSetOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -1225,9 +1225,9 @@ func (p *GetEvaluationSetOpenAPIRequest) ReadField255(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluationSetOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluationSetOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -1261,7 +1261,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -1277,7 +1277,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetEvaluationSetOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -1293,7 +1293,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetEvaluationSetOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -1312,15 +1312,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) String() string {
+func (p *GetEvaluationSetOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetEvaluationSetOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("GetEvaluationSetOApiRequest(%+v)", *p)
 
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) DeepEqual(ano *GetEvaluationSetOpenAPIRequest) bool {
+func (p *GetEvaluationSetOApiRequest) DeepEqual(ano *GetEvaluationSetOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -1338,21 +1338,21 @@ func (p *GetEvaluationSetOpenAPIRequest) DeepEqual(ano *GetEvaluationSetOpenAPIR
 	return true
 }
 
-func (p *GetEvaluationSetOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *GetEvaluationSetOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluationSetOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *GetEvaluationSetOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluationSetOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *GetEvaluationSetOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -1360,104 +1360,104 @@ func (p *GetEvaluationSetOpenAPIRequest) Field255DeepEqual(src *base.Base) bool 
 	return true
 }
 
-type GetEvaluationSetOpenAPIResponse struct {
+type GetEvaluationSetOApiResponse struct {
 	Code     *int32                       `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                      `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *GetEvaluationSetOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,GetEvaluationSetOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewGetEvaluationSetOpenAPIResponse() *GetEvaluationSetOpenAPIResponse {
-	return &GetEvaluationSetOpenAPIResponse{}
+func NewGetEvaluationSetOApiResponse() *GetEvaluationSetOApiResponse {
+	return &GetEvaluationSetOApiResponse{}
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) InitDefault() {
+func (p *GetEvaluationSetOApiResponse) InitDefault() {
 }
 
-var GetEvaluationSetOpenAPIResponse_Code_DEFAULT int32
+var GetEvaluationSetOApiResponse_Code_DEFAULT int32
 
-func (p *GetEvaluationSetOpenAPIResponse) GetCode() (v int32) {
+func (p *GetEvaluationSetOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return GetEvaluationSetOpenAPIResponse_Code_DEFAULT
+		return GetEvaluationSetOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var GetEvaluationSetOpenAPIResponse_Msg_DEFAULT string
+var GetEvaluationSetOApiResponse_Msg_DEFAULT string
 
-func (p *GetEvaluationSetOpenAPIResponse) GetMsg() (v string) {
+func (p *GetEvaluationSetOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return GetEvaluationSetOpenAPIResponse_Msg_DEFAULT
+		return GetEvaluationSetOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var GetEvaluationSetOpenAPIResponse_Data_DEFAULT *GetEvaluationSetOpenAPIData
+var GetEvaluationSetOApiResponse_Data_DEFAULT *GetEvaluationSetOpenAPIData
 
-func (p *GetEvaluationSetOpenAPIResponse) GetData() (v *GetEvaluationSetOpenAPIData) {
+func (p *GetEvaluationSetOApiResponse) GetData() (v *GetEvaluationSetOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return GetEvaluationSetOpenAPIResponse_Data_DEFAULT
+		return GetEvaluationSetOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var GetEvaluationSetOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var GetEvaluationSetOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetEvaluationSetOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *GetEvaluationSetOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetEvaluationSetOpenAPIResponse_BaseResp_DEFAULT
+		return GetEvaluationSetOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetEvaluationSetOpenAPIResponse) SetCode(val *int32) {
+func (p *GetEvaluationSetOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *GetEvaluationSetOpenAPIResponse) SetMsg(val *string) {
+func (p *GetEvaluationSetOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *GetEvaluationSetOpenAPIResponse) SetData(val *GetEvaluationSetOpenAPIData) {
+func (p *GetEvaluationSetOApiResponse) SetData(val *GetEvaluationSetOpenAPIData) {
 	p.Data = val
 }
-func (p *GetEvaluationSetOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *GetEvaluationSetOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetEvaluationSetOpenAPIResponse = map[int16]string{
+var fieldIDToName_GetEvaluationSetOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) IsSetCode() bool {
+func (p *GetEvaluationSetOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) IsSetMsg() bool {
+func (p *GetEvaluationSetOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) IsSetData() bool {
+func (p *GetEvaluationSetOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) IsSetBaseResp() bool {
+func (p *GetEvaluationSetOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -1526,7 +1526,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluationSetOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluationSetOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -1536,7 +1536,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -1547,7 +1547,7 @@ func (p *GetEvaluationSetOpenAPIResponse) ReadField1(iprot thrift.TProtocol) err
 	p.Code = _field
 	return nil
 }
-func (p *GetEvaluationSetOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -1558,7 +1558,7 @@ func (p *GetEvaluationSetOpenAPIResponse) ReadField2(iprot thrift.TProtocol) err
 	p.Msg = _field
 	return nil
 }
-func (p *GetEvaluationSetOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewGetEvaluationSetOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -1566,7 +1566,7 @@ func (p *GetEvaluationSetOpenAPIResponse) ReadField3(iprot thrift.TProtocol) err
 	p.Data = _field
 	return nil
 }
-func (p *GetEvaluationSetOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetEvaluationSetOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -1575,9 +1575,9 @@ func (p *GetEvaluationSetOpenAPIResponse) ReadField255(iprot thrift.TProtocol) e
 	return nil
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluationSetOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluationSetOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -1615,7 +1615,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -1633,7 +1633,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetEvaluationSetOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -1651,7 +1651,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetEvaluationSetOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -1669,7 +1669,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetEvaluationSetOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluationSetOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -1686,15 +1686,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) String() string {
+func (p *GetEvaluationSetOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetEvaluationSetOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("GetEvaluationSetOApiResponse(%+v)", *p)
 
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) DeepEqual(ano *GetEvaluationSetOpenAPIResponse) bool {
+func (p *GetEvaluationSetOApiResponse) DeepEqual(ano *GetEvaluationSetOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -1715,7 +1715,7 @@ func (p *GetEvaluationSetOpenAPIResponse) DeepEqual(ano *GetEvaluationSetOpenAPI
 	return true
 }
 
-func (p *GetEvaluationSetOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *GetEvaluationSetOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -1727,7 +1727,7 @@ func (p *GetEvaluationSetOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetEvaluationSetOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *GetEvaluationSetOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -1739,14 +1739,14 @@ func (p *GetEvaluationSetOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetEvaluationSetOpenAPIResponse) Field3DeepEqual(src *GetEvaluationSetOpenAPIData) bool {
+func (p *GetEvaluationSetOApiResponse) Field3DeepEqual(src *GetEvaluationSetOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluationSetOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *GetEvaluationSetOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -1928,7 +1928,7 @@ func (p *GetEvaluationSetOpenAPIData) Field1DeepEqual(src *eval_set.EvaluationSe
 }
 
 // 1.3 查询评测集列表
-type ListEvaluationSetsOpenAPIRequest struct {
+type ListEvaluationSetsOApiRequest struct {
 	WorkspaceID      int64             `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	Name             *string           `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Creators         []string          `thrift:"creators,3,optional" frugal:"3,optional,list<string>" form:"creators" json:"creators,omitempty" query:"creators"`
@@ -1939,129 +1939,129 @@ type ListEvaluationSetsOpenAPIRequest struct {
 	Base             *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewListEvaluationSetsOpenAPIRequest() *ListEvaluationSetsOpenAPIRequest {
-	return &ListEvaluationSetsOpenAPIRequest{}
+func NewListEvaluationSetsOApiRequest() *ListEvaluationSetsOApiRequest {
+	return &ListEvaluationSetsOApiRequest{}
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) InitDefault() {
+func (p *ListEvaluationSetsOApiRequest) InitDefault() {
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *ListEvaluationSetsOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-var ListEvaluationSetsOpenAPIRequest_Name_DEFAULT string
+var ListEvaluationSetsOApiRequest_Name_DEFAULT string
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetName() (v string) {
+func (p *ListEvaluationSetsOApiRequest) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
-		return ListEvaluationSetsOpenAPIRequest_Name_DEFAULT
+		return ListEvaluationSetsOApiRequest_Name_DEFAULT
 	}
 	return *p.Name
 }
 
-var ListEvaluationSetsOpenAPIRequest_Creators_DEFAULT []string
+var ListEvaluationSetsOApiRequest_Creators_DEFAULT []string
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetCreators() (v []string) {
+func (p *ListEvaluationSetsOApiRequest) GetCreators() (v []string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCreators() {
-		return ListEvaluationSetsOpenAPIRequest_Creators_DEFAULT
+		return ListEvaluationSetsOApiRequest_Creators_DEFAULT
 	}
 	return p.Creators
 }
 
-var ListEvaluationSetsOpenAPIRequest_EvaluationSetIds_DEFAULT []int64
+var ListEvaluationSetsOApiRequest_EvaluationSetIds_DEFAULT []int64
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetEvaluationSetIds() (v []int64) {
+func (p *ListEvaluationSetsOApiRequest) GetEvaluationSetIds() (v []int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluationSetIds() {
-		return ListEvaluationSetsOpenAPIRequest_EvaluationSetIds_DEFAULT
+		return ListEvaluationSetsOApiRequest_EvaluationSetIds_DEFAULT
 	}
 	return p.EvaluationSetIds
 }
 
-var ListEvaluationSetsOpenAPIRequest_PageToken_DEFAULT string
+var ListEvaluationSetsOApiRequest_PageToken_DEFAULT string
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetPageToken() (v string) {
+func (p *ListEvaluationSetsOApiRequest) GetPageToken() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageToken() {
-		return ListEvaluationSetsOpenAPIRequest_PageToken_DEFAULT
+		return ListEvaluationSetsOApiRequest_PageToken_DEFAULT
 	}
 	return *p.PageToken
 }
 
-var ListEvaluationSetsOpenAPIRequest_PageSize_DEFAULT int32
+var ListEvaluationSetsOApiRequest_PageSize_DEFAULT int32
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetPageSize() (v int32) {
+func (p *ListEvaluationSetsOApiRequest) GetPageSize() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageSize() {
-		return ListEvaluationSetsOpenAPIRequest_PageSize_DEFAULT
+		return ListEvaluationSetsOApiRequest_PageSize_DEFAULT
 	}
 	return *p.PageSize
 }
 
-var ListEvaluationSetsOpenAPIRequest_OrderBys_DEFAULT []*common.OrderBy
+var ListEvaluationSetsOApiRequest_OrderBys_DEFAULT []*common.OrderBy
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetOrderBys() (v []*common.OrderBy) {
+func (p *ListEvaluationSetsOApiRequest) GetOrderBys() (v []*common.OrderBy) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetOrderBys() {
-		return ListEvaluationSetsOpenAPIRequest_OrderBys_DEFAULT
+		return ListEvaluationSetsOApiRequest_OrderBys_DEFAULT
 	}
 	return p.OrderBys
 }
 
-var ListEvaluationSetsOpenAPIRequest_Base_DEFAULT *base.Base
+var ListEvaluationSetsOApiRequest_Base_DEFAULT *base.Base
 
-func (p *ListEvaluationSetsOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *ListEvaluationSetsOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return ListEvaluationSetsOpenAPIRequest_Base_DEFAULT
+		return ListEvaluationSetsOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *ListEvaluationSetsOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetName(val *string) {
+func (p *ListEvaluationSetsOApiRequest) SetName(val *string) {
 	p.Name = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetCreators(val []string) {
+func (p *ListEvaluationSetsOApiRequest) SetCreators(val []string) {
 	p.Creators = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetEvaluationSetIds(val []int64) {
+func (p *ListEvaluationSetsOApiRequest) SetEvaluationSetIds(val []int64) {
 	p.EvaluationSetIds = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetPageToken(val *string) {
+func (p *ListEvaluationSetsOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetPageSize(val *int32) {
+func (p *ListEvaluationSetsOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetOrderBys(val []*common.OrderBy) {
+func (p *ListEvaluationSetsOApiRequest) SetOrderBys(val []*common.OrderBy) {
 	p.OrderBys = val
 }
-func (p *ListEvaluationSetsOpenAPIRequest) SetBase(val *base.Base) {
+func (p *ListEvaluationSetsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_ListEvaluationSetsOpenAPIRequest = map[int16]string{
+var fieldIDToName_ListEvaluationSetsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "name",
 	3:   "creators",
@@ -2072,35 +2072,35 @@ var fieldIDToName_ListEvaluationSetsOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetName() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetName() bool {
 	return p.Name != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetCreators() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetCreators() bool {
 	return p.Creators != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetEvaluationSetIds() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetEvaluationSetIds() bool {
 	return p.EvaluationSetIds != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetPageToken() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetPageSize() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetOrderBys() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetOrderBys() bool {
 	return p.OrderBys != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) IsSetBase() bool {
+func (p *ListEvaluationSetsOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -2207,7 +2207,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetsOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetsOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -2216,10 +2216,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListEvaluationSetsOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListEvaluationSetsOApiRequest[fieldId]))
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -2230,7 +2230,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) er
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2241,7 +2241,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) er
 	p.Name = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -2264,7 +2264,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField3(iprot thrift.TProtocol) er
 	p.Creators = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -2287,7 +2287,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField4(iprot thrift.TProtocol) er
 	p.EvaluationSetIds = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField100(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2298,7 +2298,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField100(iprot thrift.TProtocol) 
 	p.PageToken = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField101(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField101(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -2309,7 +2309,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField101(iprot thrift.TProtocol) 
 	p.PageSize = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField103(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField103(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -2332,7 +2332,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField103(iprot thrift.TProtocol) 
 	p.OrderBys = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2341,9 +2341,9 @@ func (p *ListEvaluationSetsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) 
 	return nil
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSetsOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetsOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -2397,7 +2397,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -2413,7 +2413,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetName() {
 		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -2431,7 +2431,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreators() {
 		if err = oprot.WriteFieldBegin("creators", thrift.LIST, 3); err != nil {
 			goto WriteFieldBeginError
@@ -2457,7 +2457,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluationSetIds() {
 		if err = oprot.WriteFieldBegin("evaluation_set_ids", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
@@ -2483,7 +2483,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField100(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 100); err != nil {
 			goto WriteFieldBeginError
@@ -2501,7 +2501,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField101(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
 		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 101); err != nil {
 			goto WriteFieldBeginError
@@ -2519,7 +2519,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField103(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField103(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOrderBys() {
 		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 103); err != nil {
 			goto WriteFieldBeginError
@@ -2545,7 +2545,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -2564,15 +2564,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) String() string {
+func (p *ListEvaluationSetsOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ListEvaluationSetsOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("ListEvaluationSetsOApiRequest(%+v)", *p)
 
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) DeepEqual(ano *ListEvaluationSetsOpenAPIRequest) bool {
+func (p *ListEvaluationSetsOApiRequest) DeepEqual(ano *ListEvaluationSetsOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -2605,14 +2605,14 @@ func (p *ListEvaluationSetsOpenAPIRequest) DeepEqual(ano *ListEvaluationSetsOpen
 	return true
 }
 
-func (p *ListEvaluationSetsOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *ListEvaluationSetsOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field2DeepEqual(src *string) bool {
+func (p *ListEvaluationSetsOApiRequest) Field2DeepEqual(src *string) bool {
 
 	if p.Name == src {
 		return true
@@ -2624,7 +2624,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field3DeepEqual(src []string) bool {
+func (p *ListEvaluationSetsOApiRequest) Field3DeepEqual(src []string) bool {
 
 	if len(p.Creators) != len(src) {
 		return false
@@ -2637,7 +2637,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field3DeepEqual(src []string) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field4DeepEqual(src []int64) bool {
+func (p *ListEvaluationSetsOApiRequest) Field4DeepEqual(src []int64) bool {
 
 	if len(p.EvaluationSetIds) != len(src) {
 		return false
@@ -2650,7 +2650,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field4DeepEqual(src []int64) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field100DeepEqual(src *string) bool {
+func (p *ListEvaluationSetsOApiRequest) Field100DeepEqual(src *string) bool {
 
 	if p.PageToken == src {
 		return true
@@ -2662,7 +2662,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field100DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field101DeepEqual(src *int32) bool {
+func (p *ListEvaluationSetsOApiRequest) Field101DeepEqual(src *int32) bool {
 
 	if p.PageSize == src {
 		return true
@@ -2674,7 +2674,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field101DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field103DeepEqual(src []*common.OrderBy) bool {
+func (p *ListEvaluationSetsOApiRequest) Field103DeepEqual(src []*common.OrderBy) bool {
 
 	if len(p.OrderBys) != len(src) {
 		return false
@@ -2687,7 +2687,7 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field103DeepEqual(src []*common.Order
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *ListEvaluationSetsOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -2695,104 +2695,104 @@ func (p *ListEvaluationSetsOpenAPIRequest) Field255DeepEqual(src *base.Base) boo
 	return true
 }
 
-type ListEvaluationSetsOpenAPIResponse struct {
+type ListEvaluationSetsOApiResponse struct {
 	Code     *int32                         `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                        `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *ListEvaluationSetsOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,ListEvaluationSetsOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                 `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewListEvaluationSetsOpenAPIResponse() *ListEvaluationSetsOpenAPIResponse {
-	return &ListEvaluationSetsOpenAPIResponse{}
+func NewListEvaluationSetsOApiResponse() *ListEvaluationSetsOApiResponse {
+	return &ListEvaluationSetsOApiResponse{}
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) InitDefault() {
+func (p *ListEvaluationSetsOApiResponse) InitDefault() {
 }
 
-var ListEvaluationSetsOpenAPIResponse_Code_DEFAULT int32
+var ListEvaluationSetsOApiResponse_Code_DEFAULT int32
 
-func (p *ListEvaluationSetsOpenAPIResponse) GetCode() (v int32) {
+func (p *ListEvaluationSetsOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return ListEvaluationSetsOpenAPIResponse_Code_DEFAULT
+		return ListEvaluationSetsOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var ListEvaluationSetsOpenAPIResponse_Msg_DEFAULT string
+var ListEvaluationSetsOApiResponse_Msg_DEFAULT string
 
-func (p *ListEvaluationSetsOpenAPIResponse) GetMsg() (v string) {
+func (p *ListEvaluationSetsOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return ListEvaluationSetsOpenAPIResponse_Msg_DEFAULT
+		return ListEvaluationSetsOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var ListEvaluationSetsOpenAPIResponse_Data_DEFAULT *ListEvaluationSetsOpenAPIData
+var ListEvaluationSetsOApiResponse_Data_DEFAULT *ListEvaluationSetsOpenAPIData
 
-func (p *ListEvaluationSetsOpenAPIResponse) GetData() (v *ListEvaluationSetsOpenAPIData) {
+func (p *ListEvaluationSetsOApiResponse) GetData() (v *ListEvaluationSetsOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return ListEvaluationSetsOpenAPIResponse_Data_DEFAULT
+		return ListEvaluationSetsOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var ListEvaluationSetsOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var ListEvaluationSetsOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *ListEvaluationSetsOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *ListEvaluationSetsOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return ListEvaluationSetsOpenAPIResponse_BaseResp_DEFAULT
+		return ListEvaluationSetsOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *ListEvaluationSetsOpenAPIResponse) SetCode(val *int32) {
+func (p *ListEvaluationSetsOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *ListEvaluationSetsOpenAPIResponse) SetMsg(val *string) {
+func (p *ListEvaluationSetsOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *ListEvaluationSetsOpenAPIResponse) SetData(val *ListEvaluationSetsOpenAPIData) {
+func (p *ListEvaluationSetsOApiResponse) SetData(val *ListEvaluationSetsOpenAPIData) {
 	p.Data = val
 }
-func (p *ListEvaluationSetsOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *ListEvaluationSetsOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_ListEvaluationSetsOpenAPIResponse = map[int16]string{
+var fieldIDToName_ListEvaluationSetsOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) IsSetCode() bool {
+func (p *ListEvaluationSetsOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) IsSetMsg() bool {
+func (p *ListEvaluationSetsOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) IsSetData() bool {
+func (p *ListEvaluationSetsOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) IsSetBaseResp() bool {
+func (p *ListEvaluationSetsOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -2861,7 +2861,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetsOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetsOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -2871,7 +2871,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -2882,7 +2882,7 @@ func (p *ListEvaluationSetsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) e
 	p.Code = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2893,7 +2893,7 @@ func (p *ListEvaluationSetsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) e
 	p.Msg = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewListEvaluationSetsOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2901,7 +2901,7 @@ func (p *ListEvaluationSetsOpenAPIResponse) ReadField3(iprot thrift.TProtocol) e
 	p.Data = _field
 	return nil
 }
-func (p *ListEvaluationSetsOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -2910,9 +2910,9 @@ func (p *ListEvaluationSetsOpenAPIResponse) ReadField255(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSetsOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetsOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -2950,7 +2950,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -2968,7 +2968,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -2986,7 +2986,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -3004,7 +3004,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -3021,15 +3021,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) String() string {
+func (p *ListEvaluationSetsOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ListEvaluationSetsOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("ListEvaluationSetsOApiResponse(%+v)", *p)
 
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) DeepEqual(ano *ListEvaluationSetsOpenAPIResponse) bool {
+func (p *ListEvaluationSetsOApiResponse) DeepEqual(ano *ListEvaluationSetsOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3050,7 +3050,7 @@ func (p *ListEvaluationSetsOpenAPIResponse) DeepEqual(ano *ListEvaluationSetsOpe
 	return true
 }
 
-func (p *ListEvaluationSetsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *ListEvaluationSetsOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -3062,7 +3062,7 @@ func (p *ListEvaluationSetsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *ListEvaluationSetsOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -3074,14 +3074,14 @@ func (p *ListEvaluationSetsOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIResponse) Field3DeepEqual(src *ListEvaluationSetsOpenAPIData) bool {
+func (p *ListEvaluationSetsOApiResponse) Field3DeepEqual(src *ListEvaluationSetsOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ListEvaluationSetsOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *ListEvaluationSetsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -3523,7 +3523,7 @@ func (p *ListEvaluationSetsOpenAPIData) Field102DeepEqual(src *int64) bool {
 }
 
 // 1.4 创建评测集版本
-type CreateEvaluationSetVersionOpenAPIRequest struct {
+type CreateEvaluationSetVersionOApiRequest struct {
 	WorkspaceID     int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64      `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	Version         *string    `thrift:"version,3,optional" frugal:"3,optional,string" form:"version" json:"version,omitempty" query:"version"`
@@ -3531,79 +3531,79 @@ type CreateEvaluationSetVersionOpenAPIRequest struct {
 	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewCreateEvaluationSetVersionOpenAPIRequest() *CreateEvaluationSetVersionOpenAPIRequest {
-	return &CreateEvaluationSetVersionOpenAPIRequest{}
+func NewCreateEvaluationSetVersionOApiRequest() *CreateEvaluationSetVersionOApiRequest {
+	return &CreateEvaluationSetVersionOApiRequest{}
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) InitDefault() {
+func (p *CreateEvaluationSetVersionOApiRequest) InitDefault() {
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *CreateEvaluationSetVersionOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *CreateEvaluationSetVersionOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-var CreateEvaluationSetVersionOpenAPIRequest_Version_DEFAULT string
+var CreateEvaluationSetVersionOApiRequest_Version_DEFAULT string
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) GetVersion() (v string) {
+func (p *CreateEvaluationSetVersionOApiRequest) GetVersion() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetVersion() {
-		return CreateEvaluationSetVersionOpenAPIRequest_Version_DEFAULT
+		return CreateEvaluationSetVersionOApiRequest_Version_DEFAULT
 	}
 	return *p.Version
 }
 
-var CreateEvaluationSetVersionOpenAPIRequest_Description_DEFAULT string
+var CreateEvaluationSetVersionOApiRequest_Description_DEFAULT string
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) GetDescription() (v string) {
+func (p *CreateEvaluationSetVersionOApiRequest) GetDescription() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDescription() {
-		return CreateEvaluationSetVersionOpenAPIRequest_Description_DEFAULT
+		return CreateEvaluationSetVersionOApiRequest_Description_DEFAULT
 	}
 	return *p.Description
 }
 
-var CreateEvaluationSetVersionOpenAPIRequest_Base_DEFAULT *base.Base
+var CreateEvaluationSetVersionOApiRequest_Base_DEFAULT *base.Base
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *CreateEvaluationSetVersionOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return CreateEvaluationSetVersionOpenAPIRequest_Base_DEFAULT
+		return CreateEvaluationSetVersionOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *CreateEvaluationSetVersionOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *CreateEvaluationSetVersionOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) SetVersion(val *string) {
+func (p *CreateEvaluationSetVersionOApiRequest) SetVersion(val *string) {
 	p.Version = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) SetDescription(val *string) {
+func (p *CreateEvaluationSetVersionOApiRequest) SetDescription(val *string) {
 	p.Description = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) SetBase(val *base.Base) {
+func (p *CreateEvaluationSetVersionOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_CreateEvaluationSetVersionOpenAPIRequest = map[int16]string{
+var fieldIDToName_CreateEvaluationSetVersionOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "version",
@@ -3611,19 +3611,19 @@ var fieldIDToName_CreateEvaluationSetVersionOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) IsSetVersion() bool {
+func (p *CreateEvaluationSetVersionOApiRequest) IsSetVersion() bool {
 	return p.Version != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) IsSetDescription() bool {
+func (p *CreateEvaluationSetVersionOApiRequest) IsSetDescription() bool {
 	return p.Description != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) IsSetBase() bool {
+func (p *CreateEvaluationSetVersionOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -3713,7 +3713,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetVersionOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetVersionOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3722,10 +3722,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateEvaluationSetVersionOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateEvaluationSetVersionOApiRequest[fieldId]))
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3736,7 +3736,7 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField1(iprot thrift.TProt
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3747,7 +3747,7 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField2(iprot thrift.TProt
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3758,7 +3758,7 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField3(iprot thrift.TProt
 	p.Version = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3769,7 +3769,7 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField4(iprot thrift.TProt
 	p.Description = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -3778,9 +3778,9 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) ReadField255(iprot thrift.TPr
 	return nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSetVersionOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetVersionOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3822,7 +3822,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -3838,7 +3838,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -3854,7 +3854,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVersion() {
 		if err = oprot.WriteFieldBegin("version", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -3872,7 +3872,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDescription() {
 		if err = oprot.WriteFieldBegin("description", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
@@ -3890,7 +3890,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -3909,15 +3909,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) String() string {
+func (p *CreateEvaluationSetVersionOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateEvaluationSetVersionOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("CreateEvaluationSetVersionOApiRequest(%+v)", *p)
 
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) DeepEqual(ano *CreateEvaluationSetVersionOpenAPIRequest) bool {
+func (p *CreateEvaluationSetVersionOApiRequest) DeepEqual(ano *CreateEvaluationSetVersionOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3941,21 +3941,21 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) DeepEqual(ano *CreateEvaluati
 	return true
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *CreateEvaluationSetVersionOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *CreateEvaluationSetVersionOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Field3DeepEqual(src *string) bool {
+func (p *CreateEvaluationSetVersionOApiRequest) Field3DeepEqual(src *string) bool {
 
 	if p.Version == src {
 		return true
@@ -3967,7 +3967,7 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) Field3DeepEqual(src *string) 
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Field4DeepEqual(src *string) bool {
+func (p *CreateEvaluationSetVersionOApiRequest) Field4DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -3979,7 +3979,7 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) Field4DeepEqual(src *string) 
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *CreateEvaluationSetVersionOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -3987,104 +3987,104 @@ func (p *CreateEvaluationSetVersionOpenAPIRequest) Field255DeepEqual(src *base.B
 	return true
 }
 
-type CreateEvaluationSetVersionOpenAPIResponse struct {
+type CreateEvaluationSetVersionOApiResponse struct {
 	Code     *int32                                 `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                                `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *CreateEvaluationSetVersionOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,CreateEvaluationSetVersionOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                         `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewCreateEvaluationSetVersionOpenAPIResponse() *CreateEvaluationSetVersionOpenAPIResponse {
-	return &CreateEvaluationSetVersionOpenAPIResponse{}
+func NewCreateEvaluationSetVersionOApiResponse() *CreateEvaluationSetVersionOApiResponse {
+	return &CreateEvaluationSetVersionOApiResponse{}
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) InitDefault() {
+func (p *CreateEvaluationSetVersionOApiResponse) InitDefault() {
 }
 
-var CreateEvaluationSetVersionOpenAPIResponse_Code_DEFAULT int32
+var CreateEvaluationSetVersionOApiResponse_Code_DEFAULT int32
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) GetCode() (v int32) {
+func (p *CreateEvaluationSetVersionOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return CreateEvaluationSetVersionOpenAPIResponse_Code_DEFAULT
+		return CreateEvaluationSetVersionOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var CreateEvaluationSetVersionOpenAPIResponse_Msg_DEFAULT string
+var CreateEvaluationSetVersionOApiResponse_Msg_DEFAULT string
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) GetMsg() (v string) {
+func (p *CreateEvaluationSetVersionOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return CreateEvaluationSetVersionOpenAPIResponse_Msg_DEFAULT
+		return CreateEvaluationSetVersionOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var CreateEvaluationSetVersionOpenAPIResponse_Data_DEFAULT *CreateEvaluationSetVersionOpenAPIData
+var CreateEvaluationSetVersionOApiResponse_Data_DEFAULT *CreateEvaluationSetVersionOpenAPIData
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) GetData() (v *CreateEvaluationSetVersionOpenAPIData) {
+func (p *CreateEvaluationSetVersionOApiResponse) GetData() (v *CreateEvaluationSetVersionOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return CreateEvaluationSetVersionOpenAPIResponse_Data_DEFAULT
+		return CreateEvaluationSetVersionOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var CreateEvaluationSetVersionOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var CreateEvaluationSetVersionOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *CreateEvaluationSetVersionOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return CreateEvaluationSetVersionOpenAPIResponse_BaseResp_DEFAULT
+		return CreateEvaluationSetVersionOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) SetCode(val *int32) {
+func (p *CreateEvaluationSetVersionOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) SetMsg(val *string) {
+func (p *CreateEvaluationSetVersionOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) SetData(val *CreateEvaluationSetVersionOpenAPIData) {
+func (p *CreateEvaluationSetVersionOApiResponse) SetData(val *CreateEvaluationSetVersionOpenAPIData) {
 	p.Data = val
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *CreateEvaluationSetVersionOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_CreateEvaluationSetVersionOpenAPIResponse = map[int16]string{
+var fieldIDToName_CreateEvaluationSetVersionOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) IsSetCode() bool {
+func (p *CreateEvaluationSetVersionOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) IsSetMsg() bool {
+func (p *CreateEvaluationSetVersionOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) IsSetData() bool {
+func (p *CreateEvaluationSetVersionOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) IsSetBaseResp() bool {
+func (p *CreateEvaluationSetVersionOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -4153,7 +4153,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetVersionOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluationSetVersionOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -4163,7 +4163,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -4174,7 +4174,7 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField1(iprot thrift.TPro
 	p.Code = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -4185,7 +4185,7 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField2(iprot thrift.TPro
 	p.Msg = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewCreateEvaluationSetVersionOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -4193,7 +4193,7 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField3(iprot thrift.TPro
 	p.Data = _field
 	return nil
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateEvaluationSetVersionOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -4202,9 +4202,9 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) ReadField255(iprot thrift.TP
 	return nil
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSetVersionOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetVersionOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -4242,7 +4242,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -4260,7 +4260,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -4278,7 +4278,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -4296,7 +4296,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluationSetVersionOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -4313,15 +4313,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) String() string {
+func (p *CreateEvaluationSetVersionOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateEvaluationSetVersionOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("CreateEvaluationSetVersionOApiResponse(%+v)", *p)
 
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) DeepEqual(ano *CreateEvaluationSetVersionOpenAPIResponse) bool {
+func (p *CreateEvaluationSetVersionOApiResponse) DeepEqual(ano *CreateEvaluationSetVersionOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -4342,7 +4342,7 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) DeepEqual(ano *CreateEvaluat
 	return true
 }
 
-func (p *CreateEvaluationSetVersionOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *CreateEvaluationSetVersionOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -4354,7 +4354,7 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) Field1DeepEqual(src *int32) 
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *CreateEvaluationSetVersionOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -4366,14 +4366,14 @@ func (p *CreateEvaluationSetVersionOpenAPIResponse) Field2DeepEqual(src *string)
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) Field3DeepEqual(src *CreateEvaluationSetVersionOpenAPIData) bool {
+func (p *CreateEvaluationSetVersionOApiResponse) Field3DeepEqual(src *CreateEvaluationSetVersionOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluationSetVersionOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *CreateEvaluationSetVersionOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -4563,7 +4563,7 @@ func (p *CreateEvaluationSetVersionOpenAPIData) Field1DeepEqual(src *int64) bool
 }
 
 // 1.5 批量添加评测集数据
-type BatchCreateEvaluationSetItemsOpenAPIRequest struct {
+type BatchCreateEvaluationSetItemsOApiRequest struct {
 	WorkspaceID     int64                         `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64                         `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	Items           []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty" query:"items"`
@@ -4574,94 +4574,94 @@ type BatchCreateEvaluationSetItemsOpenAPIRequest struct {
 	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewBatchCreateEvaluationSetItemsOpenAPIRequest() *BatchCreateEvaluationSetItemsOpenAPIRequest {
-	return &BatchCreateEvaluationSetItemsOpenAPIRequest{}
+func NewBatchCreateEvaluationSetItemsOApiRequest() *BatchCreateEvaluationSetItemsOApiRequest {
+	return &BatchCreateEvaluationSetItemsOApiRequest{}
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) InitDefault() {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) InitDefault() {
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIRequest_Items_DEFAULT []*eval_set.EvaluationSetItem
+var BatchCreateEvaluationSetItemsOApiRequest_Items_DEFAULT []*eval_set.EvaluationSetItem
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) GetItems() (v []*eval_set.EvaluationSetItem) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetItems() (v []*eval_set.EvaluationSetItem) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetItems() {
-		return BatchCreateEvaluationSetItemsOpenAPIRequest_Items_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiRequest_Items_DEFAULT
 	}
 	return p.Items
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIRequest_SkipInvalidItems_DEFAULT bool
+var BatchCreateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT bool
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) GetSkipInvalidItems() (v bool) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetSkipInvalidItems() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSkipInvalidItems() {
-		return BatchCreateEvaluationSetItemsOpenAPIRequest_SkipInvalidItems_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT
 	}
 	return *p.SkipInvalidItems
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIRequest_AllowPartialAdd_DEFAULT bool
+var BatchCreateEvaluationSetItemsOApiRequest_AllowPartialAdd_DEFAULT bool
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) GetAllowPartialAdd() (v bool) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetAllowPartialAdd() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetAllowPartialAdd() {
-		return BatchCreateEvaluationSetItemsOpenAPIRequest_AllowPartialAdd_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiRequest_AllowPartialAdd_DEFAULT
 	}
 	return *p.AllowPartialAdd
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIRequest_Base_DEFAULT *base.Base
+var BatchCreateEvaluationSetItemsOApiRequest_Base_DEFAULT *base.Base
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return BatchCreateEvaluationSetItemsOpenAPIRequest_Base_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) SetItems(val []*eval_set.EvaluationSetItem) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetItems(val []*eval_set.EvaluationSetItem) {
 	p.Items = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) SetSkipInvalidItems(val *bool) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetSkipInvalidItems(val *bool) {
 	p.SkipInvalidItems = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) SetAllowPartialAdd(val *bool) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetAllowPartialAdd(val *bool) {
 	p.AllowPartialAdd = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) SetBase(val *base.Base) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIRequest = map[int16]string{
+var fieldIDToName_BatchCreateEvaluationSetItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "items",
@@ -4670,23 +4670,23 @@ var fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIRequest = map[int16]string
 	255: "Base",
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) IsSetItems() bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetItems() bool {
 	return p.Items != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) IsSetSkipInvalidItems() bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetSkipInvalidItems() bool {
 	return p.SkipInvalidItems != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) IsSetAllowPartialAdd() bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetAllowPartialAdd() bool {
 	return p.AllowPartialAdd != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) IsSetBase() bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -4784,7 +4784,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchCreateEvaluationSetItemsOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -4793,10 +4793,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchCreateEvaluationSetItemsOApiRequest[fieldId]))
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -4807,7 +4807,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField1(iprot thrift.TP
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -4818,7 +4818,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField2(iprot thrift.TP
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -4841,7 +4841,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField3(iprot thrift.TP
 	p.Items = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -4852,7 +4852,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField4(iprot thrift.TP
 	p.SkipInvalidItems = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField5(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -4863,7 +4863,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField5(iprot thrift.TP
 	p.AllowPartialAdd = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -4872,9 +4872,9 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) ReadField255(iprot thrift.
 	return nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItemsOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItemsOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -4920,7 +4920,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -4936,7 +4936,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -4952,7 +4952,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetItems() {
 		if err = oprot.WriteFieldBegin("items", thrift.LIST, 3); err != nil {
 			goto WriteFieldBeginError
@@ -4978,7 +4978,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSkipInvalidItems() {
 		if err = oprot.WriteFieldBegin("skip_invalid_items", thrift.BOOL, 4); err != nil {
 			goto WriteFieldBeginError
@@ -4996,7 +4996,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAllowPartialAdd() {
 		if err = oprot.WriteFieldBegin("allow_partial_add", thrift.BOOL, 5); err != nil {
 			goto WriteFieldBeginError
@@ -5014,7 +5014,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -5033,15 +5033,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) String() string {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BatchCreateEvaluationSetItemsOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("BatchCreateEvaluationSetItemsOApiRequest(%+v)", *p)
 
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) DeepEqual(ano *BatchCreateEvaluationSetItemsOpenAPIRequest) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchCreateEvaluationSetItemsOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -5068,21 +5068,21 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) DeepEqual(ano *BatchCreate
 	return true
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field3DeepEqual(src []*eval_set.EvaluationSetItem) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field3DeepEqual(src []*eval_set.EvaluationSetItem) bool {
 
 	if len(p.Items) != len(src) {
 		return false
@@ -5095,7 +5095,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field3DeepEqual(src []*eva
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field4DeepEqual(src *bool) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field4DeepEqual(src *bool) bool {
 
 	if p.SkipInvalidItems == src {
 		return true
@@ -5107,7 +5107,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field4DeepEqual(src *bool)
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field5DeepEqual(src *bool) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field5DeepEqual(src *bool) bool {
 
 	if p.AllowPartialAdd == src {
 		return true
@@ -5119,7 +5119,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field5DeepEqual(src *bool)
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -5127,104 +5127,104 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIRequest) Field255DeepEqual(src *bas
 	return true
 }
 
-type BatchCreateEvaluationSetItemsOpenAPIResponse struct {
+type BatchCreateEvaluationSetItemsOApiResponse struct {
 	Code     *int32                                    `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                                   `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *BatchCreateEvaluationSetItemsOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,BatchCreateEvaluationSetItemsOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                            `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewBatchCreateEvaluationSetItemsOpenAPIResponse() *BatchCreateEvaluationSetItemsOpenAPIResponse {
-	return &BatchCreateEvaluationSetItemsOpenAPIResponse{}
+func NewBatchCreateEvaluationSetItemsOApiResponse() *BatchCreateEvaluationSetItemsOApiResponse {
+	return &BatchCreateEvaluationSetItemsOApiResponse{}
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) InitDefault() {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) InitDefault() {
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIResponse_Code_DEFAULT int32
+var BatchCreateEvaluationSetItemsOApiResponse_Code_DEFAULT int32
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) GetCode() (v int32) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return BatchCreateEvaluationSetItemsOpenAPIResponse_Code_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIResponse_Msg_DEFAULT string
+var BatchCreateEvaluationSetItemsOApiResponse_Msg_DEFAULT string
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) GetMsg() (v string) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return BatchCreateEvaluationSetItemsOpenAPIResponse_Msg_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIResponse_Data_DEFAULT *BatchCreateEvaluationSetItemsOpenAPIData
+var BatchCreateEvaluationSetItemsOApiResponse_Data_DEFAULT *BatchCreateEvaluationSetItemsOpenAPIData
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) GetData() (v *BatchCreateEvaluationSetItemsOpenAPIData) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) GetData() (v *BatchCreateEvaluationSetItemsOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return BatchCreateEvaluationSetItemsOpenAPIResponse_Data_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var BatchCreateEvaluationSetItemsOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return BatchCreateEvaluationSetItemsOpenAPIResponse_BaseResp_DEFAULT
+		return BatchCreateEvaluationSetItemsOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) SetCode(val *int32) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) SetMsg(val *string) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) SetData(val *BatchCreateEvaluationSetItemsOpenAPIData) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) SetData(val *BatchCreateEvaluationSetItemsOpenAPIData) {
 	p.Data = val
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIResponse = map[int16]string{
+var fieldIDToName_BatchCreateEvaluationSetItemsOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) IsSetCode() bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) IsSetMsg() bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) IsSetData() bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) IsSetBaseResp() bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -5293,7 +5293,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchCreateEvaluationSetItemsOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -5303,7 +5303,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -5314,7 +5314,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField1(iprot thrift.T
 	p.Code = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -5325,7 +5325,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField2(iprot thrift.T
 	p.Msg = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewBatchCreateEvaluationSetItemsOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -5333,7 +5333,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField3(iprot thrift.T
 	p.Data = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -5342,9 +5342,9 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) ReadField255(iprot thrift
 	return nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItemsOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItemsOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -5382,7 +5382,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -5400,7 +5400,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -5418,7 +5418,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -5436,7 +5436,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -5453,15 +5453,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) String() string {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BatchCreateEvaluationSetItemsOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("BatchCreateEvaluationSetItemsOApiResponse(%+v)", *p)
 
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) DeepEqual(ano *BatchCreateEvaluationSetItemsOpenAPIResponse) bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) DeepEqual(ano *BatchCreateEvaluationSetItemsOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -5482,7 +5482,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) DeepEqual(ano *BatchCreat
 	return true
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -5494,7 +5494,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Field1DeepEqual(src *int3
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -5506,14 +5506,14 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Field2DeepEqual(src *stri
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Field3DeepEqual(src *BatchCreateEvaluationSetItemsOpenAPIData) bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) Field3DeepEqual(src *BatchCreateEvaluationSetItemsOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *BatchCreateEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -5832,7 +5832,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) Field2DeepEqual(src []*eval_s
 }
 
 // 1.6 批量更新评测集数据
-type BatchUpdateEvaluationSetItemsOpenAPIRequest struct {
+type BatchUpdateEvaluationSetItemsOApiRequest struct {
 	WorkspaceID      int64                         `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID  int64                         `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	Items            []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty" query:"items"`
@@ -5840,79 +5840,79 @@ type BatchUpdateEvaluationSetItemsOpenAPIRequest struct {
 	Base             *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewBatchUpdateEvaluationSetItemsOpenAPIRequest() *BatchUpdateEvaluationSetItemsOpenAPIRequest {
-	return &BatchUpdateEvaluationSetItemsOpenAPIRequest{}
+func NewBatchUpdateEvaluationSetItemsOApiRequest() *BatchUpdateEvaluationSetItemsOApiRequest {
+	return &BatchUpdateEvaluationSetItemsOApiRequest{}
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) InitDefault() {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) InitDefault() {
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIRequest_Items_DEFAULT []*eval_set.EvaluationSetItem
+var BatchUpdateEvaluationSetItemsOApiRequest_Items_DEFAULT []*eval_set.EvaluationSetItem
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) GetItems() (v []*eval_set.EvaluationSetItem) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetItems() (v []*eval_set.EvaluationSetItem) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetItems() {
-		return BatchUpdateEvaluationSetItemsOpenAPIRequest_Items_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiRequest_Items_DEFAULT
 	}
 	return p.Items
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIRequest_SkipInvalidItems_DEFAULT bool
+var BatchUpdateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT bool
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) GetSkipInvalidItems() (v bool) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetSkipInvalidItems() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSkipInvalidItems() {
-		return BatchUpdateEvaluationSetItemsOpenAPIRequest_SkipInvalidItems_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT
 	}
 	return *p.SkipInvalidItems
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIRequest_Base_DEFAULT *base.Base
+var BatchUpdateEvaluationSetItemsOApiRequest_Base_DEFAULT *base.Base
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return BatchUpdateEvaluationSetItemsOpenAPIRequest_Base_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) SetItems(val []*eval_set.EvaluationSetItem) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetItems(val []*eval_set.EvaluationSetItem) {
 	p.Items = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) SetSkipInvalidItems(val *bool) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetSkipInvalidItems(val *bool) {
 	p.SkipInvalidItems = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) SetBase(val *base.Base) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIRequest = map[int16]string{
+var fieldIDToName_BatchUpdateEvaluationSetItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "items",
@@ -5920,19 +5920,19 @@ var fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIRequest = map[int16]string
 	255: "Base",
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) IsSetItems() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetItems() bool {
 	return p.Items != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) IsSetSkipInvalidItems() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetSkipInvalidItems() bool {
 	return p.SkipInvalidItems != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) IsSetBase() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -6022,7 +6022,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchUpdateEvaluationSetItemsOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -6031,10 +6031,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchUpdateEvaluationSetItemsOApiRequest[fieldId]))
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -6045,7 +6045,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField1(iprot thrift.TP
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -6056,7 +6056,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField2(iprot thrift.TP
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -6079,7 +6079,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField3(iprot thrift.TP
 	p.Items = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -6090,7 +6090,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField4(iprot thrift.TP
 	p.SkipInvalidItems = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -6099,9 +6099,9 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) ReadField255(iprot thrift.
 	return nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItemsOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItemsOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -6143,7 +6143,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -6159,7 +6159,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -6175,7 +6175,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetItems() {
 		if err = oprot.WriteFieldBegin("items", thrift.LIST, 3); err != nil {
 			goto WriteFieldBeginError
@@ -6201,7 +6201,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSkipInvalidItems() {
 		if err = oprot.WriteFieldBegin("skip_invalid_items", thrift.BOOL, 4); err != nil {
 			goto WriteFieldBeginError
@@ -6219,7 +6219,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -6238,15 +6238,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) String() string {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BatchUpdateEvaluationSetItemsOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("BatchUpdateEvaluationSetItemsOApiRequest(%+v)", *p)
 
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) DeepEqual(ano *BatchUpdateEvaluationSetItemsOpenAPIRequest) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchUpdateEvaluationSetItemsOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -6270,21 +6270,21 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) DeepEqual(ano *BatchUpdate
 	return true
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field3DeepEqual(src []*eval_set.EvaluationSetItem) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field3DeepEqual(src []*eval_set.EvaluationSetItem) bool {
 
 	if len(p.Items) != len(src) {
 		return false
@@ -6297,7 +6297,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field3DeepEqual(src []*eva
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field4DeepEqual(src *bool) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field4DeepEqual(src *bool) bool {
 
 	if p.SkipInvalidItems == src {
 		return true
@@ -6309,7 +6309,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field4DeepEqual(src *bool)
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -6317,104 +6317,104 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIRequest) Field255DeepEqual(src *bas
 	return true
 }
 
-type BatchUpdateEvaluationSetItemsOpenAPIResponse struct {
+type BatchUpdateEvaluationSetItemsOApiResponse struct {
 	Code     *int32                                    `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                                   `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *BatchUpdateEvaluationSetItemsOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,BatchUpdateEvaluationSetItemsOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                            `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewBatchUpdateEvaluationSetItemsOpenAPIResponse() *BatchUpdateEvaluationSetItemsOpenAPIResponse {
-	return &BatchUpdateEvaluationSetItemsOpenAPIResponse{}
+func NewBatchUpdateEvaluationSetItemsOApiResponse() *BatchUpdateEvaluationSetItemsOApiResponse {
+	return &BatchUpdateEvaluationSetItemsOApiResponse{}
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) InitDefault() {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) InitDefault() {
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIResponse_Code_DEFAULT int32
+var BatchUpdateEvaluationSetItemsOApiResponse_Code_DEFAULT int32
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) GetCode() (v int32) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return BatchUpdateEvaluationSetItemsOpenAPIResponse_Code_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIResponse_Msg_DEFAULT string
+var BatchUpdateEvaluationSetItemsOApiResponse_Msg_DEFAULT string
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) GetMsg() (v string) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return BatchUpdateEvaluationSetItemsOpenAPIResponse_Msg_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIResponse_Data_DEFAULT *BatchUpdateEvaluationSetItemsOpenAPIData
+var BatchUpdateEvaluationSetItemsOApiResponse_Data_DEFAULT *BatchUpdateEvaluationSetItemsOpenAPIData
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) GetData() (v *BatchUpdateEvaluationSetItemsOpenAPIData) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) GetData() (v *BatchUpdateEvaluationSetItemsOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return BatchUpdateEvaluationSetItemsOpenAPIResponse_Data_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var BatchUpdateEvaluationSetItemsOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return BatchUpdateEvaluationSetItemsOpenAPIResponse_BaseResp_DEFAULT
+		return BatchUpdateEvaluationSetItemsOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) SetCode(val *int32) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) SetMsg(val *string) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) SetData(val *BatchUpdateEvaluationSetItemsOpenAPIData) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) SetData(val *BatchUpdateEvaluationSetItemsOpenAPIData) {
 	p.Data = val
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIResponse = map[int16]string{
+var fieldIDToName_BatchUpdateEvaluationSetItemsOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) IsSetCode() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) IsSetMsg() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) IsSetData() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) IsSetBaseResp() bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -6483,7 +6483,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchUpdateEvaluationSetItemsOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -6493,7 +6493,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -6504,7 +6504,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField1(iprot thrift.T
 	p.Code = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -6515,7 +6515,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField2(iprot thrift.T
 	p.Msg = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewBatchUpdateEvaluationSetItemsOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -6523,7 +6523,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField3(iprot thrift.T
 	p.Data = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -6532,9 +6532,9 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) ReadField255(iprot thrift
 	return nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItemsOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItemsOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -6572,7 +6572,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -6590,7 +6590,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -6608,7 +6608,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -6626,7 +6626,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -6643,15 +6643,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) String() string {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BatchUpdateEvaluationSetItemsOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("BatchUpdateEvaluationSetItemsOApiResponse(%+v)", *p)
 
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) DeepEqual(ano *BatchUpdateEvaluationSetItemsOpenAPIResponse) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) DeepEqual(ano *BatchUpdateEvaluationSetItemsOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -6672,7 +6672,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) DeepEqual(ano *BatchUpdat
 	return true
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -6684,7 +6684,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Field1DeepEqual(src *int3
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -6696,14 +6696,14 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Field2DeepEqual(src *stri
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Field3DeepEqual(src *BatchUpdateEvaluationSetItemsOpenAPIData) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) Field3DeepEqual(src *BatchUpdateEvaluationSetItemsOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *BatchUpdateEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -7021,86 +7021,86 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) Field2DeepEqual(src []*eval_s
 }
 
 // 1.7 批量删除评测集数据
-type BatchDeleteEvaluationSetItemsOpenAPIRequest struct {
+type BatchDeleteEvaluationSetItemsOApiRequest struct {
 	WorkspaceID     int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64      `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	ItemIds         []int64    `thrift:"item_ids,3,optional" frugal:"3,optional,list<i64>" json:"item_ids" form:"item_ids" query:"item_ids"`
 	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewBatchDeleteEvaluationSetItemsOpenAPIRequest() *BatchDeleteEvaluationSetItemsOpenAPIRequest {
-	return &BatchDeleteEvaluationSetItemsOpenAPIRequest{}
+func NewBatchDeleteEvaluationSetItemsOApiRequest() *BatchDeleteEvaluationSetItemsOApiRequest {
+	return &BatchDeleteEvaluationSetItemsOApiRequest{}
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) InitDefault() {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) InitDefault() {
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-var BatchDeleteEvaluationSetItemsOpenAPIRequest_ItemIds_DEFAULT []int64
+var BatchDeleteEvaluationSetItemsOApiRequest_ItemIds_DEFAULT []int64
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) GetItemIds() (v []int64) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) GetItemIds() (v []int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetItemIds() {
-		return BatchDeleteEvaluationSetItemsOpenAPIRequest_ItemIds_DEFAULT
+		return BatchDeleteEvaluationSetItemsOApiRequest_ItemIds_DEFAULT
 	}
 	return p.ItemIds
 }
 
-var BatchDeleteEvaluationSetItemsOpenAPIRequest_Base_DEFAULT *base.Base
+var BatchDeleteEvaluationSetItemsOApiRequest_Base_DEFAULT *base.Base
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return BatchDeleteEvaluationSetItemsOpenAPIRequest_Base_DEFAULT
+		return BatchDeleteEvaluationSetItemsOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) SetItemIds(val []int64) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) SetItemIds(val []int64) {
 	p.ItemIds = val
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) SetBase(val *base.Base) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_BatchDeleteEvaluationSetItemsOpenAPIRequest = map[int16]string{
+var fieldIDToName_BatchDeleteEvaluationSetItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "item_ids",
 	255: "Base",
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) IsSetItemIds() bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) IsSetItemIds() bool {
 	return p.ItemIds != nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) IsSetBase() bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -7182,7 +7182,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchDeleteEvaluationSetItemsOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchDeleteEvaluationSetItemsOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -7191,10 +7191,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchDeleteEvaluationSetItemsOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchDeleteEvaluationSetItemsOApiRequest[fieldId]))
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -7205,7 +7205,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField1(iprot thrift.TP
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -7216,7 +7216,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField2(iprot thrift.TP
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -7239,7 +7239,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField3(iprot thrift.TP
 	p.ItemIds = _field
 	return nil
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -7248,9 +7248,9 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) ReadField255(iprot thrift.
 	return nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItemsOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItemsOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -7288,7 +7288,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -7304,7 +7304,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -7320,7 +7320,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetItemIds() {
 		if err = oprot.WriteFieldBegin("item_ids", thrift.LIST, 3); err != nil {
 			goto WriteFieldBeginError
@@ -7346,7 +7346,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -7365,15 +7365,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) String() string {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BatchDeleteEvaluationSetItemsOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("BatchDeleteEvaluationSetItemsOApiRequest(%+v)", *p)
 
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) DeepEqual(ano *BatchDeleteEvaluationSetItemsOpenAPIRequest) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchDeleteEvaluationSetItemsOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -7394,21 +7394,21 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) DeepEqual(ano *BatchDelete
 	return true
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Field3DeepEqual(src []int64) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) Field3DeepEqual(src []int64) bool {
 
 	if len(p.ItemIds) != len(src) {
 		return false
@@ -7421,7 +7421,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Field3DeepEqual(src []int6
 	}
 	return true
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -7429,83 +7429,83 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIRequest) Field255DeepEqual(src *bas
 	return true
 }
 
-type BatchDeleteEvaluationSetItemsOpenAPIResponse struct {
+type BatchDeleteEvaluationSetItemsOApiResponse struct {
 	Code     *int32         `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string        `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewBatchDeleteEvaluationSetItemsOpenAPIResponse() *BatchDeleteEvaluationSetItemsOpenAPIResponse {
-	return &BatchDeleteEvaluationSetItemsOpenAPIResponse{}
+func NewBatchDeleteEvaluationSetItemsOApiResponse() *BatchDeleteEvaluationSetItemsOApiResponse {
+	return &BatchDeleteEvaluationSetItemsOApiResponse{}
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) InitDefault() {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) InitDefault() {
 }
 
-var BatchDeleteEvaluationSetItemsOpenAPIResponse_Code_DEFAULT int32
+var BatchDeleteEvaluationSetItemsOApiResponse_Code_DEFAULT int32
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) GetCode() (v int32) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return BatchDeleteEvaluationSetItemsOpenAPIResponse_Code_DEFAULT
+		return BatchDeleteEvaluationSetItemsOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var BatchDeleteEvaluationSetItemsOpenAPIResponse_Msg_DEFAULT string
+var BatchDeleteEvaluationSetItemsOApiResponse_Msg_DEFAULT string
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) GetMsg() (v string) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return BatchDeleteEvaluationSetItemsOpenAPIResponse_Msg_DEFAULT
+		return BatchDeleteEvaluationSetItemsOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var BatchDeleteEvaluationSetItemsOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var BatchDeleteEvaluationSetItemsOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return BatchDeleteEvaluationSetItemsOpenAPIResponse_BaseResp_DEFAULT
+		return BatchDeleteEvaluationSetItemsOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) SetCode(val *int32) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) SetMsg(val *string) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_BatchDeleteEvaluationSetItemsOpenAPIResponse = map[int16]string{
+var fieldIDToName_BatchDeleteEvaluationSetItemsOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	255: "BaseResp",
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) IsSetCode() bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) IsSetMsg() bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) IsSetBaseResp() bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -7566,7 +7566,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchDeleteEvaluationSetItemsOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchDeleteEvaluationSetItemsOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -7576,7 +7576,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -7587,7 +7587,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) ReadField1(iprot thrift.T
 	p.Code = _field
 	return nil
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -7598,7 +7598,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) ReadField2(iprot thrift.T
 	p.Msg = _field
 	return nil
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -7607,9 +7607,9 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) ReadField255(iprot thrift
 	return nil
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItemsOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItemsOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -7643,7 +7643,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -7661,7 +7661,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -7679,7 +7679,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -7696,15 +7696,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) String() string {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BatchDeleteEvaluationSetItemsOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("BatchDeleteEvaluationSetItemsOApiResponse(%+v)", *p)
 
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) DeepEqual(ano *BatchDeleteEvaluationSetItemsOpenAPIResponse) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) DeepEqual(ano *BatchDeleteEvaluationSetItemsOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -7722,7 +7722,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) DeepEqual(ano *BatchDelet
 	return true
 }
 
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -7734,7 +7734,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Field1DeepEqual(src *int3
 	}
 	return true
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -7746,7 +7746,7 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Field2DeepEqual(src *stri
 	}
 	return true
 }
-func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *BatchDeleteEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -7755,65 +7755,65 @@ func (p *BatchDeleteEvaluationSetItemsOpenAPIResponse) Field255DeepEqual(src *ba
 }
 
 // 1.8 清空评测集草稿数据
-type ClearEvaluationSetDraftItemsOpenAPIRequest struct {
+type ClearEvaluationSetDraftItemsOApiRequest struct {
 	WorkspaceID     int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64      `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewClearEvaluationSetDraftItemsOpenAPIRequest() *ClearEvaluationSetDraftItemsOpenAPIRequest {
-	return &ClearEvaluationSetDraftItemsOpenAPIRequest{}
+func NewClearEvaluationSetDraftItemsOApiRequest() *ClearEvaluationSetDraftItemsOApiRequest {
+	return &ClearEvaluationSetDraftItemsOApiRequest{}
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) InitDefault() {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) InitDefault() {
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-var ClearEvaluationSetDraftItemsOpenAPIRequest_Base_DEFAULT *base.Base
+var ClearEvaluationSetDraftItemsOApiRequest_Base_DEFAULT *base.Base
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return ClearEvaluationSetDraftItemsOpenAPIRequest_Base_DEFAULT
+		return ClearEvaluationSetDraftItemsOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) SetBase(val *base.Base) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_ClearEvaluationSetDraftItemsOpenAPIRequest = map[int16]string{
+var fieldIDToName_ClearEvaluationSetDraftItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	255: "Base",
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) IsSetBase() bool {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -7887,7 +7887,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ClearEvaluationSetDraftItemsOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ClearEvaluationSetDraftItemsOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -7896,10 +7896,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ClearEvaluationSetDraftItemsOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ClearEvaluationSetDraftItemsOApiRequest[fieldId]))
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -7910,7 +7910,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) ReadField1(iprot thrift.TPr
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -7921,7 +7921,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) ReadField2(iprot thrift.TPr
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -7930,9 +7930,9 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) ReadField255(iprot thrift.T
 	return nil
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItemsOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItemsOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -7966,7 +7966,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -7982,7 +7982,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -7998,7 +7998,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -8017,15 +8017,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) String() string {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ClearEvaluationSetDraftItemsOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("ClearEvaluationSetDraftItemsOApiRequest(%+v)", *p)
 
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) DeepEqual(ano *ClearEvaluationSetDraftItemsOpenAPIRequest) bool {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) DeepEqual(ano *ClearEvaluationSetDraftItemsOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -8043,21 +8043,21 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) DeepEqual(ano *ClearEvaluat
 	return true
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *ClearEvaluationSetDraftItemsOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -8065,83 +8065,83 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIRequest) Field255DeepEqual(src *base
 	return true
 }
 
-type ClearEvaluationSetDraftItemsOpenAPIResponse struct {
+type ClearEvaluationSetDraftItemsOApiResponse struct {
 	Code     *int32         `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string        `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewClearEvaluationSetDraftItemsOpenAPIResponse() *ClearEvaluationSetDraftItemsOpenAPIResponse {
-	return &ClearEvaluationSetDraftItemsOpenAPIResponse{}
+func NewClearEvaluationSetDraftItemsOApiResponse() *ClearEvaluationSetDraftItemsOApiResponse {
+	return &ClearEvaluationSetDraftItemsOApiResponse{}
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) InitDefault() {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) InitDefault() {
 }
 
-var ClearEvaluationSetDraftItemsOpenAPIResponse_Code_DEFAULT int32
+var ClearEvaluationSetDraftItemsOApiResponse_Code_DEFAULT int32
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) GetCode() (v int32) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return ClearEvaluationSetDraftItemsOpenAPIResponse_Code_DEFAULT
+		return ClearEvaluationSetDraftItemsOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var ClearEvaluationSetDraftItemsOpenAPIResponse_Msg_DEFAULT string
+var ClearEvaluationSetDraftItemsOApiResponse_Msg_DEFAULT string
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) GetMsg() (v string) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return ClearEvaluationSetDraftItemsOpenAPIResponse_Msg_DEFAULT
+		return ClearEvaluationSetDraftItemsOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var ClearEvaluationSetDraftItemsOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var ClearEvaluationSetDraftItemsOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return ClearEvaluationSetDraftItemsOpenAPIResponse_BaseResp_DEFAULT
+		return ClearEvaluationSetDraftItemsOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) SetCode(val *int32) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) SetMsg(val *string) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_ClearEvaluationSetDraftItemsOpenAPIResponse = map[int16]string{
+var fieldIDToName_ClearEvaluationSetDraftItemsOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	255: "BaseResp",
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) IsSetCode() bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) IsSetMsg() bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) IsSetBaseResp() bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -8202,7 +8202,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ClearEvaluationSetDraftItemsOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ClearEvaluationSetDraftItemsOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -8212,7 +8212,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -8223,7 +8223,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) ReadField1(iprot thrift.TP
 	p.Code = _field
 	return nil
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -8234,7 +8234,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) ReadField2(iprot thrift.TP
 	p.Msg = _field
 	return nil
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -8243,9 +8243,9 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) ReadField255(iprot thrift.
 	return nil
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItemsOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItemsOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -8279,7 +8279,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -8297,7 +8297,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -8315,7 +8315,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -8332,15 +8332,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) String() string {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ClearEvaluationSetDraftItemsOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("ClearEvaluationSetDraftItemsOApiResponse(%+v)", *p)
 
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) DeepEqual(ano *ClearEvaluationSetDraftItemsOpenAPIResponse) bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) DeepEqual(ano *ClearEvaluationSetDraftItemsOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -8358,7 +8358,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) DeepEqual(ano *ClearEvalua
 	return true
 }
 
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -8370,7 +8370,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Field1DeepEqual(src *int32
 	}
 	return true
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -8382,7 +8382,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Field2DeepEqual(src *strin
 	}
 	return true
 }
-func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *ClearEvaluationSetDraftItemsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -8391,7 +8391,7 @@ func (p *ClearEvaluationSetDraftItemsOpenAPIResponse) Field255DeepEqual(src *bas
 }
 
 // 1.9 查询评测集特定版本数据
-type ListEvaluationSetVersionItemsOpenAPIRequest struct {
+type ListEvaluationSetVersionItemsOApiRequest struct {
 	WorkspaceID     int64             `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64             `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	VersionID       int64             `thrift:"version_id,3,required" frugal:"3,required,i64" json:"version_id" form:"version_id,required" query:"version_id,required"`
@@ -8401,104 +8401,104 @@ type ListEvaluationSetVersionItemsOpenAPIRequest struct {
 	Base            *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewListEvaluationSetVersionItemsOpenAPIRequest() *ListEvaluationSetVersionItemsOpenAPIRequest {
-	return &ListEvaluationSetVersionItemsOpenAPIRequest{}
+func NewListEvaluationSetVersionItemsOApiRequest() *ListEvaluationSetVersionItemsOApiRequest {
+	return &ListEvaluationSetVersionItemsOApiRequest{}
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) InitDefault() {
+func (p *ListEvaluationSetVersionItemsOApiRequest) InitDefault() {
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetEvaluationSetID() (v int64) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetEvaluationSetID() (v int64) {
 	if p != nil {
 		return p.EvaluationSetID
 	}
 	return
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetVersionID() (v int64) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetVersionID() (v int64) {
 	if p != nil {
 		return p.VersionID
 	}
 	return
 }
 
-var ListEvaluationSetVersionItemsOpenAPIRequest_PageToken_DEFAULT string
+var ListEvaluationSetVersionItemsOApiRequest_PageToken_DEFAULT string
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetPageToken() (v string) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetPageToken() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageToken() {
-		return ListEvaluationSetVersionItemsOpenAPIRequest_PageToken_DEFAULT
+		return ListEvaluationSetVersionItemsOApiRequest_PageToken_DEFAULT
 	}
 	return *p.PageToken
 }
 
-var ListEvaluationSetVersionItemsOpenAPIRequest_PageSize_DEFAULT int32
+var ListEvaluationSetVersionItemsOApiRequest_PageSize_DEFAULT int32
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetPageSize() (v int32) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetPageSize() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageSize() {
-		return ListEvaluationSetVersionItemsOpenAPIRequest_PageSize_DEFAULT
+		return ListEvaluationSetVersionItemsOApiRequest_PageSize_DEFAULT
 	}
 	return *p.PageSize
 }
 
-var ListEvaluationSetVersionItemsOpenAPIRequest_OrderBys_DEFAULT []*common.OrderBy
+var ListEvaluationSetVersionItemsOApiRequest_OrderBys_DEFAULT []*common.OrderBy
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetOrderBys() (v []*common.OrderBy) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetOrderBys() (v []*common.OrderBy) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetOrderBys() {
-		return ListEvaluationSetVersionItemsOpenAPIRequest_OrderBys_DEFAULT
+		return ListEvaluationSetVersionItemsOApiRequest_OrderBys_DEFAULT
 	}
 	return p.OrderBys
 }
 
-var ListEvaluationSetVersionItemsOpenAPIRequest_Base_DEFAULT *base.Base
+var ListEvaluationSetVersionItemsOApiRequest_Base_DEFAULT *base.Base
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return ListEvaluationSetVersionItemsOpenAPIRequest_Base_DEFAULT
+		return ListEvaluationSetVersionItemsOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetEvaluationSetID(val int64) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetVersionID(val int64) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetVersionID(val int64) {
 	p.VersionID = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetPageToken(val *string) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetPageSize(val *int32) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetOrderBys(val []*common.OrderBy) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetOrderBys(val []*common.OrderBy) {
 	p.OrderBys = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) SetBase(val *base.Base) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_ListEvaluationSetVersionItemsOpenAPIRequest = map[int16]string{
+var fieldIDToName_ListEvaluationSetVersionItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "version_id",
@@ -8508,23 +8508,23 @@ var fieldIDToName_ListEvaluationSetVersionItemsOpenAPIRequest = map[int16]string
 	255: "Base",
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) IsSetPageToken() bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) IsSetPageSize() bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) IsSetOrderBys() bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetOrderBys() bool {
 	return p.OrderBys != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) IsSetBase() bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -8637,7 +8637,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetVersionItemsOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetVersionItemsOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -8646,10 +8646,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListEvaluationSetVersionItemsOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListEvaluationSetVersionItemsOApiRequest[fieldId]))
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -8660,7 +8660,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField1(iprot thrift.TP
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -8671,7 +8671,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField2(iprot thrift.TP
 	p.EvaluationSetID = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -8682,7 +8682,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField3(iprot thrift.TP
 	p.VersionID = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField100(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -8693,7 +8693,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField100(iprot thrift.
 	p.PageToken = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField101(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField101(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -8704,7 +8704,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField101(iprot thrift.
 	p.PageSize = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField102(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField102(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -8727,7 +8727,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField102(iprot thrift.
 	p.OrderBys = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -8736,9 +8736,9 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) ReadField255(iprot thrift.
 	return nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItemsOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItemsOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -8788,7 +8788,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -8804,7 +8804,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -8820,7 +8820,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("version_id", thrift.I64, 3); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -8836,7 +8836,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField100(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 100); err != nil {
 			goto WriteFieldBeginError
@@ -8854,7 +8854,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField101(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
 		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 101); err != nil {
 			goto WriteFieldBeginError
@@ -8872,7 +8872,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField102(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField102(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOrderBys() {
 		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 102); err != nil {
 			goto WriteFieldBeginError
@@ -8898,7 +8898,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -8917,15 +8917,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) String() string {
+func (p *ListEvaluationSetVersionItemsOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ListEvaluationSetVersionItemsOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("ListEvaluationSetVersionItemsOApiRequest(%+v)", *p)
 
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) DeepEqual(ano *ListEvaluationSetVersionItemsOpenAPIRequest) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) DeepEqual(ano *ListEvaluationSetVersionItemsOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -8955,28 +8955,28 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) DeepEqual(ano *ListEvaluat
 	return true
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field2DeepEqual(src int64) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.EvaluationSetID != src {
 		return false
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field3DeepEqual(src int64) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field3DeepEqual(src int64) bool {
 
 	if p.VersionID != src {
 		return false
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field100DeepEqual(src *string) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field100DeepEqual(src *string) bool {
 
 	if p.PageToken == src {
 		return true
@@ -8988,7 +8988,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field100DeepEqual(src *str
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field101DeepEqual(src *int32) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field101DeepEqual(src *int32) bool {
 
 	if p.PageSize == src {
 		return true
@@ -9000,7 +9000,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field101DeepEqual(src *int
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field102DeepEqual(src []*common.OrderBy) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field102DeepEqual(src []*common.OrderBy) bool {
 
 	if len(p.OrderBys) != len(src) {
 		return false
@@ -9013,7 +9013,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field102DeepEqual(src []*c
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -9021,104 +9021,104 @@ func (p *ListEvaluationSetVersionItemsOpenAPIRequest) Field255DeepEqual(src *bas
 	return true
 }
 
-type ListEvaluationSetVersionItemsOpenAPIResponse struct {
+type ListEvaluationSetVersionItemsOApiResponse struct {
 	Code     *int32                                    `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                                   `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *ListEvaluationSetVersionItemsOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,ListEvaluationSetVersionItemsOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                            `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewListEvaluationSetVersionItemsOpenAPIResponse() *ListEvaluationSetVersionItemsOpenAPIResponse {
-	return &ListEvaluationSetVersionItemsOpenAPIResponse{}
+func NewListEvaluationSetVersionItemsOApiResponse() *ListEvaluationSetVersionItemsOApiResponse {
+	return &ListEvaluationSetVersionItemsOApiResponse{}
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) InitDefault() {
+func (p *ListEvaluationSetVersionItemsOApiResponse) InitDefault() {
 }
 
-var ListEvaluationSetVersionItemsOpenAPIResponse_Code_DEFAULT int32
+var ListEvaluationSetVersionItemsOApiResponse_Code_DEFAULT int32
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) GetCode() (v int32) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return ListEvaluationSetVersionItemsOpenAPIResponse_Code_DEFAULT
+		return ListEvaluationSetVersionItemsOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var ListEvaluationSetVersionItemsOpenAPIResponse_Msg_DEFAULT string
+var ListEvaluationSetVersionItemsOApiResponse_Msg_DEFAULT string
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) GetMsg() (v string) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return ListEvaluationSetVersionItemsOpenAPIResponse_Msg_DEFAULT
+		return ListEvaluationSetVersionItemsOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var ListEvaluationSetVersionItemsOpenAPIResponse_Data_DEFAULT *ListEvaluationSetVersionItemsOpenAPIData
+var ListEvaluationSetVersionItemsOApiResponse_Data_DEFAULT *ListEvaluationSetVersionItemsOpenAPIData
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) GetData() (v *ListEvaluationSetVersionItemsOpenAPIData) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) GetData() (v *ListEvaluationSetVersionItemsOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return ListEvaluationSetVersionItemsOpenAPIResponse_Data_DEFAULT
+		return ListEvaluationSetVersionItemsOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var ListEvaluationSetVersionItemsOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var ListEvaluationSetVersionItemsOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return ListEvaluationSetVersionItemsOpenAPIResponse_BaseResp_DEFAULT
+		return ListEvaluationSetVersionItemsOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) SetCode(val *int32) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) SetMsg(val *string) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) SetData(val *ListEvaluationSetVersionItemsOpenAPIData) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) SetData(val *ListEvaluationSetVersionItemsOpenAPIData) {
 	p.Data = val
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_ListEvaluationSetVersionItemsOpenAPIResponse = map[int16]string{
+var fieldIDToName_ListEvaluationSetVersionItemsOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) IsSetCode() bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) IsSetMsg() bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) IsSetData() bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) IsSetBaseResp() bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -9187,7 +9187,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetVersionItemsOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvaluationSetVersionItemsOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -9197,7 +9197,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -9208,7 +9208,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField1(iprot thrift.T
 	p.Code = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9219,7 +9219,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField2(iprot thrift.T
 	p.Msg = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewListEvaluationSetVersionItemsOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -9227,7 +9227,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField3(iprot thrift.T
 	p.Data = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListEvaluationSetVersionItemsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -9236,9 +9236,9 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) ReadField255(iprot thrift
 	return nil
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItemsOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItemsOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -9276,7 +9276,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -9294,7 +9294,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -9312,7 +9312,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -9330,7 +9330,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListEvaluationSetVersionItemsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -9347,15 +9347,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) String() string {
+func (p *ListEvaluationSetVersionItemsOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ListEvaluationSetVersionItemsOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("ListEvaluationSetVersionItemsOApiResponse(%+v)", *p)
 
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) DeepEqual(ano *ListEvaluationSetVersionItemsOpenAPIResponse) bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) DeepEqual(ano *ListEvaluationSetVersionItemsOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -9376,7 +9376,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) DeepEqual(ano *ListEvalua
 	return true
 }
 
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -9388,7 +9388,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Field1DeepEqual(src *int3
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -9400,14 +9400,14 @@ func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Field2DeepEqual(src *stri
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Field3DeepEqual(src *ListEvaluationSetVersionItemsOpenAPIData) bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) Field3DeepEqual(src *ListEvaluationSetVersionItemsOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ListEvaluationSetVersionItemsOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *ListEvaluationSetVersionItemsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -9852,74 +9852,74 @@ func (p *ListEvaluationSetVersionItemsOpenAPIData) Field102DeepEqual(src *int64)
 // 评估器相关接口 (5个接口)
 // ===============================
 // 2.1 创建评估器
-type CreateEvaluatorOpenAPIRequest struct {
+type CreateEvaluatorOApiRequest struct {
 	WorkspaceID int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	Evaluator   *evaluator.Evaluator `thrift:"evaluator,2,required" frugal:"2,required,evaluator.Evaluator" form:"evaluator,required" json:"evaluator,required" query:"evaluator,required"`
 	Base        *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewCreateEvaluatorOpenAPIRequest() *CreateEvaluatorOpenAPIRequest {
-	return &CreateEvaluatorOpenAPIRequest{}
+func NewCreateEvaluatorOApiRequest() *CreateEvaluatorOApiRequest {
+	return &CreateEvaluatorOApiRequest{}
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) InitDefault() {
+func (p *CreateEvaluatorOApiRequest) InitDefault() {
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *CreateEvaluatorOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-var CreateEvaluatorOpenAPIRequest_Evaluator_DEFAULT *evaluator.Evaluator
+var CreateEvaluatorOApiRequest_Evaluator_DEFAULT *evaluator.Evaluator
 
-func (p *CreateEvaluatorOpenAPIRequest) GetEvaluator() (v *evaluator.Evaluator) {
+func (p *CreateEvaluatorOApiRequest) GetEvaluator() (v *evaluator.Evaluator) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluator() {
-		return CreateEvaluatorOpenAPIRequest_Evaluator_DEFAULT
+		return CreateEvaluatorOApiRequest_Evaluator_DEFAULT
 	}
 	return p.Evaluator
 }
 
-var CreateEvaluatorOpenAPIRequest_Base_DEFAULT *base.Base
+var CreateEvaluatorOApiRequest_Base_DEFAULT *base.Base
 
-func (p *CreateEvaluatorOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *CreateEvaluatorOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return CreateEvaluatorOpenAPIRequest_Base_DEFAULT
+		return CreateEvaluatorOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *CreateEvaluatorOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *CreateEvaluatorOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *CreateEvaluatorOpenAPIRequest) SetEvaluator(val *evaluator.Evaluator) {
+func (p *CreateEvaluatorOApiRequest) SetEvaluator(val *evaluator.Evaluator) {
 	p.Evaluator = val
 }
-func (p *CreateEvaluatorOpenAPIRequest) SetBase(val *base.Base) {
+func (p *CreateEvaluatorOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_CreateEvaluatorOpenAPIRequest = map[int16]string{
+var fieldIDToName_CreateEvaluatorOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluator",
 	255: "Base",
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) IsSetEvaluator() bool {
+func (p *CreateEvaluatorOApiRequest) IsSetEvaluator() bool {
 	return p.Evaluator != nil
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) IsSetBase() bool {
+func (p *CreateEvaluatorOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -9993,7 +9993,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluatorOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluatorOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -10002,10 +10002,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateEvaluatorOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateEvaluatorOApiRequest[fieldId]))
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -10016,7 +10016,7 @@ func (p *CreateEvaluatorOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *CreateEvaluatorOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 	_field := evaluator.NewEvaluator()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -10024,7 +10024,7 @@ func (p *CreateEvaluatorOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error
 	p.Evaluator = _field
 	return nil
 }
-func (p *CreateEvaluatorOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -10033,9 +10033,9 @@ func (p *CreateEvaluatorOpenAPIRequest) ReadField255(iprot thrift.TProtocol) err
 	return nil
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluatorOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluatorOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -10069,7 +10069,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -10085,7 +10085,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateEvaluatorOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluator", thrift.STRUCT, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -10101,7 +10101,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateEvaluatorOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -10120,15 +10120,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) String() string {
+func (p *CreateEvaluatorOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateEvaluatorOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("CreateEvaluatorOApiRequest(%+v)", *p)
 
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) DeepEqual(ano *CreateEvaluatorOpenAPIRequest) bool {
+func (p *CreateEvaluatorOApiRequest) DeepEqual(ano *CreateEvaluatorOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -10146,21 +10146,21 @@ func (p *CreateEvaluatorOpenAPIRequest) DeepEqual(ano *CreateEvaluatorOpenAPIReq
 	return true
 }
 
-func (p *CreateEvaluatorOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *CreateEvaluatorOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluatorOpenAPIRequest) Field2DeepEqual(src *evaluator.Evaluator) bool {
+func (p *CreateEvaluatorOApiRequest) Field2DeepEqual(src *evaluator.Evaluator) bool {
 
 	if !p.Evaluator.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluatorOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *CreateEvaluatorOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -10168,104 +10168,104 @@ func (p *CreateEvaluatorOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type CreateEvaluatorOpenAPIResponse struct {
+type CreateEvaluatorOApiResponse struct {
 	Code     *int32                      `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                     `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *CreateEvaluatorOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,CreateEvaluatorOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp              `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewCreateEvaluatorOpenAPIResponse() *CreateEvaluatorOpenAPIResponse {
-	return &CreateEvaluatorOpenAPIResponse{}
+func NewCreateEvaluatorOApiResponse() *CreateEvaluatorOApiResponse {
+	return &CreateEvaluatorOApiResponse{}
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) InitDefault() {
+func (p *CreateEvaluatorOApiResponse) InitDefault() {
 }
 
-var CreateEvaluatorOpenAPIResponse_Code_DEFAULT int32
+var CreateEvaluatorOApiResponse_Code_DEFAULT int32
 
-func (p *CreateEvaluatorOpenAPIResponse) GetCode() (v int32) {
+func (p *CreateEvaluatorOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return CreateEvaluatorOpenAPIResponse_Code_DEFAULT
+		return CreateEvaluatorOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var CreateEvaluatorOpenAPIResponse_Msg_DEFAULT string
+var CreateEvaluatorOApiResponse_Msg_DEFAULT string
 
-func (p *CreateEvaluatorOpenAPIResponse) GetMsg() (v string) {
+func (p *CreateEvaluatorOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return CreateEvaluatorOpenAPIResponse_Msg_DEFAULT
+		return CreateEvaluatorOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var CreateEvaluatorOpenAPIResponse_Data_DEFAULT *CreateEvaluatorOpenAPIData
+var CreateEvaluatorOApiResponse_Data_DEFAULT *CreateEvaluatorOpenAPIData
 
-func (p *CreateEvaluatorOpenAPIResponse) GetData() (v *CreateEvaluatorOpenAPIData) {
+func (p *CreateEvaluatorOApiResponse) GetData() (v *CreateEvaluatorOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return CreateEvaluatorOpenAPIResponse_Data_DEFAULT
+		return CreateEvaluatorOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var CreateEvaluatorOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var CreateEvaluatorOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *CreateEvaluatorOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *CreateEvaluatorOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return CreateEvaluatorOpenAPIResponse_BaseResp_DEFAULT
+		return CreateEvaluatorOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *CreateEvaluatorOpenAPIResponse) SetCode(val *int32) {
+func (p *CreateEvaluatorOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *CreateEvaluatorOpenAPIResponse) SetMsg(val *string) {
+func (p *CreateEvaluatorOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *CreateEvaluatorOpenAPIResponse) SetData(val *CreateEvaluatorOpenAPIData) {
+func (p *CreateEvaluatorOApiResponse) SetData(val *CreateEvaluatorOpenAPIData) {
 	p.Data = val
 }
-func (p *CreateEvaluatorOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *CreateEvaluatorOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_CreateEvaluatorOpenAPIResponse = map[int16]string{
+var fieldIDToName_CreateEvaluatorOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) IsSetCode() bool {
+func (p *CreateEvaluatorOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) IsSetMsg() bool {
+func (p *CreateEvaluatorOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) IsSetData() bool {
+func (p *CreateEvaluatorOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) IsSetBaseResp() bool {
+func (p *CreateEvaluatorOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -10334,7 +10334,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluatorOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvaluatorOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -10344,7 +10344,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -10355,7 +10355,7 @@ func (p *CreateEvaluatorOpenAPIResponse) ReadField1(iprot thrift.TProtocol) erro
 	p.Code = _field
 	return nil
 }
-func (p *CreateEvaluatorOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -10366,7 +10366,7 @@ func (p *CreateEvaluatorOpenAPIResponse) ReadField2(iprot thrift.TProtocol) erro
 	p.Msg = _field
 	return nil
 }
-func (p *CreateEvaluatorOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewCreateEvaluatorOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -10374,7 +10374,7 @@ func (p *CreateEvaluatorOpenAPIResponse) ReadField3(iprot thrift.TProtocol) erro
 	p.Data = _field
 	return nil
 }
-func (p *CreateEvaluatorOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateEvaluatorOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -10383,9 +10383,9 @@ func (p *CreateEvaluatorOpenAPIResponse) ReadField255(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluatorOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluatorOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -10423,7 +10423,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -10441,7 +10441,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateEvaluatorOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -10459,7 +10459,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateEvaluatorOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -10477,7 +10477,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateEvaluatorOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateEvaluatorOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -10494,15 +10494,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) String() string {
+func (p *CreateEvaluatorOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateEvaluatorOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("CreateEvaluatorOApiResponse(%+v)", *p)
 
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) DeepEqual(ano *CreateEvaluatorOpenAPIResponse) bool {
+func (p *CreateEvaluatorOApiResponse) DeepEqual(ano *CreateEvaluatorOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -10523,7 +10523,7 @@ func (p *CreateEvaluatorOpenAPIResponse) DeepEqual(ano *CreateEvaluatorOpenAPIRe
 	return true
 }
 
-func (p *CreateEvaluatorOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *CreateEvaluatorOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -10535,7 +10535,7 @@ func (p *CreateEvaluatorOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *CreateEvaluatorOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *CreateEvaluatorOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -10547,14 +10547,14 @@ func (p *CreateEvaluatorOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateEvaluatorOpenAPIResponse) Field3DeepEqual(src *CreateEvaluatorOpenAPIData) bool {
+func (p *CreateEvaluatorOApiResponse) Field3DeepEqual(src *CreateEvaluatorOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateEvaluatorOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *CreateEvaluatorOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -10744,7 +10744,7 @@ func (p *CreateEvaluatorOpenAPIData) Field1DeepEqual(src *string) bool {
 }
 
 // 2.2 提交评估器版本
-type SubmitEvaluatorVersionOpenAPIRequest struct {
+type SubmitEvaluatorVersionOApiRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluatorID string     `thrift:"evaluator_id,2,required" frugal:"2,required,string" json:"evaluator_id,required" path:"evaluator_id,required"`
 	Version     string     `thrift:"version,3,required" frugal:"3,required,string" form:"version,required" json:"version,required" query:"version,required"`
@@ -10752,74 +10752,74 @@ type SubmitEvaluatorVersionOpenAPIRequest struct {
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewSubmitEvaluatorVersionOpenAPIRequest() *SubmitEvaluatorVersionOpenAPIRequest {
-	return &SubmitEvaluatorVersionOpenAPIRequest{}
+func NewSubmitEvaluatorVersionOApiRequest() *SubmitEvaluatorVersionOApiRequest {
+	return &SubmitEvaluatorVersionOApiRequest{}
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) InitDefault() {
+func (p *SubmitEvaluatorVersionOApiRequest) InitDefault() {
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *SubmitEvaluatorVersionOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) GetEvaluatorID() (v string) {
+func (p *SubmitEvaluatorVersionOApiRequest) GetEvaluatorID() (v string) {
 	if p != nil {
 		return p.EvaluatorID
 	}
 	return
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) GetVersion() (v string) {
+func (p *SubmitEvaluatorVersionOApiRequest) GetVersion() (v string) {
 	if p != nil {
 		return p.Version
 	}
 	return
 }
 
-var SubmitEvaluatorVersionOpenAPIRequest_Description_DEFAULT string
+var SubmitEvaluatorVersionOApiRequest_Description_DEFAULT string
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) GetDescription() (v string) {
+func (p *SubmitEvaluatorVersionOApiRequest) GetDescription() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDescription() {
-		return SubmitEvaluatorVersionOpenAPIRequest_Description_DEFAULT
+		return SubmitEvaluatorVersionOApiRequest_Description_DEFAULT
 	}
 	return *p.Description
 }
 
-var SubmitEvaluatorVersionOpenAPIRequest_Base_DEFAULT *base.Base
+var SubmitEvaluatorVersionOApiRequest_Base_DEFAULT *base.Base
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *SubmitEvaluatorVersionOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return SubmitEvaluatorVersionOpenAPIRequest_Base_DEFAULT
+		return SubmitEvaluatorVersionOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *SubmitEvaluatorVersionOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) SetEvaluatorID(val string) {
+func (p *SubmitEvaluatorVersionOApiRequest) SetEvaluatorID(val string) {
 	p.EvaluatorID = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) SetVersion(val string) {
+func (p *SubmitEvaluatorVersionOApiRequest) SetVersion(val string) {
 	p.Version = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) SetDescription(val *string) {
+func (p *SubmitEvaluatorVersionOApiRequest) SetDescription(val *string) {
 	p.Description = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) SetBase(val *base.Base) {
+func (p *SubmitEvaluatorVersionOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_SubmitEvaluatorVersionOpenAPIRequest = map[int16]string{
+var fieldIDToName_SubmitEvaluatorVersionOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluator_id",
 	3:   "version",
@@ -10827,15 +10827,15 @@ var fieldIDToName_SubmitEvaluatorVersionOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) IsSetDescription() bool {
+func (p *SubmitEvaluatorVersionOApiRequest) IsSetDescription() bool {
 	return p.Description != nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) IsSetBase() bool {
+func (p *SubmitEvaluatorVersionOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -10932,7 +10932,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitEvaluatorVersionOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitEvaluatorVersionOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -10941,10 +10941,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_SubmitEvaluatorVersionOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_SubmitEvaluatorVersionOApiRequest[fieldId]))
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -10955,7 +10955,7 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField1(iprot thrift.TProtocol
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -10966,7 +10966,7 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField2(iprot thrift.TProtocol
 	p.EvaluatorID = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -10977,7 +10977,7 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField3(iprot thrift.TProtocol
 	p.Version = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -10988,7 +10988,7 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField4(iprot thrift.TProtocol
 	p.Description = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -10997,9 +10997,9 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) ReadField255(iprot thrift.TProtoc
 	return nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("SubmitEvaluatorVersionOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("SubmitEvaluatorVersionOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -11041,7 +11041,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -11057,7 +11057,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluator_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -11073,7 +11073,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("version", thrift.STRING, 3); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -11089,7 +11089,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDescription() {
 		if err = oprot.WriteFieldBegin("description", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
@@ -11107,7 +11107,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -11126,15 +11126,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) String() string {
+func (p *SubmitEvaluatorVersionOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("SubmitEvaluatorVersionOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("SubmitEvaluatorVersionOApiRequest(%+v)", *p)
 
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) DeepEqual(ano *SubmitEvaluatorVersionOpenAPIRequest) bool {
+func (p *SubmitEvaluatorVersionOApiRequest) DeepEqual(ano *SubmitEvaluatorVersionOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -11158,28 +11158,28 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) DeepEqual(ano *SubmitEvaluatorVer
 	return true
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *SubmitEvaluatorVersionOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Field2DeepEqual(src string) bool {
+func (p *SubmitEvaluatorVersionOApiRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.EvaluatorID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Field3DeepEqual(src string) bool {
+func (p *SubmitEvaluatorVersionOApiRequest) Field3DeepEqual(src string) bool {
 
 	if strings.Compare(p.Version, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Field4DeepEqual(src *string) bool {
+func (p *SubmitEvaluatorVersionOApiRequest) Field4DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -11191,7 +11191,7 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) Field4DeepEqual(src *string) bool
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *SubmitEvaluatorVersionOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -11199,104 +11199,104 @@ func (p *SubmitEvaluatorVersionOpenAPIRequest) Field255DeepEqual(src *base.Base)
 	return true
 }
 
-type SubmitEvaluatorVersionOpenAPIResponse struct {
+type SubmitEvaluatorVersionOApiResponse struct {
 	Code     *int32                             `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                            `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *SubmitEvaluatorVersionOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,SubmitEvaluatorVersionOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewSubmitEvaluatorVersionOpenAPIResponse() *SubmitEvaluatorVersionOpenAPIResponse {
-	return &SubmitEvaluatorVersionOpenAPIResponse{}
+func NewSubmitEvaluatorVersionOApiResponse() *SubmitEvaluatorVersionOApiResponse {
+	return &SubmitEvaluatorVersionOApiResponse{}
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) InitDefault() {
+func (p *SubmitEvaluatorVersionOApiResponse) InitDefault() {
 }
 
-var SubmitEvaluatorVersionOpenAPIResponse_Code_DEFAULT int32
+var SubmitEvaluatorVersionOApiResponse_Code_DEFAULT int32
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) GetCode() (v int32) {
+func (p *SubmitEvaluatorVersionOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return SubmitEvaluatorVersionOpenAPIResponse_Code_DEFAULT
+		return SubmitEvaluatorVersionOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var SubmitEvaluatorVersionOpenAPIResponse_Msg_DEFAULT string
+var SubmitEvaluatorVersionOApiResponse_Msg_DEFAULT string
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) GetMsg() (v string) {
+func (p *SubmitEvaluatorVersionOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return SubmitEvaluatorVersionOpenAPIResponse_Msg_DEFAULT
+		return SubmitEvaluatorVersionOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var SubmitEvaluatorVersionOpenAPIResponse_Data_DEFAULT *SubmitEvaluatorVersionOpenAPIData
+var SubmitEvaluatorVersionOApiResponse_Data_DEFAULT *SubmitEvaluatorVersionOpenAPIData
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) GetData() (v *SubmitEvaluatorVersionOpenAPIData) {
+func (p *SubmitEvaluatorVersionOApiResponse) GetData() (v *SubmitEvaluatorVersionOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return SubmitEvaluatorVersionOpenAPIResponse_Data_DEFAULT
+		return SubmitEvaluatorVersionOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var SubmitEvaluatorVersionOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var SubmitEvaluatorVersionOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *SubmitEvaluatorVersionOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return SubmitEvaluatorVersionOpenAPIResponse_BaseResp_DEFAULT
+		return SubmitEvaluatorVersionOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) SetCode(val *int32) {
+func (p *SubmitEvaluatorVersionOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) SetMsg(val *string) {
+func (p *SubmitEvaluatorVersionOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) SetData(val *SubmitEvaluatorVersionOpenAPIData) {
+func (p *SubmitEvaluatorVersionOApiResponse) SetData(val *SubmitEvaluatorVersionOpenAPIData) {
 	p.Data = val
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *SubmitEvaluatorVersionOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_SubmitEvaluatorVersionOpenAPIResponse = map[int16]string{
+var fieldIDToName_SubmitEvaluatorVersionOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) IsSetCode() bool {
+func (p *SubmitEvaluatorVersionOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) IsSetMsg() bool {
+func (p *SubmitEvaluatorVersionOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) IsSetData() bool {
+func (p *SubmitEvaluatorVersionOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) IsSetBaseResp() bool {
+func (p *SubmitEvaluatorVersionOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -11365,7 +11365,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitEvaluatorVersionOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitEvaluatorVersionOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -11375,7 +11375,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -11386,7 +11386,7 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField1(iprot thrift.TProtoco
 	p.Code = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -11397,7 +11397,7 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField2(iprot thrift.TProtoco
 	p.Msg = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewSubmitEvaluatorVersionOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -11405,7 +11405,7 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField3(iprot thrift.TProtoco
 	p.Data = _field
 	return nil
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *SubmitEvaluatorVersionOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -11414,9 +11414,9 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) ReadField255(iprot thrift.TProto
 	return nil
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("SubmitEvaluatorVersionOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("SubmitEvaluatorVersionOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -11454,7 +11454,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -11472,7 +11472,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -11490,7 +11490,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -11508,7 +11508,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *SubmitEvaluatorVersionOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -11525,15 +11525,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) String() string {
+func (p *SubmitEvaluatorVersionOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("SubmitEvaluatorVersionOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("SubmitEvaluatorVersionOApiResponse(%+v)", *p)
 
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) DeepEqual(ano *SubmitEvaluatorVersionOpenAPIResponse) bool {
+func (p *SubmitEvaluatorVersionOApiResponse) DeepEqual(ano *SubmitEvaluatorVersionOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -11554,7 +11554,7 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) DeepEqual(ano *SubmitEvaluatorVe
 	return true
 }
 
-func (p *SubmitEvaluatorVersionOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *SubmitEvaluatorVersionOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -11566,7 +11566,7 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) Field1DeepEqual(src *int32) bool
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *SubmitEvaluatorVersionOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -11578,14 +11578,14 @@ func (p *SubmitEvaluatorVersionOpenAPIResponse) Field2DeepEqual(src *string) boo
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) Field3DeepEqual(src *SubmitEvaluatorVersionOpenAPIData) bool {
+func (p *SubmitEvaluatorVersionOApiResponse) Field3DeepEqual(src *SubmitEvaluatorVersionOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *SubmitEvaluatorVersionOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *SubmitEvaluatorVersionOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -11767,86 +11767,86 @@ func (p *SubmitEvaluatorVersionOpenAPIData) Field1DeepEqual(src *evaluator.Evalu
 }
 
 // 2.3 获取评估器版本详情
-type GetEvaluatorVersionOpenAPIRequest struct {
+type GetEvaluatorVersionOApiRequest struct {
 	WorkspaceID        int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluatorVersionID string     `thrift:"evaluator_version_id,2,required" frugal:"2,required,string" json:"evaluator_version_id,required" path:"evaluator_version_id,required"`
 	IncludeDeleted     *bool      `thrift:"include_deleted,3,optional" frugal:"3,optional,bool" form:"include_deleted" json:"include_deleted,omitempty" query:"include_deleted"`
 	Base               *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetEvaluatorVersionOpenAPIRequest() *GetEvaluatorVersionOpenAPIRequest {
-	return &GetEvaluatorVersionOpenAPIRequest{}
+func NewGetEvaluatorVersionOApiRequest() *GetEvaluatorVersionOApiRequest {
+	return &GetEvaluatorVersionOApiRequest{}
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) InitDefault() {
+func (p *GetEvaluatorVersionOApiRequest) InitDefault() {
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *GetEvaluatorVersionOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) GetEvaluatorVersionID() (v string) {
+func (p *GetEvaluatorVersionOApiRequest) GetEvaluatorVersionID() (v string) {
 	if p != nil {
 		return p.EvaluatorVersionID
 	}
 	return
 }
 
-var GetEvaluatorVersionOpenAPIRequest_IncludeDeleted_DEFAULT bool
+var GetEvaluatorVersionOApiRequest_IncludeDeleted_DEFAULT bool
 
-func (p *GetEvaluatorVersionOpenAPIRequest) GetIncludeDeleted() (v bool) {
+func (p *GetEvaluatorVersionOApiRequest) GetIncludeDeleted() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetIncludeDeleted() {
-		return GetEvaluatorVersionOpenAPIRequest_IncludeDeleted_DEFAULT
+		return GetEvaluatorVersionOApiRequest_IncludeDeleted_DEFAULT
 	}
 	return *p.IncludeDeleted
 }
 
-var GetEvaluatorVersionOpenAPIRequest_Base_DEFAULT *base.Base
+var GetEvaluatorVersionOApiRequest_Base_DEFAULT *base.Base
 
-func (p *GetEvaluatorVersionOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *GetEvaluatorVersionOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetEvaluatorVersionOpenAPIRequest_Base_DEFAULT
+		return GetEvaluatorVersionOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *GetEvaluatorVersionOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) SetEvaluatorVersionID(val string) {
+func (p *GetEvaluatorVersionOApiRequest) SetEvaluatorVersionID(val string) {
 	p.EvaluatorVersionID = val
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) SetIncludeDeleted(val *bool) {
+func (p *GetEvaluatorVersionOApiRequest) SetIncludeDeleted(val *bool) {
 	p.IncludeDeleted = val
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) SetBase(val *base.Base) {
+func (p *GetEvaluatorVersionOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetEvaluatorVersionOpenAPIRequest = map[int16]string{
+var fieldIDToName_GetEvaluatorVersionOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluator_version_id",
 	3:   "include_deleted",
 	255: "Base",
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) IsSetIncludeDeleted() bool {
+func (p *GetEvaluatorVersionOApiRequest) IsSetIncludeDeleted() bool {
 	return p.IncludeDeleted != nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) IsSetBase() bool {
+func (p *GetEvaluatorVersionOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -11928,7 +11928,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorVersionOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorVersionOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -11937,10 +11937,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetEvaluatorVersionOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetEvaluatorVersionOApiRequest[fieldId]))
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -11951,7 +11951,7 @@ func (p *GetEvaluatorVersionOpenAPIRequest) ReadField1(iprot thrift.TProtocol) e
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -11962,7 +11962,7 @@ func (p *GetEvaluatorVersionOpenAPIRequest) ReadField2(iprot thrift.TProtocol) e
 	p.EvaluatorVersionID = _field
 	return nil
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -11973,7 +11973,7 @@ func (p *GetEvaluatorVersionOpenAPIRequest) ReadField3(iprot thrift.TProtocol) e
 	p.IncludeDeleted = _field
 	return nil
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -11982,9 +11982,9 @@ func (p *GetEvaluatorVersionOpenAPIRequest) ReadField255(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorVersionOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorVersionOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -12022,7 +12022,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -12038,7 +12038,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -12054,7 +12054,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIncludeDeleted() {
 		if err = oprot.WriteFieldBegin("include_deleted", thrift.BOOL, 3); err != nil {
 			goto WriteFieldBeginError
@@ -12072,7 +12072,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -12091,15 +12091,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) String() string {
+func (p *GetEvaluatorVersionOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetEvaluatorVersionOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("GetEvaluatorVersionOApiRequest(%+v)", *p)
 
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) DeepEqual(ano *GetEvaluatorVersionOpenAPIRequest) bool {
+func (p *GetEvaluatorVersionOApiRequest) DeepEqual(ano *GetEvaluatorVersionOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -12120,21 +12120,21 @@ func (p *GetEvaluatorVersionOpenAPIRequest) DeepEqual(ano *GetEvaluatorVersionOp
 	return true
 }
 
-func (p *GetEvaluatorVersionOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *GetEvaluatorVersionOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) Field2DeepEqual(src string) bool {
+func (p *GetEvaluatorVersionOApiRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.EvaluatorVersionID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) Field3DeepEqual(src *bool) bool {
+func (p *GetEvaluatorVersionOApiRequest) Field3DeepEqual(src *bool) bool {
 
 	if p.IncludeDeleted == src {
 		return true
@@ -12146,7 +12146,7 @@ func (p *GetEvaluatorVersionOpenAPIRequest) Field3DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *GetEvaluatorVersionOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *GetEvaluatorVersionOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -12154,104 +12154,104 @@ func (p *GetEvaluatorVersionOpenAPIRequest) Field255DeepEqual(src *base.Base) bo
 	return true
 }
 
-type GetEvaluatorVersionOpenAPIResponse struct {
+type GetEvaluatorVersionOApiResponse struct {
 	Code     *int32                          `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                         `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *GetEvaluatorVersionOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,GetEvaluatorVersionOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                  `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewGetEvaluatorVersionOpenAPIResponse() *GetEvaluatorVersionOpenAPIResponse {
-	return &GetEvaluatorVersionOpenAPIResponse{}
+func NewGetEvaluatorVersionOApiResponse() *GetEvaluatorVersionOApiResponse {
+	return &GetEvaluatorVersionOApiResponse{}
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) InitDefault() {
+func (p *GetEvaluatorVersionOApiResponse) InitDefault() {
 }
 
-var GetEvaluatorVersionOpenAPIResponse_Code_DEFAULT int32
+var GetEvaluatorVersionOApiResponse_Code_DEFAULT int32
 
-func (p *GetEvaluatorVersionOpenAPIResponse) GetCode() (v int32) {
+func (p *GetEvaluatorVersionOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return GetEvaluatorVersionOpenAPIResponse_Code_DEFAULT
+		return GetEvaluatorVersionOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var GetEvaluatorVersionOpenAPIResponse_Msg_DEFAULT string
+var GetEvaluatorVersionOApiResponse_Msg_DEFAULT string
 
-func (p *GetEvaluatorVersionOpenAPIResponse) GetMsg() (v string) {
+func (p *GetEvaluatorVersionOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return GetEvaluatorVersionOpenAPIResponse_Msg_DEFAULT
+		return GetEvaluatorVersionOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var GetEvaluatorVersionOpenAPIResponse_Data_DEFAULT *GetEvaluatorVersionOpenAPIData
+var GetEvaluatorVersionOApiResponse_Data_DEFAULT *GetEvaluatorVersionOpenAPIData
 
-func (p *GetEvaluatorVersionOpenAPIResponse) GetData() (v *GetEvaluatorVersionOpenAPIData) {
+func (p *GetEvaluatorVersionOApiResponse) GetData() (v *GetEvaluatorVersionOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return GetEvaluatorVersionOpenAPIResponse_Data_DEFAULT
+		return GetEvaluatorVersionOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var GetEvaluatorVersionOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var GetEvaluatorVersionOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetEvaluatorVersionOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *GetEvaluatorVersionOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetEvaluatorVersionOpenAPIResponse_BaseResp_DEFAULT
+		return GetEvaluatorVersionOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) SetCode(val *int32) {
+func (p *GetEvaluatorVersionOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) SetMsg(val *string) {
+func (p *GetEvaluatorVersionOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) SetData(val *GetEvaluatorVersionOpenAPIData) {
+func (p *GetEvaluatorVersionOApiResponse) SetData(val *GetEvaluatorVersionOpenAPIData) {
 	p.Data = val
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *GetEvaluatorVersionOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetEvaluatorVersionOpenAPIResponse = map[int16]string{
+var fieldIDToName_GetEvaluatorVersionOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) IsSetCode() bool {
+func (p *GetEvaluatorVersionOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) IsSetMsg() bool {
+func (p *GetEvaluatorVersionOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) IsSetData() bool {
+func (p *GetEvaluatorVersionOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) IsSetBaseResp() bool {
+func (p *GetEvaluatorVersionOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -12320,7 +12320,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorVersionOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorVersionOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -12330,7 +12330,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -12341,7 +12341,7 @@ func (p *GetEvaluatorVersionOpenAPIResponse) ReadField1(iprot thrift.TProtocol) 
 	p.Code = _field
 	return nil
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -12352,7 +12352,7 @@ func (p *GetEvaluatorVersionOpenAPIResponse) ReadField2(iprot thrift.TProtocol) 
 	p.Msg = _field
 	return nil
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewGetEvaluatorVersionOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -12360,7 +12360,7 @@ func (p *GetEvaluatorVersionOpenAPIResponse) ReadField3(iprot thrift.TProtocol) 
 	p.Data = _field
 	return nil
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorVersionOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -12369,9 +12369,9 @@ func (p *GetEvaluatorVersionOpenAPIResponse) ReadField255(iprot thrift.TProtocol
 	return nil
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorVersionOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorVersionOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -12409,7 +12409,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -12427,7 +12427,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -12445,7 +12445,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -12463,7 +12463,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorVersionOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -12480,15 +12480,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) String() string {
+func (p *GetEvaluatorVersionOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetEvaluatorVersionOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("GetEvaluatorVersionOApiResponse(%+v)", *p)
 
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) DeepEqual(ano *GetEvaluatorVersionOpenAPIResponse) bool {
+func (p *GetEvaluatorVersionOApiResponse) DeepEqual(ano *GetEvaluatorVersionOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -12509,7 +12509,7 @@ func (p *GetEvaluatorVersionOpenAPIResponse) DeepEqual(ano *GetEvaluatorVersionO
 	return true
 }
 
-func (p *GetEvaluatorVersionOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *GetEvaluatorVersionOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -12521,7 +12521,7 @@ func (p *GetEvaluatorVersionOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *GetEvaluatorVersionOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -12533,14 +12533,14 @@ func (p *GetEvaluatorVersionOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) Field3DeepEqual(src *GetEvaluatorVersionOpenAPIData) bool {
+func (p *GetEvaluatorVersionOApiResponse) Field3DeepEqual(src *GetEvaluatorVersionOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluatorVersionOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *GetEvaluatorVersionOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -12722,7 +12722,7 @@ func (p *GetEvaluatorVersionOpenAPIData) Field1DeepEqual(src *evaluator.Evaluato
 }
 
 // 2.4 执行评估器
-type RunEvaluatorOpenAPIRequest struct {
+type RunEvaluatorOApiRequest struct {
 	WorkspaceID        int64                         `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluatorVersionID string                        `thrift:"evaluator_version_id,2,required" frugal:"2,required,string" json:"evaluator_version_id,required" path:"evaluator_version_id,required"`
 	InputData          *evaluator.EvaluatorInputData `thrift:"input_data,3,required" frugal:"3,required,evaluator.EvaluatorInputData" form:"input_data,required" json:"input_data,required" query:"input_data,required"`
@@ -12730,79 +12730,79 @@ type RunEvaluatorOpenAPIRequest struct {
 	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewRunEvaluatorOpenAPIRequest() *RunEvaluatorOpenAPIRequest {
-	return &RunEvaluatorOpenAPIRequest{}
+func NewRunEvaluatorOApiRequest() *RunEvaluatorOApiRequest {
+	return &RunEvaluatorOApiRequest{}
 }
 
-func (p *RunEvaluatorOpenAPIRequest) InitDefault() {
+func (p *RunEvaluatorOApiRequest) InitDefault() {
 }
 
-func (p *RunEvaluatorOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *RunEvaluatorOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *RunEvaluatorOpenAPIRequest) GetEvaluatorVersionID() (v string) {
+func (p *RunEvaluatorOApiRequest) GetEvaluatorVersionID() (v string) {
 	if p != nil {
 		return p.EvaluatorVersionID
 	}
 	return
 }
 
-var RunEvaluatorOpenAPIRequest_InputData_DEFAULT *evaluator.EvaluatorInputData
+var RunEvaluatorOApiRequest_InputData_DEFAULT *evaluator.EvaluatorInputData
 
-func (p *RunEvaluatorOpenAPIRequest) GetInputData() (v *evaluator.EvaluatorInputData) {
+func (p *RunEvaluatorOApiRequest) GetInputData() (v *evaluator.EvaluatorInputData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetInputData() {
-		return RunEvaluatorOpenAPIRequest_InputData_DEFAULT
+		return RunEvaluatorOApiRequest_InputData_DEFAULT
 	}
 	return p.InputData
 }
 
-var RunEvaluatorOpenAPIRequest_Ext_DEFAULT map[string]string
+var RunEvaluatorOApiRequest_Ext_DEFAULT map[string]string
 
-func (p *RunEvaluatorOpenAPIRequest) GetExt() (v map[string]string) {
+func (p *RunEvaluatorOApiRequest) GetExt() (v map[string]string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetExt() {
-		return RunEvaluatorOpenAPIRequest_Ext_DEFAULT
+		return RunEvaluatorOApiRequest_Ext_DEFAULT
 	}
 	return p.Ext
 }
 
-var RunEvaluatorOpenAPIRequest_Base_DEFAULT *base.Base
+var RunEvaluatorOApiRequest_Base_DEFAULT *base.Base
 
-func (p *RunEvaluatorOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *RunEvaluatorOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return RunEvaluatorOpenAPIRequest_Base_DEFAULT
+		return RunEvaluatorOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *RunEvaluatorOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *RunEvaluatorOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *RunEvaluatorOpenAPIRequest) SetEvaluatorVersionID(val string) {
+func (p *RunEvaluatorOApiRequest) SetEvaluatorVersionID(val string) {
 	p.EvaluatorVersionID = val
 }
-func (p *RunEvaluatorOpenAPIRequest) SetInputData(val *evaluator.EvaluatorInputData) {
+func (p *RunEvaluatorOApiRequest) SetInputData(val *evaluator.EvaluatorInputData) {
 	p.InputData = val
 }
-func (p *RunEvaluatorOpenAPIRequest) SetExt(val map[string]string) {
+func (p *RunEvaluatorOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
-func (p *RunEvaluatorOpenAPIRequest) SetBase(val *base.Base) {
+func (p *RunEvaluatorOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_RunEvaluatorOpenAPIRequest = map[int16]string{
+var fieldIDToName_RunEvaluatorOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluator_version_id",
 	3:   "input_data",
@@ -12810,19 +12810,19 @@ var fieldIDToName_RunEvaluatorOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *RunEvaluatorOpenAPIRequest) IsSetInputData() bool {
+func (p *RunEvaluatorOApiRequest) IsSetInputData() bool {
 	return p.InputData != nil
 }
 
-func (p *RunEvaluatorOpenAPIRequest) IsSetExt() bool {
+func (p *RunEvaluatorOApiRequest) IsSetExt() bool {
 	return p.Ext != nil
 }
 
-func (p *RunEvaluatorOpenAPIRequest) IsSetBase() bool {
+func (p *RunEvaluatorOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *RunEvaluatorOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -12919,7 +12919,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunEvaluatorOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunEvaluatorOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -12928,10 +12928,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_RunEvaluatorOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_RunEvaluatorOApiRequest[fieldId]))
 }
 
-func (p *RunEvaluatorOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -12942,7 +12942,7 @@ func (p *RunEvaluatorOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -12953,7 +12953,7 @@ func (p *RunEvaluatorOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.EvaluatorVersionID = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 	_field := evaluator.NewEvaluatorInputData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -12961,7 +12961,7 @@ func (p *RunEvaluatorOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.InputData = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return err
@@ -12990,7 +12990,7 @@ func (p *RunEvaluatorOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -12999,9 +12999,9 @@ func (p *RunEvaluatorOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error 
 	return nil
 }
 
-func (p *RunEvaluatorOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("RunEvaluatorOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("RunEvaluatorOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -13043,7 +13043,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *RunEvaluatorOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -13059,7 +13059,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -13075,7 +13075,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("input_data", thrift.STRUCT, 3); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -13091,7 +13091,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 4); err != nil {
 			goto WriteFieldBeginError
@@ -13120,7 +13120,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -13139,15 +13139,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *RunEvaluatorOpenAPIRequest) String() string {
+func (p *RunEvaluatorOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("RunEvaluatorOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("RunEvaluatorOApiRequest(%+v)", *p)
 
 }
 
-func (p *RunEvaluatorOpenAPIRequest) DeepEqual(ano *RunEvaluatorOpenAPIRequest) bool {
+func (p *RunEvaluatorOApiRequest) DeepEqual(ano *RunEvaluatorOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -13171,28 +13171,28 @@ func (p *RunEvaluatorOpenAPIRequest) DeepEqual(ano *RunEvaluatorOpenAPIRequest) 
 	return true
 }
 
-func (p *RunEvaluatorOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *RunEvaluatorOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIRequest) Field2DeepEqual(src string) bool {
+func (p *RunEvaluatorOApiRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.EvaluatorVersionID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIRequest) Field3DeepEqual(src *evaluator.EvaluatorInputData) bool {
+func (p *RunEvaluatorOApiRequest) Field3DeepEqual(src *evaluator.EvaluatorInputData) bool {
 
 	if !p.InputData.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIRequest) Field4DeepEqual(src map[string]string) bool {
+func (p *RunEvaluatorOApiRequest) Field4DeepEqual(src map[string]string) bool {
 
 	if len(p.Ext) != len(src) {
 		return false
@@ -13205,7 +13205,7 @@ func (p *RunEvaluatorOpenAPIRequest) Field4DeepEqual(src map[string]string) bool
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *RunEvaluatorOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -13213,104 +13213,104 @@ func (p *RunEvaluatorOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type RunEvaluatorOpenAPIResponse struct {
+type RunEvaluatorOApiResponse struct {
 	Code     *int32                   `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                  `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *RunEvaluatorOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,RunEvaluatorOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp           `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewRunEvaluatorOpenAPIResponse() *RunEvaluatorOpenAPIResponse {
-	return &RunEvaluatorOpenAPIResponse{}
+func NewRunEvaluatorOApiResponse() *RunEvaluatorOApiResponse {
+	return &RunEvaluatorOApiResponse{}
 }
 
-func (p *RunEvaluatorOpenAPIResponse) InitDefault() {
+func (p *RunEvaluatorOApiResponse) InitDefault() {
 }
 
-var RunEvaluatorOpenAPIResponse_Code_DEFAULT int32
+var RunEvaluatorOApiResponse_Code_DEFAULT int32
 
-func (p *RunEvaluatorOpenAPIResponse) GetCode() (v int32) {
+func (p *RunEvaluatorOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return RunEvaluatorOpenAPIResponse_Code_DEFAULT
+		return RunEvaluatorOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var RunEvaluatorOpenAPIResponse_Msg_DEFAULT string
+var RunEvaluatorOApiResponse_Msg_DEFAULT string
 
-func (p *RunEvaluatorOpenAPIResponse) GetMsg() (v string) {
+func (p *RunEvaluatorOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return RunEvaluatorOpenAPIResponse_Msg_DEFAULT
+		return RunEvaluatorOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var RunEvaluatorOpenAPIResponse_Data_DEFAULT *RunEvaluatorOpenAPIData
+var RunEvaluatorOApiResponse_Data_DEFAULT *RunEvaluatorOpenAPIData
 
-func (p *RunEvaluatorOpenAPIResponse) GetData() (v *RunEvaluatorOpenAPIData) {
+func (p *RunEvaluatorOApiResponse) GetData() (v *RunEvaluatorOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return RunEvaluatorOpenAPIResponse_Data_DEFAULT
+		return RunEvaluatorOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var RunEvaluatorOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var RunEvaluatorOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *RunEvaluatorOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *RunEvaluatorOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return RunEvaluatorOpenAPIResponse_BaseResp_DEFAULT
+		return RunEvaluatorOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *RunEvaluatorOpenAPIResponse) SetCode(val *int32) {
+func (p *RunEvaluatorOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *RunEvaluatorOpenAPIResponse) SetMsg(val *string) {
+func (p *RunEvaluatorOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *RunEvaluatorOpenAPIResponse) SetData(val *RunEvaluatorOpenAPIData) {
+func (p *RunEvaluatorOApiResponse) SetData(val *RunEvaluatorOpenAPIData) {
 	p.Data = val
 }
-func (p *RunEvaluatorOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *RunEvaluatorOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_RunEvaluatorOpenAPIResponse = map[int16]string{
+var fieldIDToName_RunEvaluatorOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *RunEvaluatorOpenAPIResponse) IsSetCode() bool {
+func (p *RunEvaluatorOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *RunEvaluatorOpenAPIResponse) IsSetMsg() bool {
+func (p *RunEvaluatorOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *RunEvaluatorOpenAPIResponse) IsSetData() bool {
+func (p *RunEvaluatorOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *RunEvaluatorOpenAPIResponse) IsSetBaseResp() bool {
+func (p *RunEvaluatorOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *RunEvaluatorOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -13379,7 +13379,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunEvaluatorOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunEvaluatorOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -13389,7 +13389,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *RunEvaluatorOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -13400,7 +13400,7 @@ func (p *RunEvaluatorOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.Code = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -13411,7 +13411,7 @@ func (p *RunEvaluatorOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.Msg = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewRunEvaluatorOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -13419,7 +13419,7 @@ func (p *RunEvaluatorOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
 	p.Data = _field
 	return nil
 }
-func (p *RunEvaluatorOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *RunEvaluatorOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -13428,9 +13428,9 @@ func (p *RunEvaluatorOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error
 	return nil
 }
 
-func (p *RunEvaluatorOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("RunEvaluatorOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("RunEvaluatorOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -13468,7 +13468,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *RunEvaluatorOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -13486,7 +13486,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -13504,7 +13504,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -13522,7 +13522,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *RunEvaluatorOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *RunEvaluatorOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -13539,15 +13539,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *RunEvaluatorOpenAPIResponse) String() string {
+func (p *RunEvaluatorOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("RunEvaluatorOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("RunEvaluatorOApiResponse(%+v)", *p)
 
 }
 
-func (p *RunEvaluatorOpenAPIResponse) DeepEqual(ano *RunEvaluatorOpenAPIResponse) bool {
+func (p *RunEvaluatorOApiResponse) DeepEqual(ano *RunEvaluatorOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -13568,7 +13568,7 @@ func (p *RunEvaluatorOpenAPIResponse) DeepEqual(ano *RunEvaluatorOpenAPIResponse
 	return true
 }
 
-func (p *RunEvaluatorOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *RunEvaluatorOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -13580,7 +13580,7 @@ func (p *RunEvaluatorOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *RunEvaluatorOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -13592,14 +13592,14 @@ func (p *RunEvaluatorOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIResponse) Field3DeepEqual(src *RunEvaluatorOpenAPIData) bool {
+func (p *RunEvaluatorOApiResponse) Field3DeepEqual(src *RunEvaluatorOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *RunEvaluatorOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *RunEvaluatorOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -13787,86 +13787,86 @@ func (p *RunEvaluatorOpenAPIData) Field1DeepEqual(src *evaluator.EvaluatorRecord
 }
 
 // 2.5 获取评估器执行结果
-type GetEvaluatorRecordOpenAPIRequest struct {
+type GetEvaluatorRecordOApiRequest struct {
 	WorkspaceID       int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluatorRecordID string     `thrift:"evaluator_record_id,2,required" frugal:"2,required,string" json:"evaluator_record_id,required" path:"evaluator_record_id,required"`
 	IncludeDeleted    *bool      `thrift:"include_deleted,3,optional" frugal:"3,optional,bool" form:"include_deleted" json:"include_deleted,omitempty" query:"include_deleted"`
 	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetEvaluatorRecordOpenAPIRequest() *GetEvaluatorRecordOpenAPIRequest {
-	return &GetEvaluatorRecordOpenAPIRequest{}
+func NewGetEvaluatorRecordOApiRequest() *GetEvaluatorRecordOApiRequest {
+	return &GetEvaluatorRecordOApiRequest{}
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) InitDefault() {
+func (p *GetEvaluatorRecordOApiRequest) InitDefault() {
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *GetEvaluatorRecordOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) GetEvaluatorRecordID() (v string) {
+func (p *GetEvaluatorRecordOApiRequest) GetEvaluatorRecordID() (v string) {
 	if p != nil {
 		return p.EvaluatorRecordID
 	}
 	return
 }
 
-var GetEvaluatorRecordOpenAPIRequest_IncludeDeleted_DEFAULT bool
+var GetEvaluatorRecordOApiRequest_IncludeDeleted_DEFAULT bool
 
-func (p *GetEvaluatorRecordOpenAPIRequest) GetIncludeDeleted() (v bool) {
+func (p *GetEvaluatorRecordOApiRequest) GetIncludeDeleted() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetIncludeDeleted() {
-		return GetEvaluatorRecordOpenAPIRequest_IncludeDeleted_DEFAULT
+		return GetEvaluatorRecordOApiRequest_IncludeDeleted_DEFAULT
 	}
 	return *p.IncludeDeleted
 }
 
-var GetEvaluatorRecordOpenAPIRequest_Base_DEFAULT *base.Base
+var GetEvaluatorRecordOApiRequest_Base_DEFAULT *base.Base
 
-func (p *GetEvaluatorRecordOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *GetEvaluatorRecordOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetEvaluatorRecordOpenAPIRequest_Base_DEFAULT
+		return GetEvaluatorRecordOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *GetEvaluatorRecordOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) SetEvaluatorRecordID(val string) {
+func (p *GetEvaluatorRecordOApiRequest) SetEvaluatorRecordID(val string) {
 	p.EvaluatorRecordID = val
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) SetIncludeDeleted(val *bool) {
+func (p *GetEvaluatorRecordOApiRequest) SetIncludeDeleted(val *bool) {
 	p.IncludeDeleted = val
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) SetBase(val *base.Base) {
+func (p *GetEvaluatorRecordOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetEvaluatorRecordOpenAPIRequest = map[int16]string{
+var fieldIDToName_GetEvaluatorRecordOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluator_record_id",
 	3:   "include_deleted",
 	255: "Base",
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) IsSetIncludeDeleted() bool {
+func (p *GetEvaluatorRecordOApiRequest) IsSetIncludeDeleted() bool {
 	return p.IncludeDeleted != nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) IsSetBase() bool {
+func (p *GetEvaluatorRecordOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -13948,7 +13948,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorRecordOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorRecordOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -13957,10 +13957,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetEvaluatorRecordOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetEvaluatorRecordOApiRequest[fieldId]))
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -13971,7 +13971,7 @@ func (p *GetEvaluatorRecordOpenAPIRequest) ReadField1(iprot thrift.TProtocol) er
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -13982,7 +13982,7 @@ func (p *GetEvaluatorRecordOpenAPIRequest) ReadField2(iprot thrift.TProtocol) er
 	p.EvaluatorRecordID = _field
 	return nil
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -13993,7 +13993,7 @@ func (p *GetEvaluatorRecordOpenAPIRequest) ReadField3(iprot thrift.TProtocol) er
 	p.IncludeDeleted = _field
 	return nil
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -14002,9 +14002,9 @@ func (p *GetEvaluatorRecordOpenAPIRequest) ReadField255(iprot thrift.TProtocol) 
 	return nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorRecordOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorRecordOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -14042,7 +14042,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -14058,7 +14058,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluator_record_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -14074,7 +14074,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIncludeDeleted() {
 		if err = oprot.WriteFieldBegin("include_deleted", thrift.BOOL, 3); err != nil {
 			goto WriteFieldBeginError
@@ -14092,7 +14092,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -14111,15 +14111,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) String() string {
+func (p *GetEvaluatorRecordOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetEvaluatorRecordOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("GetEvaluatorRecordOApiRequest(%+v)", *p)
 
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) DeepEqual(ano *GetEvaluatorRecordOpenAPIRequest) bool {
+func (p *GetEvaluatorRecordOApiRequest) DeepEqual(ano *GetEvaluatorRecordOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -14140,21 +14140,21 @@ func (p *GetEvaluatorRecordOpenAPIRequest) DeepEqual(ano *GetEvaluatorRecordOpen
 	return true
 }
 
-func (p *GetEvaluatorRecordOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *GetEvaluatorRecordOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) Field2DeepEqual(src string) bool {
+func (p *GetEvaluatorRecordOApiRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.EvaluatorRecordID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) Field3DeepEqual(src *bool) bool {
+func (p *GetEvaluatorRecordOApiRequest) Field3DeepEqual(src *bool) bool {
 
 	if p.IncludeDeleted == src {
 		return true
@@ -14166,7 +14166,7 @@ func (p *GetEvaluatorRecordOpenAPIRequest) Field3DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *GetEvaluatorRecordOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *GetEvaluatorRecordOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -14174,104 +14174,104 @@ func (p *GetEvaluatorRecordOpenAPIRequest) Field255DeepEqual(src *base.Base) boo
 	return true
 }
 
-type GetEvaluatorRecordOpenAPIResponse struct {
+type GetEvaluatorRecordOApiResponse struct {
 	Code     *int32                         `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                        `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *GetEvaluatorRecordOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,GetEvaluatorRecordOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                 `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewGetEvaluatorRecordOpenAPIResponse() *GetEvaluatorRecordOpenAPIResponse {
-	return &GetEvaluatorRecordOpenAPIResponse{}
+func NewGetEvaluatorRecordOApiResponse() *GetEvaluatorRecordOApiResponse {
+	return &GetEvaluatorRecordOApiResponse{}
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) InitDefault() {
+func (p *GetEvaluatorRecordOApiResponse) InitDefault() {
 }
 
-var GetEvaluatorRecordOpenAPIResponse_Code_DEFAULT int32
+var GetEvaluatorRecordOApiResponse_Code_DEFAULT int32
 
-func (p *GetEvaluatorRecordOpenAPIResponse) GetCode() (v int32) {
+func (p *GetEvaluatorRecordOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return GetEvaluatorRecordOpenAPIResponse_Code_DEFAULT
+		return GetEvaluatorRecordOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var GetEvaluatorRecordOpenAPIResponse_Msg_DEFAULT string
+var GetEvaluatorRecordOApiResponse_Msg_DEFAULT string
 
-func (p *GetEvaluatorRecordOpenAPIResponse) GetMsg() (v string) {
+func (p *GetEvaluatorRecordOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return GetEvaluatorRecordOpenAPIResponse_Msg_DEFAULT
+		return GetEvaluatorRecordOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var GetEvaluatorRecordOpenAPIResponse_Data_DEFAULT *GetEvaluatorRecordOpenAPIData
+var GetEvaluatorRecordOApiResponse_Data_DEFAULT *GetEvaluatorRecordOpenAPIData
 
-func (p *GetEvaluatorRecordOpenAPIResponse) GetData() (v *GetEvaluatorRecordOpenAPIData) {
+func (p *GetEvaluatorRecordOApiResponse) GetData() (v *GetEvaluatorRecordOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return GetEvaluatorRecordOpenAPIResponse_Data_DEFAULT
+		return GetEvaluatorRecordOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var GetEvaluatorRecordOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var GetEvaluatorRecordOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetEvaluatorRecordOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *GetEvaluatorRecordOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetEvaluatorRecordOpenAPIResponse_BaseResp_DEFAULT
+		return GetEvaluatorRecordOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) SetCode(val *int32) {
+func (p *GetEvaluatorRecordOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) SetMsg(val *string) {
+func (p *GetEvaluatorRecordOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) SetData(val *GetEvaluatorRecordOpenAPIData) {
+func (p *GetEvaluatorRecordOApiResponse) SetData(val *GetEvaluatorRecordOpenAPIData) {
 	p.Data = val
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *GetEvaluatorRecordOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetEvaluatorRecordOpenAPIResponse = map[int16]string{
+var fieldIDToName_GetEvaluatorRecordOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) IsSetCode() bool {
+func (p *GetEvaluatorRecordOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) IsSetMsg() bool {
+func (p *GetEvaluatorRecordOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) IsSetData() bool {
+func (p *GetEvaluatorRecordOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) IsSetBaseResp() bool {
+func (p *GetEvaluatorRecordOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -14340,7 +14340,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorRecordOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvaluatorRecordOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -14350,7 +14350,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -14361,7 +14361,7 @@ func (p *GetEvaluatorRecordOpenAPIResponse) ReadField1(iprot thrift.TProtocol) e
 	p.Code = _field
 	return nil
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -14372,7 +14372,7 @@ func (p *GetEvaluatorRecordOpenAPIResponse) ReadField2(iprot thrift.TProtocol) e
 	p.Msg = _field
 	return nil
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewGetEvaluatorRecordOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -14380,7 +14380,7 @@ func (p *GetEvaluatorRecordOpenAPIResponse) ReadField3(iprot thrift.TProtocol) e
 	p.Data = _field
 	return nil
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetEvaluatorRecordOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -14389,9 +14389,9 @@ func (p *GetEvaluatorRecordOpenAPIResponse) ReadField255(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorRecordOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorRecordOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -14429,7 +14429,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -14447,7 +14447,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -14465,7 +14465,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -14483,7 +14483,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetEvaluatorRecordOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -14500,15 +14500,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) String() string {
+func (p *GetEvaluatorRecordOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetEvaluatorRecordOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("GetEvaluatorRecordOApiResponse(%+v)", *p)
 
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) DeepEqual(ano *GetEvaluatorRecordOpenAPIResponse) bool {
+func (p *GetEvaluatorRecordOApiResponse) DeepEqual(ano *GetEvaluatorRecordOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -14529,7 +14529,7 @@ func (p *GetEvaluatorRecordOpenAPIResponse) DeepEqual(ano *GetEvaluatorRecordOpe
 	return true
 }
 
-func (p *GetEvaluatorRecordOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *GetEvaluatorRecordOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -14541,7 +14541,7 @@ func (p *GetEvaluatorRecordOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *GetEvaluatorRecordOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -14553,14 +14553,14 @@ func (p *GetEvaluatorRecordOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) Field3DeepEqual(src *GetEvaluatorRecordOpenAPIData) bool {
+func (p *GetEvaluatorRecordOApiResponse) Field3DeepEqual(src *GetEvaluatorRecordOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *GetEvaluatorRecordOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *GetEvaluatorRecordOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -14751,7 +14751,7 @@ func (p *GetEvaluatorRecordOpenAPIData) Field1DeepEqual(src *evaluator.Evaluator
 // 评测实验相关接口 (2个接口)
 // ===============================
 // 3.1 创建评测实验
-type CreateExperimentOpenAPIRequest struct {
+type CreateExperimentOApiRequest struct {
 	WorkspaceID           int64                               `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvalSetVersionID      *string                             `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,string" form:"eval_set_version_id" json:"eval_set_version_id,omitempty" query:"eval_set_version_id"`
 	TargetVersionID       *string                             `thrift:"target_version_id,3,optional" frugal:"3,optional,string" form:"target_version_id" json:"target_version_id,omitempty" query:"target_version_id"`
@@ -14765,174 +14765,174 @@ type CreateExperimentOpenAPIRequest struct {
 	Base                  *base.Base                          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewCreateExperimentOpenAPIRequest() *CreateExperimentOpenAPIRequest {
-	return &CreateExperimentOpenAPIRequest{}
+func NewCreateExperimentOApiRequest() *CreateExperimentOApiRequest {
+	return &CreateExperimentOApiRequest{}
 }
 
-func (p *CreateExperimentOpenAPIRequest) InitDefault() {
+func (p *CreateExperimentOApiRequest) InitDefault() {
 }
 
-func (p *CreateExperimentOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *CreateExperimentOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-var CreateExperimentOpenAPIRequest_EvalSetVersionID_DEFAULT string
+var CreateExperimentOApiRequest_EvalSetVersionID_DEFAULT string
 
-func (p *CreateExperimentOpenAPIRequest) GetEvalSetVersionID() (v string) {
+func (p *CreateExperimentOApiRequest) GetEvalSetVersionID() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvalSetVersionID() {
-		return CreateExperimentOpenAPIRequest_EvalSetVersionID_DEFAULT
+		return CreateExperimentOApiRequest_EvalSetVersionID_DEFAULT
 	}
 	return *p.EvalSetVersionID
 }
 
-var CreateExperimentOpenAPIRequest_TargetVersionID_DEFAULT string
+var CreateExperimentOApiRequest_TargetVersionID_DEFAULT string
 
-func (p *CreateExperimentOpenAPIRequest) GetTargetVersionID() (v string) {
+func (p *CreateExperimentOApiRequest) GetTargetVersionID() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTargetVersionID() {
-		return CreateExperimentOpenAPIRequest_TargetVersionID_DEFAULT
+		return CreateExperimentOApiRequest_TargetVersionID_DEFAULT
 	}
 	return *p.TargetVersionID
 }
 
-var CreateExperimentOpenAPIRequest_EvaluatorVersionIds_DEFAULT []string
+var CreateExperimentOApiRequest_EvaluatorVersionIds_DEFAULT []string
 
-func (p *CreateExperimentOpenAPIRequest) GetEvaluatorVersionIds() (v []string) {
+func (p *CreateExperimentOApiRequest) GetEvaluatorVersionIds() (v []string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorVersionIds() {
-		return CreateExperimentOpenAPIRequest_EvaluatorVersionIds_DEFAULT
+		return CreateExperimentOApiRequest_EvaluatorVersionIds_DEFAULT
 	}
 	return p.EvaluatorVersionIds
 }
 
-var CreateExperimentOpenAPIRequest_Name_DEFAULT string
+var CreateExperimentOApiRequest_Name_DEFAULT string
 
-func (p *CreateExperimentOpenAPIRequest) GetName() (v string) {
+func (p *CreateExperimentOApiRequest) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
-		return CreateExperimentOpenAPIRequest_Name_DEFAULT
+		return CreateExperimentOApiRequest_Name_DEFAULT
 	}
 	return *p.Name
 }
 
-var CreateExperimentOpenAPIRequest_Description_DEFAULT string
+var CreateExperimentOApiRequest_Description_DEFAULT string
 
-func (p *CreateExperimentOpenAPIRequest) GetDescription() (v string) {
+func (p *CreateExperimentOApiRequest) GetDescription() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDescription() {
-		return CreateExperimentOpenAPIRequest_Description_DEFAULT
+		return CreateExperimentOApiRequest_Description_DEFAULT
 	}
 	return *p.Description
 }
 
-var CreateExperimentOpenAPIRequest_TargetFieldMapping_DEFAULT *experiment.TargetFieldMapping
+var CreateExperimentOApiRequest_TargetFieldMapping_DEFAULT *experiment.TargetFieldMapping
 
-func (p *CreateExperimentOpenAPIRequest) GetTargetFieldMapping() (v *experiment.TargetFieldMapping) {
+func (p *CreateExperimentOApiRequest) GetTargetFieldMapping() (v *experiment.TargetFieldMapping) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTargetFieldMapping() {
-		return CreateExperimentOpenAPIRequest_TargetFieldMapping_DEFAULT
+		return CreateExperimentOApiRequest_TargetFieldMapping_DEFAULT
 	}
 	return p.TargetFieldMapping
 }
 
-var CreateExperimentOpenAPIRequest_EvaluatorFieldMapping_DEFAULT []*experiment.EvaluatorFieldMapping
+var CreateExperimentOApiRequest_EvaluatorFieldMapping_DEFAULT []*experiment.EvaluatorFieldMapping
 
-func (p *CreateExperimentOpenAPIRequest) GetEvaluatorFieldMapping() (v []*experiment.EvaluatorFieldMapping) {
+func (p *CreateExperimentOApiRequest) GetEvaluatorFieldMapping() (v []*experiment.EvaluatorFieldMapping) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorFieldMapping() {
-		return CreateExperimentOpenAPIRequest_EvaluatorFieldMapping_DEFAULT
+		return CreateExperimentOApiRequest_EvaluatorFieldMapping_DEFAULT
 	}
 	return p.EvaluatorFieldMapping
 }
 
-var CreateExperimentOpenAPIRequest_ItemConcurNum_DEFAULT int32
+var CreateExperimentOApiRequest_ItemConcurNum_DEFAULT int32
 
-func (p *CreateExperimentOpenAPIRequest) GetItemConcurNum() (v int32) {
+func (p *CreateExperimentOApiRequest) GetItemConcurNum() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetItemConcurNum() {
-		return CreateExperimentOpenAPIRequest_ItemConcurNum_DEFAULT
+		return CreateExperimentOApiRequest_ItemConcurNum_DEFAULT
 	}
 	return *p.ItemConcurNum
 }
 
-var CreateExperimentOpenAPIRequest_EvaluatorsConcurNum_DEFAULT int32
+var CreateExperimentOApiRequest_EvaluatorsConcurNum_DEFAULT int32
 
-func (p *CreateExperimentOpenAPIRequest) GetEvaluatorsConcurNum() (v int32) {
+func (p *CreateExperimentOApiRequest) GetEvaluatorsConcurNum() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorsConcurNum() {
-		return CreateExperimentOpenAPIRequest_EvaluatorsConcurNum_DEFAULT
+		return CreateExperimentOApiRequest_EvaluatorsConcurNum_DEFAULT
 	}
 	return *p.EvaluatorsConcurNum
 }
 
-var CreateExperimentOpenAPIRequest_Base_DEFAULT *base.Base
+var CreateExperimentOApiRequest_Base_DEFAULT *base.Base
 
-func (p *CreateExperimentOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *CreateExperimentOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return CreateExperimentOpenAPIRequest_Base_DEFAULT
+		return CreateExperimentOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *CreateExperimentOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *CreateExperimentOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetEvalSetVersionID(val *string) {
+func (p *CreateExperimentOApiRequest) SetEvalSetVersionID(val *string) {
 	p.EvalSetVersionID = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetTargetVersionID(val *string) {
+func (p *CreateExperimentOApiRequest) SetTargetVersionID(val *string) {
 	p.TargetVersionID = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetEvaluatorVersionIds(val []string) {
+func (p *CreateExperimentOApiRequest) SetEvaluatorVersionIds(val []string) {
 	p.EvaluatorVersionIds = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetName(val *string) {
+func (p *CreateExperimentOApiRequest) SetName(val *string) {
 	p.Name = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetDescription(val *string) {
+func (p *CreateExperimentOApiRequest) SetDescription(val *string) {
 	p.Description = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetTargetFieldMapping(val *experiment.TargetFieldMapping) {
+func (p *CreateExperimentOApiRequest) SetTargetFieldMapping(val *experiment.TargetFieldMapping) {
 	p.TargetFieldMapping = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetEvaluatorFieldMapping(val []*experiment.EvaluatorFieldMapping) {
+func (p *CreateExperimentOApiRequest) SetEvaluatorFieldMapping(val []*experiment.EvaluatorFieldMapping) {
 	p.EvaluatorFieldMapping = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetItemConcurNum(val *int32) {
+func (p *CreateExperimentOApiRequest) SetItemConcurNum(val *int32) {
 	p.ItemConcurNum = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetEvaluatorsConcurNum(val *int32) {
+func (p *CreateExperimentOApiRequest) SetEvaluatorsConcurNum(val *int32) {
 	p.EvaluatorsConcurNum = val
 }
-func (p *CreateExperimentOpenAPIRequest) SetBase(val *base.Base) {
+func (p *CreateExperimentOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_CreateExperimentOpenAPIRequest = map[int16]string{
+var fieldIDToName_CreateExperimentOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "eval_set_version_id",
 	3:   "target_version_id",
@@ -14946,47 +14946,47 @@ var fieldIDToName_CreateExperimentOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetEvalSetVersionID() bool {
+func (p *CreateExperimentOApiRequest) IsSetEvalSetVersionID() bool {
 	return p.EvalSetVersionID != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetTargetVersionID() bool {
+func (p *CreateExperimentOApiRequest) IsSetTargetVersionID() bool {
 	return p.TargetVersionID != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetEvaluatorVersionIds() bool {
+func (p *CreateExperimentOApiRequest) IsSetEvaluatorVersionIds() bool {
 	return p.EvaluatorVersionIds != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetName() bool {
+func (p *CreateExperimentOApiRequest) IsSetName() bool {
 	return p.Name != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetDescription() bool {
+func (p *CreateExperimentOApiRequest) IsSetDescription() bool {
 	return p.Description != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetTargetFieldMapping() bool {
+func (p *CreateExperimentOApiRequest) IsSetTargetFieldMapping() bool {
 	return p.TargetFieldMapping != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetEvaluatorFieldMapping() bool {
+func (p *CreateExperimentOApiRequest) IsSetEvaluatorFieldMapping() bool {
 	return p.EvaluatorFieldMapping != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetItemConcurNum() bool {
+func (p *CreateExperimentOApiRequest) IsSetItemConcurNum() bool {
 	return p.ItemConcurNum != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetEvaluatorsConcurNum() bool {
+func (p *CreateExperimentOApiRequest) IsSetEvaluatorsConcurNum() bool {
 	return p.EvaluatorsConcurNum != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) IsSetBase() bool {
+func (p *CreateExperimentOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -15117,7 +15117,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateExperimentOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateExperimentOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -15126,10 +15126,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateExperimentOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateExperimentOApiRequest[fieldId]))
 }
 
-func (p *CreateExperimentOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -15140,7 +15140,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField1(iprot thrift.TProtocol) erro
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -15151,7 +15151,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField2(iprot thrift.TProtocol) erro
 	p.EvalSetVersionID = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -15162,7 +15162,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField3(iprot thrift.TProtocol) erro
 	p.TargetVersionID = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -15185,7 +15185,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField4(iprot thrift.TProtocol) erro
 	p.EvaluatorVersionIds = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField5(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -15196,7 +15196,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField5(iprot thrift.TProtocol) erro
 	p.Name = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField6(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -15207,7 +15207,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField6(iprot thrift.TProtocol) erro
 	p.Description = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField7(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField7(iprot thrift.TProtocol) error {
 	_field := experiment.NewTargetFieldMapping()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -15215,7 +15215,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField7(iprot thrift.TProtocol) erro
 	p.TargetFieldMapping = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField8(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField8(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -15238,7 +15238,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField8(iprot thrift.TProtocol) erro
 	p.EvaluatorFieldMapping = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField9(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField9(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -15249,7 +15249,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField9(iprot thrift.TProtocol) erro
 	p.ItemConcurNum = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField10(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -15260,7 +15260,7 @@ func (p *CreateExperimentOpenAPIRequest) ReadField10(iprot thrift.TProtocol) err
 	p.EvaluatorsConcurNum = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -15269,9 +15269,9 @@ func (p *CreateExperimentOpenAPIRequest) ReadField255(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CreateExperimentOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateExperimentOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("CreateExperimentOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -15337,7 +15337,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateExperimentOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -15353,7 +15353,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetVersionID() {
 		if err = oprot.WriteFieldBegin("eval_set_version_id", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -15371,7 +15371,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetVersionID() {
 		if err = oprot.WriteFieldBegin("target_version_id", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -15389,7 +15389,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorVersionIds() {
 		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
@@ -15415,7 +15415,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetName() {
 		if err = oprot.WriteFieldBegin("name", thrift.STRING, 5); err != nil {
 			goto WriteFieldBeginError
@@ -15433,7 +15433,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDescription() {
 		if err = oprot.WriteFieldBegin("description", thrift.STRING, 6); err != nil {
 			goto WriteFieldBeginError
@@ -15451,7 +15451,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField7(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField7(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetFieldMapping() {
 		if err = oprot.WriteFieldBegin("target_field_mapping", thrift.STRUCT, 7); err != nil {
 			goto WriteFieldBeginError
@@ -15469,7 +15469,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField8(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField8(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorFieldMapping() {
 		if err = oprot.WriteFieldBegin("evaluator_field_mapping", thrift.LIST, 8); err != nil {
 			goto WriteFieldBeginError
@@ -15495,7 +15495,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField9(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField9(oprot thrift.TProtocol) (err error) {
 	if p.IsSetItemConcurNum() {
 		if err = oprot.WriteFieldBegin("item_concur_num", thrift.I32, 9); err != nil {
 			goto WriteFieldBeginError
@@ -15513,7 +15513,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField10(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorsConcurNum() {
 		if err = oprot.WriteFieldBegin("evaluators_concur_num", thrift.I32, 10); err != nil {
 			goto WriteFieldBeginError
@@ -15531,7 +15531,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -15550,15 +15550,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateExperimentOpenAPIRequest) String() string {
+func (p *CreateExperimentOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateExperimentOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("CreateExperimentOApiRequest(%+v)", *p)
 
 }
 
-func (p *CreateExperimentOpenAPIRequest) DeepEqual(ano *CreateExperimentOpenAPIRequest) bool {
+func (p *CreateExperimentOApiRequest) DeepEqual(ano *CreateExperimentOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -15600,14 +15600,14 @@ func (p *CreateExperimentOpenAPIRequest) DeepEqual(ano *CreateExperimentOpenAPIR
 	return true
 }
 
-func (p *CreateExperimentOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *CreateExperimentOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field2DeepEqual(src *string) bool {
+func (p *CreateExperimentOApiRequest) Field2DeepEqual(src *string) bool {
 
 	if p.EvalSetVersionID == src {
 		return true
@@ -15619,7 +15619,7 @@ func (p *CreateExperimentOpenAPIRequest) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field3DeepEqual(src *string) bool {
+func (p *CreateExperimentOApiRequest) Field3DeepEqual(src *string) bool {
 
 	if p.TargetVersionID == src {
 		return true
@@ -15631,7 +15631,7 @@ func (p *CreateExperimentOpenAPIRequest) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field4DeepEqual(src []string) bool {
+func (p *CreateExperimentOApiRequest) Field4DeepEqual(src []string) bool {
 
 	if len(p.EvaluatorVersionIds) != len(src) {
 		return false
@@ -15644,7 +15644,7 @@ func (p *CreateExperimentOpenAPIRequest) Field4DeepEqual(src []string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field5DeepEqual(src *string) bool {
+func (p *CreateExperimentOApiRequest) Field5DeepEqual(src *string) bool {
 
 	if p.Name == src {
 		return true
@@ -15656,7 +15656,7 @@ func (p *CreateExperimentOpenAPIRequest) Field5DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field6DeepEqual(src *string) bool {
+func (p *CreateExperimentOApiRequest) Field6DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -15668,14 +15668,14 @@ func (p *CreateExperimentOpenAPIRequest) Field6DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field7DeepEqual(src *experiment.TargetFieldMapping) bool {
+func (p *CreateExperimentOApiRequest) Field7DeepEqual(src *experiment.TargetFieldMapping) bool {
 
 	if !p.TargetFieldMapping.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field8DeepEqual(src []*experiment.EvaluatorFieldMapping) bool {
+func (p *CreateExperimentOApiRequest) Field8DeepEqual(src []*experiment.EvaluatorFieldMapping) bool {
 
 	if len(p.EvaluatorFieldMapping) != len(src) {
 		return false
@@ -15688,7 +15688,7 @@ func (p *CreateExperimentOpenAPIRequest) Field8DeepEqual(src []*experiment.Evalu
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field9DeepEqual(src *int32) bool {
+func (p *CreateExperimentOApiRequest) Field9DeepEqual(src *int32) bool {
 
 	if p.ItemConcurNum == src {
 		return true
@@ -15700,7 +15700,7 @@ func (p *CreateExperimentOpenAPIRequest) Field9DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field10DeepEqual(src *int32) bool {
+func (p *CreateExperimentOApiRequest) Field10DeepEqual(src *int32) bool {
 
 	if p.EvaluatorsConcurNum == src {
 		return true
@@ -15712,7 +15712,7 @@ func (p *CreateExperimentOpenAPIRequest) Field10DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *CreateExperimentOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -15720,104 +15720,104 @@ func (p *CreateExperimentOpenAPIRequest) Field255DeepEqual(src *base.Base) bool 
 	return true
 }
 
-type CreateExperimentOpenAPIResponse struct {
+type CreateExperimentOApiResponse struct {
 	Code     *int32                       `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                      `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *CreateExperimentOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,CreateExperimentOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewCreateExperimentOpenAPIResponse() *CreateExperimentOpenAPIResponse {
-	return &CreateExperimentOpenAPIResponse{}
+func NewCreateExperimentOApiResponse() *CreateExperimentOApiResponse {
+	return &CreateExperimentOApiResponse{}
 }
 
-func (p *CreateExperimentOpenAPIResponse) InitDefault() {
+func (p *CreateExperimentOApiResponse) InitDefault() {
 }
 
-var CreateExperimentOpenAPIResponse_Code_DEFAULT int32
+var CreateExperimentOApiResponse_Code_DEFAULT int32
 
-func (p *CreateExperimentOpenAPIResponse) GetCode() (v int32) {
+func (p *CreateExperimentOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return CreateExperimentOpenAPIResponse_Code_DEFAULT
+		return CreateExperimentOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var CreateExperimentOpenAPIResponse_Msg_DEFAULT string
+var CreateExperimentOApiResponse_Msg_DEFAULT string
 
-func (p *CreateExperimentOpenAPIResponse) GetMsg() (v string) {
+func (p *CreateExperimentOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return CreateExperimentOpenAPIResponse_Msg_DEFAULT
+		return CreateExperimentOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var CreateExperimentOpenAPIResponse_Data_DEFAULT *CreateExperimentOpenAPIData
+var CreateExperimentOApiResponse_Data_DEFAULT *CreateExperimentOpenAPIData
 
-func (p *CreateExperimentOpenAPIResponse) GetData() (v *CreateExperimentOpenAPIData) {
+func (p *CreateExperimentOApiResponse) GetData() (v *CreateExperimentOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return CreateExperimentOpenAPIResponse_Data_DEFAULT
+		return CreateExperimentOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var CreateExperimentOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var CreateExperimentOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *CreateExperimentOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *CreateExperimentOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return CreateExperimentOpenAPIResponse_BaseResp_DEFAULT
+		return CreateExperimentOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *CreateExperimentOpenAPIResponse) SetCode(val *int32) {
+func (p *CreateExperimentOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *CreateExperimentOpenAPIResponse) SetMsg(val *string) {
+func (p *CreateExperimentOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *CreateExperimentOpenAPIResponse) SetData(val *CreateExperimentOpenAPIData) {
+func (p *CreateExperimentOApiResponse) SetData(val *CreateExperimentOpenAPIData) {
 	p.Data = val
 }
-func (p *CreateExperimentOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *CreateExperimentOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_CreateExperimentOpenAPIResponse = map[int16]string{
+var fieldIDToName_CreateExperimentOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *CreateExperimentOpenAPIResponse) IsSetCode() bool {
+func (p *CreateExperimentOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *CreateExperimentOpenAPIResponse) IsSetMsg() bool {
+func (p *CreateExperimentOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *CreateExperimentOpenAPIResponse) IsSetData() bool {
+func (p *CreateExperimentOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *CreateExperimentOpenAPIResponse) IsSetBaseResp() bool {
+func (p *CreateExperimentOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *CreateExperimentOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -15886,7 +15886,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateExperimentOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateExperimentOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -15896,7 +15896,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *CreateExperimentOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -15907,7 +15907,7 @@ func (p *CreateExperimentOpenAPIResponse) ReadField1(iprot thrift.TProtocol) err
 	p.Code = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -15918,7 +15918,7 @@ func (p *CreateExperimentOpenAPIResponse) ReadField2(iprot thrift.TProtocol) err
 	p.Msg = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewCreateExperimentOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -15926,7 +15926,7 @@ func (p *CreateExperimentOpenAPIResponse) ReadField3(iprot thrift.TProtocol) err
 	p.Data = _field
 	return nil
 }
-func (p *CreateExperimentOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *CreateExperimentOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -15935,9 +15935,9 @@ func (p *CreateExperimentOpenAPIResponse) ReadField255(iprot thrift.TProtocol) e
 	return nil
 }
 
-func (p *CreateExperimentOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateExperimentOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("CreateExperimentOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -15975,7 +15975,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *CreateExperimentOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -15993,7 +15993,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -16011,7 +16011,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -16029,7 +16029,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *CreateExperimentOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *CreateExperimentOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -16046,15 +16046,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *CreateExperimentOpenAPIResponse) String() string {
+func (p *CreateExperimentOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CreateExperimentOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("CreateExperimentOApiResponse(%+v)", *p)
 
 }
 
-func (p *CreateExperimentOpenAPIResponse) DeepEqual(ano *CreateExperimentOpenAPIResponse) bool {
+func (p *CreateExperimentOApiResponse) DeepEqual(ano *CreateExperimentOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -16075,7 +16075,7 @@ func (p *CreateExperimentOpenAPIResponse) DeepEqual(ano *CreateExperimentOpenAPI
 	return true
 }
 
-func (p *CreateExperimentOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *CreateExperimentOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -16087,7 +16087,7 @@ func (p *CreateExperimentOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *CreateExperimentOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -16099,14 +16099,14 @@ func (p *CreateExperimentOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIResponse) Field3DeepEqual(src *CreateExperimentOpenAPIData) bool {
+func (p *CreateExperimentOApiResponse) Field3DeepEqual(src *CreateExperimentOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *CreateExperimentOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *CreateExperimentOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -16288,7 +16288,7 @@ func (p *CreateExperimentOpenAPIData) Field1DeepEqual(src *experiment.Experiment
 }
 
 // 3.2 获取评测实验结果
-type GetExperimentResultOpenAPIRequest struct {
+type GetExperimentResultOApiRequest struct {
 	WorkspaceID  int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	ExperimentID string     `thrift:"experiment_id,2,required" frugal:"2,required,string" json:"experiment_id,required" path:"experiment_id,required"`
 	PageToken    *string    `thrift:"page_token,3,optional" frugal:"3,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
@@ -16296,79 +16296,79 @@ type GetExperimentResultOpenAPIRequest struct {
 	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetExperimentResultOpenAPIRequest() *GetExperimentResultOpenAPIRequest {
-	return &GetExperimentResultOpenAPIRequest{}
+func NewGetExperimentResultOApiRequest() *GetExperimentResultOApiRequest {
+	return &GetExperimentResultOApiRequest{}
 }
 
-func (p *GetExperimentResultOpenAPIRequest) InitDefault() {
+func (p *GetExperimentResultOApiRequest) InitDefault() {
 }
 
-func (p *GetExperimentResultOpenAPIRequest) GetWorkspaceID() (v int64) {
+func (p *GetExperimentResultOApiRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *GetExperimentResultOpenAPIRequest) GetExperimentID() (v string) {
+func (p *GetExperimentResultOApiRequest) GetExperimentID() (v string) {
 	if p != nil {
 		return p.ExperimentID
 	}
 	return
 }
 
-var GetExperimentResultOpenAPIRequest_PageToken_DEFAULT string
+var GetExperimentResultOApiRequest_PageToken_DEFAULT string
 
-func (p *GetExperimentResultOpenAPIRequest) GetPageToken() (v string) {
+func (p *GetExperimentResultOApiRequest) GetPageToken() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageToken() {
-		return GetExperimentResultOpenAPIRequest_PageToken_DEFAULT
+		return GetExperimentResultOApiRequest_PageToken_DEFAULT
 	}
 	return *p.PageToken
 }
 
-var GetExperimentResultOpenAPIRequest_PageSize_DEFAULT int32
+var GetExperimentResultOApiRequest_PageSize_DEFAULT int32
 
-func (p *GetExperimentResultOpenAPIRequest) GetPageSize() (v int32) {
+func (p *GetExperimentResultOApiRequest) GetPageSize() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageSize() {
-		return GetExperimentResultOpenAPIRequest_PageSize_DEFAULT
+		return GetExperimentResultOApiRequest_PageSize_DEFAULT
 	}
 	return *p.PageSize
 }
 
-var GetExperimentResultOpenAPIRequest_Base_DEFAULT *base.Base
+var GetExperimentResultOApiRequest_Base_DEFAULT *base.Base
 
-func (p *GetExperimentResultOpenAPIRequest) GetBase() (v *base.Base) {
+func (p *GetExperimentResultOApiRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetExperimentResultOpenAPIRequest_Base_DEFAULT
+		return GetExperimentResultOApiRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetExperimentResultOpenAPIRequest) SetWorkspaceID(val int64) {
+func (p *GetExperimentResultOApiRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetExperimentResultOpenAPIRequest) SetExperimentID(val string) {
+func (p *GetExperimentResultOApiRequest) SetExperimentID(val string) {
 	p.ExperimentID = val
 }
-func (p *GetExperimentResultOpenAPIRequest) SetPageToken(val *string) {
+func (p *GetExperimentResultOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
-func (p *GetExperimentResultOpenAPIRequest) SetPageSize(val *int32) {
+func (p *GetExperimentResultOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *GetExperimentResultOpenAPIRequest) SetBase(val *base.Base) {
+func (p *GetExperimentResultOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetExperimentResultOpenAPIRequest = map[int16]string{
+var fieldIDToName_GetExperimentResultOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "experiment_id",
 	3:   "page_token",
@@ -16376,19 +16376,19 @@ var fieldIDToName_GetExperimentResultOpenAPIRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *GetExperimentResultOpenAPIRequest) IsSetPageToken() bool {
+func (p *GetExperimentResultOApiRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
 }
 
-func (p *GetExperimentResultOpenAPIRequest) IsSetPageSize() bool {
+func (p *GetExperimentResultOApiRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
 
-func (p *GetExperimentResultOpenAPIRequest) IsSetBase() bool {
+func (p *GetExperimentResultOApiRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetExperimentResultOpenAPIRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -16478,7 +16478,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetExperimentResultOpenAPIRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetExperimentResultOApiRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -16487,10 +16487,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetExperimentResultOpenAPIRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetExperimentResultOApiRequest[fieldId]))
 }
 
-func (p *GetExperimentResultOpenAPIRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -16501,7 +16501,7 @@ func (p *GetExperimentResultOpenAPIRequest) ReadField1(iprot thrift.TProtocol) e
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -16512,7 +16512,7 @@ func (p *GetExperimentResultOpenAPIRequest) ReadField2(iprot thrift.TProtocol) e
 	p.ExperimentID = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -16523,7 +16523,7 @@ func (p *GetExperimentResultOpenAPIRequest) ReadField3(iprot thrift.TProtocol) e
 	p.PageToken = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -16534,7 +16534,7 @@ func (p *GetExperimentResultOpenAPIRequest) ReadField4(iprot thrift.TProtocol) e
 	p.PageSize = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -16543,9 +16543,9 @@ func (p *GetExperimentResultOpenAPIRequest) ReadField255(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *GetExperimentResultOpenAPIRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetExperimentResultOpenAPIRequest"); err != nil {
+	if err = oprot.WriteStructBegin("GetExperimentResultOApiRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -16587,7 +16587,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetExperimentResultOpenAPIRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -16603,7 +16603,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("experiment_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -16619,7 +16619,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -16637,7 +16637,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
 		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 4); err != nil {
 			goto WriteFieldBeginError
@@ -16655,7 +16655,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -16674,15 +16674,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetExperimentResultOpenAPIRequest) String() string {
+func (p *GetExperimentResultOApiRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetExperimentResultOpenAPIRequest(%+v)", *p)
+	return fmt.Sprintf("GetExperimentResultOApiRequest(%+v)", *p)
 
 }
 
-func (p *GetExperimentResultOpenAPIRequest) DeepEqual(ano *GetExperimentResultOpenAPIRequest) bool {
+func (p *GetExperimentResultOApiRequest) DeepEqual(ano *GetExperimentResultOApiRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -16706,21 +16706,21 @@ func (p *GetExperimentResultOpenAPIRequest) DeepEqual(ano *GetExperimentResultOp
 	return true
 }
 
-func (p *GetExperimentResultOpenAPIRequest) Field1DeepEqual(src int64) bool {
+func (p *GetExperimentResultOApiRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIRequest) Field2DeepEqual(src string) bool {
+func (p *GetExperimentResultOApiRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.ExperimentID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIRequest) Field3DeepEqual(src *string) bool {
+func (p *GetExperimentResultOApiRequest) Field3DeepEqual(src *string) bool {
 
 	if p.PageToken == src {
 		return true
@@ -16732,7 +16732,7 @@ func (p *GetExperimentResultOpenAPIRequest) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIRequest) Field4DeepEqual(src *int32) bool {
+func (p *GetExperimentResultOApiRequest) Field4DeepEqual(src *int32) bool {
 
 	if p.PageSize == src {
 		return true
@@ -16744,7 +16744,7 @@ func (p *GetExperimentResultOpenAPIRequest) Field4DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *GetExperimentResultOApiRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -16752,104 +16752,104 @@ func (p *GetExperimentResultOpenAPIRequest) Field255DeepEqual(src *base.Base) bo
 	return true
 }
 
-type GetExperimentResultOpenAPIResponse struct {
+type GetExperimentResultOApiResponse struct {
 	Code     *int32                          `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                         `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
 	Data     *GetExperimentResultOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,GetExperimentResultOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
 	BaseResp *base.BaseResp                  `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewGetExperimentResultOpenAPIResponse() *GetExperimentResultOpenAPIResponse {
-	return &GetExperimentResultOpenAPIResponse{}
+func NewGetExperimentResultOApiResponse() *GetExperimentResultOApiResponse {
+	return &GetExperimentResultOApiResponse{}
 }
 
-func (p *GetExperimentResultOpenAPIResponse) InitDefault() {
+func (p *GetExperimentResultOApiResponse) InitDefault() {
 }
 
-var GetExperimentResultOpenAPIResponse_Code_DEFAULT int32
+var GetExperimentResultOApiResponse_Code_DEFAULT int32
 
-func (p *GetExperimentResultOpenAPIResponse) GetCode() (v int32) {
+func (p *GetExperimentResultOApiResponse) GetCode() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCode() {
-		return GetExperimentResultOpenAPIResponse_Code_DEFAULT
+		return GetExperimentResultOApiResponse_Code_DEFAULT
 	}
 	return *p.Code
 }
 
-var GetExperimentResultOpenAPIResponse_Msg_DEFAULT string
+var GetExperimentResultOApiResponse_Msg_DEFAULT string
 
-func (p *GetExperimentResultOpenAPIResponse) GetMsg() (v string) {
+func (p *GetExperimentResultOApiResponse) GetMsg() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetMsg() {
-		return GetExperimentResultOpenAPIResponse_Msg_DEFAULT
+		return GetExperimentResultOApiResponse_Msg_DEFAULT
 	}
 	return *p.Msg
 }
 
-var GetExperimentResultOpenAPIResponse_Data_DEFAULT *GetExperimentResultOpenAPIData
+var GetExperimentResultOApiResponse_Data_DEFAULT *GetExperimentResultOpenAPIData
 
-func (p *GetExperimentResultOpenAPIResponse) GetData() (v *GetExperimentResultOpenAPIData) {
+func (p *GetExperimentResultOApiResponse) GetData() (v *GetExperimentResultOpenAPIData) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetData() {
-		return GetExperimentResultOpenAPIResponse_Data_DEFAULT
+		return GetExperimentResultOApiResponse_Data_DEFAULT
 	}
 	return p.Data
 }
 
-var GetExperimentResultOpenAPIResponse_BaseResp_DEFAULT *base.BaseResp
+var GetExperimentResultOApiResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetExperimentResultOpenAPIResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *GetExperimentResultOApiResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetExperimentResultOpenAPIResponse_BaseResp_DEFAULT
+		return GetExperimentResultOApiResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetExperimentResultOpenAPIResponse) SetCode(val *int32) {
+func (p *GetExperimentResultOApiResponse) SetCode(val *int32) {
 	p.Code = val
 }
-func (p *GetExperimentResultOpenAPIResponse) SetMsg(val *string) {
+func (p *GetExperimentResultOApiResponse) SetMsg(val *string) {
 	p.Msg = val
 }
-func (p *GetExperimentResultOpenAPIResponse) SetData(val *GetExperimentResultOpenAPIData) {
+func (p *GetExperimentResultOApiResponse) SetData(val *GetExperimentResultOpenAPIData) {
 	p.Data = val
 }
-func (p *GetExperimentResultOpenAPIResponse) SetBaseResp(val *base.BaseResp) {
+func (p *GetExperimentResultOApiResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetExperimentResultOpenAPIResponse = map[int16]string{
+var fieldIDToName_GetExperimentResultOApiResponse = map[int16]string{
 	1:   "code",
 	2:   "msg",
 	3:   "data",
 	255: "BaseResp",
 }
 
-func (p *GetExperimentResultOpenAPIResponse) IsSetCode() bool {
+func (p *GetExperimentResultOApiResponse) IsSetCode() bool {
 	return p.Code != nil
 }
 
-func (p *GetExperimentResultOpenAPIResponse) IsSetMsg() bool {
+func (p *GetExperimentResultOApiResponse) IsSetMsg() bool {
 	return p.Msg != nil
 }
 
-func (p *GetExperimentResultOpenAPIResponse) IsSetData() bool {
+func (p *GetExperimentResultOApiResponse) IsSetData() bool {
 	return p.Data != nil
 }
 
-func (p *GetExperimentResultOpenAPIResponse) IsSetBaseResp() bool {
+func (p *GetExperimentResultOApiResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetExperimentResultOpenAPIResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -16918,7 +16918,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetExperimentResultOpenAPIResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetExperimentResultOApiResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -16928,7 +16928,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *GetExperimentResultOpenAPIResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiResponse) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -16939,7 +16939,7 @@ func (p *GetExperimentResultOpenAPIResponse) ReadField1(iprot thrift.TProtocol) 
 	p.Code = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -16950,7 +16950,7 @@ func (p *GetExperimentResultOpenAPIResponse) ReadField2(iprot thrift.TProtocol) 
 	p.Msg = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiResponse) ReadField3(iprot thrift.TProtocol) error {
 	_field := NewGetExperimentResultOpenAPIData()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -16958,7 +16958,7 @@ func (p *GetExperimentResultOpenAPIResponse) ReadField3(iprot thrift.TProtocol) 
 	p.Data = _field
 	return nil
 }
-func (p *GetExperimentResultOpenAPIResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetExperimentResultOApiResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -16967,9 +16967,9 @@ func (p *GetExperimentResultOpenAPIResponse) ReadField255(iprot thrift.TProtocol
 	return nil
 }
 
-func (p *GetExperimentResultOpenAPIResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetExperimentResultOpenAPIResponse"); err != nil {
+	if err = oprot.WriteStructBegin("GetExperimentResultOApiResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -17007,7 +17007,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetExperimentResultOpenAPIResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCode() {
 		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
@@ -17025,7 +17025,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMsg() {
 		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -17043,7 +17043,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetData() {
 		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -17061,7 +17061,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetExperimentResultOpenAPIResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetExperimentResultOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -17078,15 +17078,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetExperimentResultOpenAPIResponse) String() string {
+func (p *GetExperimentResultOApiResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetExperimentResultOpenAPIResponse(%+v)", *p)
+	return fmt.Sprintf("GetExperimentResultOApiResponse(%+v)", *p)
 
 }
 
-func (p *GetExperimentResultOpenAPIResponse) DeepEqual(ano *GetExperimentResultOpenAPIResponse) bool {
+func (p *GetExperimentResultOApiResponse) DeepEqual(ano *GetExperimentResultOApiResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -17107,7 +17107,7 @@ func (p *GetExperimentResultOpenAPIResponse) DeepEqual(ano *GetExperimentResultO
 	return true
 }
 
-func (p *GetExperimentResultOpenAPIResponse) Field1DeepEqual(src *int32) bool {
+func (p *GetExperimentResultOApiResponse) Field1DeepEqual(src *int32) bool {
 
 	if p.Code == src {
 		return true
@@ -17119,7 +17119,7 @@ func (p *GetExperimentResultOpenAPIResponse) Field1DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIResponse) Field2DeepEqual(src *string) bool {
+func (p *GetExperimentResultOApiResponse) Field2DeepEqual(src *string) bool {
 
 	if p.Msg == src {
 		return true
@@ -17131,14 +17131,14 @@ func (p *GetExperimentResultOpenAPIResponse) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIResponse) Field3DeepEqual(src *GetExperimentResultOpenAPIData) bool {
+func (p *GetExperimentResultOApiResponse) Field3DeepEqual(src *GetExperimentResultOpenAPIData) bool {
 
 	if !p.Data.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *GetExperimentResultOpenAPIResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *GetExperimentResultOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -17778,39 +17778,39 @@ func (p *GetExperimentResultOpenAPIData) Field6DeepEqual(src *int64) bool {
 type EvaluationOpenAPIService interface {
 	// 评测集接口 (9个)
 	// 1.1 创建评测集
-	CreateEvaluationSet(ctx context.Context, req *CreateEvaluationSetOpenAPIRequest) (r *CreateEvaluationSetOpenAPIResponse, err error)
+	CreateEvaluationSetOApi(ctx context.Context, req *CreateEvaluationSetOApiRequest) (r *CreateEvaluationSetOApiResponse, err error)
 	// 1.2 获取评测集详情
-	GetEvaluationSet(ctx context.Context, req *GetEvaluationSetOpenAPIRequest) (r *GetEvaluationSetOpenAPIResponse, err error)
+	GetEvaluationSetOApi(ctx context.Context, req *GetEvaluationSetOApiRequest) (r *GetEvaluationSetOApiResponse, err error)
 	// 1.3 查询评测集列表
-	ListEvaluationSets(ctx context.Context, req *ListEvaluationSetsOpenAPIRequest) (r *ListEvaluationSetsOpenAPIResponse, err error)
+	ListEvaluationSetsOApi(ctx context.Context, req *ListEvaluationSetsOApiRequest) (r *ListEvaluationSetsOApiResponse, err error)
 	// 1.4 创建评测集版本
-	CreateEvaluationSetVersion(ctx context.Context, req *CreateEvaluationSetVersionOpenAPIRequest) (r *CreateEvaluationSetVersionOpenAPIResponse, err error)
+	CreateEvaluationSetVersionOApi(ctx context.Context, req *CreateEvaluationSetVersionOApiRequest) (r *CreateEvaluationSetVersionOApiResponse, err error)
 	// 1.5 批量添加评测集数据
-	BatchCreateEvaluationSetItems(ctx context.Context, req *BatchCreateEvaluationSetItemsOpenAPIRequest) (r *BatchCreateEvaluationSetItemsOpenAPIResponse, err error)
+	BatchCreateEvaluationSetItemsOApi(ctx context.Context, req *BatchCreateEvaluationSetItemsOApiRequest) (r *BatchCreateEvaluationSetItemsOApiResponse, err error)
 	// 1.6 批量更新评测集数据
-	BatchUpdateEvaluationSetItems(ctx context.Context, req *BatchUpdateEvaluationSetItemsOpenAPIRequest) (r *BatchUpdateEvaluationSetItemsOpenAPIResponse, err error)
+	BatchUpdateEvaluationSetItemsOApi(ctx context.Context, req *BatchUpdateEvaluationSetItemsOApiRequest) (r *BatchUpdateEvaluationSetItemsOApiResponse, err error)
 	// 1.7 批量删除评测集数据
-	BatchDeleteEvaluationSetItems(ctx context.Context, req *BatchDeleteEvaluationSetItemsOpenAPIRequest) (r *BatchDeleteEvaluationSetItemsOpenAPIResponse, err error)
+	BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *BatchDeleteEvaluationSetItemsOApiRequest) (r *BatchDeleteEvaluationSetItemsOApiResponse, err error)
 	// 1.8 清空评测集草稿数据
-	ClearEvaluationSetDraftItems(ctx context.Context, req *ClearEvaluationSetDraftItemsOpenAPIRequest) (r *ClearEvaluationSetDraftItemsOpenAPIResponse, err error)
+	ClearEvaluationSetDraftItemsOApi(ctx context.Context, req *ClearEvaluationSetDraftItemsOApiRequest) (r *ClearEvaluationSetDraftItemsOApiResponse, err error)
 	// 1.9 查询评测集特定版本数据
-	ListEvaluationSetVersionItems(ctx context.Context, req *ListEvaluationSetVersionItemsOpenAPIRequest) (r *ListEvaluationSetVersionItemsOpenAPIResponse, err error)
+	ListEvaluationSetVersionItemsOApi(ctx context.Context, req *ListEvaluationSetVersionItemsOApiRequest) (r *ListEvaluationSetVersionItemsOApiResponse, err error)
 	// 评估器接口 (5个)
 	// 2.1 创建评估器
-	CreateEvaluator(ctx context.Context, req *CreateEvaluatorOpenAPIRequest) (r *CreateEvaluatorOpenAPIResponse, err error)
+	CreateEvaluatorOApi(ctx context.Context, req *CreateEvaluatorOApiRequest) (r *CreateEvaluatorOApiResponse, err error)
 	// 2.2 提交评估器版本
-	SubmitEvaluatorVersion(ctx context.Context, req *SubmitEvaluatorVersionOpenAPIRequest) (r *SubmitEvaluatorVersionOpenAPIResponse, err error)
+	SubmitEvaluatorVersionOApi(ctx context.Context, req *SubmitEvaluatorVersionOApiRequest) (r *SubmitEvaluatorVersionOApiResponse, err error)
 	// 2.3 获取评估器版本详情
-	GetEvaluatorVersion(ctx context.Context, req *GetEvaluatorVersionOpenAPIRequest) (r *GetEvaluatorVersionOpenAPIResponse, err error)
+	GetEvaluatorVersionOApi(ctx context.Context, req *GetEvaluatorVersionOApiRequest) (r *GetEvaluatorVersionOApiResponse, err error)
 	// 2.4 执行评估器
-	RunEvaluator(ctx context.Context, req *RunEvaluatorOpenAPIRequest) (r *RunEvaluatorOpenAPIResponse, err error)
+	RunEvaluatorOApi(ctx context.Context, req *RunEvaluatorOApiRequest) (r *RunEvaluatorOApiResponse, err error)
 	// 2.5 获取评估器执行结果
-	GetEvaluatorRecord(ctx context.Context, req *GetEvaluatorRecordOpenAPIRequest) (r *GetEvaluatorRecordOpenAPIResponse, err error)
+	GetEvaluatorRecordOApi(ctx context.Context, req *GetEvaluatorRecordOApiRequest) (r *GetEvaluatorRecordOApiResponse, err error)
 	// 评测实验接口 (2个)
 	// 3.1 创建评测实验
-	CreateExperiment(ctx context.Context, req *CreateExperimentOpenAPIRequest) (r *CreateExperimentOpenAPIResponse, err error)
+	CreateExperimentOApi(ctx context.Context, req *CreateExperimentOApiRequest) (r *CreateExperimentOApiResponse, err error)
 	// 3.2 获取评测实验结果
-	GetExperimentResult_(ctx context.Context, req *GetExperimentResultOpenAPIRequest) (r *GetExperimentResultOpenAPIResponse, err error)
+	GetExperimentResultOApi(ctx context.Context, req *GetExperimentResultOApiRequest) (r *GetExperimentResultOApiResponse, err error)
 }
 
 type EvaluationOpenAPIServiceClient struct {
@@ -17839,146 +17839,146 @@ func (p *EvaluationOpenAPIServiceClient) Client_() thrift.TClient {
 	return p.c
 }
 
-func (p *EvaluationOpenAPIServiceClient) CreateEvaluationSet(ctx context.Context, req *CreateEvaluationSetOpenAPIRequest) (r *CreateEvaluationSetOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceCreateEvaluationSetArgs
+func (p *EvaluationOpenAPIServiceClient) CreateEvaluationSetOApi(ctx context.Context, req *CreateEvaluationSetOApiRequest) (r *CreateEvaluationSetOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceCreateEvaluationSetResult
-	if err = p.Client_().Call(ctx, "CreateEvaluationSet", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceCreateEvaluationSetOApiResult
+	if err = p.Client_().Call(ctx, "CreateEvaluationSetOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) GetEvaluationSet(ctx context.Context, req *GetEvaluationSetOpenAPIRequest) (r *GetEvaluationSetOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceGetEvaluationSetArgs
+func (p *EvaluationOpenAPIServiceClient) GetEvaluationSetOApi(ctx context.Context, req *GetEvaluationSetOApiRequest) (r *GetEvaluationSetOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetEvaluationSetOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceGetEvaluationSetResult
-	if err = p.Client_().Call(ctx, "GetEvaluationSet", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceGetEvaluationSetOApiResult
+	if err = p.Client_().Call(ctx, "GetEvaluationSetOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) ListEvaluationSets(ctx context.Context, req *ListEvaluationSetsOpenAPIRequest) (r *ListEvaluationSetsOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceListEvaluationSetsArgs
+func (p *EvaluationOpenAPIServiceClient) ListEvaluationSetsOApi(ctx context.Context, req *ListEvaluationSetsOApiRequest) (r *ListEvaluationSetsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceListEvaluationSetsOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceListEvaluationSetsResult
-	if err = p.Client_().Call(ctx, "ListEvaluationSets", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceListEvaluationSetsOApiResult
+	if err = p.Client_().Call(ctx, "ListEvaluationSetsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) CreateEvaluationSetVersion(ctx context.Context, req *CreateEvaluationSetVersionOpenAPIRequest) (r *CreateEvaluationSetVersionOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs
+func (p *EvaluationOpenAPIServiceClient) CreateEvaluationSetVersionOApi(ctx context.Context, req *CreateEvaluationSetVersionOApiRequest) (r *CreateEvaluationSetVersionOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceCreateEvaluationSetVersionResult
-	if err = p.Client_().Call(ctx, "CreateEvaluationSetVersion", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult
+	if err = p.Client_().Call(ctx, "CreateEvaluationSetVersionOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) BatchCreateEvaluationSetItems(ctx context.Context, req *BatchCreateEvaluationSetItemsOpenAPIRequest) (r *BatchCreateEvaluationSetItemsOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs
+func (p *EvaluationOpenAPIServiceClient) BatchCreateEvaluationSetItemsOApi(ctx context.Context, req *BatchCreateEvaluationSetItemsOApiRequest) (r *BatchCreateEvaluationSetItemsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult
-	if err = p.Client_().Call(ctx, "BatchCreateEvaluationSetItems", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult
+	if err = p.Client_().Call(ctx, "BatchCreateEvaluationSetItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) BatchUpdateEvaluationSetItems(ctx context.Context, req *BatchUpdateEvaluationSetItemsOpenAPIRequest) (r *BatchUpdateEvaluationSetItemsOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs
+func (p *EvaluationOpenAPIServiceClient) BatchUpdateEvaluationSetItemsOApi(ctx context.Context, req *BatchUpdateEvaluationSetItemsOApiRequest) (r *BatchUpdateEvaluationSetItemsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult
-	if err = p.Client_().Call(ctx, "BatchUpdateEvaluationSetItems", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult
+	if err = p.Client_().Call(ctx, "BatchUpdateEvaluationSetItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) BatchDeleteEvaluationSetItems(ctx context.Context, req *BatchDeleteEvaluationSetItemsOpenAPIRequest) (r *BatchDeleteEvaluationSetItemsOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs
+func (p *EvaluationOpenAPIServiceClient) BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *BatchDeleteEvaluationSetItemsOApiRequest) (r *BatchDeleteEvaluationSetItemsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult
-	if err = p.Client_().Call(ctx, "BatchDeleteEvaluationSetItems", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult
+	if err = p.Client_().Call(ctx, "BatchDeleteEvaluationSetItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) ClearEvaluationSetDraftItems(ctx context.Context, req *ClearEvaluationSetDraftItemsOpenAPIRequest) (r *ClearEvaluationSetDraftItemsOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs
+func (p *EvaluationOpenAPIServiceClient) ClearEvaluationSetDraftItemsOApi(ctx context.Context, req *ClearEvaluationSetDraftItemsOApiRequest) (r *ClearEvaluationSetDraftItemsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult
-	if err = p.Client_().Call(ctx, "ClearEvaluationSetDraftItems", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult
+	if err = p.Client_().Call(ctx, "ClearEvaluationSetDraftItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) ListEvaluationSetVersionItems(ctx context.Context, req *ListEvaluationSetVersionItemsOpenAPIRequest) (r *ListEvaluationSetVersionItemsOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs
+func (p *EvaluationOpenAPIServiceClient) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *ListEvaluationSetVersionItemsOApiRequest) (r *ListEvaluationSetVersionItemsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult
-	if err = p.Client_().Call(ctx, "ListEvaluationSetVersionItems", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult
+	if err = p.Client_().Call(ctx, "ListEvaluationSetVersionItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) CreateEvaluator(ctx context.Context, req *CreateEvaluatorOpenAPIRequest) (r *CreateEvaluatorOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceCreateEvaluatorArgs
+func (p *EvaluationOpenAPIServiceClient) CreateEvaluatorOApi(ctx context.Context, req *CreateEvaluatorOApiRequest) (r *CreateEvaluatorOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceCreateEvaluatorOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceCreateEvaluatorResult
-	if err = p.Client_().Call(ctx, "CreateEvaluator", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceCreateEvaluatorOApiResult
+	if err = p.Client_().Call(ctx, "CreateEvaluatorOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) SubmitEvaluatorVersion(ctx context.Context, req *SubmitEvaluatorVersionOpenAPIRequest) (r *SubmitEvaluatorVersionOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs
+func (p *EvaluationOpenAPIServiceClient) SubmitEvaluatorVersionOApi(ctx context.Context, req *SubmitEvaluatorVersionOApiRequest) (r *SubmitEvaluatorVersionOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceSubmitEvaluatorVersionResult
-	if err = p.Client_().Call(ctx, "SubmitEvaluatorVersion", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult
+	if err = p.Client_().Call(ctx, "SubmitEvaluatorVersionOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) GetEvaluatorVersion(ctx context.Context, req *GetEvaluatorVersionOpenAPIRequest) (r *GetEvaluatorVersionOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceGetEvaluatorVersionArgs
+func (p *EvaluationOpenAPIServiceClient) GetEvaluatorVersionOApi(ctx context.Context, req *GetEvaluatorVersionOApiRequest) (r *GetEvaluatorVersionOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceGetEvaluatorVersionResult
-	if err = p.Client_().Call(ctx, "GetEvaluatorVersion", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult
+	if err = p.Client_().Call(ctx, "GetEvaluatorVersionOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) RunEvaluator(ctx context.Context, req *RunEvaluatorOpenAPIRequest) (r *RunEvaluatorOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceRunEvaluatorArgs
+func (p *EvaluationOpenAPIServiceClient) RunEvaluatorOApi(ctx context.Context, req *RunEvaluatorOApiRequest) (r *RunEvaluatorOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceRunEvaluatorOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceRunEvaluatorResult
-	if err = p.Client_().Call(ctx, "RunEvaluator", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceRunEvaluatorOApiResult
+	if err = p.Client_().Call(ctx, "RunEvaluatorOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) GetEvaluatorRecord(ctx context.Context, req *GetEvaluatorRecordOpenAPIRequest) (r *GetEvaluatorRecordOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceGetEvaluatorRecordArgs
+func (p *EvaluationOpenAPIServiceClient) GetEvaluatorRecordOApi(ctx context.Context, req *GetEvaluatorRecordOApiRequest) (r *GetEvaluatorRecordOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceGetEvaluatorRecordResult
-	if err = p.Client_().Call(ctx, "GetEvaluatorRecord", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult
+	if err = p.Client_().Call(ctx, "GetEvaluatorRecordOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) CreateExperiment(ctx context.Context, req *CreateExperimentOpenAPIRequest) (r *CreateExperimentOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceCreateExperimentArgs
+func (p *EvaluationOpenAPIServiceClient) CreateExperimentOApi(ctx context.Context, req *CreateExperimentOApiRequest) (r *CreateExperimentOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceCreateExperimentOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceCreateExperimentResult
-	if err = p.Client_().Call(ctx, "CreateExperiment", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceCreateExperimentOApiResult
+	if err = p.Client_().Call(ctx, "CreateExperimentOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) GetExperimentResult_(ctx context.Context, req *GetExperimentResultOpenAPIRequest) (r *GetExperimentResultOpenAPIResponse, err error) {
-	var _args EvaluationOpenAPIServiceGetExperimentResultArgs
+func (p *EvaluationOpenAPIServiceClient) GetExperimentResultOApi(ctx context.Context, req *GetExperimentResultOApiRequest) (r *GetExperimentResultOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetExperimentResultOApiArgs
 	_args.Req = req
-	var _result EvaluationOpenAPIServiceGetExperimentResultResult
-	if err = p.Client_().Call(ctx, "GetExperimentResult", &_args, &_result); err != nil {
+	var _result EvaluationOpenAPIServiceGetExperimentResultOApiResult
+	if err = p.Client_().Call(ctx, "GetExperimentResultOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -18004,22 +18004,22 @@ func (p *EvaluationOpenAPIServiceProcessor) ProcessorMap() map[string]thrift.TPr
 
 func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *EvaluationOpenAPIServiceProcessor {
 	self := &EvaluationOpenAPIServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self.AddToProcessorMap("CreateEvaluationSet", &evaluationOpenAPIServiceProcessorCreateEvaluationSet{handler: handler})
-	self.AddToProcessorMap("GetEvaluationSet", &evaluationOpenAPIServiceProcessorGetEvaluationSet{handler: handler})
-	self.AddToProcessorMap("ListEvaluationSets", &evaluationOpenAPIServiceProcessorListEvaluationSets{handler: handler})
-	self.AddToProcessorMap("CreateEvaluationSetVersion", &evaluationOpenAPIServiceProcessorCreateEvaluationSetVersion{handler: handler})
-	self.AddToProcessorMap("BatchCreateEvaluationSetItems", &evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItems{handler: handler})
-	self.AddToProcessorMap("BatchUpdateEvaluationSetItems", &evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItems{handler: handler})
-	self.AddToProcessorMap("BatchDeleteEvaluationSetItems", &evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItems{handler: handler})
-	self.AddToProcessorMap("ClearEvaluationSetDraftItems", &evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItems{handler: handler})
-	self.AddToProcessorMap("ListEvaluationSetVersionItems", &evaluationOpenAPIServiceProcessorListEvaluationSetVersionItems{handler: handler})
-	self.AddToProcessorMap("CreateEvaluator", &evaluationOpenAPIServiceProcessorCreateEvaluator{handler: handler})
-	self.AddToProcessorMap("SubmitEvaluatorVersion", &evaluationOpenAPIServiceProcessorSubmitEvaluatorVersion{handler: handler})
-	self.AddToProcessorMap("GetEvaluatorVersion", &evaluationOpenAPIServiceProcessorGetEvaluatorVersion{handler: handler})
-	self.AddToProcessorMap("RunEvaluator", &evaluationOpenAPIServiceProcessorRunEvaluator{handler: handler})
-	self.AddToProcessorMap("GetEvaluatorRecord", &evaluationOpenAPIServiceProcessorGetEvaluatorRecord{handler: handler})
-	self.AddToProcessorMap("CreateExperiment", &evaluationOpenAPIServiceProcessorCreateExperiment{handler: handler})
-	self.AddToProcessorMap("GetExperimentResult", &evaluationOpenAPIServiceProcessorGetExperimentResult_{handler: handler})
+	self.AddToProcessorMap("CreateEvaluationSetOApi", &evaluationOpenAPIServiceProcessorCreateEvaluationSetOApi{handler: handler})
+	self.AddToProcessorMap("GetEvaluationSetOApi", &evaluationOpenAPIServiceProcessorGetEvaluationSetOApi{handler: handler})
+	self.AddToProcessorMap("ListEvaluationSetsOApi", &evaluationOpenAPIServiceProcessorListEvaluationSetsOApi{handler: handler})
+	self.AddToProcessorMap("CreateEvaluationSetVersionOApi", &evaluationOpenAPIServiceProcessorCreateEvaluationSetVersionOApi{handler: handler})
+	self.AddToProcessorMap("BatchCreateEvaluationSetItemsOApi", &evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItemsOApi{handler: handler})
+	self.AddToProcessorMap("BatchUpdateEvaluationSetItemsOApi", &evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItemsOApi{handler: handler})
+	self.AddToProcessorMap("BatchDeleteEvaluationSetItemsOApi", &evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItemsOApi{handler: handler})
+	self.AddToProcessorMap("ClearEvaluationSetDraftItemsOApi", &evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItemsOApi{handler: handler})
+	self.AddToProcessorMap("ListEvaluationSetVersionItemsOApi", &evaluationOpenAPIServiceProcessorListEvaluationSetVersionItemsOApi{handler: handler})
+	self.AddToProcessorMap("CreateEvaluatorOApi", &evaluationOpenAPIServiceProcessorCreateEvaluatorOApi{handler: handler})
+	self.AddToProcessorMap("SubmitEvaluatorVersionOApi", &evaluationOpenAPIServiceProcessorSubmitEvaluatorVersionOApi{handler: handler})
+	self.AddToProcessorMap("GetEvaluatorVersionOApi", &evaluationOpenAPIServiceProcessorGetEvaluatorVersionOApi{handler: handler})
+	self.AddToProcessorMap("RunEvaluatorOApi", &evaluationOpenAPIServiceProcessorRunEvaluatorOApi{handler: handler})
+	self.AddToProcessorMap("GetEvaluatorRecordOApi", &evaluationOpenAPIServiceProcessorGetEvaluatorRecordOApi{handler: handler})
+	self.AddToProcessorMap("CreateExperimentOApi", &evaluationOpenAPIServiceProcessorCreateExperimentOApi{handler: handler})
+	self.AddToProcessorMap("GetExperimentResultOApi", &evaluationOpenAPIServiceProcessorGetExperimentResultOApi{handler: handler})
 	return self
 }
 func (p *EvaluationOpenAPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -18040,16 +18040,16 @@ func (p *EvaluationOpenAPIServiceProcessor) Process(ctx context.Context, iprot, 
 	return false, x
 }
 
-type evaluationOpenAPIServiceProcessorCreateEvaluationSet struct {
+type evaluationOpenAPIServiceProcessorCreateEvaluationSetOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSet) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceCreateEvaluationSetArgs{}
+func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSetOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("CreateEvaluationSet", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("CreateEvaluationSetOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18058,11 +18058,11 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSet) Process(ctx conte
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceCreateEvaluationSetResult{}
-	var retval *CreateEvaluationSetOpenAPIResponse
-	if retval, err2 = p.handler.CreateEvaluationSet(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateEvaluationSet: "+err2.Error())
-		oprot.WriteMessageBegin("CreateEvaluationSet", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceCreateEvaluationSetOApiResult{}
+	var retval *CreateEvaluationSetOApiResponse
+	if retval, err2 = p.handler.CreateEvaluationSetOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateEvaluationSetOApi: "+err2.Error())
+		oprot.WriteMessageBegin("CreateEvaluationSetOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18070,7 +18070,7 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSet) Process(ctx conte
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("CreateEvaluationSet", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("CreateEvaluationSetOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18088,16 +18088,16 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSet) Process(ctx conte
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorGetEvaluationSet struct {
+type evaluationOpenAPIServiceProcessorGetEvaluationSetOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorGetEvaluationSet) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceGetEvaluationSetArgs{}
+func (p *evaluationOpenAPIServiceProcessorGetEvaluationSetOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetEvaluationSetOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetEvaluationSet", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("GetEvaluationSetOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18106,11 +18106,11 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluationSet) Process(ctx context.
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceGetEvaluationSetResult{}
-	var retval *GetEvaluationSetOpenAPIResponse
-	if retval, err2 = p.handler.GetEvaluationSet(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvaluationSet: "+err2.Error())
-		oprot.WriteMessageBegin("GetEvaluationSet", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceGetEvaluationSetOApiResult{}
+	var retval *GetEvaluationSetOApiResponse
+	if retval, err2 = p.handler.GetEvaluationSetOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvaluationSetOApi: "+err2.Error())
+		oprot.WriteMessageBegin("GetEvaluationSetOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18118,7 +18118,7 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluationSet) Process(ctx context.
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetEvaluationSet", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("GetEvaluationSetOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18136,16 +18136,16 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluationSet) Process(ctx context.
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorListEvaluationSets struct {
+type evaluationOpenAPIServiceProcessorListEvaluationSetsOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorListEvaluationSets) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceListEvaluationSetsArgs{}
+func (p *evaluationOpenAPIServiceProcessorListEvaluationSetsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceListEvaluationSetsOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("ListEvaluationSets", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("ListEvaluationSetsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18154,11 +18154,11 @@ func (p *evaluationOpenAPIServiceProcessorListEvaluationSets) Process(ctx contex
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceListEvaluationSetsResult{}
-	var retval *ListEvaluationSetsOpenAPIResponse
-	if retval, err2 = p.handler.ListEvaluationSets(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListEvaluationSets: "+err2.Error())
-		oprot.WriteMessageBegin("ListEvaluationSets", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceListEvaluationSetsOApiResult{}
+	var retval *ListEvaluationSetsOApiResponse
+	if retval, err2 = p.handler.ListEvaluationSetsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListEvaluationSetsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("ListEvaluationSetsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18166,7 +18166,7 @@ func (p *evaluationOpenAPIServiceProcessorListEvaluationSets) Process(ctx contex
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("ListEvaluationSets", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("ListEvaluationSetsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18184,16 +18184,16 @@ func (p *evaluationOpenAPIServiceProcessorListEvaluationSets) Process(ctx contex
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorCreateEvaluationSetVersion struct {
+type evaluationOpenAPIServiceProcessorCreateEvaluationSetVersionOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSetVersion) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs{}
+func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSetVersionOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("CreateEvaluationSetVersion", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("CreateEvaluationSetVersionOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18202,11 +18202,11 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSetVersion) Process(ct
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceCreateEvaluationSetVersionResult{}
-	var retval *CreateEvaluationSetVersionOpenAPIResponse
-	if retval, err2 = p.handler.CreateEvaluationSetVersion(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateEvaluationSetVersion: "+err2.Error())
-		oprot.WriteMessageBegin("CreateEvaluationSetVersion", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult{}
+	var retval *CreateEvaluationSetVersionOApiResponse
+	if retval, err2 = p.handler.CreateEvaluationSetVersionOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateEvaluationSetVersionOApi: "+err2.Error())
+		oprot.WriteMessageBegin("CreateEvaluationSetVersionOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18214,7 +18214,7 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSetVersion) Process(ct
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("CreateEvaluationSetVersion", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("CreateEvaluationSetVersionOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18232,16 +18232,16 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluationSetVersion) Process(ct
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItems struct {
+type evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItemsOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs{}
+func (p *evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItemsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("BatchCreateEvaluationSetItems", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("BatchCreateEvaluationSetItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18250,11 +18250,11 @@ func (p *evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItems) Process
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult{}
-	var retval *BatchCreateEvaluationSetItemsOpenAPIResponse
-	if retval, err2 = p.handler.BatchCreateEvaluationSetItems(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchCreateEvaluationSetItems: "+err2.Error())
-		oprot.WriteMessageBegin("BatchCreateEvaluationSetItems", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult{}
+	var retval *BatchCreateEvaluationSetItemsOApiResponse
+	if retval, err2 = p.handler.BatchCreateEvaluationSetItemsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchCreateEvaluationSetItemsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("BatchCreateEvaluationSetItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18262,7 +18262,7 @@ func (p *evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItems) Process
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("BatchCreateEvaluationSetItems", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("BatchCreateEvaluationSetItemsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18280,16 +18280,16 @@ func (p *evaluationOpenAPIServiceProcessorBatchCreateEvaluationSetItems) Process
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItems struct {
+type evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItemsOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs{}
+func (p *evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItemsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("BatchUpdateEvaluationSetItems", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("BatchUpdateEvaluationSetItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18298,11 +18298,11 @@ func (p *evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItems) Process
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult{}
-	var retval *BatchUpdateEvaluationSetItemsOpenAPIResponse
-	if retval, err2 = p.handler.BatchUpdateEvaluationSetItems(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchUpdateEvaluationSetItems: "+err2.Error())
-		oprot.WriteMessageBegin("BatchUpdateEvaluationSetItems", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult{}
+	var retval *BatchUpdateEvaluationSetItemsOApiResponse
+	if retval, err2 = p.handler.BatchUpdateEvaluationSetItemsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchUpdateEvaluationSetItemsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("BatchUpdateEvaluationSetItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18310,7 +18310,7 @@ func (p *evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItems) Process
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("BatchUpdateEvaluationSetItems", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("BatchUpdateEvaluationSetItemsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18328,16 +18328,16 @@ func (p *evaluationOpenAPIServiceProcessorBatchUpdateEvaluationSetItems) Process
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItems struct {
+type evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItemsOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs{}
+func (p *evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItemsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("BatchDeleteEvaluationSetItems", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("BatchDeleteEvaluationSetItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18346,11 +18346,11 @@ func (p *evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItems) Process
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult{}
-	var retval *BatchDeleteEvaluationSetItemsOpenAPIResponse
-	if retval, err2 = p.handler.BatchDeleteEvaluationSetItems(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchDeleteEvaluationSetItems: "+err2.Error())
-		oprot.WriteMessageBegin("BatchDeleteEvaluationSetItems", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult{}
+	var retval *BatchDeleteEvaluationSetItemsOApiResponse
+	if retval, err2 = p.handler.BatchDeleteEvaluationSetItemsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchDeleteEvaluationSetItemsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("BatchDeleteEvaluationSetItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18358,7 +18358,7 @@ func (p *evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItems) Process
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("BatchDeleteEvaluationSetItems", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("BatchDeleteEvaluationSetItemsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18376,16 +18376,16 @@ func (p *evaluationOpenAPIServiceProcessorBatchDeleteEvaluationSetItems) Process
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItems struct {
+type evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItemsOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs{}
+func (p *evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItemsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("ClearEvaluationSetDraftItems", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("ClearEvaluationSetDraftItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18394,11 +18394,11 @@ func (p *evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItems) Process(
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult{}
-	var retval *ClearEvaluationSetDraftItemsOpenAPIResponse
-	if retval, err2 = p.handler.ClearEvaluationSetDraftItems(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ClearEvaluationSetDraftItems: "+err2.Error())
-		oprot.WriteMessageBegin("ClearEvaluationSetDraftItems", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult{}
+	var retval *ClearEvaluationSetDraftItemsOApiResponse
+	if retval, err2 = p.handler.ClearEvaluationSetDraftItemsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ClearEvaluationSetDraftItemsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("ClearEvaluationSetDraftItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18406,7 +18406,7 @@ func (p *evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItems) Process(
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("ClearEvaluationSetDraftItems", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("ClearEvaluationSetDraftItemsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18424,16 +18424,16 @@ func (p *evaluationOpenAPIServiceProcessorClearEvaluationSetDraftItems) Process(
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorListEvaluationSetVersionItems struct {
+type evaluationOpenAPIServiceProcessorListEvaluationSetVersionItemsOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorListEvaluationSetVersionItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs{}
+func (p *evaluationOpenAPIServiceProcessorListEvaluationSetVersionItemsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("ListEvaluationSetVersionItems", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("ListEvaluationSetVersionItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18442,11 +18442,11 @@ func (p *evaluationOpenAPIServiceProcessorListEvaluationSetVersionItems) Process
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult{}
-	var retval *ListEvaluationSetVersionItemsOpenAPIResponse
-	if retval, err2 = p.handler.ListEvaluationSetVersionItems(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListEvaluationSetVersionItems: "+err2.Error())
-		oprot.WriteMessageBegin("ListEvaluationSetVersionItems", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult{}
+	var retval *ListEvaluationSetVersionItemsOApiResponse
+	if retval, err2 = p.handler.ListEvaluationSetVersionItemsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListEvaluationSetVersionItemsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("ListEvaluationSetVersionItemsOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18454,7 +18454,7 @@ func (p *evaluationOpenAPIServiceProcessorListEvaluationSetVersionItems) Process
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("ListEvaluationSetVersionItems", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("ListEvaluationSetVersionItemsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18472,16 +18472,16 @@ func (p *evaluationOpenAPIServiceProcessorListEvaluationSetVersionItems) Process
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorCreateEvaluator struct {
+type evaluationOpenAPIServiceProcessorCreateEvaluatorOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorCreateEvaluator) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceCreateEvaluatorArgs{}
+func (p *evaluationOpenAPIServiceProcessorCreateEvaluatorOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceCreateEvaluatorOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("CreateEvaluator", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("CreateEvaluatorOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18490,11 +18490,11 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluator) Process(ctx context.C
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceCreateEvaluatorResult{}
-	var retval *CreateEvaluatorOpenAPIResponse
-	if retval, err2 = p.handler.CreateEvaluator(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateEvaluator: "+err2.Error())
-		oprot.WriteMessageBegin("CreateEvaluator", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceCreateEvaluatorOApiResult{}
+	var retval *CreateEvaluatorOApiResponse
+	if retval, err2 = p.handler.CreateEvaluatorOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateEvaluatorOApi: "+err2.Error())
+		oprot.WriteMessageBegin("CreateEvaluatorOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18502,7 +18502,7 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluator) Process(ctx context.C
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("CreateEvaluator", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("CreateEvaluatorOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18520,16 +18520,16 @@ func (p *evaluationOpenAPIServiceProcessorCreateEvaluator) Process(ctx context.C
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorSubmitEvaluatorVersion struct {
+type evaluationOpenAPIServiceProcessorSubmitEvaluatorVersionOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorSubmitEvaluatorVersion) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs{}
+func (p *evaluationOpenAPIServiceProcessorSubmitEvaluatorVersionOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("SubmitEvaluatorVersion", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("SubmitEvaluatorVersionOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18538,11 +18538,11 @@ func (p *evaluationOpenAPIServiceProcessorSubmitEvaluatorVersion) Process(ctx co
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceSubmitEvaluatorVersionResult{}
-	var retval *SubmitEvaluatorVersionOpenAPIResponse
-	if retval, err2 = p.handler.SubmitEvaluatorVersion(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SubmitEvaluatorVersion: "+err2.Error())
-		oprot.WriteMessageBegin("SubmitEvaluatorVersion", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult{}
+	var retval *SubmitEvaluatorVersionOApiResponse
+	if retval, err2 = p.handler.SubmitEvaluatorVersionOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SubmitEvaluatorVersionOApi: "+err2.Error())
+		oprot.WriteMessageBegin("SubmitEvaluatorVersionOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18550,7 +18550,7 @@ func (p *evaluationOpenAPIServiceProcessorSubmitEvaluatorVersion) Process(ctx co
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("SubmitEvaluatorVersion", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("SubmitEvaluatorVersionOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18568,16 +18568,16 @@ func (p *evaluationOpenAPIServiceProcessorSubmitEvaluatorVersion) Process(ctx co
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorGetEvaluatorVersion struct {
+type evaluationOpenAPIServiceProcessorGetEvaluatorVersionOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorGetEvaluatorVersion) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceGetEvaluatorVersionArgs{}
+func (p *evaluationOpenAPIServiceProcessorGetEvaluatorVersionOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetEvaluatorVersion", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("GetEvaluatorVersionOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18586,11 +18586,11 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluatorVersion) Process(ctx conte
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceGetEvaluatorVersionResult{}
-	var retval *GetEvaluatorVersionOpenAPIResponse
-	if retval, err2 = p.handler.GetEvaluatorVersion(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvaluatorVersion: "+err2.Error())
-		oprot.WriteMessageBegin("GetEvaluatorVersion", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult{}
+	var retval *GetEvaluatorVersionOApiResponse
+	if retval, err2 = p.handler.GetEvaluatorVersionOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvaluatorVersionOApi: "+err2.Error())
+		oprot.WriteMessageBegin("GetEvaluatorVersionOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18598,7 +18598,7 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluatorVersion) Process(ctx conte
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetEvaluatorVersion", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("GetEvaluatorVersionOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18616,16 +18616,16 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluatorVersion) Process(ctx conte
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorRunEvaluator struct {
+type evaluationOpenAPIServiceProcessorRunEvaluatorOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorRunEvaluator) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceRunEvaluatorArgs{}
+func (p *evaluationOpenAPIServiceProcessorRunEvaluatorOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceRunEvaluatorOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("RunEvaluator", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("RunEvaluatorOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18634,11 +18634,11 @@ func (p *evaluationOpenAPIServiceProcessorRunEvaluator) Process(ctx context.Cont
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceRunEvaluatorResult{}
-	var retval *RunEvaluatorOpenAPIResponse
-	if retval, err2 = p.handler.RunEvaluator(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing RunEvaluator: "+err2.Error())
-		oprot.WriteMessageBegin("RunEvaluator", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceRunEvaluatorOApiResult{}
+	var retval *RunEvaluatorOApiResponse
+	if retval, err2 = p.handler.RunEvaluatorOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing RunEvaluatorOApi: "+err2.Error())
+		oprot.WriteMessageBegin("RunEvaluatorOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18646,7 +18646,7 @@ func (p *evaluationOpenAPIServiceProcessorRunEvaluator) Process(ctx context.Cont
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("RunEvaluator", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("RunEvaluatorOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18664,16 +18664,16 @@ func (p *evaluationOpenAPIServiceProcessorRunEvaluator) Process(ctx context.Cont
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorGetEvaluatorRecord struct {
+type evaluationOpenAPIServiceProcessorGetEvaluatorRecordOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorGetEvaluatorRecord) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceGetEvaluatorRecordArgs{}
+func (p *evaluationOpenAPIServiceProcessorGetEvaluatorRecordOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetEvaluatorRecord", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("GetEvaluatorRecordOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18682,11 +18682,11 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluatorRecord) Process(ctx contex
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceGetEvaluatorRecordResult{}
-	var retval *GetEvaluatorRecordOpenAPIResponse
-	if retval, err2 = p.handler.GetEvaluatorRecord(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvaluatorRecord: "+err2.Error())
-		oprot.WriteMessageBegin("GetEvaluatorRecord", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult{}
+	var retval *GetEvaluatorRecordOApiResponse
+	if retval, err2 = p.handler.GetEvaluatorRecordOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvaluatorRecordOApi: "+err2.Error())
+		oprot.WriteMessageBegin("GetEvaluatorRecordOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18694,7 +18694,7 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluatorRecord) Process(ctx contex
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetEvaluatorRecord", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("GetEvaluatorRecordOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18712,16 +18712,16 @@ func (p *evaluationOpenAPIServiceProcessorGetEvaluatorRecord) Process(ctx contex
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorCreateExperiment struct {
+type evaluationOpenAPIServiceProcessorCreateExperimentOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorCreateExperiment) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceCreateExperimentArgs{}
+func (p *evaluationOpenAPIServiceProcessorCreateExperimentOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceCreateExperimentOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("CreateExperiment", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("CreateExperimentOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18730,11 +18730,11 @@ func (p *evaluationOpenAPIServiceProcessorCreateExperiment) Process(ctx context.
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceCreateExperimentResult{}
-	var retval *CreateExperimentOpenAPIResponse
-	if retval, err2 = p.handler.CreateExperiment(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateExperiment: "+err2.Error())
-		oprot.WriteMessageBegin("CreateExperiment", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceCreateExperimentOApiResult{}
+	var retval *CreateExperimentOApiResponse
+	if retval, err2 = p.handler.CreateExperimentOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CreateExperimentOApi: "+err2.Error())
+		oprot.WriteMessageBegin("CreateExperimentOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18742,7 +18742,7 @@ func (p *evaluationOpenAPIServiceProcessorCreateExperiment) Process(ctx context.
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("CreateExperiment", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("CreateExperimentOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18760,16 +18760,16 @@ func (p *evaluationOpenAPIServiceProcessorCreateExperiment) Process(ctx context.
 	return true, err
 }
 
-type evaluationOpenAPIServiceProcessorGetExperimentResult_ struct {
+type evaluationOpenAPIServiceProcessorGetExperimentResultOApi struct {
 	handler EvaluationOpenAPIService
 }
 
-func (p *evaluationOpenAPIServiceProcessorGetExperimentResult_) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationOpenAPIServiceGetExperimentResultArgs{}
+func (p *evaluationOpenAPIServiceProcessorGetExperimentResultOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetExperimentResultOApiArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetExperimentResult", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("GetExperimentResultOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18778,11 +18778,11 @@ func (p *evaluationOpenAPIServiceProcessorGetExperimentResult_) Process(ctx cont
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationOpenAPIServiceGetExperimentResultResult{}
-	var retval *GetExperimentResultOpenAPIResponse
-	if retval, err2 = p.handler.GetExperimentResult_(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetExperimentResult: "+err2.Error())
-		oprot.WriteMessageBegin("GetExperimentResult", thrift.EXCEPTION, seqId)
+	result := EvaluationOpenAPIServiceGetExperimentResultOApiResult{}
+	var retval *GetExperimentResultOApiResponse
+	if retval, err2 = p.handler.GetExperimentResultOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetExperimentResultOApi: "+err2.Error())
+		oprot.WriteMessageBegin("GetExperimentResultOApi", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -18790,7 +18790,7 @@ func (p *evaluationOpenAPIServiceProcessorGetExperimentResult_) Process(ctx cont
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetExperimentResult", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("GetExperimentResultOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -18808,41 +18808,41 @@ func (p *evaluationOpenAPIServiceProcessorGetExperimentResult_) Process(ctx cont
 	return true, err
 }
 
-type EvaluationOpenAPIServiceCreateEvaluationSetArgs struct {
-	Req *CreateEvaluationSetOpenAPIRequest `thrift:"req,1" frugal:"1,default,CreateEvaluationSetOpenAPIRequest"`
+type EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs struct {
+	Req *CreateEvaluationSetOApiRequest `thrift:"req,1" frugal:"1,default,CreateEvaluationSetOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceCreateEvaluationSetArgs() *EvaluationOpenAPIServiceCreateEvaluationSetArgs {
-	return &EvaluationOpenAPIServiceCreateEvaluationSetArgs{}
+func NewEvaluationOpenAPIServiceCreateEvaluationSetOApiArgs() *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs {
+	return &EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateEvaluationSetArgs_Req_DEFAULT *CreateEvaluationSetOpenAPIRequest
+var EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs_Req_DEFAULT *CreateEvaluationSetOApiRequest
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) GetReq() (v *CreateEvaluationSetOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) GetReq() (v *CreateEvaluationSetOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceCreateEvaluationSetArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) SetReq(val *CreateEvaluationSetOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) SetReq(val *CreateEvaluationSetOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -18887,7 +18887,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -18897,8 +18897,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewCreateEvaluationSetOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewCreateEvaluationSetOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -18906,9 +18906,9 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) ReadField1(iprot thrif
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSet_args"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -18934,7 +18934,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -18951,15 +18951,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) String() string {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetArgs) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -18971,7 +18971,7 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) DeepEqual(ano *Evaluat
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) Field1DeepEqual(src *CreateEvaluationSetOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiArgs) Field1DeepEqual(src *CreateEvaluationSetOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -18979,41 +18979,41 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetArgs) Field1DeepEqual(src *C
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateEvaluationSetResult struct {
-	Success *CreateEvaluationSetOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,CreateEvaluationSetOpenAPIResponse"`
+type EvaluationOpenAPIServiceCreateEvaluationSetOApiResult struct {
+	Success *CreateEvaluationSetOApiResponse `thrift:"success,0,optional" frugal:"0,optional,CreateEvaluationSetOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceCreateEvaluationSetResult() *EvaluationOpenAPIServiceCreateEvaluationSetResult {
-	return &EvaluationOpenAPIServiceCreateEvaluationSetResult{}
+func NewEvaluationOpenAPIServiceCreateEvaluationSetOApiResult() *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult {
+	return &EvaluationOpenAPIServiceCreateEvaluationSetOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateEvaluationSetResult_Success_DEFAULT *CreateEvaluationSetOpenAPIResponse
+var EvaluationOpenAPIServiceCreateEvaluationSetOApiResult_Success_DEFAULT *CreateEvaluationSetOApiResponse
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) GetSuccess() (v *CreateEvaluationSetOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) GetSuccess() (v *CreateEvaluationSetOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceCreateEvaluationSetResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceCreateEvaluationSetOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) SetSuccess(x interface{}) {
-	p.Success = x.(*CreateEvaluationSetOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateEvaluationSetOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19058,7 +19058,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19068,8 +19068,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewCreateEvaluationSetOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCreateEvaluationSetOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -19077,9 +19077,9 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) ReadField0(iprot thr
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSet_result"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19105,7 +19105,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -19124,15 +19124,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) String() string {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetResult) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -19144,7 +19144,7 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) DeepEqual(ano *Evalu
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) Field0DeepEqual(src *CreateEvaluationSetOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetOApiResult) Field0DeepEqual(src *CreateEvaluationSetOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -19152,41 +19152,41 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetResult) Field0DeepEqual(src 
 	return true
 }
 
-type EvaluationOpenAPIServiceGetEvaluationSetArgs struct {
-	Req *GetEvaluationSetOpenAPIRequest `thrift:"req,1" frugal:"1,default,GetEvaluationSetOpenAPIRequest"`
+type EvaluationOpenAPIServiceGetEvaluationSetOApiArgs struct {
+	Req *GetEvaluationSetOApiRequest `thrift:"req,1" frugal:"1,default,GetEvaluationSetOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceGetEvaluationSetArgs() *EvaluationOpenAPIServiceGetEvaluationSetArgs {
-	return &EvaluationOpenAPIServiceGetEvaluationSetArgs{}
+func NewEvaluationOpenAPIServiceGetEvaluationSetOApiArgs() *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs {
+	return &EvaluationOpenAPIServiceGetEvaluationSetOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetEvaluationSetArgs_Req_DEFAULT *GetEvaluationSetOpenAPIRequest
+var EvaluationOpenAPIServiceGetEvaluationSetOApiArgs_Req_DEFAULT *GetEvaluationSetOApiRequest
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) GetReq() (v *GetEvaluationSetOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) GetReq() (v *GetEvaluationSetOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceGetEvaluationSetArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceGetEvaluationSetOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) SetReq(val *GetEvaluationSetOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) SetReq(val *GetEvaluationSetOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19231,7 +19231,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19241,8 +19241,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewGetEvaluationSetOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetEvaluationSetOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -19250,9 +19250,9 @@ func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) ReadField1(iprot thrift.T
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluationSet_args"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluationSetOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19278,7 +19278,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -19295,15 +19295,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) String() string {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluationSetArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluationSetOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluationSetArgs) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -19315,7 +19315,7 @@ func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) DeepEqual(ano *Evaluation
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) Field1DeepEqual(src *GetEvaluationSetOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiArgs) Field1DeepEqual(src *GetEvaluationSetOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -19323,41 +19323,41 @@ func (p *EvaluationOpenAPIServiceGetEvaluationSetArgs) Field1DeepEqual(src *GetE
 	return true
 }
 
-type EvaluationOpenAPIServiceGetEvaluationSetResult struct {
-	Success *GetEvaluationSetOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvaluationSetOpenAPIResponse"`
+type EvaluationOpenAPIServiceGetEvaluationSetOApiResult struct {
+	Success *GetEvaluationSetOApiResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvaluationSetOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceGetEvaluationSetResult() *EvaluationOpenAPIServiceGetEvaluationSetResult {
-	return &EvaluationOpenAPIServiceGetEvaluationSetResult{}
+func NewEvaluationOpenAPIServiceGetEvaluationSetOApiResult() *EvaluationOpenAPIServiceGetEvaluationSetOApiResult {
+	return &EvaluationOpenAPIServiceGetEvaluationSetOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetEvaluationSetResult_Success_DEFAULT *GetEvaluationSetOpenAPIResponse
+var EvaluationOpenAPIServiceGetEvaluationSetOApiResult_Success_DEFAULT *GetEvaluationSetOApiResponse
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) GetSuccess() (v *GetEvaluationSetOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) GetSuccess() (v *GetEvaluationSetOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceGetEvaluationSetResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceGetEvaluationSetOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) SetSuccess(x interface{}) {
-	p.Success = x.(*GetEvaluationSetOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetEvaluationSetOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19402,7 +19402,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluationSetOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19412,8 +19412,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewGetEvaluationSetOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetEvaluationSetOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -19421,9 +19421,9 @@ func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) ReadField0(iprot thrift
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluationSet_result"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluationSetOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19449,7 +19449,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -19468,15 +19468,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) String() string {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluationSetResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluationSetOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluationSetResult) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -19488,7 +19488,7 @@ func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) DeepEqual(ano *Evaluati
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) Field0DeepEqual(src *GetEvaluationSetOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluationSetOApiResult) Field0DeepEqual(src *GetEvaluationSetOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -19496,41 +19496,41 @@ func (p *EvaluationOpenAPIServiceGetEvaluationSetResult) Field0DeepEqual(src *Ge
 	return true
 }
 
-type EvaluationOpenAPIServiceListEvaluationSetsArgs struct {
-	Req *ListEvaluationSetsOpenAPIRequest `thrift:"req,1" frugal:"1,default,ListEvaluationSetsOpenAPIRequest"`
+type EvaluationOpenAPIServiceListEvaluationSetsOApiArgs struct {
+	Req *ListEvaluationSetsOApiRequest `thrift:"req,1" frugal:"1,default,ListEvaluationSetsOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceListEvaluationSetsArgs() *EvaluationOpenAPIServiceListEvaluationSetsArgs {
-	return &EvaluationOpenAPIServiceListEvaluationSetsArgs{}
+func NewEvaluationOpenAPIServiceListEvaluationSetsOApiArgs() *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs {
+	return &EvaluationOpenAPIServiceListEvaluationSetsOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceListEvaluationSetsArgs_Req_DEFAULT *ListEvaluationSetsOpenAPIRequest
+var EvaluationOpenAPIServiceListEvaluationSetsOApiArgs_Req_DEFAULT *ListEvaluationSetsOApiRequest
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) GetReq() (v *ListEvaluationSetsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) GetReq() (v *ListEvaluationSetsOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceListEvaluationSetsArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceListEvaluationSetsOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) SetReq(val *ListEvaluationSetsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) SetReq(val *ListEvaluationSetsOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19575,7 +19575,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19585,8 +19585,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewListEvaluationSetsOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListEvaluationSetsOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -19594,9 +19594,9 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) ReadField1(iprot thrift
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSets_args"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetsOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19622,7 +19622,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -19639,15 +19639,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) String() string {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetsArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetsOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetsArgs) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -19659,7 +19659,7 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) DeepEqual(ano *Evaluati
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) Field1DeepEqual(src *ListEvaluationSetsOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiArgs) Field1DeepEqual(src *ListEvaluationSetsOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -19667,41 +19667,41 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetsArgs) Field1DeepEqual(src *Li
 	return true
 }
 
-type EvaluationOpenAPIServiceListEvaluationSetsResult struct {
-	Success *ListEvaluationSetsOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,ListEvaluationSetsOpenAPIResponse"`
+type EvaluationOpenAPIServiceListEvaluationSetsOApiResult struct {
+	Success *ListEvaluationSetsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ListEvaluationSetsOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceListEvaluationSetsResult() *EvaluationOpenAPIServiceListEvaluationSetsResult {
-	return &EvaluationOpenAPIServiceListEvaluationSetsResult{}
+func NewEvaluationOpenAPIServiceListEvaluationSetsOApiResult() *EvaluationOpenAPIServiceListEvaluationSetsOApiResult {
+	return &EvaluationOpenAPIServiceListEvaluationSetsOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceListEvaluationSetsResult_Success_DEFAULT *ListEvaluationSetsOpenAPIResponse
+var EvaluationOpenAPIServiceListEvaluationSetsOApiResult_Success_DEFAULT *ListEvaluationSetsOApiResponse
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) GetSuccess() (v *ListEvaluationSetsOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) GetSuccess() (v *ListEvaluationSetsOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceListEvaluationSetsResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceListEvaluationSetsOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*ListEvaluationSetsOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListEvaluationSetsOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19746,7 +19746,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetsOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19756,8 +19756,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewListEvaluationSetsOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListEvaluationSetsOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -19765,9 +19765,9 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) ReadField0(iprot thri
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSets_result"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetsOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19793,7 +19793,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -19812,15 +19812,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) String() string {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetsResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetsOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetsResult) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -19832,7 +19832,7 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) DeepEqual(ano *Evalua
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) Field0DeepEqual(src *ListEvaluationSetsOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetsOApiResult) Field0DeepEqual(src *ListEvaluationSetsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -19840,41 +19840,41 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetsResult) Field0DeepEqual(src *
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs struct {
-	Req *CreateEvaluationSetVersionOpenAPIRequest `thrift:"req,1" frugal:"1,default,CreateEvaluationSetVersionOpenAPIRequest"`
+type EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs struct {
+	Req *CreateEvaluationSetVersionOApiRequest `thrift:"req,1" frugal:"1,default,CreateEvaluationSetVersionOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceCreateEvaluationSetVersionArgs() *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs {
-	return &EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs{}
+func NewEvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs() *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs {
+	return &EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs_Req_DEFAULT *CreateEvaluationSetVersionOpenAPIRequest
+var EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs_Req_DEFAULT *CreateEvaluationSetVersionOApiRequest
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) GetReq() (v *CreateEvaluationSetVersionOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) GetReq() (v *CreateEvaluationSetVersionOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) SetReq(val *CreateEvaluationSetVersionOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) SetReq(val *CreateEvaluationSetVersionOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19919,7 +19919,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19929,8 +19929,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewCreateEvaluationSetVersionOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewCreateEvaluationSetVersionOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -19938,9 +19938,9 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) ReadField1(ipro
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSetVersion_args"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetVersionOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19966,7 +19966,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -19983,15 +19983,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) String() string {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -20003,7 +20003,7 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) DeepEqual(ano *
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) Field1DeepEqual(src *CreateEvaluationSetVersionOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiArgs) Field1DeepEqual(src *CreateEvaluationSetVersionOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -20011,41 +20011,41 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionArgs) Field1DeepEqual
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateEvaluationSetVersionResult struct {
-	Success *CreateEvaluationSetVersionOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,CreateEvaluationSetVersionOpenAPIResponse"`
+type EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult struct {
+	Success *CreateEvaluationSetVersionOApiResponse `thrift:"success,0,optional" frugal:"0,optional,CreateEvaluationSetVersionOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceCreateEvaluationSetVersionResult() *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult {
-	return &EvaluationOpenAPIServiceCreateEvaluationSetVersionResult{}
+func NewEvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult() *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult {
+	return &EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateEvaluationSetVersionResult_Success_DEFAULT *CreateEvaluationSetVersionOpenAPIResponse
+var EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult_Success_DEFAULT *CreateEvaluationSetVersionOApiResponse
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) GetSuccess() (v *CreateEvaluationSetVersionOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) GetSuccess() (v *CreateEvaluationSetVersionOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceCreateEvaluationSetVersionResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) SetSuccess(x interface{}) {
-	p.Success = x.(*CreateEvaluationSetVersionOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateEvaluationSetVersionOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -20090,7 +20090,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -20100,8 +20100,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewCreateEvaluationSetVersionOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCreateEvaluationSetVersionOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20109,9 +20109,9 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) ReadField0(ip
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluationSetVersion_result"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluationSetVersionOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -20137,7 +20137,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -20156,15 +20156,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) String() string {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetVersionResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -20176,7 +20176,7 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) DeepEqual(ano
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) Field0DeepEqual(src *CreateEvaluationSetVersionOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult) Field0DeepEqual(src *CreateEvaluationSetVersionOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -20184,41 +20184,41 @@ func (p *EvaluationOpenAPIServiceCreateEvaluationSetVersionResult) Field0DeepEqu
 	return true
 }
 
-type EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs struct {
-	Req *BatchCreateEvaluationSetItemsOpenAPIRequest `thrift:"req,1" frugal:"1,default,BatchCreateEvaluationSetItemsOpenAPIRequest"`
+type EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs struct {
+	Req *BatchCreateEvaluationSetItemsOApiRequest `thrift:"req,1" frugal:"1,default,BatchCreateEvaluationSetItemsOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs() *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs {
-	return &EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs{}
+func NewEvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs() *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs {
+	return &EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs_Req_DEFAULT *BatchCreateEvaluationSetItemsOpenAPIRequest
+var EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs_Req_DEFAULT *BatchCreateEvaluationSetItemsOApiRequest
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) GetReq() (v *BatchCreateEvaluationSetItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) GetReq() (v *BatchCreateEvaluationSetItemsOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) SetReq(val *BatchCreateEvaluationSetItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) SetReq(val *BatchCreateEvaluationSetItemsOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -20263,7 +20263,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -20273,8 +20273,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewBatchCreateEvaluationSetItemsOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchCreateEvaluationSetItemsOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20282,9 +20282,9 @@ func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) ReadField1(i
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItems_args"); err != nil {
+	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItemsOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -20310,7 +20310,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -20327,15 +20327,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) String() string {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) DeepEqual(ano *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) bool {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -20347,7 +20347,7 @@ func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) DeepEqual(an
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) Field1DeepEqual(src *BatchCreateEvaluationSetItemsOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs) Field1DeepEqual(src *BatchCreateEvaluationSetItemsOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -20355,41 +20355,41 @@ func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsArgs) Field1DeepEq
 	return true
 }
 
-type EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult struct {
-	Success *BatchCreateEvaluationSetItemsOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,BatchCreateEvaluationSetItemsOpenAPIResponse"`
+type EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult struct {
+	Success *BatchCreateEvaluationSetItemsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,BatchCreateEvaluationSetItemsOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult() *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult {
-	return &EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult{}
+func NewEvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult() *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult {
+	return &EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult_Success_DEFAULT *BatchCreateEvaluationSetItemsOpenAPIResponse
+var EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult_Success_DEFAULT *BatchCreateEvaluationSetItemsOApiResponse
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) GetSuccess() (v *BatchCreateEvaluationSetItemsOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) GetSuccess() (v *BatchCreateEvaluationSetItemsOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*BatchCreateEvaluationSetItemsOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchCreateEvaluationSetItemsOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -20434,7 +20434,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -20444,8 +20444,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewBatchCreateEvaluationSetItemsOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchCreateEvaluationSetItemsOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20453,9 +20453,9 @@ func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) ReadField0
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItems_result"); err != nil {
+	if err = oprot.WriteStructBegin("BatchCreateEvaluationSetItemsOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -20481,7 +20481,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -20500,15 +20500,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) String() string {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) DeepEqual(ano *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) bool {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -20520,7 +20520,7 @@ func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) DeepEqual(
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) Field0DeepEqual(src *BatchCreateEvaluationSetItemsOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult) Field0DeepEqual(src *BatchCreateEvaluationSetItemsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -20528,41 +20528,41 @@ func (p *EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsResult) Field0Deep
 	return true
 }
 
-type EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs struct {
-	Req *BatchUpdateEvaluationSetItemsOpenAPIRequest `thrift:"req,1" frugal:"1,default,BatchUpdateEvaluationSetItemsOpenAPIRequest"`
+type EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs struct {
+	Req *BatchUpdateEvaluationSetItemsOApiRequest `thrift:"req,1" frugal:"1,default,BatchUpdateEvaluationSetItemsOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs() *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs {
-	return &EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs{}
+func NewEvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs() *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs {
+	return &EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs_Req_DEFAULT *BatchUpdateEvaluationSetItemsOpenAPIRequest
+var EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs_Req_DEFAULT *BatchUpdateEvaluationSetItemsOApiRequest
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) GetReq() (v *BatchUpdateEvaluationSetItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) GetReq() (v *BatchUpdateEvaluationSetItemsOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) SetReq(val *BatchUpdateEvaluationSetItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) SetReq(val *BatchUpdateEvaluationSetItemsOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -20607,7 +20607,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -20617,8 +20617,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewBatchUpdateEvaluationSetItemsOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchUpdateEvaluationSetItemsOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20626,9 +20626,9 @@ func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) ReadField1(i
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItems_args"); err != nil {
+	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItemsOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -20654,7 +20654,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -20671,15 +20671,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) String() string {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) DeepEqual(ano *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) bool {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -20691,7 +20691,7 @@ func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) DeepEqual(an
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) Field1DeepEqual(src *BatchUpdateEvaluationSetItemsOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiArgs) Field1DeepEqual(src *BatchUpdateEvaluationSetItemsOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -20699,41 +20699,41 @@ func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsArgs) Field1DeepEq
 	return true
 }
 
-type EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult struct {
-	Success *BatchUpdateEvaluationSetItemsOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,BatchUpdateEvaluationSetItemsOpenAPIResponse"`
+type EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult struct {
+	Success *BatchUpdateEvaluationSetItemsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,BatchUpdateEvaluationSetItemsOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult() *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult {
-	return &EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult{}
+func NewEvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult() *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult {
+	return &EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult_Success_DEFAULT *BatchUpdateEvaluationSetItemsOpenAPIResponse
+var EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult_Success_DEFAULT *BatchUpdateEvaluationSetItemsOApiResponse
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) GetSuccess() (v *BatchUpdateEvaluationSetItemsOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) GetSuccess() (v *BatchUpdateEvaluationSetItemsOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*BatchUpdateEvaluationSetItemsOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchUpdateEvaluationSetItemsOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -20778,7 +20778,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -20788,8 +20788,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewBatchUpdateEvaluationSetItemsOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchUpdateEvaluationSetItemsOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20797,9 +20797,9 @@ func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) ReadField0
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItems_result"); err != nil {
+	if err = oprot.WriteStructBegin("BatchUpdateEvaluationSetItemsOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -20825,7 +20825,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -20844,15 +20844,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) String() string {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) DeepEqual(ano *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) bool {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -20864,7 +20864,7 @@ func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) DeepEqual(
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) Field0DeepEqual(src *BatchUpdateEvaluationSetItemsOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsOApiResult) Field0DeepEqual(src *BatchUpdateEvaluationSetItemsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -20872,41 +20872,41 @@ func (p *EvaluationOpenAPIServiceBatchUpdateEvaluationSetItemsResult) Field0Deep
 	return true
 }
 
-type EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs struct {
-	Req *BatchDeleteEvaluationSetItemsOpenAPIRequest `thrift:"req,1" frugal:"1,default,BatchDeleteEvaluationSetItemsOpenAPIRequest"`
+type EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs struct {
+	Req *BatchDeleteEvaluationSetItemsOApiRequest `thrift:"req,1" frugal:"1,default,BatchDeleteEvaluationSetItemsOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs() *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs {
-	return &EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs{}
+func NewEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs() *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs {
+	return &EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs_Req_DEFAULT *BatchDeleteEvaluationSetItemsOpenAPIRequest
+var EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs_Req_DEFAULT *BatchDeleteEvaluationSetItemsOApiRequest
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) GetReq() (v *BatchDeleteEvaluationSetItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) GetReq() (v *BatchDeleteEvaluationSetItemsOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) SetReq(val *BatchDeleteEvaluationSetItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) SetReq(val *BatchDeleteEvaluationSetItemsOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -20951,7 +20951,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -20961,8 +20961,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewBatchDeleteEvaluationSetItemsOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchDeleteEvaluationSetItemsOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20970,9 +20970,9 @@ func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) ReadField1(i
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItems_args"); err != nil {
+	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItemsOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -20998,7 +20998,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21015,15 +21015,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) String() string {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) DeepEqual(ano *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) bool {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21035,7 +21035,7 @@ func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) DeepEqual(an
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) Field1DeepEqual(src *BatchDeleteEvaluationSetItemsOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs) Field1DeepEqual(src *BatchDeleteEvaluationSetItemsOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -21043,41 +21043,41 @@ func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsArgs) Field1DeepEq
 	return true
 }
 
-type EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult struct {
-	Success *BatchDeleteEvaluationSetItemsOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,BatchDeleteEvaluationSetItemsOpenAPIResponse"`
+type EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult struct {
+	Success *BatchDeleteEvaluationSetItemsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,BatchDeleteEvaluationSetItemsOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult() *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult {
-	return &EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult{}
+func NewEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult() *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult {
+	return &EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult_Success_DEFAULT *BatchDeleteEvaluationSetItemsOpenAPIResponse
+var EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult_Success_DEFAULT *BatchDeleteEvaluationSetItemsOApiResponse
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) GetSuccess() (v *BatchDeleteEvaluationSetItemsOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) GetSuccess() (v *BatchDeleteEvaluationSetItemsOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*BatchDeleteEvaluationSetItemsOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchDeleteEvaluationSetItemsOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -21122,7 +21122,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21132,8 +21132,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewBatchDeleteEvaluationSetItemsOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchDeleteEvaluationSetItemsOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -21141,9 +21141,9 @@ func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) ReadField0
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItems_result"); err != nil {
+	if err = oprot.WriteStructBegin("BatchDeleteEvaluationSetItemsOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21169,7 +21169,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -21188,15 +21188,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) String() string {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) DeepEqual(ano *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) bool {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21208,7 +21208,7 @@ func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) DeepEqual(
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) Field0DeepEqual(src *BatchDeleteEvaluationSetItemsOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult) Field0DeepEqual(src *BatchDeleteEvaluationSetItemsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -21216,41 +21216,41 @@ func (p *EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsResult) Field0Deep
 	return true
 }
 
-type EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs struct {
-	Req *ClearEvaluationSetDraftItemsOpenAPIRequest `thrift:"req,1" frugal:"1,default,ClearEvaluationSetDraftItemsOpenAPIRequest"`
+type EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs struct {
+	Req *ClearEvaluationSetDraftItemsOApiRequest `thrift:"req,1" frugal:"1,default,ClearEvaluationSetDraftItemsOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs() *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs {
-	return &EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs{}
+func NewEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs() *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs {
+	return &EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs_Req_DEFAULT *ClearEvaluationSetDraftItemsOpenAPIRequest
+var EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs_Req_DEFAULT *ClearEvaluationSetDraftItemsOApiRequest
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) GetReq() (v *ClearEvaluationSetDraftItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) GetReq() (v *ClearEvaluationSetDraftItemsOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) SetReq(val *ClearEvaluationSetDraftItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) SetReq(val *ClearEvaluationSetDraftItemsOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -21295,7 +21295,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21305,8 +21305,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewClearEvaluationSetDraftItemsOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewClearEvaluationSetDraftItemsOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -21314,9 +21314,9 @@ func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) ReadField1(ip
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItems_args"); err != nil {
+	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItemsOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21342,7 +21342,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21359,15 +21359,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) String() string {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) DeepEqual(ano *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) bool {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21379,7 +21379,7 @@ func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) DeepEqual(ano
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) Field1DeepEqual(src *ClearEvaluationSetDraftItemsOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs) Field1DeepEqual(src *ClearEvaluationSetDraftItemsOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -21387,41 +21387,41 @@ func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsArgs) Field1DeepEqu
 	return true
 }
 
-type EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult struct {
-	Success *ClearEvaluationSetDraftItemsOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,ClearEvaluationSetDraftItemsOpenAPIResponse"`
+type EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult struct {
+	Success *ClearEvaluationSetDraftItemsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ClearEvaluationSetDraftItemsOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult() *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult {
-	return &EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult{}
+func NewEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult() *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult {
+	return &EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult_Success_DEFAULT *ClearEvaluationSetDraftItemsOpenAPIResponse
+var EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult_Success_DEFAULT *ClearEvaluationSetDraftItemsOApiResponse
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) GetSuccess() (v *ClearEvaluationSetDraftItemsOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) GetSuccess() (v *ClearEvaluationSetDraftItemsOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*ClearEvaluationSetDraftItemsOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ClearEvaluationSetDraftItemsOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -21466,7 +21466,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21476,8 +21476,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewClearEvaluationSetDraftItemsOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewClearEvaluationSetDraftItemsOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -21485,9 +21485,9 @@ func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) ReadField0(
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItems_result"); err != nil {
+	if err = oprot.WriteStructBegin("ClearEvaluationSetDraftItemsOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21513,7 +21513,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -21532,15 +21532,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) String() string {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) DeepEqual(ano *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) bool {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21552,7 +21552,7 @@ func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) DeepEqual(a
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) Field0DeepEqual(src *ClearEvaluationSetDraftItemsOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult) Field0DeepEqual(src *ClearEvaluationSetDraftItemsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -21560,41 +21560,41 @@ func (p *EvaluationOpenAPIServiceClearEvaluationSetDraftItemsResult) Field0DeepE
 	return true
 }
 
-type EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs struct {
-	Req *ListEvaluationSetVersionItemsOpenAPIRequest `thrift:"req,1" frugal:"1,default,ListEvaluationSetVersionItemsOpenAPIRequest"`
+type EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs struct {
+	Req *ListEvaluationSetVersionItemsOApiRequest `thrift:"req,1" frugal:"1,default,ListEvaluationSetVersionItemsOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs() *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs {
-	return &EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs{}
+func NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs() *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs {
+	return &EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs_Req_DEFAULT *ListEvaluationSetVersionItemsOpenAPIRequest
+var EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs_Req_DEFAULT *ListEvaluationSetVersionItemsOApiRequest
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) GetReq() (v *ListEvaluationSetVersionItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) GetReq() (v *ListEvaluationSetVersionItemsOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) SetReq(val *ListEvaluationSetVersionItemsOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) SetReq(val *ListEvaluationSetVersionItemsOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -21639,7 +21639,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21649,8 +21649,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewListEvaluationSetVersionItemsOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListEvaluationSetVersionItemsOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -21658,9 +21658,9 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) ReadField1(i
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItems_args"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItemsOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21686,7 +21686,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21703,15 +21703,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) String() string {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21723,7 +21723,7 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) DeepEqual(an
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) Field1DeepEqual(src *ListEvaluationSetVersionItemsOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs) Field1DeepEqual(src *ListEvaluationSetVersionItemsOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -21731,41 +21731,41 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsArgs) Field1DeepEq
 	return true
 }
 
-type EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult struct {
-	Success *ListEvaluationSetVersionItemsOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,ListEvaluationSetVersionItemsOpenAPIResponse"`
+type EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult struct {
+	Success *ListEvaluationSetVersionItemsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ListEvaluationSetVersionItemsOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsResult() *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult {
-	return &EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult{}
+func NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult() *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult {
+	return &EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult_Success_DEFAULT *ListEvaluationSetVersionItemsOpenAPIResponse
+var EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult_Success_DEFAULT *ListEvaluationSetVersionItemsOApiResponse
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) GetSuccess() (v *ListEvaluationSetVersionItemsOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) GetSuccess() (v *ListEvaluationSetVersionItemsOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*ListEvaluationSetVersionItemsOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListEvaluationSetVersionItemsOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -21810,7 +21810,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21820,8 +21820,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewListEvaluationSetVersionItemsOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListEvaluationSetVersionItemsOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -21829,9 +21829,9 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) ReadField0
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItems_result"); err != nil {
+	if err = oprot.WriteStructBegin("ListEvaluationSetVersionItemsOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21857,7 +21857,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -21876,15 +21876,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) String() string {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21896,7 +21896,7 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) DeepEqual(
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) Field0DeepEqual(src *ListEvaluationSetVersionItemsOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult) Field0DeepEqual(src *ListEvaluationSetVersionItemsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -21904,41 +21904,41 @@ func (p *EvaluationOpenAPIServiceListEvaluationSetVersionItemsResult) Field0Deep
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateEvaluatorArgs struct {
-	Req *CreateEvaluatorOpenAPIRequest `thrift:"req,1" frugal:"1,default,CreateEvaluatorOpenAPIRequest"`
+type EvaluationOpenAPIServiceCreateEvaluatorOApiArgs struct {
+	Req *CreateEvaluatorOApiRequest `thrift:"req,1" frugal:"1,default,CreateEvaluatorOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceCreateEvaluatorArgs() *EvaluationOpenAPIServiceCreateEvaluatorArgs {
-	return &EvaluationOpenAPIServiceCreateEvaluatorArgs{}
+func NewEvaluationOpenAPIServiceCreateEvaluatorOApiArgs() *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs {
+	return &EvaluationOpenAPIServiceCreateEvaluatorOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateEvaluatorArgs_Req_DEFAULT *CreateEvaluatorOpenAPIRequest
+var EvaluationOpenAPIServiceCreateEvaluatorOApiArgs_Req_DEFAULT *CreateEvaluatorOApiRequest
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) GetReq() (v *CreateEvaluatorOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) GetReq() (v *CreateEvaluatorOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceCreateEvaluatorArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceCreateEvaluatorOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) SetReq(val *CreateEvaluatorOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) SetReq(val *CreateEvaluatorOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -21983,7 +21983,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21993,8 +21993,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewCreateEvaluatorOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewCreateEvaluatorOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -22002,9 +22002,9 @@ func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) ReadField1(iprot thrift.TP
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluator_args"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluatorOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22030,7 +22030,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -22047,15 +22047,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) String() string {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluatorArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluatorOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluatorArgs) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22067,7 +22067,7 @@ func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) DeepEqual(ano *EvaluationO
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) Field1DeepEqual(src *CreateEvaluatorOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiArgs) Field1DeepEqual(src *CreateEvaluatorOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -22075,41 +22075,41 @@ func (p *EvaluationOpenAPIServiceCreateEvaluatorArgs) Field1DeepEqual(src *Creat
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateEvaluatorResult struct {
-	Success *CreateEvaluatorOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,CreateEvaluatorOpenAPIResponse"`
+type EvaluationOpenAPIServiceCreateEvaluatorOApiResult struct {
+	Success *CreateEvaluatorOApiResponse `thrift:"success,0,optional" frugal:"0,optional,CreateEvaluatorOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceCreateEvaluatorResult() *EvaluationOpenAPIServiceCreateEvaluatorResult {
-	return &EvaluationOpenAPIServiceCreateEvaluatorResult{}
+func NewEvaluationOpenAPIServiceCreateEvaluatorOApiResult() *EvaluationOpenAPIServiceCreateEvaluatorOApiResult {
+	return &EvaluationOpenAPIServiceCreateEvaluatorOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateEvaluatorResult_Success_DEFAULT *CreateEvaluatorOpenAPIResponse
+var EvaluationOpenAPIServiceCreateEvaluatorOApiResult_Success_DEFAULT *CreateEvaluatorOApiResponse
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) GetSuccess() (v *CreateEvaluatorOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) GetSuccess() (v *CreateEvaluatorOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceCreateEvaluatorResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceCreateEvaluatorOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) SetSuccess(x interface{}) {
-	p.Success = x.(*CreateEvaluatorOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateEvaluatorOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -22154,7 +22154,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateEvaluatorOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22164,8 +22164,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewCreateEvaluatorOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCreateEvaluatorOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -22173,9 +22173,9 @@ func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) ReadField0(iprot thrift.
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvaluator_result"); err != nil {
+	if err = oprot.WriteStructBegin("CreateEvaluatorOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22201,7 +22201,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -22220,15 +22220,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) String() string {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluatorResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateEvaluatorOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluatorResult) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22240,7 +22240,7 @@ func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) DeepEqual(ano *Evaluatio
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) Field0DeepEqual(src *CreateEvaluatorOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceCreateEvaluatorOApiResult) Field0DeepEqual(src *CreateEvaluatorOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -22248,41 +22248,41 @@ func (p *EvaluationOpenAPIServiceCreateEvaluatorResult) Field0DeepEqual(src *Cre
 	return true
 }
 
-type EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs struct {
-	Req *SubmitEvaluatorVersionOpenAPIRequest `thrift:"req,1" frugal:"1,default,SubmitEvaluatorVersionOpenAPIRequest"`
+type EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs struct {
+	Req *SubmitEvaluatorVersionOApiRequest `thrift:"req,1" frugal:"1,default,SubmitEvaluatorVersionOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceSubmitEvaluatorVersionArgs() *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs {
-	return &EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs{}
+func NewEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs() *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs {
+	return &EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs_Req_DEFAULT *SubmitEvaluatorVersionOpenAPIRequest
+var EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs_Req_DEFAULT *SubmitEvaluatorVersionOApiRequest
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) GetReq() (v *SubmitEvaluatorVersionOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) GetReq() (v *SubmitEvaluatorVersionOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) SetReq(val *SubmitEvaluatorVersionOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) SetReq(val *SubmitEvaluatorVersionOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -22327,7 +22327,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22337,8 +22337,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewSubmitEvaluatorVersionOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewSubmitEvaluatorVersionOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -22346,9 +22346,9 @@ func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) ReadField1(iprot th
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("SubmitEvaluatorVersion_args"); err != nil {
+	if err = oprot.WriteStructBegin("SubmitEvaluatorVersionOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22374,7 +22374,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -22391,15 +22391,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) String() string {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) DeepEqual(ano *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) bool {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22411,7 +22411,7 @@ func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) DeepEqual(ano *Eval
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) Field1DeepEqual(src *SubmitEvaluatorVersionOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs) Field1DeepEqual(src *SubmitEvaluatorVersionOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -22419,41 +22419,41 @@ func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionArgs) Field1DeepEqual(src
 	return true
 }
 
-type EvaluationOpenAPIServiceSubmitEvaluatorVersionResult struct {
-	Success *SubmitEvaluatorVersionOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,SubmitEvaluatorVersionOpenAPIResponse"`
+type EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult struct {
+	Success *SubmitEvaluatorVersionOApiResponse `thrift:"success,0,optional" frugal:"0,optional,SubmitEvaluatorVersionOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceSubmitEvaluatorVersionResult() *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult {
-	return &EvaluationOpenAPIServiceSubmitEvaluatorVersionResult{}
+func NewEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult() *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult {
+	return &EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceSubmitEvaluatorVersionResult_Success_DEFAULT *SubmitEvaluatorVersionOpenAPIResponse
+var EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult_Success_DEFAULT *SubmitEvaluatorVersionOApiResponse
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) GetSuccess() (v *SubmitEvaluatorVersionOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) GetSuccess() (v *SubmitEvaluatorVersionOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceSubmitEvaluatorVersionResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) SetSuccess(x interface{}) {
-	p.Success = x.(*SubmitEvaluatorVersionOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SubmitEvaluatorVersionOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -22498,7 +22498,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22508,8 +22508,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewSubmitEvaluatorVersionOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewSubmitEvaluatorVersionOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -22517,9 +22517,9 @@ func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) ReadField0(iprot 
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("SubmitEvaluatorVersion_result"); err != nil {
+	if err = oprot.WriteStructBegin("SubmitEvaluatorVersionOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22545,7 +22545,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -22564,15 +22564,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) String() string {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceSubmitEvaluatorVersionResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) DeepEqual(ano *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) bool {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22584,7 +22584,7 @@ func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) DeepEqual(ano *Ev
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) Field0DeepEqual(src *SubmitEvaluatorVersionOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult) Field0DeepEqual(src *SubmitEvaluatorVersionOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -22592,41 +22592,41 @@ func (p *EvaluationOpenAPIServiceSubmitEvaluatorVersionResult) Field0DeepEqual(s
 	return true
 }
 
-type EvaluationOpenAPIServiceGetEvaluatorVersionArgs struct {
-	Req *GetEvaluatorVersionOpenAPIRequest `thrift:"req,1" frugal:"1,default,GetEvaluatorVersionOpenAPIRequest"`
+type EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs struct {
+	Req *GetEvaluatorVersionOApiRequest `thrift:"req,1" frugal:"1,default,GetEvaluatorVersionOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceGetEvaluatorVersionArgs() *EvaluationOpenAPIServiceGetEvaluatorVersionArgs {
-	return &EvaluationOpenAPIServiceGetEvaluatorVersionArgs{}
+func NewEvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs() *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs {
+	return &EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetEvaluatorVersionArgs_Req_DEFAULT *GetEvaluatorVersionOpenAPIRequest
+var EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs_Req_DEFAULT *GetEvaluatorVersionOApiRequest
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) GetReq() (v *GetEvaluatorVersionOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) GetReq() (v *GetEvaluatorVersionOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceGetEvaluatorVersionArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) SetReq(val *GetEvaluatorVersionOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) SetReq(val *GetEvaluatorVersionOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -22671,7 +22671,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22681,8 +22681,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewGetEvaluatorVersionOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetEvaluatorVersionOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -22690,9 +22690,9 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) ReadField1(iprot thrif
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorVersion_args"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorVersionOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22718,7 +22718,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -22735,15 +22735,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) String() string {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorVersionArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22755,7 +22755,7 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) DeepEqual(ano *Evaluat
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) Field1DeepEqual(src *GetEvaluatorVersionOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs) Field1DeepEqual(src *GetEvaluatorVersionOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -22763,41 +22763,41 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorVersionArgs) Field1DeepEqual(src *G
 	return true
 }
 
-type EvaluationOpenAPIServiceGetEvaluatorVersionResult struct {
-	Success *GetEvaluatorVersionOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvaluatorVersionOpenAPIResponse"`
+type EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult struct {
+	Success *GetEvaluatorVersionOApiResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvaluatorVersionOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceGetEvaluatorVersionResult() *EvaluationOpenAPIServiceGetEvaluatorVersionResult {
-	return &EvaluationOpenAPIServiceGetEvaluatorVersionResult{}
+func NewEvaluationOpenAPIServiceGetEvaluatorVersionOApiResult() *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult {
+	return &EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetEvaluatorVersionResult_Success_DEFAULT *GetEvaluatorVersionOpenAPIResponse
+var EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult_Success_DEFAULT *GetEvaluatorVersionOApiResponse
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) GetSuccess() (v *GetEvaluatorVersionOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) GetSuccess() (v *GetEvaluatorVersionOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceGetEvaluatorVersionResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) SetSuccess(x interface{}) {
-	p.Success = x.(*GetEvaluatorVersionOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetEvaluatorVersionOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -22842,7 +22842,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22852,8 +22852,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewGetEvaluatorVersionOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetEvaluatorVersionOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -22861,9 +22861,9 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) ReadField0(iprot thr
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorVersion_result"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorVersionOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22889,7 +22889,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -22908,15 +22908,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) String() string {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorVersionResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorVersionResult) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22928,7 +22928,7 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) DeepEqual(ano *Evalu
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) Field0DeepEqual(src *GetEvaluatorVersionOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult) Field0DeepEqual(src *GetEvaluatorVersionOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -22936,41 +22936,41 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorVersionResult) Field0DeepEqual(src 
 	return true
 }
 
-type EvaluationOpenAPIServiceRunEvaluatorArgs struct {
-	Req *RunEvaluatorOpenAPIRequest `thrift:"req,1" frugal:"1,default,RunEvaluatorOpenAPIRequest"`
+type EvaluationOpenAPIServiceRunEvaluatorOApiArgs struct {
+	Req *RunEvaluatorOApiRequest `thrift:"req,1" frugal:"1,default,RunEvaluatorOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceRunEvaluatorArgs() *EvaluationOpenAPIServiceRunEvaluatorArgs {
-	return &EvaluationOpenAPIServiceRunEvaluatorArgs{}
+func NewEvaluationOpenAPIServiceRunEvaluatorOApiArgs() *EvaluationOpenAPIServiceRunEvaluatorOApiArgs {
+	return &EvaluationOpenAPIServiceRunEvaluatorOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceRunEvaluatorArgs_Req_DEFAULT *RunEvaluatorOpenAPIRequest
+var EvaluationOpenAPIServiceRunEvaluatorOApiArgs_Req_DEFAULT *RunEvaluatorOApiRequest
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) GetReq() (v *RunEvaluatorOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) GetReq() (v *RunEvaluatorOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceRunEvaluatorArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceRunEvaluatorOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) SetReq(val *RunEvaluatorOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) SetReq(val *RunEvaluatorOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -23015,7 +23015,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -23025,8 +23025,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewRunEvaluatorOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewRunEvaluatorOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -23034,9 +23034,9 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) ReadField1(iprot thrift.TProt
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("RunEvaluator_args"); err != nil {
+	if err = oprot.WriteStructBegin("RunEvaluatorOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23062,7 +23062,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -23079,15 +23079,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) String() string {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceRunEvaluatorArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceRunEvaluatorOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) DeepEqual(ano *EvaluationOpenAPIServiceRunEvaluatorArgs) bool {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23099,7 +23099,7 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) DeepEqual(ano *EvaluationOpen
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) Field1DeepEqual(src *RunEvaluatorOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiArgs) Field1DeepEqual(src *RunEvaluatorOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -23107,41 +23107,41 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorArgs) Field1DeepEqual(src *RunEvalu
 	return true
 }
 
-type EvaluationOpenAPIServiceRunEvaluatorResult struct {
-	Success *RunEvaluatorOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,RunEvaluatorOpenAPIResponse"`
+type EvaluationOpenAPIServiceRunEvaluatorOApiResult struct {
+	Success *RunEvaluatorOApiResponse `thrift:"success,0,optional" frugal:"0,optional,RunEvaluatorOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceRunEvaluatorResult() *EvaluationOpenAPIServiceRunEvaluatorResult {
-	return &EvaluationOpenAPIServiceRunEvaluatorResult{}
+func NewEvaluationOpenAPIServiceRunEvaluatorOApiResult() *EvaluationOpenAPIServiceRunEvaluatorOApiResult {
+	return &EvaluationOpenAPIServiceRunEvaluatorOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceRunEvaluatorResult_Success_DEFAULT *RunEvaluatorOpenAPIResponse
+var EvaluationOpenAPIServiceRunEvaluatorOApiResult_Success_DEFAULT *RunEvaluatorOApiResponse
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) GetSuccess() (v *RunEvaluatorOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) GetSuccess() (v *RunEvaluatorOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceRunEvaluatorResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceRunEvaluatorOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) SetSuccess(x interface{}) {
-	p.Success = x.(*RunEvaluatorOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*RunEvaluatorOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -23186,7 +23186,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceRunEvaluatorOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -23196,8 +23196,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewRunEvaluatorOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewRunEvaluatorOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -23205,9 +23205,9 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorResult) ReadField0(iprot thrift.TPr
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("RunEvaluator_result"); err != nil {
+	if err = oprot.WriteStructBegin("RunEvaluatorOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23233,7 +23233,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -23252,15 +23252,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) String() string {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceRunEvaluatorResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceRunEvaluatorOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) DeepEqual(ano *EvaluationOpenAPIServiceRunEvaluatorResult) bool {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceRunEvaluatorOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23272,7 +23272,7 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorResult) DeepEqual(ano *EvaluationOp
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceRunEvaluatorResult) Field0DeepEqual(src *RunEvaluatorOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) Field0DeepEqual(src *RunEvaluatorOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -23280,41 +23280,41 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorResult) Field0DeepEqual(src *RunEva
 	return true
 }
 
-type EvaluationOpenAPIServiceGetEvaluatorRecordArgs struct {
-	Req *GetEvaluatorRecordOpenAPIRequest `thrift:"req,1" frugal:"1,default,GetEvaluatorRecordOpenAPIRequest"`
+type EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs struct {
+	Req *GetEvaluatorRecordOApiRequest `thrift:"req,1" frugal:"1,default,GetEvaluatorRecordOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceGetEvaluatorRecordArgs() *EvaluationOpenAPIServiceGetEvaluatorRecordArgs {
-	return &EvaluationOpenAPIServiceGetEvaluatorRecordArgs{}
+func NewEvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs() *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs {
+	return &EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetEvaluatorRecordArgs_Req_DEFAULT *GetEvaluatorRecordOpenAPIRequest
+var EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs_Req_DEFAULT *GetEvaluatorRecordOApiRequest
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) GetReq() (v *GetEvaluatorRecordOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) GetReq() (v *GetEvaluatorRecordOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceGetEvaluatorRecordArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) SetReq(val *GetEvaluatorRecordOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) SetReq(val *GetEvaluatorRecordOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -23359,7 +23359,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -23369,8 +23369,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewGetEvaluatorRecordOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetEvaluatorRecordOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -23378,9 +23378,9 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) ReadField1(iprot thrift
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorRecord_args"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorRecordOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23406,7 +23406,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -23423,15 +23423,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) String() string {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorRecordArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23443,7 +23443,7 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) DeepEqual(ano *Evaluati
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) Field1DeepEqual(src *GetEvaluatorRecordOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs) Field1DeepEqual(src *GetEvaluatorRecordOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -23451,41 +23451,41 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorRecordArgs) Field1DeepEqual(src *Ge
 	return true
 }
 
-type EvaluationOpenAPIServiceGetEvaluatorRecordResult struct {
-	Success *GetEvaluatorRecordOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvaluatorRecordOpenAPIResponse"`
+type EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult struct {
+	Success *GetEvaluatorRecordOApiResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvaluatorRecordOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceGetEvaluatorRecordResult() *EvaluationOpenAPIServiceGetEvaluatorRecordResult {
-	return &EvaluationOpenAPIServiceGetEvaluatorRecordResult{}
+func NewEvaluationOpenAPIServiceGetEvaluatorRecordOApiResult() *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult {
+	return &EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetEvaluatorRecordResult_Success_DEFAULT *GetEvaluatorRecordOpenAPIResponse
+var EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult_Success_DEFAULT *GetEvaluatorRecordOApiResponse
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) GetSuccess() (v *GetEvaluatorRecordOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) GetSuccess() (v *GetEvaluatorRecordOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceGetEvaluatorRecordResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) SetSuccess(x interface{}) {
-	p.Success = x.(*GetEvaluatorRecordOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetEvaluatorRecordOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -23530,7 +23530,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -23540,8 +23540,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewGetEvaluatorRecordOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetEvaluatorRecordOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -23549,9 +23549,9 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) ReadField0(iprot thri
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetEvaluatorRecord_result"); err != nil {
+	if err = oprot.WriteStructBegin("GetEvaluatorRecordOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23577,7 +23577,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -23596,15 +23596,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) String() string {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorRecordResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorRecordResult) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23616,7 +23616,7 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) DeepEqual(ano *Evalua
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) Field0DeepEqual(src *GetEvaluatorRecordOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult) Field0DeepEqual(src *GetEvaluatorRecordOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -23624,41 +23624,41 @@ func (p *EvaluationOpenAPIServiceGetEvaluatorRecordResult) Field0DeepEqual(src *
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateExperimentArgs struct {
-	Req *CreateExperimentOpenAPIRequest `thrift:"req,1" frugal:"1,default,CreateExperimentOpenAPIRequest"`
+type EvaluationOpenAPIServiceCreateExperimentOApiArgs struct {
+	Req *CreateExperimentOApiRequest `thrift:"req,1" frugal:"1,default,CreateExperimentOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceCreateExperimentArgs() *EvaluationOpenAPIServiceCreateExperimentArgs {
-	return &EvaluationOpenAPIServiceCreateExperimentArgs{}
+func NewEvaluationOpenAPIServiceCreateExperimentOApiArgs() *EvaluationOpenAPIServiceCreateExperimentOApiArgs {
+	return &EvaluationOpenAPIServiceCreateExperimentOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateExperimentArgs_Req_DEFAULT *CreateExperimentOpenAPIRequest
+var EvaluationOpenAPIServiceCreateExperimentOApiArgs_Req_DEFAULT *CreateExperimentOApiRequest
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) GetReq() (v *CreateExperimentOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) GetReq() (v *CreateExperimentOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceCreateExperimentArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceCreateExperimentOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) SetReq(val *CreateExperimentOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) SetReq(val *CreateExperimentOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateExperimentArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateExperimentOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -23703,7 +23703,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateExperimentArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateExperimentOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -23713,8 +23713,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewCreateExperimentOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewCreateExperimentOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -23722,9 +23722,9 @@ func (p *EvaluationOpenAPIServiceCreateExperimentArgs) ReadField1(iprot thrift.T
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateExperiment_args"); err != nil {
+	if err = oprot.WriteStructBegin("CreateExperimentOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23750,7 +23750,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -23767,15 +23767,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) String() string {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateExperimentArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateExperimentOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateExperimentArgs) bool {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceCreateExperimentOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23787,7 +23787,7 @@ func (p *EvaluationOpenAPIServiceCreateExperimentArgs) DeepEqual(ano *Evaluation
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentArgs) Field1DeepEqual(src *CreateExperimentOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiArgs) Field1DeepEqual(src *CreateExperimentOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -23795,41 +23795,41 @@ func (p *EvaluationOpenAPIServiceCreateExperimentArgs) Field1DeepEqual(src *Crea
 	return true
 }
 
-type EvaluationOpenAPIServiceCreateExperimentResult struct {
-	Success *CreateExperimentOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,CreateExperimentOpenAPIResponse"`
+type EvaluationOpenAPIServiceCreateExperimentOApiResult struct {
+	Success *CreateExperimentOApiResponse `thrift:"success,0,optional" frugal:"0,optional,CreateExperimentOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceCreateExperimentResult() *EvaluationOpenAPIServiceCreateExperimentResult {
-	return &EvaluationOpenAPIServiceCreateExperimentResult{}
+func NewEvaluationOpenAPIServiceCreateExperimentOApiResult() *EvaluationOpenAPIServiceCreateExperimentOApiResult {
+	return &EvaluationOpenAPIServiceCreateExperimentOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceCreateExperimentResult_Success_DEFAULT *CreateExperimentOpenAPIResponse
+var EvaluationOpenAPIServiceCreateExperimentOApiResult_Success_DEFAULT *CreateExperimentOApiResponse
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) GetSuccess() (v *CreateExperimentOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) GetSuccess() (v *CreateExperimentOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceCreateExperimentResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceCreateExperimentOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) SetSuccess(x interface{}) {
-	p.Success = x.(*CreateExperimentOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateExperimentOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceCreateExperimentResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceCreateExperimentOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -23874,7 +23874,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateExperimentResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCreateExperimentOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -23884,8 +23884,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewCreateExperimentOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCreateExperimentOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -23893,9 +23893,9 @@ func (p *EvaluationOpenAPIServiceCreateExperimentResult) ReadField0(iprot thrift
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateExperiment_result"); err != nil {
+	if err = oprot.WriteStructBegin("CreateExperimentOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23921,7 +23921,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -23940,15 +23940,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) String() string {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceCreateExperimentResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceCreateExperimentOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateExperimentResult) bool {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceCreateExperimentOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23960,7 +23960,7 @@ func (p *EvaluationOpenAPIServiceCreateExperimentResult) DeepEqual(ano *Evaluati
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceCreateExperimentResult) Field0DeepEqual(src *CreateExperimentOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceCreateExperimentOApiResult) Field0DeepEqual(src *CreateExperimentOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -23968,41 +23968,41 @@ func (p *EvaluationOpenAPIServiceCreateExperimentResult) Field0DeepEqual(src *Cr
 	return true
 }
 
-type EvaluationOpenAPIServiceGetExperimentResultArgs struct {
-	Req *GetExperimentResultOpenAPIRequest `thrift:"req,1" frugal:"1,default,GetExperimentResultOpenAPIRequest"`
+type EvaluationOpenAPIServiceGetExperimentResultOApiArgs struct {
+	Req *GetExperimentResultOApiRequest `thrift:"req,1" frugal:"1,default,GetExperimentResultOApiRequest"`
 }
 
-func NewEvaluationOpenAPIServiceGetExperimentResultArgs() *EvaluationOpenAPIServiceGetExperimentResultArgs {
-	return &EvaluationOpenAPIServiceGetExperimentResultArgs{}
+func NewEvaluationOpenAPIServiceGetExperimentResultOApiArgs() *EvaluationOpenAPIServiceGetExperimentResultOApiArgs {
+	return &EvaluationOpenAPIServiceGetExperimentResultOApiArgs{}
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetExperimentResultArgs_Req_DEFAULT *GetExperimentResultOpenAPIRequest
+var EvaluationOpenAPIServiceGetExperimentResultOApiArgs_Req_DEFAULT *GetExperimentResultOApiRequest
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) GetReq() (v *GetExperimentResultOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) GetReq() (v *GetExperimentResultOApiRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationOpenAPIServiceGetExperimentResultArgs_Req_DEFAULT
+		return EvaluationOpenAPIServiceGetExperimentResultOApiArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) SetReq(val *GetExperimentResultOpenAPIRequest) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) SetReq(val *GetExperimentResultOApiRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultArgs = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultOApiArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) IsSetReq() bool {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -24047,7 +24047,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultOApiArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -24057,8 +24057,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewGetExperimentResultOpenAPIRequest()
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetExperimentResultOApiRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -24066,9 +24066,9 @@ func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) ReadField1(iprot thrif
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetExperimentResult_args"); err != nil {
+	if err = oprot.WriteStructBegin("GetExperimentResultOApi_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -24094,7 +24094,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -24111,15 +24111,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) String() string {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetExperimentResultArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetExperimentResultOApiArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetExperimentResultArgs) bool {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -24131,7 +24131,7 @@ func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) DeepEqual(ano *Evaluat
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) Field1DeepEqual(src *GetExperimentResultOpenAPIRequest) bool {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiArgs) Field1DeepEqual(src *GetExperimentResultOApiRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -24139,41 +24139,41 @@ func (p *EvaluationOpenAPIServiceGetExperimentResultArgs) Field1DeepEqual(src *G
 	return true
 }
 
-type EvaluationOpenAPIServiceGetExperimentResultResult struct {
-	Success *GetExperimentResultOpenAPIResponse `thrift:"success,0,optional" frugal:"0,optional,GetExperimentResultOpenAPIResponse"`
+type EvaluationOpenAPIServiceGetExperimentResultOApiResult struct {
+	Success *GetExperimentResultOApiResponse `thrift:"success,0,optional" frugal:"0,optional,GetExperimentResultOApiResponse"`
 }
 
-func NewEvaluationOpenAPIServiceGetExperimentResultResult() *EvaluationOpenAPIServiceGetExperimentResultResult {
-	return &EvaluationOpenAPIServiceGetExperimentResultResult{}
+func NewEvaluationOpenAPIServiceGetExperimentResultOApiResult() *EvaluationOpenAPIServiceGetExperimentResultOApiResult {
+	return &EvaluationOpenAPIServiceGetExperimentResultOApiResult{}
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) InitDefault() {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceGetExperimentResultResult_Success_DEFAULT *GetExperimentResultOpenAPIResponse
+var EvaluationOpenAPIServiceGetExperimentResultOApiResult_Success_DEFAULT *GetExperimentResultOApiResponse
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) GetSuccess() (v *GetExperimentResultOpenAPIResponse) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) GetSuccess() (v *GetExperimentResultOApiResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationOpenAPIServiceGetExperimentResultResult_Success_DEFAULT
+		return EvaluationOpenAPIServiceGetExperimentResultOApiResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) SetSuccess(x interface{}) {
-	p.Success = x.(*GetExperimentResultOpenAPIResponse)
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetExperimentResultOApiResponse)
 }
 
-var fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultResult = map[int16]string{
+var fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultOApiResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) IsSetSuccess() bool {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -24218,7 +24218,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetExperimentResultOApiResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -24228,8 +24228,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewGetExperimentResultOpenAPIResponse()
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetExperimentResultOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -24237,9 +24237,9 @@ func (p *EvaluationOpenAPIServiceGetExperimentResultResult) ReadField0(iprot thr
 	return nil
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetExperimentResult_result"); err != nil {
+	if err = oprot.WriteStructBegin("GetExperimentResultOApi_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -24265,7 +24265,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -24284,15 +24284,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) String() string {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationOpenAPIServiceGetExperimentResultResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetExperimentResultOApiResult(%+v)", *p)
 
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) DeepEqual(ano *EvaluationOpenAPIServiceGetExperimentResultResult) bool {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceGetExperimentResultOApiResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -24304,7 +24304,7 @@ func (p *EvaluationOpenAPIServiceGetExperimentResultResult) DeepEqual(ano *Evalu
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceGetExperimentResultResult) Field0DeepEqual(src *GetExperimentResultOpenAPIResponse) bool {
+func (p *EvaluationOpenAPIServiceGetExperimentResultOApiResult) Field0DeepEqual(src *GetExperimentResultOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
