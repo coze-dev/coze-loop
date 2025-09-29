@@ -122,22 +122,6 @@ func BatchDeleteEvaluationSetItemsOApi(ctx context.Context, c *app.RequestContex
 	c.JSON(consts.StatusOK, resp)
 }
 
-// ClearEvaluationSetDraftItemsOApi .
-// @router /open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/clear [DELETE]
-func ClearEvaluationSetDraftItemsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ClearEvaluationSetDraftItemsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ClearEvaluationSetDraftItemsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
 // ListEvaluationSetVersionItemsOApi .
 // @router /open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list [POST]
 func ListEvaluationSetVersionItemsOApi(ctx context.Context, c *app.RequestContext) {

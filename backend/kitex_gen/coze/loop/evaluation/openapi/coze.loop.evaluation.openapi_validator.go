@@ -22,11 +22,13 @@ var (
 )
 
 func (p *CreateEvaluationSetOApiRequest) IsValid() error {
-	if len(p.Name) < int(1) {
-		return fmt.Errorf("field Name min_len rule failed, current value: %d", len(p.Name))
-	}
-	if len(p.Name) > int(255) {
-		return fmt.Errorf("field Name max_len rule failed, current value: %d", len(p.Name))
+	if p.Name != nil {
+		if len(*p.Name) < int(1) {
+			return fmt.Errorf("field Name min_len rule failed, current value: %d", len(*p.Name))
+		}
+		if len(*p.Name) > int(255) {
+			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
+		}
 	}
 	if p.Description != nil {
 		if len(*p.Description) > int(2048) {
@@ -228,22 +230,6 @@ func (p *BatchDeleteEvaluationSetItemsOApiRequest) IsValid() error {
 	return nil
 }
 func (p *BatchDeleteEvaluationSetItemsOApiResponse) IsValid() error {
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *ClearEvaluationSetDraftItemsOApiRequest) IsValid() error {
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *ClearEvaluationSetDraftItemsOApiResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

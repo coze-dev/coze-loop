@@ -64,14 +64,14 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.Name == "" {
+	if req.GetName() == "" {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is required"))
 	}
 
 	// 调用domain服务
 	id, err := e.evaluationSetService.CreateEvaluationSet(ctx, &entity.CreateEvaluationSetParam{
-		SpaceID:             req.WorkspaceID,
-		Name:                req.Name,
+		SpaceID:             req.GetWorkspaceID(),
+		Name:                req.GetName(),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
 	})
@@ -101,7 +101,7 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSetOApi(ctx context.Cont
 	}
 
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetsOApi(ctx context.Co
 
 	// 调用domain服务
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
-		SpaceID:          req.WorkspaceID,
+		SpaceID:          req.GetWorkspaceID(),
 		EvaluationSetIDs: req.EvaluationSetIds,
 		Name:             req.Name,
 		Creators:         req.Creators,
@@ -177,8 +177,8 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetVersionOApi(ctx co
 
 	// 调用domain服务
 	id, err := e.evaluationSetVersionService.CreateEvaluationSetVersion(ctx, &entity.CreateEvaluationSetVersionParam{
-		SpaceID:         req.WorkspaceID,
-		EvaluationSetID: req.EvaluationSetID,
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
 		Version:         *req.Version,
 		Description:     req.Description,
 	})
@@ -210,8 +210,8 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx
 
 	// 调用domain服务
 	idMap, errors, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
-		SpaceID:          req.WorkspaceID,
-		EvaluationSetID:  req.EvaluationSetID,
+		SpaceID:          req.GetWorkspaceID(),
+		EvaluationSetID:  req.GetEvaluationSetID(),
 		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.Items),
 		SkipInvalidItems: req.SkipInvalidItems,
 		AllowPartialAdd:  req.AllowPartialAdd,
@@ -245,7 +245,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItemsOApi(ctx
 
 	// 批量更新评测集项目
 	for _, item := range req.Items {
-		err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, *item.ID, evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
+		err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), *item.ID, evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
 		if err != nil {
 			logs.CtxError(ctx, "UpdateEvaluationSetItem, err=%v", err)
 		}
@@ -270,36 +270,21 @@ func (e *EvaluationOpenApiApplicationImpl) BatchDeleteEvaluationSetItemsOApi(ctx
 	if req.ItemIds == nil || len(req.ItemIds) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
-
-	// 调用domain服务
-	err = e.evaluationSetItemService.BatchDeleteEvaluationSetItems(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemIds)
-	if err != nil {
-		return nil, err
+	if req.GetIsDeleteAll() == true {
+		// 调用domain服务
+		err = e.evaluationSetItemService.ClearEvaluationSetDraftItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// 调用domain服务
+		err = e.evaluationSetItemService.BatchDeleteEvaluationSetItems(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), req.ItemIds)
+		if err != nil {
+			return nil, err
+		}
 	}
-
 	// 构建响应
 	return &openapi.BatchDeleteEvaluationSetItemsOApiResponse{}, nil
-}
-
-func (e *EvaluationOpenApiApplicationImpl) ClearEvaluationSetDraftItemsOApi(ctx context.Context, req *openapi.ClearEvaluationSetDraftItemsOApiRequest) (r *openapi.ClearEvaluationSetDraftItemsOApiResponse, err error) {
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	defer func() {
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
-	}()
-
-	// 参数校验
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-
-	// 调用domain服务
-	err = e.evaluationSetItemService.ClearEvaluationSetDraftItem(ctx, req.WorkspaceID, req.EvaluationSetID)
-	if err != nil {
-		return nil, err
-	}
-
-	// 构建响应
-	return &openapi.ClearEvaluationSetDraftItemsOApiResponse{}, nil
 }
 
 func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error) {
@@ -315,9 +300,9 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItemsOApi(ctx
 
 	// 调用domain服务
 	items, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-		SpaceID:         req.WorkspaceID,
-		EvaluationSetID: req.EvaluationSetID,
-		VersionID:       gptr.Of(req.VersionID),
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		VersionID:       req.VersionID,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
 		OrderBys:        evaluation_set.OrderByDTO2DOs(req.OrderBys),

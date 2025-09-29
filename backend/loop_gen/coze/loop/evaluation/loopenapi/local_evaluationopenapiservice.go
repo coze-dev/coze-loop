@@ -23,7 +23,7 @@ func NewLocalEvaluationOpenAPIService(impl openapi.EvaluationOpenAPIService, mds
 }
 
 // CreateEvaluationSetOApi
-// 评测集接口 (9个)
+// 评测集接口 (8个)
 // 1.1 创建评测集
 func (l *LocalEvaluationOpenAPIService) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest, callOptions ...callopt.Option) (*openapi.CreateEvaluationSetOApiResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
@@ -184,31 +184,8 @@ func (l *LocalEvaluationOpenAPIService) BatchDeleteEvaluationSetItemsOApi(ctx co
 	return result.GetSuccess(), nil
 }
 
-// ClearEvaluationSetDraftItemsOApi
-// 1.8 清空评测集草稿数据
-func (l *LocalEvaluationOpenAPIService) ClearEvaluationSetDraftItemsOApi(ctx context.Context, req *openapi.ClearEvaluationSetDraftItemsOApiRequest, callOptions ...callopt.Option) (*openapi.ClearEvaluationSetDraftItemsOApiResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs)
-		result := out.(*openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult)
-		resp, err := l.impl.ClearEvaluationSetDraftItemsOApi(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs{Req: req}
-	result := &openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult{}
-	ctx = l.injectRPCInfo(ctx, "ClearEvaluationSetDraftItemsOApi")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 // ListEvaluationSetVersionItemsOApi
-// 1.9 查询评测集特定版本数据
+// 1.8 查询评测集特定版本数据
 func (l *LocalEvaluationOpenAPIService) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvaluationSetVersionItemsOApiResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs)

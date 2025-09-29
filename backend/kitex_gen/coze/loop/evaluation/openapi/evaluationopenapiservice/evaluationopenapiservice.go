@@ -62,13 +62,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"ClearEvaluationSetDraftItemsOApi": kitex.NewMethodInfo(
-		clearEvaluationSetDraftItemsOApiHandler,
-		newEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs,
-		newEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"ListEvaluationSetVersionItemsOApi": kitex.NewMethodInfo(
 		listEvaluationSetVersionItemsOApiHandler,
 		newEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs,
@@ -289,25 +282,6 @@ func newEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiArgs() interfac
 
 func newEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult()
-}
-
-func clearEvaluationSetDraftItemsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).ClearEvaluationSetDraftItemsOApi(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs()
-}
-
-func newEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult()
 }
 
 func listEvaluationSetVersionItemsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -539,16 +513,6 @@ func (p *kClient) BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *op
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceBatchDeleteEvaluationSetItemsOApiResult
 	if err = p.c.Call(ctx, "BatchDeleteEvaluationSetItemsOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) ClearEvaluationSetDraftItemsOApi(ctx context.Context, req *openapi.ClearEvaluationSetDraftItemsOApiRequest) (r *openapi.ClearEvaluationSetDraftItemsOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceClearEvaluationSetDraftItemsOApiResult
-	if err = p.c.Call(ctx, "ClearEvaluationSetDraftItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
