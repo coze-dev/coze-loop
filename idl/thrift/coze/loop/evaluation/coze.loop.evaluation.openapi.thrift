@@ -402,7 +402,7 @@ service EvaluationOpenAPIService {
     // 1.7 批量删除评测集数据
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_delete")
     // 1.8 清空评测集草稿数据
-    ClearEvaluationSetDraftItemsOApiResponse ClearEvaluationSetDraftItemsOApi(1: ClearEvaluationSetDraftItemsOApiRequest req) (api.delete = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/clear")
+    ClearEvaluationSetDraftItemsOApiResponse ClearEvaluationSetDraftItemsOApi(1: ClearEvaluationSetDraftItemsOApiRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/clear")
     // 1.9 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.post = "/open-apis/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list")
 
