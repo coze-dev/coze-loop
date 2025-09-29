@@ -121,19 +121,13 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	}
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(taskPOs))
 	for _, taskPO := range taskPOs {
-		var taskRun entity.TaskRun
-		// 计算 taskRunstat：只有当所有 run 都为 done 状态时才为 true
-		allRunsDone := true
-		if len(taskPO.TaskRuns) == 0 {
-			// 如果没有 TaskRuns，则认为未完成
-			allRunsDone = false
-		} else {
-			// 检查所有 TaskRuns 是否都为 done 状态
-			for _, taskRunPO := range taskPO.TaskRuns {
+		var taskRun, backfillTaskRun entity.TaskRun
+		for _, taskRunPO := range taskPO.TaskRuns {
+			if taskRunPO.TaskType == task.TaskRunTypeBackFill {
+				backfillTaskRun = *taskRunPO
+			} else {
 				if taskRunPO.RunStatus != task.RunStatusDone {
 					taskRun = *taskRunPO
-					allRunsDone = false
-					break
 				}
 			}
 		}
@@ -145,15 +139,41 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 达到任务时间期限
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
-		if (time.Now().After(endTime) || taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0) && allRunsDone {
-			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     taskInfo,
-				TaskRun:  &taskRun,
-				IsFinish: true,
-			})
-			if err != nil {
-				logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
-				continue
+		if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 && taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
+			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
+				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+					Task:     taskInfo,
+					TaskRun:  &backfillTaskRun,
+					IsFinish: true,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					continue
+				}
+			}
+		} else if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 {
+			if backfillTaskRun.RunStatus == task.RunStatusDone {
+				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+					Task:     taskInfo,
+					TaskRun:  &taskRun,
+					IsFinish: true,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					continue
+				}
+			}
+		} else if taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
+			if time.Now().After(endTime) {
+				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+					Task:     taskInfo,
+					TaskRun:  &taskRun,
+					IsFinish: true,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					continue
+				}
 			}
 		}
 		// 如果任务状态为unstarted，到任务开始时间就开始create

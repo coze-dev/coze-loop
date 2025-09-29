@@ -280,6 +280,19 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 
 		if !result.HasMore {
 			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
+			taskRunConfig, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
+			if err != nil {
+				logs.CtxWarn(ctx, "GetBackfillTaskRun, task_id=%d, err=%v", sub.taskID, err)
+				return err
+			}
+			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				Task:     sub.t,
+				TaskRun:  taskRunConfig,
+				IsFinish: true,
+			}); err != nil {
+				logs.CtxWarn(ctx, "OnFinishTaskChange, task_id=%d, err=%v", sub.taskID, err)
+				return err
+			}
 			break
 		}
 
@@ -445,19 +458,6 @@ func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *l
 		}); err != nil {
 			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 			return err
-		}
-	}
-	if sampler.GetIsCycle() {
-		// 达到单次任务上限
-		if taskRunCount+1 > sampler.GetCycleCount() {
-			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     sub.t,
-				TaskRun:  taskRunConfig,
-				IsFinish: false,
-			}); err != nil {
-				logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
-				return err
-			}
 		}
 	}
 	logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
