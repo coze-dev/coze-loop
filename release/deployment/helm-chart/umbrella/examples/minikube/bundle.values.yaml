@@ -8,6 +8,8 @@ ingress:
 custom: &custom
   image:
     registry: "docker.io"
+    tag: "new"
+    repository: "coze-dev/coze-loop"
   redis:
     disabled: true
   mysql:
@@ -35,4 +37,21 @@ coze-loop-minio:
 coze-loop-rmq-namesrv:
   custom: *custom
 coze-loop-rmq-broker:
+  custom: *custom
+coze-loop-python-faas:
+  custom: *custom
+  probes:
+    liveness:
+      enabled: true
+      initialDelaySeconds: 120
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 5
+    readiness:
+      enabled: true
+      initialDelaySeconds: 60
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 5
+coze-loop-js-faas:
   custom: *custom
