@@ -349,17 +349,17 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
 		len(sampledSpans), len(fr.spans), sub.t.GetID())
-	if fr.noMore {
-		logs.CtxInfo(ctx, "completed listing spans, task_id=%d", sub.t.GetID())
-		if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-			Task:     sub.t,
-			TaskRun:  taskRun,
-			IsFinish: true,
-		}); err != nil {
-			logs.CtxWarn(ctx, "OnFinishTaskChange, task_id=%d, err=%v", sub.taskID, err)
-			return len(fr.spans), len(sampledSpans), err
-		}
-	}
+	//if fr.noMore {
+	//	logs.CtxInfo(ctx, "completed listing spans, task_id=%d", sub.t.GetID())
+	//	if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+	//		Task:     sub.t,
+	//		TaskRun:  taskRun,
+	//		IsFinish: true,
+	//	}); err != nil {
+	//		logs.CtxWarn(ctx, "OnFinishTaskChange, task_id=%d, err=%v", sub.taskID, err)
+	//		return len(fr.spans), len(sampledSpans), err
+	//	}
+	//}
 	return len(fr.spans), len(sampledSpans), nil
 }
 
