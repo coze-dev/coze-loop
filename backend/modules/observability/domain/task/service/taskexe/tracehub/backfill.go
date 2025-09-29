@@ -280,19 +280,6 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 
 		if !result.HasMore {
 			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
-			taskRunConfig, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
-			if err != nil {
-				logs.CtxWarn(ctx, "GetBackfillTaskRun, task_id=%d, err=%v", sub.taskID, err)
-				return err
-			}
-			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     sub.t,
-				TaskRun:  taskRunConfig,
-				IsFinish: true,
-			}); err != nil {
-				logs.CtxWarn(ctx, "OnFinishTaskChange, task_id=%d, err=%v", sub.taskID, err)
-				return err
-			}
 			break
 		}
 
@@ -362,7 +349,16 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
 		len(sampledSpans), len(fr.spans), sub.t.GetID())
-
+	if fr.noMore {
+		if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			Task:     sub.t,
+			TaskRun:  taskRun,
+			IsFinish: true,
+		}); err != nil {
+			logs.CtxWarn(ctx, "OnFinishTaskChange, task_id=%d, err=%v", sub.taskID, err)
+			return len(fr.spans), len(sampledSpans), err
+		}
+	}
 	return len(fr.spans), len(sampledSpans), nil
 }
 
