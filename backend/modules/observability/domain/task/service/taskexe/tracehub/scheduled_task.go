@@ -95,6 +95,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 						Values: []string{
 							string(task.TaskStatusUnstarted),
 							string(task.TaskStatusRunning),
+							string(task.TaskStatusPending),
 						},
 						QueryType: ptr.Of(filter.QueryTypeIn),
 						FieldType: ptr.Of(filter.FieldTypeString),
@@ -118,9 +119,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 继续下一页，offset增加1000
 		offset += limit
 	}
-
-	var tasks []*task.Task
-	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(tasks))
+	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(taskPOs))
 	for _, taskPO := range taskPOs {
 		var taskRun entity.TaskRun
 		// 计算 taskRunstat：只有当所有 run 都为 done 状态时才为 true
@@ -147,7 +146,6 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// 到任务结束时间就结束
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if (time.Now().After(endTime) || taskInfo.GetRule().GetEffectiveTime().GetEndAt() == 0) && allRunsDone {
-
 			err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     taskInfo,
 				TaskRun:  &taskRun,
@@ -185,7 +183,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 			}
 		}
-		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetRule().GetSampler().GetIsCycle() {
+		if taskInfo.GetTaskStatus() != task.TaskStatusUnstarted {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
 			// 达到单次任务时间期限
 			if time.Now().After(taskRun.RunEndAt) {
@@ -199,15 +197,17 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
 					continue
 				}
-				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-					CurrentTask: taskInfo,
-					RunType:     task.TaskRunTypeNewData,
-					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
-					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
-				})
-				if err != nil {
-					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
-					continue
+				if taskInfo.GetRule().GetSampler().GetIsCycle() {
+					err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+						CurrentTask: taskInfo,
+						RunType:     task.TaskRunTypeNewData,
+						RunStartAt:  taskRun.RunEndAt.UnixMilli(),
+						RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
+					})
+					if err != nil {
+						logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+						continue
+					}
 				}
 			}
 		}
