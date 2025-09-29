@@ -585,6 +585,7 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 		fieldMetas[field] = fieldMta
 	}
 	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
+	logs.CtxInfo(ctx, "GetTracesMetaInfo spanTypeCfg: %v", spanTypeCfg)
 	keySpanTypes := make([]string, 0)
 	spanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
 	if !ok {
