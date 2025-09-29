@@ -804,11 +804,11 @@ func (p *EvaluationSetSchema) Field1DeepEqual(src []*FieldSchema) bool {
 
 // 评测集版本
 type EvaluationSetVersion struct {
-	ID                  *int64               `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	ID                  *int64               `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	Version             *string              `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	Description         *string              `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	EvaluationSetSchema *EvaluationSetSchema `thrift:"evaluation_set_schema,4,optional" frugal:"4,optional,EvaluationSetSchema" form:"evaluation_set_schema" json:"evaluation_set_schema,omitempty" query:"evaluation_set_schema"`
-	ItemCount           *int64               `thrift:"item_count,5,optional" frugal:"5,optional,i64" form:"item_count" json:"item_count,omitempty" query:"item_count"`
+	ItemCount           *int64               `thrift:"item_count,5,optional" frugal:"5,optional,i64" json:"item_count" form:"item_count" query:"item_count"`
 	BaseInfo            *common.BaseInfo     `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
@@ -1355,15 +1355,15 @@ func (p *EvaluationSetVersion) Field100DeepEqual(src *common.BaseInfo) bool {
 
 // 评测集
 type EvaluationSet struct {
-	ID                *int64                `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
-	Name              *string               `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description       *string               `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	Status            *EvaluationSetStatus  `thrift:"status,4,optional" frugal:"4,optional,string" form:"status" json:"status,omitempty" query:"status"`
-	ItemCount         *int64                `thrift:"item_count,5,optional" frugal:"5,optional,i64" form:"item_count" json:"item_count,omitempty" query:"item_count"`
-	LatestVersion     *string               `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
-	ChangeUncommitted *bool                 `thrift:"change_uncommitted,7,optional" frugal:"7,optional,bool" form:"change_uncommitted" json:"change_uncommitted,omitempty" query:"change_uncommitted"`
-	CurrentVersion    *EvaluationSetVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	BaseInfo          *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	ID                  *int64                `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	Name                *string               `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description         *string               `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Status              *EvaluationSetStatus  `thrift:"status,4,optional" frugal:"4,optional,string" form:"status" json:"status,omitempty" query:"status"`
+	ItemCount           *int64                `thrift:"item_count,5,optional" frugal:"5,optional,i64" json:"item_count" form:"item_count" query:"item_count"`
+	LatestVersion       *string               `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	IsChangeUncommitted *bool                 `thrift:"is_change_uncommitted,7,optional" frugal:"7,optional,bool" form:"is_change_uncommitted" json:"is_change_uncommitted,omitempty" query:"is_change_uncommitted"`
+	CurrentVersion      *EvaluationSetVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	BaseInfo            *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewEvaluationSet() *EvaluationSet {
@@ -1445,16 +1445,16 @@ func (p *EvaluationSet) GetLatestVersion() (v string) {
 	return *p.LatestVersion
 }
 
-var EvaluationSet_ChangeUncommitted_DEFAULT bool
+var EvaluationSet_IsChangeUncommitted_DEFAULT bool
 
-func (p *EvaluationSet) GetChangeUncommitted() (v bool) {
+func (p *EvaluationSet) GetIsChangeUncommitted() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetChangeUncommitted() {
-		return EvaluationSet_ChangeUncommitted_DEFAULT
+	if !p.IsSetIsChangeUncommitted() {
+		return EvaluationSet_IsChangeUncommitted_DEFAULT
 	}
-	return *p.ChangeUncommitted
+	return *p.IsChangeUncommitted
 }
 
 var EvaluationSet_CurrentVersion_DEFAULT *EvaluationSetVersion
@@ -1498,8 +1498,8 @@ func (p *EvaluationSet) SetItemCount(val *int64) {
 func (p *EvaluationSet) SetLatestVersion(val *string) {
 	p.LatestVersion = val
 }
-func (p *EvaluationSet) SetChangeUncommitted(val *bool) {
-	p.ChangeUncommitted = val
+func (p *EvaluationSet) SetIsChangeUncommitted(val *bool) {
+	p.IsChangeUncommitted = val
 }
 func (p *EvaluationSet) SetCurrentVersion(val *EvaluationSetVersion) {
 	p.CurrentVersion = val
@@ -1515,7 +1515,7 @@ var fieldIDToName_EvaluationSet = map[int16]string{
 	4:   "status",
 	5:   "item_count",
 	6:   "latest_version",
-	7:   "change_uncommitted",
+	7:   "is_change_uncommitted",
 	20:  "current_version",
 	100: "base_info",
 }
@@ -1544,8 +1544,8 @@ func (p *EvaluationSet) IsSetLatestVersion() bool {
 	return p.LatestVersion != nil
 }
 
-func (p *EvaluationSet) IsSetChangeUncommitted() bool {
-	return p.ChangeUncommitted != nil
+func (p *EvaluationSet) IsSetIsChangeUncommitted() bool {
+	return p.IsChangeUncommitted != nil
 }
 
 func (p *EvaluationSet) IsSetCurrentVersion() bool {
@@ -1749,7 +1749,7 @@ func (p *EvaluationSet) ReadField7(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.ChangeUncommitted = _field
+	p.IsChangeUncommitted = _field
 	return nil
 }
 func (p *EvaluationSet) ReadField20(iprot thrift.TProtocol) error {
@@ -1938,11 +1938,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *EvaluationSet) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetChangeUncommitted() {
-		if err = oprot.WriteFieldBegin("change_uncommitted", thrift.BOOL, 7); err != nil {
+	if p.IsSetIsChangeUncommitted() {
+		if err = oprot.WriteFieldBegin("is_change_uncommitted", thrift.BOOL, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.ChangeUncommitted); err != nil {
+		if err := oprot.WriteBool(*p.IsChangeUncommitted); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2024,7 +2024,7 @@ func (p *EvaluationSet) DeepEqual(ano *EvaluationSet) bool {
 	if !p.Field6DeepEqual(ano.LatestVersion) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.ChangeUncommitted) {
+	if !p.Field7DeepEqual(ano.IsChangeUncommitted) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.CurrentVersion) {
@@ -2110,12 +2110,12 @@ func (p *EvaluationSet) Field6DeepEqual(src *string) bool {
 }
 func (p *EvaluationSet) Field7DeepEqual(src *bool) bool {
 
-	if p.ChangeUncommitted == src {
+	if p.IsChangeUncommitted == src {
 		return true
-	} else if p.ChangeUncommitted == nil || src == nil {
+	} else if p.IsChangeUncommitted == nil || src == nil {
 		return false
 	}
-	if *p.ChangeUncommitted != *src {
+	if *p.IsChangeUncommitted != *src {
 		return false
 	}
 	return true
@@ -2388,8 +2388,8 @@ func (p *FieldData) Field2DeepEqual(src *common.Content) bool {
 
 // 轮次数据
 type Turn struct {
-	ID            *int64       `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
-	FieldDataList []*FieldData `thrift:"field_data_list,2,optional" frugal:"2,optional,list<FieldData>" form:"field_data_list" json:"field_data_list,omitempty" query:"field_data_list"`
+	ID         *int64       `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	FieldDatas []*FieldData `thrift:"field_datas,2,optional" frugal:"2,optional,list<FieldData>" form:"field_datas" json:"field_datas,omitempty" query:"field_datas"`
 }
 
 func NewTurn() *Turn {
@@ -2411,35 +2411,35 @@ func (p *Turn) GetID() (v int64) {
 	return *p.ID
 }
 
-var Turn_FieldDataList_DEFAULT []*FieldData
+var Turn_FieldDatas_DEFAULT []*FieldData
 
-func (p *Turn) GetFieldDataList() (v []*FieldData) {
+func (p *Turn) GetFieldDatas() (v []*FieldData) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetFieldDataList() {
-		return Turn_FieldDataList_DEFAULT
+	if !p.IsSetFieldDatas() {
+		return Turn_FieldDatas_DEFAULT
 	}
-	return p.FieldDataList
+	return p.FieldDatas
 }
 func (p *Turn) SetID(val *int64) {
 	p.ID = val
 }
-func (p *Turn) SetFieldDataList(val []*FieldData) {
-	p.FieldDataList = val
+func (p *Turn) SetFieldDatas(val []*FieldData) {
+	p.FieldDatas = val
 }
 
 var fieldIDToName_Turn = map[int16]string{
 	1: "id",
-	2: "field_data_list",
+	2: "field_datas",
 }
 
 func (p *Turn) IsSetID() bool {
 	return p.ID != nil
 }
 
-func (p *Turn) IsSetFieldDataList() bool {
-	return p.FieldDataList != nil
+func (p *Turn) IsSetFieldDatas() bool {
+	return p.FieldDatas != nil
 }
 
 func (p *Turn) Read(iprot thrift.TProtocol) (err error) {
@@ -2536,7 +2536,7 @@ func (p *Turn) ReadField2(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.FieldDataList = _field
+	p.FieldDatas = _field
 	return nil
 }
 
@@ -2591,14 +2591,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *Turn) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetFieldDataList() {
-		if err = oprot.WriteFieldBegin("field_data_list", thrift.LIST, 2); err != nil {
+	if p.IsSetFieldDatas() {
+		if err = oprot.WriteFieldBegin("field_datas", thrift.LIST, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldDataList)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldDatas)); err != nil {
 			return err
 		}
-		for _, v := range p.FieldDataList {
+		for _, v := range p.FieldDatas {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
@@ -2634,7 +2634,7 @@ func (p *Turn) DeepEqual(ano *Turn) bool {
 	if !p.Field1DeepEqual(ano.ID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.FieldDataList) {
+	if !p.Field2DeepEqual(ano.FieldDatas) {
 		return false
 	}
 	return true
@@ -2654,10 +2654,10 @@ func (p *Turn) Field1DeepEqual(src *int64) bool {
 }
 func (p *Turn) Field2DeepEqual(src []*FieldData) bool {
 
-	if len(p.FieldDataList) != len(src) {
+	if len(p.FieldDatas) != len(src) {
 		return false
 	}
-	for i, v := range p.FieldDataList {
+	for i, v := range p.FieldDatas {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
@@ -2668,7 +2668,7 @@ func (p *Turn) Field2DeepEqual(src []*FieldData) bool {
 
 // 评测集数据项
 type EvaluationSetItem struct {
-	ID       *int64           `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	ID       *int64           `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	ItemKey  *string          `thrift:"item_key,2,optional" frugal:"2,optional,string" form:"item_key" json:"item_key,omitempty" query:"item_key"`
 	Turns    []*Turn          `thrift:"turns,3,optional" frugal:"3,optional,list<Turn>" form:"turns" json:"turns,omitempty" query:"turns"`
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`

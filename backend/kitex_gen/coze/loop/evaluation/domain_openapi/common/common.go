@@ -1459,8 +1459,8 @@ func (p *UserInfo) Field4DeepEqual(src *string) bool {
 type BaseInfo struct {
 	CreatedBy *UserInfo `thrift:"created_by,1,optional" frugal:"1,optional,UserInfo" form:"created_by" json:"created_by,omitempty" query:"created_by"`
 	UpdatedBy *UserInfo `thrift:"updated_by,2,optional" frugal:"2,optional,UserInfo" form:"updated_by" json:"updated_by,omitempty" query:"updated_by"`
-	CreatedAt *int64    `thrift:"created_at,3,optional" frugal:"3,optional,i64" form:"created_at" json:"created_at,omitempty" query:"created_at"`
-	UpdatedAt *int64    `thrift:"updated_at,4,optional" frugal:"4,optional,i64" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
+	CreatedAt *int64    `thrift:"created_at,3,optional" frugal:"3,optional,i64" json:"created_at" form:"created_at" query:"created_at"`
+	UpdatedAt *int64    `thrift:"updated_at,4,optional" frugal:"4,optional,i64" json:"updated_at" form:"updated_at" query:"updated_at"`
 }
 
 func NewBaseInfo() *BaseInfo {
@@ -2628,7 +2628,7 @@ type PageInfo struct {
 	PageNum    *int32 `thrift:"page_num,1,optional" frugal:"1,optional,i32" form:"page_num" json:"page_num,omitempty" query:"page_num"`
 	PageSize   *int32 `thrift:"page_size,2,optional" frugal:"2,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	HasMore    *bool  `thrift:"has_more,3,optional" frugal:"3,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
-	TotalCount *int64 `thrift:"total_count,4,optional" frugal:"4,optional,i64" form:"total_count" json:"total_count,omitempty" query:"total_count"`
+	TotalCount *int64 `thrift:"total_count,4,optional" frugal:"4,optional,i64" json:"total_count" form:"total_count" query:"total_count"`
 }
 
 func NewPageInfo() *PageInfo {

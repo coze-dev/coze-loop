@@ -1214,7 +1214,7 @@ func (p *EvaluationSet) FastReadField7(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.ChangeUncommitted = _field
+	p.IsChangeUncommitted = _field
 	return offset, nil
 }
 
@@ -1336,9 +1336,9 @@ func (p *EvaluationSet) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *EvaluationSet) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetChangeUncommitted() {
+	if p.IsSetIsChangeUncommitted() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.ChangeUncommitted)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsChangeUncommitted)
 	}
 	return offset
 }
@@ -1417,7 +1417,7 @@ func (p *EvaluationSet) field6Length() int {
 
 func (p *EvaluationSet) field7Length() int {
 	l := 0
-	if p.IsSetChangeUncommitted() {
+	if p.IsSetIsChangeUncommitted() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -1487,9 +1487,9 @@ func (p *EvaluationSet) DeepCopy(s interface{}) error {
 		p.LatestVersion = &tmp
 	}
 
-	if src.ChangeUncommitted != nil {
-		tmp := *src.ChangeUncommitted
-		p.ChangeUncommitted = &tmp
+	if src.IsChangeUncommitted != nil {
+		tmp := *src.IsChangeUncommitted
+		p.IsChangeUncommitted = &tmp
 	}
 
 	var _currentVersion *EvaluationSetVersion
@@ -1786,7 +1786,7 @@ func (p *Turn) FastReadField2(buf []byte) (int, error) {
 
 		_field = append(_field, _elem)
 	}
-	p.FieldDataList = _field
+	p.FieldDatas = _field
 	return offset, nil
 }
 
@@ -1825,12 +1825,12 @@ func (p *Turn) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Turn) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetFieldDataList() {
+	if p.IsSetFieldDatas() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for _, v := range p.FieldDataList {
+		for _, v := range p.FieldDatas {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -1850,10 +1850,10 @@ func (p *Turn) field1Length() int {
 
 func (p *Turn) field2Length() int {
 	l := 0
-	if p.IsSetFieldDataList() {
+	if p.IsSetFieldDatas() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.FieldDataList {
+		for _, v := range p.FieldDatas {
 			_ = v
 			l += v.BLength()
 		}
@@ -1872,9 +1872,9 @@ func (p *Turn) DeepCopy(s interface{}) error {
 		p.ID = &tmp
 	}
 
-	if src.FieldDataList != nil {
-		p.FieldDataList = make([]*FieldData, 0, len(src.FieldDataList))
-		for _, elem := range src.FieldDataList {
+	if src.FieldDatas != nil {
+		p.FieldDatas = make([]*FieldData, 0, len(src.FieldDatas))
+		for _, elem := range src.FieldDatas {
 			var _elem *FieldData
 			if elem != nil {
 				_elem = &FieldData{}
@@ -1883,7 +1883,7 @@ func (p *Turn) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.FieldDataList = append(p.FieldDataList, _elem)
+			p.FieldDatas = append(p.FieldDatas, _elem)
 		}
 	}
 

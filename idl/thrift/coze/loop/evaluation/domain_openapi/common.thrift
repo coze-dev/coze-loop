@@ -41,8 +41,8 @@ struct UserInfo {
 struct BaseInfo {
     1: optional UserInfo created_by
     2: optional UserInfo updated_by
-    3: optional i64 created_at
-    4: optional i64 updated_at
+    3: optional i64 created_at (api.js_conv="true", go.tag = 'json:"created_at"')
+    4: optional i64 updated_at (api.js_conv="true", go.tag = 'json:"updated_at"')
 }
 
 // 模型配置
@@ -65,7 +65,7 @@ struct PageInfo {
     1: optional i32 page_num
     2: optional i32 page_size
     3: optional bool has_more
-    4: optional i64 total_count
+    4: optional i64 total_count (api.js_conv="true", go.tag = 'json:"total_count"')
 }
 
 // 统一响应格式

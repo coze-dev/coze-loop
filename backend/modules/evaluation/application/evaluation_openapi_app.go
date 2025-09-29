@@ -213,8 +213,8 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx
 		SpaceID:          req.GetWorkspaceID(),
 		EvaluationSetID:  req.GetEvaluationSetID(),
 		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.Items),
-		SkipInvalidItems: req.SkipInvalidItems,
-		AllowPartialAdd:  req.AllowPartialAdd,
+		SkipInvalidItems: req.IsSkipInvalidItems,
+		AllowPartialAdd:  req.IsAllowPartialAdd,
 	})
 	if err != nil {
 		return nil, err

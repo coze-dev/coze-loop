@@ -31,24 +31,24 @@ struct EvaluationSetSchema {
 
 // 评测集版本
 struct EvaluationSetVersion {
-    1: optional i64 id
+    1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"')
     2: optional string version
     3: optional string description
     4: optional EvaluationSetSchema evaluation_set_schema
-    5: optional i64 item_count
+    5: optional i64 item_count (api.js_conv="true", go.tag = 'json:"item_count"')
 
     100: optional common.BaseInfo base_info
 }
 
 // 评测集
 struct EvaluationSet {
-    1: optional i64 id
+    1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"')
     2: optional string name
     3: optional string description
     4: optional EvaluationSetStatus status
-    5: optional i64 item_count
+    5: optional i64 item_count (api.js_conv="true", go.tag = 'json:"item_count"')
     6: optional string latest_version
-    7: optional bool change_uncommitted
+    7: optional bool is_change_uncommitted
 
     20: optional EvaluationSetVersion current_version
 
@@ -63,13 +63,13 @@ struct FieldData {
 
 // 轮次数据
 struct Turn {
-    1: optional i64 id
-    2: optional list<FieldData> field_data_list
+    1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"')
+    2: optional list<FieldData> field_datas
 }
 
 // 评测集数据项
 struct EvaluationSetItem {
-    1: optional i64 id
+    1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"')
     2: optional string item_key
     3: optional list<Turn> turns
     100: optional common.BaseInfo base_info

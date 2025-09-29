@@ -4628,10 +4628,10 @@ type BatchCreateEvaluationSetItemsOApiRequest struct {
 	EvaluationSetID *int64                        `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
 	Items           []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty"`
 	// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
-	SkipInvalidItems *bool `thrift:"skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"skip_invalid_items" json:"skip_invalid_items,omitempty"`
+	IsSkipInvalidItems *bool `thrift:"is_skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"is_skip_invalid_items" json:"is_skip_invalid_items,omitempty"`
 	// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
-	AllowPartialAdd *bool      `thrift:"allow_partial_add,5,optional" frugal:"5,optional,bool" form:"allow_partial_add" json:"allow_partial_add,omitempty"`
-	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	IsAllowPartialAdd *bool      `thrift:"is_allow_partial_add,5,optional" frugal:"5,optional,bool" form:"is_allow_partial_add" json:"is_allow_partial_add,omitempty"`
+	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchCreateEvaluationSetItemsOApiRequest() *BatchCreateEvaluationSetItemsOApiRequest {
@@ -4677,28 +4677,28 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) GetItems() (v []*eval_set.Eva
 	return p.Items
 }
 
-var BatchCreateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT bool
+var BatchCreateEvaluationSetItemsOApiRequest_IsSkipInvalidItems_DEFAULT bool
 
-func (p *BatchCreateEvaluationSetItemsOApiRequest) GetSkipInvalidItems() (v bool) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetIsSkipInvalidItems() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSkipInvalidItems() {
-		return BatchCreateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT
+	if !p.IsSetIsSkipInvalidItems() {
+		return BatchCreateEvaluationSetItemsOApiRequest_IsSkipInvalidItems_DEFAULT
 	}
-	return *p.SkipInvalidItems
+	return *p.IsSkipInvalidItems
 }
 
-var BatchCreateEvaluationSetItemsOApiRequest_AllowPartialAdd_DEFAULT bool
+var BatchCreateEvaluationSetItemsOApiRequest_IsAllowPartialAdd_DEFAULT bool
 
-func (p *BatchCreateEvaluationSetItemsOApiRequest) GetAllowPartialAdd() (v bool) {
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetIsAllowPartialAdd() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetAllowPartialAdd() {
-		return BatchCreateEvaluationSetItemsOApiRequest_AllowPartialAdd_DEFAULT
+	if !p.IsSetIsAllowPartialAdd() {
+		return BatchCreateEvaluationSetItemsOApiRequest_IsAllowPartialAdd_DEFAULT
 	}
-	return *p.AllowPartialAdd
+	return *p.IsAllowPartialAdd
 }
 
 var BatchCreateEvaluationSetItemsOApiRequest_Base_DEFAULT *base.Base
@@ -4721,11 +4721,11 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) SetEvaluationSetID(val *int64
 func (p *BatchCreateEvaluationSetItemsOApiRequest) SetItems(val []*eval_set.EvaluationSetItem) {
 	p.Items = val
 }
-func (p *BatchCreateEvaluationSetItemsOApiRequest) SetSkipInvalidItems(val *bool) {
-	p.SkipInvalidItems = val
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetIsSkipInvalidItems(val *bool) {
+	p.IsSkipInvalidItems = val
 }
-func (p *BatchCreateEvaluationSetItemsOApiRequest) SetAllowPartialAdd(val *bool) {
-	p.AllowPartialAdd = val
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetIsAllowPartialAdd(val *bool) {
+	p.IsAllowPartialAdd = val
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -4735,8 +4735,8 @@ var fieldIDToName_BatchCreateEvaluationSetItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "items",
-	4:   "skip_invalid_items",
-	5:   "allow_partial_add",
+	4:   "is_skip_invalid_items",
+	5:   "is_allow_partial_add",
 	255: "Base",
 }
 
@@ -4752,12 +4752,12 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetItems() bool {
 	return p.Items != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetSkipInvalidItems() bool {
-	return p.SkipInvalidItems != nil
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetIsSkipInvalidItems() bool {
+	return p.IsSkipInvalidItems != nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetAllowPartialAdd() bool {
-	return p.AllowPartialAdd != nil
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetIsAllowPartialAdd() bool {
+	return p.IsAllowPartialAdd != nil
 }
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetBase() bool {
@@ -4912,7 +4912,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField4(iprot thrift.TProt
 	} else {
 		_field = &v
 	}
-	p.SkipInvalidItems = _field
+	p.IsSkipInvalidItems = _field
 	return nil
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField5(iprot thrift.TProtocol) error {
@@ -4923,7 +4923,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField5(iprot thrift.TProt
 	} else {
 		_field = &v
 	}
-	p.AllowPartialAdd = _field
+	p.IsAllowPartialAdd = _field
 	return nil
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -5046,11 +5046,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSkipInvalidItems() {
-		if err = oprot.WriteFieldBegin("skip_invalid_items", thrift.BOOL, 4); err != nil {
+	if p.IsSetIsSkipInvalidItems() {
+		if err = oprot.WriteFieldBegin("is_skip_invalid_items", thrift.BOOL, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.SkipInvalidItems); err != nil {
+		if err := oprot.WriteBool(*p.IsSkipInvalidItems); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -5064,11 +5064,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAllowPartialAdd() {
-		if err = oprot.WriteFieldBegin("allow_partial_add", thrift.BOOL, 5); err != nil {
+	if p.IsSetIsAllowPartialAdd() {
+		if err = oprot.WriteFieldBegin("is_allow_partial_add", thrift.BOOL, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.AllowPartialAdd); err != nil {
+		if err := oprot.WriteBool(*p.IsAllowPartialAdd); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -5123,10 +5123,10 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchCreateEva
 	if !p.Field3DeepEqual(ano.Items) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.SkipInvalidItems) {
+	if !p.Field4DeepEqual(ano.IsSkipInvalidItems) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.AllowPartialAdd) {
+	if !p.Field5DeepEqual(ano.IsAllowPartialAdd) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -5174,24 +5174,24 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Field3DeepEqual(src []*eval_s
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) Field4DeepEqual(src *bool) bool {
 
-	if p.SkipInvalidItems == src {
+	if p.IsSkipInvalidItems == src {
 		return true
-	} else if p.SkipInvalidItems == nil || src == nil {
+	} else if p.IsSkipInvalidItems == nil || src == nil {
 		return false
 	}
-	if *p.SkipInvalidItems != *src {
+	if *p.IsSkipInvalidItems != *src {
 		return false
 	}
 	return true
 }
 func (p *BatchCreateEvaluationSetItemsOApiRequest) Field5DeepEqual(src *bool) bool {
 
-	if p.AllowPartialAdd == src {
+	if p.IsAllowPartialAdd == src {
 		return true
-	} else if p.AllowPartialAdd == nil || src == nil {
+	} else if p.IsAllowPartialAdd == nil || src == nil {
 		return false
 	}
-	if *p.AllowPartialAdd != *src {
+	if *p.IsAllowPartialAdd != *src {
 		return false
 	}
 	return true
@@ -5910,11 +5910,11 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) Field2DeepEqual(src []*eval_s
 
 // 1.6 批量更新评测集数据
 type BatchUpdateEvaluationSetItemsOApiRequest struct {
-	WorkspaceID      *int64                        `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	EvaluationSetID  *int64                        `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
-	Items            []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty"`
-	SkipInvalidItems *bool                         `thrift:"skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"skip_invalid_items" json:"skip_invalid_items,omitempty"`
-	Base             *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID        *int64                        `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	EvaluationSetID    *int64                        `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
+	Items              []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty"`
+	IsSkipInvalidItems *bool                         `thrift:"is_skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"is_skip_invalid_items" json:"is_skip_invalid_items,omitempty"`
+	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchUpdateEvaluationSetItemsOApiRequest() *BatchUpdateEvaluationSetItemsOApiRequest {
@@ -5960,16 +5960,16 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetItems() (v []*eval_set.Eva
 	return p.Items
 }
 
-var BatchUpdateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT bool
+var BatchUpdateEvaluationSetItemsOApiRequest_IsSkipInvalidItems_DEFAULT bool
 
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetSkipInvalidItems() (v bool) {
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetIsSkipInvalidItems() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSkipInvalidItems() {
-		return BatchUpdateEvaluationSetItemsOApiRequest_SkipInvalidItems_DEFAULT
+	if !p.IsSetIsSkipInvalidItems() {
+		return BatchUpdateEvaluationSetItemsOApiRequest_IsSkipInvalidItems_DEFAULT
 	}
-	return *p.SkipInvalidItems
+	return *p.IsSkipInvalidItems
 }
 
 var BatchUpdateEvaluationSetItemsOApiRequest_Base_DEFAULT *base.Base
@@ -5992,8 +5992,8 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetEvaluationSetID(val *int64
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetItems(val []*eval_set.EvaluationSetItem) {
 	p.Items = val
 }
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetSkipInvalidItems(val *bool) {
-	p.SkipInvalidItems = val
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetIsSkipInvalidItems(val *bool) {
+	p.IsSkipInvalidItems = val
 }
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -6003,7 +6003,7 @@ var fieldIDToName_BatchUpdateEvaluationSetItemsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "items",
-	4:   "skip_invalid_items",
+	4:   "is_skip_invalid_items",
 	255: "Base",
 }
 
@@ -6019,8 +6019,8 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetItems() bool {
 	return p.Items != nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetSkipInvalidItems() bool {
-	return p.SkipInvalidItems != nil
+func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetIsSkipInvalidItems() bool {
+	return p.IsSkipInvalidItems != nil
 }
 
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetBase() bool {
@@ -6167,7 +6167,7 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField4(iprot thrift.TProt
 	} else {
 		_field = &v
 	}
-	p.SkipInvalidItems = _field
+	p.IsSkipInvalidItems = _field
 	return nil
 }
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -6286,11 +6286,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSkipInvalidItems() {
-		if err = oprot.WriteFieldBegin("skip_invalid_items", thrift.BOOL, 4); err != nil {
+	if p.IsSetIsSkipInvalidItems() {
+		if err = oprot.WriteFieldBegin("is_skip_invalid_items", thrift.BOOL, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.SkipInvalidItems); err != nil {
+		if err := oprot.WriteBool(*p.IsSkipInvalidItems); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -6345,7 +6345,7 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchUpdateEva
 	if !p.Field3DeepEqual(ano.Items) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.SkipInvalidItems) {
+	if !p.Field4DeepEqual(ano.IsSkipInvalidItems) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -6393,12 +6393,12 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field3DeepEqual(src []*eval_s
 }
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field4DeepEqual(src *bool) bool {
 
-	if p.SkipInvalidItems == src {
+	if p.IsSkipInvalidItems == src {
 		return true
-	} else if p.SkipInvalidItems == nil || src == nil {
+	} else if p.IsSkipInvalidItems == nil || src == nil {
 		return false
 	}
-	if *p.SkipInvalidItems != *src {
+	if *p.IsSkipInvalidItems != *src {
 		return false
 	}
 	return true

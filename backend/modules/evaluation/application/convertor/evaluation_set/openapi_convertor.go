@@ -209,15 +209,15 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 	}
 
 	return &openapi_eval_set.EvaluationSet{
-		ID:                gptr.Of(do.ID),
-		Name:              gptr.Of(do.Name),
-		Description:       gptr.Of(do.Description),
-		Status:            gptr.Of(convertDOStatusToOpenAPI(do.Status)),
-		ItemCount:         gptr.Of(do.ItemCount),
-		LatestVersion:     gptr.Of(do.LatestVersion),
-		ChangeUncommitted: gptr.Of(do.ChangeUncommitted),
-		CurrentVersion:    OpenAPIEvaluationSetVersionDO2DTO(do.EvaluationSetVersion),
-		BaseInfo:          ConvertBaseInfoDO2DTO(do.BaseInfo),
+		ID:                  gptr.Of(do.ID),
+		Name:                gptr.Of(do.Name),
+		Description:         gptr.Of(do.Description),
+		Status:              gptr.Of(convertDOStatusToOpenAPI(do.Status)),
+		ItemCount:           gptr.Of(do.ItemCount),
+		LatestVersion:       gptr.Of(do.LatestVersion),
+		IsChangeUncommitted: gptr.Of(do.ChangeUncommitted),
+		CurrentVersion:      OpenAPIEvaluationSetVersionDO2DTO(do.EvaluationSetVersion),
+		BaseInfo:            ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
 }
 
@@ -361,7 +361,7 @@ func OpenAPITurnDTO2DO(dto *openapi_eval_set.Turn) *entity.Turn {
 	}
 	return &entity.Turn{
 		ID:            gptr.Indirect(dto.ID),
-		FieldDataList: OpenAPIFieldDataDTO2DOs(dto.FieldDataList),
+		FieldDataList: OpenAPIFieldDataDTO2DOs(dto.FieldDatas),
 	}
 }
 
@@ -456,8 +456,8 @@ func OpenAPITurnDO2DTO(do *entity.Turn) *openapi_eval_set.Turn {
 		return nil
 	}
 	return &openapi_eval_set.Turn{
-		ID:            gptr.Of(do.ID),
-		FieldDataList: OpenAPIFieldDataDO2DTOs(do.FieldDataList),
+		ID:         gptr.Of(do.ID),
+		FieldDatas: OpenAPIFieldDataDO2DTOs(do.FieldDataList),
 	}
 }
 

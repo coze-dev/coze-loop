@@ -3476,7 +3476,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField4(buf []byte) (i
 		offset += l
 		_field = &v
 	}
-	p.SkipInvalidItems = _field
+	p.IsSkipInvalidItems = _field
 	return offset, nil
 }
 
@@ -3490,7 +3490,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField5(buf []byte) (i
 		offset += l
 		_field = &v
 	}
-	p.AllowPartialAdd = _field
+	p.IsAllowPartialAdd = _field
 	return offset, nil
 }
 
@@ -3574,18 +3574,18 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField3(buf []byte, w
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSkipInvalidItems() {
+	if p.IsSetIsSkipInvalidItems() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 4)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.SkipInvalidItems)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsSkipInvalidItems)
 	}
 	return offset
 }
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetAllowPartialAdd() {
+	if p.IsSetIsAllowPartialAdd() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.AllowPartialAdd)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsAllowPartialAdd)
 	}
 	return offset
 }
@@ -3632,7 +3632,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) field3Length() int {
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) field4Length() int {
 	l := 0
-	if p.IsSetSkipInvalidItems() {
+	if p.IsSetIsSkipInvalidItems() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -3641,7 +3641,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) field4Length() int {
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) field5Length() int {
 	l := 0
-	if p.IsSetAllowPartialAdd() {
+	if p.IsSetIsAllowPartialAdd() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -3688,14 +3688,14 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepCopy(s interface{}) error
 		}
 	}
 
-	if src.SkipInvalidItems != nil {
-		tmp := *src.SkipInvalidItems
-		p.SkipInvalidItems = &tmp
+	if src.IsSkipInvalidItems != nil {
+		tmp := *src.IsSkipInvalidItems
+		p.IsSkipInvalidItems = &tmp
 	}
 
-	if src.AllowPartialAdd != nil {
-		tmp := *src.AllowPartialAdd
-		p.AllowPartialAdd = &tmp
+	if src.IsAllowPartialAdd != nil {
+		tmp := *src.IsAllowPartialAdd
+		p.IsAllowPartialAdd = &tmp
 	}
 
 	var _base *base.Base
@@ -4395,7 +4395,7 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastReadField4(buf []byte) (i
 		offset += l
 		_field = &v
 	}
-	p.SkipInvalidItems = _field
+	p.IsSkipInvalidItems = _field
 	return offset, nil
 }
 
@@ -4477,9 +4477,9 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) fastWriteField3(buf []byte, w
 
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSkipInvalidItems() {
+	if p.IsSetIsSkipInvalidItems() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 4)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.SkipInvalidItems)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsSkipInvalidItems)
 	}
 	return offset
 }
@@ -4526,7 +4526,7 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) field3Length() int {
 
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) field4Length() int {
 	l := 0
-	if p.IsSetSkipInvalidItems() {
+	if p.IsSetIsSkipInvalidItems() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -4573,9 +4573,9 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) DeepCopy(s interface{}) error
 		}
 	}
 
-	if src.SkipInvalidItems != nil {
-		tmp := *src.SkipInvalidItems
-		p.SkipInvalidItems = &tmp
+	if src.IsSkipInvalidItems != nil {
+		tmp := *src.IsSkipInvalidItems
+		p.IsSkipInvalidItems = &tmp
 	}
 
 	var _base *base.Base
