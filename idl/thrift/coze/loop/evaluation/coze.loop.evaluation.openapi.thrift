@@ -54,14 +54,14 @@ struct GetEvaluationSetOpenAPIData {
 
 // 1.3 查询评测集列表
 struct ListEvaluationSetsOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string name (api.body="name")
-    3: optional list<string> creators (api.body="creators")
-    4: optional list<i64> evaluation_set_ids (api.body="evaluation_set_ids", api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional string name (api.query="name")
+    3: optional list<string> creators (api.query="creators")
+    4: optional list<i64> evaluation_set_ids (api.query="evaluation_set_ids", api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
 
-    100: optional string page_token (api.body="page_token")
-    101: optional i32 page_size (api.body="page_size", vt.gt = "0", vt.le = "200")
-    103: optional list<common.OrderBy> order_bys (api.body="order_bys")
+    100: optional string page_token (api.query="page_token")
+    101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
+    103: optional list<common.OrderBy> order_bys (api.query="order_bys")
 
     255: optional base.Base Base
 }
@@ -170,13 +170,13 @@ struct BatchDeleteEvaluationSetItemsOApiResponse {
 
 // 1.9 查询评测集特定版本数据
 struct ListEvaluationSetVersionItemsOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
-    3: optional i64 version_id (api.body="version_id", api.js_conv="true", go.tag='json:"version_id"')
+    3: optional i64 version_id (api.query="version_id", api.js_conv="true", go.tag='json:"version_id"')
 
-    100: optional string page_token (api.body="page_token")
-    101: optional i32 page_size (api.body="page_size", vt.gt = "0", vt.le = "200")
-    102: optional list<common.OrderBy> order_bys (api.body="order_bys"),
+    100: optional string page_token (api.query="page_token")
+    101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
+    102: optional list<common.OrderBy> order_bys (api.query="order_bys"),
 
     255: optional base.Base Base
 }
@@ -377,7 +377,7 @@ service EvaluationOpenAPIService {
     // 1.2 获取评测集详情
     GetEvaluationSetOApiResponse GetEvaluationSetOApi(1: GetEvaluationSetOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
     // 1.3 查询评测集列表
-    ListEvaluationSetsOApiResponse ListEvaluationSetsOApi(1: ListEvaluationSetsOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/list")
+    ListEvaluationSetsOApiResponse ListEvaluationSetsOApi(1: ListEvaluationSetsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/list")
     // 1.4 创建评测集版本
     CreateEvaluationSetVersionOApiResponse CreateEvaluationSetVersionOApi(1: CreateEvaluationSetVersionOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
     // 1.5 批量添加评测集数据
@@ -387,7 +387,7 @@ service EvaluationOpenAPIService {
     // 1.7 批量删除评测集数据
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 1.8 查询评测集特定版本数据
-    ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/list")
+    ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/list")
 
     // 评估器接口 (5个)
     // 2.1 创建评估器
