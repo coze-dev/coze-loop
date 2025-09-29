@@ -27,7 +27,7 @@ func NewAuthRPCProvider(client authservice.Client) rpc.IAuthProvider {
 	}
 }
 
-func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+func (a *AuthRPCAdapter) mCheckPromptPermissionBase(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
 	var authPairs []*authentity.SubjectActionObjects
 	authSubject := &authentity.AuthPrincipal{
 		AuthPrincipalType:  authentity.AuthPrincipalTypePtr(authentity.AuthPrincipalType_CozeIdentifier),
@@ -74,7 +74,15 @@ func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int
 	return nil
 }
 
-func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64, action string) error {
+func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+	return a.mCheckPromptPermissionBase(ctx, spaceID, promptIDs, action)
+}
+
+func (a *AuthRPCAdapter) MCheckPromptPermissionForOpenAPI(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+	return a.mCheckPromptPermissionBase(ctx, spaceID, promptIDs, action)
+}
+
+func (a *AuthRPCAdapter) checkSpacePermissionBase(ctx context.Context, spaceID int64, action string) error {
 	authSubject := &authentity.AuthPrincipal{
 		AuthPrincipalType:  authentity.AuthPrincipalTypePtr(authentity.AuthPrincipalType_CozeIdentifier),
 		AuthCozeIdentifier: &authentity.AuthCozeIdentifier{IdentityTicket: nil},
@@ -105,4 +113,12 @@ func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64
 		}
 	}
 	return nil
+}
+
+func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64, action string) error {
+	return a.checkSpacePermissionBase(ctx, spaceID, action)
+}
+
+func (a *AuthRPCAdapter) CheckSpacePermissionForOpenAPI(ctx context.Context, spaceID int64, action string) error {
+	return a.checkSpacePermissionBase(ctx, spaceID, action)
 }
