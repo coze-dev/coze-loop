@@ -46,6 +46,7 @@ const (
 	FieldTypeDouble FieldType = "double"
 	FieldTypeBool   FieldType = "bool"
 
+	PlatformDefault    PlatformType = "default"
 	PlatformCozeLoop   PlatformType = "cozeloop"
 	PlatformPrompt     PlatformType = "prompt"
 	PlatformEvaluator  PlatformType = "evaluator"

@@ -530,7 +530,7 @@ func (t *TraceApplication) buildGetTracesMetaInfoReq(req *trace.GetTracesMetaInf
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
-		platformType = loop_span.PlatformCozeLoop
+		platformType = loop_span.PlatformDefault
 	}
 	ret.PlatformType = platformType
 	switch req.GetSpanListType() {

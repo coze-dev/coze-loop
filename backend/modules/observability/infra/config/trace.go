@@ -161,10 +161,10 @@ func (t *TraceConfigCenter) GetKeyColumns(ctx context.Context) []string {
 	return keyColumns
 }
 
-func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) []string {
-	keyColumns := make([]string, 0)
+func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) map[string]map[string][]string {
+	keyColumns := make(map[string]map[string][]string)
 	if err := t.UnmarshalKey(ctx, keySpanTypeCfgKey, &keyColumns); err != nil {
-		return []string{"model", "tool", "prompt"}
+		return keyColumns
 	}
 	return keyColumns
 }

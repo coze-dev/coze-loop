@@ -262,14 +262,17 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		selectColumns = r.traceConfig.GetKeyColumns(ctx)
 	}
 	st := time.Now()
-
+	limit := int32(1000)
+	if !req.WithDetail {
+		limit = 10000
+	}
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		Tenants:       tenants,
 		LogID:         req.LogID,
 		TraceID:       req.TraceID,
 		StartAt:       req.StartTime,
 		EndAt:         req.EndTime,
-		Limit:         1000,
+		Limit:         limit,
 		SpanIDs:       req.SpanIDs,
 		Filters:       req.Filters,
 		SelectColumns: selectColumns,
@@ -581,9 +584,16 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 		fieldMetas[field] = fieldMta
 	}
 	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
+	keySpanTypes := make([]string, 0)
+	spanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
+	if !ok {
+		keySpanTypes = spanTypeCfg[string(loop_span.PlatformDefault)][string(loop_span.SpanListTypeRootSpan)]
+	} else {
+		keySpanTypes = spanTypes
+	}
 	return &GetTracesMetaInfoResp{
 		FilesMetas:      fieldMetas,
-		KeySpanTypeList: spanTypeCfg,
+		KeySpanTypeList: keySpanTypes,
 	}, nil
 }
 
