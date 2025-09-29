@@ -5,12 +5,10 @@ package processor
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
@@ -22,21 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
-
-func getSession(ctx context.Context, task *task.Task) *common.Session {
-	userIDStr := session.UserIDInCtxOrEmpty(ctx)
-	if userIDStr == "" {
-		userIDStr = task.GetBaseInfo().GetCreatedBy().GetUserID()
-	}
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		logs.CtxError(ctx, "[task-debug] AutoEvaluteProcessor OnChangeProcessor, ParseInt err:%v", err)
-	}
-	return &common.Session{
-		UserID: gptr.Of(userID),
-		AppID:  gptr.Of(session.AppIDInCtxOrEmpty(ctx)),
-	}
-}
 
 func getCategory(taskType task.TaskType) entity.DatasetCategory {
 	switch taskType {

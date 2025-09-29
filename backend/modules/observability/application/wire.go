@@ -200,7 +200,7 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo))
+	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
 }
 

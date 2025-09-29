@@ -12,6 +12,7 @@ import (
 	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
@@ -40,9 +41,11 @@ type AutoEvaluteProcessor struct {
 	evaluationSvc         rpc.IEvaluationRPCAdapter
 	datasetServiceAdaptor *service.DatasetServiceAdaptor
 	taskRepo              repo.ITaskRepo
+	aid                   int32
 }
 
 func NewAutoEvaluteProcessor(
+	aid int32,
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
@@ -52,6 +55,7 @@ func NewAutoEvaluteProcessor(
 		evalSvc:               evalService,
 		evaluationSvc:         evaluationService,
 		taskRepo:              taskRepo,
+		aid:                   aid,
 	}
 }
 
@@ -98,7 +102,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *
 	}
 	taskRun := tconv.TaskRunPO2DTO(ctx, cfg, nil)
 	workspaceID := trigger.Task.GetWorkspaceID()
-	session := getSession(ctx, trigger.Task)
+	session := p.getSession(ctx, trigger.Task)
 	var mapping []*task.EvaluateFieldMapping
 	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
@@ -258,7 +262,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	//todo:[xun]加锁
 	currentTask := param.CurrentTask
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
-	sessionInfo := getSession(ctx, currentTask)
+	sessionInfo := p.getSession(ctx, currentTask)
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
 	var evaluatorFieldMappings []*expt.EvaluatorFieldMapping
@@ -403,7 +407,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 }
 
 func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
-	session := getSession(ctx, param.Task)
+	session := p.getSession(ctx, param.Task)
 	taskRun := param.TaskRun
 	taskRunPO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
 	if err := p.evaluationSvc.FinishExperiment(ctx, &rpc.FinishExperimentReq{
@@ -423,4 +427,19 @@ func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param 
 		return err
 	}
 	return nil
+}
+
+func (p *AutoEvaluteProcessor) getSession(ctx context.Context, task *task.Task) *common.Session {
+	userIDStr := session.UserIDInCtxOrEmpty(ctx)
+	if userIDStr == "" {
+		userIDStr = task.GetBaseInfo().GetCreatedBy().GetUserID()
+	}
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		logs.CtxError(ctx, "[task-debug] AutoEvaluteProcessor OnChangeProcessor, ParseInt err:%v", err)
+	}
+	return &common.Session{
+		UserID: gptr.Of(userID),
+		AppID:  gptr.Of(p.aid),
+	}
 }
