@@ -54,6 +54,20 @@ func (mr *MockIAuthProviderMockRecorder) CheckSpacePermission(ctx, spaceID, acti
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSpacePermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckSpacePermission), ctx, spaceID, action)
 }
 
+// CheckSpacePermissionForOpenAPI mocks base method.
+func (m *MockIAuthProvider) CheckSpacePermissionForOpenAPI(ctx context.Context, spaceID int64, action string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckSpacePermissionForOpenAPI", ctx, spaceID, action)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckSpacePermissionForOpenAPI indicates an expected call of CheckSpacePermissionForOpenAPI.
+func (mr *MockIAuthProviderMockRecorder) CheckSpacePermissionForOpenAPI(ctx, spaceID, action any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSpacePermissionForOpenAPI", reflect.TypeOf((*MockIAuthProvider)(nil).CheckSpacePermissionForOpenAPI), ctx, spaceID, action)
+}
+
 // MCheckPromptPermission mocks base method.
 func (m *MockIAuthProvider) MCheckPromptPermission(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
 	m.ctrl.T.Helper()
@@ -66,4 +80,18 @@ func (m *MockIAuthProvider) MCheckPromptPermission(ctx context.Context, spaceID 
 func (mr *MockIAuthProviderMockRecorder) MCheckPromptPermission(ctx, spaceID, promptIDs, action any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCheckPromptPermission", reflect.TypeOf((*MockIAuthProvider)(nil).MCheckPromptPermission), ctx, spaceID, promptIDs, action)
+}
+
+// MCheckPromptPermissionForOpenAPI mocks base method.
+func (m *MockIAuthProvider) MCheckPromptPermissionForOpenAPI(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MCheckPromptPermissionForOpenAPI", ctx, spaceID, promptIDs, action)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MCheckPromptPermissionForOpenAPI indicates an expected call of MCheckPromptPermissionForOpenAPI.
+func (mr *MockIAuthProviderMockRecorder) MCheckPromptPermissionForOpenAPI(ctx, spaceID, promptIDs, action any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCheckPromptPermissionForOpenAPI", reflect.TypeOf((*MockIAuthProvider)(nil).MCheckPromptPermissionForOpenAPI), ctx, spaceID, promptIDs, action)
 }

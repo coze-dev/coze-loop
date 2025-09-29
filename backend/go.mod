@@ -18,8 +18,8 @@ require (
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/baidubce/bce-qianfan-sdk/go/qianfan v0.0.15
 	github.com/bytedance/gg v1.0.0
-	github.com/bytedance/gopkg v0.1.2
-	github.com/bytedance/sonic v1.13.2
+	github.com/bytedance/gopkg v0.1.3
+	github.com/bytedance/sonic v1.14.1
 	github.com/cenk/backoff v2.2.1+incompatible
 	github.com/cloudwego/eino v0.3.55
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.8
@@ -132,10 +132,10 @@ require (
 	github.com/baidubce/bce-sdk-go v0.9.164 // indirect
 	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/bufbuild/protocompile v0.8.0 // indirect
-	github.com/bytedance/sonic/loader v0.2.4 // indirect
+	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudwego/base64x v0.1.5 // indirect
+	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/cloudwego/configmanager v0.2.3 // indirect
 	github.com/cloudwego/dynamicgo v0.6.2 // indirect
 	github.com/cloudwego/fastpb v0.0.5 // indirect
