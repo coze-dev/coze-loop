@@ -34,7 +34,7 @@ func getSession(ctx context.Context, task *task.Task) *common.Session {
 	}
 	return &common.Session{
 		UserID: gptr.Of(userID),
-		//AppID:  gptr.Of(int32(717152)),
+		AppID:  gptr.Of(session.AppIDInCtxOrEmpty(ctx)),
 	}
 }
 
