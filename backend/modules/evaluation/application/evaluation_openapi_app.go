@@ -271,7 +271,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchDeleteEvaluationSetItemsOApi(ctx
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
 	if req.GetIsDeleteAll() == true {
-		// 调用domain服务
+		// 清除所有
 		err = e.evaluationSetItemService.ClearEvaluationSetDraftItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID())
 		if err != nil {
 			return nil, err
