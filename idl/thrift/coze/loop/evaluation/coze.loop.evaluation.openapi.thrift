@@ -75,7 +75,7 @@ struct ListEvaluationSetsOApiResponse {
 }
 
 struct ListEvaluationSetsOpenAPIData {
-    1: optional list<eval_set.EvaluationSet> items
+    1: optional list<eval_set.EvaluationSet> sets
 
     100: optional bool has_more
     101: optional string next_page_token

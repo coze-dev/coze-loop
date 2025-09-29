@@ -2364,7 +2364,7 @@ func (p *ListEvaluationSetsOpenAPIData) FastReadField1(buf []byte) (int, error) 
 
 		_field = append(_field, _elem)
 	}
-	p.Items = _field
+	p.Sets = _field
 	return offset, nil
 }
 
@@ -2440,12 +2440,12 @@ func (p *ListEvaluationSetsOpenAPIData) BLength() int {
 
 func (p *ListEvaluationSetsOpenAPIData) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetItems() {
+	if p.IsSetSets() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for _, v := range p.Items {
+		for _, v := range p.Sets {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -2483,10 +2483,10 @@ func (p *ListEvaluationSetsOpenAPIData) fastWriteField102(buf []byte, w thrift.N
 
 func (p *ListEvaluationSetsOpenAPIData) field1Length() int {
 	l := 0
-	if p.IsSetItems() {
+	if p.IsSetSets() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.Items {
+		for _, v := range p.Sets {
 			_ = v
 			l += v.BLength()
 		}
@@ -2527,9 +2527,9 @@ func (p *ListEvaluationSetsOpenAPIData) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.Items != nil {
-		p.Items = make([]*eval_set.EvaluationSet, 0, len(src.Items))
-		for _, elem := range src.Items {
+	if src.Sets != nil {
+		p.Sets = make([]*eval_set.EvaluationSet, 0, len(src.Sets))
+		for _, elem := range src.Sets {
 			var _elem *eval_set.EvaluationSet
 			if elem != nil {
 				_elem = &eval_set.EvaluationSet{}
@@ -2538,7 +2538,7 @@ func (p *ListEvaluationSetsOpenAPIData) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.Items = append(p.Items, _elem)
+			p.Sets = append(p.Sets, _elem)
 		}
 	}
 

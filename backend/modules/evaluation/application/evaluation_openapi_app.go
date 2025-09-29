@@ -151,7 +151,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetsOApi(ctx context.Co
 	hasMore := sets != nil && len(sets) == int(req.GetPageSize())
 	return &openapi.ListEvaluationSetsOApiResponse{
 		Data: &openapi.ListEvaluationSetsOpenAPIData{
-			Items:         dtos,
+			Sets:          dtos,
 			HasMore:       gptr.Of(hasMore),
 			NextPageToken: nextPageToken,
 			Total:         total,

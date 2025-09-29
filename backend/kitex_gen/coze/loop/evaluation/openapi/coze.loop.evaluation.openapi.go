@@ -3090,7 +3090,7 @@ func (p *ListEvaluationSetsOApiResponse) Field255DeepEqual(src *base.BaseResp) b
 }
 
 type ListEvaluationSetsOpenAPIData struct {
-	Items         []*eval_set.EvaluationSet `thrift:"items,1,optional" frugal:"1,optional,list<eval_set.EvaluationSet>" form:"items" json:"items,omitempty" query:"items"`
+	Sets          []*eval_set.EvaluationSet `thrift:"sets,1,optional" frugal:"1,optional,list<eval_set.EvaluationSet>" form:"sets" json:"sets,omitempty" query:"sets"`
 	HasMore       *bool                     `thrift:"has_more,100,optional" frugal:"100,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
 	NextPageToken *string                   `thrift:"next_page_token,101,optional" frugal:"101,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
 	Total         *int64                    `thrift:"total,102,optional" frugal:"102,optional,i64" json:"total" form:"total" query:"total"`
@@ -3103,16 +3103,16 @@ func NewListEvaluationSetsOpenAPIData() *ListEvaluationSetsOpenAPIData {
 func (p *ListEvaluationSetsOpenAPIData) InitDefault() {
 }
 
-var ListEvaluationSetsOpenAPIData_Items_DEFAULT []*eval_set.EvaluationSet
+var ListEvaluationSetsOpenAPIData_Sets_DEFAULT []*eval_set.EvaluationSet
 
-func (p *ListEvaluationSetsOpenAPIData) GetItems() (v []*eval_set.EvaluationSet) {
+func (p *ListEvaluationSetsOpenAPIData) GetSets() (v []*eval_set.EvaluationSet) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetItems() {
-		return ListEvaluationSetsOpenAPIData_Items_DEFAULT
+	if !p.IsSetSets() {
+		return ListEvaluationSetsOpenAPIData_Sets_DEFAULT
 	}
-	return p.Items
+	return p.Sets
 }
 
 var ListEvaluationSetsOpenAPIData_HasMore_DEFAULT bool
@@ -3150,8 +3150,8 @@ func (p *ListEvaluationSetsOpenAPIData) GetTotal() (v int64) {
 	}
 	return *p.Total
 }
-func (p *ListEvaluationSetsOpenAPIData) SetItems(val []*eval_set.EvaluationSet) {
-	p.Items = val
+func (p *ListEvaluationSetsOpenAPIData) SetSets(val []*eval_set.EvaluationSet) {
+	p.Sets = val
 }
 func (p *ListEvaluationSetsOpenAPIData) SetHasMore(val *bool) {
 	p.HasMore = val
@@ -3164,14 +3164,14 @@ func (p *ListEvaluationSetsOpenAPIData) SetTotal(val *int64) {
 }
 
 var fieldIDToName_ListEvaluationSetsOpenAPIData = map[int16]string{
-	1:   "items",
+	1:   "sets",
 	100: "has_more",
 	101: "next_page_token",
 	102: "total",
 }
 
-func (p *ListEvaluationSetsOpenAPIData) IsSetItems() bool {
-	return p.Items != nil
+func (p *ListEvaluationSetsOpenAPIData) IsSetSets() bool {
+	return p.Sets != nil
 }
 
 func (p *ListEvaluationSetsOpenAPIData) IsSetHasMore() bool {
@@ -3285,7 +3285,7 @@ func (p *ListEvaluationSetsOpenAPIData) ReadField1(iprot thrift.TProtocol) error
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.Items = _field
+	p.Sets = _field
 	return nil
 }
 func (p *ListEvaluationSetsOpenAPIData) ReadField100(iprot thrift.TProtocol) error {
@@ -3363,14 +3363,14 @@ WriteStructEndError:
 }
 
 func (p *ListEvaluationSetsOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItems() {
-		if err = oprot.WriteFieldBegin("items", thrift.LIST, 1); err != nil {
+	if p.IsSetSets() {
+		if err = oprot.WriteFieldBegin("sets", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Items)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Sets)); err != nil {
 			return err
 		}
-		for _, v := range p.Items {
+		for _, v := range p.Sets {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
@@ -3457,7 +3457,7 @@ func (p *ListEvaluationSetsOpenAPIData) DeepEqual(ano *ListEvaluationSetsOpenAPI
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.Items) {
+	if !p.Field1DeepEqual(ano.Sets) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.HasMore) {
@@ -3474,10 +3474,10 @@ func (p *ListEvaluationSetsOpenAPIData) DeepEqual(ano *ListEvaluationSetsOpenAPI
 
 func (p *ListEvaluationSetsOpenAPIData) Field1DeepEqual(src []*eval_set.EvaluationSet) bool {
 
-	if len(p.Items) != len(src) {
+	if len(p.Sets) != len(src) {
 		return false
 	}
-	for i, v := range p.Items {
+	for i, v := range p.Sets {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
