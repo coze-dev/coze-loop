@@ -5,7 +5,6 @@ package evaluation_set
 
 import (
 	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -387,14 +386,34 @@ func OpenAPIFieldDataDTO2DO(dto *openapi_eval_set.FieldData) *entity.FieldData {
 	}
 }
 
-func OpenAPIContentDTO2DO(dto *common.Content) *entity.Content {
-	if dto == nil {
+func OpenAPIContentDTO2DO(content *common.Content) *entity.Content {
+	if content == nil {
 		return nil
 	}
-	contentType := convertOpenAPIContentTypeToDO(dto.ContentType)
+
+	var multiPart []*entity.Content
+	if content.MultiPart != nil {
+		multiPart = make([]*entity.Content, 0, len(content.MultiPart))
+		for _, part := range content.MultiPart {
+			multiPart = append(multiPart, OpenAPIContentDTO2DO(part))
+		}
+	}
 	return &entity.Content{
-		Text:        dto.Text,
-		ContentType: &contentType,
+		ContentType: gptr.Of(convertOpenAPIContentTypeToDO(content.ContentType)),
+		Text:        content.Text,
+		Image:       ConvertImageDTO2DO(content.Image),
+		MultiPart:   multiPart,
+	}
+}
+
+func ConvertImageDTO2DO(img *common.Image) *entity.Image {
+	if img == nil {
+		return nil
+	}
+	return &entity.Image{
+		Name:     img.Name,
+		URL:      img.URL,
+		ThumbURL: img.ThumbURL,
 	}
 }
 
@@ -463,13 +482,43 @@ func OpenAPIFieldDataDO2DTO(do *entity.FieldData) *openapi_eval_set.FieldData {
 	}
 }
 
-func OpenAPIContentDO2DTO(do *entity.Content) *common.Content {
-	if do == nil {
+func OpenAPIContentDO2DTO(content *entity.Content) *common.Content {
+	if content == nil {
 		return nil
 	}
+	var multiPart []*common.Content
+	if content.MultiPart != nil {
+		multiPart = make([]*common.Content, 0, len(content.MultiPart))
+		for _, part := range content.MultiPart {
+			multiPart = append(multiPart, OpenAPIContentDO2DTO(part))
+		}
+	}
 	return &common.Content{
-		Text:        do.Text,
-		ContentType: convertDOContentTypeToOpenAPI(gptr.Indirect(do.ContentType)),
+		ContentType: convertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
+		Text:        content.Text,
+		Image:       ConvertImageDO2DTO(content.Image),
+		MultiPart:   multiPart,
+	}
+}
+
+func ConvertImageDO2DTO(img *entity.Image) *common.Image {
+	if img == nil {
+		return nil
+	}
+	return &common.Image{
+		Name:     img.Name,
+		URL:      img.URL,
+		ThumbURL: img.ThumbURL,
+	}
+}
+
+func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
+	if audio == nil {
+		return nil
+	}
+	return &common.Audio{
+		Format: audio.Format,
+		URL:    audio.URL,
 	}
 }
 
