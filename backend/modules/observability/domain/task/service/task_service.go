@@ -318,11 +318,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 	}, nil
 }
 func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *GetTaskResp, err error) {
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return resp, errorx.NewByCode(obErrorx.UserParseFailedCode)
-	}
-	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, &userID)
+	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
 	if err != nil {
 		logs.CtxError(ctx, "GetTasks err:%v", err)
 		return resp, err
