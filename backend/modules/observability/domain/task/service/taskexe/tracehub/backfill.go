@@ -353,7 +353,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		LastSpanPageToken: ptr.Of(fr.pageToken),
 	}
 	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, taskRunDTO.ID, taskRunDTO.WorkspaceID, map[string]interface{}{
-		"backfill_detail": taskRunDTO.BackfillRunDetail,
+		"backfill_detail": ToJSONString(ctx, taskRunDTO.BackfillRunDetail),
 	})
 	if err != nil {
 		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.GetID(), err)

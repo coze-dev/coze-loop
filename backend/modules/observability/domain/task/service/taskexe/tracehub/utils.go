@@ -3,10 +3,29 @@
 
 package tracehub
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+)
 
 // Usec2Msec 微秒转毫秒
 func Usec2Msec(usec int64) int64 {
 	d := time.Duration(usec) * time.Microsecond
 	return int64(d / time.Millisecond)
+}
+
+func ToJSONString(ctx context.Context, obj interface{}) string {
+	if obj == nil {
+		return ""
+	}
+	jsonData, err := sonic.Marshal(obj)
+	if err != nil {
+		logs.CtxError(ctx, "JSON marshal error: %v", err)
+		return ""
+	}
+	jsonStr := string(jsonData)
+	return jsonStr
 }
