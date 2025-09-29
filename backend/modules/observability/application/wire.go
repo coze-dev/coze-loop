@@ -67,7 +67,7 @@ var (
 		NewInitTaskProcessor,
 		taskSvc.NewTaskServiceImpl,
 		obrepo.NewTaskRepoImpl,
-		obrepo.NewTaskRunRepoImpl,
+		//obrepo.NewTaskRunRepoImpl,
 		mysqldao.NewTaskDaoImpl,
 		tredis.NewTaskDAO,
 		tredis.NewTaskRunDAO,
@@ -198,9 +198,9 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo, taskRunRepo trepo.ITaskRunRepo) *task_processor.TaskProcessor {
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo, taskRunRepo))
+	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
 }
 

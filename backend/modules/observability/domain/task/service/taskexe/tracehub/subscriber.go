@@ -34,7 +34,6 @@ type spanSubscriber struct {
 	flushWait        sync.WaitGroup
 	maxFlushInterval time.Duration
 	taskRepo         repo.ITaskRepo
-	taskRunRepo      repo.ITaskRunRepo
 	runType          task.TaskRunType
 	buildHelper      service.TraceFilterProcessorBuilder
 }

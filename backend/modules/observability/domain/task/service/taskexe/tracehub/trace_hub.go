@@ -37,7 +37,6 @@ type ITraceHubService interface {
 
 func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
-	tRunRepo repo.ITaskRunRepo,
 	traceRepo trace_repo.ITraceRepo,
 	tenantProvider tenant.ITenantProvider,
 	buildHelper service.TraceFilterProcessorBuilder,
@@ -49,7 +48,6 @@ func NewTraceHubImpl(
 	syncTaskTicker := time.NewTicker(2 * time.Minute)      // 数据同步 - 1分钟间隔
 	impl := &TraceHubServiceImpl{
 		taskRepo:            tRepo,
-		taskRunRepo:         tRunRepo,
 		scheduledTaskTicker: scheduledTaskTicker,
 		syncTaskTicker:      syncTaskTicker,
 		stopChan:            make(chan struct{}),
@@ -72,7 +70,6 @@ type TraceHubServiceImpl struct {
 	syncTaskTicker      *time.Ticker // 数据同步定时器 - 1分钟间隔
 	stopChan            chan struct{}
 	taskRepo            repo.ITaskRepo
-	taskRunRepo         repo.ITaskRunRepo
 	traceRepo           trace_repo.ITraceRepo
 	tenantProvider      tenant.ITenantProvider
 	taskProcessor       *processor.TaskProcessor
@@ -164,7 +161,6 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 			maxFlushInterval: time.Second * 5,
 			taskRepo:         h.taskRepo,
 			runType:          task.TaskRunTypeNewData,
-			taskRunRepo:      h.taskRunRepo,
 			buildHelper:      h.buildHelper,
 		})
 	}

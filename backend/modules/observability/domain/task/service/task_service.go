@@ -82,7 +82,6 @@ type ITaskService interface {
 
 func NewTaskServiceImpl(
 	tRepo repo.ITaskRepo,
-	tRunRepo repo.ITaskRunRepo,
 	userProvider rpc.IUserProvider,
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
@@ -91,7 +90,6 @@ func NewTaskServiceImpl(
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
-		TaskRunRepo:      tRunRepo,
 		userProvider:     userProvider,
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
@@ -102,7 +100,6 @@ func NewTaskServiceImpl(
 
 type TaskServiceImpl struct {
 	TaskRepo         repo.ITaskRepo
-	TaskRunRepo      repo.ITaskRunRepo
 	userProvider     rpc.IUserProvider
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer

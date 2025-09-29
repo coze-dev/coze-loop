@@ -40,21 +40,18 @@ type AutoEvaluteProcessor struct {
 	evaluationSvc         rpc.IEvaluationRPCAdapter
 	datasetServiceAdaptor *service.DatasetServiceAdaptor
 	taskRepo              repo.ITaskRepo
-	taskRunRepo           repo.ITaskRunRepo
 }
 
 func NewAutoEvaluteProcessor(
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
-	taskRepo repo.ITaskRepo,
-	taskRunRepo repo.ITaskRunRepo) *AutoEvaluteProcessor {
+	taskRepo repo.ITaskRepo) *AutoEvaluteProcessor {
 	return &AutoEvaluteProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
 		evaluationSvc:         evaluationService,
 		taskRepo:              taskRepo,
-		taskRunRepo:           taskRunRepo,
 	}
 }
 
