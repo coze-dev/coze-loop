@@ -51,7 +51,7 @@ func (a AuthRPCAdapter) Authorization(ctx context.Context, param *rpc.Authorizat
 }
 
 func (a AuthRPCAdapter) AuthorizationWithoutSPI(ctx context.Context, param *rpc.AuthorizationWithoutSPIParam) (err error) {
-	if param.OwnerID == nil {
+	if param.OwnerID == nil || gptr.Indirect(param.OwnerID) == "0" {
 		// TODO dsf openapi 没有创建人就跳过鉴权
 		return nil
 	}
