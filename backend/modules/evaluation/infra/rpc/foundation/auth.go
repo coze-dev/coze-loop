@@ -51,6 +51,10 @@ func (a AuthRPCAdapter) Authorization(ctx context.Context, param *rpc.Authorizat
 }
 
 func (a AuthRPCAdapter) AuthorizationWithoutSPI(ctx context.Context, param *rpc.AuthorizationWithoutSPIParam) (err error) {
+	if param.OwnerID == nil {
+		// TODO dsf openapi 没有创建人就跳过鉴权
+		return nil
+	}
 	cp := make([]*checkPermissionParam, 0)
 	cp = append(cp, &checkPermissionParam{
 		objectID:        param.ObjectID,
