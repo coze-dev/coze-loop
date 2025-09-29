@@ -52,7 +52,7 @@ type EvaluationOpenApiApplicationImpl struct {
 	metric                      metrics.OpenAPIEvaluationSetMetrics
 }
 
-func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Context, req *openapi.CreateEvaluationSetOpenAPIRequest) (r *openapi.CreateEvaluationSetOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
 	var evaluationSetID int64
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -80,14 +80,14 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSet(ctx context.Conte
 	evaluationSetID = id
 
 	// 构建响应
-	return &openapi.CreateEvaluationSetOpenAPIResponse{
+	return &openapi.CreateEvaluationSetOApiResponse{
 		Data: &openapi.CreateEvaluationSetOpenAPIData{
 			EvaluationSetID: gptr.Of(id),
 		},
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context, req *openapi.GetEvaluationSetOpenAPIRequest) (r *openapi.GetEvaluationSetOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest) (r *openapi.GetEvaluationSetOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -111,14 +111,14 @@ func (e *EvaluationOpenApiApplicationImpl) GetEvaluationSet(ctx context.Context,
 	dto := evaluation_set.OpenAPIEvaluationSetDO2DTO(set)
 
 	// 构建响应
-	return &openapi.GetEvaluationSetOpenAPIResponse{
+	return &openapi.GetEvaluationSetOApiResponse{
 		Data: &openapi.GetEvaluationSetOpenAPIData{
 			EvaluationSet: dto,
 		},
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Context, req *openapi.ListEvaluationSetsOpenAPIRequest) (r *openapi.ListEvaluationSetsOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetsOApi(ctx context.Context, req *openapi.ListEvaluationSetsOApiRequest) (r *openapi.ListEvaluationSetsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		// ListEvaluationSets没有单个evaluationSetID，使用0作为占位符
@@ -149,7 +149,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Contex
 
 	// 构建响应
 	hasMore := sets != nil && len(sets) == int(req.GetPageSize())
-	return &openapi.ListEvaluationSetsOpenAPIResponse{
+	return &openapi.ListEvaluationSetsOApiResponse{
 		Data: &openapi.ListEvaluationSetsOpenAPIData{
 			Items:         dtos,
 			HasMore:       gptr.Of(hasMore),
@@ -159,7 +159,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSets(ctx context.Contex
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetVersion(ctx context.Context, req *openapi.CreateEvaluationSetVersionOpenAPIRequest) (r *openapi.CreateEvaluationSetVersionOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetVersionOApi(ctx context.Context, req *openapi.CreateEvaluationSetVersionOApiRequest) (r *openapi.CreateEvaluationSetVersionOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -185,14 +185,14 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetVersion(ctx contex
 	}
 
 	// 构建响应
-	return &openapi.CreateEvaluationSetVersionOpenAPIResponse{
+	return &openapi.CreateEvaluationSetVersionOApiResponse{
 		Data: &openapi.CreateEvaluationSetVersionOpenAPIData{
 			VersionID: gptr.Of(id),
 		},
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItems(ctx context.Context, req *openapi.BatchCreateEvaluationSetItemsOpenAPIRequest) (r *openapi.BatchCreateEvaluationSetItemsOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchCreateEvaluationSetItemsOApiRequest) (r *openapi.BatchCreateEvaluationSetItemsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -219,7 +219,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItems(ctx con
 	}
 
 	// 构建响应
-	return &openapi.BatchCreateEvaluationSetItemsOpenAPIResponse{
+	return &openapi.BatchCreateEvaluationSetItemsOApiResponse{
 		Data: &openapi.BatchCreateEvaluationSetItemsOpenAPIData{
 			AddedItems: idMap,
 			Errors:     evaluation_set.OpenAPIItemErrorGroupDO2DTOs(errors),
@@ -227,7 +227,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItems(ctx con
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItems(ctx context.Context, req *openapi.BatchUpdateEvaluationSetItemsOpenAPIRequest) (r *openapi.BatchUpdateEvaluationSetItemsOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchUpdateEvaluationSetItemsOApiRequest) (r *openapi.BatchUpdateEvaluationSetItemsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -270,7 +270,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItems(ctx con
 	}
 
 	// 构建响应
-	return &openapi.BatchUpdateEvaluationSetItemsOpenAPIResponse{
+	return &openapi.BatchUpdateEvaluationSetItemsOApiResponse{
 		Data: &openapi.BatchUpdateEvaluationSetItemsOpenAPIData{
 			UpdatedItems: updatedItems,
 			Errors:       evaluation_set.OpenAPIItemErrorGroupDO2DTOs(allErrors),
@@ -278,7 +278,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItems(ctx con
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) BatchDeleteEvaluationSetItems(ctx context.Context, req *openapi.BatchDeleteEvaluationSetItemsOpenAPIRequest) (r *openapi.BatchDeleteEvaluationSetItemsOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchDeleteEvaluationSetItemsOApiRequest) (r *openapi.BatchDeleteEvaluationSetItemsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -299,10 +299,10 @@ func (e *EvaluationOpenApiApplicationImpl) BatchDeleteEvaluationSetItems(ctx con
 	}
 
 	// 构建响应
-	return &openapi.BatchDeleteEvaluationSetItemsOpenAPIResponse{}, nil
+	return &openapi.BatchDeleteEvaluationSetItemsOApiResponse{}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) ClearEvaluationSetDraftItems(ctx context.Context, req *openapi.ClearEvaluationSetDraftItemsOpenAPIRequest) (r *openapi.ClearEvaluationSetDraftItemsOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) ClearEvaluationSetDraftItemsOApi(ctx context.Context, req *openapi.ClearEvaluationSetDraftItemsOApiRequest) (r *openapi.ClearEvaluationSetDraftItemsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -320,10 +320,10 @@ func (e *EvaluationOpenApiApplicationImpl) ClearEvaluationSetDraftItems(ctx cont
 	}
 
 	// 构建响应
-	return &openapi.ClearEvaluationSetDraftItemsOpenAPIResponse{}, nil
+	return &openapi.ClearEvaluationSetDraftItemsOApiResponse{}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItems(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOpenAPIRequest) (r *openapi.ListEvaluationSetVersionItemsOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
@@ -352,7 +352,7 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItems(ctx con
 
 	// 构建响应
 	hasMore := items != nil && len(items) == int(req.GetPageSize())
-	return &openapi.ListEvaluationSetVersionItemsOpenAPIResponse{
+	return &openapi.ListEvaluationSetVersionItemsOApiResponse{
 		Data: &openapi.ListEvaluationSetVersionItemsOpenAPIData{
 			Items:         dtos,
 			HasMore:       gptr.Of(hasMore),
@@ -362,37 +362,37 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItems(ctx con
 	}, nil
 }
 
-func (e *EvaluationOpenApiApplicationImpl) CreateEvaluator(ctx context.Context, req *openapi.CreateEvaluatorOpenAPIRequest) (r *openapi.CreateEvaluatorOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) CreateEvaluatorOApi(ctx context.Context, req *openapi.CreateEvaluatorOApiRequest) (r *openapi.CreateEvaluatorOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (e *EvaluationOpenApiApplicationImpl) SubmitEvaluatorVersion(ctx context.Context, req *openapi.SubmitEvaluatorVersionOpenAPIRequest) (r *openapi.SubmitEvaluatorVersionOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) SubmitEvaluatorVersionOApi(ctx context.Context, req *openapi.SubmitEvaluatorVersionOApiRequest) (r *openapi.SubmitEvaluatorVersionOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (e *EvaluationOpenApiApplicationImpl) GetEvaluatorVersion(ctx context.Context, req *openapi.GetEvaluatorVersionOpenAPIRequest) (r *openapi.GetEvaluatorVersionOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) GetEvaluatorVersionOApi(ctx context.Context, req *openapi.GetEvaluatorVersionOApiRequest) (r *openapi.GetEvaluatorVersionOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (e *EvaluationOpenApiApplicationImpl) RunEvaluator(ctx context.Context, req *openapi.RunEvaluatorOpenAPIRequest) (r *openapi.RunEvaluatorOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest) (r *openapi.RunEvaluatorOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (e *EvaluationOpenApiApplicationImpl) GetEvaluatorRecord(ctx context.Context, req *openapi.GetEvaluatorRecordOpenAPIRequest) (r *openapi.GetEvaluatorRecordOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) GetEvaluatorRecordOApi(ctx context.Context, req *openapi.GetEvaluatorRecordOApiRequest) (r *openapi.GetEvaluatorRecordOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (e *EvaluationOpenApiApplicationImpl) CreateExperiment(ctx context.Context, req *openapi.CreateExperimentOpenAPIRequest) (r *openapi.CreateExperimentOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) CreateExperimentOApi(ctx context.Context, req *openapi.CreateExperimentOApiRequest) (r *openapi.CreateExperimentOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (e *EvaluationOpenApiApplicationImpl) GetExperimentResult_(ctx context.Context, req *openapi.GetExperimentResultOpenAPIRequest) (r *openapi.GetExperimentResultOpenAPIResponse, err error) {
+func (e *EvaluationOpenApiApplicationImpl) GetExperimentResultOApi(ctx context.Context, req *openapi.GetExperimentResultOApiRequest) (r *openapi.GetExperimentResultOApiResponse, err error) {
 	// TODO implement me
 	panic("implement me")
 }
