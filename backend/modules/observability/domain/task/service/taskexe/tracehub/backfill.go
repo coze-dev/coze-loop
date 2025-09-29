@@ -24,7 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-const pageSize = 100
+const pageSize = 500
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. 设置当前任务上下文
@@ -349,7 +349,9 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 	}
 	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
 	taskRunDTO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
-	taskRunDTO.BackfillRunDetail.LastSpanPageToken = ptr.Of(fr.pageToken)
+	taskRunDTO.BackfillRunDetail = &task.BackfillDetail{
+		LastSpanPageToken: ptr.Of(fr.pageToken),
+	}
 	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, taskRunDTO.ID, taskRunDTO.WorkspaceID, map[string]interface{}{
 		"backfill_detail": taskRunDTO.BackfillRunDetail,
 	})
