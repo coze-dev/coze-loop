@@ -26,12 +26,30 @@ func MetricPointListDO2DTO(m []*entity.MetricPoint) []*metric.MetricPoint {
 
 func MetricDO2DTO(m *entity.Metric) *metric.Metric {
 	ret := &metric.Metric{}
-	ret.Summary = ptr.Of(m.Summary)
+	if m.Summary != "" {
+		ret.Summary = ptr.Of(m.Summary)
+	}
 	for k, v := range m.Pie {
+		if ret.Pie == nil {
+			ret.Pie = make(map[string]string)
+		}
 		ret.Pie[k] = v
 	}
 	for k, v := range m.TimeSeries {
+		if ret.TimeSeries == nil {
+			ret.TimeSeries = make(map[string][]*metric.MetricPoint)
+		}
 		ret.TimeSeries[k] = MetricPointListDO2DTO(v)
 	}
 	return ret
+}
+
+func CompareDTO2DO(c *metric.Compare) *entity.Compare {
+	if c == nil {
+		return &entity.Compare{}
+	}
+	return &entity.Compare{
+		Type:  entity.MetricCompareType(ptr.From(c.CompareType)),
+		Shift: ptr.From(c.ShiftSeconds),
+	}
 }

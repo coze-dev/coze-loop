@@ -15,14 +15,16 @@ struct GetMetricsRequest {
     6: optional filter.FilterFields filters (api.body="filters")
     7: optional common.PlatformType platform_type (api.body="platform_type")
     8: optional list<filter.FilterField> drill_down_fields (api.body="drill_down_fields")
+    9: optional metric.Compare compare (api.body="compare")
 
     255: optional base.Base Base
 }
 
 struct GetMetricsResponse {
     1: optional map<string, metric.Metric> metrics
+    2: optional map<string, metric.Metric> compared_metrics
 
-    255: base.BaseResp     BaseResp
+    255: optional base.BaseResp BaseResp
 }
 
 service MetricService {

@@ -22,6 +22,7 @@ type GetMetricsRequest struct {
 	Filters         *filter.FilterFields  `thrift:"filters,6,optional" frugal:"6,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
 	PlatformType    *common.PlatformType  `thrift:"platform_type,7,optional" frugal:"7,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	DrillDownFields []*filter.FilterField `thrift:"drill_down_fields,8,optional" frugal:"8,optional,list<filter.FilterField>" form:"drill_down_fields" json:"drill_down_fields,omitempty"`
+	Compare         *metric.Compare       `thrift:"compare,9,optional" frugal:"9,optional,metric.Compare" form:"compare" json:"compare,omitempty"`
 	Base            *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -108,6 +109,18 @@ func (p *GetMetricsRequest) GetDrillDownFields() (v []*filter.FilterField) {
 	return p.DrillDownFields
 }
 
+var GetMetricsRequest_Compare_DEFAULT *metric.Compare
+
+func (p *GetMetricsRequest) GetCompare() (v *metric.Compare) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCompare() {
+		return GetMetricsRequest_Compare_DEFAULT
+	}
+	return p.Compare
+}
+
 var GetMetricsRequest_Base_DEFAULT *base.Base
 
 func (p *GetMetricsRequest) GetBase() (v *base.Base) {
@@ -143,6 +156,9 @@ func (p *GetMetricsRequest) SetPlatformType(val *common.PlatformType) {
 func (p *GetMetricsRequest) SetDrillDownFields(val []*filter.FilterField) {
 	p.DrillDownFields = val
 }
+func (p *GetMetricsRequest) SetCompare(val *metric.Compare) {
+	p.Compare = val
+}
 func (p *GetMetricsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -156,6 +172,7 @@ var fieldIDToName_GetMetricsRequest = map[int16]string{
 	6:   "filters",
 	7:   "platform_type",
 	8:   "drill_down_fields",
+	9:   "compare",
 	255: "Base",
 }
 
@@ -173,6 +190,10 @@ func (p *GetMetricsRequest) IsSetPlatformType() bool {
 
 func (p *GetMetricsRequest) IsSetDrillDownFields() bool {
 	return p.DrillDownFields != nil
+}
+
+func (p *GetMetricsRequest) IsSetCompare() bool {
+	return p.Compare != nil
 }
 
 func (p *GetMetricsRequest) IsSetBase() bool {
@@ -264,6 +285,14 @@ func (p *GetMetricsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -436,6 +465,14 @@ func (p *GetMetricsRequest) ReadField8(iprot thrift.TProtocol) error {
 	p.DrillDownFields = _field
 	return nil
 }
+func (p *GetMetricsRequest) ReadField9(iprot thrift.TProtocol) error {
+	_field := metric.NewCompare()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Compare = _field
+	return nil
+}
 func (p *GetMetricsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -481,6 +518,10 @@ func (p *GetMetricsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -657,6 +698,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *GetMetricsRequest) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompare() {
+		if err = oprot.WriteFieldBegin("compare", thrift.STRUCT, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Compare.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 func (p *GetMetricsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -712,6 +771,9 @@ func (p *GetMetricsRequest) DeepEqual(ano *GetMetricsRequest) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.DrillDownFields) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Compare) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -798,6 +860,13 @@ func (p *GetMetricsRequest) Field8DeepEqual(src []*filter.FilterField) bool {
 	}
 	return true
 }
+func (p *GetMetricsRequest) Field9DeepEqual(src *metric.Compare) bool {
+
+	if !p.Compare.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *GetMetricsRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -807,8 +876,9 @@ func (p *GetMetricsRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type GetMetricsResponse struct {
-	Metrics  map[string]*metric.Metric `thrift:"metrics,1,optional" frugal:"1,optional,map<string:metric.Metric>" form:"metrics" json:"metrics,omitempty" query:"metrics"`
-	BaseResp *base.BaseResp            `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	Metrics         map[string]*metric.Metric `thrift:"metrics,1,optional" frugal:"1,optional,map<string:metric.Metric>" form:"metrics" json:"metrics,omitempty" query:"metrics"`
+	ComparedMetrics map[string]*metric.Metric `thrift:"compared_metrics,2,optional" frugal:"2,optional,map<string:metric.Metric>" form:"compared_metrics" json:"compared_metrics,omitempty" query:"compared_metrics"`
+	BaseResp        *base.BaseResp            `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewGetMetricsResponse() *GetMetricsResponse {
@@ -830,6 +900,18 @@ func (p *GetMetricsResponse) GetMetrics() (v map[string]*metric.Metric) {
 	return p.Metrics
 }
 
+var GetMetricsResponse_ComparedMetrics_DEFAULT map[string]*metric.Metric
+
+func (p *GetMetricsResponse) GetComparedMetrics() (v map[string]*metric.Metric) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetComparedMetrics() {
+		return GetMetricsResponse_ComparedMetrics_DEFAULT
+	}
+	return p.ComparedMetrics
+}
+
 var GetMetricsResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *GetMetricsResponse) GetBaseResp() (v *base.BaseResp) {
@@ -844,17 +926,25 @@ func (p *GetMetricsResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *GetMetricsResponse) SetMetrics(val map[string]*metric.Metric) {
 	p.Metrics = val
 }
+func (p *GetMetricsResponse) SetComparedMetrics(val map[string]*metric.Metric) {
+	p.ComparedMetrics = val
+}
 func (p *GetMetricsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_GetMetricsResponse = map[int16]string{
 	1:   "metrics",
+	2:   "compared_metrics",
 	255: "BaseResp",
 }
 
 func (p *GetMetricsResponse) IsSetMetrics() bool {
 	return p.Metrics != nil
+}
+
+func (p *GetMetricsResponse) IsSetComparedMetrics() bool {
+	return p.ComparedMetrics != nil
 }
 
 func (p *GetMetricsResponse) IsSetBaseResp() bool {
@@ -882,6 +972,14 @@ func (p *GetMetricsResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -953,6 +1051,35 @@ func (p *GetMetricsResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.Metrics = _field
 	return nil
 }
+func (p *GetMetricsResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]*metric.Metric, size)
+	values := make([]metric.Metric, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.ComparedMetrics = _field
+	return nil
+}
 func (p *GetMetricsResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -970,6 +1097,10 @@ func (p *GetMetricsResponse) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1023,15 +1154,46 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *GetMetricsResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetComparedMetrics() {
+		if err = oprot.WriteFieldBegin("compared_metrics", thrift.MAP, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.ComparedMetrics)); err != nil {
+			return err
+		}
+		for k, v := range p.ComparedMetrics {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *GetMetricsResponse) writeField255(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.BaseResp.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -1057,6 +1219,9 @@ func (p *GetMetricsResponse) DeepEqual(ano *GetMetricsResponse) bool {
 	if !p.Field1DeepEqual(ano.Metrics) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.ComparedMetrics) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -1069,6 +1234,19 @@ func (p *GetMetricsResponse) Field1DeepEqual(src map[string]*metric.Metric) bool
 		return false
 	}
 	for k, v := range p.Metrics {
+		_src := src[k]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *GetMetricsResponse) Field2DeepEqual(src map[string]*metric.Metric) bool {
+
+	if len(p.ComparedMetrics) != len(src) {
+		return false
+	}
+	for k, v := range p.ComparedMetrics {
 		_src := src[k]
 		if !v.DeepEqual(_src) {
 			return false

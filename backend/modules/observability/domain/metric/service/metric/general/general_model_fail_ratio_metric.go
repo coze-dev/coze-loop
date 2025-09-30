@@ -12,7 +12,9 @@ import (
 )
 
 // GeneralModelFailRatioMetric 模型调用错误率指标
-type GeneralModelFailRatioMetric struct{}
+type GeneralModelFailRatioMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *GeneralModelFailRatioMetric) Name() string {
 	return entity.MetricNameGeneralModelFailRatio

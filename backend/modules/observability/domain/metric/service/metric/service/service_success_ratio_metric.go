@@ -12,7 +12,9 @@ import (
 )
 
 // ServiceSuccessRatioMetric 服务请求成功率指标
-type ServiceSuccessRatioMetric struct{}
+type ServiceSuccessRatioMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *ServiceSuccessRatioMetric) Name() string {
 	return entity.MetricNameServiceSuccessRatio

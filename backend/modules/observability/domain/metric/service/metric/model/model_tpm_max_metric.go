@@ -27,7 +27,7 @@ func (m *ModelTPMMaxMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPMMaxMetric) Expression(granularity entity.MetricGranularity) string {
-	return "max(sum(tags_long['input_tokens']+tags_long['output_tokens']) * 60 * 1000/sum(duration))"
+	return "max((tags_long['input_tokens']+tags_long['output_tokens'])/(duration / 60000000))"
 }
 
 func (m *ModelTPMMaxMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

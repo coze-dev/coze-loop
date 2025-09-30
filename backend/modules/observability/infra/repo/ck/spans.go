@@ -153,11 +153,9 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsP
 	if param.Granularity != "" {
 		ckTimeInterval := getTimeInterval(param.Granularity)
 		selectClauses = append(selectClauses,
-			fmt.Sprintf("toStartOfInterval(fromUnixTimestamp64Micro(start_time), %s) AS time_bucket", ckTimeInterval))
+			fmt.Sprintf("toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), %s)) * 1000 AS time_bucket", ckTimeInterval))
 		groupByClauses = append(groupByClauses, "time_bucket")
-		orderByClauses = append(orderByClauses,
-			fmt.Sprintf("time_bucket WITH FILL FROM toStartOfInterval(fromUnixTimestamp64Micro(%d), %s) TO toStartOfInterval(fromUnixTimestamp64Micro(%d), %s) STEP %s",
-				param.StartAt, ckTimeInterval, param.EndAt, ckTimeInterval, ckTimeInterval))
+		orderByClauses = append(orderByClauses, "time_bucket") // 代码填充, 不在SQL中实现
 	}
 	for _, dimension := range param.Aggregations {
 		selectClauses = append(selectClauses,
@@ -490,13 +488,13 @@ func isSafeColumnName(name string) bool {
 
 func getTimeInterval(granularity metrics_entity.MetricGranularity) string {
 	switch granularity {
-	case metrics_entity.MetricsGranularity5Min:
-		return "INTERVAL 5 MINUTE"
-	case metrics_entity.MetricsGranularity1Hour:
+	case metrics_entity.MetricGranularity1Min:
+		return "INTERVAL 1 MINUTE"
+	case metrics_entity.MetricGranularity1Hour:
 		return "INTERVAL 1 HOUR"
-	case metrics_entity.MetricsGranularity1Day:
+	case metrics_entity.MetricGranularity1Day:
 		return "INTERVAL 1 DAY"
 	default:
-		return "INTERVAL 1 DAY" // 默认5分钟
+		return "INTERVAL 1 DAY"
 	}
 }

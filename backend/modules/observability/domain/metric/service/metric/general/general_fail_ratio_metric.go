@@ -12,7 +12,9 @@ import (
 )
 
 // GeneralFailRatioMetric Span错误率指标
-type GeneralFailRatioMetric struct{}
+type GeneralFailRatioMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *GeneralFailRatioMetric) Name() string {
 	return entity.MetricNameGeneralFailRatio

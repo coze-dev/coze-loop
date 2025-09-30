@@ -13,7 +13,9 @@ import (
 )
 
 // ToolSuccessRatioMetric 工具调用成功率指标
-type ToolSuccessRatioMetric struct{}
+type ToolSuccessRatioMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *ToolSuccessRatioMetric) Name() string {
 	return entity.MetricNameToolSuccessRatio

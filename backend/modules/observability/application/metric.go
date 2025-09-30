@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"golang.org/x/sync/errgroup"
 )
 
 type IMetricApplication interface {
@@ -46,6 +47,51 @@ func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetri
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
 	}
+	var (
+		metrics         map[string]*entity.Metric
+		comparedMetrics map[string]*entity.Metric
+		eGroup          errgroup.Group
+	)
+	eGroup.Go(func() error {
+		sReq := m.buildGetMetricsReq(req)
+		sResp, err := m.metricService.QueryMetrics(ctx, sReq)
+		if err != nil {
+			return err
+		}
+		metrics = sResp.Metrics
+		return nil
+	})
+	compare := mconv.CompareDTO2DO(req.GetCompare())
+	if newStart, newEnd, do := m.shouldCompareWith(req.GetStartTime(), req.GetEndTime(), compare); do {
+		eGroup.Go(func() error {
+			sReq := m.buildGetMetricsReq(req)
+			sReq.StartTime = newStart
+			sReq.EndTime = newEnd
+			sResp, err := m.metricService.QueryMetrics(ctx, sReq)
+			if err != nil {
+				return err
+			}
+			comparedMetrics = sResp.Metrics
+			return nil
+		})
+	}
+	if err := eGroup.Wait(); err != nil {
+		return nil, err
+	}
+	resp := &metric.GetMetricsResponse{
+		Metrics:         make(map[string]*metric2.Metric),
+		ComparedMetrics: make(map[string]*metric2.Metric),
+	}
+	for k, v := range metrics {
+		resp.Metrics[k] = mconv.MetricDO2DTO(v)
+	}
+	for k, v := range comparedMetrics {
+		resp.ComparedMetrics[k] = mconv.MetricDO2DTO(v)
+	}
+	return resp, nil
+}
+
+func (m *MetricApplication) buildGetMetricsReq(req *metric.GetMetricsRequest) *service.QueryMetricsReq {
 	sReq := &service.QueryMetricsReq{
 		PlatformType:    loop_span.PlatformType(req.GetPlatformType()),
 		WorkspaceID:     req.GetWorkspaceID(),
@@ -56,15 +102,23 @@ func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetri
 		FilterFields:    tconv.FilterFieldsDTO2DO(req.Filters),
 		DrillDownFields: tconv.FilterFieldListDTO2DO(req.DrillDownFields),
 	}
-	sResp, err := m.metricService.QueryMetrics(ctx, sReq)
-	if err != nil {
-		return nil, err
+	if sReq.Granularity == "" {
+		sReq.Granularity = entity.MetricGranularity1Day
 	}
-	resp := &metric.GetMetricsResponse{
-		Metrics: make(map[string]*metric2.Metric),
+	return sReq
+}
+
+func (m *MetricApplication) shouldCompareWith(start, end int64, c *entity.Compare) (int64, int64, bool) {
+	if c == nil {
+		return 0, 0, false
 	}
-	for k, v := range sResp.Metrics {
-		resp.Metrics[k] = mconv.MetricDO2DTO(v)
+	switch c.Type {
+	case entity.MetricCompareTypeMoM:
+		return start - (end - start), start, true
+	case entity.MetricCompareTypeYoY:
+		shiftMill := c.Shift * 1000
+		return start - shiftMill, end - shiftMill, true
+	default:
+		return 0, 0, false
 	}
-	return resp, nil
 }

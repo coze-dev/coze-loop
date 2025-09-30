@@ -27,7 +27,7 @@ func (m *ModelTPMAvgMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPMAvgMetric) Expression(granularity entity.MetricGranularity) string {
-	return "avg(sum(tags_long['input_tokens']+tags_long['output_tokens']) * 60 * 1000/sum(duration))"
+	return "avg((tags_long['input_tokens']+tags_long['output_tokens'])/(duration / 60000000))"
 }
 
 func (m *ModelTPMAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

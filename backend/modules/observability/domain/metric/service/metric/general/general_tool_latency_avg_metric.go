@@ -13,7 +13,9 @@ import (
 )
 
 // GeneralToolLatencyAvgMetric 工具调用平均耗时指标
-type GeneralToolLatencyAvgMetric struct{}
+type GeneralToolLatencyAvgMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *GeneralToolLatencyAvgMetric) Name() string {
 	return entity.MetricNameGeneralToolLatencyAvg
@@ -28,7 +30,7 @@ func (m *GeneralToolLatencyAvgMetric) Source() entity.MetricSource {
 }
 
 func (m *GeneralToolLatencyAvgMetric) Expression(granularity entity.MetricGranularity) string {
-	return "sum(duration / 1000) / count()"
+	return "sum(duration / 1000) / count()" // ms
 }
 
 func (m *GeneralToolLatencyAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

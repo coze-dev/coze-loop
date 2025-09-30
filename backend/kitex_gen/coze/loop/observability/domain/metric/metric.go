@@ -8,10 +8,18 @@ import (
 	"strings"
 )
 
+const (
+	CompareTypeYoY = "yoy"
+
+	CompareTypeMoM = "mom"
+)
+
+type CompareType = string
+
 type Metric struct {
-	Summary    *string                   `thrift:"Summary,1,optional" frugal:"1,optional,string" form:"Summary" json:"Summary,omitempty" query:"Summary"`
-	Pie        map[string]string         `thrift:"Pie,2,optional" frugal:"2,optional,map<string:string>" form:"Pie" json:"Pie,omitempty" query:"Pie"`
-	TimeSeries map[string][]*MetricPoint `thrift:"TimeSeries,3,optional" frugal:"3,optional,map<string:list<MetricPoint>>" form:"TimeSeries" json:"TimeSeries,omitempty" query:"TimeSeries"`
+	Summary    *string                   `thrift:"summary,1,optional" frugal:"1,optional,string" form:"summary" json:"summary,omitempty" query:"summary"`
+	Pie        map[string]string         `thrift:"pie,2,optional" frugal:"2,optional,map<string:string>" form:"pie" json:"pie,omitempty" query:"pie"`
+	TimeSeries map[string][]*MetricPoint `thrift:"time_series,3,optional" frugal:"3,optional,map<string:list<MetricPoint>>" form:"time_series" json:"time_series,omitempty" query:"time_series"`
 }
 
 func NewMetric() *Metric {
@@ -67,9 +75,9 @@ func (p *Metric) SetTimeSeries(val map[string][]*MetricPoint) {
 }
 
 var fieldIDToName_Metric = map[int16]string{
-	1: "Summary",
-	2: "Pie",
-	3: "TimeSeries",
+	1: "summary",
+	2: "pie",
+	3: "time_series",
 }
 
 func (p *Metric) IsSetSummary() bool {
@@ -275,7 +283,7 @@ WriteStructEndError:
 
 func (p *Metric) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSummary() {
-		if err = oprot.WriteFieldBegin("Summary", thrift.STRING, 1); err != nil {
+		if err = oprot.WriteFieldBegin("summary", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.Summary); err != nil {
@@ -293,7 +301,7 @@ WriteFieldEndError:
 }
 func (p *Metric) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPie() {
-		if err = oprot.WriteFieldBegin("Pie", thrift.MAP, 2); err != nil {
+		if err = oprot.WriteFieldBegin("pie", thrift.MAP, 2); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Pie)); err != nil {
@@ -322,7 +330,7 @@ WriteFieldEndError:
 }
 func (p *Metric) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTimeSeries() {
-		if err = oprot.WriteFieldBegin("TimeSeries", thrift.MAP, 3); err != nil {
+		if err = oprot.WriteFieldBegin("time_series", thrift.MAP, 3); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.TimeSeries)); err != nil {
@@ -430,8 +438,8 @@ func (p *Metric) Field3DeepEqual(src map[string][]*MetricPoint) bool {
 }
 
 type MetricPoint struct {
-	Timestamp *string `thrift:"Timestamp,1,optional" frugal:"1,optional,string" form:"Timestamp" json:"Timestamp,omitempty" query:"Timestamp"`
-	Value     *string `thrift:"Value,2,optional" frugal:"2,optional,string" form:"Value" json:"Value,omitempty" query:"Value"`
+	Timestamp *string `thrift:"timestamp,1,optional" frugal:"1,optional,string" form:"timestamp" json:"timestamp,omitempty" query:"timestamp"`
+	Value     *string `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
 }
 
 func NewMetricPoint() *MetricPoint {
@@ -472,8 +480,8 @@ func (p *MetricPoint) SetValue(val *string) {
 }
 
 var fieldIDToName_MetricPoint = map[int16]string{
-	1: "Timestamp",
-	2: "Value",
+	1: "timestamp",
+	2: "value",
 }
 
 func (p *MetricPoint) IsSetTimestamp() bool {
@@ -604,7 +612,7 @@ WriteStructEndError:
 
 func (p *MetricPoint) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTimestamp() {
-		if err = oprot.WriteFieldBegin("Timestamp", thrift.STRING, 1); err != nil {
+		if err = oprot.WriteFieldBegin("timestamp", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.Timestamp); err != nil {
@@ -622,7 +630,7 @@ WriteFieldEndError:
 }
 func (p *MetricPoint) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetValue() {
-		if err = oprot.WriteFieldBegin("Value", thrift.STRING, 2); err != nil {
+		if err = oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.Value); err != nil {
@@ -682,6 +690,264 @@ func (p *MetricPoint) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Value, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type Compare struct {
+	CompareType  *CompareType `thrift:"compare_type,1,optional" frugal:"1,optional,string" form:"compare_type" json:"compare_type,omitempty" query:"compare_type"`
+	ShiftSeconds *int64       `thrift:"shift_seconds,2,optional" frugal:"2,optional,i64" json:"shift_seconds" form:"shift_seconds" query:"shift_seconds"`
+}
+
+func NewCompare() *Compare {
+	return &Compare{}
+}
+
+func (p *Compare) InitDefault() {
+}
+
+var Compare_CompareType_DEFAULT CompareType
+
+func (p *Compare) GetCompareType() (v CompareType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCompareType() {
+		return Compare_CompareType_DEFAULT
+	}
+	return *p.CompareType
+}
+
+var Compare_ShiftSeconds_DEFAULT int64
+
+func (p *Compare) GetShiftSeconds() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetShiftSeconds() {
+		return Compare_ShiftSeconds_DEFAULT
+	}
+	return *p.ShiftSeconds
+}
+func (p *Compare) SetCompareType(val *CompareType) {
+	p.CompareType = val
+}
+func (p *Compare) SetShiftSeconds(val *int64) {
+	p.ShiftSeconds = val
+}
+
+var fieldIDToName_Compare = map[int16]string{
+	1: "compare_type",
+	2: "shift_seconds",
+}
+
+func (p *Compare) IsSetCompareType() bool {
+	return p.CompareType != nil
+}
+
+func (p *Compare) IsSetShiftSeconds() bool {
+	return p.ShiftSeconds != nil
+}
+
+func (p *Compare) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_Compare[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *Compare) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *CompareType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CompareType = _field
+	return nil
+}
+func (p *Compare) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ShiftSeconds = _field
+	return nil
+}
+
+func (p *Compare) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("Compare"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *Compare) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompareType() {
+		if err = oprot.WriteFieldBegin("compare_type", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CompareType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *Compare) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetShiftSeconds() {
+		if err = oprot.WriteFieldBegin("shift_seconds", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ShiftSeconds); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *Compare) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("Compare(%+v)", *p)
+
+}
+
+func (p *Compare) DeepEqual(ano *Compare) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.CompareType) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ShiftSeconds) {
+		return false
+	}
+	return true
+}
+
+func (p *Compare) Field1DeepEqual(src *CompareType) bool {
+
+	if p.CompareType == src {
+		return true
+	} else if p.CompareType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CompareType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Compare) Field2DeepEqual(src *int64) bool {
+
+	if p.ShiftSeconds == src {
+		return true
+	} else if p.ShiftSeconds == nil || src == nil {
+		return false
+	}
+	if *p.ShiftSeconds != *src {
 		return false
 	}
 	return true

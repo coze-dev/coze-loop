@@ -27,7 +27,7 @@ func (m *ModelTPSMinMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPSMinMetric) Expression(granularity entity.MetricGranularity) string {
-	return "min(sum(tags_long['input_tokens']+tags_long['output_tokens']) * 1000/sum(duration))"
+	return "min((tags_long['input_tokens']+tags_long['output_tokens'])/(duration / 1000000))"
 }
 
 func (m *ModelTPSMinMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

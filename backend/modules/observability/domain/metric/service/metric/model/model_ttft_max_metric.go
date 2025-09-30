@@ -27,7 +27,7 @@ func (m *ModelTTFTMaxMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTTFTMaxMetric) Expression(granularity entity.MetricGranularity) string {
-	return "max(tags_long['latency_first_resp'])"
+	return "max(tags_long['latency_first_resp']/1000)"
 }
 
 func (m *ModelTTFTMaxMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

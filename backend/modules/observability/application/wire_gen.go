@@ -25,6 +25,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	service3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	entity2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -255,7 +259,7 @@ func NewTraceProcessorBuilder(
 }
 
 func NewMetricDefinitions() []entity.IMetricDefinition {
-	return []entity.IMetricDefinition{}
+	return []entity.IMetricDefinition{general.NewGeneralFailRatioMetric(), general.NewGeneralModelFailRatioMetric(), general.NewGeneralModelLatencyAvgMetric(), general.NewGeneralModelTotalTokensMetric(), general.NewGeneralToolTotalCountMetric(), general.NewGeneralToolFailRatioMetric(), general.NewGeneralToolLatencyAvgMetric(), model.NewModelTokenCountMetric(), model.NewModelInputTokenCountMetric(), model.NewModelOutputTokenCountMetric(), model.NewModelQPSMetric(), model.NewModelQPMMetric(), model.NewModelSuccessRatioMetric(), model.NewModelTPSAvgMetric(), model.NewModelTPSMinMetric(), model.NewModelTPSMaxMetric(), model.NewModelTPSPct50Metric(), model.NewModelTPSPct90Metric(), model.NewModelTPSPct99Metric(), model.NewModelTPMAvgMetric(), model.NewModelTPMMinMetric(), model.NewModelTPMMaxMetric(), model.NewModelTPMPct50Metric(), model.NewModelTPMPct90Metric(), model.NewModelTPMPct99Metric(), model.NewModelDurationAvgMetric(), model.NewModelDurationMinMetric(), model.NewModelDurationMaxMetric(), model.NewModelDurationPct50Metric(), model.NewModelDurationPct90Metric(), model.NewModelDurationPct99Metric(), model.NewModelTTFTAvgMetric(), model.NewModelTTFTMinMetric(), model.NewModelTTFTMaxMetric(), model.NewModelTTFTPct50Metric(), model.NewModelTTFTPct90Metric(), model.NewModelTTFTPct99Metric(), model.NewModelTPOTAvgMetric(), model.NewModelTPOTMinMetric(), model.NewModelTPOTMaxMetric(), model.NewModelTPOTPct50Metric(), model.NewModelTPOTPct90Metric(), model.NewModelTPOTPct99Metric(), tool.NewToolTotalCountMetric(), tool.NewToolDurationAvgMetric(), tool.NewToolDurationMinMetric(), tool.NewToolDurationMaxMetric(), tool.NewToolDurationPct50Metric(), tool.NewToolDurationPct90Metric(), tool.NewToolDurationPct99Metric(), tool.NewToolSuccessRatioMetric(), service3.NewServiceTraceCountTotalMetric(), service3.NewServiceTraceCountMetric(), service3.NewServiceSpanCountMetric(), service3.NewServiceUserCountMetric(), service3.NewServiceMessageCountMetric(), service3.NewServiceQPSAllMetric(), service3.NewServiceQPSSuccessMetric(), service3.NewServiceQPSFailMetric(), service3.NewServiceQPMAllMetric(), service3.NewServiceQPMSuccessMetric(), service3.NewServiceQPMFailMetric(), service3.NewServiceDurationAvgMetric(), service3.NewServiceDurationMinMetric(), service3.NewServiceDurationMaxMetric(), service3.NewServiceDurationPct50Metric(), service3.NewServiceDurationPct90Metric(), service3.NewServiceDurationPct99Metric(), service3.NewServiceSuccessRatioMetric()}
 }
 
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo2.ITraceRepo) service.IngestionCollectorFactory {

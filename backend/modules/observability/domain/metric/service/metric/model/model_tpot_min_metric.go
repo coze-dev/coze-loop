@@ -27,7 +27,7 @@ func (m *ModelTPOTMinMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPOTMinMetric) Expression(granularity entity.MetricGranularity) string {
-	return "min(tags_long['output_tokens'] / (duration-tags_long['latency_first_resp']))"
+	return "min((duration-tags_long['latency_first_resp'])/(1000*tags_long['output_tokens']))"
 }
 
 func (m *ModelTPOTMinMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

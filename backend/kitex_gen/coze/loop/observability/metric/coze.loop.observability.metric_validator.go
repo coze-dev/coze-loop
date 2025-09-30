@@ -39,6 +39,11 @@ func (p *GetMetricsRequest) IsValid() error {
 			return fmt.Errorf("field Filters not valid, %w", err)
 		}
 	}
+	if p.Compare != nil {
+		if err := p.Compare.IsValid(); err != nil {
+			return fmt.Errorf("field Compare not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

@@ -13,7 +13,9 @@ import (
 )
 
 // GeneralToolFailRatioMetric 工具调用错误率指标
-type GeneralToolFailRatioMetric struct{}
+type GeneralToolFailRatioMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *GeneralToolFailRatioMetric) Name() string {
 	return entity.MetricNameGeneralToolFailRatio

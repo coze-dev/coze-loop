@@ -238,7 +238,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					TimeSeries: map[string][]*entity.MetricPoint{
-						"all": {
+						"": {
 							{Timestamp: "2023-01-01T00:00:00Z", Value: "100"},
 						},
 					},
@@ -557,7 +557,7 @@ func TestMetricsService_formatMetrics(t *testing.T) {
 			expected: map[string]*entity.Metric{
 				"metric1": {
 					Pie: map[string]string{
-						"all": "100",
+						"": "100",
 					},
 				},
 			},

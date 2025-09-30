@@ -12,7 +12,9 @@ import (
 )
 
 // ModelSuccessRatioMetric 模型请求成功率指标
-type ModelSuccessRatioMetric struct{}
+type ModelSuccessRatioMetric struct {
+	entity.MetricFillNull
+}
 
 func (m *ModelSuccessRatioMetric) Name() string {
 	return entity.MetricNameModelSuccessRatio

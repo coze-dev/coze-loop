@@ -170,6 +170,20 @@ func (p *GetMetricsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -354,6 +368,18 @@ func (p *GetMetricsRequest) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetMetricsRequest) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+	_field := metric.NewCompare()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Compare = _field
+	return offset, nil
+}
+
 func (p *GetMetricsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -381,6 +407,7 @@ func (p *GetMetricsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -398,6 +425,7 @@ func (p *GetMetricsRequest) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -478,6 +506,15 @@ func (p *GetMetricsRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter) i
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *GetMetricsRequest) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCompare() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 9)
+		offset += p.Compare.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -563,6 +600,15 @@ func (p *GetMetricsRequest) field8Length() int {
 	return l
 }
 
+func (p *GetMetricsRequest) field9Length() int {
+	l := 0
+	if p.IsSetCompare() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Compare.BLength()
+	}
+	return l
+}
+
 func (p *GetMetricsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -632,6 +678,15 @@ func (p *GetMetricsRequest) DeepCopy(s interface{}) error {
 		}
 	}
 
+	var _compare *metric.Compare
+	if src.Compare != nil {
+		_compare = &metric.Compare{}
+		if err := _compare.DeepCopy(src.Compare); err != nil {
+			return err
+		}
+	}
+	p.Compare = _compare
+
 	var _base *base.Base
 	if src.Base != nil {
 		_base = &base.Base{}
@@ -664,6 +719,20 @@ func (p *GetMetricsResponse) FastRead(buf []byte) (int, error) {
 		case 1:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -740,6 +809,39 @@ func (p *GetMetricsResponse) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetMetricsResponse) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]*metric.Metric, size)
+	values := make([]metric.Metric, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if l, err := _val.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field[_key] = _val
+	}
+	p.ComparedMetrics = _field
+	return offset, nil
+}
+
 func (p *GetMetricsResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -760,6 +862,7 @@ func (p *GetMetricsResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -770,6 +873,7 @@ func (p *GetMetricsResponse) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -793,10 +897,29 @@ func (p *GetMetricsResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
+func (p *GetMetricsResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetComparedMetrics() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 2)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ComparedMetrics {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *GetMetricsResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
-	offset += p.BaseResp.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetBaseResp() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
+		offset += p.BaseResp.FastWriteNocopy(buf[offset:], w)
+	}
 	return offset
 }
 
@@ -815,10 +938,27 @@ func (p *GetMetricsResponse) field1Length() int {
 	return l
 }
 
+func (p *GetMetricsResponse) field2Length() int {
+	l := 0
+	if p.IsSetComparedMetrics() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ComparedMetrics {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *GetMetricsResponse) field255Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += p.BaseResp.BLength()
+	if p.IsSetBaseResp() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.BaseResp.BLength()
+	}
 	return l
 }
 
@@ -845,6 +985,26 @@ func (p *GetMetricsResponse) DeepCopy(s interface{}) error {
 			}
 
 			p.Metrics[_key] = _val
+		}
+	}
+
+	if src.ComparedMetrics != nil {
+		p.ComparedMetrics = make(map[string]*metric.Metric, len(src.ComparedMetrics))
+		for key, val := range src.ComparedMetrics {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val *metric.Metric
+			if val != nil {
+				_val = &metric.Metric{}
+				if err := _val.DeepCopy(val); err != nil {
+					return err
+				}
+			}
+
+			p.ComparedMetrics[_key] = _val
 		}
 	}
 

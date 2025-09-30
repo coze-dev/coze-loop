@@ -27,7 +27,7 @@ func (m *ModelTPSPct99Metric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPSPct99Metric) Expression(granularity entity.MetricGranularity) string {
-	return "quantile(0.99)(sum(tags_long['input_tokens']+tags_long['output_tokens']) * 1000/sum(duration))"
+	return "quantile(0.99)((tags_long['input_tokens']+tags_long['output_tokens'])/(duration / 1000000))"
 }
 
 func (m *ModelTPSPct99Metric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -27,3 +27,11 @@ func (p *Metric) IsValid() error {
 func (p *MetricPoint) IsValid() error {
 	return nil
 }
+func (p *Compare) IsValid() error {
+	if p.ShiftSeconds != nil {
+		if *p.ShiftSeconds <= int64(0) {
+			return fmt.Errorf("field ShiftSeconds gt rule failed, current value: %v", *p.ShiftSeconds)
+		}
+	}
+	return nil
+}
