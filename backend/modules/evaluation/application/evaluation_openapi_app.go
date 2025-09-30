@@ -245,7 +245,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItemsOApi(ctx
 
 	// 批量更新评测集项目
 	for _, item := range req.Items {
-		err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), *item.ID, evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
+		err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), item.GetID(), evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
 		if err != nil {
 			logs.CtxError(ctx, "UpdateEvaluationSetItem, err=%v", err)
 		}

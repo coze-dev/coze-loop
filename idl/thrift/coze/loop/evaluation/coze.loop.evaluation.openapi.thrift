@@ -61,7 +61,6 @@ struct ListEvaluationSetsOApiRequest {
 
     100: optional string page_token (api.query="page_token")
     101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
-    103: optional list<common.OrderBy> order_bys (api.query="order_bys")
 
     255: optional base.Base Base
 }
@@ -176,7 +175,6 @@ struct ListEvaluationSetVersionItemsOApiRequest {
 
     100: optional string page_token (api.query="page_token")
     101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
-    102: optional list<common.OrderBy> order_bys (api.query="order_bys"),
 
     255: optional base.Base Base
 }
