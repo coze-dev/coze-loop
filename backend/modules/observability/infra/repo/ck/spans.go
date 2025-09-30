@@ -463,14 +463,8 @@ var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldLogicDeleteDate: true,
 }
 
-var spanColumnStr string
-
 var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
-}
-
-func init() {
-	spanColumnStr = strings.Join(spanColumns, ", ")
 }

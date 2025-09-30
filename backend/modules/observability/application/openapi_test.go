@@ -4,19 +4,8 @@
 package application
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	"testing"
-
-	"github.com/bytedance/sonic"
-	"github.com/stretchr/testify/assert"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"go.uber.org/mock/gomock"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
@@ -40,10 +29,12 @@ import (
 	workspacemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
+
+	"go.uber.org/mock/gomock"
 )
 
 func TestOpenAPIApplication_IngestTraces(t *testing.T) {
@@ -514,92 +505,6 @@ func TestOpenAPIApplication_Send(t *testing.T) {
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}
-}
-
-// Helper functions for creating test data
-func createValidJSONTraceData() []byte {
-	req := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: []*tracepb.ResourceSpans{
-			{
-				Resource: &resourcepb.Resource{
-					Attributes: []*commonpb.KeyValue{
-						{
-							Key: "service.name",
-							Value: &commonpb.AnyValue{
-								Value: &commonpb.AnyValue_StringValue{StringValue: "test-service"},
-							},
-						},
-					},
-				},
-				ScopeSpans: []*tracepb.ScopeSpans{
-					{
-						Spans: []*tracepb.Span{
-							{
-								TraceId: []byte("test-trace-id-123"),
-								SpanId:  []byte("test-span-id-456"),
-								Name:    "test-span",
-								Kind:    tracepb.Span_SPAN_KIND_SERVER,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, _ := sonic.Marshal(otel.OtelTraceRequestPbToJson(req))
-	return data
-}
-
-func createValidProtoBufTraceData() []byte {
-	req := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: []*tracepb.ResourceSpans{
-			{
-				Resource: &resourcepb.Resource{
-					Attributes: []*commonpb.KeyValue{
-						{
-							Key: "service.name",
-							Value: &commonpb.AnyValue{
-								Value: &commonpb.AnyValue_StringValue{StringValue: "test-service"},
-							},
-						},
-					},
-				},
-				ScopeSpans: []*tracepb.ScopeSpans{
-					{
-						Spans: []*tracepb.Span{
-							{
-								TraceId: []byte("test-trace-id-123"),
-								SpanId:  []byte("test-span-id-456"),
-								Name:    "test-span",
-								Kind:    tracepb.Span_SPAN_KIND_SERVER,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, _ := proto.Marshal(req)
-	return data
-}
-
-func createValidProtoBufResponse() []byte {
-	resp := &coltracepb.ExportTraceServiceResponse{
-		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 0,
-			ErrorMessage:  "",
-		},
-	}
-	data, _ := proto.Marshal(resp)
-	return data
-}
-
-func createGzipData(data []byte) []byte {
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	gz.Write(data)
-	gz.Close()
-	return buf.Bytes()
 }
 
 func TestNewOpenAPIApplication(t *testing.T) {

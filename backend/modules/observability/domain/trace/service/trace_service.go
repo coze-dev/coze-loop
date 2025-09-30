@@ -578,7 +578,10 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("base meta info not found"))
 	}
 
-	fields, _ := cfg.FieldMetas[req.PlatformType][req.SpanListType]
+	fields, ok := cfg.FieldMetas[req.PlatformType][req.SpanListType]
+	if !ok {
+		logs.CtxInfo(ctx, "on")
+	}
 	fieldMetas := make(map[string]*config.FieldMeta)
 	for _, field := range baseFields {
 		fieldMta, ok := cfg.AvailableFields[field]
@@ -598,12 +601,9 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	}
 
 	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
-	keySpanTypes := make([]string, 0)
-	spanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
+	keySpanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
 	if !ok {
 		keySpanTypes = spanTypeCfg[string(loop_span.PlatformDefault)][string(loop_span.SpanListTypeRootSpan)]
-	} else {
-		keySpanTypes = spanTypes
 	}
 	return &GetTracesMetaInfoResp{
 		FilesMetas:      fieldMetas,
