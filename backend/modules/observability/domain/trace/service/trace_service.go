@@ -75,6 +75,7 @@ type SearchTraceOApiReq struct {
 	StartTime             int64 // ms
 	EndTime               int64 // ms
 	Limit                 int32
+	SpanIDs               []string
 	PlatformType          loop_span.PlatformType
 	WithDetail            bool
 	Filters               *loop_span.FilterFields
@@ -372,6 +373,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
 		LogID:              req.LogID,
+		SpanIDs:            req.SpanIDs,
 		StartAt:            req.StartTime,
 		EndAt:              req.EndTime,
 		Limit:              req.Limit,
@@ -571,11 +573,21 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	fields, ok := cfg.FieldMetas[req.PlatformType][req.SpanListType]
+	baseFields, ok := cfg.FieldMetas[loop_span.PlatformDefault][req.SpanListType]
 	if !ok {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("meta info not found"))
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("base meta info not found"))
 	}
+
+	fields, _ := cfg.FieldMetas[req.PlatformType][req.SpanListType]
 	fieldMetas := make(map[string]*config.FieldMeta)
+	for _, field := range baseFields {
+		fieldMta, ok := cfg.AvailableFields[field]
+		if !ok || fieldMta == nil {
+			logs.CtxError(ctx, "GetTracesMetaInfo invalid field: %v", field)
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		}
+		fieldMetas[field] = fieldMta
+	}
 	for _, field := range fields {
 		fieldMta, ok := cfg.AvailableFields[field]
 		if !ok || fieldMta == nil {
@@ -584,8 +596,8 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 		}
 		fieldMetas[field] = fieldMta
 	}
+
 	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
-	logs.CtxInfo(ctx, "GetTracesMetaInfo spanTypeCfg: %v PlatformType: %v SpanListType: %v", spanTypeCfg, req.PlatformType, req.SpanListType)
 	keySpanTypes := make([]string, 0)
 	spanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
 	if !ok {
@@ -593,7 +605,6 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	} else {
 		keySpanTypes = spanTypes
 	}
-	logs.CtxInfo(ctx, "GetTracesMetaInfo spanTypeCfg: %v", keySpanTypes)
 	return &GetTracesMetaInfoResp{
 		FilesMetas:      fieldMetas,
 		KeySpanTypeList: keySpanTypes,

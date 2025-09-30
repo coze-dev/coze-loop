@@ -39,6 +39,7 @@ import (
 const (
 	MaxSpanLength         = 500
 	MaxListSpansLimit     = 1000
+	MaxTraceTreeLength    = 10000
 	MaxOApiListSpansLimit = 200
 	QueryLimitDefault     = 100
 )

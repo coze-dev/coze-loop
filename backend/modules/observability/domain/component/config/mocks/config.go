@@ -101,10 +101,10 @@ func (mr *MockITraceConfigMockRecorder) GetDefaultTraceTenant(ctx any) *gomock.C
 }
 
 // GetKeyColumns mocks base method.
-func (m *MockITraceConfig) GetKeyColumns(ctx context.Context) map[string]map[string][]string {
+func (m *MockITraceConfig) GetKeyColumns(ctx context.Context) []string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKeyColumns", ctx)
-	ret0, _ := ret[0].(map[string]map[string][]string)
+	ret0, _ := ret[0].([]string)
 	return ret0
 }
 
@@ -115,10 +115,10 @@ func (mr *MockITraceConfigMockRecorder) GetKeyColumns(ctx any) *gomock.Call {
 }
 
 // GetKeySpanTypes mocks base method.
-func (m *MockITraceConfig) GetKeySpanTypes(ctx context.Context) []string {
+func (m *MockITraceConfig) GetKeySpanTypes(ctx context.Context) map[string]map[string][]string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKeySpanTypes", ctx)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].(map[string]map[string][]string)
 	return ret0
 }
 
