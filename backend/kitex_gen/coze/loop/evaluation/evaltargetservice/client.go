@@ -21,6 +21,7 @@ type Client interface {
 	ExecuteEvalTarget(ctx context.Context, request *eval_target.ExecuteEvalTargetRequest, callOptions ...callopt.Option) (r *eval_target.ExecuteEvalTargetResponse, err error)
 	GetEvalTargetRecord(ctx context.Context, request *eval_target.GetEvalTargetRecordRequest, callOptions ...callopt.Option) (r *eval_target.GetEvalTargetRecordResponse, err error)
 	BatchGetEvalTargetRecords(ctx context.Context, request *eval_target.BatchGetEvalTargetRecordsRequest, callOptions ...callopt.Option) (r *eval_target.BatchGetEvalTargetRecordsResponse, err error)
+	MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest, callOptions ...callopt.Option) (r *eval_target.MockEvalTargetOutputResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -100,4 +101,9 @@ func (p *kEvalTargetServiceClient) GetEvalTargetRecord(ctx context.Context, requ
 func (p *kEvalTargetServiceClient) BatchGetEvalTargetRecords(ctx context.Context, request *eval_target.BatchGetEvalTargetRecordsRequest, callOptions ...callopt.Option) (r *eval_target.BatchGetEvalTargetRecordsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetEvalTargetRecords(ctx, request)
+}
+
+func (p *kEvalTargetServiceClient) MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest, callOptions ...callopt.Option) (r *eval_target.MockEvalTargetOutputResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.MockEvalTargetOutput(ctx, request)
 }

@@ -26,7 +26,7 @@ func NewTagRPCProvider(client tagservice.Client) rpc.ITagRPCAdapter {
 	}
 }
 
-func (t *TagRPCAdapter) GetTagInfo(ctx context.Context, workspaceID int64, tagID int64) (*entity.TagInfo, error) {
+func (t *TagRPCAdapter) GetTagInfo(ctx context.Context, workspaceID, tagID int64) (*entity.TagInfo, error) {
 	res, err := t.client.BatchGetTags(ctx, &tag.BatchGetTagsRequest{
 		WorkspaceID: workspaceID,
 		TagKeyIds:   []int64{tagID},
