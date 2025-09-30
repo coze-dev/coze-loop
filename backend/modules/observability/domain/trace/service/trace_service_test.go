@@ -327,8 +327,11 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				confMock.EXPECT().GetTraceFieldMetaInfo(gomock.Any()).Return(&config.TraceFieldMetaInfoCfg{
 					FieldMetas: map[loop_span.PlatformType]map[loop_span.SpanListType][]string{
-						loop_span.PlatformCozeLoop: {
+						loop_span.PlatformDefault: {
 							loop_span.SpanListTypeAllSpan: {"field1", "field2"},
+						},
+						loop_span.PlatformCozeLoop: {
+							loop_span.SpanListTypeAllSpan: {},
 						},
 					},
 					AvailableFields: map[string]*config.FieldMeta{
@@ -336,6 +339,14 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 						"field2": {FieldType: "int"},
 					},
 				}, nil)
+				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string]map[string][]string{
+					string(loop_span.PlatformDefault): {
+						string(loop_span.SpanListTypeRootSpan): {},
+					},
+					string(loop_span.PlatformCozeLoop): {
+						string(loop_span.SpanListTypeAllSpan): {},
+					},
+				})
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -359,6 +370,7 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 					"field1": {FieldType: "string"},
 					"field2": {FieldType: "int"},
 				},
+				KeySpanTypeList: []string{},
 			},
 		},
 		{
@@ -401,8 +413,12 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				fields.buildHelper,
 				fields.tenantProvider)
 			got, err := r.GetTracesMetaInfo(tt.args.ctx, tt.args.req)
-			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }
@@ -2144,6 +2160,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 					},
 				}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetKeyColumns(gomock.Any()).Return([]string{}).AnyTimes()
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -2187,6 +2204,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 					},
 				}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetKeyColumns(gomock.Any()).Return([]string{}).AnyTimes()
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -2252,6 +2270,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed"))
 				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetKeyColumns(gomock.Any()).Return([]string{}).AnyTimes()
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
@@ -2426,10 +2445,13 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 					Tenants:            []string{"tenant1"},
 					TraceID:            "trace-123",
 					LogID:              "",
+					SpanIDs:            nil,
 					StartAt:            1640995200000,
 					EndAt:              1640995800000,
 					Limit:              100,
 					NotQueryAnnotation: false,
+					Filters:            nil,
+					SelectColumns:      []string{},
 				}).Return(loop_span.SpanList{
 					{
 						TraceID:   "trace-123",
