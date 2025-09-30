@@ -585,7 +585,7 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 		fieldMetas[field] = fieldMta
 	}
 	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
-	logs.CtxInfo(ctx, "GetTracesMetaInfo spanTypeCfg: %v", spanTypeCfg)
+	logs.CtxInfo(ctx, "GetTracesMetaInfo spanTypeCfg: %v PlatformType: %v SpanListType: %v", spanTypeCfg, req.PlatformType, req.SpanListType)
 	keySpanTypes := make([]string, 0)
 	spanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
 	if !ok {
@@ -593,6 +593,7 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	} else {
 		keySpanTypes = spanTypes
 	}
+	logs.CtxInfo(ctx, "GetTracesMetaInfo spanTypeCfg: %v", keySpanTypes)
 	return &GetTracesMetaInfoResp{
 		FilesMetas:      fieldMetas,
 		KeySpanTypeList: keySpanTypes,
