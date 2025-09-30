@@ -267,7 +267,28 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx
 	if req.Items == nil || len(req.Items) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
-
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
 	// 调用domain服务
 	idMap, errors, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
 		SpaceID:          req.GetWorkspaceID(),
