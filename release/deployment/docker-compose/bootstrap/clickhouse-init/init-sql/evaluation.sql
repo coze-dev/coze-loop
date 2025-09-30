@@ -23,11 +23,13 @@ CREATE TABLE IF NOT EXISTS cozeloop_evaluation.expt_turn_result_filter_local
     `created_date` Date,
     `created_at` DateTime,
     `updated_at` DateTime,
-    INDEX inv_eval_target_data_actual_output eval_target_data TYPE inverted GRANULARITY 1
+    INDEX idx_space_id space_id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_expt_id expt_id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_item_id item_id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_turn_id turn_id TYPE bloom_filter() GRANULARITY 1
 )
-ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{database}/{table}', '{replica}')
+ENGINE = MergeTree()
 PARTITION BY created_date
 ORDER BY (expt_id, cityHash64(item_id), turn_id)
-UNIQUE KEY (sipHash64(expt_id), sipHash64(item_id), sipHash64(turn_id))
 SAMPLE BY cityHash64(item_id)
 SETTINGS index_granularity = 8192;
