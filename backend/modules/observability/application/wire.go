@@ -266,7 +266,8 @@ func InitTaskApplication(
 	exptService experimentservice.Client,
 	datasetService datasetservice.Client,
 	fileClient fileservice.Client,
-	taskProcessor task_processor.TaskProcessor) (ITaskApplication, error) {
+	taskProcessor task_processor.TaskProcessor,
+	aid int32) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
 }
