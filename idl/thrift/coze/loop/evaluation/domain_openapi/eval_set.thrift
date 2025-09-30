@@ -35,7 +35,7 @@ struct EvaluationSetVersion {
     2: optional string version
     3: optional string description
     4: optional EvaluationSetSchema evaluation_set_schema
-    5: optional i64 item_count (api.js_conv="true", go.tag = 'json:"item_count"')
+    5: optional i64 item_count
 
     100: optional common.BaseInfo base_info
 }
@@ -46,7 +46,7 @@ struct EvaluationSet {
     2: optional string name
     3: optional string description
     4: optional EvaluationSetStatus status
-    5: optional i64 item_count (api.js_conv="true", go.tag = 'json:"item_count"')
+    5: optional i64 item_count
     6: optional string latest_version
     7: optional bool is_change_uncommitted
 
