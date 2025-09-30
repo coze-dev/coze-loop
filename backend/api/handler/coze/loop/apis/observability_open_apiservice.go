@@ -64,15 +64,5 @@ func ListTracesOApi(ctx context.Context, c *app.RequestContext) {
 // SearchTraceTreeOApi .
 // @router /v1/loop/traces/search_tree [POST]
 func SearchTraceTreeOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi1.SearchTraceTreeOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi1.SearchTraceTreeOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.SearchTraceTreeOApi)
 }
