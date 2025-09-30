@@ -61,17 +61,3 @@ func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.Expt
 	const key = "expt_export_white_list"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &eec) == nil, eec, entity.DefaultExptExportWhiteList())
 }
-
-func (c *configer) GetExptTurnResultFilterTableName(ctx context.Context) string {
-	type ClickHouseTableConfig struct {
-		ExptTurnResultFilterTableName string `json:"expt_turn_result_filter_table_name" mapstructure:"expt_turn_result_filter_table_name"`
-	}
-	
-	var config ClickHouseTableConfig
-	const key = "clickhouse_table_config"
-	if c.loader.UnmarshalKey(ctx, key, &config) == nil && config.ExptTurnResultFilterTableName != "" {
-		return config.ExptTurnResultFilterTableName
-	}
-	// 返回默认表名
-	return "expt_turn_result_filter"
-}

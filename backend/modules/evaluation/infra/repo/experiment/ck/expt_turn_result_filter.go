@@ -523,10 +523,7 @@ func (d *exptTurnResultFilterDAOImpl) buildKeywordSearchConditions(ctx context.C
 
 // buildBaseSQL 构建基础SQL语句
 func (d *exptTurnResultFilterDAOImpl) buildBaseSQL(ctx context.Context, joinSQL, whereSQL, keywordCond, evalSetSyncCkDate string, args *[]interface{}) string {
-	tableName := d.configer.GetExptTurnResultFilterTableName(ctx)
-	if tableName == "" {
-		tableName = "expt_turn_result_filter"
-	}
+	tableName := d.configer.GetCKDBName(ctx).ExptTurnResultFilterDBName
 	sql := "SELECT  etrf.item_id, etrf.status FROM " + d.configer.GetCKDBName(ctx).ExptTurnResultFilterDBName + "." + tableName + " etrf"
 	if joinSQL != "" || keywordCond != "" {
 		sql += " INNER JOIN " + d.configer.GetCKDBName(ctx).DatasetItemsSnapshotDBName + ".dataset_item_snapshot dis ON etrf.eval_set_version_id = dis.version_id AND etrf.item_id = dis.item_id"
@@ -655,10 +652,7 @@ func (d *exptTurnResultFilterDAOImpl) GetByExptIDItemIDs(ctx context.Context, sp
 }
 
 func (d *exptTurnResultFilterDAOImpl) buildGetByExptIDItemIDsSQL(ctx context.Context, spaceID, exptID, createdDate string, itemIDs []string) (string, []interface{}) {
-	tableName := d.configer.GetExptTurnResultFilterTableName(ctx)
-	if tableName == "" {
-		tableName = "expt_turn_result_filter"
-	}
+	tableName := d.configer.GetCKDBName(ctx).ExptTurnResultFilterDBName
 	sql := "SELECT " +
 		"etrf.space_id, " +
 		"etrf.expt_id, " +
