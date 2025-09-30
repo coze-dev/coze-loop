@@ -229,13 +229,16 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService
 }
 
-func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metrics.Meter) evaluation.EvaluationOpenAPIService {
+func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metrics.Meter, authClient authservice.Client, userClient userservice.Client) evaluation.EvaluationOpenAPIService {
+	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(client)
 	iEvaluationSetService := service.NewEvaluationSetServiceImpl(iDatasetRPCAdapter)
 	evaluationSetVersionService := service.NewEvaluationSetVersionServiceImpl(iDatasetRPCAdapter)
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	openAPIEvaluationSetMetrics := metrics4.NewOpenAPIEvaluationSetMetrics(meter)
-	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, openAPIEvaluationSetMetrics)
+	iUserProvider := foundation.NewUserRPCProvider(userClient)
+	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
+	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, openAPIEvaluationSetMetrics, userInfoService)
 	return evaluationOpenAPIService
 }
 
@@ -271,7 +274,7 @@ var (
 	)
 
 	evaluationOpenAPISet = wire.NewSet(
-		NewEvaluationOpenApiApplicationImpl, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, data.NewDatasetRPCAdapter, metrics4.NewOpenAPIEvaluationSetMetrics,
+		NewEvaluationOpenApiApplicationImpl, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, data.NewDatasetRPCAdapter, metrics4.NewOpenAPIEvaluationSetMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
 	)
 
 	targetDomainService = wire.NewSet(service.NewEvalTargetServiceImpl, NewSourceTargetOperators, prompt.NewPromptRPCAdapter, target.NewEvalTargetRepo, mysql3.NewEvalTargetDAO, mysql3.NewEvalTargetRecordDAO, mysql3.NewEvalTargetVersionDAO)

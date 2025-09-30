@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -29,18 +32,21 @@ var (
 	evaluationOpenApiApplication     evaluation.EvaluationOpenAPIService
 )
 
-func NewEvaluationOpenApiApplicationImpl(
+func NewEvaluationOpenApiApplicationImpl(auth rpc.IAuthProvider,
 	evaluationSetService service.IEvaluationSetService,
 	evaluationSetVersionService service.EvaluationSetVersionService,
 	evaluationSetItemService service.EvaluationSetItemService,
 	metric metrics.OpenAPIEvaluationSetMetrics,
+	userInfoService userinfo.UserInfoService,
 ) evaluation.EvaluationOpenAPIService {
 	evaluationOpenApiApplicationOnce.Do(func() {
 		evaluationOpenApiApplication = &EvaluationOpenApiApplicationImpl{
+			auth:                        auth,
 			evaluationSetService:        evaluationSetService,
 			evaluationSetVersionService: evaluationSetVersionService,
 			evaluationSetItemService:    evaluationSetItemService,
 			metric:                      metric,
+			userInfoService:             userInfoService,
 		}
 	})
 
@@ -48,10 +54,12 @@ func NewEvaluationOpenApiApplicationImpl(
 }
 
 type EvaluationOpenApiApplicationImpl struct {
+	auth                        rpc.IAuthProvider
 	evaluationSetService        service.IEvaluationSetService
 	evaluationSetVersionService service.EvaluationSetVersionService
 	evaluationSetItemService    service.EvaluationSetItemService
 	metric                      metrics.OpenAPIEvaluationSetMetrics
+	userInfoService             userinfo.UserInfoService
 }
 
 func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
@@ -66,6 +74,15 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetOApi(ctx context.C
 	}
 	if req.GetName() == "" {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is required"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	// 调用domain服务
