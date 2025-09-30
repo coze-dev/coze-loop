@@ -28,6 +28,8 @@ type IBenefitService interface {
 	BatchCheckEnableTypeBenefit(ctx context.Context, param *BatchCheckEnableTypeBenefitParams) (result *BatchCheckEnableTypeBenefitResult, err error)
 	// CheckAndDeductOptimizationBenefit 校验扣减优化权益
 	CheckAndDeductOptimizationBenefit(ctx context.Context, param *CheckAndDeductOptimizationBenefitParams) (result *CheckAndDeductOptimizationBenefitResult, err error)
+	// DeductOptimizationBenefit 上报优化资源点
+	DeductOptimizationBenefit(ctx context.Context, param *DeductOptimizationBenefitParams) (err error)
 }
 
 type CheckTraceBenefitParams struct {
@@ -152,15 +154,24 @@ type BatchCheckEnableTypeBenefitResult struct {
 }
 
 type CheckAndDeductOptimizationBenefitParams struct {
-	ConnectorUID string  `json:"connector_uid"` // Coze登录ID
-	SpaceID      int64   `json:"space_id"`      // 空间ID
-	PromptID     int64   `json:"prompt_id"`     // prompt id，用于唯一标识
-	TaskID       int64   `json:"task_id"`       // task id
+	ConnectorUID string `json:"connector_uid"` // Coze登录ID
+	SpaceID      int64  `json:"space_id"`      // 空间ID
+	PromptID     int64  `json:"prompt_id"`     // prompt id，用于唯一标识
+	TaskID       int64  `json:"task_id"`       // task id
 	Amount       float64 `json:"amount"`        // 消耗的资源点数
 	When         When    `json:"when"`          // 适用场景：1-启动时校验，2-运行时校验，3-结束时校验
+
 }
 
 type CheckAndDeductOptimizationBenefitResult struct {
 	DenyReason         *DenyReason `json:"deny_reason"`          // 拒绝原因，为空代表校验通过
 	IsFreeOptimization *bool       `json:"is_free_optimization"` // 是否免费优化
+}
+
+type DeductOptimizationBenefitParams struct {
+	ConnectorUID   string `json:"connector_uid"`   // Coze登录ID
+	SpaceID        int64  `json:"space_id"`        // 空间ID
+	PromptID       int64  `json:"prompt_id"`       // prompt id
+	TaskID         int64  `json:"task_id"`         // task id
+	ResourcePoints int64  `json:"resource_points"` // 消耗的资源点数
 }
