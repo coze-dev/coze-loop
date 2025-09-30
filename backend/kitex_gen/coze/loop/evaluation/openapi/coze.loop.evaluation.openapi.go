@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
@@ -1963,14 +1962,13 @@ func (p *GetEvaluationSetOpenAPIData) Field1DeepEqual(src *eval_set.EvaluationSe
 
 // 1.3 查询评测集列表
 type ListEvaluationSetsOApiRequest struct {
-	WorkspaceID      *int64            `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	Name             *string           `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty"`
-	Creators         []string          `thrift:"creators,3,optional" frugal:"3,optional,list<string>" form:"creators" json:"creators,omitempty"`
-	EvaluationSetIds []int64           `thrift:"evaluation_set_ids,4,optional" frugal:"4,optional,list<i64>" json:"evaluation_set_ids" form:"evaluation_set_ids" `
-	PageToken        *string           `thrift:"page_token,100,optional" frugal:"100,optional,string" form:"page_token" json:"page_token,omitempty"`
-	PageSize         *int32            `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
-	OrderBys         []*common.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
-	Base             *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID      *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
+	Name             *string    `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty" query:"name"`
+	Creators         []string   `thrift:"creators,3,optional" frugal:"3,optional,list<string>" json:"creators,omitempty" query:"creators"`
+	EvaluationSetIds []int64    `thrift:"evaluation_set_ids,4,optional" frugal:"4,optional,list<i64>" json:"evaluation_set_ids" query:"evaluation_set_ids" `
+	PageToken        *string    `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
+	PageSize         *int32     `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	Base             *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluationSetsOApiRequest() *ListEvaluationSetsOApiRequest {
@@ -2052,18 +2050,6 @@ func (p *ListEvaluationSetsOApiRequest) GetPageSize() (v int32) {
 	return *p.PageSize
 }
 
-var ListEvaluationSetsOApiRequest_OrderBys_DEFAULT []*common.OrderBy
-
-func (p *ListEvaluationSetsOApiRequest) GetOrderBys() (v []*common.OrderBy) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetOrderBys() {
-		return ListEvaluationSetsOApiRequest_OrderBys_DEFAULT
-	}
-	return p.OrderBys
-}
-
 var ListEvaluationSetsOApiRequest_Base_DEFAULT *base.Base
 
 func (p *ListEvaluationSetsOApiRequest) GetBase() (v *base.Base) {
@@ -2093,9 +2079,6 @@ func (p *ListEvaluationSetsOApiRequest) SetPageToken(val *string) {
 func (p *ListEvaluationSetsOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *ListEvaluationSetsOApiRequest) SetOrderBys(val []*common.OrderBy) {
-	p.OrderBys = val
-}
 func (p *ListEvaluationSetsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -2107,7 +2090,6 @@ var fieldIDToName_ListEvaluationSetsOApiRequest = map[int16]string{
 	4:   "evaluation_set_ids",
 	100: "page_token",
 	101: "page_size",
-	103: "order_bys",
 	255: "Base",
 }
 
@@ -2133,10 +2115,6 @@ func (p *ListEvaluationSetsOApiRequest) IsSetPageToken() bool {
 
 func (p *ListEvaluationSetsOApiRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
-}
-
-func (p *ListEvaluationSetsOApiRequest) IsSetOrderBys() bool {
-	return p.OrderBys != nil
 }
 
 func (p *ListEvaluationSetsOApiRequest) IsSetBase() bool {
@@ -2204,14 +2182,6 @@ func (p *ListEvaluationSetsOApiRequest) Read(iprot thrift.TProtocol) (err error)
 		case 101:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField101(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 103:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField103(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2344,29 +2314,6 @@ func (p *ListEvaluationSetsOApiRequest) ReadField101(iprot thrift.TProtocol) err
 	p.PageSize = _field
 	return nil
 }
-func (p *ListEvaluationSetsOApiRequest) ReadField103(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]*common.OrderBy, 0, size)
-	values := make([]common.OrderBy, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.OrderBys = _field
-	return nil
-}
 func (p *ListEvaluationSetsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -2404,10 +2351,6 @@ func (p *ListEvaluationSetsOApiRequest) Write(oprot thrift.TProtocol) (err error
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
-			goto WriteFieldError
-		}
-		if err = p.writeField103(oprot); err != nil {
-			fieldId = 103
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -2556,32 +2499,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
-func (p *ListEvaluationSetsOApiRequest) writeField103(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOrderBys() {
-		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 103); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OrderBys)); err != nil {
-			return err
-		}
-		for _, v := range p.OrderBys {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 103 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
-}
 func (p *ListEvaluationSetsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -2631,9 +2548,6 @@ func (p *ListEvaluationSetsOApiRequest) DeepEqual(ano *ListEvaluationSetsOApiReq
 		return false
 	}
 	if !p.Field101DeepEqual(ano.PageSize) {
-		return false
-	}
-	if !p.Field103DeepEqual(ano.OrderBys) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -2713,19 +2627,6 @@ func (p *ListEvaluationSetsOApiRequest) Field101DeepEqual(src *int32) bool {
 	}
 	if *p.PageSize != *src {
 		return false
-	}
-	return true
-}
-func (p *ListEvaluationSetsOApiRequest) Field103DeepEqual(src []*common.OrderBy) bool {
-
-	if len(p.OrderBys) != len(src) {
-		return false
-	}
-	for i, v := range p.OrderBys {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
 	}
 	return true
 }
@@ -7945,13 +7846,12 @@ func (p *BatchDeleteEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.
 
 // 1.9 查询评测集特定版本数据
 type ListEvaluationSetVersionItemsOApiRequest struct {
-	WorkspaceID     *int64            `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	EvaluationSetID *int64            `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
-	VersionID       *int64            `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" form:"version_id" `
-	PageToken       *string           `thrift:"page_token,100,optional" frugal:"100,optional,string" form:"page_token" json:"page_token,omitempty"`
-	PageSize        *int32            `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
-	OrderBys        []*common.OrderBy `thrift:"order_bys,102,optional" frugal:"102,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
-	Base            *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID     *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
+	EvaluationSetID *int64     `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
+	VersionID       *int64     `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" query:"version_id" `
+	PageToken       *string    `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
+	PageSize        *int32     `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluationSetVersionItemsOApiRequest() *ListEvaluationSetVersionItemsOApiRequest {
@@ -8021,18 +7921,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) GetPageSize() (v int32) {
 	return *p.PageSize
 }
 
-var ListEvaluationSetVersionItemsOApiRequest_OrderBys_DEFAULT []*common.OrderBy
-
-func (p *ListEvaluationSetVersionItemsOApiRequest) GetOrderBys() (v []*common.OrderBy) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetOrderBys() {
-		return ListEvaluationSetVersionItemsOApiRequest_OrderBys_DEFAULT
-	}
-	return p.OrderBys
-}
-
 var ListEvaluationSetVersionItemsOApiRequest_Base_DEFAULT *base.Base
 
 func (p *ListEvaluationSetVersionItemsOApiRequest) GetBase() (v *base.Base) {
@@ -8059,9 +7947,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) SetPageToken(val *string) {
 func (p *ListEvaluationSetVersionItemsOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *ListEvaluationSetVersionItemsOApiRequest) SetOrderBys(val []*common.OrderBy) {
-	p.OrderBys = val
-}
 func (p *ListEvaluationSetVersionItemsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -8072,7 +7957,6 @@ var fieldIDToName_ListEvaluationSetVersionItemsOApiRequest = map[int16]string{
 	3:   "version_id",
 	100: "page_token",
 	101: "page_size",
-	102: "order_bys",
 	255: "Base",
 }
 
@@ -8094,10 +7978,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetPageToken() bool {
 
 func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
-}
-
-func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetOrderBys() bool {
-	return p.OrderBys != nil
 }
 
 func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetBase() bool {
@@ -8157,14 +8037,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) Read(iprot thrift.TProtocol) 
 		case 101:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField101(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 102:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8262,29 +8134,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField101(iprot thrift.TPr
 	p.PageSize = _field
 	return nil
 }
-func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField102(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]*common.OrderBy, 0, size)
-	values := make([]common.OrderBy, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.OrderBys = _field
-	return nil
-}
 func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -8318,10 +8167,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
-			goto WriteFieldError
-		}
-		if err = p.writeField102(oprot); err != nil {
-			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8436,32 +8281,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
-func (p *ListEvaluationSetVersionItemsOApiRequest) writeField102(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOrderBys() {
-		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 102); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OrderBys)); err != nil {
-			return err
-		}
-		for _, v := range p.OrderBys {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
-}
 func (p *ListEvaluationSetVersionItemsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -8508,9 +8327,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) DeepEqual(ano *ListEvaluation
 		return false
 	}
 	if !p.Field101DeepEqual(ano.PageSize) {
-		return false
-	}
-	if !p.Field102DeepEqual(ano.OrderBys) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -8576,19 +8392,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) Field101DeepEqual(src *int32)
 	}
 	if *p.PageSize != *src {
 		return false
-	}
-	return true
-}
-func (p *ListEvaluationSetVersionItemsOApiRequest) Field102DeepEqual(src []*common.OrderBy) bool {
-
-	if len(p.OrderBys) != len(src) {
-		return false
-	}
-	for i, v := range p.OrderBys {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
 	}
 	return true
 }

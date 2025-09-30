@@ -808,7 +808,7 @@ type EvaluationSetVersion struct {
 	Version             *string              `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	Description         *string              `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	EvaluationSetSchema *EvaluationSetSchema `thrift:"evaluation_set_schema,4,optional" frugal:"4,optional,EvaluationSetSchema" form:"evaluation_set_schema" json:"evaluation_set_schema,omitempty" query:"evaluation_set_schema"`
-	ItemCount           *int64               `thrift:"item_count,5,optional" frugal:"5,optional,i64" json:"item_count" form:"item_count" query:"item_count"`
+	ItemCount           *int64               `thrift:"item_count,5,optional" frugal:"5,optional,i64" form:"item_count" json:"item_count,omitempty" query:"item_count"`
 	BaseInfo            *common.BaseInfo     `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
@@ -1359,7 +1359,7 @@ type EvaluationSet struct {
 	Name                *string               `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Description         *string               `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	Status              *EvaluationSetStatus  `thrift:"status,4,optional" frugal:"4,optional,string" form:"status" json:"status,omitempty" query:"status"`
-	ItemCount           *int64                `thrift:"item_count,5,optional" frugal:"5,optional,i64" json:"item_count" form:"item_count" query:"item_count"`
+	ItemCount           *int64                `thrift:"item_count,5,optional" frugal:"5,optional,i64" form:"item_count" json:"item_count,omitempty" query:"item_count"`
 	LatestVersion       *string               `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
 	IsChangeUncommitted *bool                 `thrift:"is_change_uncommitted,7,optional" frugal:"7,optional,bool" form:"is_change_uncommitted" json:"is_change_uncommitted,omitempty" query:"is_change_uncommitted"`
 	CurrentVersion      *EvaluationSetVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`

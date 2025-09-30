@@ -140,7 +140,6 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetsOApi(ctx context.Co
 		Creators:         req.Creators,
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
-		OrderBys:         evaluation_set.OrderByDTO2DOs(req.OrderBys),
 	})
 	if err != nil {
 		return nil, err
@@ -305,7 +304,6 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItemsOApi(ctx
 		VersionID:       req.VersionID,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
-		OrderBys:        evaluation_set.OrderByDTO2DOs(req.OrderBys),
 	})
 	if err != nil {
 		return nil, err

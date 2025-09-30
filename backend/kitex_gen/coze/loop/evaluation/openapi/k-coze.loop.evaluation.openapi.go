@@ -1494,20 +1494,6 @@ func (p *ListEvaluationSetsOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 103:
-			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField103(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -1644,31 +1630,6 @@ func (p *ListEvaluationSetsOApiRequest) FastReadField101(buf []byte) (int, error
 	return offset, nil
 }
 
-func (p *ListEvaluationSetsOApiRequest) FastReadField103(buf []byte) (int, error) {
-	offset := 0
-
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make([]*common.OrderBy, 0, size)
-	values := make([]common.OrderBy, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-		if l, err := _elem.FastRead(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-		}
-
-		_field = append(_field, _elem)
-	}
-	p.OrderBys = _field
-	return offset, nil
-}
-
 func (p *ListEvaluationSetsOApiRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -1694,7 +1655,6 @@ func (p *ListEvaluationSetsOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
-		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1710,7 +1670,6 @@ func (p *ListEvaluationSetsOApiRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field100Length()
 		l += p.field101Length()
-		l += p.field103Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1785,22 +1744,6 @@ func (p *ListEvaluationSetsOApiRequest) fastWriteField101(buf []byte, w thrift.N
 	return offset
 }
 
-func (p *ListEvaluationSetsOApiRequest) fastWriteField103(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetOrderBys() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 103)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
-		var length int
-		for _, v := range p.OrderBys {
-			length++
-			offset += v.FastWriteNocopy(buf[offset:], w)
-		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
-	}
-	return offset
-}
-
 func (p *ListEvaluationSetsOApiRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -1870,19 +1813,6 @@ func (p *ListEvaluationSetsOApiRequest) field101Length() int {
 	return l
 }
 
-func (p *ListEvaluationSetsOApiRequest) field103Length() int {
-	l := 0
-	if p.IsSetOrderBys() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.OrderBys {
-			_ = v
-			l += v.BLength()
-		}
-	}
-	return l
-}
-
 func (p *ListEvaluationSetsOApiRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -1942,21 +1872,6 @@ func (p *ListEvaluationSetsOApiRequest) DeepCopy(s interface{}) error {
 	if src.PageSize != nil {
 		tmp := *src.PageSize
 		p.PageSize = &tmp
-	}
-
-	if src.OrderBys != nil {
-		p.OrderBys = make([]*common.OrderBy, 0, len(src.OrderBys))
-		for _, elem := range src.OrderBys {
-			var _elem *common.OrderBy
-			if elem != nil {
-				_elem = &common.OrderBy{}
-				if err := _elem.DeepCopy(elem); err != nil {
-					return err
-				}
-			}
-
-			p.OrderBys = append(p.OrderBys, _elem)
-		}
 	}
 
 	var _base *base.Base
@@ -5772,20 +5687,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) FastRead(buf []byte) (int, er
 					goto SkipFieldError
 				}
 			}
-		case 102:
-			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField102(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -5888,31 +5789,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) FastReadField101(buf []byte) 
 	return offset, nil
 }
 
-func (p *ListEvaluationSetVersionItemsOApiRequest) FastReadField102(buf []byte) (int, error) {
-	offset := 0
-
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make([]*common.OrderBy, 0, size)
-	values := make([]common.OrderBy, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-		if l, err := _elem.FastRead(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-		}
-
-		_field = append(_field, _elem)
-	}
-	p.OrderBys = _field
-	return offset, nil
-}
-
 func (p *ListEvaluationSetVersionItemsOApiRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -5937,7 +5813,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
-		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -5952,7 +5827,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field100Length()
 		l += p.field101Length()
-		l += p.field102Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6000,22 +5874,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) fastWriteField101(buf []byte,
 	if p.IsSetPageSize() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 101)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.PageSize)
-	}
-	return offset
-}
-
-func (p *ListEvaluationSetVersionItemsOApiRequest) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetOrderBys() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 102)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
-		var length int
-		for _, v := range p.OrderBys {
-			length++
-			offset += v.FastWriteNocopy(buf[offset:], w)
-		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -6074,19 +5932,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) field101Length() int {
 	return l
 }
 
-func (p *ListEvaluationSetVersionItemsOApiRequest) field102Length() int {
-	l := 0
-	if p.IsSetOrderBys() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.OrderBys {
-			_ = v
-			l += v.BLength()
-		}
-	}
-	return l
-}
-
 func (p *ListEvaluationSetVersionItemsOApiRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6128,21 +5973,6 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) DeepCopy(s interface{}) error
 	if src.PageSize != nil {
 		tmp := *src.PageSize
 		p.PageSize = &tmp
-	}
-
-	if src.OrderBys != nil {
-		p.OrderBys = make([]*common.OrderBy, 0, len(src.OrderBys))
-		for _, elem := range src.OrderBys {
-			var _elem *common.OrderBy
-			if elem != nil {
-				_elem = &common.OrderBy{}
-				if err := _elem.DeepCopy(elem); err != nil {
-					return err
-				}
-			}
-
-			p.OrderBys = append(p.OrderBys, _elem)
-		}
 	}
 
 	var _base *base.Base
