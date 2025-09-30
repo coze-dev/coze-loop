@@ -57,6 +57,8 @@ type GetTraceReq struct {
 	EndTime      int64 // ms
 	PlatformType loop_span.PlatformType
 	SpanIDs      []string
+	WithDetail   bool
+	Filters      *loop_span.FilterFields
 }
 
 type GetTraceResp struct {
@@ -73,7 +75,10 @@ type SearchTraceOApiReq struct {
 	StartTime             int64 // ms
 	EndTime               int64 // ms
 	Limit                 int32
+	SpanIDs               []string
 	PlatformType          loop_span.PlatformType
+	WithDetail            bool
+	Filters               *loop_span.FilterFields
 }
 
 type SearchTraceOApiResp struct {
@@ -135,7 +140,8 @@ type GetTracesMetaInfoReq struct {
 }
 
 type GetTracesMetaInfoResp struct {
-	FilesMetas map[string]*config.FieldMeta
+	FilesMetas      map[string]*config.FieldMeta
+	KeySpanTypeList []string
 }
 
 type CreateAnnotationReq struct {
@@ -252,25 +258,37 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if err != nil {
 		return nil, err
 	}
+	selectColumns := make([]string, 0)
+	if !req.WithDetail {
+		selectColumns = r.traceConfig.GetKeyColumns(ctx)
+	}
 	st := time.Now()
+	limit := int32(1000)
+	if !req.WithDetail {
+		limit = 10000
+	}
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-		Tenants: tenants,
-		LogID:   req.LogID,
-		TraceID: req.TraceID,
-		StartAt: req.StartTime,
-		EndAt:   req.EndTime,
-		Limit:   1000,
-		SpanIDs: req.SpanIDs,
+		Tenants:       tenants,
+		LogID:         req.LogID,
+		TraceID:       req.TraceID,
+		StartAt:       req.StartTime,
+		EndAt:         req.EndTime,
+		Limit:         limit,
+		SpanIDs:       req.SpanIDs,
+		Filters:       req.Filters,
+		SelectColumns: selectColumns,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
 		return nil, err
 	}
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		PlatformType:   req.PlatformType,
-		QueryStartTime: req.StartTime,
-		QueryEndTime:   req.EndTime,
+		WorkspaceId:     req.WorkspaceID,
+		PlatformType:    req.PlatformType,
+		QueryStartTime:  req.StartTime,
+		QueryEndTime:    req.EndTime,
+		SpanDoubleCheck: len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
+		QueryTenants:    tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -327,6 +345,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		PlatformType:   req.PlatformType,
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
+		QueryTenants:   tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -345,14 +364,22 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 }
 
 func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
+	selectColumns := make([]string, 0)
+	if req.WithDetail {
+		selectColumns = r.traceConfig.GetKeyColumns(ctx)
+	}
+
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
 		LogID:              req.LogID,
+		SpanIDs:            req.SpanIDs,
 		StartAt:            req.StartTime,
 		EndAt:              req.EndTime,
 		Limit:              req.Limit,
 		NotQueryAnnotation: false,
+		Filters:            req.Filters,
+		SelectColumns:      selectColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -363,6 +390,10 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		QueryStartTime:        req.StartTime,
 		QueryEndTime:          req.EndTime,
 		PlatformType:          req.PlatformType,
+		SpanDoubleCheck:       req.Filters != nil && len(req.Filters.FilterFields) > 0,
+		QueryTenants:          req.Tenants,
+		QueryTraceID:          req.TraceID,
+		QueryLogID:            req.LogID,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -416,6 +447,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 		WorkspaceId:    req.WorkspaceID,
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
+		QueryTenants:   req.Tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -434,9 +466,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 }
 
 func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesReq) error {
-	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{
-		Tenant: req.Tenant,
-	})
+	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
@@ -543,20 +573,41 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
+	baseFields, ok := cfg.FieldMetas[loop_span.PlatformDefault][req.SpanListType]
+	if !ok {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("base meta info not found"))
+	}
+
 	fields, ok := cfg.FieldMetas[req.PlatformType][req.SpanListType]
 	if !ok {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("meta info not found"))
+		logs.CtxInfo(ctx, "on")
 	}
 	fieldMetas := make(map[string]*config.FieldMeta)
-	for _, field := range fields {
+	for _, field := range baseFields {
 		fieldMta, ok := cfg.AvailableFields[field]
 		if !ok || fieldMta == nil {
+			logs.CtxError(ctx, "GetTracesMetaInfo invalid field: %v", field)
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
 		fieldMetas[field] = fieldMta
 	}
+	for _, field := range fields {
+		fieldMta, ok := cfg.AvailableFields[field]
+		if !ok || fieldMta == nil {
+			logs.CtxError(ctx, "GetTracesMetaInfo invalid field: %v", field)
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		}
+		fieldMetas[field] = fieldMta
+	}
+
+	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
+	keySpanTypes, ok := spanTypeCfg[string(req.PlatformType)][string(req.SpanListType)]
+	if !ok {
+		keySpanTypes = spanTypeCfg[string(loop_span.PlatformDefault)][string(loop_span.SpanListTypeRootSpan)]
+	}
 	return &GetTracesMetaInfoResp{
-		FilesMetas: fieldMetas,
+		FilesMetas:      fieldMetas,
+		KeySpanTypeList: keySpanTypes,
 	}, nil
 }
 

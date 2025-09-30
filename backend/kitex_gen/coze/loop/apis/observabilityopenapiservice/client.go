@@ -14,6 +14,7 @@ type Client interface {
 	IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest, callOptions ...callopt.Option) (r *openapi.IngestTracesResponse, err error)
 	OtelIngestTraces(ctx context.Context, req *openapi.OtelIngestTracesRequest, callOptions ...callopt.Option) (r *openapi.OtelIngestTracesResponse, err error)
 	SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceOApiResponse, err error)
+	SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceTreeOApiResponse, err error)
 	ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error)
 	ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error)
 	CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error)
@@ -62,6 +63,11 @@ func (p *kObservabilityOpenAPIServiceClient) OtelIngestTraces(ctx context.Contex
 func (p *kObservabilityOpenAPIServiceClient) SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SearchTraceOApi(ctx, req)
+}
+
+func (p *kObservabilityOpenAPIServiceClient) SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceTreeOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchTraceTreeOApi(ctx, req)
 }
 
 func (p *kObservabilityOpenAPIServiceClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error) {

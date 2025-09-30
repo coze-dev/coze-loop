@@ -19,6 +19,8 @@ type GetTraceParam struct {
 	NotQueryAnnotation bool
 	SpanIDs            []string
 	OmitColumns        []string // omit specific columns
+	SelectColumns      []string // select specific columns, default select all columns
+	Filters            *loop_span.FilterFields
 }
 
 type ListSpansParam struct {

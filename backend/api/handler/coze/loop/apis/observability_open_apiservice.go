@@ -60,3 +60,9 @@ func OtelIngestTraces(ctx context.Context, c *app.RequestContext) {
 func ListTracesOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListTracesOApi)
 }
+
+// SearchTraceTreeOApi .
+// @router /v1/loop/traces/search_tree [POST]
+func SearchTraceTreeOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.SearchTraceTreeOApi)
+}

@@ -1330,3 +1330,33 @@ func _listexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFun
 	// your code...
 	return nil
 }
+
+func _v2Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettracev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _traces1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _trace_treeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtracetreeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtracetreeoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

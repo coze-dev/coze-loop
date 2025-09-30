@@ -120,3 +120,19 @@ func PreviewExportTracesToDataset(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// SearchTraceTree .
+// @router /api/observability/v1/traces/search_tree [POST]
+func SearchTraceTree(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.SearchTraceTreeRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.SearchTraceTreeResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
