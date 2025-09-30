@@ -28,5 +28,6 @@ CREATE TABLE IF NOT EXISTS cozeloop_evaluation.expt_turn_result_filter_local
 ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{database}/{table}', '{replica}')
 PARTITION BY created_date
 ORDER BY (expt_id, cityHash64(item_id), turn_id)
+UNIQUE KEY (sipHash64(expt_id), sipHash64(item_id), sipHash64(turn_id))
 SAMPLE BY cityHash64(item_id)
 SETTINGS index_granularity = 8192;
