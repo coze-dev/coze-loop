@@ -61,7 +61,9 @@ func main() {
 		panic(err)
 	}
 
-	if err := registry.NewConsumerRegistry(c.mqFactory).Register(mustInitConsumerWorkers(c.cfgFactory, handler, handler, handler)).StartAll(ctx); err != nil {
+	consumerWorkers := MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler)
+	consumerRegistry := registry.NewConsumerRegistry(c.mqFactory).Register(consumerWorkers)
+	if err := consumerRegistry.StartAll(ctx); err != nil {
 		panic(err)
 	}
 

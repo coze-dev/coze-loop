@@ -114,7 +114,7 @@ func (e ExptAnnotateServiceImpl) CreateExptTurnResultTagRefs(ctx context.Context
 	return nil
 }
 
-func (e ExptAnnotateServiceImpl) DeleteExptTurnResultTagRef(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64) error {
+func (e ExptAnnotateServiceImpl) DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64) error {
 	mapping := &entity.ExptTurnResultFilterKeyMapping{
 		SpaceID:   spaceID,
 		ExptID:    exptID,
@@ -169,7 +169,7 @@ func (e ExptAnnotateServiceImpl) GetExptTurnResultTagRefs(ctx context.Context, e
 	return refs, nil
 }
 
-func (e ExptAnnotateServiceImpl) SaveAnnotateRecord(ctx context.Context, exptID int64, itemID int64, turnID int64, record *entity.AnnotateRecord) error {
+func (e ExptAnnotateServiceImpl) SaveAnnotateRecord(ctx context.Context, exptID, itemID, turnID int64, record *entity.AnnotateRecord) error {
 	turnResult, err := e.exptTurnResultRepo.Get(ctx, record.SpaceID, exptID, itemID, turnID)
 	if err != nil {
 		return err
@@ -238,7 +238,7 @@ func (e ExptAnnotateServiceImpl) SaveAnnotateRecord(ctx context.Context, exptID 
 	return nil
 }
 
-func (e ExptAnnotateServiceImpl) UpdateAnnotateRecord(ctx context.Context, itemID int64, turnID int64, record *entity.AnnotateRecord) error {
+func (e ExptAnnotateServiceImpl) UpdateAnnotateRecord(ctx context.Context, itemID, turnID int64, record *entity.AnnotateRecord) error {
 	tagRef, err := e.repo.GetTagRefByTagKeyID(ctx, record.ExperimentID, record.SpaceID, record.TagKeyID)
 	if err != nil {
 		return err
