@@ -448,6 +448,95 @@ func (v *TaskRepoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID 
 	return convertor.TaskRunPO2DO(taskRunPo), nil
 }
 
+//
+//// TaskRunCountInfo TaskRunCount信息结构
+//type TaskRunCountInfo struct {
+//	TaskID           int64
+//	TaskRunID        int64
+//	TaskRunCount     int64
+//	TaskRunSuccCount int64
+//	TaskRunFailCount int64
+//}
+//
+//func (v *TaskRepoImpl) RefreshTaskRunDetails(ctx context.Context, batch []*TaskRunCountInfo) error {
+//
+//	// 1. 批量读取Redis计数数据
+//	for _, info := range batch {
+//		// 读取taskruncount
+//		count, err := v.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
+//		if err != nil || count == -1 {
+//			logs.CtxWarn(ctx, "获取TaskRunCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+//		} else {
+//			info.TaskRunCount = count
+//		}
+//
+//		// 读取taskrunscesscount
+//		successCount, err := v.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
+//		if err != nil || successCount == -1 {
+//			logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+//			successCount = 0
+//		} else {
+//			info.TaskRunSuccCount = successCount
+//		}
+//
+//		// 读取taskrunfailcount
+//		failCount, err := v.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
+//		if err != nil || failCount == -1 {
+//			logs.CtxWarn(ctx, "获取TaskRunFailCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+//			failCount = 0
+//		} else {
+//			info.TaskRunFailCount = failCount
+//		}
+//
+//		logs.CtxDebug(ctx, "读取计数数据",
+//			"taskID", info.TaskID,
+//			"taskRunID", info.TaskRunID,
+//			"runCount", info.TaskRunCount,
+//			"successCount", info.TaskRunSuccCount,
+//			"failCount", info.TaskRunFailCount)
+//	}
+//
+//	// 2. 批量更新数据库
+//	for _, info := range batch {
+//		// 构建run_detail JSON数据
+//		runDetail := map[string]interface{}{
+//			"total_count":   info.TaskRunCount,
+//			"success_count": info.TaskRunSuccCount,
+//			"failed_count":  info.TaskRunFailCount,
+//		}
+//
+//		// 序列化为JSON字符串
+//		runDetailJSON, err := json.Marshal(runDetail)
+//		if err != nil {
+//			return errors.Wrap(err, "序列化run_detail失败")
+//		}
+//
+//		runDetailStr := string(runDetailJSON)
+//
+//		// 构建更新映射
+//		updateMap := map[string]interface{}{
+//			"run_detail": &runDetailStr,
+//		}
+//
+//		// 使用乐观锁更新
+//		err = v.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
+//		if err != nil {
+//			return errors.Wrap(err, "更新TaskRun失败")
+//		}
+//		if err != nil {
+//			logs.CtxError(ctx, "更新TaskRun详情失败",
+//				"taskID", info.TaskID,
+//				"taskRunID", info.TaskRunID,
+//				"err", err)
+//		} else {
+//			logs.CtxDebug(ctx, "更新TaskRun详情成功",
+//				"taskID", info.TaskID,
+//				"taskRunID", info.TaskRunID)
+//		}
+//	}
+//	return nil
+//}
+
 func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, error) {
 	count, err := v.TaskRedisDao.GetTaskCount(ctx, taskID)
 	if err != nil {

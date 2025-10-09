@@ -28,15 +28,6 @@ type TaskRunCountInfo struct {
 	TaskRunFailCount int64
 }
 
-// SyncMetrics 同步统计指标
-type SyncMetrics struct {
-	TotalKeys      int64
-	SuccessCount   int64
-	FailureCount   int64
-	SkippedCount   int64
-	ProcessingTime time.Duration
-}
-
 // startScheduledTask 启动定时任务goroutine - 使用5分钟间隔的定时器
 func (h *TraceHubServiceImpl) startScheduledTask() {
 	go func() {
@@ -122,15 +113,8 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(taskPOs))
 	for _, taskPO := range taskPOs {
 		var taskRun, backfillTaskRun entity.TaskRun
-		for _, taskRunPO := range taskPO.TaskRuns {
-			if taskRunPO.TaskType == task.TaskRunTypeBackFill {
-				backfillTaskRun = *taskRunPO
-			} else {
-				if taskRunPO.RunStatus != task.RunStatusDone {
-					taskRun = *taskRunPO
-				}
-			}
-		}
+		backfillTaskRun = *taskPO.GetBackfillTaskRun()
+		taskRun = *taskPO.GetCurrentTaskRun()
 
 		taskInfo := tconv.TaskPO2DTO(ctx, taskPO, nil)
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
@@ -155,7 +139,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
-					TaskRun:  &taskRun,
+					TaskRun:  &backfillTaskRun,
 					IsFinish: true,
 				})
 				if err != nil {
@@ -203,6 +187,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 			}
 		}
+		// 重复任务的处理
 		if taskInfo.GetTaskStatus() != task.TaskStatusUnstarted {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
 			// 达到单次任务时间期限

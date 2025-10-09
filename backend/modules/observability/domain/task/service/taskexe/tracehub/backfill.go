@@ -359,6 +359,16 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
 		return len(fr.spans), len(sampledSpans), err
 	}
+	if fr.noMore {
+		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			Task:     sub.t,
+			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
+			IsFinish: false,
+		}); err != nil {
+			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
+			return len(fr.spans), len(sampledSpans), err
+		}
+	}
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
 		len(sampledSpans), len(fr.spans), sub.t.GetID())
@@ -441,14 +451,13 @@ func (h *TraceHubServiceImpl) processSpan(ctx context.Context, span *loop_span.S
 	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 		span.SpanID, span.TraceID, sub.t.GetID())
 
-	taskRunConfigDTO := tconv.TaskRunDO2PO(ctx, sub.tr, nil)
 	taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 	taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.GetID())
 	sampler := sub.t.GetRule().GetSampler()
 	if taskCount+1 > sampler.GetSampleSize() {
 		if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 			Task:     sub.t,
-			TaskRun:  taskRunConfigDTO,
+			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
 			IsFinish: true,
 		}); err != nil {
 			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)

@@ -60,3 +60,21 @@ func (t ObservabilityTask) IsFinished() bool {
 		return false
 	}
 }
+
+func (t ObservabilityTask) GetBackfillTaskRun() *TaskRun {
+	for _, taskRunPO := range t.TaskRuns {
+		if taskRunPO.TaskType == task.TaskRunTypeBackFill {
+			return taskRunPO
+		}
+	}
+	return nil
+}
+
+func (t ObservabilityTask) GetCurrentTaskRun() *TaskRun {
+	for _, taskRunPO := range t.TaskRuns {
+		if taskRunPO.TaskType == task.TaskRunTypeNewData && taskRunPO.RunStatus == task.TaskStatusRunning {
+			return taskRunPO
+		}
+	}
+	return nil
+}
