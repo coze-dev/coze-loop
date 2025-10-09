@@ -28,6 +28,14 @@ type TaskRunCountInfo struct {
 	TaskRunFailCount int64
 }
 
+// TaskCacheInfo 任务缓存信息结构
+type TaskCacheInfo struct {
+	WorkspaceIDs []string
+	BotIDs       []string
+	Tasks        []*entity.ObservabilityTask
+	UpdateTime   time.Time
+}
+
 // startScheduledTask 启动定时任务goroutine - 使用5分钟间隔的定时器
 func (h *TraceHubServiceImpl) startScheduledTask() {
 	go func() {
@@ -53,6 +61,23 @@ func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 			case <-h.syncTaskTicker.C:
 				// 执行定时任务
 				h.syncTaskRunCounts()
+			case <-h.stopChan:
+				// 停止定时任务
+				h.syncTaskTicker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+// startSyncTaskCache 启动任务缓存定时任务goroutine - 使用1分钟间隔的定时器
+func (h *TraceHubServiceImpl) startSyncTaskCache() {
+	go func() {
+		for {
+			select {
+			case <-h.syncTaskTicker.C:
+				// 执行定时任务
+				h.syncTaskCache()
 			case <-h.stopChan:
 				// 停止定时任务
 				h.syncTaskTicker.Stop()
@@ -382,4 +407,51 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 	}
 
 	return nil
+}
+
+func (h *TraceHubServiceImpl) syncTaskCache() {
+	ctx := context.Background()
+	logID := logs.NewLogID()
+	ctx = logs.SetLogID(ctx, logID)
+	ctx = fillCtxWithEnv(ctx)
+
+	logs.CtxInfo(ctx, "开始同步任务缓存...")
+
+	// 1. 从数据库中获取所有非终态任务的spaceID、botID和task信息
+	spaceIDs, botIDs, tasks := h.taskRepo.GetObjListWithTask(ctx)
+	logs.CtxInfo(ctx, "获取到任务数量", "taskCount", len(tasks), "spaceCount", len(spaceIDs), "botCount", len(botIDs))
+
+	// 2. 构建新的缓存映射
+	var newCache = TaskCacheInfo{
+		WorkspaceIDs: spaceIDs,
+		BotIDs:       botIDs,
+		Tasks:        tasks,
+		UpdateTime:   time.Now(), // 设置当前时间为更新时间
+	}
+
+	// 3. 清空旧缓存并更新新缓存
+	h.taskCacheLock.Lock()
+	defer h.taskCacheLock.Unlock()
+
+	// 清空旧缓存
+	h.taskCache.Range(func(key, value interface{}) bool {
+		h.taskCache.Delete(key)
+		return true
+	})
+
+	// 4. 将新缓存写入本地缓存
+	h.taskCache.Store("ObjListWithTask", &newCache)
+
+	logs.CtxInfo(ctx, "任务缓存同步完成", "taskCount", len(tasks), "updateTime", newCache.UpdateTime.Format(time.RFC3339))
+}
+
+// getCachedTask 从缓存中获取任务信息
+func (h *TraceHubServiceImpl) getCached() (*TaskCacheInfo, bool) {
+	cacheKey := "ObjListWithTask"
+	if value, ok := h.taskCache.Load(cacheKey); ok {
+		if cacheInfo, ok := value.(*TaskCacheInfo); ok {
+			return cacheInfo, true
+		}
+	}
+	return nil, false
 }

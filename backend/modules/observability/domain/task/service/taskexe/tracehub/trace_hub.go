@@ -69,6 +69,7 @@ func NewTraceHubImpl(
 	// 立即启动定时任务
 	impl.startScheduledTask()
 	impl.startSyncTaskRunCounts()
+	impl.startSyncTaskCache()
 
 	return impl, nil
 }
@@ -88,6 +89,10 @@ type TraceHubServiceImpl struct {
 	flushCh      chan *flushReq
 	flushErrLock sync.Mutex
 	flushErr     []error
+
+	// 本地缓存 - 缓存非终态任务信息
+	taskCache     sync.Map
+	taskCacheLock sync.RWMutex
 
 	aid int32
 }
@@ -114,16 +119,22 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		return nil
 	}
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	spaceList, botList, tasks := h.taskRepo.GetObjListWithTask(ctx)
-	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", spaceList, botList, tasks)
+	taskCacheInfo, ok := h.getCached()
+	if !ok {
+		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_task"})
+		logs.CtxInfo(ctx, "no task found for span, %s", logSuffix)
+		return nil
+	}
+
+	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", taskCacheInfo.WorkspaceIDs, taskCacheInfo.BotIDs, taskCacheInfo.Tasks)
 	// 1.2 Filter out spans that do not belong to any space or bot
-	if !gslice.Contains(spaceList, span.WorkspaceID) && !gslice.Contains(botList, span.TagsString["bot_id"]) {
+	if !gslice.Contains(taskCacheInfo.WorkspaceIDs, span.WorkspaceID) && !gslice.Contains(taskCacheInfo.BotIDs, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
 		logs.CtxInfo(ctx, "no space found for span, %s", logSuffix)
 		return nil
 	}
 	// 2、Match spans against task rules
-	subs, err := h.getSubscriberOfSpan(ctx, span, tasks)
+	subs, err := h.getSubscriberOfSpan(ctx, span, taskCacheInfo.Tasks)
 	if err != nil {
 		logs.CtxWarn(ctx, "get subscriber of flow span failed, %s, err: %v", logSuffix, err)
 	}
@@ -350,4 +361,24 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 
 func (h *TraceHubServiceImpl) Close() {
 	close(h.stopChan)
+}
+
+// getObjListWithTaskFromCache 从缓存中获取任务列表，如果缓存为空则回退到数据库
+func (h *TraceHubServiceImpl) getObjListWithTaskFromCache(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask) {
+	// 首先尝试从缓存中获取任务
+	objListWithTask, ok := h.taskCache.Load("ObjListWithTask")
+	if !ok {
+		// 缓存为空，回退到数据库
+		logs.CtxInfo(ctx, "缓存为空，从数据库获取任务列表")
+		return h.taskRepo.GetObjListWithTask(ctx)
+	}
+
+	cacheInfo, ok := objListWithTask.(*TaskCacheInfo)
+	if !ok {
+		logs.CtxError(ctx, "缓存数据类型错误")
+		return h.taskRepo.GetObjListWithTask(ctx)
+	}
+
+	logs.CtxInfo(ctx, "从缓存获取任务列表", "taskCount", len(cacheInfo.Tasks), "spaceCount", len(cacheInfo.WorkspaceIDs), "botCount", len(cacheInfo.BotIDs))
+	return cacheInfo.WorkspaceIDs, cacheInfo.BotIDs, cacheInfo.Tasks
 }
