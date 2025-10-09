@@ -327,13 +327,6 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 		logs.CtxError(ctx, "GetTasks tasks is nil")
 		return resp, nil
 	}
-	taskRunPOs, _, err := t.TaskRepo.ListTaskRuns(ctx, mysql.ListTaskRunParam{
-		WorkspaceID: ptr.Of(req.WorkspaceID),
-		TaskID:      ptr.Of(req.TaskID),
-	})
-	for _, tr := range taskRunPOs {
-		taskPO.TaskRuns = append(taskPO.TaskRuns, tr)
-	}
 	_, userInfoMap, err := t.userProvider.GetUserInfo(ctx, []string{taskPO.CreatedBy, taskPO.UpdatedBy})
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
