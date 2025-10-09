@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -255,20 +256,36 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 			logs.CtxError(ctx, "list spans failed, task_id=%d, page_token=%s, err=%v", sub.t.GetID(), pageToken, err)
 			return err
 		}
+		spans := result.Spans
+		processors, err := h.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+			WorkspaceId:    sub.t.GetWorkspaceID(),
+			PlatformType:   loop_span.PlatformType(sub.t.GetRule().GetSpanFilters().GetPlatformType()),
+			QueryStartTime: listParam.StartAt,
+			QueryEndTime:   listParam.EndAt,
+		})
+		if err != nil {
+			return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+		}
+		for _, p := range processors {
+			spans, err = p.Transform(ctx, spans)
+			if err != nil {
+				return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+			}
+		}
 
-		if len(result.Spans) > 0 {
+		if len(spans) > 0 {
 			// 发送到通道
 			flush := &flushReq{
-				retrievedSpanCount: int64(len(result.Spans)),
+				retrievedSpanCount: int64(len(spans)),
 				pageToken:          result.PageToken,
-				spans:              result.Spans,
+				spans:              spans,
 				noMore:             !result.HasMore,
 			}
 
 			select {
 			case h.flushCh <- flush:
-				totalCount += int64(len(result.Spans))
-				logs.CtxInfo(ctx, "sent %d spans to flush channel, total=%d, task_id=%d", len(result.Spans), totalCount, sub.t.GetID())
+				totalCount += int64(len(spans))
+				logs.CtxInfo(ctx, "sent %d spans to flush channel, total=%d, task_id=%d", len(spans), totalCount, sub.t.GetID())
 			case <-ctx.Done():
 				logs.CtxWarn(ctx, "context cancelled while sending spans, task_id=%d", sub.t.GetID())
 				return ctx.Err()
@@ -457,11 +474,32 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, s
 	h.flushErrLock.Unlock()
 
 	if len(allErrors) > 0 {
+		backfillEvent := &entity.BackFillEvent{
+			SpaceID: sub.t.GetWorkspaceID(),
+			TaskID:  sub.t.GetID(),
+		}
+
+		// 异步发送MQ消息，不阻塞任务创建流程
+		go func() {
+			if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
+				logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
+			}
+		}()
 		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), sub.t.GetID())
 		// 返回第一个错误作为代表
 		return allErrors[0]
+
 	}
 
 	logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", sub.t.GetID())
 	return nil
+}
+
+// sendBackfillMessage 发送MQ消息
+func (h *TraceHubServiceImpl) sendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error {
+	if h.backfillProducer == nil {
+		return errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("backfill producer not initialized"))
+	}
+
+	return h.backfillProducer.SendBackfill(ctx, event)
 }

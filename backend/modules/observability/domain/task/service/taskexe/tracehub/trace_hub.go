@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -45,6 +46,7 @@ func NewTraceHubImpl(
 	taskProcessor *processor.TaskProcessor,
 	benefitSvc benefit.IBenefitService,
 	aid int32,
+	backfillProducer mq.IBackfillProducer,
 ) (ITraceHubService, error) {
 	// 创建两个不同间隔的独立定时器
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // 任务状态生命周期管理 - 5分钟间隔
@@ -60,6 +62,7 @@ func NewTraceHubImpl(
 		taskProcessor:       taskProcessor,
 		benefitSvc:          benefitSvc,
 		aid:                 aid,
+		backfillProducer:    backfillProducer,
 	}
 
 	// 立即启动定时任务
@@ -79,6 +82,7 @@ type TraceHubServiceImpl struct {
 	taskProcessor       *processor.TaskProcessor
 	buildHelper         service.TraceFilterProcessorBuilder
 	benefitSvc          benefit.IBenefitService
+	backfillProducer    mq.IBackfillProducer
 
 	flushCh      chan *flushReq
 	flushErrLock sync.Mutex
