@@ -6,6 +6,7 @@ package tracehub
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -66,7 +67,10 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	}
+	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	logs.CtxInfo(ctx, "定时任务开始执行...")
 	// 读取所有非终态（成功/禁用）任务
 	var taskPOs []*entity.ObservabilityTask
@@ -187,10 +191,9 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 			}
 		}
-		// 重复任务的处理
 		if taskInfo.GetTaskStatus() != task.TaskStatusUnstarted {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
-			// 达到单次任务时间期限
+			// 重复任务的处理:达到单次任务时间期限
 			if time.Now().After(taskRun.RunEndAt) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -225,7 +228,10 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	}
+	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 
 	logs.CtxInfo(ctx, "开始同步TaskRunCounts到数据库...")
 

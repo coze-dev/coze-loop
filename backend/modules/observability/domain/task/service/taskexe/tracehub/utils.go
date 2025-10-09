@@ -10,6 +10,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const (
+	CtxKeyEnv = "K_ENV"
+	XttEnv    = "x_tt_env"
+)
+
 func ToJSONString(ctx context.Context, obj interface{}) string {
 	if obj == nil {
 		return ""

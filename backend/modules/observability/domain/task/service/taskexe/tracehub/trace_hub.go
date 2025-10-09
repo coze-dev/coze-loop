@@ -6,6 +6,7 @@ package tracehub
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"sync"
@@ -101,7 +102,10 @@ type flushReq struct {
 const TagKeyResult = "tag_key"
 
 func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawSpan) error {
-	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	}
+	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
 	logs.CtxInfo(ctx, "TraceHub start")
 	var tags []metrics.T
