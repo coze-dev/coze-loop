@@ -102,6 +102,7 @@ type flushReq struct {
 const TagKeyResult = "tag_key"
 
 func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawSpan) error {
+	logs.CtxInfo(ctx, "XttEnv: %s", os.Getenv(XttEnv))
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
