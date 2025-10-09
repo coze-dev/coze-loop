@@ -5,7 +5,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -143,6 +142,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if err != nil {
 		return nil, err
 	}
+	// 创建任务的数据准备
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
 	taskPO.ID = id
@@ -386,12 +386,6 @@ func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *task.Task) bool {
 		backfillTime.GetStartAt() < backfillTime.GetEndAt()
 }
 
-// shouldCreateTaskRun 判断是否需要创建TaskRun
-func (t *TaskServiceImpl) shouldCreateTaskRun(taskDO *task.Task) bool {
-	// 只有数据回流任务需要立即创建TaskRun
-	return taskDO.GetTaskType() == task.TaskTypeAutoDataReflow || t.shouldTriggerBackfill(taskDO)
-}
-
 // sendBackfillMessage 发送MQ消息
 func (t *TaskServiceImpl) sendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error {
 	if t.backfillProducer == nil {
@@ -399,17 +393,4 @@ func (t *TaskServiceImpl) sendBackfillMessage(ctx context.Context, event *entity
 	}
 
 	return t.backfillProducer.SendBackfill(ctx, event)
-}
-
-// toJSONString 将对象转换为JSON字符串
-func (t *TaskServiceImpl) toJSONString(ctx context.Context, obj interface{}) string {
-	if obj == nil {
-		return ""
-	}
-	jsonData, err := json.Marshal(obj)
-	if err != nil {
-		logs.CtxError(ctx, "JSON marshal error: %v", err)
-		return ""
-	}
-	return string(jsonData)
 }

@@ -89,11 +89,18 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		return nil, errors.New("task config not found")
 	}
 	taskConfigDO := tconv.TaskPO2DTO(ctx, taskConfig, nil)
+	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(taskConfigDO.GetWorkspaceID()), taskConfigDO.GetID())
+	if err != nil {
+		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", taskConfigDO.GetID(), err)
+		return nil, err
+	}
+	taskRunDO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
 	proc := h.taskProcessor.GetTaskProcessor(taskConfig.TaskType)
 	sub := &spanSubscriber{
 		taskID:           taskConfigDO.GetID(),
 		RWMutex:          sync.RWMutex{},
 		t:                taskConfigDO,
+		tr:               taskRunDO,
 		processor:        proc,
 		bufCap:           0,
 		flushWait:        sync.WaitGroup{},
@@ -107,17 +114,12 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 
 // isBackfillDone 检查回填任务是否已完成
 func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context, sub *spanSubscriber) (bool, error) {
-	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(sub.t.GetWorkspaceID()), sub.t.GetID())
-	if err != nil {
-		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
-		return true, err
-	}
-	if taskRun == nil {
-		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
-		return true, err
+	if sub.tr == nil {
+		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), nil)
+		return true, nil
 	}
 
-	return taskRun.RunStatus == task.RunStatusDone, nil
+	return sub.tr.RunStatus == task.RunStatusDone, nil
 }
 
 func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber) error {
@@ -128,7 +130,7 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber
 		return err
 	}
 
-	// todo: 从配置中获取分页大小
+	// todo: 从tcc配置中获取分页大小
 	//batchSize := c.tccCfg.BackfillProcessConfig().ListPageSize
 	//if batchSize == 0 {
 	//	batchSize = pageSize
@@ -143,14 +145,9 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber
 		DescByStartTime:    true,
 		NotQueryAnnotation: true, // 回填时不需要查询注解
 	}
-	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(sub.t.GetWorkspaceID()), sub.t.GetID())
-	if err != nil {
-		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
-		return err
-	}
-	taskRunDTO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
-	if taskRunDTO.BackfillRunDetail != nil && taskRunDTO.BackfillRunDetail.LastSpanPageToken != nil {
-		listParam.PageToken = *taskRunDTO.BackfillRunDetail.LastSpanPageToken
+
+	if sub.tr.BackfillRunDetail != nil && sub.tr.BackfillRunDetail.LastSpanPageToken != nil {
+		listParam.PageToken = *sub.tr.BackfillRunDetail.LastSpanPageToken
 	}
 	// 分页查询并发送数据
 	return h.fetchAndSendSpans(ctx, listParam, sub)
@@ -334,13 +331,12 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
 		return len(fr.spans), len(sampledSpans), err
 	}
-	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
-	taskRunDTO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
-	taskRunDTO.BackfillRunDetail = &task.BackfillDetail{
+
+	sub.tr.BackfillRunDetail = &task.BackfillDetail{
 		LastSpanPageToken: ptr.Of(fr.pageToken),
 	}
-	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, taskRunDTO.ID, taskRunDTO.WorkspaceID, map[string]interface{}{
-		"backfill_detail": ToJSONString(ctx, taskRunDTO.BackfillRunDetail),
+	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
+		"backfill_detail": ToJSONString(ctx, sub.tr.BackfillRunDetail),
 	})
 	if err != nil {
 		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
@@ -349,17 +345,6 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
 		len(sampledSpans), len(fr.spans), sub.t.GetID())
-	//if fr.noMore {
-	//	logs.CtxInfo(ctx, "completed listing spans, task_id=%d", sub.t.GetID())
-	//	if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-	//		Task:     sub.t,
-	//		TaskRun:  taskRun,
-	//		IsFinish: true,
-	//	}); err != nil {
-	//		logs.CtxWarn(ctx, "OnFinishTaskChange, task_id=%d, err=%v", sub.taskID, err)
-	//		return len(fr.spans), len(sampledSpans), err
-	//	}
-	//}
 	return len(fr.spans), len(sampledSpans), nil
 }
 
@@ -421,12 +406,9 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 
 // processBatchSpans 批量处理 span 数据
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
-	// 这里实现具体的批量处理逻辑
-	// 例如：数据转换、存储、触发下游处理等
-
 	for _, span := range spans {
 		// 执行单个 span 的处理逻辑
-		if err := h.processIndividualSpan(ctx, span, sub); err != nil {
+		if err := h.processSpan(ctx, span, sub); err != nil {
 			logs.CtxWarn(ctx, "process individual span failed, span_id=%s, trace_id=%s, err=%v",
 				span.SpanID, span.TraceID, err)
 			// 继续处理其他span，不因单个失败而中断批处理
@@ -437,22 +419,19 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 }
 
 // processIndividualSpan 处理单个 span
-func (h *TraceHubServiceImpl) processIndividualSpan(ctx context.Context, span *loop_span.Span, sub *spanSubscriber) error {
+func (h *TraceHubServiceImpl) processSpan(ctx context.Context, span *loop_span.Span, sub *spanSubscriber) error {
 	// 根据任务类型执行相应的处理逻辑
 	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 		span.SpanID, span.TraceID, sub.t.GetID())
-	taskRunConfig, err := h.taskRepo.GetBackfillTaskRun(ctx, sub.t.WorkspaceID, sub.t.GetID())
-	if err != nil {
-		logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
-		return err
-	}
+
+	taskRunConfigDTO := tconv.TaskRunDO2PO(ctx, sub.tr, nil)
 	taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
-	taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
+	taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.GetID())
 	sampler := sub.t.GetRule().GetSampler()
 	if taskCount+1 > sampler.GetSampleSize() {
 		if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 			Task:     sub.t,
-			TaskRun:  taskRunConfig,
+			TaskRun:  taskRunConfigDTO,
 			IsFinish: true,
 		}); err != nil {
 			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)

@@ -4,6 +4,8 @@
 package entity
 
 import (
+	"strconv"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -192,6 +194,52 @@ const (
 	EvaluatorRunStatus_Fail    = 2
 )
 
+func (s *OnlineExptTurnEvalResult) GetSpanIDFromExt() string {
+	if s == nil {
+		return ""
+	}
+	return s.Ext["span_id"]
+}
+func (s *OnlineExptTurnEvalResult) GetTraceIDFromExt() string {
+	if s == nil {
+		return ""
+	}
+	return s.Ext["trace_id"]
+}
+func (s *OnlineExptTurnEvalResult) GetStartTimeFromExt() int64 {
+	if s == nil {
+		return 0
+	}
+	startTimeStr := s.Ext["start_time"]
+	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return startTime
+}
+func (s *OnlineExptTurnEvalResult) GetTaskIDFromExt() int64 {
+	if s == nil {
+		return 0
+	}
+	taskIDStr := s.Ext["task_id"]
+	taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return taskID
+}
+func (s *OnlineExptTurnEvalResult) GetWorkspaceIDFromExt() (string, int64) {
+	if s == nil {
+		return "", 0
+	}
+	workspaceIDStr := s.Ext["workspace_id"]
+	workspaceID, err := strconv.ParseInt(workspaceIDStr, 10, 64)
+	if err != nil {
+		return "", 0
+	}
+	return workspaceIDStr, workspaceID
+}
+
 type EvaluatorRunError struct {
 	Code    int32  `json:"code"`
 	Message string `json:"message"`
@@ -221,4 +269,50 @@ type CorrectionEvent struct {
 type BackFillEvent struct {
 	SpaceID int64 `json:"space_id"`
 	TaskID  int64 `json:"task_id"`
+}
+
+func (c *CorrectionEvent) GetSpanIDFromExt() string {
+	if c == nil {
+		return ""
+	}
+	return c.Ext["span_id"]
+}
+func (c *CorrectionEvent) GetTraceIDFromExt() string {
+	if c == nil {
+		return ""
+	}
+	return c.Ext["trace_id"]
+}
+func (c *CorrectionEvent) GetStartTimeFromExt() int64 {
+	if c == nil {
+		return 0
+	}
+	startTimeStr := c.Ext["start_time"]
+	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return startTime
+}
+func (c *CorrectionEvent) GetTaskIDFromExt() int64 {
+	if c == nil {
+		return 0
+	}
+	taskIDStr := c.Ext["task_id"]
+	taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return taskID
+}
+func (c *CorrectionEvent) GetWorkspaceIDFromExt() (string, int64) {
+	if c == nil {
+		return "", 0
+	}
+	workspaceIDStr := c.Ext["workspace_id"]
+	workspaceID, err := strconv.ParseInt(workspaceIDStr, 10, 64)
+	if err != nil {
+		return "", 0
+	}
+	return workspaceIDStr, workspaceID
 }

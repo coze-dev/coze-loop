@@ -27,6 +27,7 @@ type spanSubscriber struct {
 	taskID       int64
 	sync.RWMutex // protect t, buf
 	t            *task.Task
+	tr           *task.TaskRun
 	processor    taskexe.Processor
 	buf          []*loop_span.Span
 	bufCap       int // max buffer size

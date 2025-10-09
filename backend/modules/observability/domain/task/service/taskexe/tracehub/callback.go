@@ -22,40 +22,95 @@ import (
 )
 
 func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
-	err := h.upsertAnnotation(ctx, event.TurnEvalResults, false)
-	if err != nil {
-		logs.CtxError(ctx, "upsertAnnotation err:%v", err)
-		return err
+	for _, turn := range event.TurnEvalResults {
+		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
+		tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
+		if err != nil {
+			return err
+		}
+		var storageDuration int64 = 1
+		res, err := h.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
+			SpaceID:      workspaceID,
+		})
+		if err != nil {
+			logs.CtxWarn(ctx, "fail to check trace benefit, %v", err)
+		} else if res == nil {
+			logs.CtxWarn(ctx, "fail to get trace benefit, got nil response")
+		} else if res != nil {
+			storageDuration = res.StorageDuration
+		}
+
+		spans, err := h.getSpan(ctx,
+			tenants,
+			[]string{turn.GetSpanIDFromExt()},
+			turn.GetTraceIDFromExt(),
+			workspaceIDStr,
+			turn.GetStartTimeFromExt()/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
+			turn.GetStartTimeFromExt()/1000+5*time.Second.Milliseconds(),
+		)
+		if len(spans) == 0 {
+			return fmt.Errorf("span not found, span_id: %s", turn.GetSpanIDFromExt())
+		}
+		span := spans[0]
+
+		// 新增：根据Status写Redis计数
+		err = h.updateTaskRunStatusCount(ctx, turn.GetTaskIDFromExt(), turn)
+		if err != nil {
+			logs.CtxWarn(ctx, "更新TaskRun状态计数失败: taskID=%d, status=%d, err=%v",
+				turn.GetTaskIDFromExt(), turn.Status, err)
+			// 不中断流程，继续处理
+		}
+
+		annotation := &loop_span.Annotation{
+			SpanID:         turn.GetSpanIDFromExt(),
+			TraceID:        span.TraceID,
+			WorkspaceID:    workspaceIDStr,
+			AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+			StartTime:      time.UnixMicro(span.StartTime),
+			Key:            fmt.Sprintf("%d:%d", turn.GetTaskIDFromExt(), turn.EvaluatorVersionID),
+			Value: loop_span.AnnotationValue{
+				ValueType:  loop_span.AnnotationValueTypeDouble,
+				FloatValue: turn.Score,
+			},
+			Reasoning: turn.Reasoning,
+			Status:    loop_span.AnnotationStatusNormal,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err = annotation.GenID(); err != nil {
+			return err
+		}
+
+		err = h.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+			Tenant:      span.GetTenant(),
+			TTL:         span.GetTTL(ctx),
+			Annotations: []*loop_span.Annotation{annotation},
+		})
+		if err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
 func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
-	spanID := event.Ext["span_id"]
-	traceID := event.Ext["trace_id"]
-	startTimeStr := event.Ext["start_time"]
-	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
-	if err != nil {
-		return err
+	workspaceIDStr, workspaceID := event.GetWorkspaceIDFromExt()
+	if workspaceID == 0 {
+		return fmt.Errorf("workspace_id is empty")
 	}
-	logs.CtxInfo(ctx, "startTime: %v", startTime)
-	workspaceIDStr := event.Ext["workspace_id"]
-	workspaceID, err := strconv.ParseInt(workspaceIDStr, 10, 64)
-	if err != nil {
-		return err
-	}
-	////todo：loopspan下
-	//platform_type := event.Ext["platform_type"]
+	//todo：loopspan下
 	tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
 	if err != nil {
 		return err
 	}
 	spans, err := h.getSpan(ctx,
 		tenants,
-		[]string{spanID},
-		traceID,
+		[]string{event.GetSpanIDFromExt()},
+		event.GetTraceIDFromExt(),
 		workspaceIDStr,
-		startTime/1000-time.Second.Milliseconds(),
-		startTime/1000+time.Second.Milliseconds(),
+		event.GetStartTimeFromExt()/1000-time.Second.Milliseconds(),
+		event.GetStartTimeFromExt()/1000+time.Second.Milliseconds(),
 	)
 	if err != nil {
 		return err
@@ -64,16 +119,16 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 		return err
 	}
 	if len(spans) == 0 {
-		return fmt.Errorf("span not found, span_id: %s", spanID)
+		return fmt.Errorf("span not found, span_id: %s", event.GetSpanIDFromExt())
 	}
 	span := spans[0]
 	annotations, err := h.traceRepo.ListAnnotations(ctx, &repo.ListAnnotationsParam{
 		Tenants:     tenants,
-		SpanID:      spanID,
-		TraceID:     traceID,
+		SpanID:      event.GetSpanIDFromExt(),
+		TraceID:     event.GetTraceIDFromExt(),
 		WorkspaceId: workspaceID,
-		StartAt:     startTime - 5*time.Second.Milliseconds(),
-		EndAt:       startTime + 5*time.Second.Milliseconds(),
+		StartAt:     event.GetStartTimeFromExt() - 5*time.Second.Milliseconds(),
+		EndAt:       event.GetStartTimeFromExt() + 5*time.Second.Milliseconds(),
 	})
 	if err != nil {
 		return err
@@ -111,97 +166,6 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	return nil
 }
 
-func (h *TraceHubServiceImpl) upsertAnnotation(ctx context.Context, turnEvalResults []*entity.OnlineExptTurnEvalResult, isSync bool) (err error) {
-	for _, turn := range turnEvalResults {
-		spanID := turn.Ext["span_id"]
-		traceID := turn.Ext["trace_id"]
-		startTimeStr := turn.Ext["start_time"]
-		startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
-		if err != nil {
-			return err
-		}
-		logs.CtxInfo(ctx, "startTime: %v", startTime)
-		taskIDStr := turn.Ext["task_id"]
-		taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
-		if err != nil {
-			return err
-		}
-		workspaceIDStr := turn.Ext["workspace_id"]
-		workspaceID, err := strconv.ParseInt(workspaceIDStr, 10, 64)
-		if err != nil {
-			return err
-		}
-		//platform_type := turn.Ext["platform_type"]
-		tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
-		if err != nil {
-			return err
-		}
-		var storageDuration int64 = 1
-		res, err := h.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-			ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
-			SpaceID:      workspaceID,
-		})
-		if err != nil {
-			logs.CtxWarn(ctx, "fail to check trace benefit, %v", err)
-		} else if res == nil {
-			logs.CtxWarn(ctx, "fail to get trace benefit, got nil response")
-		} else if res != nil {
-			storageDuration = res.StorageDuration
-		}
-
-		spans, err := h.getSpan(ctx,
-			tenants,
-			[]string{spanID},
-			traceID,
-			workspaceIDStr,
-			startTime/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
-			startTime/1000+5*time.Second.Milliseconds(),
-		)
-		if len(spans) == 0 {
-			return fmt.Errorf("span not found, span_id: %s", spanID)
-		}
-		span := spans[0]
-
-		// 新增：根据Status写Redis计数
-		err = h.updateTaskRunStatusCount(ctx, taskID, turn)
-		if err != nil {
-			logs.CtxWarn(ctx, "更新TaskRun状态计数失败: taskID=%d, status=%d, err=%v",
-				taskID, turn.Status, err)
-			// 不中断流程，继续处理
-		}
-
-		annotation := &loop_span.Annotation{
-			SpanID:         spanID,
-			TraceID:        span.TraceID,
-			WorkspaceID:    workspaceIDStr,
-			AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
-			StartTime:      time.UnixMicro(span.StartTime),
-			Key:            fmt.Sprintf("%d:%d", taskID, turn.EvaluatorVersionID),
-			Value: loop_span.AnnotationValue{
-				ValueType:  loop_span.AnnotationValueTypeDouble,
-				FloatValue: turn.Score,
-			},
-			Reasoning: turn.Reasoning,
-			Status:    loop_span.AnnotationStatusNormal,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-		if err = annotation.GenID(); err != nil {
-			return err
-		}
-
-		err = h.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-			Tenant:      span.GetTenant(),
-			TTL:         span.GetTTL(ctx),
-			Annotations: []*loop_span.Annotation{annotation},
-		})
-		if err != nil {
-			return err
-		}
-
-	}
-	return nil
-}
 func (h *TraceHubServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
 	return h.tenantProvider.GetTenantsByPlatformType(ctx, platform)
 }
