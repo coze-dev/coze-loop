@@ -74,10 +74,12 @@ func (a *AuthRPCAdapter) mCheckPromptPermissionBase(ctx context.Context, spaceID
 	return nil
 }
 
+// MCheckPromptPermission checks if the user has permission to perform an action on the given prompts.
 func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
 	return a.mCheckPromptPermissionBase(ctx, spaceID, promptIDs, action)
 }
 
+// MCheckPromptPermissionForOpenAPI checks if the user has permission to perform an action on the given prompts for OpenAPI.
 func (a *AuthRPCAdapter) MCheckPromptPermissionForOpenAPI(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
 	return a.mCheckPromptPermissionBase(ctx, spaceID, promptIDs, action)
 }
@@ -115,10 +117,12 @@ func (a *AuthRPCAdapter) checkSpacePermissionBase(ctx context.Context, spaceID i
 	return nil
 }
 
+// CheckSpacePermission checks if the user has permission to perform an action on the given space.
 func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64, action string) error {
 	return a.checkSpacePermissionBase(ctx, spaceID, action)
 }
 
+// CheckSpacePermissionForOpenAPI checks if the user has permission to perform an action on the given space for OpenAPI.
 func (a *AuthRPCAdapter) CheckSpacePermissionForOpenAPI(ctx context.Context, spaceID int64, action string) error {
 	return a.checkSpacePermissionBase(ctx, spaceID, action)
 }
