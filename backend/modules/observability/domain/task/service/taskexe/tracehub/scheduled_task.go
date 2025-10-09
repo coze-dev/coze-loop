@@ -70,7 +70,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
-	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	logs.CtxInfo(ctx, "定时任务开始执行...")
 	// 读取所有非终态（成功/禁用）任务
 	var taskPOs []*entity.ObservabilityTask
@@ -231,7 +231,7 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
-	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 
 	logs.CtxInfo(ctx, "开始同步TaskRunCounts到数据库...")
 

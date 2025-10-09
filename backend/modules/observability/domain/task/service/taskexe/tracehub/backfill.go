@@ -33,7 +33,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
-	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
 		return err

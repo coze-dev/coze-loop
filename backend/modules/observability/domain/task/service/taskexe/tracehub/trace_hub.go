@@ -106,7 +106,7 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
-	//ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
 	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
 	logs.CtxInfo(ctx, "TraceHub start")
 	var tags []metrics.T
