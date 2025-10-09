@@ -119,22 +119,17 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		return nil
 	}
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	taskCacheInfo, ok := h.getCached()
-	if !ok {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_task"})
-		logs.CtxInfo(ctx, "no task found for span, %s", logSuffix)
-		return nil
-	}
-
-	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", taskCacheInfo.WorkspaceIDs, taskCacheInfo.BotIDs, taskCacheInfo.Tasks)
 	// 1.2 Filter out spans that do not belong to any space or bot
-	if !gslice.Contains(taskCacheInfo.WorkspaceIDs, span.WorkspaceID) && !gslice.Contains(taskCacheInfo.BotIDs, span.TagsString["bot_id"]) {
+	spaceIDs, botIDs, tasks := h.getObjListWithTaskFromCache(ctx)
+
+	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", spaceIDs, botIDs, tasks)
+	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
 		logs.CtxInfo(ctx, "no space found for span, %s", logSuffix)
 		return nil
 	}
 	// 2、Match spans against task rules
-	subs, err := h.getSubscriberOfSpan(ctx, span, taskCacheInfo.Tasks)
+	subs, err := h.getSubscriberOfSpan(ctx, span, tasks)
 	if err != nil {
 		logs.CtxWarn(ctx, "get subscriber of flow span failed, %s, err: %v", logSuffix, err)
 	}

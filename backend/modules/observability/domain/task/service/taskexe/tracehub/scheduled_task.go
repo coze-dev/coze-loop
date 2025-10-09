@@ -444,14 +444,3 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 
 	logs.CtxInfo(ctx, "任务缓存同步完成", "taskCount", len(tasks), "updateTime", newCache.UpdateTime.Format(time.RFC3339))
 }
-
-// getCachedTask 从缓存中获取任务信息
-func (h *TraceHubServiceImpl) getCached() (*TaskCacheInfo, bool) {
-	cacheKey := "ObjListWithTask"
-	if value, ok := h.taskCache.Load(cacheKey); ok {
-		if cacheInfo, ok := value.(*TaskCacheInfo); ok {
-			return cacheInfo, true
-		}
-	}
-	return nil, false
-}
