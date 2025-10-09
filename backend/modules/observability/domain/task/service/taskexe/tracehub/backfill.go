@@ -6,7 +6,6 @@ package tracehub
 import (
 	"context"
 	"errors"
-	"os"
 	"sync"
 	"time"
 
@@ -30,10 +29,7 @@ const pageSize = 500
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. 设置当前任务上下文
-	if env := os.Getenv(XttEnv); env != "" {
-		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
-	}
-	ctx = context.WithValue(ctx, "K_ENV", "boe_auto_task")
+	ctx = fillCtxWithEnv(ctx)
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
 		return err
