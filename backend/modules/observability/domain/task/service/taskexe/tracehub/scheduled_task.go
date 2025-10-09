@@ -116,9 +116,9 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	}
 	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(taskPOs))
 	for _, taskPO := range taskPOs {
-		var taskRun, backfillTaskRun entity.TaskRun
-		backfillTaskRun = *taskPO.GetBackfillTaskRun()
-		taskRun = *taskPO.GetCurrentTaskRun()
+		var taskRun, backfillTaskRun *entity.TaskRun
+		backfillTaskRun = taskPO.GetBackfillTaskRun()
+		taskRun = taskPO.GetCurrentTaskRun()
 
 		taskInfo := tconv.TaskPO2DTO(ctx, taskPO, nil)
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
@@ -131,7 +131,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
-					TaskRun:  &backfillTaskRun,
+					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
 				if err != nil {
@@ -143,7 +143,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
-					TaskRun:  &backfillTaskRun,
+					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
 				if err != nil {
@@ -155,7 +155,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			if time.Now().After(endTime) {
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
-					TaskRun:  &taskRun,
+					TaskRun:  taskRun,
 					IsFinish: true,
 				})
 				if err != nil {
@@ -198,7 +198,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
-					TaskRun:  &taskRun,
+					TaskRun:  taskRun,
 					IsFinish: false,
 				})
 				if err != nil {
