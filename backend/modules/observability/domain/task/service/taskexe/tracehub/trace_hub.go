@@ -101,24 +101,24 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
 	logs.CtxInfo(ctx, "TraceHub start")
 	var tags []metrics.T
-	// 1、转换成标准span，并根据space_id初步过滤
+	// 1、Convert to standard span and perform initial filtering based on space_id
 	span := rawSpan.RawSpanConvertToLoopSpan()
-	// 1.1 过滤掉 Evaluator 类型的 span
+	// 1.1 Filter out spans of type Evaluator
 	if slices.Contains([]string{"Evaluator"}, span.CallType) {
 		return nil
 	}
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	spaceList, botList, tasks := h.taskRepo.GetObjListWithTask(ctx)
 	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", spaceList, botList, tasks)
-	// 1.2 过滤掉不在 spaceList 中的 span
+	// 1.2 Filter out spans that do not belong to any space or bot
 	if !gslice.Contains(spaceList, span.WorkspaceID) && !gslice.Contains(botList, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
 		logs.CtxInfo(ctx, "no space found for span, %s", logSuffix)
 		return nil
 	}
-	// 2、读redis，获取rule信息，进行匹配，查询订阅者
+	// 2、Match spans against task rules
 	subs, err := h.getSubscriberOfSpan(ctx, span, tasks)
-	if err != nil { // 继续执行，不阻塞。
+	if err != nil {
 		logs.CtxWarn(ctx, "get subscriber of flow span failed, %s, err: %v", logSuffix, err)
 	}
 
@@ -127,14 +127,14 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_subscriber"})
 		return nil
 	}
-	// 3、采样
+	// 3、Sample
 	subs = gslice.Filter(subs, func(sub *spanSubscriber) bool { return sub.Sampled() })
 	logs.CtxInfo(ctx, "%d subscriber of flow span sampled, %s", len(subs), logSuffix)
 	if len(subs) == 0 {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "sampler_not_hit"})
 		return nil
 	}
-	// 3. 分发预处理
+	// 3. PreDispatch
 	err = h.preDispatch(ctx, span, subs)
 	if err != nil {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "preDispatch_failed"})
@@ -142,7 +142,7 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 		//return err
 	}
 	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
-	// 4、按条件分发
+	// 4、Dispatch
 	if err = h.dispatch(ctx, span, subs); err != nil {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "dispatch_failed"})
 		logs.CtxWarn(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)

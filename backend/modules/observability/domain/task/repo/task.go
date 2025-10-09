@@ -31,13 +31,13 @@ type ITaskRepo interface {
 
 	// task count
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
-	IncrTaskCount(ctx context.Context, taskID int64) error
-	DecrTaskCount(ctx context.Context, taskID int64) error
+	IncrTaskCount(ctx context.Context, taskID, ttl int64) error
+	DecrTaskCount(ctx context.Context, taskID, ttl int64) error
 
 	// task run count
 	GetTaskRunCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
-	IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
-	DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error
+	IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
+	DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 
 	// task run success/fail count
 	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)

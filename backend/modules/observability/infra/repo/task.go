@@ -457,16 +457,16 @@ func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, e
 	}
 	return count, nil
 }
-func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID int64) error {
-	_, err := v.TaskRedisDao.IncrTaskCount(ctx, taskID, TaskCountTTL)
+func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID, ttl int64) error {
+	_, err := v.TaskRedisDao.IncrTaskCount(ctx, taskID, time.Duration(ttl)*time.Second)
 	if err != nil {
 		logs.CtxError(ctx, "failed to increment task count", "taskID", taskID, "err", err)
 		return err
 	}
 	return nil
 }
-func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID int64) error {
-	_, err := v.TaskRedisDao.DecrTaskCount(ctx, taskID, TaskCountTTL)
+func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID, ttl int64) error {
+	_, err := v.TaskRedisDao.DecrTaskCount(ctx, taskID, time.Duration(ttl)*time.Second)
 	if err != nil {
 		logs.CtxError(ctx, "failed to decrement task count", "taskID", taskID, "err", err)
 		return err
@@ -483,16 +483,16 @@ func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID in
 	}
 	return count, nil
 }
-func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
-	_, err := v.TaskRedisDao.IncrTaskRunCount(ctx, taskID, taskRunID, TaskRunCountTTL)
+func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
+	_, err := v.TaskRedisDao.IncrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 	if err != nil {
 		logs.CtxError(ctx, "failed to increment task run count", "taskID", taskID, "taskRunID", taskRunID, "err", err)
 		return err
 	}
 	return nil
 }
-func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64) error {
-	_, err := v.TaskRedisDao.DecrTaskRunCount(ctx, taskID, taskRunID, TaskRunCountTTL)
+func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
+	_, err := v.TaskRedisDao.DecrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 	if err != nil {
 		logs.CtxError(ctx, "failed to decrement task run count", "taskID", taskID, "taskRunID", taskRunID, "err", err)
 		return err

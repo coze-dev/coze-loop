@@ -54,6 +54,6 @@ func (e *TaskConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) er
 		logs.CtxError(ctx, "Task msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "Handle Task message %+v,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event, event.LogID, event.TraceID, event.SpanID, ext.MsgID)
+	logs.CtxInfo(ctx, "Handle Task message,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event.LogID, event.TraceID, event.SpanID, ext.MsgID)
 	return e.handler.TraceHub(ctx, event)
 }
