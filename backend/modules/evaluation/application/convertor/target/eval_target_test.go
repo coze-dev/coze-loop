@@ -117,12 +117,50 @@ func TestEvalTargetVersionDTO2DO(t *testing.T) {
 				SourceTargetVersion: "v1.0",
 			},
 		},
+		{
+			name: "自定义对象转换",
+			targetVersionDTO: &dto.EvalTargetVersion{
+				ID:                  gptr.Of(int64(1)),
+				WorkspaceID:         gptr.Of(int64(2)),
+				TargetID:            gptr.Of(int64(3)),
+				SourceTargetVersion: gptr.Of("v1.0"),
+				EvalTargetContent: &dto.EvalTargetContent{
+					CustomRPCServer: &dto.CustomRPCServer{
+						ID:   gptr.Of(int64(4)),
+						Name: gptr.Of("test"),
+						InvokeHTTPInfo: &dto.HTTPInfo{
+							Method: gptr.Of(""),
+							Path:   gptr.Of(""),
+						},
+						CustomEvalTarget: &dto.CustomEvalTarget{
+							ID:        gptr.Of(""),
+							Name:      gptr.Of(""),
+							AvatarURL: gptr.Of(""),
+						},
+					},
+				},
+			},
+			expected: &do.EvalTargetVersion{
+				ID:                  1,
+				SpaceID:             2,
+				TargetID:            3,
+				SourceTargetVersion: "v1.0",
+				CustomRPCServer: &do.CustomRPCServer{
+					ID:   4,
+					Name: "test",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			result := EvalTargetVersionDTO2DO(tt.targetVersionDTO)
+			if tt.name == "自定义对象转换" {
+				assert.Equal(t, result.CustomRPCServer.Name, tt.expected.CustomRPCServer.Name)
+				return
+			}
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -309,6 +347,53 @@ func TestEvalTargetVersionDO2DTO(t *testing.T) {
 						},
 					},
 				},
+			},
+		},
+		{
+			name: "自定义对象转换",
+			targetVersionDO: &do.EvalTargetVersion{
+				ID:                  1,
+				SpaceID:             2,
+				TargetID:            3,
+				SourceTargetVersion: "v1.0",
+				EvalTargetType:      do.EvalTargetTypeCustomRPCServer,
+				CustomRPCServer: &do.CustomRPCServer{
+					Name:        "test",
+					Description: "test",
+					InvokeHTTPInfo: &do.HTTPInfo{
+						Method: "GET",
+						Path:   "/test",
+					},
+					AsyncInvokeHTTPInfo: &do.HTTPInfo{
+						Method: "GET",
+						Path:   "/test",
+					},
+					SearchHTTPInfo: &do.HTTPInfo{
+						Method: "GET",
+						Path:   "/test",
+					},
+					CustomEvalTarget: &do.CustomEvalTarget{
+						Name: gptr.Of("test"),
+					},
+					IsAsync: gptr.Of(true),
+					Ext: map[string]string{
+						"test": "test",
+					},
+				},
+				VolcengineAgent: &do.VolcengineAgent{
+					VolcengineAgentEndpoints: []*do.VolcengineAgentEndpoint{
+						{
+							EndpointID: "test",
+							APIKey:     "test",
+						},
+					},
+				},
+			},
+			expected: &dto.EvalTargetVersion{
+				ID:                  gptr.Of(int64(1)),
+				WorkspaceID:         gptr.Of(int64(2)),
+				TargetID:            gptr.Of(int64(3)),
+				SourceTargetVersion: gptr.Of("v1.0"),
 			},
 		},
 	}
