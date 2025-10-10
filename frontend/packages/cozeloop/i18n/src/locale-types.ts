@@ -2572,6 +2572,100 @@ interface I18nTranslateFn {
   (key: 'evaluate_parameter_injection', fallbackText?: string): string;
   /** 请求评测对象时，可注入填写的参数，来拿到评测对象的输出结果。如请求环境的泳道、测试账号的 UID 等。 */
   (key: 'cozeloop_open_evaluate_inject_parameters_for_evaluation_request', fallbackText?: string): string;
+  /** LLM评估器 */
+  (key: 'evaluate_llm_evaluator', fallbackText?: string): string;
+  /** Code评估器 */
+  (key: 'evaluate_code_evaluator', fallbackText?: string): string;
+  /** Code 评估器详情 */
+  (key: 'evaluate_code_evaluator_detail', fallbackText?: string): string;
+  /** 正在加载 Code 评估器详情 */
+  (key: 'evaluate_loading_code_evaluator_detail', fallbackText?: string): string;
+  /** JSON 序列化错误: */
+  (key: 'evaluate_json_serialize_error', fallbackText?: string): string;
+  /** JSON 解析错误: */
+  (key: 'evaluate_json_parse_error', fallbackText?: string): string;
+  /** 基于评测集 */
+  (key: 'evaluate_based_on_evaluation_set', fallbackText?: string): string;
+  /** 自定义 */
+  (key: 'evaluate_custom', fallbackText?: string): string;
+  /** 从评测集新增数据 */
+  (key: 'evaluate_add_data_from_evaluation_set', fallbackText?: string): string;
+  /** 暂无测试数据 */
+  (key: 'evaluate_no_test_data', fallbackText?: string): string;
+  /** 评估通过 */
+  (key: 'evaluate_validation_passed', fallbackText?: string): string;
+  /** 生成模拟输出 */
+  (key: 'evaluate_generate_mock_output', fallbackText?: string): string;
+  /** 版本 */
+  (key: 'evaluate_version', fallbackText?: string): string;
+  /** 获取评测集数据失败: */
+  (key: 'evaluate_failed_to_get_evaluation_set_data', fallbackText?: string): string;
+  /** 如果你的评测集中已经包含评测对象输出，可直接导入你选中的数据 */
+  (key: 'evaluate_import_data_from_eval_set_with_output_tip', fallbackText?: string): string;
+  /** 请选择评测对象和版本 */
+  (key: 'evaluate_please_select_target_and_version', fallbackText?: string): string;
+  /** 原因: */
+  (key: 'evaluate_reason', fallbackText?: string): string;
+  /** 未知错误 */
+  (key: 'evaluate_unknown_error', fallbackText?: string): string;
+  /** 台湾省面积是多少？ */
+  (key: 'evaluate_test_taiwan_area_question', fallbackText?: string): string;
+  /** 台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。 */
+  (key: 'evaluate_test_taiwan_area_answer', fallbackText?: string): string;
+  /** 选择模板 */
+  (key: 'evaluate_select_template', fallbackText?: string): string;
+  /** 使用自定义创建 */
+  (key: 'evaluate_create_with_custom', fallbackText?: string): string;
+  /** 确定 */
+  (key: 'evaluate_confirm', fallbackText?: string): string;
+  /** 基础信息 */
+  (key: 'evaluate_basic_info', fallbackText?: string): string;
+  /** 名称 */
+  (key: 'evaluate_name', fallbackText?: string): string;
+  /** 配置 */
+  (key: 'evaluate_config', fallbackText?: string): string;
+  /** 请编写执行函数体 */
+  (key: 'evaluate_please_write_function_body', fallbackText?: string): string;
+  /** 请配置测试数据 */
+  (key: 'evaluate_please_configure_test_data', fallbackText?: string): string;
+  /** 调试失败: 未返回结果 */
+  (key: 'evaluate_debug_failed_no_result', fallbackText?: string): string;
+  /** 调试未返回评估结果 */
+  (key: 'evaluate_debug_no_evaluation_result', fallbackText?: string): string;
+  /** 调试失败: */
+  (key: 'evaluate_debug_failed', fallbackText?: string): string;
+  /** 运行中... */
+  (key: 'evaluate_running', fallbackText?: string): string;
+  /** 代码评估器创建成功 */
+  (key: 'evaluate_code_evaluator_created_successfully', fallbackText?: string): string;
+  /** 保存失败: */
+  (key: 'evaluate_save_failed', fallbackText?: string): string;
+  /** 保存失败，请重试 */
+  (key: 'evaluate_save_failed_please_retry', fallbackText?: string): string;
+  /** 表单验证失败: */
+  (key: 'evaluate_form_validation_failed', fallbackText?: string): string;
+  /** 未命名模板 */
+  (key: 'evaluate_unnamed_template', fallbackText?: string): string;
+  /** 试运行 */
+  (key: 'evaluate_trial_run', fallbackText?: string): string;
+  /** 提交前代码检查 */
+  (key: 'evaluate_pre_submit_code_check', fallbackText?: string): string;
+  /** 检查 */
+  (key: 'evaluate_check', fallbackText?: string): string;
+  /** 重新检查 */
+  (key: 'evaluate_recheck', fallbackText?: string): string;
+  /** 编程语言 */
+  (key: 'evaluate_programming_language', fallbackText?: string): string;
+  /** 使用模板 */
+  (key: 'evaluate_used_template', fallbackText?: string): string;
+  /** 代码内容 */
+  (key: 'evaluate_code_content', fallbackText?: string): string;
+  /** 暂无配置信息 */
+  (key: 'evaluate_no_config_info', fallbackText?: string): string;
+  /** 调试失败: 未返回评估结果 */
+  (key: 'evaluate_debug_failed_no_evaluation_result', fallbackText?: string): string;
+  /** 你可以直接使用home */
+  (key: 'evaluate_you_can_use_directly', fallbackText?: string): string;
   /** 图片不可访问 */
   (key: 'analytics_image_error', fallbackText?: string): string;
   /** Arguments */

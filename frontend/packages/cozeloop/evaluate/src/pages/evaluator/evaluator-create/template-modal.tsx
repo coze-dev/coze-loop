@@ -20,13 +20,15 @@ import styles from './template-modal.module.less';
 export function TemplateModal({
   visible,
   disabled,
+  confirmLoading,
   onCancel,
   onSelect,
 }: {
   visible: boolean;
   disabled?: boolean;
+  confirmLoading?: boolean;
   onCancel: () => void;
-  onSelect: (template: EvaluatorContent) => void;
+  onSelect: (template?: EvaluatorContent) => void;
 }) {
   const [selected, setSelected] = useState<EvaluatorContent>();
   const [keyMap, setKeyMap] = useState<Record<string, EvaluatorContent>>({});
@@ -85,11 +87,13 @@ export function TemplateModal({
       width={1040}
       height="fill"
       visible={visible}
+      confirmLoading={confirmLoading}
+      hasScroll={false}
       header={null}
       footer={null}
     >
       <div
-        className="overflow-hidden w-full flex flex-row"
+        className="overflow-hidden w-full h-full flex flex-row"
         style={{
           height: 'calc(100% + 32px)',
         }}
@@ -154,9 +158,9 @@ export function TemplateModal({
               <TemplateInfo data={currentData} />
             )}
           </div>
-          <div className="flex flex-row justify-end gap-2 px-6 pt-2 pb-6">
-            <Button color="primary" onClick={onCancel}>
-              {I18n.t('cancel')}
+          <div className="flex flex-row justify-end gap-2 px-6 pt-2 pb-4">
+            <Button color="primary" onClick={() => onSelect()}>
+              {I18n.t('evaluate_create_with_custom')}
             </Button>
             <Button
               color="brand"

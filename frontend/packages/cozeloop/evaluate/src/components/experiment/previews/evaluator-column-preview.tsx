@@ -1,10 +1,16 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { useMemo } from 'react';
+
 import classNames from 'classnames';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
+import {
+  EvaluatorIcon,
+  getEvaluatorJumpUrl,
+  TypographyText,
+} from '@cozeloop/evaluate-components';
 import { JumpIconButton } from '@cozeloop/components';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useBaseURL, useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import { type ColumnEvaluator } from '@cozeloop/api-schema/evaluation';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { Tag, Tooltip, type TagProps } from '@coze-arch/coze-design';
@@ -27,8 +33,20 @@ export default function EvaluatorColumnPreview({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const { name, version, evaluator_id, evaluator_version_id } = evaluator ?? {};
-  const { baseURL } = useBaseURL();
+  const { name, version, evaluator_id, evaluator_version_id, evaluator_type } =
+    evaluator ?? {};
+
+  const jumpUrl = useMemo(
+    () =>
+      getEvaluatorJumpUrl({
+        evaluatorType: evaluator_type,
+        evaluatorId: evaluator_id,
+        evaluatorVersionId: evaluator_version_id,
+      }),
+    [evaluator_type, evaluator_id, evaluator_version_id],
+  );
+
+  const { openBlank } = useOpenWindow();
   if (!evaluator) {
     return <>-</>;
   }
@@ -39,12 +57,11 @@ export default function EvaluatorColumnPreview({
       onClick={e => {
         if (enableLinkJump && evaluator_id) {
           e.stopPropagation();
-          window.open(
-            `${baseURL}/evaluation/evaluators/${evaluator_id}?version=${evaluator_version_id}`,
-          );
+          openBlank(jumpUrl);
         }
       }}
     >
+      <EvaluatorIcon evaluatorType={evaluator_type} iconSize={14} />
       <TypographyText>{name ?? '-'}</TypographyText>
       <Tag
         color="primary"

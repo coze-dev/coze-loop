@@ -1,3 +1,4 @@
+/* eslint-disable @coze-arch/max-line-per-function */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { forwardRef, useImperativeHandle, useState } from 'react';
@@ -7,6 +8,7 @@ import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
+  EvaluatorType,
   type Evaluator,
   type EvaluatorVersion,
 } from '@cozeloop/api-schema/evaluation';
@@ -203,6 +205,8 @@ export const EvaluatorFieldCard = forwardRef<
         <div className="flex flex-row gap-5">
           <div className="flex-1 w-0">
             <FormEvaluatorSelect
+              // 在线评测目前不支持code评估器
+              evaluatorTypes={[EvaluatorType.Prompt]}
               className="w-full"
               field={`${prefix}.evaluator_id`}
               fieldStyle={{ paddingBottom: 16 }}

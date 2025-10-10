@@ -1,0 +1,28 @@
+/* stylelint-disable declaration-no-important */
+.eval-set-test-data-modal {
+  :global(.semi-modal-footer) {
+    display: none;
+  }
+
+  :global(.semi-modal-body) {
+    overflow: auto !important;
+  }
+
+  :global(.evaluate-target-mapping-field-wrapper) {
+    display: none;
+  }
+
+  :global {
+    .coz-table-wrapper .coz-empty-content .semi-table-thead > .semi-table-row > .semi-table-row-head:last-child, .coz-table-wrapper .coz-table-list .semi-table-thead > .semi-table-row > .semi-table-row-head:last-child, .coz-table-wrapper .coz-empty-content .semi-table-tbody > .semi-table-row > .semi-table-row-cell:last-child, .coz-table-wrapper .coz-table-list .semi-table-tbody > .semi-table-row > .semi-table-row-cell:last-child {
+      text-align: center;
+    }
+
+    /* start_aigc */
+    thead > tr:first-child > th:last-child > :first-child > :first-child {
+      /* 这里可以添加你需要的样式 */
+      justify-content: center;
+    }
+
+    /* end_aigc */
+  }
+}
