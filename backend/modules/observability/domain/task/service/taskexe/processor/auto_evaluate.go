@@ -109,10 +109,10 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		return nil
 	}
 	taskTTL := trigger.Task.GetRule().GetEffectiveTime().GetEndAt() - trigger.Task.GetRule().GetEffectiveTime().GetStartAt()
-	taskCount, _ := p.taskRepo.GetTaskCount(ctx, *trigger.Task.ID)
-	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
 	p.taskRepo.IncrTaskCount(ctx, *trigger.Task.ID, taskTTL)
 	p.taskRepo.IncrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID, taskTTL)
+	taskCount, _ := p.taskRepo.GetTaskCount(ctx, *trigger.Task.ID)
+	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID)
 	if (trigger.Task.GetRule().GetSampler().GetCycleCount() != 0 && taskRunCount+1 > trigger.Task.GetRule().GetSampler().GetCycleCount()) ||
 		(taskCount+1 > trigger.Task.GetRule().GetSampler().GetSampleSize()) {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
