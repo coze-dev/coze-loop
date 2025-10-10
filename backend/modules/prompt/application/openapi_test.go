@@ -167,7 +167,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -363,7 +363,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -556,7 +556,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(prompterr.CommonNoPermissionCode))
 
 				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
@@ -603,7 +603,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -650,7 +650,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -698,7 +698,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -788,7 +788,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -881,7 +881,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -1050,7 +1050,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -1155,7 +1155,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -1247,7 +1247,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -1299,7 +1299,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				mockConfig.EXPECT().GetPromptHubMaxQPSBySpace(gomock.Any(), gomock.Any()).Return(100, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 				mockRateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{
@@ -2344,7 +2344,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				expectedReply := &entity.Reply{
 					DebugID: 456,
@@ -2501,7 +2501,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(errorx.NewByCode(prompterr.CommonNoPermissionCode))
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(errorx.NewByCode(prompterr.CommonNoPermissionCode))
 
 				return fields{
 					promptService:    mockPromptService,
@@ -2559,7 +2559,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil, errors.New("execution failed"))
 
@@ -2715,7 +2715,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				expectedReply := &entity.Reply{
 					DebugID: 456,
@@ -2872,7 +2872,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				// 返回 nil reply 或者 reply.Item 为 nil
 				expectedReply := &entity.Reply{
@@ -3104,7 +3104,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				// Mock ExecuteStreaming 返回多个流式响应
 				expectedReply := &entity.Reply{
@@ -3450,7 +3450,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(
 					errorx.NewByCode(prompterr.CommonNoPermissionCode))
 
 				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
@@ -3607,7 +3607,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				// Mock ExecuteStreaming 返回错误
 				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -3719,7 +3719,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				// Mock ExecuteStreaming 返回流式响应
 				expectedReply := &entity.Reply{
@@ -3860,7 +3860,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				// Mock ExecuteStreaming 返回流式响应
 				expectedReply := &entity.Reply{
@@ -4001,7 +4001,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				}, nil)
 
 				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
 
 				// Mock ExecuteStreaming 模拟panic
 				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
