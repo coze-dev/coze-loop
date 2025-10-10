@@ -577,7 +577,7 @@ func (p *TaskDAOImpl) DeleteAppListWithTask(ctx context.Context) error {
 func (p *TaskDAOImpl) IncrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskCountCacheKey(taskID)
 	result, err := p.cmdable.Incr(ctx, key).Result()
-	logs.CtxInfo(ctx, "redis incr task count success", "key", key, "result", result)
+	logs.CtxInfo(ctx, "redis incr task count success, taskID: %v, key: %v, result: %v", taskID, key, result)
 	if err != nil {
 		logs.CtxError(ctx, "redis incr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task count key: %v", key)
