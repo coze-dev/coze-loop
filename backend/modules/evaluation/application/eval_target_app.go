@@ -27,7 +27,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
@@ -587,27 +586,6 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 			AsyncUnixMS: startTime.UnixMilli(),
 			Session:     &entity.Session{UserID: userID},
 			Callee:      callee,
-		}); err != nil {
-			return nil, err
-		}
-
-		if err := e.evalTargetService.CreateRecord(ctx, &entity.EvalTargetRecord{
-			ID:                  recordID,
-			SpaceID:             request.GetWorkspaceID(),
-			LogID:               logs.GetLogID(ctx),
-			EvalTargetInputData: &entity.EvalTargetInputData{InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) { return k, target.ToSPIContentDO(v) })},
-			EvalTargetOutputData: &entity.EvalTargetOutputData{
-				OutputFields:    map[string]*entity.Content{},
-				EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 0, OutputTokens: 0},
-				TimeConsumingMS: gptr.Of(int64(0)),
-			},
-			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
-			BaseInfo: &entity.BaseInfo{
-				CreatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
-				UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
-				CreatedAt: gptr.Of(time.Now().UnixMilli()),
-				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
-			},
 		}); err != nil {
 			return nil, err
 		}
