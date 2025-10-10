@@ -577,13 +577,14 @@ func (p *TaskDAOImpl) DeleteAppListWithTask(ctx context.Context) error {
 func (p *TaskDAOImpl) IncrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskCountCacheKey(taskID)
 	result, err := p.cmdable.Incr(ctx, key).Result()
+	logs.CtxInfo(ctx, "redis incr task count success", "key", key, "result", result)
 	if err != nil {
 		logs.CtxError(ctx, "redis incr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task count key: %v", key)
 	}
 
 	// 设置TTL
-	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
+	if err = p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
 		logs.CtxWarn(ctx, "failed to set TTL for task count", "key", key, "err", err)
 	}
 

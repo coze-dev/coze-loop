@@ -191,9 +191,9 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 		return nil
 	}
-	trigger := &taskexe.Trigger{Task: s.t, Span: span}
+	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
 	logs.CtxInfo(ctx, "invoke processor, trigger: %v", trigger)
-	err = s.processor.Invoke(ctx, taskRunConfig, trigger)
+	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {
 		logs.CtxWarn(ctx, "invoke processor failed, trace_id=%s, span_id=%s, err: %v", span.TraceID, span.SpanID, err)
 		return err

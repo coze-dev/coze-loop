@@ -23,7 +23,7 @@ func (p *NoopTaskProcessor) ValidateConfig(ctx context.Context, config any) erro
 	return nil
 }
 
-func (p *NoopTaskProcessor) Invoke(ctx context.Context, config any, trigger *taskexe.Trigger) error {
+func (p *NoopTaskProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
 	return nil
 }
 

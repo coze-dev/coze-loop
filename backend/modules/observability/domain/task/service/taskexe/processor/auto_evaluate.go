@@ -95,12 +95,8 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) e
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, config any, trigger *taskexe.Trigger) error {
-	cfg, ok := config.(*task_entity.TaskRun)
-	if !ok {
-		return taskexe.ErrInvalidConfig
-	}
-	taskRun := tconv.TaskRunPO2DTO(ctx, cfg, nil)
+func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
+	taskRun := tconv.TaskRunPO2DTO(ctx, trigger.TaskRun, nil)
 	workspaceID := trigger.Task.GetWorkspaceID()
 	session := p.getSession(ctx, trigger.Task)
 	var mapping []*task.EvaluateFieldMapping

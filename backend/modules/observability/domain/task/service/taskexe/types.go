@@ -13,9 +13,9 @@ import (
 )
 
 type Trigger struct {
-	Task     *task.Task
-	Span     *loop_span.Span
-	IsFinish bool
+	Task    *task.Task
+	Span    *loop_span.Span
+	TaskRun *task_entity.TaskRun
 }
 
 var (
@@ -40,8 +40,8 @@ type OnFinishTaskChangeReq struct {
 }
 
 type Processor interface {
-	ValidateConfig(ctx context.Context, config any) error           // 校验配置项是否有效
-	Invoke(ctx context.Context, config any, trigger *Trigger) error // 根据不同类型进行执行，如rpc回调、mq投递等
+	ValidateConfig(ctx context.Context, config any) error // 校验配置项是否有效
+	Invoke(ctx context.Context, trigger *Trigger) error   // 根据不同类型进行执行，如rpc回调、mq投递等
 
 	OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error
 	OnUpdateTaskChange(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error

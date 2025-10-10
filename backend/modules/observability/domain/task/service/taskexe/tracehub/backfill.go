@@ -460,7 +460,7 @@ func (h *TraceHubServiceImpl) processSpan(ctx context.Context, span *loop_span.S
 			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
 			IsFinish: true,
 		}); err != nil {
-			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
+			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d", sub.taskID)
 			return err
 		}
 	}
