@@ -11,9 +11,12 @@ import (
 
 //go:generate mockgen -destination=mocks/target.go -package=mocks . IEvalTargetService
 type IEvalTargetService interface {
-	CreateEvalTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, opts ...entity.Option) (id int64, versionID int64, err error)
+	CreateEvalTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, opts ...entity.Option) (id, versionID int64, err error)
 	GetEvalTarget(ctx context.Context, targetID int64) (do *entity.EvalTarget, err error)
-	GetEvalTargetVersion(ctx context.Context, spaceID int64, versionID int64, needSourceInfo bool) (do *entity.EvalTarget, err error)
+	GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64, needSourceInfo bool) (do *entity.EvalTarget, err error)
+	GetEvalTargetVersionBySource(ctx context.Context, spaceID, targetID int64, sourceVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error)
+	GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error)
+	GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, needSourceInfo bool) (do *entity.EvalTarget, err error)
 	BatchGetEvalTargetBySource(ctx context.Context, param *entity.BatchGetEvalTargetBySourceParam) (dos []*entity.EvalTarget, err error)
 	BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64, needSourceInfo bool) (dos []*entity.EvalTarget, err error)
 
@@ -26,4 +29,5 @@ type IEvalTargetService interface {
 	BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
 	ReportInvokeRecords(ctx context.Context, recordID2Params *entity.ReportTargetRecordParam) error
 	ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error
+	GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error)
 }

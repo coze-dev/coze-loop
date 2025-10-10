@@ -183,6 +183,21 @@ func (mr *MockIEvalTargetServiceMockRecorder) ExecuteTarget(ctx, spaceID, target
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).ExecuteTarget), ctx, spaceID, targetID, targetVersionID, param, inputData)
 }
 
+// GenerateMockOutputData mocks base method.
+func (m *MockIEvalTargetService) GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateMockOutputData", outputSchemas)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateMockOutputData indicates an expected call of GenerateMockOutputData.
+func (mr *MockIEvalTargetServiceMockRecorder) GenerateMockOutputData(outputSchemas any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateMockOutputData", reflect.TypeOf((*MockIEvalTargetService)(nil).GenerateMockOutputData), outputSchemas)
+}
+
 // GetEvalTarget mocks base method.
 func (m *MockIEvalTargetService) GetEvalTarget(ctx context.Context, targetID int64) (*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()
@@ -211,6 +226,51 @@ func (m *MockIEvalTargetService) GetEvalTargetVersion(ctx context.Context, space
 func (mr *MockIEvalTargetServiceMockRecorder) GetEvalTargetVersion(ctx, spaceID, versionID, needSourceInfo any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersion", reflect.TypeOf((*MockIEvalTargetService)(nil).GetEvalTargetVersion), ctx, spaceID, versionID, needSourceInfo)
+}
+
+// GetEvalTargetVersionBySource mocks base method.
+func (m *MockIEvalTargetService) GetEvalTargetVersionBySource(ctx context.Context, spaceID, targetID int64, sourceVersion string, needSourceInfo bool) (*entity.EvalTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetVersionBySource", ctx, spaceID, targetID, sourceVersion, needSourceInfo)
+	ret0, _ := ret[0].(*entity.EvalTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetVersionBySource indicates an expected call of GetEvalTargetVersionBySource.
+func (mr *MockIEvalTargetServiceMockRecorder) GetEvalTargetVersionBySource(ctx, spaceID, targetID, sourceVersion, needSourceInfo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersionBySource", reflect.TypeOf((*MockIEvalTargetService)(nil).GetEvalTargetVersionBySource), ctx, spaceID, targetID, sourceVersion, needSourceInfo)
+}
+
+// GetEvalTargetVersionBySourceTarget mocks base method.
+func (m *MockIEvalTargetService) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType, needSourceInfo bool) (*entity.EvalTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetVersionBySourceTarget", ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType, needSourceInfo)
+	ret0, _ := ret[0].(*entity.EvalTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetVersionBySourceTarget indicates an expected call of GetEvalTargetVersionBySourceTarget.
+func (mr *MockIEvalTargetServiceMockRecorder) GetEvalTargetVersionBySourceTarget(ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType, needSourceInfo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersionBySourceTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).GetEvalTargetVersionBySourceTarget), ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType, needSourceInfo)
+}
+
+// GetEvalTargetVersionByTarget mocks base method.
+func (m *MockIEvalTargetService) GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string, needSourceInfo bool) (*entity.EvalTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetVersionByTarget", ctx, spaceID, targetID, sourceTargetVersion, needSourceInfo)
+	ret0, _ := ret[0].(*entity.EvalTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetVersionByTarget indicates an expected call of GetEvalTargetVersionByTarget.
+func (mr *MockIEvalTargetServiceMockRecorder) GetEvalTargetVersionByTarget(ctx, spaceID, targetID, sourceTargetVersion, needSourceInfo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersionByTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).GetEvalTargetVersionByTarget), ctx, spaceID, targetID, sourceTargetVersion, needSourceInfo)
 }
 
 // GetRecordByID mocks base method.

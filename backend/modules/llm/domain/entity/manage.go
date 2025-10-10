@@ -163,7 +163,7 @@ type ProtocolConfig struct {
 	Model                  string                  `json:"model" yaml:"model" mapstructure:"model"`
 	TimeoutMs              *int64                  `json:"timeout_ms" yaml:"timeout_ms" mapstructure:"timeout_ms"`
 	ProtocolConfigArk      *ProtocolConfigArk      `json:"protocol_config_ark" yaml:"protocol_config_ark" mapstructure:"protocol_config_ark"`
-	ProtocolConfigOpenAI   *ProtocolConfigOpenAI   `json:"protocol_config_open_ai" yaml:"protocol_config_open_ai" mapstructure:"protocol_config_open_ai"`
+	ProtocolConfigOpenAI   *ProtocolConfigOpenAI   `json:"protocol_config_openai" yaml:"protocol_config_openai" mapstructure:"protocol_config_openai"`
 	ProtocolConfigClaude   *ProtocolConfigClaude   `json:"protocol_config_claude" yaml:"protocol_config_claude" mapstructure:"protocol_config_claude"`
 	ProtocolConfigDeepSeek *ProtocolConfigDeepSeek `json:"protocol_config_deep_seek" yaml:"protocol_config_deep_seek" mapstructure:"protocol_config_deep_seek"`
 	ProtocolConfigGemini   *ProtocolConfigGemini   `json:"protocol_config_gemini" yaml:"protocol_config_gemini" mapstructure:"protocol_config_gemini"`

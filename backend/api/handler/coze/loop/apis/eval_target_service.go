@@ -92,3 +92,9 @@ func DebugEvalTarget(ctx context.Context, c *app.RequestContext) {
 func AsyncDebugEvalTarget(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalTargetSvc.AsyncDebugEvalTarget)
 }
+
+// MockEvalTargetOutput .
+// @router /api/evaluation/v1/eval_targets/mock_output [POST]
+func MockEvalTargetOutput(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalTargetSvc.MockEvalTargetOutput)
+}

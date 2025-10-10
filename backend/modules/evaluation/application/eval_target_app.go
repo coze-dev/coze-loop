@@ -487,16 +487,64 @@ func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, r
 		HasMore:           &hasMore,
 	}, nil
 }
+func (e EvalTargetApplicationImpl) MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest) (r *eval_target.MockEvalTargetOutputResponse, err error) {
+	// 参数验证
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
+	}
+
+	// 验证targetType是否支持
+	targetType := entity.EvalTargetType(request.TargetType)
+	if e.typedOperators[targetType] == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+
+	// 使用BuildBySource构建target实体（不保存）
+	sourceTargetID := strconv.FormatInt(request.SourceTargetID, 10)
+	evalTarget, err := e.typedOperators[targetType].BuildBySource(ctx, request.WorkspaceID, sourceTargetID, request.EvalTargetVersion)
+	if err != nil {
+		return nil, err
+	}
+	if evalTarget == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("failed to build eval target from source"))
+	}
+
+	// 鉴权 - 与CreateEvalTarget保持一致，基于workspace进行鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 使用构建的target实体的output schema生成mock数据
+	var mockOutput map[string]string
+	if evalTarget.EvalTargetVersion != nil && len(evalTarget.EvalTargetVersion.OutputSchema) > 0 {
+		mockOutput, err = e.evalTargetService.GenerateMockOutputData(evalTarget.EvalTargetVersion.OutputSchema)
+		if err != nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to generate mock data: "+err.Error()))
+		}
+	} else {
+		// 如果没有输出schema，返回空对象
+		mockOutput = map[string]string{}
+	}
+
+	return &eval_target.MockEvalTargetOutputResponse{
+		EvalTarget: target.EvalTargetDO2DTO(evalTarget),
+		MockOutput: mockOutput,
+	}, nil
+}
 
 func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest) (r *eval_target.DebugEvalTargetResponse, err error) {
-	//err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	// err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 	//	ObjectID:      strconv.FormatInt(request.GetWorkspaceID(), 10),
 	//	SpaceID:       request.GetWorkspaceID(),
 	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	//})
-	//if err != nil {
+	// })
+	// if err != nil {
 	//	return nil, err
-	//}
+	// }
 
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
@@ -538,14 +586,14 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 }
 
 func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
-	//err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	// err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 	//	ObjectID:      strconv.FormatInt(request.GetWorkspaceID(), 10),
 	//	SpaceID:       request.GetWorkspaceID(),
 	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	//})
-	//if err != nil {
+	// })
+	// if err != nil {
 	//	return nil, err
-	//}
+	// }
 
 	startTime := time.Now()
 	userID := session.UserIDInCtxOrEmpty(ctx)

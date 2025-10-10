@@ -21,11 +21,11 @@ import (
 type IExptTurnResultTagRefDAO interface {
 	Create(ctx context.Context, refs []*model.ExptTurnResultTagRef) error
 	UpdateCompleteCount(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
-	Delete(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64, opts ...db.Option) error
+	Delete(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error
 
-	GetByExptID(ctx context.Context, exptID int64, spaceID int64) ([]*model.ExptTurnResultTagRef, error)
+	GetByExptID(ctx context.Context, exptID, spaceID int64) ([]*model.ExptTurnResultTagRef, error)
 	BatchGetByExptIDs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*model.ExptTurnResultTagRef, error)
-	GetByTagKeyID(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64) (*model.ExptTurnResultTagRef, error)
+	GetByTagKeyID(ctx context.Context, exptID, spaceID, tagKeyID int64) (*model.ExptTurnResultTagRef, error)
 }
 
 func NewExptTurnResultTagRefDAO(db db.Provider) IExptTurnResultTagRefDAO {
@@ -40,7 +40,7 @@ type exptTurnResultTagRefDAO struct {
 	query *query.Query
 }
 
-func (e exptTurnResultTagRefDAO) GetByTagKeyID(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64) (*model.ExptTurnResultTagRef, error) {
+func (e exptTurnResultTagRefDAO) GetByTagKeyID(ctx context.Context, exptID, spaceID, tagKeyID int64) (*model.ExptTurnResultTagRef, error) {
 	db := e.db.NewSession(ctx)
 	if contexts.CtxWriteDB(ctx) {
 		db = db.Clauses(dbresolver.Write)
@@ -80,7 +80,7 @@ func (e exptTurnResultTagRefDAO) Create(ctx context.Context, refs []*model.ExptT
 	return nil
 }
 
-func (e exptTurnResultTagRefDAO) Delete(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64, opts ...db.Option) error {
+func (e exptTurnResultTagRefDAO) Delete(ctx context.Context, exptID, spaceID, tagKeyID int64, opts ...db.Option) error {
 	// 硬删除 可能删除后再关联
 	po := &model.ExptTurnResultTagRef{}
 	db := e.db.NewSession(ctx, opts...)
@@ -93,7 +93,7 @@ func (e exptTurnResultTagRefDAO) Delete(ctx context.Context, exptID int64, space
 	return nil
 }
 
-func (e exptTurnResultTagRefDAO) GetByExptID(ctx context.Context, exptID int64, spaceID int64) ([]*model.ExptTurnResultTagRef, error) {
+func (e exptTurnResultTagRefDAO) GetByExptID(ctx context.Context, exptID, spaceID int64) ([]*model.ExptTurnResultTagRef, error) {
 	ref := e.query.ExptTurnResultTagRef
 	query := ref.WithContext(ctx)
 
@@ -105,10 +105,13 @@ func (e exptTurnResultTagRefDAO) GetByExptID(ctx context.Context, exptID int64, 
 }
 
 func (e exptTurnResultTagRefDAO) BatchGetByExptIDs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*model.ExptTurnResultTagRef, error) {
-	ref := e.query.ExptTurnResultTagRef
-	query := ref.WithContext(ctx)
+	db := e.db.NewSession(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
+	q := query.Use(db).ExptTurnResultTagRef
 
-	found, err := query.Where(ref.SpaceID.Eq(spaceID)).Where(ref.ExptID.In(exptIDs...)).Find()
+	found, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID)).Where(q.ExptID.In(exptIDs...)).Find()
 	if err != nil {
 		return nil, errorx.Wrapf(err, "BatchGetByExptIDs ExptTurnResultTagRef fail, expt_id: %v", exptIDs)
 	}

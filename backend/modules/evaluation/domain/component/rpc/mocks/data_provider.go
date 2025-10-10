@@ -290,9 +290,9 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasets(ctx, param any) *gomo
 }
 
 // QueryItemSnapshotMappings mocks base method.
-func (m *MockIDatasetRPCAdapter) QueryItemSnapshotMappings(arg0 context.Context, arg1, arg2 int64, arg3 *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+func (m *MockIDatasetRPCAdapter) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", ctx, spaceID, datasetID, versionID)
 	ret0, _ := ret[0].([]*entity.ItemSnapshotFieldMapping)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -300,9 +300,9 @@ func (m *MockIDatasetRPCAdapter) QueryItemSnapshotMappings(arg0 context.Context,
 }
 
 // QueryItemSnapshotMappings indicates an expected call of QueryItemSnapshotMappings.
-func (mr *MockIDatasetRPCAdapterMockRecorder) QueryItemSnapshotMappings(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockIDatasetRPCAdapterMockRecorder) QueryItemSnapshotMappings(ctx, spaceID, datasetID, versionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).QueryItemSnapshotMappings), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).QueryItemSnapshotMappings), ctx, spaceID, datasetID, versionID)
 }
 
 // UpdateDataset mocks base method.

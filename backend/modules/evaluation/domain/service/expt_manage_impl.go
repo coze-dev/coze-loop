@@ -413,7 +413,7 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		return t.EvaluationSetVersion.ID, t
 	})
 	evaluatorMap := gslice.ToMap(evaluators, func(t *entity.Evaluator) (int64, *entity.Evaluator) {
-		return t.GetEvaluatorVersion().GetID(), t
+		return t.GetEvaluatorVersionID(), t
 	})
 
 	res := make([]*entity.ExptTuple, 0, len(tupleIDs))
@@ -528,12 +528,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	for i, es := range tuple.Evaluators {
 		evaluatorRefs = append(evaluatorRefs, &entity.ExptEvaluatorVersionRef{
 			EvaluatorID:        es.ID,
-			EvaluatorVersionID: es.GetEvaluatorVersion().GetID(),
+			EvaluatorVersionID: es.GetEvaluatorVersionID(),
 		})
 		exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
 			SpaceID:   req.WorkspaceID,
 			ExptID:    ids[0],
-			FromField: strconv.FormatInt(es.GetEvaluatorVersion().GetID(), 10),
+			FromField: strconv.FormatInt(es.GetEvaluatorVersionID(), 10),
 			ToKey:     "key" + strconv.Itoa(i+1),
 			FieldType: entity.FieldTypeEvaluator,
 		})
@@ -615,7 +615,7 @@ func (e *ExptMangerImpl) Create(ctx context.Context, expt *entity.Experiment, se
 	return nil
 }
 
-func (e *ExptMangerImpl) Get(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) (*entity.Experiment, error) {
+func (e *ExptMangerImpl) Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error) {
 	expts, err := e.MGet(ctx, []int64{exptID}, spaceID, session)
 	if err != nil {
 		return nil, err
@@ -702,7 +702,7 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 	return e.exptRepo.Update(ctx, expt)
 }
 
-func (e *ExptMangerImpl) Delete(ctx context.Context, exptID int64, spaceID int64, session *entity.Session) error {
+func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
 	logs.CtxInfo(ctx, "delete expt, expt_id: %v", exptID)
 	return e.exptRepo.Delete(ctx, exptID, spaceID)
 }

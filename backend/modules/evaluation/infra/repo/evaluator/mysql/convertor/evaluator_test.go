@@ -418,18 +418,17 @@ func TestConvertEvaluatorVersionPO2DO(t *testing.T) {
 			}
 
 			// 验证基础信息字段
-			require.NotNil(t, got.GetEvaluatorVersion())
-			assert.Equal(t, tt.po.ID, got.GetEvaluatorVersion().GetID())
-			assert.Equal(t, tt.po.Version, got.GetEvaluatorVersion().GetVersion())
-			assert.Equal(t, tt.po.SpaceID, got.GetEvaluatorVersion().GetSpaceID())
-			assert.Equal(t, tt.po.EvaluatorID, got.GetEvaluatorVersion().GetEvaluatorID())
+			assert.Equal(t, tt.po.ID, got.GetEvaluatorVersionID())
+			assert.Equal(t, tt.po.Version, got.GetVersion())
+			assert.Equal(t, tt.po.SpaceID, got.GetSpaceID())
+			assert.Equal(t, tt.po.EvaluatorID, got.GetEvaluatorID())
 
 			if tt.po.Description != nil {
-				assert.Equal(t, *tt.po.Description, got.GetEvaluatorVersion().GetDescription())
+				assert.Equal(t, *tt.po.Description, got.GetEvaluatorVersionDescription())
 			}
 
 			// 验证 BaseInfo
-			baseInfo := got.GetEvaluatorVersion().GetBaseInfo()
+			baseInfo := got.GetBaseInfo()
 			require.NotNil(t, baseInfo)
 			assert.Equal(t, tt.po.CreatedBy, *baseInfo.CreatedBy.UserID)
 			assert.Equal(t, tt.po.UpdatedBy, *baseInfo.UpdatedBy.UserID)

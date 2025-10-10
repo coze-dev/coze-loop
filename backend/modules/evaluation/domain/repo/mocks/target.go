@@ -148,6 +148,36 @@ func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetVersion(ctx, spaceID, ve
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersion", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetVersion), ctx, spaceID, versionID)
 }
 
+// GetEvalTargetVersionBySourceTarget mocks base method.
+func (m *MockIEvalTargetRepo) GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType) (*entity.EvalTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetVersionBySourceTarget", ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType)
+	ret0, _ := ret[0].(*entity.EvalTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetVersionBySourceTarget indicates an expected call of GetEvalTargetVersionBySourceTarget.
+func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetVersionBySourceTarget(ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersionBySourceTarget", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetVersionBySourceTarget), ctx, spaceID, sourceTargetID, sourceTargetVersion, targetType)
+}
+
+// GetEvalTargetVersionByTarget mocks base method.
+func (m *MockIEvalTargetRepo) GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string) (*entity.EvalTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetVersionByTarget", ctx, spaceID, targetID, sourceTargetVersion)
+	ret0, _ := ret[0].(*entity.EvalTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetVersionByTarget indicates an expected call of GetEvalTargetVersionByTarget.
+func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetVersionByTarget(ctx, spaceID, targetID, sourceTargetVersion any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersionByTarget", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetVersionByTarget), ctx, spaceID, targetID, sourceTargetVersion)
+}
+
 // ListEvalTargetRecordByIDsAndSpaceID mocks base method.
 func (m *MockIEvalTargetRepo) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	m.ctrl.T.Helper()

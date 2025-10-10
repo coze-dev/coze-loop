@@ -9,9 +9,6 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gvalue"
-	"github.com/jinzhu/copier"
-	"gorm.io/gorm"
-
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -22,6 +19,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/pagination"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 )
 
 type TagServiceImpl struct {
@@ -724,6 +723,8 @@ func (s *TagServiceImpl) ArchiveOptionTag(ctx context.Context, spaceID, tagKeyID
 	val.SetUpdatedAt(time.Now())
 	val.SetUpdatedBy(session.UserIDInCtxOrEmpty(ctx))
 	val.SetAppID(session.AppIDInCtxOrEmpty(ctx))
+	val.SetCreatedBy(session.UserIDInCtxOrEmpty(ctx))
+	val.SetCreatedAt(time.Now())
 	val.SetSpaceID(spaceID)
 
 	// check tag key name
@@ -756,8 +757,6 @@ func (s *TagServiceImpl) ArchiveOptionTag(ctx context.Context, spaceID, tagKeyID
 		logs.CtxError(ctx, "[UpdateTag] get latest tag failed, spaceID: %d, tagKeyID: %d, err: %v", spaceID, tagKeyID, err)
 		return err
 	}
-	val.SetCreatedBy(*preTagKey.CreatedBy)
-	val.SetCreatedAt(preTagKey.CreatedAt)
 	// 计算更新日志
 	changeLogs, err := val.CalculateChangeLogs(preTagKey)
 	if err != nil {

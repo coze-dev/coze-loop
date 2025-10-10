@@ -132,13 +132,15 @@ func openAIBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opti
 		cfg.APIVersion = pc.ApiVersion
 		var js acl_openai.ChatCompletionResponseFormatJSONSchema
 		if pc.ResponseFormatJsonSchema != "" {
-			if err := sonic.UnmarshalString(pc.ResponseFormatJsonSchema, js); err != nil {
+			if err := sonic.UnmarshalString(pc.ResponseFormatJsonSchema, &js); err != nil {
 				return nil, err
 			}
-		}
-		cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
-			Type:       acl_openai.ChatCompletionResponseFormatType(pc.ResponseFormatType),
-			JSONSchema: &js,
+			if pc.ResponseFormatType != "" {
+				cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
+					Type:       acl_openai.ChatCompletionResponseFormatType(pc.ResponseFormatType),
+					JSONSchema: &js,
+				}
+			}
 		}
 	}
 	if ops.ResponseFormat != nil {

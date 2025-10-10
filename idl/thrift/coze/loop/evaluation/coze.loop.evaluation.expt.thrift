@@ -451,6 +451,102 @@ struct GetExptResultExportRecordResponse {
 }
 
 
+struct GetExptInsightAnalysisRecordRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct GetExptInsightAnalysisRecordResponse {
+    1: optional expt.ExptInsightAnalysisRecord expt_insight_analysis_record
+
+    255: base.BaseResp BaseResp
+}
+
+struct InsightAnalysisExperimentRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct InsightAnalysisExperimentResponse {
+    1: required i64 insight_analysis_record_id (api.body = "insight_analysis_record_id", api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListExptInsightAnalysisRecordRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: optional i32 page_number (api.body='page_number')
+    4: optional i32 page_size (api.body='page_size')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct ListExptInsightAnalysisRecordResponse {
+    1: required list<expt.ExptInsightAnalysisRecord> expt_insight_analysis_records
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
+    255: base.BaseResp BaseResp
+}
+
+struct DeleteExptInsightAnalysisRecordRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct DeleteExptInsightAnalysisRecordResponse {
+
+    255: base.BaseResp BaseResp
+}
+
+struct FeedbackExptInsightAnalysisReportRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+    4: required expt.FeedbackActionType feedback_action_type
+    5: optional string comment
+    6: optional i64 comment_id (api.body = 'comment_id', api.js_conv = 'true', go.tag = 'json:"comment_id"')    // 用于更新comment
+
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct FeedbackExptInsightAnalysisReportResponse {
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListExptInsightAnalysisCommentRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+    4: optional i32 page_number (api.body='page_number')
+    5: optional i32 page_size (api.body='page_size')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct ListExptInsightAnalysisCommentResponse {
+    1: required list<expt.ExptInsightAnalysisFeedbackComment> expt_insight_analysis_feedback_comments
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
+    255: base.BaseResp BaseResp
+}
+
 service ExperimentService {
 
     CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (api.post = '/api/evaluation/v1/experiments/check_name')
@@ -505,5 +601,13 @@ service ExperimentService {
     ExportExptResultResponse ExportExptResult(1: ExportExptResultRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/results/export")
     ListExptResultExportRecordResponse ListExptResultExportRecord(1: ListExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/list")
     GetExptResultExportRecordResponse GetExptResultExportRecord(1: GetExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/:export_id")
+
+    // 报告分析
+    InsightAnalysisExperimentResponse InsightAnalysisExperiment(1: InsightAnalysisExperimentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis")
+    ListExptInsightAnalysisRecordResponse ListExptInsightAnalysisRecord(1: ListExptInsightAnalysisRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/list")
+    DeleteExptInsightAnalysisRecordResponse DeleteExptInsightAnalysisRecord(1: DeleteExptInsightAnalysisRecordRequest req) (api.delete="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id")
+    GetExptInsightAnalysisRecordResponse GetExptInsightAnalysisRecord(1: GetExptInsightAnalysisRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id")
+    FeedbackExptInsightAnalysisReportResponse FeedbackExptInsightAnalysisReport(1: FeedbackExptInsightAnalysisReportRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/feedback")
+    ListExptInsightAnalysisCommentResponse ListExptInsightAnalysisComment(1: ListExptInsightAnalysisCommentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list")
 }
 

@@ -245,6 +245,14 @@ struct AsyncDebugEvalTargetRequest {
     12: optional string env    // 环境
 
     50: optional eval_target.CustomRPCServer custom_rpc_server    // 如果type=6,需要前端传入自定义服务相关信息
+    255: optional base.Base Base
+}
+
+struct MockEvalTargetOutputRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: required i64 source_target_id (api.js_conv="true", go.tag = 'json:"source_target_id"') // EvalTargetID参数实际上为SourceTargetID
+    3: required string eval_target_version
+    4: required eval_target.EvalTargetType target_type
 
     255: optional base.Base Base
 }
@@ -252,6 +260,11 @@ struct AsyncDebugEvalTargetRequest {
 struct AsyncDebugEvalTargetResponse {
     1: required i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
     2: optional string callee
+    255: base.BaseResp BaseResp
+}
+struct MockEvalTargetOutputResponse {
+    1: optional eval_target.EvalTarget eval_target
+    2: optional map<string,string> mock_output
 
     255: base.BaseResp BaseResp
 }
@@ -282,4 +295,7 @@ service EvalTargetService {
     // debug
     DebugEvalTargetResponse DebugEvalTarget(1: DebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/debug")
     AsyncDebugEvalTargetResponse AsyncDebugEvalTarget(1: AsyncDebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/async_debug")
+
+    // mock输出数据
+        MockEvalTargetOutputResponse MockEvalTargetOutput(1: MockEvalTargetOutputRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/mock_output")
 } (api.js_conv="true" )

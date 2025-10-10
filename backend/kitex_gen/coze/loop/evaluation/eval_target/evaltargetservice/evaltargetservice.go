@@ -111,6 +111,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"MockEvalTargetOutput": kitex.NewMethodInfo(
+		mockEvalTargetOutputHandler,
+		newEvalTargetServiceMockEvalTargetOutputArgs,
+		newEvalTargetServiceMockEvalTargetOutputResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -410,6 +417,25 @@ func newEvalTargetServiceAsyncDebugEvalTargetResult() interface{} {
 	return eval_target.NewEvalTargetServiceAsyncDebugEvalTargetResult()
 }
 
+func mockEvalTargetOutputHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceMockEvalTargetOutputArgs)
+	realResult := result.(*eval_target.EvalTargetServiceMockEvalTargetOutputResult)
+	success, err := handler.(eval_target.EvalTargetService).MockEvalTargetOutput(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceMockEvalTargetOutputArgs() interface{} {
+	return eval_target.NewEvalTargetServiceMockEvalTargetOutputArgs()
+}
+
+func newEvalTargetServiceMockEvalTargetOutputResult() interface{} {
+	return eval_target.NewEvalTargetServiceMockEvalTargetOutputResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -557,6 +583,16 @@ func (p *kClient) AsyncDebugEvalTarget(ctx context.Context, request *eval_target
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceAsyncDebugEvalTargetResult
 	if err = p.c.Call(ctx, "AsyncDebugEvalTarget", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest) (r *eval_target.MockEvalTargetOutputResponse, err error) {
+	var _args eval_target.EvalTargetServiceMockEvalTargetOutputArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceMockEvalTargetOutputResult
+	if err = p.c.Call(ctx, "MockEvalTargetOutput", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

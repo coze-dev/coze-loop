@@ -249,3 +249,159 @@ error_code:
     message: accessing endpoint error
     description: Accessing endpoint error
     no_affect_stability: true
+
+  - name: InvalidInputData
+    code: 5029
+    message: invalid input data
+    description: invalid input data
+    no_affect_stability: true
+
+  - name: InvalidCodeContent
+    code: 5030
+    message: invalid code content
+    description: invalid code content
+    no_affect_stability: true
+
+  - name: InvalidLanguageType
+    code: 5031
+    message: invalid language type
+    description: invalid language type
+    no_affect_stability: true
+
+  - name: CodeExecutionFailed
+    code: 5032
+    message: code execution failed
+    description: code execution failed
+    no_affect_stability: true
+
+  - name: CodeValidationFailed
+    code: 5033
+    message: code validation failed
+    description: code validation failed
+    no_affect_stability: true
+
+  - name: ResultParseFailed
+    code: 5034
+    message: result parse failed
+    description: result parse failed
+    no_affect_stability: true
+
+  - name: InvalidEvaluatorType
+    code: 5028
+    message: invalid evaluator type
+    description: invalid evaluator type
+    no_affect_stability: true
+
+  - name: MaliciousCodePatternDetected
+    code: 5035
+    message: malicious code pattern detected
+    description: detected specific malicious code pattern with detailed information
+    no_affect_stability: true
+
+  # 基础设施相关错误 (5036-5040)
+  - name: FileURLRetrieveFailed
+    code: 5036
+    message: failed to retrieve file URLs
+    description: failed to retrieve file URLs from file provider
+    no_affect_stability: false
+
+  - name: GoroutinePoolCreateFailed
+    code: 5037
+    message: failed to create goroutine pool
+    description: failed to create goroutine pool for concurrent execution
+    no_affect_stability: false
+
+  - name: BatchTaskExecutionFailed
+    code: 5038
+    message: failed to execute batch tasks
+    description: failed to execute batch debug tasks in goroutine pool
+    no_affect_stability: false
+
+  # 代码构建和运行时错误 (5041-5045)
+  - name: CodeBuilderGetFailed
+    code: 5041
+    message: failed to get code builder
+    description: failed to get code builder for specified language
+    no_affect_stability: true
+
+  - name: CodeBuildFailed
+    code: 5042
+    message: failed to build code
+    description: failed to build user code with template
+    no_affect_stability: true
+
+  - name: RuntimeGetFailed
+    code: 5043
+    message: failed to get runtime
+    description: failed to get runtime for specified language
+    no_affect_stability: true
+
+  # 语法和内容验证错误 (5046-5050)
+  - name: EmptyCodeContent
+    code: 5046
+    message: code content is empty
+    description: user provided code content is empty
+    no_affect_stability: true
+
+  - name: SyntaxValidationFailed
+    code: 5047
+    message: syntax validation failed
+    description: code syntax validation failed during execution
+    no_affect_stability: true
+
+  - name: SyntaxValidationResultParseFailed
+    code: 5048
+    message: failed to parse syntax validation result
+    description: failed to parse syntax validation execution result
+    no_affect_stability: true
+
+  # 安全检查错误 (5051-5055)
+  - name: DangerousFunctionDetected
+    code: 5051
+    message: dangerous function detected
+    description: detected dangerous function call in user code
+    no_affect_stability: true
+
+  - name: DangerousImportDetected
+    code: 5052
+    message: dangerous import detected
+    description: detected dangerous module import in user code
+    no_affect_stability: true
+
+  - name: RequiredFunctionNotFound
+    code: 5053
+    message: required function not found
+    description: required function definition not found in user code
+    no_affect_stability: true
+
+  # 数据解析错误 (5056-5060)
+  - name: ExecutionResultEmpty
+    code: 5056
+    message: execution result is empty
+    description: execution result stdout or ret_val is empty
+    no_affect_stability: true
+
+  - name: ExecutionResultParseFailed
+    code: 5057
+    message: failed to parse execution result
+    description: failed to parse execution result JSON format
+    no_affect_stability: true
+
+  # 通用错误
+  - name: UnsupportedLanguageType
+    code: 5058
+    message: unsupported language type
+    description: the specified language type is not supported
+    no_affect_stability: true
+
+  - name: InvalidEvaluatorConfiguration
+    code: 5059
+    message: invalid evaluator configuration
+    description: evaluator configuration is invalid or incomplete
+    no_affect_stability: true
+
+  - name: ExecutionResultNil
+    code: 5060
+    message: execution result is nil
+    description: execution result object is nil
+    no_affect_stability: true

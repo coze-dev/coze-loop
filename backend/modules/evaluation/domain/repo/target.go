@@ -14,6 +14,8 @@ type IEvalTargetRepo interface {
 	CreateEvalTarget(ctx context.Context, do *entity.EvalTarget) (id, versionID int64, err error)
 	GetEvalTarget(ctx context.Context, targetID int64) (do *entity.EvalTarget, err error)
 	GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64) (do *entity.EvalTarget, err error)
+	GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string) (do *entity.EvalTarget, err error)
+	GetEvalTargetVersionBySourceTarget(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, targetType entity.EvalTargetType) (do *entity.EvalTarget, err error)
 	BatchGetEvalTargetBySource(ctx context.Context, param *BatchGetEvalTargetBySourceParam) (dos []*entity.EvalTarget, err error)
 	BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64) (dos []*entity.EvalTarget, err error)
 

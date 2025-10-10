@@ -167,6 +167,7 @@ type RunEvaluatorRequest struct {
 	ItemID             int64               `json:"item_id,omitempty"`
 	TurnID             int64               `json:"turn_id,omitempty"`
 	Ext                map[string]string   `json:"ext,omitempty"`
+	DisableTracing     bool                `json:"disable_tracing,omitempty"`
 }
 
 type CreateExptParam struct {

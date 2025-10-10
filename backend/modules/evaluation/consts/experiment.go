@@ -29,3 +29,7 @@ const (
 	FieldAdapterBuiltinFieldNameRuntimeParam = "builtin_runtime_param"
 	TargetExecuteExtRuntimeParamKey          = "builtin_runtime_param"
 )
+
+const (
+	InsightAnalysisNotifyCardID = "AAq9DvIYd2qHu"
+)

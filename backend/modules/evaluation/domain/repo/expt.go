@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IEvalAsyncRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IEvalAsyncRepo,IExptInsightAnalysisRecordRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
@@ -55,7 +55,7 @@ type IExptTurnResultRepo interface {
 	ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
 	ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error)
-	Get(ctx context.Context, spaceID, exptID int64, itemID, turnID int64) (*entity.ExptTurnResult, error)
+	Get(ctx context.Context, spaceID, exptID, itemID, turnID int64) (*entity.ExptTurnResult, error)
 	CreateTurnEvaluatorRefs(ctx context.Context, turnResults []*entity.ExptTurnEvaluatorResultRef) error
 	BatchCreateNX(ctx context.Context, turnResults []*entity.ExptTurnResult) error
 	GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64) ([]*entity.ExptTurnResult, error)
@@ -138,4 +138,22 @@ type IExptResultExportRecordRepo interface {
 type IEvalAsyncRepo interface {
 	GetEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
 	SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error
+}
+type IExptInsightAnalysisRecordRepo interface {
+	CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) (int64, error)
+	UpdateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error
+	GetAnalysisRecordByID(ctx context.Context, spaceID, exptID, recordID int64) (*entity.ExptInsightAnalysisRecord, error)
+	ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*entity.ExptInsightAnalysisRecord, int64, error)
+	DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error
+
+	CreateFeedbackComment(ctx context.Context, feedbackComment *entity.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
+	UpdateFeedbackComment(ctx context.Context, feedbackComment *entity.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
+	GetFeedbackCommentByRecordID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackComment, error)
+	DeleteFeedbackComment(ctx context.Context, spaceID, exptID, commentID int64) error
+	List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*entity.ExptInsightAnalysisFeedbackComment, int64, error)
+
+	CreateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
+	UpdateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
+	GetFeedbackVoteByUser(ctx context.Context, spaceID, exptID, recordID int64, userID string, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackVote, error)
+	CountFeedbackVote(ctx context.Context, spaceID, exptID, recordID int64) (int64, int64, error)
 }

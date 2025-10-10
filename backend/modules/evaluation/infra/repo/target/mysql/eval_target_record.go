@@ -50,7 +50,7 @@ func (e *EvalTargetRecordDAOImpl) Create(ctx context.Context, record *model.Targ
 	return record.ID, nil
 }
 
-func (e *EvalTargetRecordDAOImpl) GetByIDAndSpaceID(ctx context.Context, recordID int64, spaceID int64) (*model.TargetRecord, error) {
+func (e *EvalTargetRecordDAOImpl) GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error) {
 	q := e.query
 	first, err := q.WithContext(ctx).TargetRecord.Where(q.TargetRecord.SpaceID.Eq(spaceID), q.TargetRecord.ID.Eq(recordID), q.TargetRecord.DeletedAt.IsNull()).First()
 
