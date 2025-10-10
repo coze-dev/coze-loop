@@ -380,14 +380,6 @@ func TestEvalTargetVersionDO2DTO(t *testing.T) {
 						"test": "test",
 					},
 				},
-				VolcengineAgent: &do.VolcengineAgent{
-					VolcengineAgentEndpoints: []*do.VolcengineAgentEndpoint{
-						{
-							EndpointID: "test",
-							APIKey:     "test",
-						},
-					},
-				},
 			},
 			expected: &dto.EvalTargetVersion{
 				ID:                  gptr.Of(int64(1)),

@@ -64,6 +64,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 					EvalTargetType:      &validEvalTargetType,
 					BotInfoType:         &validBotInfoType,
 					BotPublishVersion:   &validBotPublishVersion,
+					CustomEvalTarget: &domain_eval_target.CustomEvalTarget{
+						Name: gptr.Of("test"),
+					},
 				},
 			},
 			mockSetup: func() {
