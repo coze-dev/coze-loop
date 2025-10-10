@@ -2666,6 +2666,18 @@ interface I18nTranslateFn {
   (key: 'evaluate_debug_failed_no_evaluation_result', fallbackText?: string): string;
   /** 你可以直接使用home */
   (key: 'evaluate_you_can_use_directly', fallbackText?: string): string;
+  /** 全屏 */
+  (key: 'evaluate_full_screen', fallbackText?: string): string;
+  /** 选择模板 */
+  (key: 'evaluate_template_select', fallbackText?: string): string;
+  /** 执行函数体 */
+  (key: 'evaluate_func_body', fallbackText?: string): string;
+  /** 测试数据：turn */
+  (key: 'evaluate_test_data_turn', fallbackText?: string): string;
+  /** 支持 Python / Javascript 内置库，部分三方库。更多使用说明参见 */
+  (key: 'evaluate_test_data_tutorial_tip', fallbackText?: string): string;
+  /** Code评估器手册 */
+  (key: 'evaluate_test_data_tutorial_link', fallbackText?: string): string;
   /** 图片不可访问 */
   (key: 'analytics_image_error', fallbackText?: string): string;
   /** Arguments */

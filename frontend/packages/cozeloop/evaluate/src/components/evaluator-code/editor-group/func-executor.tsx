@@ -10,6 +10,7 @@ import {
 import { CodeEvaluatorLanguageFE } from '@/constants';
 
 import type { BaseFuncExecutorProps } from '../types';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 const languageOptions = [
   { label: 'JavaScript', value: CodeEvaluatorLanguageFE.Javascript },
@@ -116,7 +117,9 @@ export const BaseFuncExecutor: React.FC<BaseFuncExecutorProps> = ({
           borderBottom: '1px solid rgba(82, 100, 154, 0.13)',
         }}
       >
-        <h3 className="text-sm font-medium text-gray-900 mr-4">执行函数体</h3>
+        <h3 className="text-sm font-medium text-gray-900 mr-4">
+          {I18n.t('evaluate_func_body')}
+        </h3>
         <Select
           value={language}
           onChange={v => handleLanguageChange(v as CodeEvaluatorLanguageFE)}

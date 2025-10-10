@@ -736,5 +736,11 @@
   "evaluate_code_content": "Code Content",
   "evaluate_no_config_info": "No Configuration Information",
   "evaluate_debug_failed_no_evaluation_result": "Debug Failed: No Evaluation Result Returned",
-  "evaluate_you_can_use_directly": "You can use directly"
+  "evaluate_you_can_use_directly": "You can use directly",
+  "evaluate_full_screen": "Full Screen",
+  "evaluate_template_select": "Select Template",
+  "evaluate_func_body": "Function Body",
+  "evaluate_test_data_turn": "Test Data: turn",
+  "evaluate_test_data_tutorial_tip": "It supports Python and JavaScript built - in libraries and some third - party libraries. For more usage instructions, please refer to...",
+  "evaluate_test_data_tutorial_link": "Code Evaluator Manual"
 }

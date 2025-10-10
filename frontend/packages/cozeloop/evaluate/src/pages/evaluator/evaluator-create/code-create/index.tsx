@@ -496,7 +496,7 @@ const CodeEvaluatorCreatePage = () => {
                 icon={<IconCozExpand />}
                 onClick={handleFullscreenToggle}
               >
-                全屏
+                {I18n.t('evaluate_full_screen')}
               </Button>
               <Button
                 size="mini"
@@ -505,7 +505,7 @@ const CodeEvaluatorCreatePage = () => {
                 icon={<IconCozTemplate />}
                 onClick={() => setTemplateModalVisible(true)}
               >
-                {`选择模板${
+                {`${I18n.t('evaluate_template_select')}${
                   templateInfo?.name ? `(${templateInfo.name})` : ''
                 }`}
               </Button>
@@ -518,13 +518,13 @@ const CodeEvaluatorCreatePage = () => {
             className="!bg-[var(--coz-mg-secondary)] text-[12px] font-normal !text-[color:var(--coz-fg-primary)] rounded-lg"
             description={
               <div>
-                支持 Python / Javascript 内置库，部分三方库。更多使用说明参见
+                {I18n.t('evaluate_test_data_tutorial_tip')}
                 <a
                   href={CODE_EVALUATOR_DOCUMENT_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Code评估器手册
+                  {I18n.t('evaluate_test_data_tutorial_link')}
                 </a>
               </div>
             }

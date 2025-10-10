@@ -186,7 +186,7 @@ const BaseDataSetConfig: React.FC<
         >
           <div className="flex items-center space-x-2">
             <h3 className="text-sm font-medium text-gray-900">
-              测试数据：turn
+              {I18n.t('evaluate_test_data_turn')}
             </h3>
             <Tooltip
               content={toolTipContent}

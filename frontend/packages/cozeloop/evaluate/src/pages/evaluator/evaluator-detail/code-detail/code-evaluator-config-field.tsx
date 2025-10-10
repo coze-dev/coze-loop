@@ -118,7 +118,7 @@ export function CodeEvaluatorConfigField({
               icon={<IconCozExpand />}
               onClick={onFullscreenToggle}
             >
-              全屏
+              {I18n.t('evaluate_full_screen')}
             </Button>
           ) : null}
           {onOpenTemplateModal ? (
@@ -129,7 +129,9 @@ export function CodeEvaluatorConfigField({
               icon={<IconCozTemplate />}
               onClick={onOpenTemplateModal}
             >
-              {`选择模板${templateInfo?.name ? `(${templateInfo.name})` : ''}`}
+              {`${I18n.t('evaluate_template_select')}${
+                templateInfo?.name ? `(${templateInfo.name})` : ''
+              }`}
             </Button>
           ) : null}
         </div>

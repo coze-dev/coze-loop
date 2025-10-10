@@ -8,6 +8,7 @@ import type { IFormValues } from '@/components/evaluator-code/types';
 import CodeEvaluatorConfig from '@/components/evaluator-code';
 
 import styles from './index.module.less';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 const INIT_DELAY = 200;
 
@@ -66,7 +67,7 @@ const FullScreenEditorConfigModal = (
             className="text-[20px] font-medium"
             style={{ color: 'rgba(8,13,30,0.90)' }}
           >
-            评估器配置
+            {I18n.t('evaluate_evaluator_config')}
           </div>
           <div className="flex flex-row items-center gap-2">
             <Guard point={GuardPoint['eval.evaluator_create.debug']} realtime>
@@ -84,7 +85,7 @@ const FullScreenEditorConfigModal = (
                 }}
                 loading={debugLoading}
               >
-                试运行
+                {I18n.t('evaluate_trial_run')}
               </Button>
             </Guard>
 
