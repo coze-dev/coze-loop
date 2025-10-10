@@ -30,9 +30,13 @@ func ToJSONString(ctx context.Context, obj interface{}) string {
 }
 
 func fillCtxWithEnv(ctx context.Context) context.Context {
-	ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
-	if env := os.Getenv(XttEnv); env != "" {
-		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	if os.Getenv("TCE_HOST_ENV") == "boe" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
+	} else {
+		ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task")
 	}
+	//if env := os.Getenv(XttEnv); env != "" {
+	//	ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	//}
 	return ctx
 }
