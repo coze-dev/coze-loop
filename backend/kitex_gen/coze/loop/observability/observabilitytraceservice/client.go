@@ -13,6 +13,7 @@ import (
 type Client interface {
 	ListSpans(ctx context.Context, req *trace.ListSpansRequest, callOptions ...callopt.Option) (r *trace.ListSpansResponse, err error)
 	GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error)
+	SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest, callOptions ...callopt.Option) (r *trace.SearchTraceTreeResponse, err error)
 	BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (r *trace.BatchGetTracesAdvanceInfoResponse, err error)
 	IngestTracesInner(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (r *trace.IngestTracesResponse, err error)
 	GetTracesMetaInfo(ctx context.Context, req *trace.GetTracesMetaInfoRequest, callOptions ...callopt.Option) (r *trace.GetTracesMetaInfoResponse, err error)
@@ -65,6 +66,11 @@ func (p *kObservabilityTraceServiceClient) ListSpans(ctx context.Context, req *t
 func (p *kObservabilityTraceServiceClient) GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetTrace(ctx, req)
+}
+
+func (p *kObservabilityTraceServiceClient) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest, callOptions ...callopt.Option) (r *trace.SearchTraceTreeResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchTraceTree(ctx, req)
 }
 
 func (p *kObservabilityTraceServiceClient) BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (r *trace.BatchGetTracesAdvanceInfoResponse, err error) {
