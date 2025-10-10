@@ -374,6 +374,6 @@ func (h *TraceHubServiceImpl) getObjListWithTaskFromCache(ctx context.Context) (
 		return h.taskRepo.GetObjListWithTask(ctx)
 	}
 
-	logs.CtxInfo(ctx, "从缓存获取任务列表", "taskCount", len(cacheInfo.Tasks), "spaceCount", len(cacheInfo.WorkspaceIDs), "botCount", len(cacheInfo.BotIDs))
+	logs.CtxInfo(ctx, "从缓存获取任务列表, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
 	return cacheInfo.WorkspaceIDs, cacheInfo.BotIDs, cacheInfo.Tasks
 }

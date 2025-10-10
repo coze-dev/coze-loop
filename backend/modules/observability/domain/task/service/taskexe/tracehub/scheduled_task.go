@@ -434,10 +434,7 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	defer h.taskCacheLock.Unlock()
 
 	// 清空旧缓存
-	h.taskCache.Range(func(key, value interface{}) bool {
-		h.taskCache.Delete(key)
-		return true
-	})
+	h.taskCache.Delete("ObjListWithTask")
 
 	// 4. 将新缓存写入本地缓存
 	h.taskCache.Store("ObjListWithTask", &newCache)
