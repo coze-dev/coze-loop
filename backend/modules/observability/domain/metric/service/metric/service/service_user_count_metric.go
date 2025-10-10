@@ -31,7 +31,7 @@ func (m *ServiceUserCountMetric) Expression(granularity entity.MetricGranularity
 }
 
 func (m *ServiceUserCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildRootSpanFilter(ctx, env)
+	return filter.BuildALLSpanFilter(ctx, env)
 }
 
 func (m *ServiceUserCountMetric) GroupBy() []*entity.Dimension {
