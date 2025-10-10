@@ -187,6 +187,7 @@ var (
 		foundation.NewAuthRPCProvider,
 		targetDomainService,
 		flagSet,
+		evalAsyncRepoSet,
 	)
 
 	evalAsyncRepoSet = wire.NewSet(

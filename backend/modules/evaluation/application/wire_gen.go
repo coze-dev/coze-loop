@@ -206,7 +206,9 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
 	v := NewSourceTargetOperators(iPromptRPCAdapter)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v)
-	evalTargetService := NewEvalTargetHandlerImpl(iAuthProvider, iEvalTargetService, v)
+	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
+	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
+	evalTargetService := NewEvalTargetHandlerImpl(iAuthProvider, iEvalTargetService, v, iEvalAsyncRepo)
 	return evalTargetService
 }
 
@@ -263,6 +265,7 @@ var (
 	evalTargetSet = wire.NewSet(
 		NewEvalTargetHandlerImpl, metrics3.NewEvalTargetMetrics, foundation.NewAuthRPCProvider, targetDomainService,
 		flagSet,
+		evalAsyncRepoSet,
 	)
 
 	evalAsyncRepoSet = wire.NewSet(experiment.NewEvalAsyncRepo, dao.NewEvalAsyncDAO)

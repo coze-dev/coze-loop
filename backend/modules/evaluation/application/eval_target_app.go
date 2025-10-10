@@ -7,10 +7,12 @@ import (
 	"context"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	eval_target_dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -20,10 +22,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
@@ -32,6 +36,7 @@ type EvalTargetApplicationImpl struct {
 	auth              rpc.IAuthProvider
 	evalTargetService service.IEvalTargetService
 	typedOperators    map[entity.EvalTargetType]service.ISourceEvalTargetOperateService
+	evalAsyncRepo     repo.IEvalAsyncRepo
 }
 
 var (
@@ -39,14 +44,18 @@ var (
 	evalTargetHandler     evaluation.EvalTargetService
 )
 
-func NewEvalTargetHandlerImpl(auth rpc.IAuthProvider, evalTargetService service.IEvalTargetService,
+func NewEvalTargetHandlerImpl(
+	auth rpc.IAuthProvider,
+	evalTargetService service.IEvalTargetService,
 	typedOperators map[entity.EvalTargetType]service.ISourceEvalTargetOperateService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) evaluation.EvalTargetService {
 	evalTargetHandlerOnce.Do(func() {
 		evalTargetHandler = &EvalTargetApplicationImpl{
 			auth:              auth,
 			evalTargetService: evalTargetService,
 			typedOperators:    typedOperators,
+			evalAsyncRepo:     evalAsyncRepo,
 		}
 	})
 	return evalTargetHandler
@@ -539,6 +548,8 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 	//	return nil, err
 	//}
 
+	startTime := time.Now()
+	userID := session.UserIDInCtxOrEmpty(ctx)
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
@@ -569,6 +580,38 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 		if err != nil {
 			return nil, err
 		}
+
+		recordID := record.ID
+		if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(recordID, 10), &entity.EvalAsyncCtx{
+			TurnID:      recordID,
+			AsyncUnixMS: startTime.UnixMilli(),
+			Session:     &entity.Session{UserID: userID},
+			Callee:      callee,
+		}); err != nil {
+			return nil, err
+		}
+
+		if err := e.evalTargetService.CreateRecord(ctx, &entity.EvalTargetRecord{
+			ID:                  recordID,
+			SpaceID:             request.GetWorkspaceID(),
+			LogID:               logs.GetLogID(ctx),
+			EvalTargetInputData: &entity.EvalTargetInputData{InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) { return k, target.ToSPIContentDO(v) })},
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				OutputFields:    map[string]*entity.Content{},
+				EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 0, OutputTokens: 0},
+				TimeConsumingMS: gptr.Of(int64(0)),
+			},
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+				UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+				CreatedAt: gptr.Of(time.Now().UnixMilli()),
+				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+			},
+		}); err != nil {
+			return nil, err
+		}
+
 		return &eval_target.AsyncDebugEvalTargetResponse{
 			InvokeID: record.ID,
 			Callee:   gptr.Of(callee),

@@ -8,10 +8,7 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
-	"github.com/google/wire"
-
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -44,6 +41,7 @@ import (
 	application6 "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	application2 "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
