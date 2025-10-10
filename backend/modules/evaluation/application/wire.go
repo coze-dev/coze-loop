@@ -9,7 +9,9 @@ package application
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/google/wire"
+	"github.com/sirupsen/logrus"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -33,6 +35,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	componentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -55,6 +58,7 @@ import (
 	iredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem/redis"
 	targetrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
@@ -78,6 +82,7 @@ var (
 		domainservice.NewExptRecordEvalService,
 		domainservice.NewExptAnnotateService,
 		domainservice.NewExptResultExportService,
+		domainservice.NewInsightAnalysisService,
 		domainservice.NewSchedulerModeFactory,
 		experiment.NewExptRepo,
 		experiment.NewExptStatsRepo,
@@ -88,6 +93,7 @@ var (
 		experiment.NewExptTurnResultFilterRepo,
 		experiment.NewExptAnnotateRepo,
 		experiment.NewExptResultExportRecordRepo,
+		experiment.NewExptInsightAnalysisRecordRepo,
 		experiment.NewQuotaService,
 		idem.NewIdempotentService,
 		exptmysql.NewExptDAO,
@@ -103,6 +109,9 @@ var (
 		exptmysql.NewAnnotateRecordDAO,
 		exptmysql.NewExptTurnResultTagRefDAO,
 		exptmysql.NewExptResultExportRecordDAO,
+		exptmysql.NewExptInsightAnalysisRecordDAO,
+		exptmysql.NewExptInsightAnalysisFeedbackVoteDAO,
+		exptmysql.NewExptInsightAnalysisFeedbackCommentDAO,
 		exptredis.NewQuotaDAO,
 		iredis.NewIdemDAO,
 		exptck.NewExptTurnResultFilterDAO,
@@ -113,6 +122,8 @@ var (
 		foundation.NewAuthRPCProvider,
 		foundation.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
+		agent.NewAgentAdapter,
+		notify.NewNotifyRPCAdapter,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		evalSetDomainService,
@@ -126,6 +137,12 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
+		NewStubRuntimeFactory,
+		NewStubRuntimeManagerFromFactory,
+		NewSandboxConfig,
+		NewLogger,
+
+		service.NewCodeBuilderFactory,
 		evaluatorrepo.NewEvaluatorRepo,
 		evaluatorrepo.NewEvaluatorRecordRepo,
 		evaluatormysql.NewEvaluatorDAO,
@@ -269,15 +286,54 @@ func InitEvalTargetApplication(ctx context.Context,
 	executeClient promptexecuteservice.Client,
 	authClient authservice.Client,
 	cmdable redis.Cmdable,
-	meter metrics.Meter) evaluation.EvalTargetService {
+	meter metrics.Meter,
+) evaluation.EvalTargetService {
 	wire.Build(
 		evalTargetSet,
 	)
 	return nil
 }
 
-func NewEvaluatorSourceServices(llmProvider componentrpc.ILLMProvider, metric mtr.EvaluatorExecMetrics, config evalconf.IConfiger) []domainservice.EvaluatorSourceService {
-	return []domainservice.EvaluatorSourceService{
+// NewSandboxConfig 创建默认沙箱配置
+func NewSandboxConfig() *entity.SandboxConfig {
+	return entity.DefaultSandboxConfig()
+}
+
+// NewLogger 创建默认日志记录器
+func NewLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+	return logger
+}
+
+// NewStubRuntimeFactory 创建存根运行时工厂
+func NewStubRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
+	return service.NewStubRuntimeFactory(logger, sandboxConfig)
+}
+
+// NewStubRuntimeManagerFromFactory 从工厂创建存根运行时管理器
+func NewStubRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return service.NewStubRuntimeManager(factory, logger)
+}
+
+func NewEvaluatorSourceServices(
+	llmProvider componentrpc.ILLMProvider,
+	metric mtr.EvaluatorExecMetrics,
+	config evalconf.IConfiger,
+	runtimeManager component.IRuntimeManager,
+	codeBuilderFactory service.CodeBuilderFactory,
+) map[entity.EvaluatorType]domainservice.EvaluatorSourceService {
+	// 设置codeBuilderFactory的runtimeManager依赖
+	codeBuilderFactory.SetRuntimeManager(runtimeManager)
+
+	services := []domainservice.EvaluatorSourceService{
 		domainservice.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config),
+		domainservice.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric),
 	}
+
+	serviceMap := make(map[entity.EvaluatorType]domainservice.EvaluatorSourceService)
+	for _, svc := range services {
+		serviceMap[svc.EvaluatorType()] = svc
+	}
+	return serviceMap
 }

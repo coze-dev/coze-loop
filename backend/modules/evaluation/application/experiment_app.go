@@ -40,6 +40,7 @@ type IExperimentApplication interface {
 	service.ExptItemEvalEvent
 	service.ExptAggrResultService
 	service.IExptResultExportService
+	service.IExptInsightAnalysisService
 }
 
 type experimentApplication struct {
@@ -56,6 +57,7 @@ type experimentApplication struct {
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	userInfoService userinfo.UserInfoService
+	service.IExptInsightAnalysisService
 
 	evalTargetService        service.IEvalTargetService
 	evaluationSetItemService service.EvaluationSetItemService
@@ -68,7 +70,6 @@ func NewExperimentApplication(
 	manager service.IExptManager,
 	scheduler service.ExptSchedulerEvent,
 	recordEval service.ExptItemEvalEvent,
-	// tupleSvc service.IExptTupleService,
 	idgen idgen.IIDGenerator,
 	configer component.IConfiger,
 	auth rpc.IAuthProvider,
@@ -78,23 +79,25 @@ func NewExperimentApplication(
 	annotateService service.IExptAnnotateService,
 	tagRPCAdapter rpc.ITagRPCAdapter,
 	exptResultExportService service.IExptResultExportService,
+	exptInsightAnalysisService service.IExptInsightAnalysisService,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc: resultSvc,
 		manager:   manager,
 		// tupleSvc:                 tupleSvc,
-		idgen:                    idgen,
-		configer:                 configer,
-		ExptAggrResultService:    aggResultSvc,
-		ExptSchedulerEvent:       scheduler,
-		ExptItemEvalEvent:        recordEval,
-		auth:                     auth,
-		userInfoService:          userInfoService,
-		evalTargetService:        evalTargetService,
-		evaluationSetItemService: evaluationSetItemService,
-		annotateService:          annotateService,
-		tagRPCAdapter:            tagRPCAdapter,
-		IExptResultExportService: exptResultExportService,
+		idgen:                       idgen,
+		configer:                    configer,
+		ExptAggrResultService:       aggResultSvc,
+		ExptSchedulerEvent:          scheduler,
+		ExptItemEvalEvent:           recordEval,
+		auth:                        auth,
+		userInfoService:             userInfoService,
+		evalTargetService:           evalTargetService,
+		evaluationSetItemService:    evaluationSetItemService,
+		annotateService:             annotateService,
+		tagRPCAdapter:               tagRPCAdapter,
+		IExptResultExportService:    exptResultExportService,
+		IExptInsightAnalysisService: exptInsightAnalysisService,
 	}
 }
 
@@ -729,7 +732,7 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	if err != nil {
 		return nil, err
 	}
-	err = e.resultSvc.UpsertExptTurnResultFilter(ctx, req.GetWorkspaceID(), req.GetExperimentID(), maps.ToSlice(idMap, func(k int64, v int64) int64 {
+	err = e.resultSvc.UpsertExptTurnResultFilter(ctx, req.GetWorkspaceID(), req.GetExperimentID(), maps.ToSlice(idMap, func(k, v int64) int64 {
 		return v
 	}))
 	if err != nil {
@@ -1075,5 +1078,198 @@ func (e *experimentApplication) GetExptResultExportRecord(ctx context.Context, r
 	return &expt.GetExptResultExportRecordResponse{
 		ExptResultExportRecord: experiment.ExportRecordDO2DTO(record),
 		BaseResp:               base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest) (r *expt.InsightAnalysisExperimentResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
+		SpaceID:   req.GetWorkspaceID(),
+		ExptID:    req.GetExptID(),
+		CreatedBy: session.UserID,
+		Status:    entity.InsightAnalysisStatus_Running,
+	}, session)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.InsightAnalysisExperimentResponse{
+		InsightAnalysisRecordID: recordID,
+		BaseResp:                base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest) (r *expt.ListExptInsightAnalysisRecordResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	records, total, err := e.ListAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())), session)
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]*domain_expt.ExptInsightAnalysisRecord, 0)
+	for _, record := range records {
+		dtos = append(dtos, experiment.ExptInsightAnalysisRecordDO2DTO(record))
+	}
+	return &expt.ListExptInsightAnalysisRecordResponse{
+		ExptInsightAnalysisRecords: dtos,
+		Total:                      ptr.Of(total),
+		BaseResp:                   base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest) (r *expt.DeleteExptInsightAnalysisRecordResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = e.DeleteAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID())
+	if err != nil {
+		return nil, err
+	}
+	return &expt.DeleteExptInsightAnalysisRecordResponse{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest) (r *expt.GetExptInsightAnalysisRecordResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	record, err := e.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.GetExptInsightAnalysisRecordResponse{
+		ExptInsightAnalysisRecord: experiment.ExptInsightAnalysisRecordDO2DTO(record),
+		BaseResp:                  base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	actionType, err := experiment.FeedbackActionType2DO(req.GetFeedbackActionType())
+	if err != nil {
+		return nil, err
+	}
+	param := &entity.ExptInsightAnalysisFeedbackParam{
+		SpaceID:            req.GetWorkspaceID(),
+		ExptID:             req.GetExptID(),
+		AnalysisRecordID:   req.GetInsightAnalysisRecordID(),
+		FeedbackActionType: actionType,
+		Comment:            req.Comment,
+		CommentID:          req.CommentID,
+		Session:            session,
+	}
+	err = e.FeedbackExptInsightAnalysis(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.FeedbackExptInsightAnalysisReportResponse{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest) (r *expt.ListExptInsightAnalysisCommentResponse, err error) {
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	comments, total, err := e.ListExptInsightAnalysisFeedbackComment(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())))
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]*domain_expt.ExptInsightAnalysisFeedbackComment, 0)
+	for _, comment := range comments {
+		dtos = append(dtos, experiment.ExptInsightAnalysisFeedbackCommentDO2DTO(comment))
+	}
+	return &expt.ListExptInsightAnalysisCommentResponse{
+		ExptInsightAnalysisFeedbackComments: dtos,
+		Total:                               ptr.Of(total),
+		BaseResp:                            base.NewBaseResp(),
 	}, nil
 }

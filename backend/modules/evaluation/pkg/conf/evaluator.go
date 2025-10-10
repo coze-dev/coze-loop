@@ -23,6 +23,10 @@ type IConfiger interface {
 	GetEvaluatorToolMapping(ctx context.Context) (etf map[string]string)            // prompt_template_key -> tool_key
 	GetEvaluatorPromptSuffix(ctx context.Context) (suffix map[string]string)        // suffix_key -> suffix
 	GetEvaluatorPromptSuffixMapping(ctx context.Context) (suffix map[string]string) // model_id -> suffix_key
+	// 新增方法：专门为Code类型模板提供配置
+	GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent)
+	// 新增方法：专门为Custom类型模板提供配置
+	GetCustomCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -30,12 +34,12 @@ func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
 	if err != nil {
 		return nil
 	}
-	return &configer{
+	return &evaluatorConfiger{
 		loader: loader,
 	}
 }
 
-func (c *configer) GetEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
+func (c *evaluatorConfiger) GetEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
 	const key = "evaluator_template_conf"
 
 	if locale := contexts.CtxLocale(ctx); c.loader.UnmarshalKey(ctx, fmt.Sprintf("%s_%s", key, locale), &etf) == nil && len(etf) > 0 {
@@ -51,7 +55,7 @@ func DefaultEvaluatorTemplateConf() map[string]map[string]*evaluatordto.Evaluato
 	return map[string]map[string]*evaluatordto.EvaluatorContent{}
 }
 
-func (c *configer) GetEvaluatorToolConf(ctx context.Context) (etf map[string]*evaluatordto.Tool) {
+func (c *evaluatorConfiger) GetEvaluatorToolConf(ctx context.Context) (etf map[string]*evaluatordto.Tool) {
 	const key = "evaluator_tool_conf"
 
 	if locale := contexts.CtxLocale(ctx); c.loader.UnmarshalKey(ctx, fmt.Sprintf("%s_%s", key, locale), &etf) == nil && len(etf) > 0 {
@@ -67,7 +71,7 @@ func DefaultEvaluatorToolConf() map[string]*evaluatordto.Tool {
 	return make(map[string]*evaluatordto.Tool, 0)
 }
 
-func (c *configer) GetRateLimiterConf(ctx context.Context) (rlc []limiter.Rule) {
+func (c *evaluatorConfiger) GetRateLimiterConf(ctx context.Context) (rlc []limiter.Rule) {
 	const key = "rate_limiter_conf"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &rlc) == nil, rlc, DefaultRateLimiterConf())
 }
@@ -76,7 +80,7 @@ func DefaultRateLimiterConf() []limiter.Rule {
 	return make([]limiter.Rule, 0)
 }
 
-func (c *configer) GetEvaluatorToolMapping(ctx context.Context) (etf map[string]string) {
+func (c *evaluatorConfiger) GetEvaluatorToolMapping(ctx context.Context) (etf map[string]string) {
 	const key = "evaluator_tool_mapping"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &etf) == nil, etf, DefaultEvaluatorToolMapping())
 }
@@ -85,7 +89,7 @@ func DefaultEvaluatorToolMapping() map[string]string {
 	return make(map[string]string)
 }
 
-func (c *configer) GetEvaluatorPromptSuffix(ctx context.Context) (suffix map[string]string) {
+func (c *evaluatorConfiger) GetEvaluatorPromptSuffix(ctx context.Context) (suffix map[string]string) {
 	const key = "evaluator_prompt_suffix"
 
 	if locale := contexts.CtxLocale(ctx); c.loader.UnmarshalKey(ctx, fmt.Sprintf("%s_%s", key, locale), &suffix) == nil && len(suffix) > 0 {
@@ -101,11 +105,39 @@ func DefaultEvaluatorPromptSuffix() map[string]string {
 	return make(map[string]string)
 }
 
-func (c *configer) GetEvaluatorPromptSuffixMapping(ctx context.Context) (suffix map[string]string) {
+func (c *evaluatorConfiger) GetEvaluatorPromptSuffixMapping(ctx context.Context) (suffix map[string]string) {
 	const key = "evaluator_prompt_mapping"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &suffix) == nil, suffix, DefaultEvaluatorPromptMapping())
 }
 
 func DefaultEvaluatorPromptMapping() map[string]string {
 	return make(map[string]string)
+}
+
+func (c *evaluatorConfiger) GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
+	const key = "code_evaluator_template_conf"
+	if c.loader.UnmarshalKey(ctx, key, &etf) == nil && len(etf) > 0 {
+		return etf
+	}
+	return DefaultCodeEvaluatorTemplateConf()
+}
+
+func DefaultCodeEvaluatorTemplateConf() map[string]map[string]*evaluatordto.EvaluatorContent {
+	return map[string]map[string]*evaluatordto.EvaluatorContent{}
+}
+
+func (c *evaluatorConfiger) GetCustomCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
+	const key = "custom_code_evaluator_template_conf"
+	if c.loader.UnmarshalKey(ctx, key, &etf) == nil && len(etf) > 0 {
+		return etf
+	}
+	return DefaultCustomCodeEvaluatorTemplateConf()
+}
+
+func DefaultCustomCodeEvaluatorTemplateConf() map[string]map[string]*evaluatordto.EvaluatorContent {
+	return map[string]map[string]*evaluatordto.EvaluatorContent{}
+}
+
+type evaluatorConfiger struct {
+	loader conf.IConfigLoader
 }

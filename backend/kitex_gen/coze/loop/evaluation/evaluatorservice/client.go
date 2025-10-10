@@ -28,9 +28,11 @@ type Client interface {
 	GetDefaultPromptEvaluatorTools(ctx context.Context, req *evaluator.GetDefaultPromptEvaluatorToolsRequest, callOptions ...callopt.Option) (r *evaluator.GetDefaultPromptEvaluatorToolsResponse, err error)
 	RunEvaluator(ctx context.Context, req *evaluator.RunEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.RunEvaluatorResponse, err error)
 	DebugEvaluator(ctx context.Context, req *evaluator.DebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugEvaluatorResponse, err error)
+	BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.BatchDebugEvaluatorResponse, err error)
 	UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorRecordResponse, err error)
 	GetEvaluatorRecord(ctx context.Context, req *evaluator.GetEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.GetEvaluatorRecordResponse, err error)
 	BatchGetEvaluatorRecords(ctx context.Context, req *evaluator.BatchGetEvaluatorRecordsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorRecordsResponse, err error)
+	ValidateEvaluator(ctx context.Context, request *evaluator.ValidateEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.ValidateEvaluatorResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -147,6 +149,11 @@ func (p *kEvaluatorServiceClient) DebugEvaluator(ctx context.Context, req *evalu
 	return p.kClient.DebugEvaluator(ctx, req)
 }
 
+func (p *kEvaluatorServiceClient) BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.BatchDebugEvaluatorResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchDebugEvaluator(ctx, req)
+}
+
 func (p *kEvaluatorServiceClient) UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorRecordResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpdateEvaluatorRecord(ctx, req)
@@ -160,4 +167,9 @@ func (p *kEvaluatorServiceClient) GetEvaluatorRecord(ctx context.Context, req *e
 func (p *kEvaluatorServiceClient) BatchGetEvaluatorRecords(ctx context.Context, req *evaluator.BatchGetEvaluatorRecordsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorRecordsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetEvaluatorRecords(ctx, req)
+}
+
+func (p *kEvaluatorServiceClient) ValidateEvaluator(ctx context.Context, request *evaluator.ValidateEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.ValidateEvaluatorResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ValidateEvaluator(ctx, request)
 }

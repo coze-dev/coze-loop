@@ -297,3 +297,27 @@ func (p *ExptResultExportRecord) IsValid() error {
 	}
 	return nil
 }
+func (p *ExptInsightAnalysisRecord) IsValid() error {
+	if p.ExptInsightAnalysisFeedback != nil {
+		if err := p.ExptInsightAnalysisFeedback.IsValid(); err != nil {
+			return fmt.Errorf("field ExptInsightAnalysisFeedback not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExptInsightAnalysisFeedback) IsValid() error {
+	return nil
+}
+func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}

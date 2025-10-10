@@ -71,11 +71,18 @@ func (p *EvaluatorSourcePromptServiceImpl) EvaluatorType() entity.EvaluatorType 
 	return entity.EvaluatorTypePrompt
 }
 
-func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
+func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
 	var err error
 	startTime := time.Now()
-	rootSpan, ctx := newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
-	traceID = rootSpan.GetTraceID()
+	var rootSpan *evaluatorSpan
+
+	if !disableTracing {
+		rootSpan, ctx = newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
+		traceID = rootSpan.GetTraceID()
+	} else {
+		traceID = ""
+	}
+
 	defer func() {
 		if output == nil {
 			output = &entity.EvaluatorOutputData{
@@ -98,23 +105,25 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 				errInfo = err
 			}
 		}
-		rootSpan.reportRootSpan(ctx, &ReportRootSpanRequest{
-			input:            input,
-			output:           output,
-			runStatus:        runStatus,
-			evaluatorVersion: evaluator.PromptEvaluatorVersion,
-			errInfo:          errInfo,
-		})
+		if !disableTracing && rootSpan != nil {
+			rootSpan.reportRootSpan(ctx, &ReportRootSpanRequest{
+				input:            input,
+				output:           output,
+				runStatus:        runStatus,
+				evaluatorVersion: evaluator.PromptEvaluatorVersion,
+				errInfo:          errInfo,
+			})
+		}
 	}()
 
-	err = evaluator.GetEvaluatorVersion().ValidateBaseInfo()
+	err = evaluator.ValidateBaseInfo()
 	if err != nil {
 		logs.CtxInfo(ctx, "[RunEvaluator] ValidateBaseInfo fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
 		return nil, runStatus, traceID
 	}
 	// 校验输入数据
-	err = evaluator.GetEvaluatorVersion().ValidateInput(input)
+	err = evaluator.ValidateInput(input)
 	if err != nil {
 		logs.CtxInfo(ctx, "[RunEvaluator] ValidateInput fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
@@ -131,7 +140,7 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 		p.metric.EmitRun(evaluator.SpaceID, err, startTime, modelID)
 	}()
 	// 渲染变量
-	err = renderTemplate(ctx, evaluator.PromptEvaluatorVersion, input)
+	err = renderTemplate(ctx, evaluator.PromptEvaluatorVersion, input, disableTracing)
 	if err != nil {
 		logs.CtxError(ctx, "[RunEvaluator] renderTemplate fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
@@ -139,13 +148,13 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	}
 	// 执行评估逻辑
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	llmResp, err := p.chat(ctx, evaluator.PromptEvaluatorVersion, userIDInContext)
+	llmResp, err := p.chat(ctx, evaluator.PromptEvaluatorVersion, userIDInContext, disableTracing)
 	if err != nil {
 		logs.CtxError(ctx, "[RunEvaluator] chat fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
 		return nil, runStatus, traceID
 	}
-	output, err = parseOutput(ctx, evaluator.PromptEvaluatorVersion, llmResp)
+	output, err = parseOutput(ctx, evaluator.PromptEvaluatorVersion, llmResp, disableTracing)
 	if err != nil {
 		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
@@ -154,14 +163,23 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	return output, entity.EvaluatorRunStatusSuccess, traceID
 }
 
-func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, userIDInContext string) (resp *entity.ReplyItem, err error) {
-	modelSpan, modelCtx := newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
-	defer func() {
-		modelSpan.reportModelSpan(modelCtx, evaluatorVersion, resp, err)
-	}()
-	modelTraceCtx := looptracer.GetTracer().Inject(modelCtx)
-	if err != nil {
-		logs.CtxWarn(ctx, "[RunEvaluator] Inject fail, err: %v", err)
+func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, userIDInContext string, disableTracing bool) (resp *entity.ReplyItem, err error) {
+	var modelSpan *evaluatorSpan
+	modelCtx := ctx
+
+	if !disableTracing {
+		modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
+		defer func() {
+			modelSpan.reportModelSpan(modelCtx, evaluatorVersion, resp, err)
+		}()
+	}
+
+	modelTraceCtx := modelCtx
+	if !disableTracing {
+		modelTraceCtx = looptracer.GetTracer().Inject(modelCtx)
+		if err != nil {
+			logs.CtxWarn(ctx, "[RunEvaluator] Inject fail, err: %v", err)
+		}
 	}
 
 	llmCallParam := &entity.LLMCallParam{
@@ -308,12 +326,15 @@ func (e *evaluatorSpan) reportOutputParserSpan(ctx context.Context, replyItem *e
 	e.Finish(ctx)
 }
 
-func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem) (output *entity.EvaluatorOutputData, err error) {
+func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, disableTracing bool) (output *entity.EvaluatorOutputData, err error) {
 	// 输出数据全空直接返回
-	outputParserSpan, ctx := newEvaluatorSpan(ctx, "ParseOutput", "LoopEvaluation", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
-	defer func() {
-		outputParserSpan.reportOutputParserSpan(ctx, replyItem, output, strconv.FormatInt(evaluatorVersion.SpaceID, 10), err)
-	}()
+	var outputParserSpan *evaluatorSpan
+	if !disableTracing {
+		outputParserSpan, ctx = newEvaluatorSpan(ctx, "ParseOutput", "LoopEvaluation", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
+		defer func() {
+			outputParserSpan.reportOutputParserSpan(ctx, replyItem, output, strconv.FormatInt(evaluatorVersion.SpaceID, 10), err)
+		}()
+	}
 	output = &entity.EvaluatorOutputData{
 		EvaluatorResult: &entity.EvaluatorResult{},
 		EvaluatorUsage:  &entity.EvaluatorUsage{},
@@ -460,7 +481,7 @@ func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.Promp
 	return nil
 }
 
-func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, input *entity.EvaluatorInputData) error {
+func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, input *entity.EvaluatorInputData, disableTracing bool) error {
 	// 实现渲染模板的逻辑
 	variables := make([]*tracespec.PromptArgument, 0)
 	for k, v := range input.InputFields {
@@ -488,8 +509,12 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 			ValueType: valueType,
 		})
 	}
-	renderTemplateSpan, ctx := newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
-	renderTemplateSpan.SetInput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, variables)))
+
+	var renderTemplateSpan *evaluatorSpan
+	if !disableTracing {
+		renderTemplateSpan, ctx = newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
+		renderTemplateSpan.SetInput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, variables)))
+	}
 	for _, message := range evaluatorVersion.MessageList {
 		if err := processMessageContent(message.Content, input.InputFields); err != nil {
 			logs.CtxError(ctx, "[renderTemplate] process message content failed: %v", err)
@@ -500,21 +525,23 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 		evaluatorVersion.MessageList[0].Content.Text = gptr.Of(gptr.Indirect(evaluatorVersion.MessageList[0].Content.Text) + evaluatorVersion.PromptSuffix)
 	}
 
-	renderTemplateSpan.SetOutput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, nil)))
-	tags := make(map[string]interface{})
-	renderTemplateSpan.SetTags(ctx, tags)
-	renderTemplateSpan.SetCallType("Evaluator")
-	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	if userIDInContext != "" {
-		renderTemplateSpan.SetUserID(ctx, userIDInContext)
+	if !disableTracing && renderTemplateSpan != nil {
+		renderTemplateSpan.SetOutput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, nil)))
+		tags := make(map[string]interface{})
+		renderTemplateSpan.SetTags(ctx, tags)
+		renderTemplateSpan.SetCallType("Evaluator")
+		userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+		if userIDInContext != "" {
+			renderTemplateSpan.SetUserID(ctx, userIDInContext)
+		}
+		renderTemplateSpan.Finish(ctx)
 	}
-	renderTemplateSpan.Finish(ctx)
 	return nil
 }
 
 func (p *EvaluatorSourcePromptServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, err error) {
 	// 实现调试评估的逻辑
-	output, _, _ = p.Run(ctx, evaluator, input)
+	output, _, _ = p.Run(ctx, evaluator, input, false)
 	if output != nil && output.EvaluatorRunError != nil {
 		return nil, errorx.NewByCode(output.EvaluatorRunError.Code, errorx.WithExtraMsg(output.EvaluatorRunError.Message))
 	}
@@ -531,25 +558,26 @@ func (p *EvaluatorSourcePromptServiceImpl) injectPromptTools(ctx context.Context
 	// 注入默认工具
 	tools := make([]*entity.Tool, 0, len(p.configer.GetEvaluatorToolConf(ctx)))
 
-	if toolKey, ok := p.configer.GetEvaluatorToolMapping(ctx)[evaluatorDO.GetEvaluatorVersion().GetPromptTemplateKey()]; ok {
+	if toolKey, ok := p.configer.GetEvaluatorToolMapping(ctx)[evaluatorDO.GetPromptTemplateKey()]; ok {
 		tools = append(tools, evaluator.ConvertToolDTO2DO(p.configer.GetEvaluatorToolConf(ctx)[toolKey]))
 	} else {
 		tools = append(tools, evaluator.ConvertToolDTO2DO(p.configer.GetEvaluatorToolConf(ctx)[consts.DefaultEvaluatorToolKey]))
 	}
-	evaluatorDO.GetEvaluatorVersion().SetTools(tools)
+	evaluatorDO.SetTools(tools)
 }
 
 func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, evaluatorDO *entity.Evaluator) {
 	// 注入后缀
-	if evaluatorDO.GetEvaluatorVersion() == nil || evaluatorDO.GetEvaluatorVersion().GetModelConfig() == nil {
+	if evaluatorDO.GetModelConfig() == nil {
 		return
 	}
-	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetEvaluatorVersion().GetModelConfig().ModelID, 10)]; ok {
-		evaluatorDO.GetEvaluatorVersion().SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[suffixKey])
-		evaluatorDO.GetEvaluatorVersion().SetParseType(entity.ParseType(suffixKey))
+
+	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetModelConfig().ModelID, 10)]; ok {
+		evaluatorDO.SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[suffixKey])
+		evaluatorDO.SetParseType(entity.ParseType(suffixKey))
 	} else {
-		evaluatorDO.GetEvaluatorVersion().SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[consts.DefaultEvaluatorPromptSuffixKey])
-		evaluatorDO.GetEvaluatorVersion().SetParseType(entity.ParseTypeContent)
+		evaluatorDO.SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[consts.DefaultEvaluatorPromptSuffixKey])
+		evaluatorDO.SetParseType(entity.ParseTypeContent)
 	}
 }
 
@@ -645,4 +673,10 @@ func expandMultiPartVariable(variablePart *entity.Content, inputFields map[strin
 		res = append(res, part)
 	}
 	return res, nil
+}
+
+// Validate 验证Prompt评估器（Prompt评估器暂时提供空实现）
+func (p *EvaluatorSourcePromptServiceImpl) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
+	// Prompt评估器暂时提供空实现，返回nil表示验证通过
+	return nil
 }

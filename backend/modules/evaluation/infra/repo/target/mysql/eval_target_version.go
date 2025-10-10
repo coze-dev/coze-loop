@@ -19,8 +19,8 @@ import (
 //go:generate mockgen -destination=mocks/eval_target_version.go -package=mocks . EvalTargetVersionDAO
 type EvalTargetVersionDAO interface {
 	CreateEvalTargetVersion(ctx context.Context, target *model.TargetVersion, opts ...db.Option) (err error)
-	GetEvalTargetVersion(ctx context.Context, spaceID int64, versionID int64, opts ...db.Option) (version *model.TargetVersion, err error)
-	GetEvalTargetVersionByTarget(ctx context.Context, spaceID int64, targetID int64, sourceTargetVersion string, opts ...db.Option) (version *model.TargetVersion, err error)
+	GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64, opts ...db.Option) (version *model.TargetVersion, err error)
+	GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string, opts ...db.Option) (version *model.TargetVersion, err error)
 	BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64, opts ...db.Option) (versions []*model.TargetVersion, err error)
 }
 
@@ -51,7 +51,7 @@ func (e *EvalTargetVersionDAOImpl) CreateEvalTargetVersion(ctx context.Context, 
 	return nil
 }
 
-func (e *EvalTargetVersionDAOImpl) GetEvalTargetVersion(ctx context.Context, spaceID int64, versionID int64, opts ...db.Option) (version *model.TargetVersion, err error) {
+func (e *EvalTargetVersionDAOImpl) GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64, opts ...db.Option) (version *model.TargetVersion, err error) {
 	dbSession := e.provider.NewSession(ctx, opts...)
 	po := &model.TargetVersion{}
 	err = dbSession.Where("id = ?", versionID).
@@ -65,7 +65,7 @@ func (e *EvalTargetVersionDAOImpl) GetEvalTargetVersion(ctx context.Context, spa
 	return po, nil
 }
 
-func (e *EvalTargetVersionDAOImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID int64, targetID int64, sourceTargetVersion string, opts ...db.Option) (version *model.TargetVersion, err error) {
+func (e *EvalTargetVersionDAOImpl) GetEvalTargetVersionByTarget(ctx context.Context, spaceID, targetID int64, sourceTargetVersion string, opts ...db.Option) (version *model.TargetVersion, err error) {
 	dbSession := e.provider.NewSession(ctx, opts...)
 	po := &model.TargetVersion{}
 	err = dbSession.Where("space_id = ?", spaceID).

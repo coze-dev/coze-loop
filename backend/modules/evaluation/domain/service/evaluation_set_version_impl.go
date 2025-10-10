@@ -39,7 +39,7 @@ func (d *EvaluationSetVersionServiceImpl) CreateEvaluationSetVersion(ctx context
 	return d.datasetRPCAdapter.CreateDatasetVersion(ctx, param.SpaceID, param.EvaluationSetID, param.Version, param.Description)
 }
 
-func (d *EvaluationSetVersionServiceImpl) GetEvaluationSetVersion(ctx context.Context, spaceID int64, versionID int64, deletedAt *bool) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error) {
+func (d *EvaluationSetVersionServiceImpl) GetEvaluationSetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error) {
 	// 依赖数据集服务
 	return d.datasetRPCAdapter.GetDatasetVersion(ctx, spaceID, versionID, deletedAt)
 }
