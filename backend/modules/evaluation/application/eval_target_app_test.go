@@ -1131,6 +1131,304 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 	}
 }
 
+func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth: mockAuth,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			entity.EvalTargetTypeCustomRPCServer: mockTypedOperator,
+		},
+	}
+
+	// Test data
+	validSpaceID := int64(123)
+	validApplicationID := int64(456)
+	validKeyword := "test keyword"
+	validRegion := "cn"
+	validEnv := "prod"
+	validPageSize := int32(10)
+	validPageToken := "token123"
+	validCustomRPCServer := &domain_eval_target.CustomRPCServer{
+		ID:             gptr.Of(int64(789)),
+		Name:           gptr.Of("test server"),
+		Description:    gptr.Of("test description"),
+		ServerName:     gptr.Of("test-server"),
+		AccessProtocol: gptr.Of("rpc"),
+		Cluster:        gptr.Of("test-cluster"),
+	}
+
+	validCustomEvalTargets := []*entity.CustomEvalTarget{
+		{
+			ID:        gptr.Of("target-1"),
+			Name:      gptr.Of("Test Target 1"),
+			AvatarURL: gptr.Of("http://example.com/avatar1.jpg"),
+			Ext:       map[string]string{"type": "custom"},
+		},
+		{
+			ID:        gptr.Of("target-2"),
+			Name:      gptr.Of("Test Target 2"),
+			AvatarURL: gptr.Of("http://example.com/avatar2.jpg"),
+			Ext:       map[string]string{"type": "custom"},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *eval_target.SearchCustomEvalTargetRequest
+		mockSetup   func()
+		wantResp    *eval_target.SearchCustomEvalTargetResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request with applicationID",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:   &validSpaceID,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+				Region:        &validRegion,
+				Env:           &validEnv,
+				PageSize:      &validPageSize,
+				PageToken:     &validPageToken,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), &entity.SearchCustomEvalTargetParam{
+					WorkspaceID:   &validSpaceID,
+					Keyword:       &validKeyword,
+					ApplicationID: &validApplicationID,
+					CustomRPCServer: nil,
+					Region:        &validRegion,
+					Env:           &validEnv,
+					PageSize:      &validPageSize,
+					PageToken:     &validPageToken,
+				}).Return(validCustomEvalTargets, "next-token", true, nil)
+			},
+			wantResp: &eval_target.SearchCustomEvalTargetResponse{
+				CustomEvalTargets: []*domain_eval_target.CustomEvalTarget{
+					{
+						ID:        gptr.Of("target-1"),
+						Name:      gptr.Of("Test Target 1"),
+						AvatarURL: gptr.Of("http://example.com/avatar1.jpg"),
+						Ext:       map[string]string{"type": "custom"},
+					},
+					{
+						ID:        gptr.Of("target-2"),
+						Name:      gptr.Of("Test Target 2"),
+						AvatarURL: gptr.Of("http://example.com/avatar2.jpg"),
+						Ext:       map[string]string{"type": "custom"},
+					},
+				},
+				NextPageToken: gptr.Of("next-token"),
+				HasMore:       gptr.Of(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - normal request with customRPCServer",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:     &validSpaceID,
+				Keyword:         &validKeyword,
+				CustomRPCServer: validCustomRPCServer,
+				Region:          &validRegion,
+				Env:             &validEnv,
+				PageSize:        &validPageSize,
+				PageToken:       &validPageToken,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), gomock.Any()).Return(validCustomEvalTargets, "next-token", true, nil)
+			},
+			wantResp: &eval_target.SearchCustomEvalTargetResponse{
+				CustomEvalTargets: []*domain_eval_target.CustomEvalTarget{
+					{
+						ID:        gptr.Of("target-1"),
+						Name:      gptr.Of("Test Target 1"),
+						AvatarURL: gptr.Of("http://example.com/avatar1.jpg"),
+						Ext:       map[string]string{"type": "custom"},
+					},
+					{
+						ID:        gptr.Of("target-2"),
+						Name:      gptr.Of("Test Target 2"),
+						AvatarURL: gptr.Of("http://example.com/avatar2.jpg"),
+						Ext:       map[string]string{"type": "custom"},
+					},
+				},
+				NextPageToken: gptr.Of("next-token"),
+				HasMore:       gptr.Of(true),
+			},
+			wantErr: false,
+		},
+		{
+			name:        "error - nil request",
+			req:         nil,
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - nil workspaceID",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				Keyword:         &validKeyword,
+				ApplicationID:   &validApplicationID,
+				Region:          &validRegion,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - both applicationID and customRPCServer are nil",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID: &validSpaceID,
+				Keyword:     &validKeyword,
+				Region:      &validRegion,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - nil region",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:   &validSpaceID,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - target type not support",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:   &validSpaceID,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+				Region:        &validRegion,
+			},
+			mockSetup: func() {
+				// Create app without typedOperators for CustomRPCServer
+				app.typedOperators = map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{}
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:   &validSpaceID,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+				Region:        &validRegion,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - service failure",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:   &validSpaceID,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+				Region:        &validRegion,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), gomock.Any()).
+					Return(nil, "", false, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "success - empty results",
+			req: &eval_target.SearchCustomEvalTargetRequest{
+				WorkspaceID:   &validSpaceID,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+				Region:        &validRegion,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), &entity.SearchCustomEvalTargetParam{
+					WorkspaceID:   &validSpaceID,
+					Keyword:       &validKeyword,
+					ApplicationID: &validApplicationID,
+					CustomRPCServer: nil,
+					Region:        &validRegion,
+					Env:           nil,
+					PageSize:      nil,
+					PageToken:     nil,
+				}).Return([]*entity.CustomEvalTarget{}, "", false, nil)
+			},
+			wantResp: &eval_target.SearchCustomEvalTargetResponse{
+				CustomEvalTargets: []*domain_eval_target.CustomEvalTarget{},
+				NextPageToken:     gptr.Of(""),
+				HasMore:           gptr.Of(false),
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset typedOperators for each test
+			app.typedOperators = map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+				entity.EvalTargetTypeCustomRPCServer: mockTypedOperator,
+			}
+			
+			tt.mockSetup()
+
+			resp, err := app.SearchCustomEvalTarget(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantResp, resp)
+			}
+		})
+	}
+}
+
 func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
