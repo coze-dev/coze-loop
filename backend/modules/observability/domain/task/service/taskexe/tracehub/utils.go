@@ -5,8 +5,8 @@ package tracehub
 
 import (
 	"context"
+	"os"
 
-	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -31,12 +31,8 @@ func ToJSONString(ctx context.Context, obj interface{}) string {
 
 func fillCtxWithEnv(ctx context.Context) context.Context {
 	ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
-	if env, ok := metainfo.GetPersistentValue(ctx, XttEnv); ok {
+	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
-	//if env := os.Getenv(XttEnv); env != "" {
-	//	ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
-	//}
-
 	return ctx
 }
