@@ -14,7 +14,7 @@ type IExptAnnotateService interface {
 	CreateExptTurnResultTagRefs(ctx context.Context, refs []*entity.ExptTurnResultTagRef) error
 	GetExptTurnResultTagRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnResultTagRef, error)
 	SaveAnnotateRecord(ctx context.Context, exptID, itemID, turnID int64, record *entity.AnnotateRecord) error
-	UpdateAnnotateRecord(ctx context.Context, itemID int64, turnID int64, record *entity.AnnotateRecord) error
+	UpdateAnnotateRecord(ctx context.Context, itemID, turnID int64, record *entity.AnnotateRecord) error
 	GetAnnotateRecordsByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.AnnotateRecord, error)
-	DeleteExptTurnResultTagRef(ctx context.Context, exptID int64, spaceID int64, tagKeyID int64) error
+	DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64) error
 }

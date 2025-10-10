@@ -95,7 +95,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 		setupMocks      func()
 		expectedOutput  *entity.EvaluatorOutputData
 		expectedStatus  entity.EvaluatorRunStatus
-		checkOutputFunc func(t *testing.T, output *entity.EvaluatorOutputData, expected *entity.EvaluatorOutputData)
+		checkOutputFunc func(t *testing.T, output, expected *entity.EvaluatorOutputData)
 	}{
 		{
 			name:      "成功运行评估器",
@@ -123,7 +123,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				EvaluatorRunError: nil,
 			},
 			expectedStatus: entity.EvaluatorRunStatusSuccess,
-			checkOutputFunc: func(t *testing.T, output *entity.EvaluatorOutputData, expected *entity.EvaluatorOutputData) {
+			checkOutputFunc: func(t *testing.T, output, expected *entity.EvaluatorOutputData) {
 				assert.NotNil(t, output.EvaluatorResult)
 				assert.Equal(t, expected.EvaluatorResult.Score, output.EvaluatorResult.Score)
 				assert.Equal(t, expected.EvaluatorResult.Reasoning, output.EvaluatorResult.Reasoning)
@@ -149,7 +149,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				EvaluatorUsage:    &entity.EvaluatorUsage{},
 			},
 			expectedStatus: entity.EvaluatorRunStatusFail,
-			checkOutputFunc: func(t *testing.T, output *entity.EvaluatorOutputData, expected *entity.EvaluatorOutputData) {
+			checkOutputFunc: func(t *testing.T, output, expected *entity.EvaluatorOutputData) {
 				assert.NotNil(t, output.EvaluatorRunError)
 				assert.Contains(t, output.EvaluatorRunError.Message, expected.EvaluatorRunError.Message)
 				assert.Nil(t, output.EvaluatorResult)
@@ -173,7 +173,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				EvaluatorUsage:    &entity.EvaluatorUsage{InputTokens: 5, OutputTokens: 5},
 			},
 			expectedStatus: entity.EvaluatorRunStatusFail,
-			checkOutputFunc: func(t *testing.T, output *entity.EvaluatorOutputData, expected *entity.EvaluatorOutputData) {
+			checkOutputFunc: func(t *testing.T, output, expected *entity.EvaluatorOutputData) {
 				assert.NotNil(t, output.EvaluatorRunError)
 				assert.Nil(t, output.EvaluatorResult)
 			},
@@ -199,7 +199,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				EvaluatorUsage:    &entity.EvaluatorUsage{InputTokens: 8, OutputTokens: 8},
 			},
 			expectedStatus: entity.EvaluatorRunStatusFail,
-			checkOutputFunc: func(t *testing.T, output *entity.EvaluatorOutputData, expected *entity.EvaluatorOutputData) {
+			checkOutputFunc: func(t *testing.T, output, expected *entity.EvaluatorOutputData) {
 				assert.NotNil(t, output.EvaluatorRunError)
 				assert.Nil(t, output.EvaluatorResult)
 			},

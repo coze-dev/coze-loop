@@ -102,7 +102,7 @@ func (l *defaultLogger) GetLogID(ctx context.Context) string {
 }
 
 func (l *defaultLogger) SetLogID(ctx context.Context, logID string) context.Context {
-	ctx = context.WithValue(ctx, consts.CtxKeyLogID, logID) //nolint:staticcheck,SA1029
+	ctx = context.WithValue(ctx, consts.CtxKeyLogID, logID) //nolint:staticcheck
 	return ctx
 }
 
