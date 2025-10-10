@@ -27,7 +27,7 @@ func NewAuthRPCProvider(client authservice.Client) rpc.IAuthProvider {
 	}
 }
 
-func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+func (a *AuthRPCAdapter) mCheckPromptPermissionBase(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
 	var authPairs []*authentity.SubjectActionObjects
 	authSubject := &authentity.AuthPrincipal{
 		AuthPrincipalType:  authentity.AuthPrincipalTypePtr(authentity.AuthPrincipalType_CozeIdentifier),
@@ -74,7 +74,17 @@ func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int
 	return nil
 }
 
-func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64, action string) error {
+// MCheckPromptPermission checks if the user has permission to perform an action on the given prompts.
+func (a *AuthRPCAdapter) MCheckPromptPermission(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+	return a.mCheckPromptPermissionBase(ctx, spaceID, promptIDs, action)
+}
+
+// MCheckPromptPermissionForOpenAPI checks if the user has permission to perform an action on the given prompts for OpenAPI.
+func (a *AuthRPCAdapter) MCheckPromptPermissionForOpenAPI(ctx context.Context, spaceID int64, promptIDs []int64, action string) error {
+	return a.mCheckPromptPermissionBase(ctx, spaceID, promptIDs, action)
+}
+
+func (a *AuthRPCAdapter) checkSpacePermissionBase(ctx context.Context, spaceID int64, action string) error {
 	authSubject := &authentity.AuthPrincipal{
 		AuthPrincipalType:  authentity.AuthPrincipalTypePtr(authentity.AuthPrincipalType_CozeIdentifier),
 		AuthCozeIdentifier: &authentity.AuthCozeIdentifier{IdentityTicket: nil},
@@ -105,4 +115,14 @@ func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64
 		}
 	}
 	return nil
+}
+
+// CheckSpacePermission checks if the user has permission to perform an action on the given space.
+func (a *AuthRPCAdapter) CheckSpacePermission(ctx context.Context, spaceID int64, action string) error {
+	return a.checkSpacePermissionBase(ctx, spaceID, action)
+}
+
+// CheckSpacePermissionForOpenAPI checks if the user has permission to perform an action on the given space for OpenAPI.
+func (a *AuthRPCAdapter) CheckSpacePermissionForOpenAPI(ctx context.Context, spaceID int64, action string) error {
+	return a.checkSpacePermissionBase(ctx, spaceID, action)
 }
