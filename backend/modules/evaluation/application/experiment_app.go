@@ -706,7 +706,7 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("expt status not allow to invoke"))
 	}
 	itemDOS := evaluation_set.ItemDTO2DOs(req.Items)
-	idMap, evalSetErrors, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
+	idMap, evalSetErrors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
 		SpaceID:          req.GetWorkspaceID(),
 		EvaluationSetID:  req.GetEvaluationSetID(),
 		Items:            itemDOS,
@@ -740,9 +740,10 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	}
 
 	return &expt.InvokeExperimentResponse{
-		AddedItems: idMap,
-		Errors:     evaluation_set.ItemErrorGroupDO2DTOs(evalSetErrors),
-		BaseResp:   base.NewBaseResp(),
+		AddedItems:  idMap,
+		Errors:      evaluation_set.ItemErrorGroupDO2DTOs(evalSetErrors),
+		ItemOutputs: evaluation_set.CreateDatasetItemOutputDO2DTOs(itemOutputs),
+		BaseResp:    base.NewBaseResp(),
 	}, nil
 }
 

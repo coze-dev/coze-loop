@@ -11,7 +11,7 @@ import (
 
 //go:generate mockgen -destination=mocks/evaluation_set_item.go -package=mocks . EvaluationSetItemService
 type EvaluationSetItemService interface {
-	BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, err error)
+	BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, itemOutputs []*entity.CreateDatasetItemOutput, err error)
 	UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error)
 	BatchDeleteEvaluationSetItems(ctx context.Context, spaceID int64, evaluationSetID int64, itemIDs []int64) (err error)
 	ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error)

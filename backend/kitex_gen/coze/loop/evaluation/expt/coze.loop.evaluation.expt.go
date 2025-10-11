@@ -13662,9 +13662,10 @@ func (p *InvokeExperimentRequest) Field255DeepEqual(src *base.Base) bool {
 
 type InvokeExperimentResponse struct {
 	// key: item 在 items 中的索引
-	AddedItems map[int64]int64           `thrift:"added_items,1,optional" frugal:"1,optional,map<i64:i64>" form:"added_items" json:"added_items,omitempty" query:"added_items"`
-	Errors     []*dataset.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<dataset.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
-	BaseResp   *base.BaseResp            `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	AddedItems  map[int64]int64                    `thrift:"added_items,1,optional" frugal:"1,optional,map<i64:i64>" form:"added_items" json:"added_items,omitempty" query:"added_items"`
+	Errors      []*dataset.ItemErrorGroup          `thrift:"errors,2,optional" frugal:"2,optional,list<dataset.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
+	ItemOutputs []*dataset.CreateDatasetItemOutput `thrift:"item_outputs,3,optional" frugal:"3,optional,list<dataset.CreateDatasetItemOutput>" form:"item_outputs" json:"item_outputs,omitempty" query:"item_outputs"`
+	BaseResp    *base.BaseResp                     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewInvokeExperimentResponse() *InvokeExperimentResponse {
@@ -13698,6 +13699,18 @@ func (p *InvokeExperimentResponse) GetErrors() (v []*dataset.ItemErrorGroup) {
 	return p.Errors
 }
 
+var InvokeExperimentResponse_ItemOutputs_DEFAULT []*dataset.CreateDatasetItemOutput
+
+func (p *InvokeExperimentResponse) GetItemOutputs() (v []*dataset.CreateDatasetItemOutput) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemOutputs() {
+		return InvokeExperimentResponse_ItemOutputs_DEFAULT
+	}
+	return p.ItemOutputs
+}
+
 var InvokeExperimentResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *InvokeExperimentResponse) GetBaseResp() (v *base.BaseResp) {
@@ -13715,6 +13728,9 @@ func (p *InvokeExperimentResponse) SetAddedItems(val map[int64]int64) {
 func (p *InvokeExperimentResponse) SetErrors(val []*dataset.ItemErrorGroup) {
 	p.Errors = val
 }
+func (p *InvokeExperimentResponse) SetItemOutputs(val []*dataset.CreateDatasetItemOutput) {
+	p.ItemOutputs = val
+}
 func (p *InvokeExperimentResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -13722,6 +13738,7 @@ func (p *InvokeExperimentResponse) SetBaseResp(val *base.BaseResp) {
 var fieldIDToName_InvokeExperimentResponse = map[int16]string{
 	1:   "added_items",
 	2:   "errors",
+	3:   "item_outputs",
 	255: "BaseResp",
 }
 
@@ -13731,6 +13748,10 @@ func (p *InvokeExperimentResponse) IsSetAddedItems() bool {
 
 func (p *InvokeExperimentResponse) IsSetErrors() bool {
 	return p.Errors != nil
+}
+
+func (p *InvokeExperimentResponse) IsSetItemOutputs() bool {
+	return p.ItemOutputs != nil
 }
 
 func (p *InvokeExperimentResponse) IsSetBaseResp() bool {
@@ -13766,6 +13787,14 @@ func (p *InvokeExperimentResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13860,6 +13889,29 @@ func (p *InvokeExperimentResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.Errors = _field
 	return nil
 }
+func (p *InvokeExperimentResponse) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.CreateDatasetItemOutput, 0, size)
+	values := make([]dataset.CreateDatasetItemOutput, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ItemOutputs = _field
+	return nil
+}
 func (p *InvokeExperimentResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -13881,6 +13933,10 @@ func (p *InvokeExperimentResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -13960,6 +14016,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *InvokeExperimentResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemOutputs() {
+		if err = oprot.WriteFieldBegin("item_outputs", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ItemOutputs)); err != nil {
+			return err
+		}
+		for _, v := range p.ItemOutputs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *InvokeExperimentResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -13997,6 +14079,9 @@ func (p *InvokeExperimentResponse) DeepEqual(ano *InvokeExperimentResponse) bool
 	if !p.Field2DeepEqual(ano.Errors) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.ItemOutputs) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -14022,6 +14107,19 @@ func (p *InvokeExperimentResponse) Field2DeepEqual(src []*dataset.ItemErrorGroup
 		return false
 	}
 	for i, v := range p.Errors {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *InvokeExperimentResponse) Field3DeepEqual(src []*dataset.CreateDatasetItemOutput) bool {
+
+	if len(p.ItemOutputs) != len(src) {
+		return false
+	}
+	for i, v := range p.ItemOutputs {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

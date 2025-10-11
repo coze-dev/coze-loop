@@ -25,7 +25,7 @@ type IDatasetRPCAdapter interface {
 
 	UpdateDatasetSchema(ctx context.Context, spaceID int64, evaluationSetID int64, schemas []*entity.FieldSchema) (err error)
 
-	BatchCreateDatasetItems(ctx context.Context, param *BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, err error)
+	BatchCreateDatasetItems(ctx context.Context, param *BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.CreateDatasetItemOutput, err error)
 	UpdateDatasetItem(ctx context.Context, spaceID int64, evaluationSetID int64, itemID int64, turns []*entity.Turn) (err error)
 	BatchDeleteDatasetItems(ctx context.Context, spaceID int64, evaluationSetID int64, itemIDs []int64) (err error)
 	ListDatasetItems(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error)

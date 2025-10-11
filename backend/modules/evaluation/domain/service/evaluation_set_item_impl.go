@@ -31,9 +31,9 @@ func NewEvaluationSetItemServiceImpl(datasetRPCAdapter rpc.IDatasetRPCAdapter) E
 	return evaluationSetItemServiceImpl
 }
 
-func (d *EvaluationSetItemServiceImpl) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, err error) {
+func (d *EvaluationSetItemServiceImpl) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, itemOutputs []*entity.CreateDatasetItemOutput, err error) {
 	if param == nil {
-		return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+		return nil, nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	return d.datasetRPCAdapter.BatchCreateDatasetItems(ctx, &rpc.BatchCreateDatasetItemsParam{
 		SpaceID:          param.SpaceID,

@@ -294,7 +294,7 @@ func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context
 		return nil, err
 	}
 	// domain调用
-	idMap, errors, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
+	idMap, errors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
 		SpaceID:          req.WorkspaceID,
 		EvaluationSetID:  req.EvaluationSetID,
 		Items:            evaluation_set.ItemDTO2DOs(req.Items),
@@ -306,8 +306,9 @@ func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context
 	}
 	// 返回结果构建、错误处理
 	return &eval_set.BatchCreateEvaluationSetItemsResponse{
-		AddedItems: idMap,
-		Errors:     evaluation_set.ItemErrorGroupDO2DTOs(errors),
+		AddedItems:  idMap,
+		Errors:      evaluation_set.ItemErrorGroupDO2DTOs(errors),
+		ItemOutputs: evaluation_set.CreateDatasetItemOutputDO2DTOs(itemOutputs),
 	}, nil
 }
 
