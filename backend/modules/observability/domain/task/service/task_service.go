@@ -31,7 +31,7 @@ import (
 )
 
 type CreateTaskReq struct {
-	Task *task.Task
+	Task *task.Task //todo:entity
 }
 type CreateTaskResp struct {
 	TaskID *int64
@@ -136,7 +136,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if err != nil {
 		return nil, err
 	}
-
+	//dto2do_application
 	taskPO := tconv.TaskDTO2PO(ctx, req.Task, userID, spanFilers)
 	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
 	if err != nil {

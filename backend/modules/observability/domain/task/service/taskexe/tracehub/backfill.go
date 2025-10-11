@@ -27,6 +27,7 @@ import (
 
 const pageSize = 500
 
+// 定时任务+锁
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
 	ctx = h.fillCtx(ctx)
@@ -58,6 +59,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	h.flushErrLock.Unlock()
 
 	// 4. Launch asynchronous flush handling via goroutine for concurrent processing
+	//list+flush一个线程处理+续锁
 	wg.Add(1)
 	goroutine.Go(ctx, func() {
 		defer wg.Done()

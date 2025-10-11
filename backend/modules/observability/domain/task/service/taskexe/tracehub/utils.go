@@ -43,15 +43,16 @@ func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
 		logID := logs.NewLogID()
 		ctx = logs.SetLogID(ctx, logID)
 	}
+	//todo：是否需要？——eval
 	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
-	if os.Getenv("TCE_HOST_ENV") == "boe" {
-		ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
-	} else {
-		ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task")
-	}
-	//if env := os.Getenv(XttEnv); env != "" {
-	//	ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	//if os.Getenv("TCE_HOST_ENV") == "boe" {
+	//	ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
+	//} else {
+	//	ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task")
 	//}
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
+	}
 	return ctx
 }
 

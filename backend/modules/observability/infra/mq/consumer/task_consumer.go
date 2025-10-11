@@ -30,6 +30,7 @@ func newTaskConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader
 }
 
 func (e *TaskConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
+	// 【1011】内场的topic，doubaogu过滤
 	const key = "task_mq_consumer_config"
 	cfg := &config.MqConsumerCfg{}
 	if err := e.UnmarshalKey(ctx, key, cfg); err != nil {
