@@ -187,6 +187,15 @@ var (
 		userinfo.NewUserInfoServiceImpl,
 	)
 
+	evaluationOpenAPISet = wire.NewSet(
+		NewEvaluationOpenApiApplicationImpl,
+		domainservice.NewEvaluationSetServiceImpl,
+		domainservice.NewEvaluationSetVersionServiceImpl,
+		domainservice.NewEvaluationSetItemServiceImpl,
+		data.NewDatasetRPCAdapter,
+		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
+	)
+
 	targetDomainService = wire.NewSet(
 		domainservice.NewEvalTargetServiceImpl,
 		NewSourceTargetOperators,
@@ -292,6 +301,27 @@ func InitEvalTargetApplication(ctx context.Context,
 		evalTargetSet,
 	)
 	return nil
+}
+
+func InitEvaluationOpenAPIApplication(client datasetservice.Client,
+	meter metrics.Meter,
+) evaluation.EvaluationOpenAPIService {
+	wire.Build(
+		evaluationOpenAPISet,
+	)
+	return nil
+}
+
+func NewEvaluatorSourceServices(llmProvider componentrpc.ILLMProvider, metric mtr.EvaluatorExecMetrics, config evalconf.IConfiger) []domainservice.EvaluatorSourceService {
+	return []domainservice.EvaluatorSourceService{
+		domainservice.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config),
+		domainservice.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric),
+	}
+
+	serviceMap := make(map[entity.EvaluatorType]domainservice.EvaluatorSourceService)
+	for _, svc := range services {
+		serviceMap[svc.EvaluatorType()] = svc
+	}
 }
 
 // NewSandboxConfig 创建默认沙箱配置
