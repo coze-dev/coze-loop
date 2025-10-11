@@ -434,39 +434,27 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 // processBatchSpans 批量处理 span 数据
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	for _, span := range spans {
-		// 执行单个 span 的处理逻辑
-		if err := h.processSpan(ctx, span, sub); err != nil {
-			logs.CtxWarn(ctx, "process individual span failed, span_id=%s, trace_id=%s, err=%v",
-				span.SpanID, span.TraceID, err)
-			// 继续处理其他span，不因单个失败而中断批处理
+		// 根据任务类型执行相应的处理逻辑
+		logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
+			span.SpanID, span.TraceID, sub.t.GetID())
+		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
+		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.GetID())
+		sampler := sub.t.GetRule().GetSampler()
+		if taskCount+1 > sampler.GetSampleSize() {
+			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.GetSampleSize())
+			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				Task:     sub.t,
+				TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
+				IsFinish: true,
+			}); err != nil {
+				return err
+			}
+			break
 		}
-	}
-
-	return nil
-}
-
-// processIndividualSpan 处理单个 span
-func (h *TraceHubServiceImpl) processSpan(ctx context.Context, span *loop_span.Span, sub *spanSubscriber) error {
-	// 根据任务类型执行相应的处理逻辑
-	logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
-		span.SpanID, span.TraceID, sub.t.GetID())
-
-	taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
-	taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.GetID())
-	sampler := sub.t.GetRule().GetSampler()
-	if taskCount+1 > sampler.GetSampleSize() {
-		if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-			Task:     sub.t,
-			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
-			IsFinish: true,
-		}); err != nil {
-			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d", sub.taskID)
+		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
+		if err := h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
 			return err
 		}
-	}
-	logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
-	if err := h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
-		return err
 	}
 
 	return nil

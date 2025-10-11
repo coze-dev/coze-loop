@@ -296,8 +296,6 @@ func SpanFilterDTO2PO(ctx context.Context, filters *filter.SpanFilterFields) *st
 		filterDO.Filters = *filtersDO
 	}
 
-	//todo[xun]:coze数据处理
-
 	return ptr.Of(ToJSONString(ctx, filterDO))
 }
 

@@ -153,6 +153,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 }
 
 func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
+	// todo[xun]:加锁
 	taskRuns, err := p.taskRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
@@ -256,7 +257,6 @@ func (p *AutoEvaluteProcessor) OnFinishTaskChange(ctx context.Context, param tas
 }
 
 func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param taskexe.OnCreateTaskRunChangeReq) error {
-	//todo:[xun]加锁
 	currentTask := param.CurrentTask
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
 	sessionInfo := p.getSession(ctx, currentTask)
