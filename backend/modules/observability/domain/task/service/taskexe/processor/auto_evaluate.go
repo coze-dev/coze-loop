@@ -251,6 +251,13 @@ func (p *AutoEvaluteProcessor) OnFinishTaskChange(ctx context.Context, param tas
 	return nil
 }
 
+const (
+	AutoEvaluateCN   = "自动化任务实验"
+	AutoEvaluateI18N = "AutoEvaluate"
+	BackFillCN       = "历史回溯"
+	BackFillI18N     = "BackFill"
+)
+
 func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param taskexe.OnCreateTaskRunChangeReq) error {
 	currentTask := param.CurrentTask
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.GetBaseInfo().GetCreatedBy().GetUserID()})
@@ -298,11 +305,11 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
 	var datasetName, exptName string
 	if param.RunType == task.TaskRunTypeBackFill {
-		datasetName = fmt.Sprintf("Auto Task Evaluation Set_Backfill_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
-		exptName = fmt.Sprintf("Auto Task Experiment_Backfill_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		datasetName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		exptName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	} else {
-		datasetName = fmt.Sprintf("Auto Task Evaluation Set_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
-		exptName = fmt.Sprintf("Auto Task Experiment_%s_%d.%d.%d.%d", currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		datasetName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		exptName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	}
 	// Step 1: create evaluation dataset
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
