@@ -54,12 +54,12 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 		}
 		span := spans[0]
 
-		// 新增：根据Status写Redis计数
+		// Newly added: write Redis counters based on the Status
 		err = h.updateTaskRunStatusCount(ctx, turn.GetTaskIDFromExt(), turn)
 		if err != nil {
 			logs.CtxWarn(ctx, "更新TaskRun状态计数失败: taskID=%d, status=%d, err=%v",
 				turn.GetTaskIDFromExt(), turn.Status, err)
-			// 不中断流程，继续处理
+			// Continue processing without interrupting the flow
 		}
 
 		annotation := &loop_span.Annotation{
@@ -99,7 +99,7 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	//todo：loopspan下
+	// TODO: move under loopspan
 	tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	}
 	annotation.CorrectAutoEvaluateScore(event.EvaluatorResult.Correction.Score, event.EvaluatorResult.Correction.Explain, updateBy)
 
-	// 再同步修改观测数据
+	// Then synchronize the observability data
 	param := &repo.UpsertAnnotationParam{
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
@@ -157,8 +157,8 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	}
 	if err = h.traceRepo.UpsertAnnotation(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
-		// 如果同步修改失败，异步补偿
-		// todo 异步有问题，会重复
+		// If the synchronous update fails, compensate asynchronously
+		// TODO: asynchronous processing has issues and may duplicate
 		logs.CtxWarn(ctx, "Sync upsert annotation failed, try async upsert. span_id=[%v], recored_id=[%v], err:%v",
 			annotation.SpanID, recordID, err)
 		return nil
@@ -166,31 +166,31 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	return nil
 }
 
-func (h *TraceHubServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
-	return h.tenantProvider.GetTenantsByPlatformType(ctx, platform)
-}
-func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
-	if len(spanIds) == 0 || workspaceId == "" {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+// updateTaskRunStatusCount updates the Redis count based on Status
+func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult) error {
+	// Retrieve taskRunID from Ext
+	taskRunIDStr := turn.Ext["run_id"]
+	if taskRunIDStr == "" {
+		return fmt.Errorf("task_run_id not found in ext")
 	}
-	var filterFields []*loop_span.FilterField
-	filterFields = append(filterFields, &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldSpanId,
-		FieldType: loop_span.FieldTypeString,
-		Values:    spanIds,
-		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-	})
-	filterFields = append(filterFields, &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldSpaceId,
-		FieldType: loop_span.FieldTypeString,
-		Values:    []string{workspaceId},
-		QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-	})
-	if traceId != "" {
-		filterFields = append(filterFields, &loop_span.FilterField{
-			FieldName: loop_span.SpanFieldTraceId,
-			FieldType: loop_span.FieldTypeString,
-			Values:    []string{traceId},
+
+	taskRunID, err := strconv.ParseInt(taskRunIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid task_run_id: %s, err: %v", taskRunIDStr, err)
+	}
+	// Increase the corresponding counter based on Status
+	switch turn.Status {
+	case entity.EvaluatorRunStatus_Success:
+		return h.taskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+	case entity.EvaluatorRunStatus_Fail:
+		return h.taskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+	default:
+		logs.CtxDebug(ctx, "未知的评估状态，跳过计数: taskID=%d, taskRunID=%d, status=%d",
+			taskID, taskRunID, turn.Status)
+		return nil
+	}
+}
+
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
 	}
@@ -213,9 +213,9 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 	return res.Spans, nil
 }
 
-// updateTaskRunStatusCount 根据Status更新Redis计数
+// updateTaskRunStatusCount updates the Redis count based on Status
 func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult) error {
-	// 从Ext中获取taskRunID
+	// Retrieve taskRunID from Ext
 	taskRunIDStr := turn.Ext["run_id"]
 	if taskRunIDStr == "" {
 		return fmt.Errorf("task_run_id not found in ext")
@@ -225,7 +225,7 @@ func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, task
 	if err != nil {
 		return fmt.Errorf("invalid task_run_id: %s, err: %v", taskRunIDStr, err)
 	}
-	// 根据Status增加相应计数
+	// Increase the corresponding counter based on Status
 	switch turn.Status {
 	case entity.EvaluatorRunStatus_Success:
 		return h.taskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
