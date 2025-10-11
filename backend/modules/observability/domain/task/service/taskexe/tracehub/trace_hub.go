@@ -49,9 +49,9 @@ func NewTraceHubImpl(
 	aid int32,
 	backfillProducer mq.IBackfillProducer,
 ) (ITraceHubService, error) {
-	// 创建两个不同间隔的独立定时器
-	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // 任务状态生命周期管理 - 5分钟间隔
-	syncTaskTicker := time.NewTicker(2 * time.Minute)      // 数据同步 - 1分钟间隔
+	// Create two independent timers with different intervals
+	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // Task status lifecycle management - 5-minute interval
+	syncTaskTicker := time.NewTicker(2 * time.Minute)      // Data synchronization - 1-minute interval
 	impl := &TraceHubServiceImpl{
 		taskRepo:            tRepo,
 		scheduledTaskTicker: scheduledTaskTicker,
@@ -66,7 +66,7 @@ func NewTraceHubImpl(
 		backfillProducer:    backfillProducer,
 	}
 
-	// 立即启动定时任务
+	// Start the scheduled tasks immediately
 	impl.startScheduledTask()
 	impl.startSyncTaskRunCounts()
 	impl.startSyncTaskCache()
@@ -75,8 +75,8 @@ func NewTraceHubImpl(
 }
 
 type TraceHubServiceImpl struct {
-	scheduledTaskTicker *time.Ticker // 任务状态生命周期管理定时器 - 5分钟间隔
-	syncTaskTicker      *time.Ticker // 数据同步定时器 - 1分钟间隔
+	scheduledTaskTicker *time.Ticker // Task status lifecycle management timer - 5-minute interval
+	syncTaskTicker      *time.Ticker // Data synchronization timer - 1-minute interval
 	stopChan            chan struct{}
 	taskRepo            repo.ITaskRepo
 	traceRepo           trace_repo.ITraceRepo
@@ -90,7 +90,7 @@ type TraceHubServiceImpl struct {
 	flushErrLock sync.Mutex
 	flushErr     []error
 
-	// 本地缓存 - 缓存非终态任务信息
+	// Local cache - caching non-terminal task information
 	taskCache     sync.Map
 	taskCacheLock sync.RWMutex
 
@@ -188,7 +188,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 		merr = &multierror.Error{}
 		keep int
 	)
-	// 按照详细的filter规则匹配数据
+	// Match data according to detailed filter rules
 	for _, s := range subscribers {
 		ok, err := s.Match(ctx, span)
 		logs.CtxInfo(ctx, "Match span, task_id=%d, trace_id=%s, span_id=%s, ok=%v, err=%v", s.taskID, span.TraceID, span.SpanID, ok, err)
@@ -212,8 +212,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 			continue
 		}
-		// 第一步task状态变更的锁
-		// taskrun的状态
+		// First step: lock for task status change
+		// Task run status
 		var runStartAt, runEndAt int64
 		if sub.t.GetTaskStatus() == task.TaskStatusUnstarted {
 			logs.CtxWarn(ctx, "task is unstarted, need sub.Creative")
@@ -240,7 +240,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				continue
 			}
 		}
-		//获取对应的taskconfig
+		// Fetch the corresponding task config
 		taskRunConfig, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, sub.t.WorkspaceID, sub.taskID)
 		if err != nil {
 			logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
@@ -268,12 +268,12 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 		sampler := sub.t.GetRule().GetSampler()
-		//获取对应的taskcount和subtaskcount
+		// Fetch the corresponding task count and subtask count
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
 		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
 		endTime := time.UnixMilli(sub.t.GetRule().GetEffectiveTime().GetEndAt())
-		// 达到任务时间期限
+		// Reached task time limit
 		if time.Now().After(endTime) {
 			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -286,7 +286,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				continue
 			}
 		}
-		// 达到任务上限
+		// Reached task limit
 		if taskCount+1 > sampler.GetSampleSize() {
 			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -300,7 +300,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		}
 		if sampler.GetIsCycle() {
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
-			// 达到单次任务时间期限
+			// Reached single cycle task time limit
 			if time.Now().After(cycleEndTime) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -319,7 +319,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 					continue
 				}
 			}
-			// 达到单次任务上限
+			// Reached single cycle task limit
 			if taskRunCount+1 > sampler.GetCycleCount() {
 				logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -358,22 +358,22 @@ func (h *TraceHubServiceImpl) Close() {
 	close(h.stopChan)
 }
 
-// getObjListWithTaskFromCache 从缓存中获取任务列表，如果缓存为空则回退到数据库
+// getObjListWithTaskFromCache retrieves the task list from cache, falling back to the database if cache is empty
 func (h *TraceHubServiceImpl) getObjListWithTaskFromCache(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask) {
-	// 首先尝试从缓存中获取任务
+	// First, try to retrieve tasks from cache
 	objListWithTask, ok := h.taskCache.Load("ObjListWithTask")
 	if !ok {
-		// 缓存为空，回退到数据库
-		logs.CtxInfo(ctx, "缓存为空，从数据库获取任务列表")
+		// Cache is empty, fallback to the database
+		logs.CtxInfo(ctx, "Cache is empty, retrieving task list from database")
 		return h.taskRepo.GetObjListWithTask(ctx)
 	}
 
 	cacheInfo, ok := objListWithTask.(*TaskCacheInfo)
 	if !ok {
-		logs.CtxError(ctx, "缓存数据类型错误")
+		logs.CtxError(ctx, "Cache data type mismatch")
 		return h.taskRepo.GetObjListWithTask(ctx)
 	}
 
-	logs.CtxInfo(ctx, "从缓存获取任务列表, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
+	logs.CtxInfo(ctx, "Retrieve task list from cache, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
 	return cacheInfo.WorkspaceIDs, cacheInfo.BotIDs, cacheInfo.Tasks
 }
