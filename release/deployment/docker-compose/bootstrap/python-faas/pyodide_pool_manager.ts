@@ -80,7 +80,7 @@ class PyodidePoolManager {
     console.log("🚀 启动Pyodide进程池...");
 
     // 启动最小数量的进程
-    const initPromises = [];
+    const initPromises: Promise<PooledProcess>[] = [];
     for (let i = 0; i < this.config.minSize; i++) {
       initPromises.push(this.createProcess());
     }
@@ -179,7 +179,7 @@ class PyodidePoolManager {
 
     // 继续处理其他请求
     if (this.pendingRequests.length > 0) {
-      setImmediate(() => this.processRequest());
+      setTimeout(() => this.processRequest(), 0);
     }
   }
 
@@ -242,6 +242,52 @@ ${request.code}
     }
   }
 
+   /**
+    * 预处理代码，处理换行符和特殊字符问题
+    */
+   private preprocessCode(code: string, processId?: string): string {
+     try {
+       let processedCode = code;
+
+       // 处理JSON层面的双重转义
+       processedCode = processedCode.replace(/\\\\n/g, '\\n');  // \\n -> \n (JSON转义)
+       processedCode = processedCode.replace(/\\\\t/g, '\\t');  // \\t -> \t (JSON转义)
+       processedCode = processedCode.replace(/\\\\r/g, '\\r');  // \\r -> \r (JSON转义)
+       processedCode = processedCode.replace(/\\\\"/g, '\\"');  // \\" -> \" (JSON转义)
+       processedCode = processedCode.replace(/\\\\\\\\/g, '\\\\'); // \\\\ -> \\ (JSON转义)
+
+       // 关键修复：处理Python字符串字面量中的转义序列
+       // 将 "\\na" 转换为 "\na"，这样Python会正确解释为换行符+字母a
+       processedCode = processedCode.replace(/"\\\\n/g, '"\n');  // "\\n -> "\n (实际换行符)
+       processedCode = processedCode.replace(/"\\\\t/g, '"\t');  // "\\t -> "\t (实际制表符)
+       processedCode = processedCode.replace(/"\\\\r/g, '"\r');  // "\\r -> "\r (实际回车符)
+       processedCode = processedCode.replace(/"\\\\"/g, '"\""');  // "\\" -> "\" (实际双引号)
+       processedCode = processedCode.replace(/"\\\\\\\\/g, '"\\'); // "\\\\ -> "\ (实际反斜杠)
+
+       // 额外处理：确保所有字符串字面量中的转义序列都被正确处理
+       processedCode = processedCode.replace(/"\\n/g, '"\n');  // "\\n -> "\n (实际换行符)
+       processedCode = processedCode.replace(/"\\t/g, '"\t');  // "\\t -> "\t (实际制表符)
+       processedCode = processedCode.replace(/"\\r/g, '"\r');  // "\\r -> "\r (实际回车符)
+       processedCode = processedCode.replace(/"\\"/g, '"\""');  // "\\" -> "\" (实际双引号)
+
+       // 检查是否处理了转义字符
+       if (code.includes('\\\\n') && processedCode.includes('\\n')) {
+         console.log(`✅ 已处理转义字符: ${processId || 'unknown'}`);
+       }
+
+       // 记录处理前后的差异（仅用于调试）
+       if (code !== processedCode) {
+         console.log(`🔧 代码预处理完成: ${processId || 'unknown'}, 处理了转义字符`);
+       }
+
+       return processedCode;
+     } catch (error) {
+       console.error(`❌ 代码预处理失败: ${processId || 'unknown'}`, error);
+       // 如果预处理失败，返回原始代码
+       return code;
+     }
+   }
+
   /**
    * 使用pyodide-sandbox执行代码
    */
@@ -249,25 +295,35 @@ ${request.code}
     const startTime = Date.now();
 
     try {
+      // 预处理代码，处理Unicode字符问题
+      const processedCode = this.preprocessCode(code, processId);
+
       // 使用 pyodide-sandbox 执行代码
+      // 确保代码正确编码，处理特殊字符
       const process = new Deno.Command("deno", {
         args: [
           "run",
           "-A",
           "jsr:@eyurtsev/pyodide-sandbox",
           "-c",
-          code
+          processedCode
         ],
         stdout: "piped",
         stderr: "piped",
-        timeout: timeout
+        timeout: timeout,
+        env: {
+          "PYTHONIOENCODING": "utf-8",
+          "LANG": "en_US.UTF-8",
+          "LC_ALL": "en_US.UTF-8"
+        }
       });
 
       const { stdout, stderr, code: exitCode } = await process.output();
       const duration = Date.now() - startTime;
 
-      const stdoutText = new TextDecoder().decode(stdout);
-      const stderrText = new TextDecoder().decode(stderr);
+      // 使用UTF-8解码，并处理可能的编码错误
+      const stdoutText = new TextDecoder('utf-8', { fatal: false }).decode(stdout);
+      const stderrText = new TextDecoder('utf-8', { fatal: false }).decode(stderr);
 
       // 提取 return_val 的结果
       const returnValue = this.extractReturnValue(stdoutText);
@@ -332,7 +388,7 @@ ${request.code}
           try {
             // 解析JSON字符串，然后重新序列化以去除多余的转义
             const parsedResult = JSON.parse(parsedOutput.result);
-            return JSON.stringify(parsedResult);
+            return JSON.stringify(parsedResult, null, 0);
           } catch {
             // 如果解析失败，直接返回原始字符串
             return parsedOutput.result;
@@ -344,8 +400,22 @@ ${request.code}
       // 如果没有result字段，从stdout中提取
       const pyodideStdout = parsedOutput.stdout || "";
 
-      // 查找return_val输出的JSON内容
-      const jsonMatch = pyodideStdout.match(/\{[^{}]*"score"[^{}]*\}/);
+      // 首先尝试提取特殊标记格式的return_val
+      const specialMarkerMatch = pyodideStdout.match(/__COZE_RETURN_VAL_START__\s*\n?(.*?)\s*\n?__COZE_RETURN_VAL_END__/s);
+      if (specialMarkerMatch) {
+        const returnVal = specialMarkerMatch[1].trim();
+        try {
+          // 尝试解析为JSON，如果是JSON则重新序列化
+          const parsed = JSON.parse(returnVal);
+          return JSON.stringify(parsed, null, 0);
+        } catch {
+          // 如果不是JSON，直接返回
+          return returnVal;
+        }
+      }
+
+      // 查找return_val输出的JSON内容（改进正则表达式以处理复杂内容）
+      const jsonMatch = pyodideStdout.match(/\{[^{}]*(?:"score"[^{}]*)*\}/);
       if (jsonMatch) {
         return jsonMatch[0];
       }
@@ -360,7 +430,20 @@ ${request.code}
     } catch (error) {
       // 如果JSON解析失败，尝试直接从原始输出中提取
       try {
-        const jsonMatch = output.match(/\{[^{}]*"score"[^{}]*\}/);
+        // 首先尝试特殊标记格式
+        const specialMarkerMatch = output.match(/__COZE_RETURN_VAL_START__\s*\n?(.*?)\s*\n?__COZE_RETURN_VAL_END__/s);
+        if (specialMarkerMatch) {
+          const returnVal = specialMarkerMatch[1].trim();
+          try {
+            const parsed = JSON.parse(returnVal);
+            return JSON.stringify(parsed, null, 0);
+          } catch {
+            return returnVal;
+          }
+        }
+
+        // 改进的JSON匹配，处理复杂内容
+        const jsonMatch = output.match(/\{[^{}]*(?:"score"[^{}]*)*\}/);
         if (jsonMatch) {
           return jsonMatch[0];
         }
@@ -389,8 +472,11 @@ ${request.code}
       // 从pyodide-sandbox的stdout中移除return_val输出的JSON
       const pyodideStdout = parsedOutput.stdout || "";
 
-      // 移除JSON对象，保留其他内容
-      let cleaned = pyodideStdout.replace(/\{[^{}]*"score"[^{}]*\}/g, '');
+      // 首先移除特殊标记格式的return_val输出
+      let cleaned = pyodideStdout.replace(/__COZE_RETURN_VAL_START__\s*\n?.*?\s*\n?__COZE_RETURN_VAL_END__/gs, '');
+
+      // 移除JSON对象，保留其他内容（改进正则表达式以处理复杂内容）
+      cleaned = cleaned.replace(/\{[^{}]*(?:"score"[^{}]*)*\}/g, '');
       if (cleaned === pyodideStdout) {
         // 如果没有找到特定的JSON，尝试移除任何JSON对象
         cleaned = pyodideStdout.replace(/\{[^{}]*\}/g, '');
@@ -404,7 +490,10 @@ ${request.code}
     } catch (error) {
       // 如果JSON解析失败，尝试直接从原始输出中清理
       try {
-        let cleaned = output.replace(/\{[^{}]*"score"[^{}]*\}/g, '');
+        // 首先移除特殊标记格式
+        let cleaned = output.replace(/__COZE_RETURN_VAL_START__\s*\n?.*?\s*\n?__COZE_RETURN_VAL_END__/gs, '');
+
+        cleaned = cleaned.replace(/\{[^{}]*(?:"score"[^{}]*)*\}/g, '');
         if (cleaned === output) {
           cleaned = output.replace(/\{[^{}]*\}/g, '');
         }
