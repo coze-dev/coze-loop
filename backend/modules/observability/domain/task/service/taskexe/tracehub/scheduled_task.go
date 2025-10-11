@@ -91,7 +91,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	ctx = fillCtxWithEnv(ctx)
+	ctx = h.fillCtx(ctx)
 	logs.CtxInfo(ctx, "Scheduled task started...")
 	// Read all non-final (success/disabled) tasks
 	var taskPOs []*entity.ObservabilityTask
@@ -250,7 +250,7 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	ctx = fillCtxWithEnv(ctx)
+	ctx = h.fillCtx(ctx)
 
 	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to database...")
 
@@ -413,7 +413,7 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	ctx = fillCtxWithEnv(ctx)
+	ctx = h.fillCtx(ctx)
 
 	logs.CtxInfo(ctx, "Start syncing task cache...")
 

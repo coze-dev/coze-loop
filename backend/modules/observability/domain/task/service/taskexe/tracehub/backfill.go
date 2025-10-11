@@ -29,7 +29,7 @@ const pageSize = 500
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
-	ctx = fillCtxWithEnv(ctx)
+	ctx = h.fillCtx(ctx)
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
 		return err

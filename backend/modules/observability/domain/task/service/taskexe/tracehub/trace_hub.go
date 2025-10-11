@@ -6,14 +6,11 @@ package tracehub
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/bytedance/gg/gslice"
-	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
@@ -107,9 +104,7 @@ type flushReq struct {
 const TagKeyResult = "tag_key"
 
 func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawSpan) error {
-	logs.CtxInfo(ctx, "XttEnv: %s", os.Getenv(XttEnv))
-	ctx = fillCtxWithEnv(ctx)
-	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
+	ctx = h.fillCtx(ctx)
 	logs.CtxInfo(ctx, "TraceHub start")
 	var tags []metrics.T
 	// 1、Convert to standard span and perform initial filtering based on space_id

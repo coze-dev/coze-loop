@@ -6,7 +6,9 @@ package tracehub
 import (
 	"context"
 	"os"
+	"strconv"
 
+	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -29,7 +31,8 @@ func ToJSONString(ctx context.Context, obj interface{}) string {
 	return jsonStr
 }
 
-func fillCtxWithEnv(ctx context.Context) context.Context {
+func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
+	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
 	if os.Getenv("TCE_HOST_ENV") == "boe" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
 	} else {
