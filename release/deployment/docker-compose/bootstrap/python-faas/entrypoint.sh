@@ -16,7 +16,7 @@ print_banner() {
   printf "%s\n%s%s%s\n%s\n" "$line" "$side_eq" "$content" "$side_eq" "$line"
 }
 
-print_banner "Starting Pyodide Python FaaS..."
+print_banner "Starting Pooled Pyodide Python FaaS..."
 
 echo "🔧 验证Deno和Pyodide环境..."
 # 验证Deno安装
@@ -46,8 +46,14 @@ mkdir -p "${FAAS_WORKSPACE:-/tmp/faas-workspace}"
   done
 )&
 
-# 使用 Pyodide Python FaaS 服务器
-echo "🚀 启动 Pyodide Python FaaS 服务器..."
+# 使用池化 Pyodide Python FaaS 服务器
+echo "🚀 启动池化 Pyodide Python FaaS 服务器..."
+echo "🏊 进程池配置:"
+echo "  - 最小进程数: ${FAAS_POOL_MIN_SIZE:-2}"
+echo "  - 最大进程数: ${FAAS_POOL_MAX_SIZE:-8}"
+echo "  - 空闲超时: ${FAAS_POOL_IDLE_TIMEOUT:-300000}ms"
+echo "  - 执行超时: ${FAAS_MAX_EXECUTION_TIME:-30000}ms"
+
 exec deno run \
   --no-lock \
   --allow-net=0.0.0.0:8000 \

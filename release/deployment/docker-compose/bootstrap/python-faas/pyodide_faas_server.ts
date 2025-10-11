@@ -1,26 +1,19 @@
-#!/usr/bin/env deno run --allow-net --allow-env --allow-read --allow-write
+#!/usr/bin/env deno run --allow-net --allow-env --allow-read --allow-write --allow-run
 
 /// <reference types="https://deno.land/x/deno@v1.45.5/cli/dts/lib.deno.d.ts" />
+// @deno-types="https://deno.land/x/deno@v1.45.5/cli/dts/lib.deno.d.ts"
 
 /**
- * Pyodide Python FaaS 服务器
+ * Pyodide Python FaaS 服务器 (池化优化版)
  *
  * 使用 Pyodide WebAssembly Python 执行环境
+ * 基于进程池和预加载技术优化执行速度
  * 基于 deno run -A jsr:@eyurtsev/pyodide-sandbox
  */
 
-// ==================== 类型定义 ====================
+import { PyodidePoolManager, type PoolConfig, type ExecutionResult } from "./pyodide_pool_manager.ts";
 
-interface ExecutionResult {
-  stdout: string;
-  stderr: string;
-  returnValue: string;
-  metadata: {
-    duration: number;
-    exitCode: number;
-    timedOut: boolean;
-  };
-}
+// ==================== 类型定义 ====================
 
 interface HealthStatus {
   status: string;
@@ -36,192 +29,88 @@ interface HealthStatus {
   };
 }
 
-// ==================== Pyodide 执行器 ====================
+// ==================== 池化执行器 ====================
 
-class PyodideExecutor {
+class PooledPyodideExecutor {
+  private poolManager: PyodidePoolManager;
   private executionCount = 0;
 
+  constructor(poolConfig?: Partial<PoolConfig>) {
+    this.poolManager = new PyodidePoolManager(poolConfig);
+  }
+
   /**
-   * 执行 Python 代码（使用 Pyodide）
+   * 启动执行器
+   */
+  async start(): Promise<void> {
+    await this.poolManager.start();
+  }
+
+  /**
+   * 执行 Python 代码（使用池化Pyodide）
    */
   async executePython(code: string, timeout = 30000): Promise<ExecutionResult> {
     this.executionCount++;
-
-    console.log(`🚀 执行 Python 代码 (Pyodide)，超时: ${timeout}ms`);
-
-    const startTime = Date.now();
+    console.log(`🚀 执行 Python 代码 (池化Pyodide)，超时: ${timeout}ms`);
 
     try {
-      // 注入标准的return_val函数，只输出JSON内容到stdout
-      const returnValFunction = `
-def return_val(value):
-    """
-    return_val函数实现 - 只输出JSON内容到stdout最后一行
-    """
-    # 处理输入值
-    if value is None:
-        ret_val = ""
-    else:
-        ret_val = str(value)
-
-    # 直接输出JSON内容（作为最后一行）
-    print(ret_val)
-`;
-
-      const enhancedCode = `${returnValFunction}
-
-${code}
-`;
-
-      // 使用 pyodide-sandbox 执行代码
-      const process = new Deno.Command("deno", {
-        args: [
-          "run",
-          "-A",
-          "jsr:@eyurtsev/pyodide-sandbox",
-          "-c",
-          enhancedCode
-        ],
-        stdout: "piped",
-        stderr: "piped",
-        timeout: timeout
-      });
-
-      const { stdout, stderr, code: exitCode } = await process.output();
-      const duration = Date.now() - startTime;
-
-      const stdoutText = new TextDecoder().decode(stdout);
-      const stderrText = new TextDecoder().decode(stderr);
-
-      // 提取 return_val 的结果（从pyodide-sandbox的输出中）
-      const returnValue = this.extractReturnValue(stdoutText);
-
-      // 清理 stdout，移除 return_val 输出（保持pyodide-sandbox的JSON结构）
-      const cleanStdout = this.cleanStdout(stdoutText);
-
-      return {
-        stdout: cleanStdout,
-        stderr: stderrText,
-        returnValue,
-        metadata: {
-          duration,
-          exitCode,
-          timedOut: false
-        }
-      };
-
+      const result = await this.poolManager.executePython(code, timeout);
+      console.log(`✅ 执行完成，耗时: ${result.metadata.duration}ms，进程: ${result.metadata.processId}`);
+      return result;
     } catch (error) {
-      const duration = Date.now() - startTime;
-
-      if (error.name === 'AbortError' || error.message.includes('timeout')) {
-        return {
-          stdout: "",
-          stderr: `执行超时 (${timeout}ms)`,
-          returnValue: "",
-          metadata: {
-            duration,
-            exitCode: 1,
-            timedOut: true
-          }
-        };
-      }
-
-      return {
-        stdout: "",
-        stderr: `Pyodide执行错误: ${error.message}`,
-        returnValue: "",
-        metadata: {
-          duration,
-          exitCode: 1,
-          timedOut: false
-        }
-      };
+      console.error("❌ 池化执行失败:", error);
+      throw error;
     }
   }
 
   /**
-   * 提取 return_val 的结果
+   * 获取执行统计
    */
-  private extractReturnValue(pyodideOutput: string): string {
-    try {
-      // pyodide-sandbox的输出结构是：
-      // {"stdout":"原始输出内容","stderr":null,"result":"return_val输出的JSON","success":true,"sessionMetadata":{...}}
-
-      // 解析pyodide-sandbox的输出JSON
-      const parsedOutput = JSON.parse(pyodideOutput);
-
-      // 优先使用result字段（这是pyodide-sandbox捕获的return_val输出）
-      if (parsedOutput.result) {
-        return parsedOutput.result;
-      }
-
-      // 如果没有result字段，再从stdout中提取
-      const pyodideStdout = parsedOutput.stdout || "";
-
-      // 查找return_val输出的JSON内容
-      // 由于return_val函数会print(value)，所以JSON会出现在stdout中
-
-      // 尝试从stdout中提取JSON对象
-      const jsonMatch = pyodideStdout.match(/\{[^{}]*"score"[^{}]*\}/);
-      if (jsonMatch) {
-        return jsonMatch[0];
-      }
-
-      // 如果没有找到，尝试查找任何JSON对象
-      const anyJsonMatch = pyodideStdout.match(/\{[^{}]*\}/);
-      if (anyJsonMatch) {
-        return anyJsonMatch[0];
-      }
-
-      return "";
-    } catch (error) {
-      console.error("解析pyodide输出失败:", error);
-      return "";
-    }
-  }
-
-  /**
-   * 清理 stdout，移除 return_val 输出
-   */
-  private cleanStdout(pyodideOutput: string): string {
-    try {
-      // 解析pyodide-sandbox的输出JSON
-      const parsedOutput = JSON.parse(pyodideOutput);
-
-      // 从pyodide-sandbox的stdout中移除return_val输出的JSON
-      const pyodideStdout = parsedOutput.stdout || "";
-
-      // 移除JSON对象，保留其他内容
-      let cleanedStdout = pyodideStdout.replace(/\{[^{}]*"score"[^{}]*\}/g, '');
-      if (cleanedStdout === pyodideStdout) {
-        // 如果没有找到特定的JSON，尝试移除任何JSON对象
-        cleanedStdout = pyodideStdout.replace(/\{[^{}]*\}/g, '');
-      }
-
-      // 清理多余的空行
-      cleanedStdout = cleanedStdout.replace(/\n+/g, '\n').trim();
-      // 返回清理后的纯 stdout 文本
-      return cleanedStdout;
-    } catch (error) {
-      console.error("清理pyodide输出失败:", error);
-      // 回退为原始内容（可能是pyodide-sandbox的JSON字符串）
-      return pyodideOutput;
-    }
-  }
-
   getExecutionCount(): number {
     return this.executionCount;
+  }
+
+  /**
+   * 获取池状态
+   */
+  getPoolStatus() {
+    return this.poolManager.getPoolStatus();
+  }
+
+  /**
+   * 关闭执行器
+   */
+  async shutdown(): Promise<void> {
+    await this.poolManager.shutdown();
   }
 }
 
 // ==================== Pyodide FaaS 服务器 ====================
 
 class PyodideFaaSServer {
-  private readonly executor: PyodideExecutor;
+  private readonly executor: PooledPyodideExecutor;
   private readonly startTime = Date.now();
 
   constructor() {
-    this.executor = new PyodideExecutor();
+    // 配置进程池参数
+    const poolConfig: Partial<PoolConfig> = {
+      minSize: parseInt(Deno.env.get("FAAS_POOL_MIN_SIZE") || "2"),
+      maxSize: parseInt(Deno.env.get("FAAS_POOL_MAX_SIZE") || "8"),
+      idleTimeout: parseInt(Deno.env.get("FAAS_POOL_IDLE_TIMEOUT") || "300000"), // 5分钟
+      maxExecutionTime: parseInt(Deno.env.get("FAAS_MAX_EXECUTION_TIME") || "30000"), // 30秒
+      preloadTimeout: parseInt(Deno.env.get("FAAS_PRELOAD_TIMEOUT") || "60000"), // 1分钟
+    };
+
+    this.executor = new PooledPyodideExecutor(poolConfig);
+  }
+
+  /**
+   * 启动服务器
+   */
+  async start(): Promise<void> {
+    console.log("🚀 启动池化Pyodide执行器...");
+    await this.executor.start();
+    console.log("✅ 池化Pyodide执行器启动完成");
   }
 
   /**
@@ -329,13 +218,14 @@ class PyodideFaaSServer {
    * 处理健康检查
    */
   handleHealth(): Response {
+    const poolStatus = this.executor.getPoolStatus();
     const healthData: HealthStatus = {
       status: "healthy",
       timestamp: new Date().toISOString(),
-      runtime: "pyodide-webassembly",
-      version: "pyodide-faas-v1.0.0",
+      runtime: "pyodide-webassembly-pooled",
+      version: "pyodide-faas-v2.0.0-pooled",
       execution_count: this.executor.getExecutionCount(),
-      python_version: "Pyodide WebAssembly Python",
+      python_version: "Pyodide WebAssembly Python (Pooled)",
       security: {
         sandbox: "pyodide-webassembly",
         isolation: "deno-permissions",
@@ -343,7 +233,13 @@ class PyodideFaaSServer {
       }
     };
 
-    return new Response(JSON.stringify(healthData), {
+    // 添加池状态信息
+    const responseData = {
+      ...healthData,
+      pool_status: poolStatus
+    };
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
@@ -354,18 +250,29 @@ class PyodideFaaSServer {
    */
   handleMetrics(): Response {
     const uptime = Date.now() - this.startTime;
+    const poolStatus = this.executor.getPoolStatus();
     const metrics = {
       execution_count: this.executor.getExecutionCount(),
       uptime_seconds: Math.floor(uptime / 1000),
-      runtime: "pyodide-webassembly",
-      python_version: "Pyodide WebAssembly Python",
-      status: "healthy"
+      runtime: "pyodide-webassembly-pooled",
+      python_version: "Pyodide WebAssembly Python (Pooled)",
+      status: "healthy",
+      pool_metrics: poolStatus
     };
 
     return new Response(JSON.stringify(metrics), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
+  }
+
+  /**
+   * 关闭服务器
+   */
+  async shutdown(): Promise<void> {
+    console.log("🛑 关闭Pyodide FaaS服务器...");
+    await this.executor.shutdown();
+    console.log("✅ Pyodide FaaS服务器关闭完成");
   }
 }
 
@@ -374,11 +281,15 @@ class PyodideFaaSServer {
 async function main() {
   const port = parseInt(Deno.env.get("FAAS_PORT") || "8000");
 
-  console.log(`🚀 启动 Pyodide Python FaaS 服务器，端口: ${port}...`);
+  console.log(`🚀 启动 Pyodide Python FaaS 服务器 (池化优化版)，端口: ${port}...`);
   console.log("🔒 安全特性: Deno 权限控制 + Pyodide WebAssembly 沙箱");
-  console.log("⚡ 运行模式: Pyodide WebAssembly Python 执行器");
+  console.log("⚡ 运行模式: 池化 Pyodide WebAssembly Python 执行器");
+  console.log("🏊 性能优化: 进程池 + Pyodide 预加载");
 
   const faasServer = new PyodideFaaSServer();
+
+  // 启动服务器（包括进程池初始化）
+  await faasServer.start();
 
   const handler = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -412,16 +323,23 @@ async function main() {
 
   console.log(`✅ Pyodide Python FaaS 服务器启动成功: http://0.0.0.0:${port}`);
   console.log("📡 可用端点:");
-  console.log("  GET  /health    - 健康检查");
-  console.log("  GET  /metrics   - 指标信息");
-  console.log("  POST /run_code  - 执行 Python 代码 (Pyodide)");
+  console.log("  GET  /health    - 健康检查 (包含池状态)");
+  console.log("  GET  /metrics   - 指标信息 (包含池指标)");
+  console.log("  POST /run_code  - 执行 Python 代码 (池化Pyodide)");
   console.log("");
   console.log("🔐 安全保障:");
   console.log("  ✅ Deno 权限控制");
   console.log("  ✅ Pyodide WebAssembly 沙箱");
   console.log("  ✅ 代码执行隔离");
   console.log("");
-  console.log("⚡ 特性:");
+  console.log("⚡ 性能优化特性:");
+  console.log("  ✅ 进程池管理 (2-8个进程)");
+  console.log("  ✅ Pyodide 预加载");
+  console.log("  ✅ 智能负载均衡");
+  console.log("  ✅ 空闲进程自动清理");
+  console.log("  ✅ 连接复用");
+  console.log("");
+  console.log("🐍 Python 执行特性:");
   console.log("  ✅ WebAssembly Python 执行");
   console.log("  ✅ 完整的 Python 标准库");
   console.log("  ✅ stdout/stderr 捕获");

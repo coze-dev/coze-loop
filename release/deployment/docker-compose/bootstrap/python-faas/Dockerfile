@@ -12,6 +12,13 @@ ENV FAAS_TIMEOUT=30000
 ENV FAAS_LANGUAGE=python
 ENV PYODIDE_VERSION=0.26.2
 
+# 池化配置
+ENV FAAS_POOL_MIN_SIZE=2
+ENV FAAS_POOL_MAX_SIZE=8
+ENV FAAS_POOL_IDLE_TIMEOUT=300000
+ENV FAAS_MAX_EXECUTION_TIME=30000
+ENV FAAS_PRELOAD_TIMEOUT=60000
+
 # 安装系统依赖
 USER root
 RUN apt-get update && apt-get install -y \
@@ -28,6 +35,7 @@ COPY deno.json ./
 COPY entrypoint.sh ./
 COPY healthcheck.sh ./
 COPY pyodide_faas_server.ts ./
+COPY pyodide_pool_manager.ts ./
 
 # 确保脚本有可执行权限
 RUN chmod +x entrypoint.sh healthcheck.sh

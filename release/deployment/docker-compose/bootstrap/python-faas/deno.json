@@ -4,7 +4,7 @@
     "strict": true
   },
   "tasks": {
-    "dev": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run enhanced_python_faas_server.ts",
-    "start": "deno run --allow-net=0.0.0.0:8000 --allow-env --allow-read=/coze-loop/bootstrap/python-faas,/tmp --allow-write=/tmp --allow-run=python3,python --allow-ffi enhanced_python_faas_server.ts"
+    "dev": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run pyodide_faas_server.ts",
+    "start": "deno run --allow-net=0.0.0.0:8000 --allow-env --allow-read=/app,/tmp --allow-write=/tmp --allow-run=deno pyodide_faas_server.ts"
   }
 }
