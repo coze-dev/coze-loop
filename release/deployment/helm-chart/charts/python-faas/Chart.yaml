@@ -1,0 +1,7 @@
+apiVersion: v2
+name: coze-loop-python-faas
+description: Cozeloop Python FaaS Helm chart
+type: application
+version: 1.0.0
+appVersion: latest
+

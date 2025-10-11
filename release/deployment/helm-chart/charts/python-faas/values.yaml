@@ -1,0 +1,40 @@
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+image:
+  registry: "denoland"
+  repository: "deno"
+  image: "deno"
+  tag: "1.45.5"
+  pullPolicy: IfNotPresent
+  pullSecrets: "coze-loop-image-secret"
+
+deployment:
+  replicaCount: 1
+  terminationGracePeriodSeconds: 5
+  resources:
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+
+env:
+  deno:
+    dir: "/tmp/.deno"
+    noUpdateCheck: "1"
+    v8Flags: "--max-old-space-size=2048"
+  faas:
+    workspace: "/tmp/faas-workspace"
+    port: "8000"
+    timeout: "30000"
+    language: "python"
+
+custom:
+  image:
+    registry:
+    pullSecrets:
+
