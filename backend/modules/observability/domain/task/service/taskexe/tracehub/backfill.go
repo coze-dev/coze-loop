@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
@@ -35,6 +36,10 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	if err != nil {
 		return err
 	}
+	ctx = session.WithCtxUser(ctx, &session.User{
+		ID: sub.t.GetBaseInfo().GetCreatedBy().GetUserID(),
+	})
+	logs.CtxInfo(ctx, "ctx:%v", ctx)
 
 	// 2. Determine whether the backfill task is completed to avoid repeated execution
 	isDone, err := h.isBackfillDone(ctx, sub)
