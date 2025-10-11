@@ -35,7 +35,7 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", spaceIDs, botIDs, tasks)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space_or_bot"})
-		logs.CtxInfo(ctx, "no space or bot found for span, %s", logSuffix)
+		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
 		return nil
 	}
 	// 2、Match spans against task rules
