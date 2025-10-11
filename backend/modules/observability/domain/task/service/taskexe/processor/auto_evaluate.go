@@ -307,8 +307,8 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 		datasetName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 		exptName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	} else {
-		datasetName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
-		exptName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		datasetName = fmt.Sprintf("%s_%s_%d.%d.%d.%d", AutoEvaluateCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
+		exptName = fmt.Sprintf("%s_%s_%d.%d.%d.%d", AutoEvaluateCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	}
 	// Step 1: create evaluation dataset
 	datasetID, err := p.datasetServiceAdaptor.GetDatasetProvider(category).CreateDataset(ctx, entity.NewDataset(
