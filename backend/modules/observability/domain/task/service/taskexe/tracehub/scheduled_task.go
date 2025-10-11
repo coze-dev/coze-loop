@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TaskRunCountInfo TaskRunCount信息结构
+// TaskRunCountInfo defines the TaskRunCount structure
 type TaskRunCountInfo struct {
 	TaskID           int64
 	TaskRunID        int64
@@ -28,7 +28,7 @@ type TaskRunCountInfo struct {
 	TaskRunFailCount int64
 }
 
-// TaskCacheInfo 任务缓存信息结构
+// TaskCacheInfo represents task cache metadata
 type TaskCacheInfo struct {
 	WorkspaceIDs []string
 	BotIDs       []string
@@ -36,16 +36,16 @@ type TaskCacheInfo struct {
 	UpdateTime   time.Time
 }
 
-// startScheduledTask 启动定时任务goroutine - 使用5分钟间隔的定时器
+// startScheduledTask launches the scheduled task goroutine with a five-minute interval timer
 func (h *TraceHubServiceImpl) startScheduledTask() {
 	go func() {
 		for {
 			select {
 			case <-h.scheduledTaskTicker.C:
-				// 执行定时任务
+				// Execute scheduled task
 				h.runScheduledTask()
 			case <-h.stopChan:
-				// 停止定时任务
+				// Stop scheduled task
 				h.scheduledTaskTicker.Stop()
 				return
 			}
@@ -53,16 +53,16 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 	}()
 }
 
-// startSyncTaskRunCounts 启动数据同步定时任务goroutine - 使用1分钟间隔的定时器
+// startSyncTaskRunCounts launches the data synchronization goroutine with a one-minute interval timer
 func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 	go func() {
 		for {
 			select {
 			case <-h.syncTaskTicker.C:
-				// 执行定时任务
+				// Execute scheduled task
 				h.syncTaskRunCounts()
 			case <-h.stopChan:
-				// 停止定时任务
+				// Stop scheduled task
 				h.syncTaskTicker.Stop()
 				return
 			}
@@ -70,16 +70,16 @@ func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 	}()
 }
 
-// startSyncTaskCache 启动任务缓存定时任务goroutine - 使用1分钟间隔的定时器
+// startSyncTaskCache launches the task cache synchronization goroutine with a one-minute interval timer
 func (h *TraceHubServiceImpl) startSyncTaskCache() {
 	go func() {
 		for {
 			select {
 			case <-h.syncTaskTicker.C:
-				// 执行定时任务
+				// Execute scheduled task
 				h.syncTaskCache()
 			case <-h.stopChan:
-				// 停止定时任务
+				// Stop scheduled task
 				h.syncTaskTicker.Stop()
 				return
 			}
@@ -92,14 +92,14 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = fillCtxWithEnv(ctx)
-	logs.CtxInfo(ctx, "定时任务开始执行...")
-	// 读取所有非终态（成功/禁用）任务
+	logs.CtxInfo(ctx, "Scheduled task execution started...")
+	// Read all non-final (success/disabled) tasks
 	var taskPOs []*entity.ObservabilityTask
 	var err error
 	var offset int32 = 0
 	const limit int32 = 1000
 
-	// 分页循环读取所有任务
+	// Iterate through all tasks with pagination
 	for {
 		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
 			ReqLimit:  limit,
@@ -120,22 +120,22 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			},
 		})
 		if err != nil {
-			logs.CtxError(ctx, "获取非终态任务列表失败", "err", err)
+			logs.CtxError(ctx, "Failed to retrieve non-final task list", "err", err)
 			return
 		}
 
-		// 将当前页的任务添加到总列表中
+		// Append current page tasks to the overall list
 		taskPOs = append(taskPOs, tasklist...)
 
-		// 如果当前页返回的任务数量小于限制数量，说明已经是最后一页
+		// If the number of tasks returned is less than the limit, this is the last page
 		if len(tasklist) < int(limit) {
 			break
 		}
 
-		// 继续下一页，offset增加1000
+		// Continue to the next page by increasing offset by 1000
 		offset += limit
 	}
-	logs.CtxInfo(ctx, "定时任务获取到任务数量:%d", len(taskPOs))
+	logs.CtxInfo(ctx, "Scheduled task retrieved %d tasks", len(taskPOs))
 	for _, taskPO := range taskPOs {
 		var taskRun, backfillTaskRun *entity.TaskRun
 		backfillTaskRun = taskPO.GetBackfillTaskRun()
@@ -145,8 +145,8 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
 		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc := h.taskProcessor.GetTaskProcessor(taskInfo.TaskType)
-		// 达到任务时间期限
-		// 到任务结束时间就结束
+		// Reach task time limit
+		// End task when reaching the end time
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 && taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
@@ -185,7 +185,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 			}
 		}
-		// 如果任务状态为unstarted，到任务开始时间就开始create
+		// If the task status is unstarted, create a run when the start time is reached
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
 			if !taskInfo.GetRule().GetSampler().GetIsCycle() {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
@@ -212,10 +212,10 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 			}
 		}
-		// 处理taskRun
+		// Handle taskRun
 		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetTaskStatus() == task.TaskStatusPending {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
-			// 重复任务的处理:达到单次任务时间期限
+			// Handle recurring tasks: reach single task time limit
 			if time.Now().After(taskRun.RunEndAt) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -245,16 +245,16 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 
 }
 
-// syncTaskRunCounts 同步TaskRunCount到数据库
+// syncTaskRunCounts synchronizes TaskRunCount to the database
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = fillCtxWithEnv(ctx)
 
-	logs.CtxInfo(ctx, "开始同步TaskRunCounts到数据库...")
+	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to the database...")
 
-	// 1. 获取非终态任务列表
+	// 1. Retrieve non-final task list
 	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
 		ReqLimit:  1000,
 		ReqOffset: 0,
@@ -278,13 +278,13 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 		return
 	}
 	if len(taskPOs) == 0 {
-		logs.CtxInfo(ctx, "没有非终态任务需要同步")
+		logs.CtxInfo(ctx, "No non-final tasks to synchronize")
 		return
 	}
 
-	logs.CtxInfo(ctx, "获取到非终态任务数量,count:%d", len(taskPOs))
+	logs.CtxInfo(ctx, "Retrieved non-final tasks, count:%d", len(taskPOs))
 
-	// 2. 收集所有需要同步的TaskRun信息
+	// 2. Collect TaskRun info requiring synchronization
 	var taskRunInfos []*TaskRunCountInfo
 	for _, taskPO := range taskPOs {
 		if len(taskPO.TaskRuns) == 0 {
@@ -300,13 +300,13 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	}
 
 	if len(taskRunInfos) == 0 {
-		logs.CtxInfo(ctx, "没有TaskRun需要同步")
+		logs.CtxInfo(ctx, "No TaskRun requires synchronization")
 		return
 	}
 
-	logs.CtxInfo(ctx, "需要同步的TaskRun数量", "count", len(taskRunInfos))
+	logs.CtxInfo(ctx, "TaskRuns pending synchronization, count:%d", len(taskRunInfos))
 
-	// 3. 批量处理TaskRun，每批50个
+	// 3. Process TaskRuns in batches of 50
 	batchSize := 50
 	for i := 0; i < len(taskRunInfos); i += batchSize {
 		end := i + batchSize
@@ -319,39 +319,39 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	}
 }
 
-// processBatch 批量处理TaskRun计数同步
+// processBatch handles TaskRun count synchronization for a batch
 func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRunCountInfo) {
-	logs.CtxInfo(ctx, "开始处理批次", "batchSize", len(batch))
+	logs.CtxInfo(ctx, "Start processing batch, batchSize:%d", len(batch))
 
-	// 1. 批量读取Redis计数数据
+	// 1. Read Redis counters in bulk
 	for _, info := range batch {
-		// 读取taskruncount
+		// Read task run count
 		count, err := h.taskRepo.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || count == -1 {
-			logs.CtxWarn(ctx, "获取TaskRunCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+			logs.CtxWarn(ctx, "Failed to get TaskRunCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
 		} else {
 			info.TaskRunCount = count
 		}
 
-		// 读取taskrunscesscount
+		// Read task run success count
 		successCount, err := h.taskRepo.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || successCount == -1 {
-			logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+			logs.CtxWarn(ctx, "Failed to get TaskRunSuccessCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
 			successCount = 0
 		} else {
 			info.TaskRunSuccCount = successCount
 		}
 
-		// 读取taskrunfailcount
+		// Read task run fail count
 		failCount, err := h.taskRepo.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || failCount == -1 {
-			logs.CtxWarn(ctx, "获取TaskRunFailCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
+			logs.CtxWarn(ctx, "Failed to get TaskRunFailCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
 			failCount = 0
 		} else {
 			info.TaskRunFailCount = failCount
 		}
 
-		logs.CtxDebug(ctx, "读取计数数据",
+		logs.CtxDebug(ctx, "Read count data",
 			"taskID", info.TaskID,
 			"taskRunID", info.TaskRunID,
 			"runCount", info.TaskRunCount,
@@ -359,51 +359,51 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 			"failCount", info.TaskRunFailCount)
 	}
 
-	// 2. 批量更新数据库
+	// 2. Batch update the database
 	for _, info := range batch {
 		err := h.updateTaskRunDetail(ctx, info)
 		if err != nil {
-			logs.CtxError(ctx, "更新TaskRun详情失败",
+			logs.CtxError(ctx, "Failed to update TaskRun detail",
 				"taskID", info.TaskID,
 				"taskRunID", info.TaskRunID,
 				"err", err)
 		} else {
-			logs.CtxDebug(ctx, "更新TaskRun详情成功",
+			logs.CtxDebug(ctx, "Successfully updated TaskRun detail",
 				"taskID", info.TaskID,
 				"taskRunID", info.TaskRunID)
 		}
 	}
 
-	logs.CtxInfo(ctx, "批次处理完成",
+	logs.CtxInfo(ctx, "Batch processing completed",
 		"batchSize", len(batch))
 }
 
-// updateTaskRunDetail 更新TaskRun的run_detail字段
+// updateTaskRunDetail updates the run_detail field for a TaskRun
 func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *TaskRunCountInfo) error {
-	// 构建run_detail JSON数据
+	// Build run_detail JSON payload
 	runDetail := map[string]interface{}{
 		"total_count":   info.TaskRunCount,
 		"success_count": info.TaskRunSuccCount,
 		"failed_count":  info.TaskRunFailCount,
 	}
 
-	// 序列化为JSON字符串
+	// Serialize to JSON string
 	runDetailJSON, err := json.Marshal(runDetail)
 	if err != nil {
-		return errors.Wrap(err, "序列化run_detail失败")
+		return errors.Wrap(err, "failed to marshal run_detail")
 	}
 
 	runDetailStr := string(runDetailJSON)
 
-	// 构建更新映射
+	// Build update map
 	updateMap := map[string]interface{}{
 		"run_detail": &runDetailStr,
 	}
 
-	// 使用乐观锁更新
+	// Update with optimistic concurrency control
 	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
 	if err != nil {
-		return errors.Wrap(err, "更新TaskRun失败")
+		return errors.Wrap(err, "failed to update TaskRun")
 	}
 
 	return nil
@@ -415,29 +415,29 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = fillCtxWithEnv(ctx)
 
-	logs.CtxInfo(ctx, "开始同步任务缓存...")
+	logs.CtxInfo(ctx, "Start syncing task cache...")
 
-	// 1. 从数据库中获取所有非终态任务的spaceID、botID和task信息
+	// 1. Fetch workspace, bot, and task information for non-final tasks from the database
 	spaceIDs, botIDs, tasks := h.taskRepo.GetObjListWithTask(ctx)
-	logs.CtxInfo(ctx, "获取到任务数量", "taskCount", len(tasks), "spaceCount", len(spaceIDs), "botCount", len(botIDs))
+	logs.CtxInfo(ctx, "Retrieved tasks, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
 
-	// 2. 构建新的缓存映射
+	// 2. Build new cache map
 	var newCache = TaskCacheInfo{
 		WorkspaceIDs: spaceIDs,
 		BotIDs:       botIDs,
 		Tasks:        tasks,
-		UpdateTime:   time.Now(), // 设置当前时间为更新时间
+		UpdateTime:   time.Now(), // Set current time as update timestamp
 	}
 
-	// 3. 清空旧缓存并更新新缓存
+	// 3. Clear the old cache and update with the new cache
 	h.taskCacheLock.Lock()
 	defer h.taskCacheLock.Unlock()
 
-	// 清空旧缓存
+	// Clear old cache
 	h.taskCache.Delete("ObjListWithTask")
 
-	// 4. 将新缓存写入本地缓存
+	// 4. Store the new cache into local cache
 	h.taskCache.Store("ObjListWithTask", &newCache)
 
-	logs.CtxInfo(ctx, "任务缓存同步完成", "taskCount", len(tasks), "updateTime", newCache.UpdateTime.Format(time.RFC3339))
+	logs.CtxInfo(ctx, "Task cache synchronization completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
 }
