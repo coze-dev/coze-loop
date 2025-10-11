@@ -7,6 +7,7 @@ service PromptOpenAPIService {
     BatchGetPromptByPromptKeyResponse BatchGetPromptByPromptKey(1: BatchGetPromptByPromptKeyRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/mget')
     ExecuteResponse Execute(1: ExecuteRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/execute")
     ExecuteStreamingResponse ExecuteStreaming(1: ExecuteRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/execute_streaming", streaming.mode='server')
+    ListPromptBasicResponse ListPromptBasic(1: ListPromptBasicRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/list')
 }
 
 struct BatchGetPromptByPromptKeyRequest {
@@ -204,4 +205,41 @@ struct VariableVal {
 struct TokenUsage {
     1: optional i32 input_tokens // 输入消耗
     2: optional i32 output_tokens // 输出消耗
+}
+
+struct ListPromptBasicRequest {
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional i32 page_number (api.body="page_number", vt.gt = "0")
+    3: optional i32 page_size (api.body="page_size", vt.gt = "0", vt.le = "200")
+    4: optional string key_word (api.body="key_word") // name/key前缀匹配
+    5: optional string creator (api.body="creator") // 创建人
+
+    255: optional base.Base Base
+}
+
+struct ListPromptBasicResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListPromptBasicData data
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct PromptBasic {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"id"') // Prompt ID
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"') // 工作空间ID
+    3: optional string prompt_key // 唯一标识
+    4: optional string display_name // Prompt名称
+    5: optional string description // Prompt描述
+    6: optional string latest_version // 最新版本
+    7: optional string created_by // 创建者
+    8: optional string updated_by // 更新者
+    9: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"') // 创建时间
+    10: optional i64 updated_at (api.js_conv='true', go.tag='json:"updated_at"') // 更新时间
+    11: optional i64 latest_committed_at (api.js_conv='true', go.tag='json:"latest_committed_at"') // 最后提交时间
+}
+
+struct ListPromptBasicData {
+    1: optional list<PromptBasic> prompts // Prompt列表
+    2: optional i32 total
 }

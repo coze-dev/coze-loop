@@ -416,3 +416,28 @@ func OpenAPIFunctionCallDTO2DO(dto *openapi.FunctionCall) *entity.FunctionCall {
 		Arguments: dto.Arguments,
 	}
 }
+
+// OpenAPIPromptBasicDO2DTO 将entity Prompt转换为openapi PromptBasic
+func OpenAPIPromptBasicDO2DTO(do *entity.Prompt) *openapi.PromptBasic {
+	if do == nil || do.PromptBasic == nil {
+		return nil
+	}
+	return &openapi.PromptBasic{
+		ID:            ptr.Of(do.ID),
+		WorkspaceID:   ptr.Of(do.SpaceID),
+		PromptKey:     ptr.Of(do.PromptKey),
+		DisplayName:   ptr.Of(do.PromptBasic.DisplayName),
+		Description:   ptr.Of(do.PromptBasic.Description),
+		LatestVersion: ptr.Of(do.PromptBasic.LatestVersion),
+		CreatedBy:     ptr.Of(do.PromptBasic.CreatedBy),
+		UpdatedBy:     ptr.Of(do.PromptBasic.UpdatedBy),
+		CreatedAt:     ptr.Of(do.PromptBasic.CreatedAt.UnixMilli()),
+		UpdatedAt:     ptr.Of(do.PromptBasic.UpdatedAt.UnixMilli()),
+		LatestCommittedAt: func() *int64 {
+			if do.PromptBasic.LatestCommittedAt == nil {
+				return nil
+			}
+			return ptr.Of(do.PromptBasic.LatestCommittedAt.UnixMilli())
+		}(),
+	}
+}

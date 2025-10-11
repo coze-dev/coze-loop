@@ -36,6 +36,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingServer),
 	),
+	"ListPromptBasic": kitex.NewMethodInfo(
+		listPromptBasicHandler,
+		newPromptOpenAPIServiceListPromptBasicArgs,
+		newPromptOpenAPIServiceListPromptBasicResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -128,6 +135,25 @@ func newPromptOpenAPIServiceExecuteStreamingResult() interface{} {
 	return openapi.NewPromptOpenAPIServiceExecuteStreamingResult()
 }
 
+func listPromptBasicHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceListPromptBasicArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceListPromptBasicResult)
+	success, err := handler.(openapi.PromptOpenAPIService).ListPromptBasic(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceListPromptBasicArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceListPromptBasicArgs()
+}
+
+func newPromptOpenAPIServiceListPromptBasicResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceListPromptBasicResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -173,4 +199,14 @@ func (p *kClient) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequ
 		return nil, err
 	}
 	return stream, nil
+}
+
+func (p *kClient) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceListPromptBasicArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceListPromptBasicResult
+	if err = p.c.Call(ctx, "ListPromptBasic", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
 }

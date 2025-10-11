@@ -368,6 +368,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
 				_prompts0.POST("/execute", append(_executeMw(handler), apis.Execute)...)
 				_prompts0.POST("/execute_streaming", append(_executestreamingMw(handler), apis.ExecuteStreaming)...)
+				_prompts0.POST("/list", append(_listpromptbasicMw(handler), apis.ListPromptBasic)...)
 				_prompts0.POST("/mget", append(_batchgetpromptbypromptkeyMw(handler), apis.BatchGetPromptByPromptKey)...)
 			}
 			{

@@ -5,6 +5,7 @@ package convertor
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -1709,6 +1710,184 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, OpenAPIBatchToolCallDTO2DO(tt.dtos))
+		})
+	}
+}
+
+func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
+	createdAt := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	updatedAt := time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC)
+	latestCommittedAt := time.Date(2024, 1, 3, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name string
+		do   *entity.Prompt
+		want *openapi.PromptBasic
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "nil prompt basic",
+			do: &entity.Prompt{
+				ID:          123,
+				SpaceID:     456,
+				PromptKey:   "test_prompt",
+				PromptBasic: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty prompt basic",
+			do: &entity.Prompt{
+				ID:          123,
+				SpaceID:     456,
+				PromptKey:   "test_prompt",
+				PromptBasic: &entity.PromptBasic{},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(123)),
+				WorkspaceID:       ptr.Of(int64(456)),
+				PromptKey:         ptr.Of("test_prompt"),
+				DisplayName:       ptr.Of(""),
+				Description:       ptr.Of(""),
+				LatestVersion:     ptr.Of(""),
+				CreatedBy:         ptr.Of(""),
+				UpdatedBy:         ptr.Of(""),
+				CreatedAt:         ptr.Of(time.Time{}.UnixMilli()), // zero value time
+				UpdatedAt:         ptr.Of(time.Time{}.UnixMilli()), // zero value time
+				LatestCommittedAt: nil,
+			},
+		},
+		{
+			name: "complete prompt basic without latest committed at",
+			do: &entity.Prompt{
+				ID:        123,
+				SpaceID:   456,
+				PromptKey: "test_prompt",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:       "Test Prompt",
+					Description:       "A test prompt for testing",
+					LatestVersion:     "1.0.0",
+					CreatedBy:         "user123",
+					UpdatedBy:         "user456",
+					CreatedAt:         createdAt,
+					UpdatedAt:         updatedAt,
+					LatestCommittedAt: nil,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(123)),
+				WorkspaceID:       ptr.Of(int64(456)),
+				PromptKey:         ptr.Of("test_prompt"),
+				DisplayName:       ptr.Of("Test Prompt"),
+				Description:       ptr.Of("A test prompt for testing"),
+				LatestVersion:     ptr.Of("1.0.0"),
+				CreatedBy:         ptr.Of("user123"),
+				UpdatedBy:         ptr.Of("user456"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(updatedAt.UnixMilli()),
+				LatestCommittedAt: nil,
+			},
+		},
+		{
+			name: "complete prompt basic with latest committed at",
+			do: &entity.Prompt{
+				ID:        123,
+				SpaceID:   456,
+				PromptKey: "test_prompt",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:       "Test Prompt",
+					Description:       "A test prompt for testing",
+					LatestVersion:     "1.0.0",
+					CreatedBy:         "user123",
+					UpdatedBy:         "user456",
+					CreatedAt:         createdAt,
+					UpdatedAt:         updatedAt,
+					LatestCommittedAt: &latestCommittedAt,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(123)),
+				WorkspaceID:       ptr.Of(int64(456)),
+				PromptKey:         ptr.Of("test_prompt"),
+				DisplayName:       ptr.Of("Test Prompt"),
+				Description:       ptr.Of("A test prompt for testing"),
+				LatestVersion:     ptr.Of("1.0.0"),
+				CreatedBy:         ptr.Of("user123"),
+				UpdatedBy:         ptr.Of("user456"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(updatedAt.UnixMilli()),
+				LatestCommittedAt: ptr.Of(latestCommittedAt.UnixMilli()),
+			},
+		},
+		{
+			name: "prompt basic with zero IDs",
+			do: &entity.Prompt{
+				ID:        0,
+				SpaceID:   0,
+				PromptKey: "",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:   "New Prompt",
+					Description:   "A newly created prompt",
+					LatestVersion: "",
+					CreatedBy:     "user789",
+					UpdatedBy:     "user789",
+					CreatedAt:     createdAt,
+					UpdatedAt:     createdAt,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(0)),
+				WorkspaceID:       ptr.Of(int64(0)),
+				PromptKey:         ptr.Of(""),
+				DisplayName:       ptr.Of("New Prompt"),
+				Description:       ptr.Of("A newly created prompt"),
+				LatestVersion:     ptr.Of(""),
+				CreatedBy:         ptr.Of("user789"),
+				UpdatedBy:         ptr.Of("user789"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(createdAt.UnixMilli()),
+				LatestCommittedAt: nil,
+			},
+		},
+		{
+			name: "prompt basic with special characters in text fields",
+			do: &entity.Prompt{
+				ID:        999,
+				SpaceID:   888,
+				PromptKey: "prompt_with_special_chars_@#$",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:   "Prompt with 中文 and émojis 🎉",
+					Description:   "Description with\nnewlines\tand\ttabs",
+					LatestVersion: "2.3.1-beta",
+					CreatedBy:     "user@example.com",
+					UpdatedBy:     "another.user@example.com",
+					CreatedAt:     createdAt,
+					UpdatedAt:     updatedAt,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(999)),
+				WorkspaceID:       ptr.Of(int64(888)),
+				PromptKey:         ptr.Of("prompt_with_special_chars_@#$"),
+				DisplayName:       ptr.Of("Prompt with 中文 and émojis 🎉"),
+				Description:       ptr.Of("Description with\nnewlines\tand\ttabs"),
+				LatestVersion:     ptr.Of("2.3.1-beta"),
+				CreatedBy:         ptr.Of("user@example.com"),
+				UpdatedBy:         ptr.Of("another.user@example.com"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(updatedAt.UnixMilli()),
+				LatestCommittedAt: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIPromptBasicDO2DTO(tt.do))
 		})
 	}
 }
