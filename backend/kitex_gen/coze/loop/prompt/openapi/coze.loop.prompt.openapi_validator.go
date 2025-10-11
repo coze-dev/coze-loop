@@ -190,3 +190,43 @@ func (p *VariableVal) IsValid() error {
 func (p *TokenUsage) IsValid() error {
 	return nil
 }
+func (p *ListPromptBasicRequest) IsValid() error {
+	if p.PageNumber != nil {
+		if *p.PageNumber <= int32(0) {
+			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
+		}
+	}
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+		if *p.PageSize > int32(200) {
+			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListPromptBasicResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PromptBasic) IsValid() error {
+	return nil
+}
+func (p *ListPromptBasicData) IsValid() error {
+	return nil
+}
