@@ -47,6 +47,7 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		svcmocks.NewMockEvaluatorService(ctrl),
 		idgenmocks.NewMockIIDGenerator(ctrl),
 		benefitmocks.NewMockIBenefitService(ctrl),
+		repoMocks.NewMockIEvalAsyncRepo(ctrl),
 	)
 	assert.NotNil(t, service)
 }
@@ -715,6 +716,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 			prepare: func() {
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
 				mockExptTurnResultRepo.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).Return(nil)
+				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
 			},
 			eiec: &entity.ExptItemEvalCtx{
 				Event: &entity.ExptItemEvalEvent{

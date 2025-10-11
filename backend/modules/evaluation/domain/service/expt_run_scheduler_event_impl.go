@@ -239,7 +239,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete)
+	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete, exptDetail)
 	if err != nil {
 		return err
 	}
@@ -386,8 +386,8 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	return nil
 }
 
-func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem) (alives, zombies []*entity.ExptEvalItem, err error) {
-	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetZombieSecond()
+func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {
+	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(expt.AsyncExec())
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {

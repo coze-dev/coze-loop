@@ -481,9 +481,21 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 
 	var versionedTargetID *entity.VersionedTargetID
 	if !req.CreateEvalTargetParam.IsNull() {
+		opts := make([]entity.Option, 0)
+		opts = append(opts, entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
+			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)),
+			entity.WithRegion(req.CreateEvalTargetParam.Region),
+			entity.WithEnv(req.CreateEvalTargetParam.Env))
+		if req.CreateEvalTargetParam.CustomEvalTarget != nil {
+			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
+				ID:        req.CreateEvalTargetParam.CustomEvalTarget.ID,
+				Name:      req.CreateEvalTargetParam.CustomEvalTarget.Name,
+				AvatarURL: req.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
+				Ext:       req.CreateEvalTargetParam.CustomEvalTarget.Ext,
+			}))
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
-			entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
-			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)))
+			opts...)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", json.Jsonify(req.CreateEvalTargetParam))
 		}

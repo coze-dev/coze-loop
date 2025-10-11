@@ -21,4 +21,6 @@ type RequestParam struct {
 	Response   interface{}
 
 	Timeout time.Duration
+	Cluster *string
+	WithSD  *bool
 }

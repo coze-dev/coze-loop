@@ -74,6 +74,9 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				Desc:        gptr.Of("test description"),
 				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
 					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+					CustomEvalTarget: &domain_eval_target.CustomEvalTarget{
+						Name: gptr.Of("test"),
+					},
 				},
 				Session: &common.Session{
 					UserID: gptr.Of(int64(789)),
