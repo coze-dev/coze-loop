@@ -39,7 +39,7 @@ type spanSubscriber struct {
 	buildHelper      service.TraceFilterProcessorBuilder
 }
 
-// Sampled 根据采样率计算是否被采样；采样数量将在 flush 时强制校验。
+// Sampled determines whether a span is sampled based on the sampling rate; the sample size will be validated during flush.
 func (s *spanSubscriber) Sampled() bool {
 	t := s.getTask()
 	if t == nil || t.Rule == nil || t.Rule.Sampler == nil {
@@ -72,9 +72,8 @@ func combineFilters(filters ...*loop_span.FilterFields) *loop_span.FilterFields 
 	return filterAggr
 }
 
-// Match 检查 span 是否与 task 的 filter 匹配。
+// Match checks whether the span matches the task filter.
 func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool, error) {
-
 	task := s.t
 	if task == nil || task.Rule == nil {
 		return false, nil
@@ -89,8 +88,8 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	return true, nil
 }
 func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
-	// 可以根据任务配置构建更复杂的过滤条件
-	// 这里简化处理，返回 nil 表示不添加额外过滤
+	// Additional filters can be constructed based on task configuration if needed.
+	// Simplified handling here: returning nil means no extra filters are applied.
 
 	platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(taskConfig.GetRule().GetSpanFilters().GetPlatformType()))
 	if err != nil {

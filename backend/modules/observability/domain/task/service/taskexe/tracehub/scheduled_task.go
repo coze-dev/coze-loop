@@ -441,4 +441,3 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 
 	logs.CtxInfo(ctx, "Task cache sync completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
 }
-}
