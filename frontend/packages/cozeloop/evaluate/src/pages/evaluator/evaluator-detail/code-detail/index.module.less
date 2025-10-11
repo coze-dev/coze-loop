@@ -1,0 +1,25 @@
+/* stylelint-disable declaration-no-important */
+.code-detail-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  :global(.semi-form-field-main) {
+    height: 100%;
+  }
+
+  :global(.semi-empty-content) {
+    margin-top: 0 !important;
+  }
+
+  :global(.semi-empty-description) {
+    margin-top: 4px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: var(--coz-fg-primary, rgba(15, 21, 40, 82%)) !important;
+  }
+
+  :global(.semi-empty-footer) {
+    margin-top: 0 !important;
+  }
+}

@@ -148,7 +148,7 @@ function EvaluatorCreatePage() {
           maxCount={200}
           maxLength={200}
         />
-        <div className="h-7" />
+        <div className="h-7 mt-[10px]" />
         <PromptConfigField refreshEditorModelKey={refreshEditorModelKey} />
       </Form>
     </>

@@ -123,43 +123,45 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
               loading={loading}
             />
           </Form.Slot>
-          <EvaluateTargetMappingField
-            field="evalTargetMapping"
-            prefixField="evalTargetMapping"
-            label={EvaluateTargetMappingFieldLabel}
-            evaluationSetSchemas={evaluationSetSchemas}
-            rules={[
-              {
-                required: true,
-                validator: (_, value) => {
-                  // 需要配置变量, 并且配置过字段映射
-                  // 没有值, 或者为空对象
-                  if (variableList?.length > 0 && isEmpty(value)) {
-                    return new Error(
-                      I18n.t('evaluate_please_configure_field_mapping'),
-                    );
-                  }
-                  return true;
+          <div className="evaluate-target-mapping-field-wrapper">
+            <EvaluateTargetMappingField
+              field="evalTargetMapping"
+              prefixField="evalTargetMapping"
+              label={EvaluateTargetMappingFieldLabel}
+              evaluationSetSchemas={evaluationSetSchemas}
+              rules={[
+                {
+                  required: true,
+                  validator: (_, value) => {
+                    // 需要配置变量, 并且配置过字段映射
+                    // 没有值, 或者为空对象
+                    if (variableList?.length > 0 && isEmpty(value)) {
+                      return new Error(
+                        I18n.t('evaluate_please_configure_field_mapping'),
+                      );
+                    }
+                    return true;
+                  },
+                  message: I18n.t('evaluate_please_configure_field_mapping'),
                 },
-                message: I18n.t('evaluate_please_configure_field_mapping'),
-              },
-            ]}
-            loading={loading}
-            keySchemas={variableList}
-            selectProps={{
-              prefix: I18n.t('evaluation_set'),
-            }}
-          />
-          <EvalTargetDynamicParams
-            initialValue={formValues.target_runtime_param}
-            promptDetail={promptDetail}
-            onChange={v => {
-              setCreateExperimentValues?.(prev => ({
-                ...prev,
-                target_runtime_param: v,
-              }));
-            }}
-          />
+              ]}
+              loading={loading}
+              keySchemas={variableList}
+              selectProps={{
+                prefix: I18n.t('evaluation_set'),
+              }}
+            />
+            <EvalTargetDynamicParams
+              initialValue={formValues.target_runtime_param}
+              promptDetail={promptDetail}
+              onChange={v => {
+                setCreateExperimentValues?.(prev => ({
+                  ...prev,
+                  target_runtime_param: v,
+                }));
+              }}
+            />
+          </div>
         </>
       ) : null}
     </>

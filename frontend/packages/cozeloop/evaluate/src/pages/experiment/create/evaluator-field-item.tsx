@@ -8,16 +8,15 @@ import classNames from 'classnames';
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
-  EvaluatorVersionDetail,
   EvaluatorSelect,
   EvaluatorVersionSelect,
+  getEvaluatorJumpUrl,
 } from '@cozeloop/evaluate-components';
-import { useSpace, useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 import {
   IconCozArrowRight,
   IconCozTrashCan,
-  IconCozInfoCircle,
 } from '@coze-arch/coze-design/icons';
 import {
   Button,
@@ -34,7 +33,7 @@ import { getEvaluatorVersion } from '@/request/evaluator';
 import { ReactComponent as ErrorIcon } from '@/assets/icon-alert.svg';
 
 import { OpenDetailText } from './open-detail-text';
-import { EvaluatorMappingField } from './evaluator-mapping-field';
+import { EvaluatorFieldItemSynthe } from './evaluator-field-item-synthe';
 
 const FormEvaluatorSelect = withField(EvaluatorSelect);
 const FormEvaluatorVersionSelect = withField(EvaluatorVersionSelect);
@@ -63,11 +62,14 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
   } = props;
 
   const { spaceID } = useSpace();
-  const { baseURL } = useBaseURL();
   const [open, setOpen] = useState(true);
   const evaluatorProFieldState = useFieldState(arrayField.field);
   const evaluatorPro = evaluatorProFieldState.value as EvaluatorPro;
   const evaluatorProApi = useFieldApi(arrayField.field);
+
+  const { openBlank } = useOpenWindow();
+
+  const { evaluator } = evaluatorPro;
 
   const versionId = evaluatorPro?.evaluatorVersion?.id;
   const versionDetailService = useRequest(
@@ -99,17 +101,19 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
     },
   );
 
-  const keySchemas = useMemo(() => {
-    const inputSchemas =
-      evaluatorPro?.evaluatorVersionDetail?.evaluator_content?.input_schemas;
-    if (inputSchemas) {
-      return inputSchemas.map(item => ({
-        name: item.key,
-        content_type: item.support_content_types?.[0],
-        text_schema: item.json_schema,
-      }));
-    }
-  }, [evaluatorPro?.evaluatorVersionDetail]);
+  const jumpUrl = useMemo(
+    () =>
+      getEvaluatorJumpUrl({
+        evaluatorType: evaluator?.evaluator_type,
+        evaluatorId: evaluator?.evaluator_id,
+        evaluatorVersionId: evaluatorPro?.evaluatorVersion?.id,
+      }),
+    [
+      evaluator?.evaluator_id,
+      evaluator?.evaluator_type,
+      evaluatorPro?.evaluatorVersion?.id,
+    ],
+  );
 
   useEffect(() => {
     if (evaluatorProFieldState.error) {
@@ -125,8 +129,10 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
           onClick={() => setOpen(pre => !pre)}
         >
           <div className="flex flex-row items-center flex-1 text-sm font-semibold coz-fg-plus">
-            {evaluatorPro?.evaluator?.name ||
-              `${I18n.t('evaluator_placeholder1', { placeholder1: index + 1 })}`}
+            <span className="truncate max-w-[698px]">
+              {evaluatorPro?.evaluator?.name ||
+                `${I18n.t('evaluator_placeholder1', { placeholder1: index + 1 })}`}
+            </span>
             {evaluatorPro?.evaluatorVersion?.version ? (
               <Tag
                 color="primary"
@@ -201,9 +207,8 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                         {versionId ? (
                           <OpenDetailText
                             className="absolute right-0 top-2.5"
-                            url={`${baseURL}/evaluation/evaluators/${
-                              evaluatorPro?.evaluator?.evaluator_id
-                            }?version=${evaluatorPro?.evaluatorVersion?.id}`}
+                            url={jumpUrl}
+                            customOpen={() => openBlank(jumpUrl)}
                           />
                         ) : null}
                       </>
@@ -223,40 +228,14 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
             </div>
           </div>
 
-          <EvaluatorVersionDetail
+          <EvaluatorFieldItemSynthe
+            arrayField={arrayField}
+            evaluatorType={evaluator?.evaluator_type}
             loading={versionDetailService.loading}
             versionDetail={evaluatorPro?.evaluatorVersionDetail}
-          />
-          <EvaluatorMappingField
-            field={`${arrayField.field}.evaluatorMapping`}
-            prefixField={`${arrayField.field}.evaluatorMapping`}
-            label={
-              <div className="inline-flex flex-row items-center">
-                {I18n.t('field_mapping')}
-                <Tooltip
-                  theme="dark"
-                  content={I18n.t('evaluation_set_field_mapping_tip')}
-                >
-                  <IconCozInfoCircle className="ml-1 w-4 h-4 coz-fg-secondary" />
-                </Tooltip>
-              </div>
-            }
-            loading={versionDetailService.loading}
-            keySchemas={keySchemas}
             evaluationSetSchemas={evaluationSetSchemas}
             evaluateTargetSchemas={evaluateTargetSchemas}
             getEvaluatorMappingFieldRules={getEvaluatorMappingFieldRules}
-            rules={[
-              {
-                required: true,
-                validator: (_, value) => {
-                  if (versionDetailService.loading && !value) {
-                    return new Error(I18n.t('please_configure_field_mapping'));
-                  }
-                  return true;
-                },
-              },
-            ]}
           />
         </div>
       </div>

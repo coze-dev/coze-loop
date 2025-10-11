@@ -18,7 +18,7 @@ print_banner() {
 
 print_banner "Starting..."
 
-for i in $(seq 1 300); do
+for i in $(seq 1 600); do
   if curl \
       -s http://coze-loop-app:8888/ping \
       2>/dev/null \
@@ -27,8 +27,8 @@ for i in $(seq 1 300); do
   else
     sleep 3
   fi
-  if [ "$i" -eq 300 ]; then
-    echo "[ERROR] Cozeloop app not available after 300 time."
+  if [ "$i" -eq 600 ]; then
+    echo "[ERROR] Cozeloop app not available after 600 time."
     exit 1
   fi
 done
