@@ -24,8 +24,6 @@ type ITaskRepo interface {
 	CreateTaskRun(ctx context.Context, do *entity.TaskRun) (int64, error)
 	UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error
 	UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
-	GetTaskRun(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.TaskRun, error)
-	ListTaskRuns(ctx context.Context, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error)
 	GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error)
 	GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error)
 
@@ -46,8 +44,5 @@ type ITaskRepo interface {
 	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 
-	//
-	ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error)
 	GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask)
-	ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) []*entity.ObservabilityTask
 }

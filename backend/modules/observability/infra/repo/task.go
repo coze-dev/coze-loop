@@ -6,7 +6,6 @@ package repo
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -51,19 +50,19 @@ const (
 
 func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error) {
 	// 先查 Redis 缓存
-	//cachedTask, err := v.TaskRedisDao.GetTask(ctx, id)
-	//if err != nil {
-	//	logs.CtxWarn(ctx, "failed to get task from redis cache", "id", id, "err", err)
-	//} else if cachedTask != nil {
-	//	// 验证权限（workspaceID 和 userID）
-	//	if workspaceID != nil && cachedTask.WorkspaceID != *workspaceID {
-	//		return nil, nil // 权限不符，返回空
-	//	}
-	//	if userID != nil && cachedTask.CreatedBy != *userID {
-	//		return nil, nil // 权限不符，返回空
-	//	}
-	//	return cachedTask, nil
-	//}
+	cachedTask, err := v.TaskRedisDao.GetTask(ctx, id)
+	if err != nil {
+		logs.CtxWarn(ctx, "failed to get task from redis cache", "id", id, "err", err)
+	} else if cachedTask != nil {
+		// 验证权限（workspaceID 和 userID）
+		if workspaceID != nil && cachedTask.WorkspaceID != *workspaceID {
+			return nil, nil // 权限不符，返回空
+		}
+		if userID != nil && cachedTask.CreatedBy != *userID {
+			return nil, nil // 权限不符，返回空
+		}
+		return cachedTask, nil
+	}
 
 	// 缓存未命中，查询数据库
 	TaskPo, err := v.TaskDao.GetTask(ctx, id, workspaceID, userID)
@@ -140,11 +139,6 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
 			logs.Error("failed to set task cache after create", "id", createdID, "err", err)
 		}
-		// 更新非最终状态任务列表缓存
-		if err = v.TaskRedisDao.AddNonFinalTask(ctx, do); err != nil {
-			logs.Error("failed to set non final task cache after create", "id", createdID, "err", err)
-			return
-		}
 	}()
 
 	return createdID, nil
@@ -176,67 +170,6 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 
 	return nil
 }
-func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
-	// 先查 Redis 缓存
-	cachedTasks, err := v.TaskRedisDao.GetNonFinalTaskList(ctx)
-	if err != nil {
-		logs.CtxWarn(ctx, "failed to get non final task list from redis cache", "err", err)
-	} else if cachedTasks != nil {
-		return cachedTasks, nil
-	}
-
-	// 缓存未命中，查询数据库
-	results, err := v.TaskDao.ListNonFinalTask(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := make([]*entity.ObservabilityTask, len(results))
-	for i, result := range results {
-		taskDO := convertor.TaskPO2DO(result)
-		taskRuns, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
-			WorkspaceID: ptr.Of(taskDO.WorkspaceID),
-			TaskID:      ptr.Of(taskDO.ID),
-			ReqLimit:    1000,
-			ReqOffset:   0,
-		})
-		if err != nil {
-			logs.CtxError(ctx, "ListTaskRuns err, taskID:%d, err:%v", taskDO.ID, err)
-			continue
-		}
-		taskDO.TaskRuns = convertor.TaskRunsPO2DO(taskRuns)
-		resp[i] = taskDO
-	}
-
-	// 异步缓存到 Redis（短TTL，因为非最终状态变化频繁）
-	go func() {
-		if err := v.TaskRedisDao.SetNonFinalTaskList(context.Background(), resp, NonFinalTaskListTTL); err != nil {
-			logs.Error("failed to set non final task list cache", "err", err)
-		}
-	}()
-
-	return resp, nil
-}
-func (v *TaskRepoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) []*entity.ObservabilityTask {
-	// 先查 Redis 缓存
-	cachedTasks, err := v.TaskRedisDao.GetNonFinalTaskList(ctx)
-	if err != nil {
-		logs.CtxWarn(ctx, "failed to get non final task list from redis cache", "err", err)
-	} else if cachedTasks != nil {
-		return cachedTasks
-	}
-	// 缓存未命中，查询数据库
-	spaceIDInt, _ := strconv.ParseInt(spaceID, 10, 64)
-	results, err := v.TaskDao.ListNonFinalTaskBySpaceID(ctx, spaceIDInt)
-	if err != nil {
-		return nil
-	}
-	resp := make([]*entity.ObservabilityTask, len(results))
-	for i, result := range results {
-		resp[i] = convertor.TaskPO2DO(result)
-	}
-	return resp
-}
 func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
@@ -250,10 +183,6 @@ func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspac
 		// 清理相关列表缓存
 		v.clearListCaches(context.Background(), workspaceID)
 
-		// 清理非最终状态任务缓存（状态可能发生变化）
-		if err := v.TaskRedisDao.DeleteNonFinalTaskList(context.Background()); err != nil {
-			logs.Error("failed to delete non final task list cache after OCC update", "err", err)
-		}
 	}()
 
 	return nil
@@ -283,13 +212,6 @@ func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityT
 	go func() {
 		// 清理相关列表缓存
 		v.clearListCaches(context.Background(), do.WorkspaceID)
-
-		// 如果是非终态任务，需要从非终态任务列表中移除
-		if isNonFinalTaskStatus(do.TaskStatus) {
-			if err := v.TaskRedisDao.RemoveNonFinalTask(context.Background(), do.ID); err != nil {
-				logs.Error("failed to remove task from non final task list after delete", "id", do.ID, "err", err)
-			}
-		}
 	}()
 
 	return nil
@@ -301,16 +223,6 @@ func (v *TaskRepoImpl) clearListCaches(ctx context.Context, workspaceID int64) {
 	pattern := fmt.Sprintf("task:list:%d:*", workspaceID)
 	if err := v.TaskRedisDao.DeleteTaskList(ctx, pattern); err != nil {
 		logs.Error("failed to delete task list cache", "pattern", pattern, "err", err)
-	}
-
-	// 清理任务计数缓存
-	if err := v.TaskRedisDao.DeleteTaskCount(ctx, workspaceID); err != nil {
-		logs.Error("failed to delete task count cache", "workspaceID", workspaceID, "err", err)
-	}
-
-	// 清理非最终状态任务缓存
-	if err := v.TaskRedisDao.DeleteNonFinalTaskList(ctx); err != nil {
-		logs.Error("failed to delete non final task list cache", "err", err)
 	}
 }
 
@@ -375,51 +287,7 @@ func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, works
 		return err
 	}
 
-	// 数据库操作成功后，删除缓存（因为无法直接更新部分字段）
-	go func() {
-		// 删除单个TaskRun缓存，下次查询时会重新加载
-		if err := v.TaskRunRedisDao.DeleteTaskRun(context.Background(), id); err != nil {
-			logs.Error("failed to delete taskrun cache after OCC update", "id", id, "err", err)
-		}
-
-		// 清理非最终状态TaskRun缓存（状态可能发生变化）
-		if err := v.TaskRunRedisDao.DeleteNonFinalTaskRunList(context.Background()); err != nil {
-			logs.Error("failed to delete non final taskrun list cache after OCC update", "err", err)
-		}
-	}()
-
 	return nil
-}
-func (v *TaskRepoImpl) GetTaskRun(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.TaskRun, error) {
-	// 直接查询数据库(TaskRun通常不单独缓存)
-	taskRunPo, err := v.TaskRunDao.GetTaskRun(ctx, id, workspaceID, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// 如果需要userID验证，需要通过Task表验证创建者权限
-	if userID != nil {
-		taskPo, err := v.TaskDao.GetTask(ctx, taskRunPo.TaskID, workspaceID, userID)
-		if err != nil {
-			return nil, err
-		}
-		if taskPo == nil {
-			return nil, nil // 权限不符，返回空
-		}
-	}
-
-	return convertor.TaskRunPO2DO(taskRunPo), nil
-}
-func (v *TaskRepoImpl) ListTaskRuns(ctx context.Context, param mysql.ListTaskRunParam) ([]*entity.TaskRun, int64, error) {
-	results, total, err := v.TaskRunDao.ListTaskRuns(ctx, param)
-	if err != nil {
-		return nil, 0, err
-	}
-	resp := make([]*entity.TaskRun, len(results))
-	for i, result := range results {
-		resp[i] = convertor.TaskRunPO2DO(result)
-	}
-	return resp, total, nil
 }
 func (v *TaskRepoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error) {
 	taskRunPo, err := v.TaskRunDao.GetBackfillTaskRun(ctx, workspaceID, taskID)
@@ -441,95 +309,6 @@ func (v *TaskRepoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID 
 	}
 	return convertor.TaskRunPO2DO(taskRunPo), nil
 }
-
-//
-//// TaskRunCountInfo TaskRunCount信息结构
-//type TaskRunCountInfo struct {
-//	TaskID           int64
-//	TaskRunID        int64
-//	TaskRunCount     int64
-//	TaskRunSuccCount int64
-//	TaskRunFailCount int64
-//}
-//
-//func (v *TaskRepoImpl) RefreshTaskRunDetails(ctx context.Context, batch []*TaskRunCountInfo) error {
-//
-//	// 1. 批量读取Redis计数数据
-//	for _, info := range batch {
-//		// 读取taskruncount
-//		count, err := v.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
-//		if err != nil || count == -1 {
-//			logs.CtxWarn(ctx, "获取TaskRunCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
-//		} else {
-//			info.TaskRunCount = count
-//		}
-//
-//		// 读取taskrunscesscount
-//		successCount, err := v.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
-//		if err != nil || successCount == -1 {
-//			logs.CtxWarn(ctx, "获取TaskRunSuccessCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
-//			successCount = 0
-//		} else {
-//			info.TaskRunSuccCount = successCount
-//		}
-//
-//		// 读取taskrunfailcount
-//		failCount, err := v.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
-//		if err != nil || failCount == -1 {
-//			logs.CtxWarn(ctx, "获取TaskRunFailCount失败", "taskID", info.TaskID, "taskRunID", info.TaskRunID, "err", err)
-//			failCount = 0
-//		} else {
-//			info.TaskRunFailCount = failCount
-//		}
-//
-//		logs.CtxDebug(ctx, "读取计数数据",
-//			"taskID", info.TaskID,
-//			"taskRunID", info.TaskRunID,
-//			"runCount", info.TaskRunCount,
-//			"successCount", info.TaskRunSuccCount,
-//			"failCount", info.TaskRunFailCount)
-//	}
-//
-//	// 2. 批量更新数据库
-//	for _, info := range batch {
-//		// 构建run_detail JSON数据
-//		runDetail := map[string]interface{}{
-//			"total_count":   info.TaskRunCount,
-//			"success_count": info.TaskRunSuccCount,
-//			"failed_count":  info.TaskRunFailCount,
-//		}
-//
-//		// 序列化为JSON字符串
-//		runDetailJSON, err := json.Marshal(runDetail)
-//		if err != nil {
-//			return errors.Wrap(err, "序列化run_detail失败")
-//		}
-//
-//		runDetailStr := string(runDetailJSON)
-//
-//		// 构建更新映射
-//		updateMap := map[string]interface{}{
-//			"run_detail": &runDetailStr,
-//		}
-//
-//		// 使用乐观锁更新
-//		err = v.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
-//		if err != nil {
-//			return errors.Wrap(err, "更新TaskRun失败")
-//		}
-//		if err != nil {
-//			logs.CtxError(ctx, "更新TaskRun详情失败",
-//				"taskID", info.TaskID,
-//				"taskRunID", info.TaskRunID,
-//				"err", err)
-//		} else {
-//			logs.CtxDebug(ctx, "更新TaskRun详情成功",
-//				"taskID", info.TaskID,
-//				"taskRunID", info.TaskRunID)
-//		}
-//	}
-//	return nil
-//}
 
 func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, error) {
 	count, err := v.TaskRedisDao.GetTaskCount(ctx, taskID)

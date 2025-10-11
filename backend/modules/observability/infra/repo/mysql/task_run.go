@@ -39,23 +39,12 @@ type ListTaskRunParam struct {
 //go:generate mockgen -destination=mocks/task_run.go -package=mocks . ITaskRunDao
 type ITaskRunDao interface {
 	// 基础CRUD操作
-	GetTaskRun(ctx context.Context, id int64, workspaceID *int64, taskID *int64) (*model.ObservabilityTaskRun, error)
 	GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error)
 	GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error)
 	CreateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) (int64, error)
 	UpdateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) error
-	DeleteTaskRun(ctx context.Context, id int64, workspaceID int64, userID string) error
 	ListTaskRuns(ctx context.Context, param ListTaskRunParam) ([]*model.ObservabilityTaskRun, int64, error)
-
-	// 业务特定方法
-	ListNonFinalTaskRun(ctx context.Context) ([]*model.ObservabilityTaskRun, error)
-	ListNonFinalTaskRunByTaskID(ctx context.Context, taskID int64) ([]*model.ObservabilityTaskRun, error)
-	ListNonFinalTaskRunBySpaceID(ctx context.Context, spaceID int64) ([]*model.ObservabilityTaskRun, error)
 	UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
-	GetObjListWithTaskRun(ctx context.Context) ([]string, []string, error)
-	ListActiveTaskRunsByTask(ctx context.Context, taskID int64) ([]*model.ObservabilityTaskRun, error)
-	GetLatestTaskRunByTask(ctx context.Context, taskID int64) (*model.ObservabilityTaskRun, error)
-	ListTaskRunsByStatus(ctx context.Context, status string) ([]*model.ObservabilityTaskRun, error)
 }
 
 func NewTaskRunDaoImpl(db db.Provider) ITaskRunDao {
@@ -97,25 +86,6 @@ func calculateTaskRunPagination(reqLimit, reqOffset int32) (int, int) {
 	return limit, offset
 }
 
-func (v *TaskRunDaoImpl) GetTaskRun(ctx context.Context, id int64, workspaceID *int64, taskID *int64) (*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.ID.Eq(id))
-	if workspaceID != nil {
-		qd = qd.Where(q.WorkspaceID.Eq(*workspaceID))
-	}
-	if taskID != nil {
-		qd = qd.Where(q.TaskID.Eq(*taskID))
-	}
-	taskRunPo, err := qd.First()
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("TaskRun not found"))
-		} else {
-			return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-		}
-	}
-	return taskRunPo, nil
-}
 func (v *TaskRunDaoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
 	qd := q.WithContext(ctx).Where(q.TaskType.Eq(task.TaskRunTypeBackFill)).Where(q.TaskID.Eq(taskID))
@@ -175,19 +145,6 @@ func (v *TaskRunDaoImpl) UpdateTaskRun(ctx context.Context, po *model.Observabil
 	}
 }
 
-func (v *TaskRunDaoImpl) DeleteTaskRun(ctx context.Context, id int64, workspaceID int64, userID string) error {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	// 注意：TaskRun模型中没有CreatedBy字段，只能按ID和WorkspaceID过滤
-	qd := q.WithContext(ctx).Where(q.ID.Eq(id)).Where(q.WorkspaceID.Eq(workspaceID))
-	// userID参数暂时忽略，因为TaskRun模型中没有CreatedBy字段
-	info, err := qd.Delete()
-	if err != nil {
-		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	logs.CtxInfo(ctx, "%d rows deleted", info.RowsAffected)
-	return nil
-}
-
 func (v *TaskRunDaoImpl) ListTaskRuns(ctx context.Context, param ListTaskRunParam) ([]*model.ObservabilityTaskRun, int64, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx))
 	qd := q.WithContext(ctx).ObservabilityTaskRun
@@ -244,42 +201,6 @@ func (d *TaskRunDaoImpl) order(q *query.Query, orderBy string, asc bool) field.E
 	return orderExpr.Desc()
 }
 
-// ListNonFinalTaskRun 获取非终态TaskRun列表
-func (v *TaskRunDaoImpl) ListNonFinalTaskRun(ctx context.Context) ([]*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.RunStatus.In(NonFinalTaskRunStatuses...))
-
-	results, err := qd.Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return results, nil
-}
-
-// ListNonFinalTaskRunByTaskID 按TaskID获取非终态TaskRun
-func (v *TaskRunDaoImpl) ListNonFinalTaskRunByTaskID(ctx context.Context, taskID int64) ([]*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.TaskID.Eq(taskID)).Where(q.RunStatus.In(NonFinalTaskRunStatuses...))
-
-	results, err := qd.Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return results, nil
-}
-
-// ListNonFinalTaskRunBySpaceID 按空间ID获取非终态TaskRun
-func (v *TaskRunDaoImpl) ListNonFinalTaskRunBySpaceID(ctx context.Context, spaceID int64) ([]*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.WorkspaceID.Eq(spaceID)).Where(q.RunStatus.In(NonFinalTaskRunStatuses...))
-
-	results, err := qd.Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return results, nil
-}
-
 // UpdateTaskRunWithOCC 乐观并发控制更新
 func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
@@ -296,60 +217,4 @@ func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, wor
 
 	logs.CtxInfo(ctx, "TaskRun updated with OCC", "id", id, "workspaceID", workspaceID, "rowsAffected", info.RowsAffected)
 	return nil
-}
-
-// GetObjListWithTaskRun 获取有TaskRun的对象列表
-func (v *TaskRunDaoImpl) GetObjListWithTaskRun(ctx context.Context) ([]string, []string, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-
-	// 获取不重复的WorkspaceID列表
-	var spaceList []string
-	err := q.WithContext(ctx).Select(q.WorkspaceID).Distinct().Scan(&spaceList)
-	if err != nil {
-		return nil, nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-
-	// TaskRun表中没有bot相关字段，返回空的bot列表
-	var botList []string
-
-	return spaceList, botList, nil
-}
-
-// ListActiveTaskRunsByTask 获取Task的活跃TaskRun列表
-func (v *TaskRunDaoImpl) ListActiveTaskRunsByTask(ctx context.Context, taskID int64) ([]*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.TaskID.Eq(taskID)).Where(q.RunStatus.In(ActiveTaskRunStatuses...))
-
-	results, err := qd.Order(q.CreatedAt.Desc()).Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return results, nil
-}
-
-// GetLatestTaskRunByTask 获取Task的最新TaskRun
-func (v *TaskRunDaoImpl) GetLatestTaskRunByTask(ctx context.Context, taskID int64) (*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.TaskID.Eq(taskID)).Order(q.CreatedAt.Desc())
-
-	taskRun, err := qd.First()
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // 没有找到TaskRun，返回nil而不是错误
-		}
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return taskRun, nil
-}
-
-// ListTaskRunsByStatus 按状态获取TaskRun列表
-func (v *TaskRunDaoImpl) ListTaskRunsByStatus(ctx context.Context, status string) ([]*model.ObservabilityTaskRun, error) {
-	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.RunStatus.Eq(status))
-
-	results, err := qd.Order(q.CreatedAt.Desc()).Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
-	}
-	return results, nil
 }
