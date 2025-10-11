@@ -248,6 +248,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 	totalCount := int64(0)
 	pageToken := listParam.PageToken
 	for {
+		logs.CtxInfo(ctx, "ListSpansParam:%v", listParam)
 		result, err := h.traceRepo.ListSpans(ctx, listParam)
 		if err != nil {
 			logs.CtxError(ctx, "list spans failed, task_id=%d, page_token=%s, err=%v", sub.t.GetID(), pageToken, err)
