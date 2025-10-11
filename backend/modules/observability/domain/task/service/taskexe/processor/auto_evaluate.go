@@ -148,7 +148,6 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 }
 
 func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error {
-	// TODO[xun]: add lock
 	taskRuns, err := p.taskRepo.GetBackfillTaskRun(ctx, nil, currentTask.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.GetID(), err)
@@ -282,7 +281,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 			if slices.Contains(evaluationSetColumns, fieldMapping.GetEvalSetName()) {
 				continue
 			}
-			// TODO[xun]: historical data compatibility, convert plain_text to text, data needs to be refreshed
+			// historical data compatibility, convert plain_text to text, data needs to be refreshed
 			evaluationSetSchema.FieldSchemas = append(evaluationSetSchema.FieldSchemas, &dataset0.FieldSchema{
 				Key:         gptr.Of(fieldMapping.GetEvalSetName()),
 				Name:        gptr.Of(fieldMapping.GetEvalSetName()),

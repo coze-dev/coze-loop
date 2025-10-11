@@ -360,7 +360,6 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
 			IsFinish: false,
 		}); err != nil {
-			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
 			return len(fr.spans), len(sampledSpans), err
 		}
 	}
