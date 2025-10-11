@@ -389,21 +389,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		EvalTarget:          target,
 	})
 	if execErr != nil {
+		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.
+		// Avoid triggering a follow-up process via an asynchronous callback after a successful return.
 		logs.CtxError(ctx, "async execute target failed, spaceID=%v, targetID=%d, targetVersionID=%d, param=%v, inputData=%v, err=%v",
 			spaceID, targetID, targetVersionID, json.Jsonify(param), json.Jsonify(inputData), execErr)
-		// status = entity.EvalTargetRunStatusFail
-		// statusErr, ok := errorx.FromStatusError(execErr)
-		// if ok {
-		//	outputData.EvalTargetRunError = &entity.EvalTargetRunError{
-		//		Code:    statusErr.Code(),
-		//		Message: statusErr.Error(),
-		//	}
-		// } else {
-		//	outputData.EvalTargetRunError = &entity.EvalTargetRunError{
-		//		Code:    errno.CommonInternalErrorCode,
-		//		Message: execErr.Error(),
-		//	}
-		// }
 		return nil, callee, execErr
 	}
 
@@ -471,7 +460,7 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 		if ok {
 			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
 				Code:    statusErr.Code(),
-				Message: statusErr.Error(),
+				Message: errorx.ErrorWithoutStack(execErr),
 			}
 		} else {
 			outputData.EvalTargetRunError = &entity.EvalTargetRunError{
