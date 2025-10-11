@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useRef, useState, useCallback } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint, useGuard } from '@cozeloop/guard';
 import { useDemoSpace, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { useBreadcrumb } from '@cozeloop/base-hooks';
@@ -19,11 +20,7 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { Form, Spin, Toast } from '@coze-arch/coze-design';
-import { I18n } from '@cozeloop/i18n-adapter';
 
-{
-  /* start_aigc */
-}
 import { SCROLL_DELAY, SCROLL_OFFSET } from '@/utils/evaluator';
 import {
   CodeEvaluatorLanguageFE,
@@ -497,6 +494,3 @@ function CodeEvaluatorDetailPage() {
 }
 
 export default CodeEvaluatorDetailPage;
-{
-  /* end_aigc */
-}
