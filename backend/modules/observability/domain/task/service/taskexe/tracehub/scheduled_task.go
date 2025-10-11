@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TaskRunCountInfo defines the TaskRunCount structure
+// TaskRunCountInfo represents the TaskRunCount information structure
 type TaskRunCountInfo struct {
 	TaskID           int64
 	TaskRunID        int64
@@ -28,7 +28,7 @@ type TaskRunCountInfo struct {
 	TaskRunFailCount int64
 }
 
-// TaskCacheInfo represents task cache metadata
+// TaskCacheInfo represents task cache information
 type TaskCacheInfo struct {
 	WorkspaceIDs []string
 	BotIDs       []string
@@ -53,7 +53,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 	}()
 }
 
-// startSyncTaskRunCounts launches the data synchronization goroutine with a one-minute interval timer
+// startSyncTaskRunCounts launches the data sync scheduled task goroutine with a one-minute interval timer
 func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 	go func() {
 		for {
@@ -70,7 +70,7 @@ func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 	}()
 }
 
-// startSyncTaskCache launches the task cache synchronization goroutine with a one-minute interval timer
+// startSyncTaskCache launches the task cache scheduled task goroutine with a one-minute interval timer
 func (h *TraceHubServiceImpl) startSyncTaskCache() {
 	go func() {
 		for {
@@ -92,14 +92,14 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = fillCtxWithEnv(ctx)
-	logs.CtxInfo(ctx, "Scheduled task execution started...")
+	logs.CtxInfo(ctx, "Scheduled task started...")
 	// Read all non-final (success/disabled) tasks
 	var taskPOs []*entity.ObservabilityTask
 	var err error
 	var offset int32 = 0
 	const limit int32 = 1000
 
-	// Iterate through all tasks with pagination
+	// Paginate through all tasks
 	for {
 		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
 			ReqLimit:  limit,
@@ -120,22 +120,22 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 			},
 		})
 		if err != nil {
-			logs.CtxError(ctx, "Failed to retrieve non-final task list", "err", err)
+			logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
 			return
 		}
 
-		// Append current page tasks to the overall list
+		// Add tasks from the current page to the full list
 		taskPOs = append(taskPOs, tasklist...)
 
-		// If the number of tasks returned is less than the limit, this is the last page
+		// If fewer tasks than limit are returned, this is the last page
 		if len(tasklist) < int(limit) {
 			break
 		}
 
-		// Continue to the next page by increasing offset by 1000
+		// Move to the next page, increasing offset by 1000
 		offset += limit
 	}
-	logs.CtxInfo(ctx, "Scheduled task retrieved %d tasks", len(taskPOs))
+	logs.CtxInfo(ctx, "Scheduled task retrieved number of tasks:%d", len(taskPOs))
 	for _, taskPO := range taskPOs {
 		var taskRun, backfillTaskRun *entity.TaskRun
 		backfillTaskRun = taskPO.GetBackfillTaskRun()
@@ -145,8 +145,8 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
 		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc := h.taskProcessor.GetTaskProcessor(taskInfo.TaskType)
-		// Reach task time limit
-		// End task when reaching the end time
+		// Task time horizon reached
+		// End when the task end time is reached
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 && taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
@@ -185,7 +185,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 				}
 			}
 		}
-		// If the task status is unstarted, create a run when the start time is reached
+		// If the task status is unstarted, create it once the task start time is reached
 		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
 			if !taskInfo.GetRule().GetSampler().GetIsCycle() {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
@@ -215,7 +215,7 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 		// Handle taskRun
 		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetTaskStatus() == task.TaskStatusPending {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
-			// Handle recurring tasks: reach single task time limit
+			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
 				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -245,14 +245,14 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 
 }
 
-// syncTaskRunCounts synchronizes TaskRunCount to the database
+// syncTaskRunCounts synchronizes TaskRunCount data to the database
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	ctx := context.Background()
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = fillCtxWithEnv(ctx)
 
-	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to the database...")
+	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to database...")
 
 	// 1. Retrieve non-final task list
 	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
@@ -278,13 +278,13 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 		return
 	}
 	if len(taskPOs) == 0 {
-		logs.CtxInfo(ctx, "No non-final tasks to synchronize")
+		logs.CtxInfo(ctx, "No non-final tasks need syncing")
 		return
 	}
 
-	logs.CtxInfo(ctx, "Retrieved non-final tasks, count:%d", len(taskPOs))
+	logs.CtxInfo(ctx, "Retrieved non-final task count:%d", len(taskPOs))
 
-	// 2. Collect TaskRun info requiring synchronization
+	// 2. Collect all TaskRun information that needs syncing
 	var taskRunInfos []*TaskRunCountInfo
 	for _, taskPO := range taskPOs {
 		if len(taskPO.TaskRuns) == 0 {
@@ -300,13 +300,13 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	}
 
 	if len(taskRunInfos) == 0 {
-		logs.CtxInfo(ctx, "No TaskRun requires synchronization")
+		logs.CtxInfo(ctx, "No TaskRun requires syncing")
 		return
 	}
 
-	logs.CtxInfo(ctx, "TaskRuns pending synchronization, count:%d", len(taskRunInfos))
+	logs.CtxInfo(ctx, "Number of TaskRun entries requiring syncing:%d", len(taskRunInfos))
 
-	// 3. Process TaskRuns in batches of 50
+	// 3. Process TaskRun entries in batches of 50
 	batchSize := 50
 	for i := 0; i < len(taskRunInfos); i += batchSize {
 		end := i + batchSize
@@ -319,13 +319,13 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	}
 }
 
-// processBatch handles TaskRun count synchronization for a batch
+// processBatch synchronizes TaskRun counts in batches
 func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRunCountInfo) {
 	logs.CtxInfo(ctx, "Start processing batch, batchSize:%d", len(batch))
 
-	// 1. Read Redis counters in bulk
+	// 1. Read Redis count data in batch
 	for _, info := range batch {
-		// Read task run count
+		// Read taskruncount
 		count, err := h.taskRepo.GetTaskRunCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || count == -1 {
 			logs.CtxWarn(ctx, "Failed to get TaskRunCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
@@ -333,7 +333,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 			info.TaskRunCount = count
 		}
 
-		// Read task run success count
+		// Read taskrun success count
 		successCount, err := h.taskRepo.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || successCount == -1 {
 			logs.CtxWarn(ctx, "Failed to get TaskRunSuccessCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
@@ -342,7 +342,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 			info.TaskRunSuccCount = successCount
 		}
 
-		// Read task run fail count
+		// Read taskrun fail count
 		failCount, err := h.taskRepo.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || failCount == -1 {
 			logs.CtxWarn(ctx, "Failed to get TaskRunFailCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
@@ -359,7 +359,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 			"failCount", info.TaskRunFailCount)
 	}
 
-	// 2. Batch update the database
+	// 2. Update database in batch
 	for _, info := range batch {
 		err := h.updateTaskRunDetail(ctx, info)
 		if err != nil {
@@ -368,7 +368,7 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 				"taskRunID", info.TaskRunID,
 				"err", err)
 		} else {
-			logs.CtxDebug(ctx, "Successfully updated TaskRun detail",
+			logs.CtxDebug(ctx, "Succeeded in updating TaskRun detail",
 				"taskID", info.TaskID,
 				"taskRunID", info.TaskRunID)
 		}
@@ -378,19 +378,19 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 		"batchSize", len(batch))
 }
 
-// updateTaskRunDetail updates the run_detail field for a TaskRun
+// updateTaskRunDetail updates the run_detail field of TaskRun
 func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *TaskRunCountInfo) error {
-	// Build run_detail JSON payload
+	// Build run_detail JSON data
 	runDetail := map[string]interface{}{
 		"total_count":   info.TaskRunCount,
 		"success_count": info.TaskRunSuccCount,
 		"failed_count":  info.TaskRunFailCount,
 	}
 
-	// Serialize to JSON string
+	// Serialize into JSON string
 	runDetailJSON, err := json.Marshal(runDetail)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal run_detail")
+		return errors.Wrap(err, "Failed to serialize run_detail")
 	}
 
 	runDetailStr := string(runDetailJSON)
@@ -400,10 +400,10 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 		"run_detail": &runDetailStr,
 	}
 
-	// Update with optimistic concurrency control
+	// Update using optimistic locking
 	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
 	if err != nil {
-		return errors.Wrap(err, "failed to update TaskRun")
+		return errors.Wrap(err, "Failed to update TaskRun")
 	}
 
 	return nil
@@ -417,27 +417,28 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 
 	logs.CtxInfo(ctx, "Start syncing task cache...")
 
-	// 1. Fetch workspace, bot, and task information for non-final tasks from the database
+	// 1. Retrieve spaceID, botID, and task information for all non-final tasks from the database
 	spaceIDs, botIDs, tasks := h.taskRepo.GetObjListWithTask(ctx)
-	logs.CtxInfo(ctx, "Retrieved tasks, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
+	logs.CtxInfo(ctx, "Retrieved task information, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
 
-	// 2. Build new cache map
+	// 2. Build a new cache map
 	var newCache = TaskCacheInfo{
 		WorkspaceIDs: spaceIDs,
 		BotIDs:       botIDs,
 		Tasks:        tasks,
-		UpdateTime:   time.Now(), // Set current time as update timestamp
+		UpdateTime:   time.Now(), // Set the current time as the update time
 	}
 
-	// 3. Clear the old cache and update with the new cache
+	// 3. Clear old cache and update with new cache
 	h.taskCacheLock.Lock()
 	defer h.taskCacheLock.Unlock()
 
 	// Clear old cache
 	h.taskCache.Delete("ObjListWithTask")
 
-	// 4. Store the new cache into local cache
+	// 4. Write new cache into local cache
 	h.taskCache.Store("ObjListWithTask", &newCache)
 
-	logs.CtxInfo(ctx, "Task cache synchronization completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
+	logs.CtxInfo(ctx, "Task cache sync completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
+}
 }
