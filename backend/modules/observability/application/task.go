@@ -18,7 +18,7 @@ import (
 )
 
 type ITaskQueueConsumer interface {
-	TraceHub(ctx context.Context, event *entity.RawSpan) error
+	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
 	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
 	Correction(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
@@ -207,8 +207,8 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	}, nil
 }
 
-func (t *TaskApplication) TraceHub(ctx context.Context, event *entity.RawSpan) error {
-	return t.tracehubSvc.TraceHub(ctx, event)
+func (t *TaskApplication) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
+	return t.tracehubSvc.SpanTrigger(ctx, event)
 }
 
 func (t *TaskApplication) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {

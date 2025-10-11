@@ -55,5 +55,5 @@ func (e *TaskConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) er
 		return nil
 	}
 	logs.CtxInfo(ctx, "Handle Task message,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event.LogID, event.TraceID, event.SpanID, ext.MsgID)
-	return e.handler.TraceHub(ctx, event)
+	return e.handler.SpanTrigger(ctx, event)
 }
