@@ -165,31 +165,31 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	}
 	return nil
 }
-
-// updateTaskRunStatusCount updates the Redis count based on Status
-func (h *TraceHubServiceImpl) updateTaskRunStatusCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult) error {
-	// Retrieve taskRunID from Ext
-	taskRunIDStr := turn.Ext["run_id"]
-	if taskRunIDStr == "" {
-		return fmt.Errorf("task_run_id not found in ext")
-	}
-
-	taskRunID, err := strconv.ParseInt(taskRunIDStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid task_run_id: %s, err: %v", taskRunIDStr, err)
-	}
-	// Increase the corresponding counter based on Status
-	switch turn.Status {
-	case entity.EvaluatorRunStatus_Success:
-		return h.taskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
-	case entity.EvaluatorRunStatus_Fail:
-		return h.taskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID)
-	default:
-		logs.CtxDebug(ctx, "未知的评估状态，跳过计数: taskID=%d, taskRunID=%d, status=%d",
-			taskID, taskRunID, turn.Status)
-		return nil
-	}
+func (h *TraceHubServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
+	return h.tenantProvider.GetTenantsByPlatformType(ctx, platform)
 }
+func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
+	if len(spanIds) == 0 || workspaceId == "" {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	var filterFields []*loop_span.FilterField
+	filterFields = append(filterFields, &loop_span.FilterField{
+		FieldName: loop_span.SpanFieldSpanId,
+		FieldType: loop_span.FieldTypeString,
+		Values:    spanIds,
+		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+	})
+	filterFields = append(filterFields, &loop_span.FilterField{
+		FieldName: loop_span.SpanFieldSpaceId,
+		FieldType: loop_span.FieldTypeString,
+		Values:    []string{workspaceId},
+		QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+	})
+	if traceId != "" {
+		filterFields = append(filterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldTraceId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{traceId},
 
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
