@@ -39,6 +39,10 @@ func ToJSONString(ctx context.Context, obj interface{}) string {
 }
 
 func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
+	if logs.GetLogID(ctx) == "" {
+		logID := logs.NewLogID()
+		ctx = logs.SetLogID(ctx, logID)
+	}
 	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
 	if os.Getenv("TCE_HOST_ENV") == "boe" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")

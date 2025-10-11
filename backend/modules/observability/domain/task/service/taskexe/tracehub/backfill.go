@@ -81,7 +81,6 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 
 // setBackfillTask sets the context for the current backfill task
 func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity.BackFillEvent) (*spanSubscriber, error) {
-
 	taskConfig, err := h.taskRepo.GetTask(ctx, event.TaskID, nil, nil)
 	if err != nil {
 		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", event.TaskID, err)
@@ -132,11 +131,6 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber
 		return err
 	}
 
-	// todo: obtain page size from TCC configuration
-	//batchSize := c.tccCfg.BackfillProcessConfig().ListPageSize
-	//if batchSize == 0 {
-	//	batchSize = pageSize
-	//}
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
 		Tenants:            tenants,

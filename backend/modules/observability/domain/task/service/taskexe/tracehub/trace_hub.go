@@ -65,8 +65,6 @@ func NewTraceHubImpl(
 
 	// Start the scheduled tasks immediately
 	impl.startScheduledTask()
-	impl.startSyncTaskRunCounts()
-	impl.startSyncTaskCache()
 
 	return impl, nil
 }
@@ -109,18 +107,17 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	var tags []metrics.T
 	// 1、Convert to standard span and perform initial filtering based on space_id
 	span := rawSpan.RawSpanConvertToLoopSpan()
-	// 1.1 Filter out spans of type Evaluator
+	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
+	// 1.1 Filter out spans that do not belong to any space or bot
+	spaceIDs, botIDs, tasks := h.getObjListWithTaskFromCache(ctx)
+	// 1.2 Filter out spans of type Evaluator
 	if slices.Contains([]string{"Evaluator"}, span.CallType) {
 		return nil
 	}
-	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	// 1.2 Filter out spans that do not belong to any space or bot
-	spaceIDs, botIDs, tasks := h.getObjListWithTaskFromCache(ctx)
-
 	logs.CtxInfo(ctx, "space list: %v, bot list: %v, task list: %v", spaceIDs, botIDs, tasks)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space"})
-		logs.CtxInfo(ctx, "no space found for span, %s", logSuffix)
+		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space_or_bot"})
+		logs.CtxInfo(ctx, "no space or bot found for span, %s", logSuffix)
 		return nil
 	}
 	// 2、Match spans against task rules
@@ -146,7 +143,6 @@ func (h *TraceHubServiceImpl) TraceHub(ctx context.Context, rawSpan *entity.RawS
 	if err != nil {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "preDispatch_failed"})
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
-		//return err
 	}
 	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
 	// 4、Dispatch

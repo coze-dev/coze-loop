@@ -90,12 +90,12 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 	}
 	return nil
 }
+
 func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
 	workspaceIDStr, workspaceID := event.GetWorkspaceIDFromExt()
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	// TODO: move under loopspan
 	tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
 	if err != nil {
 		return err

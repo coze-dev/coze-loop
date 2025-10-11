@@ -36,14 +36,14 @@ type TaskCacheInfo struct {
 	UpdateTime   time.Time
 }
 
-// startScheduledTask launches the scheduled task goroutine with a five-minute interval timer
+// startScheduledTask launches the scheduled task goroutine
 func (h *TraceHubServiceImpl) startScheduledTask() {
 	go func() {
 		for {
 			select {
 			case <-h.scheduledTaskTicker.C:
 				// Execute scheduled task
-				h.runScheduledTask()
+				h.transformTaskStatus()
 			case <-h.stopChan:
 				// Stop scheduled task
 				h.scheduledTaskTicker.Stop()
@@ -51,32 +51,12 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			}
 		}
 	}()
-}
-
-// startSyncTaskRunCounts launches the data sync scheduled task goroutine with a one-minute interval timer
-func (h *TraceHubServiceImpl) startSyncTaskRunCounts() {
 	go func() {
 		for {
 			select {
 			case <-h.syncTaskTicker.C:
 				// Execute scheduled task
 				h.syncTaskRunCounts()
-			case <-h.stopChan:
-				// Stop scheduled task
-				h.syncTaskTicker.Stop()
-				return
-			}
-		}
-	}()
-}
-
-// startSyncTaskCache launches the task cache scheduled task goroutine with a one-minute interval timer
-func (h *TraceHubServiceImpl) startSyncTaskCache() {
-	go func() {
-		for {
-			select {
-			case <-h.syncTaskTicker.C:
-				// Execute scheduled task
 				h.syncTaskCache()
 			case <-h.stopChan:
 				// Stop scheduled task
@@ -87,53 +67,15 @@ func (h *TraceHubServiceImpl) startSyncTaskCache() {
 	}()
 }
 
-func (h *TraceHubServiceImpl) runScheduledTask() {
+func (h *TraceHubServiceImpl) transformTaskStatus() {
 	ctx := context.Background()
-	logID := logs.NewLogID()
-	ctx = logs.SetLogID(ctx, logID)
 	ctx = h.fillCtx(ctx)
 	logs.CtxInfo(ctx, "Scheduled task started...")
 	// Read all non-final (success/disabled) tasks
-	var taskPOs []*entity.ObservabilityTask
-	var err error
-	var offset int32 = 0
-	const limit int32 = 1000
-
-	// Paginate through all tasks
-	for {
-		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
-			ReqLimit:  limit,
-			ReqOffset: offset,
-			TaskFilters: &filter.TaskFilterFields{
-				FilterFields: []*filter.TaskFilterField{
-					{
-						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
-						Values: []string{
-							string(task.TaskStatusUnstarted),
-							string(task.TaskStatusRunning),
-							string(task.TaskStatusPending),
-						},
-						QueryType: ptr.Of(filter.QueryTypeIn),
-						FieldType: ptr.Of(filter.FieldTypeString),
-					},
-				},
-			},
-		})
-		if err != nil {
-			logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-			return
-		}
-
-		// Add tasks from the current page to the full list
-		taskPOs = append(taskPOs, tasklist...)
-
-		// If fewer tasks than limit are returned, this is the last page
-		if len(tasklist) < int(limit) {
-			break
-		}
-
-		// Move to the next page, increasing offset by 1000
-		offset += limit
+	taskPOs, err := h.listNonFinalTask(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		return
 	}
 	logs.CtxInfo(ctx, "Scheduled task retrieved number of tasks:%d", len(taskPOs))
 	for _, taskPO := range taskPOs {
@@ -248,33 +190,14 @@ func (h *TraceHubServiceImpl) runScheduledTask() {
 // syncTaskRunCounts synchronizes TaskRunCount data to the database
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	ctx := context.Background()
-	logID := logs.NewLogID()
-	ctx = logs.SetLogID(ctx, logID)
 	ctx = h.fillCtx(ctx)
 
 	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to database...")
 
 	// 1. Retrieve non-final task list
-	taskPOs, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
-		ReqLimit:  1000,
-		ReqOffset: 0,
-		TaskFilters: &filter.TaskFilterFields{
-			FilterFields: []*filter.TaskFilterField{
-				{
-					FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
-					Values: []string{
-						string(task.TaskStatusPending),
-						string(task.TaskStatusRunning),
-						string(task.TaskStatusSuccess),
-					},
-					QueryType: ptr.Of(filter.QueryTypeIn),
-					FieldType: ptr.Of(filter.FieldTypeString),
-				},
-			},
-		},
-	})
+	taskPOs, err := h.listNonFinalTask(ctx)
 	if err != nil {
-		logs.CtxError(ctx, "ListNonFinalTask err:%v", err)
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
 		return
 	}
 	if len(taskPOs) == 0 {
@@ -317,6 +240,37 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 		batch := taskRunInfos[i:end]
 		h.processBatch(ctx, batch)
 	}
+}
+
+func (h *TraceHubServiceImpl) syncTaskCache() {
+	ctx := context.Background()
+	ctx = h.fillCtx(ctx)
+
+	logs.CtxInfo(ctx, "Start syncing task cache...")
+
+	// 1. Retrieve spaceID, botID, and task information for all non-final tasks from the database
+	spaceIDs, botIDs, tasks := h.taskRepo.GetObjListWithTask(ctx)
+	logs.CtxInfo(ctx, "Retrieved task information, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
+
+	// 2. Build a new cache map
+	var newCache = TaskCacheInfo{
+		WorkspaceIDs: spaceIDs,
+		BotIDs:       botIDs,
+		Tasks:        tasks,
+		UpdateTime:   time.Now(), // Set the current time as the update time
+	}
+
+	// 3. Clear old cache and update with new cache
+	h.taskCacheLock.Lock()
+	defer h.taskCacheLock.Unlock()
+
+	// Clear old cache
+	h.taskCache.Delete("ObjListWithTask")
+
+	// 4. Write new cache into local cache
+	h.taskCache.Store("ObjListWithTask", &newCache)
+
+	logs.CtxInfo(ctx, "Task cache sync completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
 }
 
 // processBatch synchronizes TaskRun counts in batches
@@ -409,35 +363,45 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 	return nil
 }
 
-func (h *TraceHubServiceImpl) syncTaskCache() {
-	ctx := context.Background()
-	logID := logs.NewLogID()
-	ctx = logs.SetLogID(ctx, logID)
-	ctx = h.fillCtx(ctx)
+func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+	var taskPOs []*entity.ObservabilityTask
+	var offset int32 = 0
+	const limit int32 = 1000
+	// Paginate through all tasks
+	for {
+		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+			ReqLimit:  limit,
+			ReqOffset: offset,
+			TaskFilters: &filter.TaskFilterFields{
+				FilterFields: []*filter.TaskFilterField{
+					{
+						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+						Values: []string{
+							string(task.TaskStatusUnstarted),
+							string(task.TaskStatusRunning),
+							string(task.TaskStatusPending),
+						},
+						QueryType: ptr.Of(filter.QueryTypeIn),
+						FieldType: ptr.Of(filter.FieldTypeString),
+					},
+				},
+			},
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+			return nil, err
+		}
 
-	logs.CtxInfo(ctx, "Start syncing task cache...")
+		// Add tasks from the current page to the full list
+		taskPOs = append(taskPOs, tasklist...)
 
-	// 1. Retrieve spaceID, botID, and task information for all non-final tasks from the database
-	spaceIDs, botIDs, tasks := h.taskRepo.GetObjListWithTask(ctx)
-	logs.CtxInfo(ctx, "Retrieved task information, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
+		// If fewer tasks than limit are returned, this is the last page
+		if len(tasklist) < int(limit) {
+			break
+		}
 
-	// 2. Build a new cache map
-	var newCache = TaskCacheInfo{
-		WorkspaceIDs: spaceIDs,
-		BotIDs:       botIDs,
-		Tasks:        tasks,
-		UpdateTime:   time.Now(), // Set the current time as the update time
+		// Move to the next page, increasing offset by 1000
+		offset += limit
 	}
-
-	// 3. Clear old cache and update with new cache
-	h.taskCacheLock.Lock()
-	defer h.taskCacheLock.Unlock()
-
-	// Clear old cache
-	h.taskCache.Delete("ObjListWithTask")
-
-	// 4. Write new cache into local cache
-	h.taskCache.Store("ObjListWithTask", &newCache)
-
-	logs.CtxInfo(ctx, "Task cache sync completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
+	return taskPOs, nil
 }
