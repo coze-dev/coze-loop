@@ -1467,3 +1467,8 @@ func _getdrilldownvaluesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _listpromptbasicMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
