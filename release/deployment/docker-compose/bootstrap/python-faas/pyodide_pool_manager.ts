@@ -240,46 +240,30 @@ ${request.code}
     } finally {
       this.releaseProcess(processId);
     }
-  }
-
-   /**
+  }   /**
     * 预处理代码，处理换行符和特殊字符问题
     */
    private preprocessCode(code: string, processId?: string): string {
      try {
        let processedCode = code;
-
+ 
        // 处理JSON层面的双重转义
        processedCode = processedCode.replace(/\\\\n/g, '\\n');  // \\n -> \n (JSON转义)
        processedCode = processedCode.replace(/\\\\t/g, '\\t');  // \\t -> \t (JSON转义)
        processedCode = processedCode.replace(/\\\\r/g, '\\r');  // \\r -> \r (JSON转义)
        processedCode = processedCode.replace(/\\\\"/g, '\\"');  // \\" -> \" (JSON转义)
-       processedCode = processedCode.replace(/\\\\\\\\/g, '\\\\'); // \\\\ -> \\ (JSON转义)
-
-       // 关键修复：处理Python字符串字面量中的转义序列
-       // 将 "\\na" 转换为 "\na"，这样Python会正确解释为换行符+字母a
-       processedCode = processedCode.replace(/"\\\\n/g, '"\n');  // "\\n -> "\n (实际换行符)
-       processedCode = processedCode.replace(/"\\\\t/g, '"\t');  // "\\t -> "\t (实际制表符)
-       processedCode = processedCode.replace(/"\\\\r/g, '"\r');  // "\\r -> "\r (实际回车符)
-       processedCode = processedCode.replace(/"\\\\"/g, '"\""');  // "\\" -> "\" (实际双引号)
-       processedCode = processedCode.replace(/"\\\\\\\\/g, '"\\'); // "\\\\ -> "\ (实际反斜杠)
-
-       // 额外处理：确保所有字符串字面量中的转义序列都被正确处理
-       processedCode = processedCode.replace(/"\\n/g, '"\n');  // "\\n -> "\n (实际换行符)
-       processedCode = processedCode.replace(/"\\t/g, '"\t');  // "\\t -> "\t (实际制表符)
-       processedCode = processedCode.replace(/"\\r/g, '"\r');  // "\\r -> "\r (实际回车符)
-       processedCode = processedCode.replace(/"\\"/g, '"\""');  // "\\" -> "\" (实际双引号)
-
+       processedCode = processedCode.replace(/\\\\\\/g, '\\\\'); // \\\\ -> \\ (JSON转义)
+ 
        // 检查是否处理了转义字符
        if (code.includes('\\\\n') && processedCode.includes('\\n')) {
          console.log(`✅ 已处理转义字符: ${processId || 'unknown'}`);
        }
-
+ 
        // 记录处理前后的差异（仅用于调试）
        if (code !== processedCode) {
          console.log(`🔧 代码预处理完成: ${processId || 'unknown'}, 处理了转义字符`);
        }
-
+ 
        return processedCode;
      } catch (error) {
        console.error(`❌ 代码预处理失败: ${processId || 'unknown'}`, error);
@@ -287,6 +271,7 @@ ${request.code}
        return code;
      }
    }
+
 
   /**
    * 使用pyodide-sandbox执行代码
