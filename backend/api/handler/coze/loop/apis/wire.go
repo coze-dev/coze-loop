@@ -213,6 +213,7 @@ func InitObservabilityHandler(
 	redis redis.Cmdable,
 	experimentClient experimentservice.Client,
 	taskProcessor task_processor.TaskProcessor,
+	aid int32,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,
