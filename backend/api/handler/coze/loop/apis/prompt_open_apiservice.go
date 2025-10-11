@@ -69,3 +69,9 @@ func ExecuteStreaming(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 }
+
+// ListPromptBasic .
+// @router /v1/loop/prompts/list [POST]
+func ListPromptBasic(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.ListPromptBasic)
+}
