@@ -28,14 +28,14 @@ import (
 const pageSize = 500
 
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
-	// 1. 设置当前任务上下文
+	// 1. Set the current task context
 	ctx = fillCtxWithEnv(ctx)
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
 		return err
 	}
 
-	// 2. 判断回溯任务是否已完成 - 避免重复执行
+	// 2. Determine whether the backfill task is completed to avoid repeated execution
 	isDone, err := h.isBackfillDone(ctx, sub)
 	if err != nil {
 		logs.CtxError(ctx, "check backfill task done failed, task_id=%d, err=%v", sub.t.GetID(), err)
@@ -46,41 +46,42 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 		return nil
 	}
 
-	// 3. 创建并发控制机制 - 设置上下文和等待组
+	// 3. Create concurrency control by setting context and wait group
 	subCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	wg := sync.WaitGroup{}
 
-	// 初始化 flushCh 通道和错误收集器
-	h.flushCh = make(chan *flushReq, 100) // 缓冲通道，避免阻塞
+	// Initialize the flushCh channel and error collector
+	h.flushCh = make(chan *flushReq, 100) // Buffered channel to avoid blocking
 	h.flushErrLock.Lock()
-	h.flushErr = nil // 重置错误收集器
+	h.flushErr = nil // Reset error collector
 	h.flushErrLock.Unlock()
 
-	// 4. 启动异步刷新处理 - 通过 goroutine 实现并发处理
+	// 4. Launch asynchronous flush handling via goroutine for concurrent processing
 	wg.Add(1)
 	goroutine.Go(ctx, func() {
 		defer wg.Done()
 		h.flushSpans(subCtx, sub)
 	})
 
-	// 5. 获取 span 数据 - 从观测服务获取需要处理的数据
+	// 5. Retrieve span data from the observability service
 	listErr := h.listSpans(subCtx, sub)
 	if listErr != nil {
 		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.GetID(), listErr)
-		// continue on error，不中断处理流程
+		// continue on error without interrupting the flow
 	}
 
-	// 关闭通道并等待处理完成
+	// Close the channel and wait for processing to finish
 	close(h.flushCh)
 	wg.Wait()
 
-	// 6. 同步等待完成 - 确保所有数据处理完毕
+	// 6. Synchronously wait for completion to ensure all data is processed
 	return h.onHandleDone(ctx, listErr, sub)
 }
 
-// setBackfillTask 设置当前回填任务的上下文
+// setBackfillTask sets the context for the current backfill task
 func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity.BackFillEvent) (*spanSubscriber, error) {
+
 	taskConfig, err := h.taskRepo.GetTask(ctx, event.TaskID, nil, nil)
 	if err != nil {
 		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", event.TaskID, err)
@@ -113,7 +114,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 	return sub, nil
 }
 
-// isBackfillDone 检查回填任务是否已完成
+// isBackfillDone checks whether the backfill task has been completed
 func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context, sub *spanSubscriber) (bool, error) {
 	if sub.tr == nil {
 		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), nil)
@@ -131,26 +132,26 @@ func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber
 		return err
 	}
 
-	// todo: 从tcc配置中获取分页大小
+	// todo: obtain page size from TCC configuration
 	//batchSize := c.tccCfg.BackfillProcessConfig().ListPageSize
 	//if batchSize == 0 {
 	//	batchSize = pageSize
 	//}
-	// 构建查询参数
+	// Build query parameters
 	listParam := &repo.ListSpansParam{
 		Tenants:            tenants,
 		Filters:            h.buildSpanFilters(ctx, sub.t),
 		StartAt:            backfillTime.GetStartAt(),
 		EndAt:              backfillTime.GetEndAt(),
-		Limit:              pageSize, // 分页大小
+		Limit:              pageSize, // Page size
 		DescByStartTime:    true,
-		NotQueryAnnotation: true, // 回填时不需要查询注解
+		NotQueryAnnotation: true, // No annotation query required during backfill
 	}
 
 	if sub.tr.BackfillRunDetail != nil && sub.tr.BackfillRunDetail.LastSpanPageToken != nil {
 		listParam.PageToken = *sub.tr.BackfillRunDetail.LastSpanPageToken
 	}
-	// 分页查询并发送数据
+	// Paginate query and send data
 	return h.fetchAndSendSpans(ctx, listParam, sub)
 }
 
@@ -167,10 +168,10 @@ type ListSpansReq struct {
 	SpanListType          loop_span.SpanListType
 }
 
-// buildSpanFilters 构建 span 过滤条件
+// buildSpanFilters constructs span filter conditions
 func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
-	// 可以根据任务配置构建更复杂的过滤条件
-	// 这里简化处理，返回 nil 表示不添加额外过滤
+	// More complex filters can be built based on the task configuration
+	// Simplified here: return nil to indicate no additional filters
 
 	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(taskConfig.GetRule().GetSpanFilters().GetPlatformType()))
 	if err != nil {
@@ -246,7 +247,7 @@ func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields)
 	return filterAggr
 }
 
-// fetchAndSendSpans 分页获取并发送 span 数据
+// fetchAndSendSpans paginates and sends span data
 func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) error {
 	totalCount := int64(0)
 	pageToken := listParam.PageToken
@@ -274,7 +275,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 		}
 
 		if len(spans) > 0 {
-			// 发送到通道
+			// Send to channel
 			flush := &flushReq{
 				retrievedSpanCount: int64(len(spans)),
 				pageToken:          result.PageToken,
@@ -308,14 +309,14 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, sub *spanSubscribe
 		select {
 		case fr, ok := <-h.flushCh:
 			if !ok {
-				// 通道已关闭，退出
+				// Channel closed, exit
 				return
 			}
 
 			_, _, err := h.doFlush(ctx, fr, sub)
 			if err != nil {
 				logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
-				// 收集错误，继续处理
+				// Collect errors and continue processing
 				h.flushErrLock.Lock()
 				h.flushErr = append(h.flushErr, err)
 				h.flushErrLock.Unlock()
@@ -335,14 +336,14 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 
 	logs.CtxInfo(ctx, "processing %d spans for backfill, task_id=%d", len(fr.spans), sub.t.GetID())
 
-	// 应用采样逻辑
+	// Apply sampling logic
 	sampledSpans := h.applySampling(fr.spans, sub)
 	if len(sampledSpans) == 0 {
 		logs.CtxInfo(ctx, "no spans after sampling, task_id=%d", sub.t.GetID())
 		return len(fr.spans), 0, nil
 	}
 
-	// 执行具体的业务逻辑处理
+	// Execute specific business logic
 	err := h.processSpansForBackfill(ctx, sampledSpans, sub)
 	if err != nil {
 		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
@@ -375,7 +376,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 	return len(fr.spans), len(sampledSpans), nil
 }
 
-// applySampling 应用采样逻辑
+// applySampling applies sampling logic
 func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSubscriber) []*loop_span.Span {
 	if sub.t == nil || sub.t.Rule == nil {
 		return spans
@@ -388,17 +389,17 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 
 	sampleRate := sampler.GetSampleRate()
 	if sampleRate >= 1.0 {
-		return spans // 100% 采样
+		return spans // 100% sampling
 	}
 
 	if sampleRate <= 0.0 {
-		return nil // 0% 采样
+		return nil // 0% sampling
 	}
 
-	// 计算采样数量
+	// Calculate sampling size
 	sampleSize := int(float64(len(spans)) * sampleRate)
 	if sampleSize == 0 && len(spans) > 0 {
-		sampleSize = 1 // 至少采样一个
+		sampleSize = 1 // Sample at least one
 	}
 
 	if sampleSize >= len(spans) {
@@ -408,9 +409,9 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 	return spans[:sampleSize]
 }
 
-// processSpansForBackfill 处理回填的 span 数据
+// processSpansForBackfill handles spans for backfill
 func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
-	// 批量处理 spans，提高效率
+	// Batch processing spans for efficiency
 	const batchSize = 100
 
 	for i := 0; i < len(spans); i += batchSize {
@@ -423,7 +424,7 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		if err := h.processBatchSpans(ctx, batch, sub); err != nil {
 			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
 				sub.t.GetID(), i, err)
-			// 继续处理下一批，不因单批失败而中断
+			// Continue with the next batch without stopping due to a single failure
 			continue
 		}
 	}
@@ -431,10 +432,10 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 	return nil
 }
 
-// processBatchSpans 批量处理 span 数据
+// processBatchSpans processes a batch of span data
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	for _, span := range spans {
-		// 根据任务类型执行相应的处理逻辑
+		// Execute processing logic according to the task type
 		logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 			span.SpanID, span.TraceID, sub.t.GetID())
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
@@ -460,9 +461,9 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 	return nil
 }
 
-// onHandleDone 处理完成回调
+// onHandleDone handles completion callback
 func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, sub *spanSubscriber) error {
-	// 收集所有错误
+	// Collect all errors
 	h.flushErrLock.Lock()
 	allErrors := append([]error{}, h.flushErr...)
 	if listErr != nil {
@@ -476,14 +477,14 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, s
 			TaskID:  sub.t.GetID(),
 		}
 
-		// 异步发送MQ消息，不阻塞任务创建流程
+		// Send MQ message asynchronously without blocking task creation flow
 		go func() {
 			if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
 				logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
 			}
 		}()
 		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), sub.t.GetID())
-		// 返回第一个错误作为代表
+		// Return the first error as a representative
 		return allErrors[0]
 
 	}
@@ -492,7 +493,7 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, s
 	return nil
 }
 
-// sendBackfillMessage 发送MQ消息
+// sendBackfillMessage sends an MQ message
 func (h *TraceHubServiceImpl) sendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error {
 	if h.backfillProducer == nil {
 		return errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("backfill producer not initialized"))
