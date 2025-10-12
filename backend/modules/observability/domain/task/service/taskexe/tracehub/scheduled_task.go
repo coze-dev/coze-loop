@@ -36,6 +36,11 @@ type TaskCacheInfo struct {
 	UpdateTime   time.Time
 }
 
+const (
+	transformTaskStatusLockKey = "observability:tracehub:transform_task_status"
+	transformTaskStatusLockTTL = 3 * time.Minute
+)
+
 // startScheduledTask launches the scheduled task goroutine
 func (h *TraceHubServiceImpl) startScheduledTask() {
 	go func() {
@@ -70,7 +75,26 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 func (h *TraceHubServiceImpl) transformTaskStatus() {
 	ctx := context.Background()
 	ctx = h.fillCtx(ctx)
+
 	logs.CtxInfo(ctx, "Scheduled task started...")
+
+	if h.locker != nil {
+		locked, lockErr := h.locker.Lock(ctx, transformTaskStatusLockKey, transformTaskStatusLockTTL)
+		if lockErr != nil {
+			logs.CtxError(ctx, "transformTaskStatus acquire lock failed", "err", lockErr)
+			return
+		}
+		if !locked {
+			logs.CtxInfo(ctx, "transformTaskStatus lock held by others, skip execution")
+			return
+		}
+		defer func() {
+			if _, err := h.locker.Unlock(transformTaskStatusLockKey); err != nil {
+				logs.CtxWarn(ctx, "transformTaskStatus release lock failed", "err", err)
+			}
+		}()
+	}
+
 	// Read all non-final (success/disabled) tasks
 	taskPOs, err := h.listNonFinalTask(ctx)
 	if err != nil {
