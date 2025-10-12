@@ -7,6 +7,8 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	authentity "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/domain/auth"
@@ -122,19 +124,22 @@ func (a *AuthProviderImpl) CheckQueryPermission(ctx context.Context, workspaceId
 }
 
 func (a *AuthProviderImpl) CheckTaskPermission(ctx context.Context, action, workspaceId, taskId string) error {
+	userID := session.UserIDInCtxOrEmpty(ctx)
 	authInfos := make([]*authentity.SubjectActionObjects, 0)
 	authInfos = append(authInfos, &authentity.SubjectActionObjects{
 		Subject: &authentity.AuthPrincipal{
-			AuthPrincipalType: ptr.Of(authentity.AuthPrincipalType_CozeIdentifier),
-			AuthCozeIdentifier: &authentity.AuthCozeIdentifier{
-				IdentityTicket: nil,
+			AuthPrincipalType: ptr.Of(authentity.AuthPrincipalType_User),
+			AuthUser: &authentity.AuthUser{
+				UserID: gptr.Of(userID),
 			},
 		},
 		Action: ptr.Of(action),
 		Objects: []*authentity.AuthEntity{
 			{
-				ID:         ptr.Of(taskId),
-				EntityType: ptr.Of(authentity.AuthEntityTypeTraceTask),
+				ID:          ptr.Of(taskId),
+				EntityType:  ptr.Of(authentity.AuthEntityTypeTraceTask),
+				SpaceID:     gptr.Of(workspaceId),
+				OwnerUserID: gptr.Of(userID),
 			},
 		},
 	})
