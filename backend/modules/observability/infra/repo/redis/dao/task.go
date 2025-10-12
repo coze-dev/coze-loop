@@ -161,7 +161,6 @@ func (p *TaskDAOImpl) IncrTaskCount(ctx context.Context, taskID int64, ttl time.
 // DecrTaskCount 原子减少任务计数，确保不会变为负数
 func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskCountCacheKey(taskID)
-
 	// 先获取当前值
 	current, err := p.cmdable.Get(ctx, key).Int64()
 	if err != nil {
@@ -184,7 +183,7 @@ func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.
 		logs.CtxError(ctx, "redis decr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis decr task count key: %v", key)
 	}
-
+	logs.CtxInfo(ctx, "redis decr task count success, taskID: %v, key: %v, result: %v", taskID, key, result)
 	// 如果减少后变为负数，重置为0
 	if result < 0 {
 		if err := p.cmdable.Set(ctx, key, 0, ttl).Err(); err != nil {
