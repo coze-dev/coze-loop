@@ -29,5 +29,4 @@ type IAuthProvider interface {
 	CheckIngestPermission(ctx context.Context, workspaceId string) error
 	CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error
 	CheckTaskPermission(ctx context.Context, action, workspaceId, taskId string) error
-	//CheckTaskSpacePermission(ctx context.Context, action, workspaceId string) error
 }
