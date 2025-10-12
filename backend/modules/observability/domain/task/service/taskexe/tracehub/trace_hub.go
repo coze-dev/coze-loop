@@ -19,6 +19,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 )
 
+//go:generate mockgen -destination=mocks/trace_hub_service.go -package=mocks . ITraceHubService
+
 type ITraceHubService interface {
 	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
 	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
