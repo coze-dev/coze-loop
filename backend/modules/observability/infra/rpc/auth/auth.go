@@ -172,6 +172,55 @@ func (a *AuthProviderImpl) CheckTaskPermission(ctx context.Context, action, work
 	return nil
 }
 
+func (a *AuthProviderImpl) CheckTaskSpacePermission(ctx context.Context, action, workspaceId string) error {
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	authInfos := make([]*authentity.SubjectActionObjects, 0)
+	authInfos = append(authInfos, &authentity.SubjectActionObjects{
+		Subject: &authentity.AuthPrincipal{
+			AuthPrincipalType: ptr.Of(authentity.AuthPrincipalType_User),
+			AuthUser: &authentity.AuthUser{
+				UserID: gptr.Of(userID),
+			},
+		},
+		Action: ptr.Of(action),
+		Objects: []*authentity.AuthEntity{
+			{
+				ID:          ptr.Of(workspaceId),
+				EntityType:  ptr.Of(authentity.AuthEntityTypeSpace),
+				SpaceID:     gptr.Of(workspaceId),
+				OwnerUserID: gptr.Of(userID),
+			},
+		},
+	})
+
+	// 将workspaceId字符串转换为int64
+	spaceID, err := strconv.ParseInt(workspaceId, 10, 64)
+	if err != nil {
+		return errorx.NewByCode(obErrorx.CommonInternalErrorCode)
+	}
+
+	req := &auth.MCheckPermissionRequest{
+		Auths:   authInfos,
+		SpaceID: ptr.Of(spaceID),
+	}
+	resp, err := a.cli.MCheckPermission(ctx, req)
+	if err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	} else if resp == nil {
+		logs.CtxWarn(ctx, "MCheckPermission returned nil response")
+		return errorx.NewByCode(obErrorx.CommercialCommonRPCErrorCodeCode)
+	} else if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
+		logs.CtxWarn(ctx, "MCheckPermission returned non-zero status code %d", resp.BaseResp.StatusCode)
+		return errorx.NewByCode(obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	for _, r := range resp.AuthRes {
+		if r != nil && !r.GetIsAllowed() {
+			return errorx.NewByCode(obErrorx.CommonNoPermissionCode)
+		}
+	}
+	return nil
+}
+
 func NewAuthProvider(cli authservice.Client) rpc.IAuthProvider {
 	return &AuthProviderImpl{
 		cli: cli,
