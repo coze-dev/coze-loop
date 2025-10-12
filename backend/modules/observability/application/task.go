@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -66,8 +67,15 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
+	appID := session.AppIDInCtxOrEmpty(ctx)
+	var action string
+	if appID == 717152 {
+		action = rpc.AuthActionTraceTaskList
+	} else {
+		action = rpc.AuthActionTaskReadable
+	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskList,
+		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
 	}
@@ -88,8 +96,15 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if err := t.validateCreateTaskReq(ctx, req); err != nil {
 		return resp, err
 	}
+	appID := session.AppIDInCtxOrEmpty(ctx)
+	var action string
+	if appID == 717152 {
+		action = rpc.AuthActionTraceTaskCreate
+	} else {
+		action = rpc.AuthActionTaskWritable
+	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskCreate,
+		action,
 		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10)); err != nil {
 		return resp, err
 	}
@@ -130,8 +145,15 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 	} else if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
+	appID := session.AppIDInCtxOrEmpty(ctx)
+	var action string
+	if appID == 717152 {
+		action = rpc.AuthActionTraceTaskEdit
+	} else {
+		action = rpc.AuthActionTaskWritable
+	}
 	if err := t.authSvc.CheckTaskPermission(ctx,
-		rpc.AuthActionTraceTaskEdit,
+		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
@@ -157,8 +179,15 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
+	appID := session.AppIDInCtxOrEmpty(ctx)
+	var action string
+	if appID == 717152 {
+		action = rpc.AuthActionTraceTaskList
+	} else {
+		action = rpc.AuthActionTaskReadable
+	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskList,
+		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return resp, err
 	}
@@ -187,8 +216,15 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
+	appID := session.AppIDInCtxOrEmpty(ctx)
+	var action string
+	if appID == 717152 {
+		action = rpc.AuthActionTraceTaskList
+	} else {
+		action = rpc.AuthActionTaskReadable
+	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		rpc.AuthActionTraceTaskList,
+		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return resp, err
 	}
