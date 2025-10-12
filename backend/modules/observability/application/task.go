@@ -74,7 +74,7 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 	} else {
 		action = rpc.AuthActionTaskReadable
 	}
-	if err := t.authSvc.CheckTaskSpacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	} else {
 		action = rpc.AuthActionTaskWritable
 	}
-	if err := t.authSvc.CheckTaskSpacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
 		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10)); err != nil {
 		return resp, err
@@ -186,7 +186,7 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	} else {
 		action = rpc.AuthActionTaskReadable
 	}
-	if err := t.authSvc.CheckTaskSpacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return resp, err
@@ -223,7 +223,7 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	} else {
 		action = rpc.AuthActionTaskReadable
 	}
-	if err := t.authSvc.CheckTaskSpacePermission(ctx,
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
 		return resp, err
