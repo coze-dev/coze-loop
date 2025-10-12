@@ -205,6 +205,7 @@ func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.
 func (p *TaskDAOImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
 	result, err := p.cmdable.Incr(ctx, key).Result()
+	logs.CtxInfo(ctx, "redis incr task run count success, taskID: %v,taskRunID: %v, key: %v, result: %v", taskID, taskRunID, key, result)
 	if err != nil {
 		logs.CtxError(ctx, "redis incr task run count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task run count key: %v", key)
