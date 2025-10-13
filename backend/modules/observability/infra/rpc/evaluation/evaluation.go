@@ -62,7 +62,7 @@ func (e *EvaluationProvider) InvokeExperiment(ctx context.Context, param *rpc.In
 	if param.EvaluationSetID == 0 {
 		return 0, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("evaluation set ID is nil"))
 	}
-	logs.CtxDebug(ctx, "InvokeExperiment, param: %+v", param)
+	logs.CtxInfo(ctx, "InvokeExperiment, param: %+v", param)
 	resp, err := e.client.InvokeExperiment(ctx, &expt.InvokeExperimentRequest{
 		WorkspaceID:      param.WorkspaceID,
 		EvaluationSetID:  param.EvaluationSetID,
