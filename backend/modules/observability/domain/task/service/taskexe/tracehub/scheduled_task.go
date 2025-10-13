@@ -6,6 +6,7 @@ package tracehub
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -127,6 +128,17 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					continue
 				}
 			}
+			if backfillTaskRun.RunStatus != task.RunStatusDone {
+				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskInfo.GetID())
+				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
+				if lockErr != nil || !locked {
+					h.sendBackfillMessage(ctx, &entity.BackFillEvent{
+						TaskID:  taskInfo.GetID(),
+						SpaceID: taskInfo.GetWorkspaceID(),
+					})
+				}
+				defer cancel()
+			}
 		} else if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskInfo.GetID())
@@ -139,6 +151,17 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
 					continue
 				}
+			}
+			if backfillTaskRun.RunStatus != task.RunStatusDone {
+				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskInfo.GetID())
+				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
+				if lockErr != nil || !locked {
+					h.sendBackfillMessage(ctx, &entity.BackFillEvent{
+						TaskID:  taskInfo.GetID(),
+						SpaceID: taskInfo.GetWorkspaceID(),
+					})
+				}
+				defer cancel()
 			}
 		} else if taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) {
