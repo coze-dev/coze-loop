@@ -195,13 +195,16 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return fields, nil
 	}
 
-	inputFields, err := buildInputFields(targetConf.IngressConf.EvalSetAdapter.FieldConfs)
-	if err != nil {
-		return nil, err
+	var inputFields map[string]*entity.Content
+	if targetConf.IngressConf != nil && targetConf.IngressConf.EvalSetAdapter != nil {
+		inputFields, err = buildInputFields(targetConf.IngressConf.EvalSetAdapter.FieldConfs)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ext := gmap.Clone(etec.Ext)
-	if targetConf.IngressConf.CustomConf != nil {
+	if targetConf.IngressConf != nil && targetConf.IngressConf.CustomConf != nil {
 		for _, fc := range targetConf.IngressConf.CustomConf.FieldConfs {
 			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
 				ext[consts.TargetExecuteExtRuntimeParamKey] = fc.Value
