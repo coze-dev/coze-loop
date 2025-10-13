@@ -52,12 +52,19 @@ enum EvalTargetType {
     VolcengineAgent = 5 // 火山智能体
 }
 
+enum VolcengineAgentProtocol {
+    MCP = 1
+    A2A = 2
+    Other = 3
+}
+
 struct VolcengineAgent {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')    // 罗盘应用ID
 
     10: optional string name    // DTO使用，不存数据库
     11: optional string description  // DTO使用，不存数据库
     12: optional list<VolcengineAgentEndpoint> volcengine_agent_endpoints // DTO使用，不存数据库
+    13: optional VolcengineAgentProtocol protocol // 注册协议
 
     100: optional common.BaseInfo base_info
 }

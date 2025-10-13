@@ -1390,6 +1390,20 @@ func (p *VolcengineAgent) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -1489,6 +1503,22 @@ func (p *VolcengineAgent) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *VolcengineAgent) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *VolcengineAgentProtocol
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := VolcengineAgentProtocol(v)
+		_field = &tmp
+	}
+	p.Protocol = _field
+	return offset, nil
+}
+
 func (p *VolcengineAgent) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -1512,6 +1542,7 @@ func (p *VolcengineAgent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1525,6 +1556,7 @@ func (p *VolcengineAgent) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1570,6 +1602,15 @@ func (p *VolcengineAgent) fastWriteField12(buf []byte, w thrift.NocopyWriter) in
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *VolcengineAgent) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetProtocol() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 13)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Protocol))
 	}
 	return offset
 }
@@ -1623,6 +1664,15 @@ func (p *VolcengineAgent) field12Length() int {
 	return l
 }
 
+func (p *VolcengineAgent) field13Length() int {
+	l := 0
+	if p.IsSetProtocol() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *VolcengineAgent) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -1672,6 +1722,11 @@ func (p *VolcengineAgent) DeepCopy(s interface{}) error {
 
 			p.VolcengineAgentEndpoints = append(p.VolcengineAgentEndpoints, _elem)
 		}
+	}
+
+	if src.Protocol != nil {
+		tmp := *src.Protocol
+		p.Protocol = &tmp
 	}
 
 	var _baseInfo *common.BaseInfo
