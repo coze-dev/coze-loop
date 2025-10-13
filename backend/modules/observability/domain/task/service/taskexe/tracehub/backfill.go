@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -22,7 +21,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -70,10 +68,10 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	if err != nil {
 		return err
 	}
-	ctx = session.WithCtxUser(ctx, &session.User{
-		ID: sub.t.GetBaseInfo().GetCreatedBy().GetUserID(),
-	})
-	logs.CtxInfo(ctx, "ctx:%v", ctx)
+
+	if sub != nil && sub.t != nil && sub.t.GetBaseInfo() != nil && sub.t.GetBaseInfo().GetCreatedBy() != nil {
+		ctx = session.WithCtxUser(ctx, &session.User{ID: sub.t.GetBaseInfo().GetCreatedBy().GetUserID()})
+	}
 
 	// 2. Determine whether the backfill task is completed to avoid repeated execution
 	isDone, err := h.isBackfillDone(ctx, sub)
@@ -86,35 +84,17 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 		return nil
 	}
 
-	// 3. Create concurrency control by setting context and wait group
-	subCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	wg := sync.WaitGroup{}
-
-	// Initialize the flushCh channel and error collector
-	h.flushCh = make(chan *flushReq, 100) // Buffered channel to avoid blocking
+	// 顺序执行时重置 flush 错误收集器
 	h.flushErrLock.Lock()
-	h.flushErr = nil // Reset error collector
+	h.flushErr = nil
 	h.flushErrLock.Unlock()
 
-	// 4. Launch asynchronous flush handling via goroutine for concurrent processing
-	//list+flush一个线程处理+续锁
-	wg.Add(1)
-	goroutine.Go(ctx, func() {
-		defer wg.Done()
-		h.flushSpans(subCtx, sub)
-	})
-
 	// 5. Retrieve span data from the observability service
-	listErr := h.listSpans(subCtx, sub)
+	listErr := h.listSpans(ctx, sub)
 	if listErr != nil {
 		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.GetID(), listErr)
 		// continue on error without interrupting the flow
 	}
-
-	// Close the channel and wait for processing to finish
-	close(h.flushCh)
-	wg.Wait()
 
 	// 6. Synchronously wait for completion to ensure all data is processed
 	return h.onHandleDone(ctx, listErr, sub)
@@ -140,12 +120,10 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 	proc := h.taskProcessor.GetTaskProcessor(taskConfig.TaskType)
 	sub := &spanSubscriber{
 		taskID:           taskConfigDO.GetID(),
-		RWMutex:          sync.RWMutex{},
 		t:                taskConfigDO,
 		tr:               taskRunDO,
 		processor:        proc,
 		bufCap:           0,
-		flushWait:        sync.WaitGroup{},
 		maxFlushInterval: time.Second * 5,
 		taskRepo:         h.taskRepo,
 		runType:          task.TaskRunTypeBackFill,
@@ -311,7 +289,6 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 		}
 
 		if len(spans) > 0 {
-			// Send to channel
 			flush := &flushReq{
 				retrievedSpanCount: int64(len(spans)),
 				pageToken:          result.PageToken,
@@ -319,14 +296,14 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 				noMore:             !result.HasMore,
 			}
 
-			select {
-			case h.flushCh <- flush:
-				totalCount += int64(len(spans))
-				logs.CtxInfo(ctx, "sent %d spans to flush channel, total=%d, task_id=%d", len(spans), totalCount, sub.t.GetID())
-			case <-ctx.Done():
-				logs.CtxWarn(ctx, "context cancelled while sending spans, task_id=%d", sub.t.GetID())
-				return ctx.Err()
+			if err = h.flushSpans(ctx, flush, sub); err != nil {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					return err
+				}
 			}
+
+			totalCount += int64(len(spans))
+			logs.CtxInfo(ctx, "processed %d spans, total=%d, task_id=%d", len(spans), totalCount, sub.t.GetID())
 		}
 
 		if !result.HasMore {
@@ -340,29 +317,20 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 	return nil
 }
 
-func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, sub *spanSubscriber) {
-	for {
-		select {
-		case fr, ok := <-h.flushCh:
-			if !ok {
-				// Channel closed, exit
-				return
-			}
-
-			_, _, err := h.doFlush(ctx, fr, sub)
-			if err != nil {
-				logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
-				// Collect errors and continue processing
-				h.flushErrLock.Lock()
-				h.flushErr = append(h.flushErr, err)
-				h.flushErrLock.Unlock()
-			}
-
-		case <-ctx.Done():
-			logs.CtxWarn(ctx, "flush spans context cancelled, task_id=%d", sub.t.GetID())
-			return
-		}
+func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, fr *flushReq, sub *spanSubscriber) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
+
+	_, _, err := h.doFlush(ctx, fr, sub)
+	if err != nil {
+		logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		h.flushErrLock.Lock()
+		h.flushErr = append(h.flushErr, err)
+		h.flushErrLock.Unlock()
+	}
+
+	return nil
 }
 
 func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *spanSubscriber) (flushed, sampled int, _ error) {
@@ -472,7 +440,7 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	for _, span := range spans {
 		// Execute processing logic according to the task type
-		logs.CtxDebug(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
+		logs.CtxInfo(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 			span.SpanID, span.TraceID, sub.t.GetID())
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.GetID())

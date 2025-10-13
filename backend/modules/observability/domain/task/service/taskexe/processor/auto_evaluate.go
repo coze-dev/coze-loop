@@ -405,6 +405,9 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 }
 
 func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
+	if param.TaskRun == nil {
+		return nil
+	}
 	session := p.getSession(ctx, param.Task)
 	taskRun := param.TaskRun
 	taskRunPO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)

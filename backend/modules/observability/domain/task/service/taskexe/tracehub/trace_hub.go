@@ -78,7 +78,6 @@ type TraceHubServiceImpl struct {
 	backfillProducer    mq.IBackfillProducer
 	locker              lock.ILocker
 
-	flushCh      chan *flushReq
 	flushErrLock sync.Mutex
 	flushErr     []error
 
