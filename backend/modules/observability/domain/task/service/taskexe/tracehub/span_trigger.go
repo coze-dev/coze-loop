@@ -184,7 +184,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		endTime := time.UnixMilli(sub.t.GetRule().GetEffectiveTime().GetEndAt())
 		// Reached task time limit
 		if time.Now().After(endTime) {
-			logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
+			logs.CtxWarn(ctx, "[OnFinishTaskChange]time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     sub.t,
 				TaskRun:  taskRunConfig,
@@ -197,7 +197,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		}
 		// Reached task limit
 		if taskCount+1 > sampler.GetSampleSize() {
-			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
+			logs.CtxWarn(ctx, "[OnFinishTaskChange]taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     sub.t,
 				TaskRun:  taskRunConfig,
@@ -211,7 +211,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 			// Reached single cycle task time limit
 			if time.Now().After(cycleEndTime) {
-				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     sub.t,
 					TaskRun:  taskRunConfig,
@@ -230,7 +230,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			// Reached single cycle task limit
 			if taskRunCount+1 > sampler.GetCycleCount() {
-				logs.CtxWarn(ctx, "taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
+				logs.CtxWarn(ctx, "[OnFinishTaskChange]taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     sub.t,
 					TaskRun:  taskRunConfig,

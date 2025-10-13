@@ -116,7 +116,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 && taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
-				logs.CtxInfo(ctx, "[auto_task]taskID:%d, backfillTaskRunID:%d, backfillTaskRunStatus:%s", taskInfo.GetID(), backfillTaskRun.ID, backfillTaskRun.RunStatus)
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskInfo.GetID())
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  backfillTaskRun,
@@ -129,7 +129,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		} else if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
-				logs.CtxInfo(ctx, "[auto_task]taskID:%d, backfillTaskRunID:%d, backfillTaskRunStatus:%s", taskInfo.GetID(), backfillTaskRun.ID, backfillTaskRun.RunStatus)
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskInfo.GetID())
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  backfillTaskRun,
@@ -142,7 +142,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		} else if taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) {
-				logs.CtxInfo(ctx, "[auto_task]taskID:%d, taskRunID:%d, taskRunStatus:%s", taskInfo.GetID(), taskRun.ID, taskRun.RunStatus)
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime)", taskInfo.GetID())
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  taskRun,
@@ -186,7 +186,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
 			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
-				logs.CtxInfo(ctx, "time.Now().After(cycleEndTime)")
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(cycleEndTime)", taskInfo.GetID())
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  taskRun,
