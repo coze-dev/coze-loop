@@ -116,6 +116,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
 		if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 && taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
+				logs.CtxInfo(ctx, "[auto_task]taskID:%d, backfillTaskRunID:%d, backfillTaskRunStatus:%s", taskInfo.GetID(), backfillTaskRun.ID, backfillTaskRun.RunStatus)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  backfillTaskRun,
@@ -128,6 +129,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		} else if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
+				logs.CtxInfo(ctx, "[auto_task]taskID:%d, backfillTaskRunID:%d, backfillTaskRunStatus:%s", taskInfo.GetID(), backfillTaskRun.ID, backfillTaskRun.RunStatus)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  backfillTaskRun,
@@ -140,6 +142,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		} else if taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
 			if time.Now().After(endTime) {
+				logs.CtxInfo(ctx, "[auto_task]taskID:%d, taskRunID:%d, taskRunStatus:%s", taskInfo.GetID(), taskRun.ID, taskRun.RunStatus)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskInfo,
 					TaskRun:  taskRun,

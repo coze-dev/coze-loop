@@ -386,6 +386,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		return len(fr.spans), len(sampledSpans), err
 	}
 	if fr.noMore {
+		logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.GetID())
 		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 			Task:     sub.t,
 			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
