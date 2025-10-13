@@ -387,7 +387,7 @@ struct GetExperimentResultOpenAPIData {
 // ===============================
 
 service EvaluationOpenAPIService {
-    // 评测集接口 (8个)
+    // 评测集接口 (9个)
     // 1.1 创建评测集
     CreateEvaluationSetOApiResponse CreateEvaluationSetOApi(1: CreateEvaluationSetOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets")
     // 1.2 获取评测集详情
