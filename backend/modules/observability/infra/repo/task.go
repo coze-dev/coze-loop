@@ -132,15 +132,6 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 		return 0, err
 	}
 
-	// 数据库操作成功后，更新缓存
-	do.ID = createdID
-	go func() {
-		// 缓存新创建的任务
-		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
-			logs.Error("failed to set task cache after create", "id", createdID, "err", err)
-		}
-	}()
-
 	return createdID, nil
 }
 func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error {
