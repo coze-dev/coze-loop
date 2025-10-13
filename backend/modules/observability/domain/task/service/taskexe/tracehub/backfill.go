@@ -30,6 +30,7 @@ import (
 const (
 	pageSize                = 500
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
+	backfillLockMaxHold     = 24 * time.Hour
 )
 
 // 定时任务+锁
@@ -37,9 +38,13 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	// 1. Set the current task context
 	ctx = h.fillCtx(ctx)
 
+	var (
+		lockKey    string
+		lockCancel func()
+	)
 	if h.locker != nil && event != nil {
-		lockKey := fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-		locked, lockErr := h.locker.Lock(ctx, lockKey, transformTaskStatusLockTTL)
+		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
+		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 		if lockErr != nil {
 			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
 			return lockErr
@@ -48,11 +53,17 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 			logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
 			return nil
 		}
-		defer func() {
-			if _, err := h.locker.Unlock(lockKey); err != nil {
-				logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
+		lockCancel = cancel
+		ctx = lockCtx
+		defer func(cancel func()) {
+			if cancel != nil {
+				cancel()
+			} else if lockKey != "" {
+				if _, err := h.locker.Unlock(lockKey); err != nil {
+					logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
+				}
 			}
-		}()
+		}(lockCancel)
 	}
 
 	sub, err := h.setBackfillTask(ctx, event)
