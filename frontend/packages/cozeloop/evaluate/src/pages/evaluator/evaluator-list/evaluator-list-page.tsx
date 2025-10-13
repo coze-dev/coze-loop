@@ -348,6 +348,7 @@ function EvaluatorListPage() {
   const [currentColumns, setCurrentColumns] =
     useState<ColumnProps<Evaluator>[]>(columns);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tableOnChange = ({ sorter, extra }: Record<string, any>) => {
     if (extra?.changeType === 'sorter' && sorter) {
       let field: string | undefined = undefined;

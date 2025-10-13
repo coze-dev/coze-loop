@@ -10,7 +10,7 @@ import {
   TypographyText,
 } from '@cozeloop/evaluate-components';
 import { JumpIconButton } from '@cozeloop/components';
-import { useBaseURL, useOpenWindow } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import { type ColumnEvaluator } from '@cozeloop/api-schema/evaluation';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { Tag, Tooltip, type TagProps } from '@coze-arch/coze-design';
