@@ -195,6 +195,24 @@ struct ListEvaluationSetVersionItemsOpenAPIData {
     102: optional i64 total (api.js_conv="true", go.tag='json:"total"')
 }
 
+
+struct UpdateEvaluationSetSchemaOApiRequest {
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+
+    // fieldSchema.key 为空时：插入新的一列
+    // fieldSchema.key 不为空时：更新对应的列
+    // 删除（不支持恢复数据）的情况下，不需要写入入参的 field list；
+    10: optional list<eval_set.FieldSchema> fields,
+
+    255: optional base.Base Base
+}
+
+struct UpdateEvaluationSetSchemaOApiResponse {
+
+    255: base.BaseResp BaseResp
+}
+
 // ===============================
 // 评估器相关接口 (5个接口)
 // ===============================
@@ -386,6 +404,8 @@ service EvaluationOpenAPIService {
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 1.8 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
+    // 1.9 更新评测集字段
+    UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 
     // 评估器接口 (5个)
     // 2.1 创建评估器
