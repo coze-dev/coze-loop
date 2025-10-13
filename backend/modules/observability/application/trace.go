@@ -897,7 +897,8 @@ func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.Extra
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
 		return resp, err
 	}
 	sResp, err := t.traceService.ExtractSpanInfo(ctx, &service.ExtractSpanInfoRequest{

@@ -76,7 +76,8 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
 		return nil, err
 	}
 	sResp, err := t.taskSvc.CheckTaskName(ctx, &service.CheckTaskNameReq{
@@ -105,7 +106,8 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
-		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10),
+		false); err != nil {
 		return resp, err
 	}
 	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: req.GetTask()})
@@ -188,7 +190,8 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
 		return resp, err
 	}
 	sResp, err := t.taskSvc.ListTasks(ctx, &service.ListTasksReq{
@@ -225,7 +228,8 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		action,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
 		return resp, err
 	}
 	sResp, err := t.taskSvc.GetTask(ctx, &service.GetTaskReq{
