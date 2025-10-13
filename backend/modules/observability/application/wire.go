@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
@@ -123,9 +124,14 @@ var (
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
 		evaluation.NewEvaluationRPCProvider,
+		NewTaskLocker,
 		traceDomainSet,
 	)
 )
+
+func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
+	return lock.NewRedisLockerWithHolder(cmdable, "observability")
+}
 
 func NewTraceProcessorBuilder(
 	traceConfig config.ITraceConfig,
