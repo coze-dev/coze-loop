@@ -56,12 +56,12 @@ func TestHTTPFaaSIntegration(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Output)
-		
+
 		// 检查输出包含预期内容
-		t.Logf("JavaScript输出: stdout=%s, stderr=%s, ret_val=%s", 
+		t.Logf("JavaScript输出: stdout=%s, stderr=%s, ret_val=%s",
 			result.Output.Stdout, result.Output.Stderr, result.Output.RetVal)
-		
-	assert.Contains(t, result.Output.Stdout, "Hello from JavaScript")
+
+		assert.Contains(t, result.Output.Stdout, "Hello from JavaScript")
 	})
 
 	t.Run("Python代码执行", func(t *testing.T) {
@@ -78,13 +78,13 @@ print(f"Result: {result}")
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Output)
-		
+
 		// 检查输出包含预期内容
-		t.Logf("Python输出: stdout=%s, stderr=%s, ret_val=%s", 
+		t.Logf("Python输出: stdout=%s, stderr=%s, ret_val=%s",
 			result.Output.Stdout, result.Output.Stderr, result.Output.RetVal)
-		
-			assert.Contains(t, result.Output.Stdout, "Hello from Python")
-	assert.Contains(t, result.Output.Stdout, "Result: 30")
+
+		assert.Contains(t, result.Output.Stdout, "Hello from Python")
+		assert.Contains(t, result.Output.Stdout, "Result: 30")
 	})
 
 	t.Run("错误代码处理", func(t *testing.T) {
@@ -100,8 +100,8 @@ print(f"Result: {result}")
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Output)
-		
-		t.Logf("错误代码输出: stdout=%s, stderr=%s", 
+
+		t.Logf("错误代码输出: stdout=%s, stderr=%s",
 			result.Output.Stdout, result.Output.Stderr)
 	})
 
@@ -119,10 +119,10 @@ print(f"Result: {result}")
 		start := time.Now()
 		result, err := jsAdapter.RunCode(ctx, code, "javascript", 1000, make(map[string]string)) // 1秒超时
 		duration := time.Since(start)
-		
+
 		// 应该在合理时间内完成（可能超时或正常完成）
 		assert.True(t, duration < 5*time.Second, "执行时间应该在5秒内")
-		
+
 		if err != nil {
 			t.Logf("超时测试产生错误（预期）: %v", err)
 		} else {
@@ -132,11 +132,11 @@ print(f"Result: {result}")
 
 	t.Run("并发执行", func(t *testing.T) {
 		ctx := context.Background()
-		
+
 		// 启动多个并发执行
 		const concurrency = 5
 		results := make(chan error, concurrency)
-		
+
 		for i := 0; i < concurrency; i++ {
 			go func(index int) {
 				code := fmt.Sprintf(`
@@ -145,12 +145,12 @@ print(f"Result: {result}")
 					console.log("Task %d result:", result);
 					return result;
 				`, index, index, index)
-				
+
 				_, err := jsAdapter.RunCode(ctx, code, "javascript", 5000, make(map[string]string))
 				results <- err
 			}(i)
 		}
-		
+
 		// 等待所有任务完成
 		for i := 0; i < concurrency; i++ {
 			err := <-results
@@ -162,7 +162,7 @@ print(f"Result: {result}")
 	t.Run("清理资源", func(t *testing.T) {
 		err := jsAdapter.Cleanup()
 		assert.NoError(t, err)
-		
+
 		err = pythonAdapter.Cleanup()
 		assert.NoError(t, err)
 	})

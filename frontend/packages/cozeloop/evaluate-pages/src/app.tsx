@@ -18,6 +18,7 @@ import {
   ExperimentContrastPage,
   useEvaluateConfigCommunityInit,
   CodeEvaluatorCreatePage,
+  CodeEvaluatorDetailPage,
 } from '@cozeloop/evaluate';
 
 const App = () => {
@@ -46,6 +47,10 @@ const App = () => {
         />
 
         <Route path="evaluators/:id" element={<EvaluatorDetailPage />} />
+        <Route
+          path="evaluators/code/:id"
+          element={<CodeEvaluatorDetailPage />}
+        />
         {/* 实验 */}
         <Route path="experiments" element={<Navigate to="list" replace />} />
         <Route path="experiments/list" element={<ExperimentListPage />} />
