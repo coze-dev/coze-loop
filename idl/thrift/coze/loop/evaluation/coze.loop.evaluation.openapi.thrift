@@ -209,6 +209,8 @@ struct UpdateEvaluationSetSchemaOApiRequest {
 }
 
 struct UpdateEvaluationSetSchemaOApiResponse {
+    1: optional i32 code
+    2: optional string msg
 
     255: base.BaseResp BaseResp
 }
