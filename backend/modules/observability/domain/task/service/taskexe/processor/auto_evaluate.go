@@ -386,21 +386,21 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 		UpdatedAt:   time.Now(),
 		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
 	}
-	id, err := p.taskRepo.CreateTaskRun(ctx, taskRun)
+	_, err = p.taskRepo.CreateTaskRun(ctx, taskRun)
 	if err != nil {
 		logs.CtxError(ctx, "[auto_task] OnCreateTaskRunProcessor, CreateTaskRun err, taskRun:%+v, err:%v", taskRun, err)
 		return err
 	}
-	taskRun.ID = id
-	taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
-	if err != nil {
-		return err
-	}
-	taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-	err = p.taskRepo.UpdateTask(ctx, taskConfig)
-	if err != nil {
-		return err
-	}
+	//taskRun.ID = id
+	//taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
+	//err = p.taskRepo.UpdateTask(ctx, taskConfig)
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }
 
