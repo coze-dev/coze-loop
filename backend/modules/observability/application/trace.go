@@ -264,7 +264,7 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	sReq, err := t.buildSearchTraceTreeSvcReq(req)
