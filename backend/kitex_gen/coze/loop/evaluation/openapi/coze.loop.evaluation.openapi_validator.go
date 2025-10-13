@@ -269,6 +269,22 @@ func (p *ListEvaluationSetVersionItemsOApiResponse) IsValid() error {
 func (p *ListEvaluationSetVersionItemsOpenAPIData) IsValid() error {
 	return nil
 }
+func (p *UpdateEvaluationSetSchemaOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluationSetSchemaOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *CreateEvaluatorOApiRequest) IsValid() error {
 	if p.Evaluator != nil {
 		if err := p.Evaluator.IsValid(); err != nil {

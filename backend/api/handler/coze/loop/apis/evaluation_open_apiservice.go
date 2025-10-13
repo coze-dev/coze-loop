@@ -249,3 +249,19 @@ func GetExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// UpdateEvaluationSetSchemaOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema [PUT]
+func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.UpdateEvaluationSetSchemaOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.UpdateEvaluationSetSchemaOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

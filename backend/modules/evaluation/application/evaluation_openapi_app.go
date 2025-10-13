@@ -38,6 +38,7 @@ func NewEvaluationOpenApiApplicationImpl(auth rpc.IAuthProvider,
 	evaluationSetService service.IEvaluationSetService,
 	evaluationSetVersionService service.EvaluationSetVersionService,
 	evaluationSetItemService service.EvaluationSetItemService,
+	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationSetMetrics,
 	userInfoService userinfo.UserInfoService,
 ) evaluation.EvaluationOpenAPIService {
@@ -47,6 +48,7 @@ func NewEvaluationOpenApiApplicationImpl(auth rpc.IAuthProvider,
 			evaluationSetService:        evaluationSetService,
 			evaluationSetVersionService: evaluationSetVersionService,
 			evaluationSetItemService:    evaluationSetItemService,
+			evaluationSetSchemaService:  evaluationSetSchemaService,
 			metric:                      metric,
 			userInfoService:             userInfoService,
 		}
@@ -60,6 +62,7 @@ type EvaluationOpenApiApplicationImpl struct {
 	evaluationSetService        service.IEvaluationSetService
 	evaluationSetVersionService service.EvaluationSetVersionService
 	evaluationSetItemService    service.EvaluationSetItemService
+	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationSetMetrics
 	userInfoService             userinfo.UserInfoService
 }
@@ -228,7 +231,7 @@ func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetVersionOApi(ctx co
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(set.ID, 10),
 		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.CreateVersion), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
 		OwnerID:         ownerID,
 		ResourceSpaceID: set.SpaceID,
 	})
@@ -469,6 +472,46 @@ func (e *EvaluationOpenApiApplicationImpl) ListEvaluationSetVersionItemsOApi(ctx
 			Total:         total,
 		},
 	}, nil
+}
+
+func (e *EvaluationOpenApiApplicationImpl) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.EditSchema), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), evaluation_set.OpenAPIFieldSchemaDTO2DOs(req.Fields))
+	if err != nil {
+		return nil, err
+	}
+	// 返回结果构建、错误处理
+	return &openapi.UpdateEvaluationSetSchemaOApiResponse{}, nil
 }
 
 func (e *EvaluationOpenApiApplicationImpl) CreateEvaluatorOApi(ctx context.Context, req *openapi.CreateEvaluatorOApiRequest) (r *openapi.CreateEvaluatorOApiResponse, err error) {

@@ -69,6 +69,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpdateEvaluationSetSchemaOApi": kitex.NewMethodInfo(
+		updateEvaluationSetSchemaOApiHandler,
+		newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs,
+		newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateEvaluatorOApi": kitex.NewMethodInfo(
 		createEvaluatorOApiHandler,
 		newEvaluationOpenAPIServiceCreateEvaluatorOApiArgs,
@@ -303,6 +310,25 @@ func newEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult() interf
 	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult()
 }
 
+func updateEvaluationSetSchemaOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateEvaluationSetSchemaOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult()
+}
+
 func createEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult)
@@ -523,6 +549,16 @@ func (p *kClient) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *op
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult
 	if err = p.c.Call(ctx, "ListEvaluationSetVersionItemsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult
+	if err = p.c.Call(ctx, "UpdateEvaluationSetSchemaOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

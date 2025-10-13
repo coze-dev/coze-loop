@@ -192,6 +192,7 @@ var (
 		domainservice.NewEvaluationSetServiceImpl,
 		domainservice.NewEvaluationSetVersionServiceImpl,
 		domainservice.NewEvaluationSetItemServiceImpl,
+		domainservice.NewEvaluationSetSchemaServiceImpl,
 		data.NewDatasetRPCAdapter,
 		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
 		foundation.NewAuthRPCProvider,

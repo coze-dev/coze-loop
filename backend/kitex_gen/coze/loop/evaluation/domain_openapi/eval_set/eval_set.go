@@ -40,6 +40,8 @@ type FieldSchema struct {
 	IsRequired           *bool               `thrift:"is_required,5,optional" frugal:"5,optional,bool" form:"is_required" json:"is_required,omitempty" query:"is_required"`
 	// JSON Schema字符串
 	TextSchema *string `thrift:"text_schema,6,optional" frugal:"6,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
+	// 唯一键，创建列时无需关注，更新列的时候携带即可
+	Key *string `thrift:"key,10,optional" frugal:"10,optional,string" form:"key" json:"key,omitempty" query:"key"`
 }
 
 func NewFieldSchema() *FieldSchema {
@@ -120,6 +122,18 @@ func (p *FieldSchema) GetTextSchema() (v string) {
 	}
 	return *p.TextSchema
 }
+
+var FieldSchema_Key_DEFAULT string
+
+func (p *FieldSchema) GetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetKey() {
+		return FieldSchema_Key_DEFAULT
+	}
+	return *p.Key
+}
 func (p *FieldSchema) SetName(val *string) {
 	p.Name = val
 }
@@ -138,14 +152,18 @@ func (p *FieldSchema) SetIsRequired(val *bool) {
 func (p *FieldSchema) SetTextSchema(val *string) {
 	p.TextSchema = val
 }
+func (p *FieldSchema) SetKey(val *string) {
+	p.Key = val
+}
 
 var fieldIDToName_FieldSchema = map[int16]string{
-	1: "name",
-	2: "description",
-	3: "content_type",
-	4: "default_display_format",
-	5: "is_required",
-	6: "text_schema",
+	1:  "name",
+	2:  "description",
+	3:  "content_type",
+	4:  "default_display_format",
+	5:  "is_required",
+	6:  "text_schema",
+	10: "key",
 }
 
 func (p *FieldSchema) IsSetName() bool {
@@ -170,6 +188,10 @@ func (p *FieldSchema) IsSetIsRequired() bool {
 
 func (p *FieldSchema) IsSetTextSchema() bool {
 	return p.TextSchema != nil
+}
+
+func (p *FieldSchema) IsSetKey() bool {
+	return p.Key != nil
 }
 
 func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -233,6 +255,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -333,6 +363,17 @@ func (p *FieldSchema) ReadField6(iprot thrift.TProtocol) error {
 	p.TextSchema = _field
 	return nil
 }
+func (p *FieldSchema) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Key = _field
+	return nil
+}
 
 func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -362,6 +403,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -490,6 +535,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *FieldSchema) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKey() {
+		if err = oprot.WriteFieldBegin("key", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Key); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 
 func (p *FieldSchema) String() string {
 	if p == nil {
@@ -521,6 +584,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.TextSchema) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Key) {
 		return false
 	}
 	return true
@@ -594,6 +660,18 @@ func (p *FieldSchema) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.TextSchema, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field10DeepEqual(src *string) bool {
+
+	if p.Key == src {
+		return true
+	} else if p.Key == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Key, *src) != 0 {
 		return false
 	}
 	return true
