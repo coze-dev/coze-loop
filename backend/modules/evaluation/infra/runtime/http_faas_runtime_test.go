@@ -37,14 +37,11 @@ func TestHTTPFaaSRuntimeAdapter(t *testing.T) {
 		assert.Equal(t, entity.LanguageTypeJS, langType)
 	})
 
-
 	t.Run("Cleanup", func(t *testing.T) {
 		err := adapter.Cleanup()
 		assert.NoError(t, err)
 	})
 }
-
-
 
 func TestHTTPFaaSRuntimeConfig_Default(t *testing.T) {
 	logger := logrus.New()
@@ -62,7 +59,7 @@ func TestHTTPFaaSRuntimeConfig_Default(t *testing.T) {
 
 func TestHTTPFaaSRuntimeAdapter_GetReturnValFunction(t *testing.T) {
 	logger := logrus.New()
-	
+
 	tests := []struct {
 		name         string
 		languageType entity.LanguageType
@@ -84,7 +81,7 @@ func TestHTTPFaaSRuntimeAdapter_GetReturnValFunction(t *testing.T) {
 			wantContains: []string{""},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := &HTTPFaaSRuntimeConfig{
@@ -94,12 +91,12 @@ func TestHTTPFaaSRuntimeAdapter_GetReturnValFunction(t *testing.T) {
 				RetryInterval:  100 * time.Millisecond,
 				EnableEnhanced: true,
 			}
-			
+
 			adapter, err := NewHTTPFaaSRuntimeAdapter(tt.languageType, config, logger)
 			require.NoError(t, err)
-			
+
 			result := adapter.GetReturnValFunction()
-			
+
 			if tt.languageType == entity.LanguageType("unknown") {
 				assert.Empty(t, result)
 			} else {
@@ -129,7 +126,7 @@ func TestHTTPFaaSRuntimeAdapter_RunCode_EmptyCode(t *testing.T) {
 
 	ctx := context.Background()
 	result, err := adapter.RunCode(ctx, "", "javascript", 5000, make(map[string]string))
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "代码不能为空")
@@ -153,11 +150,11 @@ func TestHTTPFaaSRuntimeAdapter_RunCode_Success(t *testing.T) {
 
 	ctx := context.Background()
 	code := `console.log("hello world");`
-	
+
 	// 由于我们没有真实的FaaS服务，这个测试会失败
 	// 但我们仍然可以测试错误处理路径
 	result, err := adapter.RunCode(ctx, code, "javascript", 5000, make(map[string]string))
-	
+
 	// 期望连接失败错误
 	assert.Error(t, err)
 	assert.Nil(t, result)

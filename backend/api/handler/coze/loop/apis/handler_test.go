@@ -136,7 +136,7 @@ func TestValidateEvaluator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			c := &app.RequestContext{}
-			
+
 			// The function will panic due to nil localEvaluatorSvc, but we verify it exists and can be called
 			// This test mainly ensures the function compiles and follows the expected pattern
 			if tt.wantPanic {
