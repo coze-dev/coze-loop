@@ -15,10 +15,24 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+// setEnvSafe 安全地设置环境变量，忽略错误
+func setEnvSafe(t *testing.T, key, value string) {
+	t.Helper()
+	_ = os.Setenv(key, value)
+}
+
+// unsetEnvSafe 安全地取消设置环境变量，忽略错误
+func unsetEnvSafe(t *testing.T, key string) {
+	t.Helper()
+	_ = os.Unsetenv(key)
+}
+
 func TestPythonRuntime_Creation(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer func() {
+		unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
+	}()
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -35,8 +49,10 @@ func TestPythonRuntime_Creation(t *testing.T) {
 
 func TestJavaScriptRuntime_Creation(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer func() {
+		unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
+	}()
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -53,8 +69,10 @@ func TestJavaScriptRuntime_Creation(t *testing.T) {
 
 func TestRuntimeFactory_CreatePythonRuntime(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer func() {
+		unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
+	}()
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -75,8 +93,8 @@ func TestRuntimeFactory_CreatePythonRuntime(t *testing.T) {
 
 func TestRuntimeFactory_CreateJavaScriptRuntime(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -111,8 +129,8 @@ func TestRuntimeFactory_UnsupportedLanguage(t *testing.T) {
 
 func TestPythonRuntime_ValidateCode(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -136,8 +154,8 @@ func TestPythonRuntime_ValidateCode(t *testing.T) {
 
 func TestJavaScriptRuntime_ValidateCode(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -161,8 +179,8 @@ func TestJavaScriptRuntime_ValidateCode(t *testing.T) {
 
 func TestPythonRuntime_RunCode_EmptyCode(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -183,8 +201,8 @@ func TestPythonRuntime_RunCode_EmptyCode(t *testing.T) {
 
 func TestJavaScriptRuntime_RunCode_EmptyCode(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -205,8 +223,8 @@ func TestJavaScriptRuntime_RunCode_EmptyCode(t *testing.T) {
 
 func TestPythonRuntime_HealthStatus(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -224,8 +242,8 @@ func TestPythonRuntime_HealthStatus(t *testing.T) {
 
 func TestJavaScriptRuntime_HealthStatus(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -274,8 +292,8 @@ func TestRuntimeFactory_GetHealthStatus(t *testing.T) {
 	assert.Len(t, supportedLangs, 2)
 
 	// 测试有缓存的状态
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	runtime, err := factory.CreateRuntime(entity.LanguageTypePython)
 	require.NoError(t, err)
@@ -305,8 +323,8 @@ func TestRuntimeFactory_GetMetrics(t *testing.T) {
 	assert.Equal(t, 2, metrics["supported_languages"])
 
 	// 测试有缓存的指标
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	runtime, err := factory.CreateRuntime(entity.LanguageTypePython)
 	require.NoError(t, err)
@@ -326,11 +344,11 @@ func TestRuntimeFactory_ConcurrentAccess(t *testing.T) {
 	config := entity.DefaultSandboxConfig()
 
 	// 设置环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
 	defer func() {
-		os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
-		os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+		unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
+		unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 	}()
 
 	factory := NewRuntimeFactory(logger, config).(*RuntimeFactory)
@@ -396,8 +414,8 @@ func TestRuntimeFactory_NilConfig(t *testing.T) {
 
 func TestPythonRuntime_GetReturnValFunction(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -416,8 +434,8 @@ func TestPythonRuntime_GetReturnValFunction(t *testing.T) {
 
 func TestJavaScriptRuntime_GetReturnValFunction(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -435,8 +453,8 @@ func TestJavaScriptRuntime_GetReturnValFunction(t *testing.T) {
 
 func TestPythonRuntime_GetMetrics(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -455,8 +473,8 @@ func TestPythonRuntime_GetMetrics(t *testing.T) {
 
 func TestJavaScriptRuntime_GetMetrics(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -475,7 +493,7 @@ func TestJavaScriptRuntime_GetMetrics(t *testing.T) {
 
 func TestPythonRuntime_GetMetrics_NotConfigured(t *testing.T) {
 	// 确保环境变量不存在
-	os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -490,7 +508,7 @@ func TestPythonRuntime_GetMetrics_NotConfigured(t *testing.T) {
 
 func TestJavaScriptRuntime_GetMetrics_NotConfigured(t *testing.T) {
 	// 确保环境变量不存在
-	os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -505,8 +523,8 @@ func TestJavaScriptRuntime_GetMetrics_NotConfigured(t *testing.T) {
 
 func TestPythonRuntime_ComplexSyntaxValidation(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -554,8 +572,8 @@ print(squares)
 
 func TestJavaScriptRuntime_ComplexSyntaxValidation(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -604,8 +622,8 @@ async function fetchData() {
 
 func TestPythonRuntime_GetHealthStatus(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -625,8 +643,8 @@ func TestPythonRuntime_GetHealthStatus(t *testing.T) {
 
 func TestJavaScriptRuntime_GetHealthStatus(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -646,8 +664,8 @@ func TestJavaScriptRuntime_GetHealthStatus(t *testing.T) {
 
 func TestPythonRuntime_NilConfig(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -663,8 +681,8 @@ func TestPythonRuntime_NilConfig(t *testing.T) {
 
 func TestJavaScriptRuntime_NilConfig(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -680,8 +698,8 @@ func TestJavaScriptRuntime_NilConfig(t *testing.T) {
 
 func TestPythonRuntime_NilLogger(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
-	defer os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL", "http://localhost:8001")
+	defer unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	config := entity.DefaultSandboxConfig()
 
@@ -696,8 +714,8 @@ func TestPythonRuntime_NilLogger(t *testing.T) {
 
 func TestJavaScriptRuntime_NilLogger(t *testing.T) {
 	// 设置测试环境变量
-	os.Setenv("COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
-	defer os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	setEnvSafe(t, "COZE_LOOP_JS_FAAS_URL", "http://localhost:8002")
+	defer unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	config := entity.DefaultSandboxConfig()
 
@@ -741,7 +759,7 @@ func TestRuntimeFactory_Metrics(t *testing.T) {
 
 func TestPythonRuntime_MissingEnvironmentVariable(t *testing.T) {
 	// 确保环境变量不存在
-	os.Unsetenv("COZE_LOOP_PYTHON_FAAS_URL")
+	unsetEnvSafe(t, "COZE_LOOP_PYTHON_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
@@ -755,7 +773,7 @@ func TestPythonRuntime_MissingEnvironmentVariable(t *testing.T) {
 
 func TestJavaScriptRuntime_MissingEnvironmentVariable(t *testing.T) {
 	// 确保环境变量不存在
-	os.Unsetenv("COZE_LOOP_JS_FAAS_URL")
+	unsetEnvSafe(t, "COZE_LOOP_JS_FAAS_URL")
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)

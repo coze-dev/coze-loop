@@ -264,7 +264,9 @@ func (adapter *HTTPFaaSRuntimeAdapter) executeHTTPRequest(ctx context.Context, r
 	if err != nil {
 		return nil, fmt.Errorf("HTTP请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	responseBody, err := io.ReadAll(resp.Body)

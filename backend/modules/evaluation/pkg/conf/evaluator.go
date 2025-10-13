@@ -133,7 +133,7 @@ func (c *evaluatorConfiger) GetCodeEvaluatorTemplateConf(ctx context.Context) (e
 				}
 
 				if tpl != nil && tpl.CodeEvaluator != nil && tpl.CodeEvaluator.LanguageType != nil {
-					switch strings.ToLower(string(*tpl.CodeEvaluator.LanguageType)) {
+					switch strings.ToLower(*tpl.CodeEvaluator.LanguageType) {
 					case "python":
 						v := evaluatordto.LanguageTypePython
 						tpl.CodeEvaluator.LanguageType = &v
@@ -176,7 +176,7 @@ func (c *evaluatorConfiger) GetCustomCodeEvaluatorTemplateConf(ctx context.Conte
 				}
 
 				if tpl != nil && tpl.CodeEvaluator != nil && tpl.CodeEvaluator.LanguageType != nil {
-					switch strings.ToLower(string(*tpl.CodeEvaluator.LanguageType)) {
+					switch strings.ToLower(*tpl.CodeEvaluator.LanguageType) {
 					case "python":
 						v := evaluatordto.LanguageTypePython
 						tpl.CodeEvaluator.LanguageType = &v
