@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -336,6 +337,9 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	spanParam.TargetType = evalTargetDO.EvalTargetType.String()
 	spanParam.TargetID = strconv.FormatInt(targetID, 10)
 	spanParam.TargetVersion = strconv.FormatInt(targetVersionID, 10)
+	if outputData.EvalTargetRunError != nil {
+		span.SetError(ctx, errors.New(outputData.EvalTargetRunError.Message))
+	}
 	setSpanInputOutput(ctx, spanParam, inputData, outputData)
 
 	return record, nil
