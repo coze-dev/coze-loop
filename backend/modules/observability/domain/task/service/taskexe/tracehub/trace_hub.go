@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -37,7 +38,7 @@ func NewTraceHubImpl(
 	benefitSvc benefit.IBenefitService,
 	aid int32,
 	backfillProducer mq.IBackfillProducer,
-	// locker lock.ILocker,
+	locker lock.ILocker,
 ) (ITraceHubService, error) {
 	// Create two independent timers with different intervals
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // Task status lifecycle management - 5-minute interval
@@ -54,7 +55,7 @@ func NewTraceHubImpl(
 		benefitSvc:          benefitSvc,
 		aid:                 aid,
 		backfillProducer:    backfillProducer,
-		//locker:              locker,
+		locker:              locker,
 	}
 
 	// Start the scheduled tasks immediately
@@ -75,7 +76,7 @@ type TraceHubServiceImpl struct {
 	buildHelper         service.TraceFilterProcessorBuilder
 	benefitSvc          benefit.IBenefitService
 	backfillProducer    mq.IBackfillProducer
-	//locker              lock.ILocker
+	locker              lock.ILocker
 
 	flushCh      chan *flushReq
 	flushErrLock sync.Mutex

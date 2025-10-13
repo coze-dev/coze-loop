@@ -238,7 +238,8 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer)
+	iLocker := NewTaskLocker(redis2)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer, iLocker)
 	if err != nil {
 		return nil, err
 	}
