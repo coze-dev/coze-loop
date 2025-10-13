@@ -108,7 +108,8 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, turns is empty")
 		return nil
 	}
-	taskTTL := trigger.Task.GetRule().GetEffectiveTime().GetEndAt() - trigger.Task.GetRule().GetEffectiveTime().GetStartAt()
+	taskTTL := (trigger.Task.GetRule().GetEffectiveTime().GetEndAt() - trigger.Task.GetRule().GetEffectiveTime().GetStartAt() +
+		trigger.Task.GetRule().GetBackfillEffectiveTime().GetEndAt() - trigger.Task.GetRule().GetBackfillEffectiveTime().GetStartAt())
 	p.taskRepo.IncrTaskCount(ctx, *trigger.Task.ID, taskTTL)
 	p.taskRepo.IncrTaskRunCount(ctx, *trigger.Task.ID, taskRun.ID, taskTTL)
 	taskCount, _ := p.taskRepo.GetTaskCount(ctx, *trigger.Task.ID)
