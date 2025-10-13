@@ -27,7 +27,7 @@ func (e *EvaluationProvider) SubmitExperiment(ctx context.Context, param *rpc.Su
 	if param.WorkspaceID == 0 {
 		return 0, 0, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("workspace ID is nil"))
 	}
-	logs.CtxDebug(ctx, "SubmitExperiment, param: %+v", param)
+	logs.CtxInfo(ctx, "SubmitExperiment, param: %+v", param)
 	resp, err := e.client.SubmitExperiment(ctx, &expt.SubmitExperimentRequest{
 		WorkspaceID:           param.WorkspaceID,
 		EvalSetVersionID:      param.EvalSetVersionID,
@@ -91,7 +91,7 @@ func (e *EvaluationProvider) FinishExperiment(ctx context.Context, param *rpc.Fi
 	if param.ExperimentRunID == 0 {
 		return errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("experiment run ID is nil"))
 	}
-	logs.CtxDebug(ctx, "FinishExperiment, param: %+v", param)
+	logs.CtxInfo(ctx, "FinishExperiment, param: %+v", param)
 	_, err = e.client.FinishExperiment(ctx, &expt.FinishExperimentRequest{
 		WorkspaceID:     ptr.Of(param.WorkspaceID),
 		ExperimentID:    ptr.Of(param.ExperimentID),
