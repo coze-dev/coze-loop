@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
@@ -259,22 +260,22 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		if validTaskStatus != "" {
 			if validTaskStatus == task.TaskStatusDisabled {
 				// 禁用操作处理
-				//proc := t.taskProcessor.GetTaskProcessor(taskPO.TaskType)
-				//taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
-				//var taskRun *entity.TaskRun
-				//for _, tr := range taskPO.TaskRuns {
-				//	if tr.RunStatus == task.RunStatusRunning {
-				//		taskRun = tr
-				//		break
-				//	}
-				//}
-				//if err = proc.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
-				//	Task:    taskConfig,
-				//	TaskRun: taskRun,
-				//}); err != nil {
-				//	logs.CtxError(ctx, "proc Finish err:%v", err)
-				//	return err
-				//}
+				proc := t.taskProcessor.GetTaskProcessor(taskPO.TaskType)
+				taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
+				var taskRun *entity.TaskRun
+				for _, tr := range taskPO.TaskRuns {
+					if tr.RunStatus == task.RunStatusRunning {
+						taskRun = tr
+						break
+					}
+				}
+				if err = proc.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
+					Task:    taskConfig,
+					TaskRun: taskRun,
+				}); err != nil {
+					logs.CtxError(ctx, "proc Finish err:%v", err)
+					return err
+				}
 			}
 			taskPO.TaskStatus = *req.TaskStatus
 		}

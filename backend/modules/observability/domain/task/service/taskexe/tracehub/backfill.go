@@ -6,7 +6,6 @@ package tracehub
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -37,28 +36,23 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	// 1. Set the current task context
 	ctx = h.fillCtx(ctx)
 
-	var (
-		locked  bool
-		lockErr error
-		lockKey string
-	)
-	if h.locker != nil && event != nil {
-		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-		locked, lockErr = h.locker.Lock(ctx, lockKey, transformTaskStatusLockTTL)
-		if lockErr != nil {
-			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
-			return lockErr
-		}
-		if !locked {
-			logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
-			return nil
-		}
-		defer func() {
-			if _, err := h.locker.Unlock(lockKey); err != nil {
-				logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
-			}
-		}()
-	}
+	//if h.locker != nil && event != nil {
+	//	lockKey := fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
+	//	locked, lockErr := h.locker.Lock(ctx, lockKey, transformTaskStatusLockTTL)
+	//	if lockErr != nil {
+	//		logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
+	//		return lockErr
+	//	}
+	//	if !locked {
+	//		logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
+	//		return nil
+	//	}
+	//	defer func() {
+	//		if _, err := h.locker.Unlock(lockKey); err != nil {
+	//			logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
+	//		}
+	//	}()
+	//}
 
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
