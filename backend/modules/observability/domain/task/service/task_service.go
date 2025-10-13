@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -125,7 +126,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	// 校验配置项是否有效
 	if err = proc.ValidateConfig(ctx, req.Task); err != nil {
 		logs.CtxError(ctx, "ValidateConfig err:%v", err)
-		return nil, err
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("config invalid:%v", err)))
 	}
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	if userID == "" {
