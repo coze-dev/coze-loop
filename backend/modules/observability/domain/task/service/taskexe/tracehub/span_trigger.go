@@ -3,7 +3,6 @@ package tracehub
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sync"
 	"time"
 
@@ -28,14 +27,14 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	// 1.1 Filter out spans that do not belong to any space or bot
 	spaceIDs, botIDs, _ := h.getObjListWithTaskFromCache(ctx)
-	// 1.2 Filter out spans of type Evaluator
-	if slices.Contains([]string{"Evaluator"}, span.CallType) {
-		return nil
-	}
 	logs.CtxInfo(ctx, "space list: %v, bot list: %v", spaceIDs, botIDs)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space_or_bot"})
 		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
+		return nil
+	}
+	// 1.2 Filter out spans of type Evaluator
+	if gslice.Contains([]string{"Evaluator"}, span.CallType) {
 		return nil
 	}
 	// 2、Match spans against task rules
