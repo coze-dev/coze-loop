@@ -131,6 +131,9 @@ func (e *Experiment) AsyncExec() bool {
 }
 
 func (e *Experiment) AsyncCallTarget() bool {
+	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil || e.Target.EvalTargetVersion.CustomRPCServer == nil {
+		return false
+	}
 	return gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync)
 }
 
