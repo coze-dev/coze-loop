@@ -79,6 +79,7 @@ var (
 		tracespec.Input: {
 			attributeKey: []string{
 				openInferenceAttributeInput,
+				springAIAttributeToolInput,
 				otelAttributeInput,
 			},
 			attributeKeyPrefix: []string{
@@ -104,6 +105,7 @@ var (
 		tracespec.Output: {
 			attributeKey: []string{
 				openInferenceAttributeOutput,
+				springAIAttributeToolOutput,
 				otelAttributeOutput,
 			},
 			attributeKeyPrefix: []string{
