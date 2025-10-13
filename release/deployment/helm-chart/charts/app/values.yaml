@@ -79,11 +79,6 @@ env:
       port: "9876"
       user: ""
       password: ""
-  faas:
-    python:
-      url: "http://coze-loop-python-faas:8000"
-    js:
-      url: "http://coze-loop-js-faas:8000"
 
 # customization
 custom:
@@ -125,10 +120,3 @@ custom:
       port:
       user:
       password:
-  faas:
-    python:
-      disabled: true
-      url:
-    js:
-      disabled: true
-      url:

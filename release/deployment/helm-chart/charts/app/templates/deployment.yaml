@@ -261,11 +261,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "secret.name" . }}
                   key: rmq-namesrv-password
-            # faas
-            - name: COZE_LOOP_PYTHON_FAAS_URL
-              value: {{ (.Values.custom.faas.python.url | default .Values.env.faas.python.url) | quote }}
-            - name: COZE_LOOP_JS_FAAS_URL
-              value: {{ (.Values.custom.faas.js.url | default .Values.env.faas.js.url) | quote }}
           command: [ "/bin/sh", "/coze-loop/bootstrap/entrypoint.sh" ]
           livenessProbe:
             exec:

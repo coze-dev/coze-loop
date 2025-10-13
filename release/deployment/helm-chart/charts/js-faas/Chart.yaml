@@ -1,7 +1,0 @@
-apiVersion: v2
-name: coze-loop-js-faas
-description: Cozeloop JavaScript FaaS Helm chart
-type: application
-version: 1.0.0
-appVersion: latest
-
