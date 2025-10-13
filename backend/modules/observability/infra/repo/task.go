@@ -86,8 +86,10 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 
 	// 异步缓存到 Redis
 	go func() {
-		if err := v.TaskRedisDao.SetTask(context.Background(), taskDO, TaskDetailTTL); err != nil {
-			logs.Error("failed to set task cache", "id", id, "err", err)
+		if len(taskDO.TaskRuns) > 0 {
+			if err := v.TaskRedisDao.SetTask(context.Background(), taskDO, TaskDetailTTL); err != nil {
+				logs.Error("failed to set task cache", "id", id, "err", err)
+			}
 		}
 	}()
 
@@ -153,9 +155,11 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 	// 数据库操作成功后，更新缓存
 	go func() {
 		// 更新单个任务缓存
-		if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
-			logs.Error("failed to update task cache", "id", do.ID, "err", err)
-			return
+		if len(do.TaskRuns) > 0 {
+			if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
+				logs.Error("failed to update task cache", "id", do.ID, "err", err)
+				return
+			}
 		}
 	}()
 
