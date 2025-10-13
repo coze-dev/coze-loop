@@ -105,6 +105,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets.POST("/batch_get_source", append(_batchgetsourceevaltargetsMw(handler), apis.BatchGetSourceEvalTargets)...)
 				_eval_targets.POST("/list_source", append(_listsourceevaltargetsMw(handler), apis.ListSourceEvalTargets)...)
 				_eval_targets.POST("/list_source_version", append(_listsourceevaltargetversionsMw(handler), apis.ListSourceEvalTargetVersions)...)
+				_eval_targets.POST("/mock_output", append(_mockevaltargetoutputMw(handler), apis.MockEvalTargetOutput)...)
 				{
 					_eval_target_id := _eval_targets.Group("/:eval_target_id", _eval_target_idMw(handler)...)
 					{
@@ -138,6 +139,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets.POST("/list", append(_listevaluationsetsMw(handler), apis.ListEvaluationSets)...)
 				_v11.POST("/evaluators", append(_evaluatorsMw(handler), apis.CreateEvaluator)...)
 				_evaluators := _v11.Group("/evaluators", _evaluatorsMw(handler)...)
+				_evaluators.POST("/batch_debug", append(_batchdebugevaluatorMw(handler), apis.BatchDebugEvaluator)...)
 				_evaluators.POST("/check_name", append(_checkevaluatornameMw(handler), apis.CheckEvaluatorName)...)
 				_evaluators.POST("/debug", append(_debugevaluatorMw(handler), apis.DebugEvaluator)...)
 				_evaluators.POST("/default_prompt_evaluator_tools", append(_getdefaultpromptevaluatortoolsMw(handler), apis.GetDefaultPromptEvaluatorTools)...)
@@ -153,6 +155,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_id0.PATCH("/update_draft", append(_updateevaluatordraftMw(handler), apis.UpdateEvaluatorDraft)...)
 				_evaluators.POST("/get_template_info", append(_gettemplateinfoMw(handler), apis.GetTemplateInfo)...)
 				_evaluators.POST("/list_template", append(_listtemplatesMw(handler), apis.ListTemplates)...)
+				_evaluators.POST("/validate", append(_validateevaluatorMw(handler), apis.ValidateEvaluator)...)
 				{
 					_eval_target_records := _v11.Group("/eval_target_records", _eval_target_recordsMw(handler)...)
 					_eval_target_records.POST("/batch_get", append(_batchgetevaltargetrecordsMw(handler), apis.BatchGetEvalTargetRecords)...)
@@ -368,6 +371,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 		_v16 := root.Group("/v1", _v16Mw(handler)...)
 		{
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
+			{
+				_annotations0 := _loop.Group("/annotations", _annotations0Mw(handler)...)
+				_annotations0.POST("/create", append(_createannotationMw(handler), apis.CreateAnnotation)...)
+				_annotations0.DELETE("/delete", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
+			}
 			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)

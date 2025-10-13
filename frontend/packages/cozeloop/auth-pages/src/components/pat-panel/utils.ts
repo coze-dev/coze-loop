@@ -58,7 +58,7 @@ export function getExpirationOptions() {
     return {
       label:
         value === DurationDay.Permanent
-          ? 'Permanent'
+          ? I18n.t('permanent')
           : I18n.t('expired_time_days', { num: Number(value), date }),
       value,
     };

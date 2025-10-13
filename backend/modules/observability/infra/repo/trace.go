@@ -209,6 +209,8 @@ func (t *TraceCkRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListA
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
+	} else if len(tableCfg.AnnoTables) == 0 {
+		return loop_span.AnnotationList{}, nil
 	}
 	st := time.Now()
 	annotations, err := t.annoDao.List(ctx, &ck.ListAnnotationsParam{
@@ -234,6 +236,8 @@ func (t *TraceCkRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnno
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
+	} else if len(tableCfg.AnnoTables) == 0 {
+		return nil, nil
 	}
 	st := time.Now()
 	annotation, err := t.annoDao.Get(ctx, &ck.GetAnnotationParam{
@@ -299,8 +303,10 @@ func (t *TraceCkRepoImpl) getQueryTenantTables(ctx context.Context, tenants []st
 		}
 		for _, tableCfg := range tables {
 			ret.SpanTables = append(ret.SpanTables, tableCfg.SpanTable)
-			ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
-			ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+			if tableCfg.AnnoTable != "" {
+				ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
+				ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+			}
 		}
 	}
 	for _, tenant := range tenants {

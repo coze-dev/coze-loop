@@ -27,10 +27,12 @@ type (
 )
 
 const (
-	AnnotationValueTypeString AnnotationValueType = "string"
-	AnnotationValueTypeLong   AnnotationValueType = "long"
-	AnnotationValueTypeDouble AnnotationValueType = "double"
-	AnnotationValueTypeBool   AnnotationValueType = "bool"
+	AnnotationValueTypeCategory AnnotationValueType = "category" // 等于string
+	AnnotationValueTypeString   AnnotationValueType = "string"
+	AnnotationValueTypeLong     AnnotationValueType = "long"
+	AnnotationValueTypeNumber   AnnotationValueType = "number" // 等于float
+	AnnotationValueTypeDouble   AnnotationValueType = "double"
+	AnnotationValueTypeBool     AnnotationValueType = "bool"
 
 	AnnotationStatusNormal   AnnotationStatus = "normal"
 	AnnotationStatusInactive AnnotationStatus = "inactive"
@@ -44,6 +46,7 @@ const (
 	AnnotationTypeManualFeedback      AnnotationType = "manual_feedback"
 	AnnotationTypeCozeFeedback        AnnotationType = "coze_feedback"
 	AnnotationTypeManualDataset       AnnotationType = "manual_dataset"
+	AnnotationTypeOpenAPIFeedback     AnnotationType = "openapi_feedback"
 )
 
 type AnnotationValue struct {

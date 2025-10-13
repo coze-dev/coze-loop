@@ -41,7 +41,7 @@ func (QuotaSpaceExptConverter) ToDO(b []byte) (*entity.QuotaSpaceExpt, error) {
 
 // toBytes
 //
-//nolint:staticcheck,S1034
+//nolint:staticcheck
 func toBytes(v any) []byte {
 	switch v.(type) {
 	case string:

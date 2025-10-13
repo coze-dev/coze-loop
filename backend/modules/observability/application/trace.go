@@ -96,7 +96,7 @@ func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRe
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	sReq, err := t.buildListSpansSvcReq(req)
@@ -186,7 +186,7 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	sReq := t.buildGetTraceSvcReq(req)
@@ -260,7 +260,7 @@ func (t *TraceApplication) BatchGetTracesAdvanceInfo(ctx context.Context, req *t
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "Batch get traces advance info request: %+v", req)
@@ -404,7 +404,7 @@ func (t *TraceApplication) validateIngestTracesInnerReq(ctx context.Context, req
 func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.GetTracesMetaInfoRequest) (*trace.GetTracesMetaInfoResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "Get traces meta info request: %+v", req)
@@ -469,7 +469,7 @@ func (t *TraceApplication) CreateView(ctx context.Context, req *trace.CreateView
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceViewCreate,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	userID := session.UserIDInCtxOrEmpty(ctx)
@@ -557,7 +557,7 @@ func (t *TraceApplication) ListViews(ctx context.Context, req *trace.ListViewsRe
 	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceViewList,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	systemViews, err := t.getSystemViews(ctx)
@@ -601,7 +601,7 @@ func (t *TraceApplication) getSystemViews(ctx context.Context) ([]*view.View, er
 func (t *TraceApplication) CreateManualAnnotation(ctx context.Context, req *trace.CreateManualAnnotationRequest) (*trace.CreateManualAnnotationResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationCreate,
-		req.GetAnnotation().GetWorkspaceID()); err != nil {
+		req.GetAnnotation().GetWorkspaceID(), false); err != nil {
 		return nil, err
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
@@ -637,7 +637,7 @@ func (t *TraceApplication) CreateManualAnnotation(ctx context.Context, req *trac
 func (t *TraceApplication) UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest) (*trace.UpdateManualAnnotationResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationCreate,
-		req.GetAnnotation().GetWorkspaceID()); err != nil {
+		req.GetAnnotation().GetWorkspaceID(), false); err != nil {
 		return nil, err
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
@@ -672,7 +672,7 @@ func (t *TraceApplication) UpdateManualAnnotation(ctx context.Context, req *trac
 func (t *TraceApplication) DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest) (*trace.DeleteManualAnnotationResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationCreate,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
@@ -700,7 +700,7 @@ func (t *TraceApplication) DeleteManualAnnotation(ctx context.Context, req *trac
 func (t *TraceApplication) ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest) (*trace.ListAnnotationsResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
@@ -775,7 +775,7 @@ func (t *TraceApplication) ExportTracesToDataset(ctx context.Context, req *trace
 	}
 
 	spaceID := strconv.FormatInt(req.GetWorkspaceID(), 10)
-	if err := t.authSvc.CheckWorkspacePermission(ctx, rpc.AuthActionTraceExport, spaceID); err != nil {
+	if err := t.authSvc.CheckWorkspacePermission(ctx, rpc.AuthActionTraceExport, spaceID, false); err != nil {
 		return nil, err
 	}
 
@@ -812,7 +812,7 @@ func (t *TraceApplication) PreviewExportTracesToDataset(ctx context.Context, req
 	}
 
 	spaceID := strconv.FormatInt(req.GetWorkspaceID(), 10)
-	if err := t.authSvc.CheckWorkspacePermission(ctx, rpc.AuthActionTracePreviewExport, spaceID); err != nil {
+	if err := t.authSvc.CheckWorkspacePermission(ctx, rpc.AuthActionTracePreviewExport, spaceID, false); err != nil {
 		return nil, err
 	}
 

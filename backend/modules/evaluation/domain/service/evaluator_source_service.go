@@ -14,7 +14,9 @@ import (
 //go:generate mockgen -destination mocks/evaluator_source_service_mock.go -package mocks . EvaluatorSourceService
 type EvaluatorSourceService interface {
 	EvaluatorType() entity.EvaluatorType
-	Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string)
+	Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string)
 	Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, err error)
 	PreHandle(ctx context.Context, evaluator *entity.Evaluator) error
+	// Validate 验证评估器
+	Validate(ctx context.Context, evaluator *entity.Evaluator) error
 }

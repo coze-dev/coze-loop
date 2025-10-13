@@ -14,7 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
 
-func mustInitConsumerWorkers(
+func MustInitConsumerWorkers(
 	cfactory conf.IConfigLoaderFactory,
 	experimentApplication exptapp.IExperimentApplication,
 	datasetApplication dataapp.IJobRunMsgHandler,

@@ -55,7 +55,7 @@ type modelRequestRecord struct {
 	ALL                 field.Asterisk
 	ID                  field.Int64  // è‡ªå¢žä¸»é”®ID
 	SpaceID             field.Int64  // ç©ºé—´id
-	UserID              field.String  // user id
+	UserID              field.String // user id
 	UsageScene          field.String // åœºæ™¯
 	UsageSceneEntityID  field.String // åœºæ™¯å®žä½“id
 	Frame               field.String // ä½¿ç”¨çš„æ¡†æž¶ï¼Œå¦‚eino

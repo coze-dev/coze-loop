@@ -246,6 +246,29 @@ func (l *LocalEvalTargetService) BatchGetEvalTargetRecords(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// MockEvalTargetOutput
+// mock输出数据
+func (l *LocalEvalTargetService) MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest, callOptions ...callopt.Option) (*eval_target.MockEvalTargetOutputResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceMockEvalTargetOutputArgs)
+		result := out.(*eval_target.EvalTargetServiceMockEvalTargetOutputResult)
+		resp, err := l.impl.MockEvalTargetOutput(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceMockEvalTargetOutputArgs{Request: request}
+	result := &eval_target.EvalTargetServiceMockEvalTargetOutputResult{}
+	ctx = l.injectRPCInfo(ctx, "MockEvalTargetOutput")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvalTargetService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

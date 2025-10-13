@@ -94,7 +94,11 @@ var validFieldComb = map[FieldType]map[QueryTypeEnum]bool{
 		QueryTypeEnumNotEq:    true,
 	},
 	FieldTypeBool: {
-		QueryTypeEnumEq: true,
+		QueryTypeEnumEq:       true,
+		QueryTypeEnumIn:       true,
+		QueryTypeEnumNotIn:    true,
+		QueryTypeEnumExist:    true,
+		QueryTypeEnumNotExist: true,
 	},
 }
 
@@ -356,7 +360,7 @@ func CompareBool(val bool, values []bool, qType QueryTypeEnum) bool {
 
 // Compare
 //
-//nolint:staticcheck,S1034
+//nolint:staticcheck
 func Compare[T cmp.Ordered](val T, values []T, qType QueryTypeEnum) bool {
 	switch qType {
 	case QueryTypeEnumMatch:

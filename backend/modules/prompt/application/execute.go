@@ -72,7 +72,7 @@ func (p *PromptExecuteApplicationImpl) ExecuteInternal(ctx context.Context, req 
 		Prompt:       promptDO,
 		Messages:     convertor.BatchMessageDTO2DO(req.Messages),
 		VariableVals: convertor.BatchVariableValDTO2DO(req.VariableVals),
-		SingleStep:   false, // 内部接口不支持单步调试
+		SingleStep:   true, // 内部接口只支持单步调试
 		Scenario:     convertor.ScenarioDTO2DO(req.GetScenario()),
 	})
 	if err != nil {

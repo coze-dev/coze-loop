@@ -1,8 +1,8 @@
 module github.com/coze-dev/coze-loop/backend
 
-go 1.24.0
+go 1.24.1
 
-toolchain go1.24.4
+toolchain go1.24.6
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
@@ -19,8 +19,8 @@ require (
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/baidubce/bce-qianfan-sdk/go/qianfan v0.0.15
 	github.com/bytedance/gg v1.0.0
-	github.com/bytedance/gopkg v0.1.2
-	github.com/bytedance/sonic v1.13.2
+	github.com/bytedance/gopkg v0.1.3
+	github.com/bytedance/sonic v1.14.1
 	github.com/cenk/backoff v2.2.1+incompatible
 	github.com/cloudwego/eino v0.3.55
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.8
@@ -34,7 +34,7 @@ require (
 	github.com/cloudwego/eino-ext/components/model/qwen v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250519084852-38fafa73d9ea
 	github.com/cloudwego/gopkg v0.1.4
-	github.com/cloudwego/hertz v0.9.7
+	github.com/cloudwego/hertz v0.10.1
 	github.com/cloudwego/kitex v0.13.1
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
@@ -102,6 +102,8 @@ require (
 
 require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 
+require github.com/brianvoe/gofakeit/v6 v6.28.0
+
 require (
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/ai v0.8.0 // indirect
@@ -131,10 +133,10 @@ require (
 	github.com/baidubce/bce-sdk-go v0.9.164 // indirect
 	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/bufbuild/protocompile v0.8.0 // indirect
-	github.com/bytedance/sonic/loader v0.2.4 // indirect
+	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudwego/base64x v0.1.5 // indirect
+	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/cloudwego/configmanager v0.2.3 // indirect
 	github.com/cloudwego/dynamicgo v0.6.2 // indirect
 	github.com/cloudwego/fastpb v0.0.5 // indirect

@@ -113,28 +113,28 @@ evaluator_tool_conf_en-US:
 evaluator_tool_conf:
   score_range:
     function:
-        description: '评估函数。为了得到评估结果，必须调用评估函数。调用工具时需要根据Prompt 中的评判标准一步步思考、分析，先填写 reason 参数的值，再填写 score 参数的值。'
-        name: 'eval'
-        parameters: |
-          {
-            "type": "object",
-            "properties": {
-              "reason": {
-                "description": "对得分的可读解释。最后，必须用一句话结束理由，该句话为：因此，应该给出的分数是你的评分.",
-                "type": "string"
-              },
-              "score": {
-                "description": "最终的得分，必须输出，必须输出一个数字，表示满足Prompt中评分标准的程度。得分范围从 0.0 到 1.0，1.0 表示完全满足评分标准，0.0 表示完全不满足评分标准。",
-                "type": "number"
-              }
+      description: '评估函数。为了得到评估结果，必须调用评估函数。调用工具时需要根据Prompt 中的评判标准一步步思考、分析，先填写 reason 参数的值，再填写 score 参数的值。'
+      name: 'eval'
+      parameters: |
+        {
+          "type": "object",
+          "properties": {
+            "reason": {
+              "description": "对得分的可读解释。最后，必须用一句话结束理由，该句话为：因此，应该给出的分数是你的评分.",
+              "type": "string"
             },
-            "additionalProperties": false,
-            "strict": true,
-            "required": [
-              "reason",
-              "score"
-            ]
-          }
+            "score": {
+              "description": "最终的得分，必须输出，必须输出一个数字，表示满足Prompt中评分标准的程度。得分范围从 0.0 到 1.0，1.0 表示完全满足评分标准，0.0 表示完全不满足评分标准。",
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "strict": true,
+          "required": [
+            "reason",
+            "score"
+          ]
+        }
     type: 1
   score_enum:
     function:
@@ -2141,6 +2141,58 @@ evaluator_template_conf_en-US:
         prompt_template_key: builtin_template_detail
         prompt_template_name: "Detail"
       receive_chat_history: false
+
+code_evaluator_template_conf:
+  equals_checker:
+    Python:
+      receive_chat_history: false
+      code_evaluator:
+        language_type: "Python"
+        code_content: "def exec_evaluation(turn_data):\n    try:\n        # 获取实际输出和参考输出\n        actual_text = turn_data[\"turn\"][\"eval_target\"][\"actual_output\"][\"text\"]\n        reference_text = turn_data[\"turn\"][\"eval_set\"][\"reference_output\"][\"text\"]\n        \n        # 比较文本相似性或相等性\n        is_equal = actual_text.strip() == reference_text.strip()\n        score = 1.0 if is_equal else 0.0\n        \n        if is_equal:\n            status = \"实际输出与参考输出完全相等\"\n        else:\n            status = \"实际输出与参考输出不相等\"\n        \n        return {\n            \"score\": score,\n            \"reason\": status,\n            \"status\": \"success\"\n        }\n    except Exception as e:\n        return {\n            \"score\": 0.0,\n            \"reason\": f\"评估过程出现错误: {str(e)}\",\n            \"status\": \"error\"\n        }"
+        code_template_key: "equals_checker"
+        code_template_name: "相等性检查器"
+    Python3:
+      receive_chat_history: false
+      code_evaluator:
+        language_type: "Python3"
+        code_content: "def exec_evaluation(turn_data):\n    try:\n        # 获取实际输出和参考输出\n        actual_text = turn_data[\"turn\"][\"eval_target\"][\"actual_output\"][\"text\"]\n        reference_text = turn_data[\"turn\"][\"eval_set\"][\"reference_output\"][\"text\"]\n        \n        # 比较文本相似性或相等性\n        is_equal = actual_text.strip() == reference_text.strip()\n        score = 1.0 if is_equal else 0.0\n        \n        if is_equal:\n            status = \"实际输出与参考输出完全相等\"\n        else:\n            status = \"实际输出与参考输出不相等\"\n        \n        return {\n            \"score\": score,\n            \"reason\": status,\n            \"status\": \"success\"\n        }\n    except Exception as e:\n        return {\n            \"score\": 0.0,\n            \"reason\": f\"评估过程出现错误: {str(e)}\",\n            \"status\": \"error\"\n        }"
+        code_template_key: "equals_checker"
+        code_template_name: "相等性检查器"
+  contains_checker:
+    JavaScript:
+      receive_chat_history: false
+      input_schemas:
+        - name: "input"
+          type: "string"
+          description: "评估输入内容"
+        - name: "reference_output"
+          type: "string"
+          description: "参考输出内容"
+        - name: "actual_output"
+          type: "string"
+          description: "实际输出内容"
+      code_evaluator:
+        language_type: "JavaScript"
+        code_content: "function execEvaluation(turnData) {\n    try {\n        // 获取实际输出和参考输出\n        const actualText = turnData.turn.eval_target.actual_output.text;\n        const referenceText = turnData.turn.eval_set.reference_output.text;\n        \n        // 检查实际输出是否包含参考输出\n        const contains = actualText.includes(referenceText);\n        const score = contains ? 1.0 : 0.0;\n        \n        const status = contains ? \"包含\" : \"不包含\";\n        \n        return {\n            score: score,\n            reason: `实际输出${status}参考输出`,\n            status: \"success\"\n        };\n    } catch (error) {\n        return {\n            score: 0.0,\n            reason: `评估过程出现错误: ${error.message}`,\n            status: \"error\"\n        };\n    }\n}"
+        code_template_key: "contains_checker"
+        code_template_name: "包含性检查器"
+    JS:
+      receive_chat_history: false
+      input_schemas:
+        - name: "input"
+          type: "string"
+          description: "评估输入内容"
+        - name: "reference_output"
+          type: "string"
+          description: "参考输出内容"
+        - name: "actual_output"
+          type: "string"
+          description: "实际输出内容"
+      code_evaluator:
+        language_type: "JS"
+        code_content: "function execEvaluation(turnData) {\n    try {\n        // 获取实际输出和参考输出\n        const actualText = turnData.turn.eval_target.actual_output.text;\n        const referenceText = turnData.turn.eval_set.reference_output.text;\n        \n        // 检查实际输出是否包含参考输出\n        const contains = actualText.includes(referenceText);\n        const score = contains ? 1.0 : 0.0;\n        \n        const status = contains ? \"包含\" : \"不包含\";\n        \n        return {\n            score: score,\n            reason: `实际输出${status}参考输出`,\n            status: \"success\"\n        };\n    } catch (error) {\n        return {\n            score: 0.0,\n            reason: `评估过程出现错误: ${error.message}`,\n            status: \"error\"\n        };\n    }\n}"
+        code_template_key: "contains_checker"
+        code_template_name: "包含性检查器"
 
 expt_export_white_list:
   allow_all: true
