@@ -832,11 +832,12 @@ func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.
 	if err := t.validateChangeEvaluatorScoreReq(ctx, req); err != nil {
 		return nil, err
 	}
-	//if err := t.authSvc.CheckWorkspacePermission(ctx,
-	//	rpc.AuthActionTraceTaskCreate,
-	//	strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-	//	return nil, err
-	//}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskCreate,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
 
 	sResp, err := t.traceService.ChangeEvaluatorScore(ctx, &service.ChangeEvaluatorScoreRequest{
 		WorkspaceID:  req.WorkspaceID,
@@ -876,11 +877,12 @@ func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *tr
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	//if err := t.authSvc.CheckWorkspacePermission(ctx,
-	//	rpc.AuthActionTraceTaskList,
-	//	strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
-	//	return resp, err
-	//}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceTaskList,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return resp, err
+	}
 	sResp, err := t.traceService.ListAnnotationEvaluators(ctx, &service.ListAnnotationEvaluatorsRequest{
 		WorkspaceID: req.WorkspaceID,
 		Name:        req.Name,
