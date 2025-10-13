@@ -26,11 +26,11 @@ func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfi
 	if sandboxConfig == nil {
 		sandboxConfig = entity.DefaultSandboxConfig()
 	}
-	
+
 	if logger == nil {
 		logger = logrus.New()
 	}
-	
+
 	return &RuntimeFactory{
 		logger:        logger,
 		sandboxConfig: sandboxConfig,
@@ -51,7 +51,7 @@ func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (compon
 	// 双重检查锁
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
-	
+
 	if runtime, exists := f.runtimeCache[languageType]; exists {
 		return runtime, nil
 	}
@@ -78,10 +78,10 @@ func (f *RuntimeFactory) CreateRuntime(languageType entity.LanguageType) (compon
 	default:
 		return nil, fmt.Errorf("不支持的语言类型: %s", languageType)
 	}
-	
+
 	// 缓存运行时实例
 	f.runtimeCache[languageType] = runtime
-	
+
 	return runtime, nil
 }
 
@@ -93,18 +93,17 @@ func (f *RuntimeFactory) GetSupportedLanguages() []entity.LanguageType {
 	}
 }
 
-
 // GetHealthStatus 获取工厂健康状态
 func (f *RuntimeFactory) GetHealthStatus() map[string]interface{} {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
-	
+
 	status := map[string]interface{}{
-		"status":             "healthy",
+		"status":              "healthy",
 		"supported_languages": f.GetSupportedLanguages(),
-		"cache_size":         len(f.runtimeCache),
+		"cache_size":          len(f.runtimeCache),
 	}
-	
+
 	// 添加缓存的运行时健康状态
 	runtimeHealth := make(map[string]interface{})
 	for languageType, runtime := range f.runtimeCache {
@@ -119,7 +118,7 @@ func (f *RuntimeFactory) GetHealthStatus() map[string]interface{} {
 	if len(runtimeHealth) > 0 {
 		status["runtime_health"] = runtimeHealth
 	}
-	
+
 	return status
 }
 
@@ -127,13 +126,13 @@ func (f *RuntimeFactory) GetHealthStatus() map[string]interface{} {
 func (f *RuntimeFactory) GetMetrics() map[string]interface{} {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
-	
+
 	metrics := map[string]interface{}{
-		"factory_type":       "language_specific",
-		"cache_size":         len(f.runtimeCache),
+		"factory_type":        "language_specific",
+		"cache_size":          len(f.runtimeCache),
 		"supported_languages": len(f.GetSupportedLanguages()),
 	}
-	
+
 	// 添加运行时指标
 	runtimeMetrics := make(map[string]interface{})
 	for languageType, runtime := range f.runtimeCache {
@@ -144,7 +143,7 @@ func (f *RuntimeFactory) GetMetrics() map[string]interface{} {
 	if len(runtimeMetrics) > 0 {
 		metrics["runtime_metrics"] = runtimeMetrics
 	}
-	
+
 	return metrics
 }
 
