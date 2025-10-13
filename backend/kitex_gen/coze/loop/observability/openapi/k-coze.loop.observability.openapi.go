@@ -1044,7 +1044,6 @@ func (p *CreateAnnotationRequest) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetSpanID bool = false
 	var issetTraceID bool = false
 	var issetAnnotationKey bool = false
 	var issetAnnotationValue bool = false
@@ -1080,7 +1079,6 @@ func (p *CreateAnnotationRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetSpanID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -1189,11 +1187,6 @@ func (p *CreateAnnotationRequest) FastRead(buf []byte) (int, error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetSpanID {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetTraceID {
 		fieldId = 3
 		goto RequiredFieldNotSetError
@@ -1236,12 +1229,12 @@ func (p *CreateAnnotationRequest) FastReadField1(buf []byte) (int, error) {
 func (p *CreateAnnotationRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field string
+	var _field *string
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.SpanID = _field
 	return offset, nil
@@ -1374,8 +1367,10 @@ func (p *CreateAnnotationRequest) fastWriteField1(buf []byte, w thrift.NocopyWri
 
 func (p *CreateAnnotationRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.SpanID)
+	if p.IsSetSpanID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanID)
+	}
 	return offset
 }
 
@@ -1436,8 +1431,10 @@ func (p *CreateAnnotationRequest) field1Length() int {
 
 func (p *CreateAnnotationRequest) field2Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.SpanID)
+	if p.IsSetSpanID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SpanID)
+	}
 	return l
 }
 
@@ -1497,8 +1494,12 @@ func (p *CreateAnnotationRequest) DeepCopy(s interface{}) error {
 
 	p.WorkspaceID = src.WorkspaceID
 
-	if src.SpanID != "" {
-		p.SpanID = kutils.StringDeepCopy(src.SpanID)
+	if src.SpanID != nil {
+		var tmp string
+		if *src.SpanID != "" {
+			tmp = kutils.StringDeepCopy(*src.SpanID)
+		}
+		p.SpanID = &tmp
 	}
 
 	if src.TraceID != "" {
@@ -1665,7 +1666,6 @@ func (p *DeleteAnnotationRequest) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetSpanID bool = false
 	var issetTraceID bool = false
 	var issetAnnotationKey bool = false
 	for {
@@ -1700,7 +1700,6 @@ func (p *DeleteAnnotationRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetSpanID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -1766,11 +1765,6 @@ func (p *DeleteAnnotationRequest) FastRead(buf []byte) (int, error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetSpanID {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetTraceID {
 		fieldId = 4
 		goto RequiredFieldNotSetError
@@ -1808,12 +1802,12 @@ func (p *DeleteAnnotationRequest) FastReadField1(buf []byte) (int, error) {
 func (p *DeleteAnnotationRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field string
+	var _field *string
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.SpanID = _field
 	return offset, nil
@@ -1898,8 +1892,10 @@ func (p *DeleteAnnotationRequest) fastWriteField1(buf []byte, w thrift.NocopyWri
 
 func (p *DeleteAnnotationRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.SpanID)
+	if p.IsSetSpanID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanID)
+	}
 	return offset
 }
 
@@ -1935,8 +1931,10 @@ func (p *DeleteAnnotationRequest) field1Length() int {
 
 func (p *DeleteAnnotationRequest) field2Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.SpanID)
+	if p.IsSetSpanID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SpanID)
+	}
 	return l
 }
 
@@ -1971,8 +1969,12 @@ func (p *DeleteAnnotationRequest) DeepCopy(s interface{}) error {
 
 	p.WorkspaceID = src.WorkspaceID
 
-	if src.SpanID != "" {
-		p.SpanID = kutils.StringDeepCopy(src.SpanID)
+	if src.SpanID != nil {
+		var tmp string
+		if *src.SpanID != "" {
+			tmp = kutils.StringDeepCopy(*src.SpanID)
+		}
+		p.SpanID = &tmp
 	}
 
 	if src.TraceID != "" {

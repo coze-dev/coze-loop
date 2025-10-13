@@ -94,7 +94,11 @@ var validFieldComb = map[FieldType]map[QueryTypeEnum]bool{
 		QueryTypeEnumNotEq:    true,
 	},
 	FieldTypeBool: {
-		QueryTypeEnumEq: true,
+		QueryTypeEnumEq:       true,
+		QueryTypeEnumIn:       true,
+		QueryTypeEnumNotIn:    true,
+		QueryTypeEnumExist:    true,
+		QueryTypeEnumNotExist: true,
 	},
 }
 
