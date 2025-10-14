@@ -24,6 +24,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		PromptDebugContext:       newPromptDebugContext(db, opts...),
 		PromptDebugLog:           newPromptDebugLog(db, opts...),
 		PromptLabel:              newPromptLabel(db, opts...),
+		PromptRelation:           newPromptRelation(db, opts...),
 		PromptUserDraft:          newPromptUserDraft(db, opts...),
 	}
 }
@@ -37,6 +38,7 @@ type Query struct {
 	PromptDebugContext       promptDebugContext
 	PromptDebugLog           promptDebugLog
 	PromptLabel              promptLabel
+	PromptRelation           promptRelation
 	PromptUserDraft          promptUserDraft
 }
 
@@ -51,6 +53,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		PromptDebugContext:       q.PromptDebugContext.clone(db),
 		PromptDebugLog:           q.PromptDebugLog.clone(db),
 		PromptLabel:              q.PromptLabel.clone(db),
+		PromptRelation:           q.PromptRelation.clone(db),
 		PromptUserDraft:          q.PromptUserDraft.clone(db),
 	}
 }
@@ -72,6 +75,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		PromptDebugContext:       q.PromptDebugContext.replaceDB(db),
 		PromptDebugLog:           q.PromptDebugLog.replaceDB(db),
 		PromptLabel:              q.PromptLabel.replaceDB(db),
+		PromptRelation:           q.PromptRelation.replaceDB(db),
 		PromptUserDraft:          q.PromptUserDraft.replaceDB(db),
 	}
 }
@@ -83,6 +87,7 @@ type queryCtx struct {
 	PromptDebugContext       *promptDebugContextDo
 	PromptDebugLog           *promptDebugLogDo
 	PromptLabel              *promptLabelDo
+	PromptRelation           *promptRelationDo
 	PromptUserDraft          *promptUserDraftDo
 }
 
@@ -94,6 +99,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		PromptDebugContext:       q.PromptDebugContext.WithContext(ctx),
 		PromptDebugLog:           q.PromptDebugLog.WithContext(ctx),
 		PromptLabel:              q.PromptLabel.WithContext(ctx),
+		PromptRelation:           q.PromptRelation.WithContext(ctx),
 		PromptUserDraft:          q.PromptUserDraft.WithContext(ctx),
 	}
 }

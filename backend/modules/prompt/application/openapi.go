@@ -232,9 +232,13 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		return nil, err
 	}
 
-	// 构建版本映射
+	// 展开片段内容（若有），构建版本映射
 	promptMap := make(map[service.PromptKeyVersionPair]*entity.Prompt)
 	for _, prompt := range maps.Values(prompts) {
+		err = p.promptService.ExpandSnippets(ctx, prompt)
+		if err != nil {
+			return nil, err
+		}
 		promptMap[service.PromptKeyVersionPair{
 			PromptKey: prompt.PromptKey,
 			Version:   prompt.GetVersion(),
@@ -387,6 +391,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 	if err != nil {
 		return promptDO, nil, err
 	}
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, promptDO)
+	if err != nil {
+		return promptDO, nil, err
+	}
 
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
@@ -480,6 +489,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 	// 获取prompt并执行
 	promptDO, err = p.getPromptByPromptKey(ctx, req.GetWorkspaceID(), req.GetPromptIdentifier())
+	if err != nil {
+		return promptDO, nil, err
+	}
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, promptDO)
 	if err != nil {
 		return promptDO, nil, err
 	}

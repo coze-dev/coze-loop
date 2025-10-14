@@ -115,6 +115,21 @@ func (mr *MockIManageRepoMockRecorder) ListCommitInfo(ctx, param any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommitInfo", reflect.TypeOf((*MockIManageRepo)(nil).ListCommitInfo), ctx, param)
 }
 
+// ListParentPrompt mocks base method.
+func (m *MockIManageRepo) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (map[string]*repo.PromptCommitVersions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListParentPrompt", ctx, param)
+	ret0, _ := ret[0].(map[string]*repo.PromptCommitVersions)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListParentPrompt indicates an expected call of ListParentPrompt.
+func (mr *MockIManageRepoMockRecorder) ListParentPrompt(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListParentPrompt", reflect.TypeOf((*MockIManageRepo)(nil).ListParentPrompt), ctx, param)
+}
+
 // ListPrompt mocks base method.
 func (m *MockIManageRepo) ListPrompt(ctx context.Context, param repo.ListPromptParam) (*repo.ListPromptResult, error) {
 	m.ctrl.T.Helper()
