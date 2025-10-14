@@ -130,7 +130,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					continue
 				}
 			}
-			if backfillTaskRun.RunStatus != task.RunStatusDone && backfillTaskRun != nil {
+			if backfillTaskRun.RunStatus != task.RunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
@@ -141,7 +141,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				}
 				defer cancel()
 			}
-		} else if taskPO.BackfillEffectiveTime != nil {
+		} else if taskPO.BackfillEffectiveTime != nil && backfillTaskRun != nil {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
