@@ -63,7 +63,7 @@ func clipJSONContent(content string) (string, bool) {
 	if err := json.Unmarshal([]byte(content), &data); err != nil {
 		return "", false
 	}
-	clippedData, changed := clipJSONTopLevel(data)
+	clippedData, changed := clipJSONValue(data)
 	if !changed {
 		return "", false
 	}
@@ -74,13 +74,13 @@ func clipJSONContent(content string) (string, bool) {
 	return clippedStr, true
 }
 
-func clipJSONTopLevel(data interface{}) (interface{}, bool) {
-	switch val := data.(type) {
+func clipJSONValue(value interface{}) (interface{}, bool) {
+	switch val := value.(type) {
 	case map[string]interface{}:
 		changed := false
 		for key, v := range val {
-			newVal, clipped := clipJSONFirstLevelValue(v)
-			if clipped {
+			newVal, subChanged := clipJSONValue(v)
+			if subChanged {
 				val[key] = newVal
 				changed = true
 			}
@@ -89,8 +89,8 @@ func clipJSONTopLevel(data interface{}) (interface{}, bool) {
 	case []interface{}:
 		changed := false
 		for idx, v := range val {
-			newVal, clipped := clipJSONFirstLevelValue(v)
-			if clipped {
+			newVal, subChanged := clipJSONValue(v)
+			if subChanged {
 				val[idx] = newVal
 				changed = true
 			}
@@ -105,32 +105,4 @@ func clipJSONTopLevel(data interface{}) (interface{}, bool) {
 	default:
 		return val, false
 	}
-}
-
-func clipJSONFirstLevelValue(value interface{}) (interface{}, bool) {
-	switch val := value.(type) {
-	case string:
-		clipped := clipPlainText(val)
-		if clipped != val {
-			return clipped, true
-		}
-		return val, false
-	case map[string]interface{}:
-		return clipNonStringJSONValue(val)
-	case []interface{}:
-		return clipNonStringJSONValue(val)
-	default:
-		return clipNonStringJSONValue(val)
-	}
-}
-
-func clipNonStringJSONValue(value interface{}) (interface{}, bool) {
-	marshaled, err := json.MarshalString(value)
-	if err != nil {
-		return value, false
-	}
-	if len(marshaled) <= clipProcessorMaxLength {
-		return value, false
-	}
-	return clipProcessorSuffix, true
 }
