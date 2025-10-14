@@ -434,8 +434,9 @@ func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	if v == nil {
 		return nil
 	}
-	return &entity.TaskRunConfig{
-		AutoEvaluateRunConfig: &entity.AutoEvaluateRunConfig{
+	var autoEvaluateRunConfig *entity.AutoEvaluateRunConfig
+	if v.GetAutoEvaluateRunConfig() != nil {
+		autoEvaluateRunConfig = &entity.AutoEvaluateRunConfig{
 			ExptID:       v.GetAutoEvaluateRunConfig().GetExptID(),
 			ExptRunID:    v.GetAutoEvaluateRunConfig().GetExptRunID(),
 			EvalID:       v.GetAutoEvaluateRunConfig().GetEvalID(),
@@ -445,15 +446,22 @@ func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 			CycleStartAt: v.GetAutoEvaluateRunConfig().GetCycleStartAt(),
 			CycleEndAt:   v.GetAutoEvaluateRunConfig().GetCycleEndAt(),
 			Status:       v.GetAutoEvaluateRunConfig().GetStatus(),
-		},
-		DataReflowRunConfig: &entity.DataReflowRunConfig{
+		}
+	}
+	var dataReflowRunConfig *entity.DataReflowRunConfig
+	if v.GetDataReflowRunConfig() != nil {
+		dataReflowRunConfig = &entity.DataReflowRunConfig{
 			DatasetID:    v.GetDataReflowRunConfig().GetDatasetID(),
 			DatasetRunID: v.GetDataReflowRunConfig().GetDatasetRunID(),
 			EndAt:        v.GetDataReflowRunConfig().GetEndAt(),
 			CycleStartAt: v.GetDataReflowRunConfig().GetCycleStartAt(),
 			CycleEndAt:   v.GetDataReflowRunConfig().GetCycleEndAt(),
 			Status:       v.GetDataReflowRunConfig().GetStatus(),
-		},
+		}
+	}
+	return &entity.TaskRunConfig{
+		AutoEvaluateRunConfig: autoEvaluateRunConfig,
+		DataReflowRunConfig:   dataReflowRunConfig,
 	}
 }
 
