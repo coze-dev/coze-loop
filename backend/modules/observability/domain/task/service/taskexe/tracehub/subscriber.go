@@ -51,11 +51,13 @@ func (s *spanSubscriber) Sampled() bool {
 	r := rand.Int63n(base)
 	return r <= threshold
 }
+
 func (s *spanSubscriber) getTask() *task.Task {
 	s.RLock()
 	defer s.RUnlock()
 	return s.t
 }
+
 func combineFilters(filters ...*loop_span.FilterFields) *loop_span.FilterFields {
 	filterAggr := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
@@ -87,6 +89,7 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 
 	return true, nil
 }
+
 func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
 	// Additional filters can be constructed based on task configuration if needed.
 	// Simplified handling here: returning nil means no extra filters are applied.
@@ -106,6 +109,7 @@ func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskConfig *task.
 
 	return filters
 }
+
 func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
 	filters := make([]*loop_span.FilterField, 0)
 	env := &span_filter.SpanEnv{

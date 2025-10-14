@@ -48,7 +48,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			select {
 			case <-h.scheduledTaskTicker.C:
 				// Execute scheduled task
-				h.transformTaskStatus() //抢锁
+				h.transformTaskStatus() // 抢锁
 			case <-h.stopChan:
 				// Stop scheduled task
 				h.scheduledTaskTicker.Stop()
@@ -61,7 +61,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			select {
 			case <-h.syncTaskTicker.C:
 				// Execute scheduled task
-				h.syncTaskRunCounts() //抢锁
+				h.syncTaskRunCounts() // 抢锁
 				h.syncTaskCache()
 			case <-h.stopChan:
 				// Stop scheduled task
@@ -106,7 +106,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		backfillTaskRun = taskPO.GetBackfillTaskRun()
 		taskRun = taskPO.GetCurrentTaskRun()
 		var startTime, endTime time.Time
-		//taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
+		// taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
 
 		if taskPO.EffectiveTime != nil {
 			endTime = time.UnixMilli(taskPO.EffectiveTime.EndAt)
@@ -239,7 +239,6 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		}
 	}
-
 }
 
 // syncTaskRunCounts synchronizes TaskRunCount data to the database
@@ -321,7 +320,7 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	logs.CtxInfo(ctx, "Retrieved task information, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
 
 	// 2. Build a new cache map
-	var newCache = TaskCacheInfo{
+	newCache := TaskCacheInfo{
 		WorkspaceIDs: spaceIDs,
 		BotIDs:       botIDs,
 		Tasks:        tasks,
