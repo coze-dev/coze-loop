@@ -4443,6 +4443,8 @@ type PromptTemplate struct {
 	Messages []*Message `thrift:"messages,2,optional" frugal:"2,optional,list<Message>" form:"messages" json:"messages,omitempty" query:"messages"`
 	// 变量定义
 	VariableDefs []*VariableDef `thrift:"variable_defs,3,optional" frugal:"3,optional,list<VariableDef>" form:"variable_defs" json:"variable_defs,omitempty" query:"variable_defs"`
+	// 模板级元信息
+	Metadata map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
 
 func NewPromptTemplate() *PromptTemplate {
@@ -4487,6 +4489,18 @@ func (p *PromptTemplate) GetVariableDefs() (v []*VariableDef) {
 	}
 	return p.VariableDefs
 }
+
+var PromptTemplate_Metadata_DEFAULT map[string]string
+
+func (p *PromptTemplate) GetMetadata() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMetadata() {
+		return PromptTemplate_Metadata_DEFAULT
+	}
+	return p.Metadata
+}
 func (p *PromptTemplate) SetTemplateType(val *TemplateType) {
 	p.TemplateType = val
 }
@@ -4496,11 +4510,15 @@ func (p *PromptTemplate) SetMessages(val []*Message) {
 func (p *PromptTemplate) SetVariableDefs(val []*VariableDef) {
 	p.VariableDefs = val
 }
+func (p *PromptTemplate) SetMetadata(val map[string]string) {
+	p.Metadata = val
+}
 
 var fieldIDToName_PromptTemplate = map[int16]string{
-	1: "template_type",
-	2: "messages",
-	3: "variable_defs",
+	1:   "template_type",
+	2:   "messages",
+	3:   "variable_defs",
+	100: "metadata",
 }
 
 func (p *PromptTemplate) IsSetTemplateType() bool {
@@ -4513,6 +4531,10 @@ func (p *PromptTemplate) IsSetMessages() bool {
 
 func (p *PromptTemplate) IsSetVariableDefs() bool {
 	return p.VariableDefs != nil
+}
+
+func (p *PromptTemplate) IsSetMetadata() bool {
+	return p.Metadata != nil
 }
 
 func (p *PromptTemplate) Read(iprot thrift.TProtocol) (err error) {
@@ -4552,6 +4574,14 @@ func (p *PromptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4643,6 +4673,35 @@ func (p *PromptTemplate) ReadField3(iprot thrift.TProtocol) error {
 	p.VariableDefs = _field
 	return nil
 }
+func (p *PromptTemplate) ReadField100(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Metadata = _field
+	return nil
+}
 
 func (p *PromptTemplate) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4660,6 +4719,10 @@ func (p *PromptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -4750,6 +4813,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *PromptTemplate) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMetadata() {
+		if err = oprot.WriteFieldBegin("metadata", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Metadata)); err != nil {
+			return err
+		}
+		for k, v := range p.Metadata {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 
 func (p *PromptTemplate) String() string {
 	if p == nil {
@@ -4772,6 +4864,9 @@ func (p *PromptTemplate) DeepEqual(ano *PromptTemplate) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.VariableDefs) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Metadata) {
 		return false
 	}
 	return true
@@ -4810,6 +4905,19 @@ func (p *PromptTemplate) Field3DeepEqual(src []*VariableDef) bool {
 	for i, v := range p.VariableDefs {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *PromptTemplate) Field100DeepEqual(src map[string]string) bool {
+
+	if len(p.Metadata) != len(src) {
+		return false
+	}
+	for k, v := range p.Metadata {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
 			return false
 		}
 	}
@@ -5010,6 +5118,8 @@ type Message struct {
 	ToolCallID *string `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
 	// tool调用（role为assistant时有效）
 	ToolCalls []*ToolCall `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
+	// 消息元信息
+	Metadata map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
 
 func NewMessage() *Message {
@@ -5090,6 +5200,18 @@ func (p *Message) GetToolCalls() (v []*ToolCall) {
 	}
 	return p.ToolCalls
 }
+
+var Message_Metadata_DEFAULT map[string]string
+
+func (p *Message) GetMetadata() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMetadata() {
+		return Message_Metadata_DEFAULT
+	}
+	return p.Metadata
+}
 func (p *Message) SetRole(val *Role) {
 	p.Role = val
 }
@@ -5108,14 +5230,18 @@ func (p *Message) SetToolCallID(val *string) {
 func (p *Message) SetToolCalls(val []*ToolCall) {
 	p.ToolCalls = val
 }
+func (p *Message) SetMetadata(val map[string]string) {
+	p.Metadata = val
+}
 
 var fieldIDToName_Message = map[int16]string{
-	1: "role",
-	2: "content",
-	3: "parts",
-	4: "reasoning_content",
-	5: "tool_call_id",
-	6: "tool_calls",
+	1:   "role",
+	2:   "content",
+	3:   "parts",
+	4:   "reasoning_content",
+	5:   "tool_call_id",
+	6:   "tool_calls",
+	100: "metadata",
 }
 
 func (p *Message) IsSetRole() bool {
@@ -5140,6 +5266,10 @@ func (p *Message) IsSetToolCallID() bool {
 
 func (p *Message) IsSetToolCalls() bool {
 	return p.ToolCalls != nil
+}
+
+func (p *Message) IsSetMetadata() bool {
+	return p.Metadata != nil
 }
 
 func (p *Message) Read(iprot thrift.TProtocol) (err error) {
@@ -5203,6 +5333,14 @@ func (p *Message) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5327,6 +5465,35 @@ func (p *Message) ReadField6(iprot thrift.TProtocol) error {
 	p.ToolCalls = _field
 	return nil
 }
+func (p *Message) ReadField100(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Metadata = _field
+	return nil
+}
 
 func (p *Message) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5356,6 +5523,10 @@ func (p *Message) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -5500,6 +5671,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *Message) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMetadata() {
+		if err = oprot.WriteFieldBegin("metadata", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Metadata)); err != nil {
+			return err
+		}
+		for k, v := range p.Metadata {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 
 func (p *Message) String() string {
 	if p == nil {
@@ -5531,6 +5731,9 @@ func (p *Message) DeepEqual(ano *Message) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.ToolCalls) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Metadata) {
 		return false
 	}
 	return true
@@ -5605,6 +5808,19 @@ func (p *Message) Field6DeepEqual(src []*ToolCall) bool {
 	for i, v := range p.ToolCalls {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *Message) Field100DeepEqual(src map[string]string) bool {
+
+	if len(p.Metadata) != len(src) {
+		return false
+	}
+	for k, v := range p.Metadata {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
 			return false
 		}
 	}

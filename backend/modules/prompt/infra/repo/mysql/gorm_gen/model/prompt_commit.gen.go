@@ -22,6 +22,7 @@ type PromptCommit struct {
 	VariableDefs   *string   `gorm:"column:variable_defs;type:text;comment:变量定义" json:"variable_defs"`                                                                                          // 变量定义
 	Tools          *string   `gorm:"column:tools;type:longtext;comment:tools" json:"tools"`                                                                                                     // tools
 	ToolCallConfig *string   `gorm:"column:tool_call_config;type:text;comment:tool调用配置" json:"tool_call_config"`                                                                                // tool调用配置
+	Metadata       *string   `gorm:"column:metadata;type:text;comment:模板元信息" json:"metadata"`                                                                                                   // 模板元信息
 	Version        string    `gorm:"column:version;type:varchar(128);not null;uniqueIndex:uniq_prompt_id_version,priority:2;index:idx_prompt_key_version,priority:2;comment:版本" json:"version"` // 版本
 	BaseVersion    string    `gorm:"column:base_version;type:varchar(128);not null;comment:来源版本" json:"base_version"`                                                                           // 来源版本
 	CommittedBy    string    `gorm:"column:committed_by;type:varchar(128);not null;comment:提交人" json:"committed_by"`                                                                            // 提交人
