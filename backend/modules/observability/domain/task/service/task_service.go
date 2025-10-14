@@ -129,8 +129,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
 	req.Task.ID = id
-	taskConfig := tconv.TaskDO2DTO(ctx, req.Task, nil)
-	if err = proc.OnCreateTaskChange(ctx, taskConfig); err != nil {
+	if err = proc.OnCreateTaskChange(ctx, req.Task); err != nil {
 		logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 
 		if err1 := t.TaskRepo.DeleteTask(ctx, req.Task); err1 != nil {
@@ -193,7 +192,6 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 			if validTaskStatus == task.TaskStatusDisabled {
 				// 禁用操作处理
 				proc := t.taskProcessor.GetTaskProcessor(taskDO.TaskType)
-				taskConfig := tconv.TaskDO2DTO(ctx, taskDO, nil)
 				var taskRun *entity.TaskRun
 				for _, tr := range taskDO.TaskRuns {
 					if tr.RunStatus == task.RunStatusRunning {
@@ -202,7 +200,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 					}
 				}
 				if err = proc.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
-					Task:    taskConfig,
+					Task:    taskDO,
 					TaskRun: taskRun,
 				}); err != nil {
 					logs.CtxError(ctx, "proc Finish err:%v", err)
