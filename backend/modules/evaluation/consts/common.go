@@ -17,12 +17,12 @@ const (
 	Edit          = "edit"
 	Run           = "run"
 	Debug         = "debug"
-	UpdateItem    = "update_item"
-	AddItem       = "add_item"
-	DeleteItem    = "delete_item"
-	ReadItem      = "read_item"
-	CreateVersion = "create_version"
-	EditSchema    = "edit_schema"
+	UpdateItem    = "updateItem"
+	AddItem       = "addItem"
+	DeleteItem    = "deleteItem"
+	ReadItem      = "readItem"
+	CreateVersion = "createVersion"
+	EditSchema    = "editSchema"
 )
 
 const (
