@@ -6,7 +6,6 @@ package cache
 import (
 	"crypto/md5"
 	"fmt"
-	"strconv"
 )
 
 // KeyGenerator 缓存Key生成器接口
