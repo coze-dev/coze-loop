@@ -109,6 +109,7 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 		TemplateType: TemplateTypeDTO2DO(dto.GetTemplateType()),
 		Messages:     BatchMessageDTO2DO(dto.Messages),
 		VariableDefs: BatchVariableDefDTO2DO(dto.VariableDefs),
+        Metadata:     dto.Metadata,
 	}
 }
 
@@ -149,6 +150,7 @@ func MessageDTO2DO(dto *prompt.Message) *entity.Message {
 		Parts:            BatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        BatchToolCallDTO2DO(dto.ToolCalls),
+        Metadata:         dto.Metadata,
 	}
 }
 
@@ -628,6 +630,7 @@ func MessageDO2DTO(do *entity.Message) *prompt.Message {
 		Parts:            BatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        BatchToolCallDO2DTO(do.ToolCalls),
+        Metadata:         do.Metadata,
 	}
 }
 
@@ -828,6 +831,7 @@ func PromptTemplateDO2DTO(do *entity.PromptTemplate) *prompt.PromptTemplate {
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     BatchMessageDO2DTO(do.Messages),
 		VariableDefs: BatchVariableDefDO2DTO(do.VariableDefs),
+        Metadata:     do.Metadata,
 	}
 }
 
