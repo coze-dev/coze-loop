@@ -20,14 +20,14 @@ import (
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan) error {
 	ctx = h.fillCtx(ctx)
-	logs.CtxInfo(ctx, "TraceHub start")
+	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", rawSpan.LogID, rawSpan.TraceID, rawSpan.SpanID)
+	logs.CtxInfo(ctx, "TraceHub start, log_suffix=%s", logSuffix)
 	var tags []metrics.T
 	// 1、Convert to standard span and perform initial filtering based on space_id
 	span := rawSpan.RawSpanConvertToLoopSpan()
-	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	// 1.1 Filter out spans that do not belong to any space or bot
 	spaceIDs, botIDs, _ := h.getObjListWithTaskFromCache(ctx)
-	logs.CtxInfo(ctx, "space list: %v, bot list: %v", spaceIDs, botIDs)
+	logs.CtxInfo(ctx, "space list: %v, bot list: %v, log_suffix=%s", spaceIDs, botIDs, logSuffix)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
 		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space_or_bot"})
 		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)

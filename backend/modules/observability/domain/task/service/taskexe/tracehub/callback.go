@@ -18,6 +18,7 @@ import (
 )
 
 func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
+	logs.CtxInfo(ctx, "CallBack msg %+v", event)
 	for _, turn := range event.TurnEvalResults {
 		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
 		tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))

@@ -53,6 +53,6 @@ func (e *CorrectionConsumer) HandleMessage(ctx context.Context, ext *mq.MessageE
 		logs.CtxError(ctx, "Correction msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "Correction msg, event: %v", event)
+	logs.CtxInfo(ctx, "Correction msg, event: %v,msgID=%s", event, ext.MsgID)
 	return e.handler.Correction(ctx, event)
 }

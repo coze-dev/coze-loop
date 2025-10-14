@@ -35,6 +35,7 @@ const (
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
 	ctx = h.fillCtx(ctx)
+	logs.CtxInfo(ctx, "BackFill msg %+v", event)
 
 	var (
 		lockKey    string

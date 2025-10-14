@@ -91,19 +91,19 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
 	// Additional filters can be constructed based on task configuration if needed.
 	// Simplified handling here: returning nil means no extra filters are applied.
-
+	filters := &loop_span.FilterFields{}
 	platformFilter, err := s.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(taskConfig.GetRule().GetSpanFilters().GetPlatformType()))
 	if err != nil {
-		return nil
+		return filters
 	}
 	builtinFilter, err := buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
 		WorkspaceID:  taskConfig.GetWorkspaceID(),
 		SpanListType: loop_span.SpanListType(taskConfig.GetRule().GetSpanFilters().GetSpanListType()),
 	})
 	if err != nil {
-		return nil
+		return filters
 	}
-	filters := combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
+	filters = combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
 
 	return filters
 }
