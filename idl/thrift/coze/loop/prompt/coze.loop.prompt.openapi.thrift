@@ -95,6 +95,8 @@ struct PromptTemplate {
     1: optional TemplateType template_type // 模板类型
     2: optional list<Message> messages // 只支持message list形式托管
     3: optional list<VariableDef> variable_defs // 变量定义
+
+    100: optional map<string, string> metadata // 模板级元信息
 }
 
 typedef string TemplateType
@@ -117,6 +119,8 @@ struct Message {
     4: optional string reasoning_content // 推理思考内容
     5: optional string tool_call_id // tool调用ID（role为tool时有效）
     6: optional list<ToolCall> tool_calls // tool调用（role为assistant时有效）
+
+    100: optional map<string, string> metadata // 消息元信息
 }
 
 struct ContentPart {
