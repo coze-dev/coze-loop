@@ -383,9 +383,7 @@ func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 		}
 	}
 
-	// botList暂时返回空数组，因为Task表中没有bot_id字段
-
-	return spaceList, botList, results, nil
+	return spaceList, botList, nil, nil
 }
 
 // extractBotIDFromFilters 递归提取过滤器中的 bot_id 值，包括 SubFilter

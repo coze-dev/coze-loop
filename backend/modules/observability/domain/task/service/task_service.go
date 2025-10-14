@@ -14,7 +14,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -22,9 +21,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -33,7 +29,7 @@ import (
 )
 
 type CreateTaskReq struct {
-	Task *task.Task //todo:entity
+	Task *entity.ObservabilityTask
 }
 type CreateTaskResp struct {
 	TaskID *int64
@@ -87,7 +83,6 @@ func NewTaskServiceImpl(
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
 	taskProcessor *processor.TaskProcessor,
-	buildHelper service.TraceFilterProcessorBuilder,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
@@ -95,7 +90,6 @@ func NewTaskServiceImpl(
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
 		taskProcessor:    *taskProcessor,
-		buildHelper:      buildHelper,
 	}, nil
 }
 
@@ -105,14 +99,13 @@ type TaskServiceImpl struct {
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer
 	taskProcessor    processor.TaskProcessor
-	buildHelper      service.TraceFilterProcessorBuilder
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
 	// 校验task name是否存在
 	checkResp, err := t.CheckTaskName(ctx, &CheckTaskNameReq{
-		WorkspaceID: req.Task.GetWorkspaceID(),
-		Name:        req.Task.GetName(),
+		WorkspaceID: req.Task.WorkspaceID,
+		Name:        req.Task.Name,
 	})
 	if err != nil {
 		logs.CtxError(ctx, "CheckTaskName err:%v", err)
@@ -122,37 +115,25 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		logs.CtxError(ctx, "task name exist")
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("task name exist"))
 	}
-	proc := t.taskProcessor.GetTaskProcessor(req.Task.GetTaskType())
+	proc := t.taskProcessor.GetTaskProcessor(req.Task.TaskType)
 	// 校验配置项是否有效
 	if err = proc.ValidateConfig(ctx, req.Task); err != nil {
 		logs.CtxError(ctx, "ValidateConfig err:%v", err)
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("config invalid:%v", err)))
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
-	}
-	// 创建task
-	req.Task.TaskStatus = ptr.Of(task.TaskStatusUnstarted)
-	spanFilers, err := t.buildSpanFilters(ctx, req.Task.GetRule().GetSpanFilters(), req.Task.GetWorkspaceID())
-	if err != nil {
-		return nil, err
-	}
-	//dto2do_application
-	taskPO := tconv.TaskDTO2PO(ctx, req.Task, userID, spanFilers)
-	id, err := t.TaskRepo.CreateTask(ctx, taskPO)
+	id, err := t.TaskRepo.CreateTask(ctx, req.Task)
 	if err != nil {
 		return nil, err
 	}
 	// 创建任务的数据准备
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
-	taskPO.ID = id
-	taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
+	req.Task.ID = id
+	taskConfig := tconv.TaskDO2DTO(ctx, req.Task, nil)
 	if err = proc.OnCreateTaskChange(ctx, taskConfig); err != nil {
 		logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 
-		if err1 := t.TaskRepo.DeleteTask(ctx, taskPO); err1 != nil {
+		if err1 := t.TaskRepo.DeleteTask(ctx, req.Task); err1 != nil {
 			logs.CtxError(ctx, "delete task failed, task_id=%d, err=%v", id, err1)
 		}
 		return nil, err
@@ -161,7 +142,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	// 历史回溯数据发MQ
 	if t.shouldTriggerBackfill(req.Task) {
 		backfillEvent := &entity.BackFillEvent{
-			SpaceID: req.Task.GetWorkspaceID(),
+			SpaceID: req.Task.WorkspaceID,
 			TaskID:  id,
 		}
 
@@ -176,60 +157,12 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	return &CreateTaskResp{TaskID: &id}, nil
 }
 
-func (t *TaskServiceImpl) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
-
-	switch spanFilterFields.GetPlatformType() {
-	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
-		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
-		if err != nil {
-			return nil, err
-		}
-		env := &span_filter.SpanEnv{
-			WorkspaceID: workspaceID,
-		}
-		basicFilter, forceQuery, err := platformFilter.BuildBasicSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
-			return nil, nil
-		}
-		basicFilterFields := &loop_span.FilterFields{
-			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-			FilterFields: basicFilter,
-		}
-		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields), spanFilterFields.Filters)
-		return &filter.SpanFilterFields{
-			Filters:      filters,
-			PlatformType: spanFilterFields.PlatformType,
-			SpanListType: spanFilterFields.SpanListType,
-		}, nil
-	default:
-		return spanFilterFields, nil
-	}
-}
-
-func combineFilters(filters ...*filter.FilterFields) *filter.FilterFields {
-	filterAggr := &filter.FilterFields{
-		QueryAndOr: ptr.Of(filter.QueryRelationAnd),
-	}
-	for _, f := range filters {
-		if f == nil {
-			continue
-		}
-		filterAggr.FilterFields = append(filterAggr.FilterFields, &filter.FilterField{
-			QueryAndOr: ptr.Of(filter.QueryRelationAnd),
-			SubFilter:  f,
-		})
-	}
-	return filterAggr
-}
-
 func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (err error) {
-	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
+	taskDO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
 	if err != nil {
 		return err
 	}
-	if taskPO == nil {
+	if taskDO == nil {
 		logs.CtxError(ctx, "task not found")
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("task not found"))
 	}
@@ -239,32 +172,30 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 	}
 	// 校验更新参数是否合法
 	if req.Description != nil {
-		taskPO.Description = req.Description
+		taskDO.Description = req.Description
 	}
 	if req.EffectiveTime != nil {
-		validEffectiveTime, err := tconv.CheckEffectiveTime(ctx, req.EffectiveTime, taskPO.TaskStatus, taskPO.EffectiveTime)
+		validEffectiveTime, err := tconv.CheckEffectiveTime(ctx, req.EffectiveTime, taskDO.TaskStatus, taskDO.EffectiveTime)
 		if err != nil {
 			return err
 		}
-		taskPO.EffectiveTime = ptr.Of(tconv.ToJSONString(ctx, validEffectiveTime))
+		taskDO.EffectiveTime = validEffectiveTime
 	}
 	if req.SampleRate != nil {
-		sampler := tconv.SamplerPO2DO(ctx, taskPO.Sampler)
-		sampler.SampleRate = req.SampleRate
-		taskPO.Sampler = ptr.Of(tconv.ToJSONString(ctx, sampler))
+		taskDO.Sampler.SampleRate = *req.SampleRate
 	}
 	if req.TaskStatus != nil {
-		validTaskStatus, err := tconv.CheckTaskStatus(ctx, *req.TaskStatus, taskPO.TaskStatus)
+		validTaskStatus, err := tconv.CheckTaskStatus(ctx, *req.TaskStatus, taskDO.TaskStatus)
 		if err != nil {
 			return err
 		}
 		if validTaskStatus != "" {
 			if validTaskStatus == task.TaskStatusDisabled {
 				// 禁用操作处理
-				proc := t.taskProcessor.GetTaskProcessor(taskPO.TaskType)
-				taskConfig := tconv.TaskPO2DTO(ctx, taskPO, nil)
+				proc := t.taskProcessor.GetTaskProcessor(taskDO.TaskType)
+				taskConfig := tconv.TaskDO2DTO(ctx, taskDO, nil)
 				var taskRun *entity.TaskRun
-				for _, tr := range taskPO.TaskRuns {
+				for _, tr := range taskDO.TaskRuns {
 					if tr.RunStatus == task.RunStatusRunning {
 						taskRun = tr
 						break
@@ -278,32 +209,32 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 					return err
 				}
 			}
-			taskPO.TaskStatus = *req.TaskStatus
+			taskDO.TaskStatus = *req.TaskStatus
 		}
 	}
-	taskPO.UpdatedBy = userID
-	taskPO.UpdatedAt = time.Now()
-	if err = t.TaskRepo.UpdateTask(ctx, taskPO); err != nil {
+	taskDO.UpdatedBy = userID
+	taskDO.UpdatedAt = time.Now()
+	if err = t.TaskRepo.UpdateTask(ctx, taskDO); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
-	taskPOs, total, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
+	taskDOs, total, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
 		TaskFilters:  req.TaskFilters,
 		ReqLimit:     req.Limit,
 		ReqOffset:    req.Offset,
 		OrderBy:      req.OrderBy,
 	})
-	if len(taskPOs) == 0 {
+	if len(taskDOs) == 0 {
 		logs.CtxInfo(ctx, "GetTasks tasks is nil")
 		return resp, nil
 	}
 	userMap := make(map[string]bool)
 	users := make([]string, 0)
-	for _, tp := range taskPOs {
+	for _, tp := range taskDOs {
 		userMap[tp.CreatedBy] = true
 		userMap[tp.UpdatedBy] = true
 	}
@@ -315,7 +246,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
 	return &ListTasksResp{
-		Tasks: tconv.TaskPOs2DOs(ctx, taskPOs, userInfoMap),
+		Tasks: tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap),
 		Total: ptr.Of(total),
 	}, nil
 }
@@ -333,7 +264,7 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	return &GetTaskResp{Task: tconv.TaskPO2DTO(ctx, taskPO, userInfoMap)}, nil
+	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)}, nil
 }
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
 	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
@@ -365,27 +296,22 @@ func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameR
 }
 
 // shouldTriggerBackfill 判断是否需要发送历史回溯MQ
-func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *task.Task) bool {
+func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *entity.ObservabilityTask) bool {
 	// 检查任务类型
-	taskType := taskDO.GetTaskType()
+	taskType := taskDO.TaskType
 	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
 		return false
 	}
 
 	// 检查回填时间配置
-	rule := taskDO.GetRule()
-	if rule == nil {
+
+	if taskDO.BackfillEffectiveTime == nil {
 		return false
 	}
 
-	backfillTime := rule.GetBackfillEffectiveTime()
-	if backfillTime == nil {
-		return false
-	}
-
-	return backfillTime.GetStartAt() > 0 &&
-		backfillTime.GetEndAt() > 0 &&
-		backfillTime.GetStartAt() < backfillTime.GetEndAt()
+	return taskDO.BackfillEffectiveTime.StartAt > 0 &&
+		taskDO.BackfillEffectiveTime.EndAt > 0 &&
+		taskDO.BackfillEffectiveTime.StartAt < taskDO.BackfillEffectiveTime.EndAt
 }
 
 // sendBackfillMessage 发送MQ消息

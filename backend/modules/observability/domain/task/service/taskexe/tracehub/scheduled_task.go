@@ -108,7 +108,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		backfillTaskRun = taskPO.GetBackfillTaskRun()
 		taskRun = taskPO.GetCurrentTaskRun()
 
-		taskInfo := tconv.TaskPO2DTO(ctx, taskPO, nil)
+		taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
 		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
 		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
 		proc := h.taskProcessor.GetTaskProcessor(taskInfo.TaskType)

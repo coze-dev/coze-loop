@@ -9,14 +9,23 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	domain_task "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	trace_Svc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type ITaskQueueConsumer interface {
@@ -38,6 +47,7 @@ func NewTaskApplication(
 	userService rpc.IUserProvider,
 	tracehubSvc tracehub.ITraceHubService,
 	taskProcessor task_processor.TaskProcessor,
+	buildHelper trace_Svc.TraceFilterProcessorBuilder,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:       taskService,
@@ -47,6 +57,7 @@ func NewTaskApplication(
 		userSvc:       userService,
 		tracehubSvc:   tracehubSvc,
 		taskProcessor: taskProcessor,
+		buildHelper:   buildHelper,
 	}, nil
 }
 
@@ -58,6 +69,7 @@ type TaskApplication struct {
 	userSvc       rpc.IUserProvider
 	tracehubSvc   tracehub.ITraceHubService
 	taskProcessor task_processor.TaskProcessor
+	buildHelper   trace_Svc.TraceFilterProcessorBuilder
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -110,12 +122,70 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 		false); err != nil {
 		return resp, err
 	}
-	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: req.GetTask()})
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	// 创建task
+	req.Task.TaskStatus = ptr.Of(domain_task.TaskStatusUnstarted)
+	spanFilers, err := t.buildSpanFilters(ctx, req.Task.GetRule().GetSpanFilters(), req.GetTask().GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
+	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: tconv.TaskDTO2DO(ctx, req.GetTask(), userID, spanFilers)})
 	if err != nil {
 		return resp, err
 	}
 
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
+}
+func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
+
+	switch spanFilterFields.GetPlatformType() {
+	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
+		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
+		if err != nil {
+			return nil, err
+		}
+		env := &span_filter.SpanEnv{
+			WorkspaceID: workspaceID,
+		}
+		basicFilter, forceQuery, err := platformFilter.BuildBasicSpanFilter(ctx, env)
+		if err != nil {
+			return nil, err
+		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
+			return nil, nil
+		}
+		basicFilterFields := &loop_span.FilterFields{
+			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+			FilterFields: basicFilter,
+		}
+		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields), spanFilterFields.Filters)
+		return &filter.SpanFilterFields{
+			Filters:      filters,
+			PlatformType: spanFilterFields.PlatformType,
+			SpanListType: spanFilterFields.SpanListType,
+		}, nil
+	default:
+		return spanFilterFields, nil
+	}
+}
+
+func combineFilters(filters ...*filter.FilterFields) *filter.FilterFields {
+	filterAggr := &filter.FilterFields{
+		QueryAndOr: ptr.Of(filter.QueryRelationAnd),
+	}
+	for _, f := range filters {
+		if f == nil {
+			continue
+		}
+		filterAggr.FilterFields = append(filterAggr.FilterFields, &filter.FilterField{
+			QueryAndOr: ptr.Of(filter.QueryRelationAnd),
+			SubFilter:  f,
+		})
+	}
+	return filterAggr
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {

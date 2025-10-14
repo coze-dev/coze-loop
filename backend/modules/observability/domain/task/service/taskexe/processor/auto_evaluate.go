@@ -96,7 +96,7 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) e
 }
 
 func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
-	taskRun := tconv.TaskRunPO2DTO(ctx, trigger.TaskRun, nil)
+	taskRun := tconv.TaskRunDO2DTO(ctx, trigger.TaskRun, nil)
 	workspaceID := trigger.Task.GetWorkspaceID()
 	session := p.getSession(ctx, trigger.Task)
 	var mapping []*task.EvaluateFieldMapping
@@ -223,8 +223,8 @@ func (p *AutoEvaluteProcessor) OnUpdateTaskChange(ctx context.Context, currentTa
 		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
 	}
 	// Step 2: update task
-	taskPO := tconv.TaskDTO2PO(ctx, currentTask, "", nil)
-	err := p.taskRepo.UpdateTask(ctx, taskPO)
+	taskDO := tconv.TaskDTO2DO(ctx, currentTask, "", nil)
+	err := p.taskRepo.UpdateTask(ctx, taskDO)
 	if err != nil {
 		logs.CtxError(ctx, "[auto_task] OnUpdateChangeProcessor, UpdateTask err, taskID:%d, err:%v", currentTask.GetID(), err)
 		return err
@@ -377,15 +377,15 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 		},
 	}
 	taskRun := &task_entity.TaskRun{
-		TaskID:      currentTask.GetID(),
-		WorkspaceID: currentTask.GetWorkspaceID(),
-		TaskType:    param.RunType,
-		RunStatus:   task.RunStatusRunning,
-		RunStartAt:  time.UnixMilli(param.RunStartAt),
-		RunEndAt:    time.UnixMilli(param.RunEndAt),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		RunConfig:   ptr.Of(ToJSONString(ctx, taskRunConfig)),
+		TaskID:        currentTask.GetID(),
+		WorkspaceID:   currentTask.GetWorkspaceID(),
+		TaskType:      param.RunType,
+		RunStatus:     task.RunStatusRunning,
+		RunStartAt:    time.UnixMilli(param.RunStartAt),
+		RunEndAt:      time.UnixMilli(param.RunEndAt),
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+		TaskRunConfig: tconv.TaskRunConfigDTO2DO(taskRunConfig),
 	}
 	_, err = p.taskRepo.CreateTaskRun(ctx, taskRun)
 	if err != nil {
@@ -411,11 +411,10 @@ func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param 
 	}
 	session := p.getSession(ctx, param.Task)
 	taskRun := param.TaskRun
-	taskRunPO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
 	if err := p.evaluationSvc.FinishExperiment(ctx, &rpc.FinishExperimentReq{
 		WorkspaceID:     param.Task.GetWorkspaceID(),
-		ExperimentID:    taskRunPO.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID(),
-		ExperimentRunID: taskRunPO.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID(),
+		ExperimentID:    taskRun.TaskRunConfig.AutoEvaluateRunConfig.ExptID,
+		ExperimentRunID: taskRun.TaskRunConfig.AutoEvaluateRunConfig.ExptRunID,
 		Session:         session,
 	}); err != nil {
 		return err

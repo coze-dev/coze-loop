@@ -1148,7 +1148,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		}
 	} else {
 		// 没有name先查task
-		taskPOs, _, err := r.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		taskDOs, _, err := r.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
 			WorkspaceIDs: []int64{req.WorkspaceID},
 			ReqLimit:     int32(500),
 			ReqOffset:    int32(0),
@@ -1156,14 +1156,14 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		if err != nil {
 			return nil, err
 		}
-		if len(taskPOs) == 0 {
+		if len(taskDOs) == 0 {
 			logs.CtxInfo(ctx, "GetTasks tasks is nil")
 			return resp, nil
 		}
 
 		evaluatorVersionIDS := make(map[int64]bool)
-		for _, taskPO := range taskPOs {
-			taskConfig := tconv.TaskConfigPO2DO(ctx, taskPO.TaskConfig)
+		for _, taskDO := range taskDOs {
+			taskConfig := tconv.TaskConfigDO2DTO(taskDO.TaskConfig)
 			if taskConfig == nil {
 				continue
 			}

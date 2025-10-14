@@ -80,7 +80,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
 		return nil, err
 	}
-	taskList := tconv.TaskPOs2DOs(ctx, taskPOs, nil)
+	taskList := tconv.TaskDOs2DTOs(ctx, taskPOs, nil)
 	for _, taskDO := range taskList {
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		subscribers = append(subscribers, &spanSubscriber{

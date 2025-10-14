@@ -110,18 +110,18 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 	if taskConfig == nil {
 		return nil, errors.New("task config not found")
 	}
-	taskConfigDO := tconv.TaskPO2DTO(ctx, taskConfig, nil)
+	taskConfigDO := tconv.TaskDO2DTO(ctx, taskConfig, nil)
 	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(taskConfigDO.GetWorkspaceID()), taskConfigDO.GetID())
 	if err != nil {
 		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", taskConfigDO.GetID(), err)
 		return nil, err
 	}
-	taskRunDO := tconv.TaskRunPO2DTO(ctx, taskRun, nil)
+	taskRunDTO := tconv.TaskRunDO2DTO(ctx, taskRun, nil)
 	proc := h.taskProcessor.GetTaskProcessor(taskConfig.TaskType)
 	sub := &spanSubscriber{
 		taskID:           taskConfigDO.GetID(),
 		t:                taskConfigDO,
-		tr:               taskRunDO,
+		tr:               taskRunDTO,
 		processor:        proc,
 		bufCap:           0,
 		maxFlushInterval: time.Second * 5,
@@ -368,7 +368,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.GetID())
 		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 			Task:     sub.t,
-			TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
+			TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
 			IsFinish: false,
 		}); err != nil {
 			return len(fr.spans), len(sampledSpans), err
@@ -449,7 +449,7 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.GetSampleSize())
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 				Task:     sub.t,
-				TaskRun:  tconv.TaskRunDO2PO(ctx, sub.tr, nil),
+				TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
 				IsFinish: true,
 			}); err != nil {
 				return err
