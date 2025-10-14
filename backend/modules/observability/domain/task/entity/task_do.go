@@ -32,50 +32,50 @@ type ObservabilityTask struct {
 }
 
 type RunDetail struct {
-	SuccessCount int64
-	FailedCount  int64
-	TotalCount   int64
+	SuccessCount int64 `json:"success_count"`
+	FailedCount  int64 `json:"failed_count"`
+	TotalCount   int64 `json:"total_count"`
 }
 type SpanFilterFields struct {
-	Filters      filter.SpanFilterFields
-	PlatformType common.PlatformType
-	SpanListType common.SpanListType
+	Filters      filter.SpanFilterFields `json:"filters"`
+	PlatformType common.PlatformType     `json:"platform_type"`
+	SpanListType common.SpanListType     `json:"span_list_type"`
 }
 type EffectiveTime struct {
 	// ms timestamp
-	StartAt int64
+	StartAt int64 `json:"start_at"`
 	// ms timestamp
-	EndAt int64
+	EndAt int64 `json:"end_at"`
 }
 type Sampler struct {
-	SampleRate    float64
-	SampleSize    int64
-	IsCycle       bool
-	CycleCount    int64
-	CycleInterval int64
-	CycleTimeUnit string
+	SampleRate    float64 `json:"sample_rate"`
+	SampleSize    int64   `json:"sample_size"`
+	IsCycle       bool    `json:"is_cycle"`
+	CycleCount    int64   `json:"cycle_count"`
+	CycleInterval int64   `json:"cycle_interval"`
+	CycleTimeUnit string  `json:"cycle_time_unit"`
 }
 type TaskConfig struct {
-	AutoEvaluateConfigs []*AutoEvaluateConfig
+	AutoEvaluateConfigs []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
 	DataReflowConfig    []*DataReflowConfig
 }
 type AutoEvaluateConfig struct {
-	EvaluatorVersionID int64
-	EvaluatorID        int64
-	FieldMappings      []*EvaluateFieldMapping
+	EvaluatorVersionID int64                   `json:"evaluator_version_id"`
+	EvaluatorID        int64                   `json:"evaluator_id"`
+	FieldMappings      []*EvaluateFieldMapping `json:"field_mappings"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束
-	FieldSchema        *dataset.FieldSchema
-	TraceFieldKey      string
-	TraceFieldJsonpath string
-	EvalSetName        *string
+	FieldSchema        *dataset.FieldSchema `json:"field_schema"`
+	TraceFieldKey      string               `json:"trace_field_key"`
+	TraceFieldJsonpath string               `json:"trace_field_jsonpath"`
+	EvalSetName        *string              `json:"eval_set_name"`
 }
 type DataReflowConfig struct {
-	DatasetID     *int64
-	DatasetName   *string
-	DatasetSchema dataset.DatasetSchema
-	FieldMappings []dataset.FieldMapping
+	DatasetID     *int64                 `json:"dataset_id"`
+	DatasetName   *string                `json:"dataset_name"`
+	DatasetSchema dataset.DatasetSchema  `json:"dataset_schema"`
+	FieldMappings []dataset.FieldMapping `json:"field_mappings"`
 }
 
 type TaskRun struct {
@@ -93,34 +93,34 @@ type TaskRun struct {
 	UpdatedAt      time.Time       // 更新时间
 }
 type BackfillDetail struct {
-	SuccessCount      *int64
-	FailedCount       *int64
-	TotalCount        *int64
-	BackfillStatus    *string
-	LastSpanPageToken *string
+	SuccessCount      *int64  `json:"success_count"`
+	FailedCount       *int64  `json:"failed_count"`
+	TotalCount        *int64  `json:"total_count"`
+	BackfillStatus    *string `json:"backfill_status"`
+	LastSpanPageToken *string `json:"last_span_page_token"`
 }
 type TaskRunConfig struct {
-	AutoEvaluateRunConfig *AutoEvaluateRunConfig
-	DataReflowRunConfig   *DataReflowRunConfig
+	AutoEvaluateRunConfig *AutoEvaluateRunConfig `json:"auto_evaluate_run_config"`
+	DataReflowRunConfig   *DataReflowRunConfig   `json:"data_reflow_run_config"`
 }
 type AutoEvaluateRunConfig struct {
-	ExptID       int64
-	ExptRunID    int64
-	EvalID       int64
-	SchemaID     int64
-	Schema       *string
-	EndAt        int64
-	CycleStartAt int64
-	CycleEndAt   int64
-	Status       string
+	ExptID       int64   `json:"expt_id"`
+	ExptRunID    int64   `json:"expt_run_id"`
+	EvalID       int64   `json:"eval_id"`
+	SchemaID     int64   `json:"schema_id"`
+	Schema       *string `json:"schema"`
+	EndAt        int64   `json:"end_at"`
+	CycleStartAt int64   `json:"cycle_start_at"`
+	CycleEndAt   int64   `json:"cycle_end_at"`
+	Status       string  `json:"status"`
 }
 type DataReflowRunConfig struct {
-	DatasetID    int64
-	DatasetRunID int64
-	EndAt        int64
-	CycleStartAt int64
-	CycleEndAt   int64
-	Status       string
+	DatasetID    int64  `json:"dataset_id"`
+	DatasetRunID int64  `json:"dataset_run_id"`
+	EndAt        int64  `json:"end_at"`
+	CycleStartAt int64  `json:"cycle_start_at"`
+	CycleEndAt   int64  `json:"cycle_end_at"`
+	Status       string `json:"status"`
 }
 
 func (t ObservabilityTask) IsFinished() bool {

@@ -65,21 +65,21 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 	}
 
 	// 缓存未命中，查询数据库
-	TaskPo, err := v.TaskDao.GetTask(ctx, id, workspaceID, userID)
+	TaskPO, err := v.TaskDao.GetTask(ctx, id, workspaceID, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	taskDO := convertor.TaskPO2DO(TaskPo)
+	taskDO := convertor.TaskPO2DO(TaskPO)
 
-	TaskRunPo, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
+	TaskRunPO, _, err := v.TaskRunDao.ListTaskRuns(ctx, mysql.ListTaskRunParam{
 		WorkspaceID: ptr.Of(taskDO.WorkspaceID),
 		TaskID:      ptr.Of(taskDO.ID),
 		ReqLimit:    1000,
 		ReqOffset:   0,
 	})
 
-	taskDO.TaskRuns = convertor.TaskRunsPO2DO(TaskRunPo)
+	taskDO.TaskRuns = convertor.TaskRunsPO2DO(TaskRunPO)
 	if err != nil {
 		return nil, err
 	}
