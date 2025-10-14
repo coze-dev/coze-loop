@@ -44,7 +44,6 @@ func (e *DatasetJobConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfi
 		ConsumeTimeout:       cfg.ConsumeTimeout,
 		TagExpression:        cfg.TagExpression,
 		ConsumeGoroutineNums: cfg.ConsumeGoroutineNums,
-		EnablePPE:            cfg.EnablePPE,
 	}
 	return res, nil
 }

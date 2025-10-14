@@ -58,6 +58,5 @@ func (c *RMQConf) ToConsumerCfg() mq.ConsumerConfig {
 		ConsumerGroup:        c.ConsumerGroup,
 		ConsumeGoroutineNums: c.WorkerNum,
 		ConsumeTimeout:       c.ConsumeTimeout,
-		EnablePPE:            c.EnablePPE,
 	}
 }

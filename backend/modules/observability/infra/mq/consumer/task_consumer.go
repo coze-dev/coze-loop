@@ -43,6 +43,7 @@ func (e *TaskConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, err
 		ConsumeTimeout:       time.Duration(cfg.Timeout) * time.Millisecond,
 		ConsumeGoroutineNums: cfg.WorkerNum,
 		EnablePPE:            cfg.EnablePPE,
+		SubExpr:              cfg.SubExpr,
 	}
 	return res, nil
 }
