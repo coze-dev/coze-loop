@@ -34,9 +34,10 @@ type PromptDetail struct {
 }
 
 type PromptTemplate struct {
-	TemplateType TemplateType   `json:"template_type"`
-	Messages     []*Message     `json:"messages,omitempty"`
-	VariableDefs []*VariableDef `json:"variable_defs,omitempty"`
+	TemplateType TemplateType      `json:"template_type"`
+	Messages     []*Message        `json:"messages,omitempty"`
+	VariableDefs []*VariableDef    `json:"variable_defs,omitempty"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
 type TemplateType string
@@ -53,6 +54,8 @@ type Message struct {
 	Parts            []*ContentPart `json:"parts,omitempty"`
 	ToolCallID       *string        `json:"tool_call_id,omitempty"`
 	ToolCalls        []*ToolCall    `json:"tool_calls,omitempty"`
+
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 type Role string
