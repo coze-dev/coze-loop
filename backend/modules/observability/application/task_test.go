@@ -244,7 +244,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskWritable, strconv.FormatInt(123, 10), false).Return(nil)
 				svcMock := svcmock.NewMockITaskService(ctrl)
-				svcMock.EXPECT().CreateTask(gomock.Any(), &svc.CreateTaskReq{Task: taskForSvcErr}).Return(nil, errors.New("svc error"))
+				svcMock.EXPECT().CreateTask(gomock.Any(), gomock.AssignableToTypeOf(&svc.CreateTaskReq{})).Return(nil, errors.New("svc error"))
 				return svcMock, auth
 			},
 		},
@@ -257,7 +257,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
 				svcMock := svcmock.NewMockITaskService(ctrl)
-				svcMock.EXPECT().CreateTask(gomock.Any(), &svc.CreateTaskReq{Task: taskForSuccess}).Return(&svc.CreateTaskResp{TaskID: gptr.Of(int64(1000))}, nil)
+				svcMock.EXPECT().CreateTask(gomock.Any(), gomock.AssignableToTypeOf(&svc.CreateTaskReq{})).Return(&svc.CreateTaskResp{TaskID: gptr.Of(int64(1000))}, nil)
 				return svcMock, auth
 			},
 		},
