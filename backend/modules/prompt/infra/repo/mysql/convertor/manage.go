@@ -188,6 +188,9 @@ func PromptDO2CommitPO(do *entity.Prompt) *model.PromptCommit {
 				if do.PromptCommit.PromptDetail.PromptTemplate.VariableDefs != nil {
 					po.VariableDefs = ptr.Of(json.Jsonify(do.PromptCommit.PromptDetail.PromptTemplate.VariableDefs))
 				}
+				if do.PromptCommit.PromptDetail.PromptTemplate.Metadata != nil {
+					po.Metadata = ptr.Of(json.Jsonify(do.PromptCommit.PromptDetail.PromptTemplate.Metadata))
+				}
 			}
 			// 序列化ExtInfos到ExtInfo字段
 			if do.PromptCommit.PromptDetail.ExtInfos != nil {
@@ -218,6 +221,9 @@ func PromptDO2DraftPO(promptDO *entity.Prompt) *model.PromptUserDraft {
 				}
 				if detailDO.PromptTemplate.VariableDefs != nil {
 					po.VariableDefs = ptr.Of(json.Jsonify(detailDO.PromptTemplate.VariableDefs))
+				}
+				if detailDO.PromptTemplate.Metadata != nil {
+					po.Metadata = ptr.Of(json.Jsonify(detailDO.PromptTemplate.Metadata))
 				}
 			}
 			if detailDO.ModelConfig != nil {
@@ -269,6 +275,7 @@ func PromptUserDraftPO2PromptDetailDO(draftPO *model.PromptUserDraft) *entity.Pr
 			Messages:     UnmarshalMessageDOs(draftPO.Messages),
 			VariableDefs: UnmarshalVariableDefDOs(draftPO.VariableDefs),
 			TemplateType: UnmarshalTemplateType(draftPO.TemplateType),
+			Metadata:     UnmarshalMetadata(draftPO.Metadata),
 		},
 		Tools:          UnmarshalToolDOs(draftPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(draftPO.ToolCallConfig),
@@ -286,6 +293,7 @@ func PromptCommitPO2PromptDetailDO(commitPO *model.PromptCommit) *entity.PromptD
 			Messages:     UnmarshalMessageDOs(commitPO.Messages),
 			VariableDefs: UnmarshalVariableDefDOs(commitPO.VariableDefs),
 			TemplateType: UnmarshalTemplateType(commitPO.TemplateType),
+			Metadata:     UnmarshalMetadata(commitPO.Metadata),
 		},
 		Tools:          UnmarshalToolDOs(commitPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(commitPO.ToolCallConfig),
@@ -344,6 +352,15 @@ func UnmarshalToolDOs(text *string) []*entity.Tool {
 	tools := make([]*entity.Tool, 0)
 	_ = json.Unmarshal([]byte(*text), &tools)
 	return tools
+}
+
+func UnmarshalMetadata(text *string) map[string]string {
+	if text == nil {
+		return nil
+	}
+	metadata := make(map[string]string)
+	_ = json.Unmarshal([]byte(*text), &metadata)
+	return metadata
 }
 
 func UnmarshalExtInfos(text *string) map[string]string {
