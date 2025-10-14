@@ -81,6 +81,7 @@ func (s *RawSpan) GetSensitiveTags() *SensitiveTags {
 	}
 	return s.SensitiveTags
 }
+
 func (s *RawSpan) GetServerEnv() *ServerInRawSpan {
 	if s == nil {
 		return nil
@@ -213,12 +214,14 @@ func (s *OnlineExptTurnEvalResult) GetSpanIDFromExt() string {
 	}
 	return s.Ext["span_id"]
 }
+
 func (s *OnlineExptTurnEvalResult) GetTraceIDFromExt() string {
 	if s == nil {
 		return ""
 	}
 	return s.Ext["trace_id"]
 }
+
 func (s *OnlineExptTurnEvalResult) GetStartTimeFromExt() int64 {
 	if s == nil {
 		return 0
@@ -230,6 +233,7 @@ func (s *OnlineExptTurnEvalResult) GetStartTimeFromExt() int64 {
 	}
 	return startTime
 }
+
 func (s *OnlineExptTurnEvalResult) GetTaskIDFromExt() int64 {
 	if s == nil {
 		return 0
@@ -241,6 +245,7 @@ func (s *OnlineExptTurnEvalResult) GetTaskIDFromExt() int64 {
 	}
 	return taskID
 }
+
 func (s *OnlineExptTurnEvalResult) GetWorkspaceIDFromExt() (string, int64) {
 	if s == nil {
 		return "", 0
@@ -290,12 +295,14 @@ func (c *CorrectionEvent) GetSpanIDFromExt() string {
 	}
 	return c.Ext["span_id"]
 }
+
 func (c *CorrectionEvent) GetTraceIDFromExt() string {
 	if c == nil {
 		return ""
 	}
 	return c.Ext["trace_id"]
 }
+
 func (c *CorrectionEvent) GetStartTimeFromExt() int64 {
 	if c == nil {
 		return 0
@@ -307,6 +314,7 @@ func (c *CorrectionEvent) GetStartTimeFromExt() int64 {
 	}
 	return startTime
 }
+
 func (c *CorrectionEvent) GetTaskIDFromExt() int64 {
 	if c == nil {
 		return 0
@@ -318,6 +326,7 @@ func (c *CorrectionEvent) GetTaskIDFromExt() int64 {
 	}
 	return taskID
 }
+
 func (c *CorrectionEvent) GetWorkspaceIDFromExt() (string, int64) {
 	if c == nil {
 		return "", 0

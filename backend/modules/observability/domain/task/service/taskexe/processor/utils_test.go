@@ -192,7 +192,7 @@ func TestConvertContentTypeDTO2DO(t *testing.T) {
 
 	for _, tt := range cases {
 		tt := tt
-		t.Run(string(tt.input), func(t *testing.T) {
+		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.expected, convertContentTypeDTO2DO(tt.input))
 		})
