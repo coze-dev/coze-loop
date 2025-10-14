@@ -115,10 +115,21 @@ func AutoEvaluateConfigDO2DTO(v *entity.AutoEvaluateConfig) *task.AutoEvaluateCo
 	if v == nil {
 		return nil
 	}
+	var fieldMappings []*task.EvaluateFieldMapping
+	if len(v.FieldMappings) > 0 {
+		for _, config := range v.FieldMappings {
+			fieldMappings = append(fieldMappings, &task.EvaluateFieldMapping{
+				FieldSchema:        config.FieldSchema,
+				TraceFieldKey:      config.TraceFieldKey,
+				TraceFieldJsonpath: config.TraceFieldJsonpath,
+				EvalSetName:        config.EvalSetName,
+			})
+		}
+	}
 	return &task.AutoEvaluateConfig{
-		EvaluatorVersionID: 0,
-		EvaluatorID:        0,
-		FieldMappings:      nil,
+		EvaluatorVersionID: v.EvaluatorVersionID,
+		EvaluatorID:        v.EvaluatorID,
+		FieldMappings:      fieldMappings,
 	}
 }
 func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
@@ -355,9 +366,47 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 	if taskConfig == nil {
 		return nil
 	}
+	autoEvaluateConfigs := make([]*entity.AutoEvaluateConfig, 0, len(taskConfig.AutoEvaluateConfigs))
+	for _, autoEvaluateConfig := range taskConfig.AutoEvaluateConfigs {
+		var fieldMappings []*entity.EvaluateFieldMapping
+		if len(autoEvaluateConfig.FieldMappings) > 0 {
+			for _, config := range autoEvaluateConfig.FieldMappings {
+				fieldMappings = append(fieldMappings, &entity.EvaluateFieldMapping{
+					FieldSchema:        config.FieldSchema,
+					TraceFieldKey:      config.TraceFieldKey,
+					TraceFieldJsonpath: config.TraceFieldJsonpath,
+					EvalSetName:        config.EvalSetName,
+				})
+			}
+		}
+		autoEvaluateConfigs = append(autoEvaluateConfigs, &entity.AutoEvaluateConfig{
+			EvaluatorVersionID: autoEvaluateConfig.EvaluatorVersionID,
+			EvaluatorID:        autoEvaluateConfig.EvaluatorID,
+			FieldMappings:      fieldMappings,
+		})
+	}
+	dataReflowConfigs := make([]*entity.DataReflowConfig, 0, len(taskConfig.DataReflowConfig))
+	for _, dataReflowConfig := range taskConfig.DataReflowConfig {
+		var fieldMappings []dataset.FieldMapping
+		if len(dataReflowConfig.FieldMappings) > 0 {
+			for _, config := range dataReflowConfig.FieldMappings {
+				fieldMappings = append(fieldMappings, dataset.FieldMapping{
+					FieldSchema:        config.FieldSchema,
+					TraceFieldKey:      config.TraceFieldKey,
+					TraceFieldJsonpath: config.TraceFieldJsonpath,
+				})
+			}
+		}
+		dataReflowConfigs = append(dataReflowConfigs, &entity.DataReflowConfig{
+			DatasetID:     dataReflowConfig.DatasetID,
+			DatasetName:   dataReflowConfig.DatasetName,
+			DatasetSchema: *dataReflowConfig.DatasetSchema,
+			FieldMappings: fieldMappings,
+		})
+	}
 	return &entity.TaskConfig{
-		AutoEvaluateConfigs: nil,
-		DataReflowConfig:    nil,
+		AutoEvaluateConfigs: autoEvaluateConfigs,
+		DataReflowConfig:    dataReflowConfigs,
 	}
 }
 func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
