@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -31,50 +32,40 @@ func getCategory(taskType task.TaskType) entity.DatasetCategory {
 }
 
 // shouldTriggerBackfill 判断是否需要发送历史回溯MQ
-func ShouldTriggerBackfill(taskDO *task.Task) bool {
+func ShouldTriggerBackfill(taskDO *task_entity.ObservabilityTask) bool {
 	// 检查任务类型
-	taskType := taskDO.GetTaskType()
+	taskType := taskDO.TaskType
 	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
 		return false
 	}
 
 	// 检查回填时间配置
-	rule := taskDO.GetRule()
-	if rule == nil {
+
+	if taskDO.BackfillEffectiveTime == nil {
 		return false
 	}
 
-	backfillTime := rule.GetBackfillEffectiveTime()
-	if backfillTime == nil {
-		return false
-	}
-
-	return backfillTime.GetStartAt() > 0 &&
-		backfillTime.GetEndAt() > 0 &&
-		backfillTime.GetStartAt() < backfillTime.GetEndAt()
+	return taskDO.BackfillEffectiveTime.StartAt > 0 &&
+		taskDO.BackfillEffectiveTime.EndAt > 0 &&
+		taskDO.BackfillEffectiveTime.StartAt < taskDO.BackfillEffectiveTime.EndAt
 }
 
-func ShouldTriggerNewData(ctx context.Context, taskDO *task.Task) bool {
+func ShouldTriggerNewData(ctx context.Context, taskDO *task_entity.ObservabilityTask) bool {
 	// 检查任务类型
-	taskType := taskDO.GetTaskType()
+	taskType := taskDO.TaskType
 	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
 		return false
 	}
-	rule := taskDO.GetRule()
-	if rule == nil {
+
+	if taskDO.EffectiveTime == nil {
 		return false
 	}
+	logs.CtxInfo(ctx, "[auto_task] ShouldTriggerNewData, endAt:%d, startAt:%d", taskDO.EffectiveTime.EndAt, taskDO.EffectiveTime.StartAt)
 
-	effectiveTime := rule.GetEffectiveTime()
-	if effectiveTime == nil {
-		return false
-	}
-	logs.CtxInfo(ctx, "[auto_task] ShouldTriggerNewData, endAt:%d, startAt:%d", effectiveTime.GetEndAt(), effectiveTime.GetStartAt())
-
-	return effectiveTime.GetEndAt() > 0 &&
-		effectiveTime.GetStartAt() > 0 &&
-		effectiveTime.GetStartAt() < effectiveTime.GetEndAt() &&
-		time.Now().After(time.UnixMilli(effectiveTime.GetStartAt()))
+	return taskDO.EffectiveTime.EndAt > 0 &&
+		taskDO.EffectiveTime.StartAt > 0 &&
+		taskDO.EffectiveTime.StartAt < taskDO.EffectiveTime.EndAt &&
+		time.Now().After(time.UnixMilli(taskDO.EffectiveTime.StartAt))
 }
 
 func ToJSONString(ctx context.Context, obj interface{}) string {
@@ -160,7 +151,7 @@ func convertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task.EvaluateFieldMapping,
+func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
 	evaluationSetSchema string, taskRunID string) (turns []*eval_set.Turn) {
 	turns = make([]*eval_set.Turn, 0, len(spans))
 	for _, span := range spans {
@@ -176,7 +167,7 @@ func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*t
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task.EvaluateFieldMapping,
+func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
 	evaluationSetSchema string, taskRunID string) []*eval_set.FieldData {
 	var fieldDatas []*eval_set.FieldData
 	fieldDatas = append(fieldDatas, &eval_set.FieldData{

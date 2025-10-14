@@ -13,7 +13,7 @@ import (
 )
 
 type Trigger struct {
-	Task    *task.Task
+	Task    *task_entity.ObservabilityTask
 	Span    *loop_span.Span
 	TaskRun *task_entity.TaskRun
 }
@@ -24,17 +24,17 @@ var (
 )
 
 type OnCreateTaskRunChangeReq struct {
-	CurrentTask *task.Task
+	CurrentTask *task_entity.ObservabilityTask
 	RunType     task.TaskRunType
 	RunStartAt  int64
 	RunEndAt    int64
 }
 type OnFinishTaskRunChangeReq struct {
-	Task    *task.Task
+	Task    *task_entity.ObservabilityTask
 	TaskRun *task_entity.TaskRun
 }
 type OnFinishTaskChangeReq struct {
-	Task     *task.Task
+	Task     *task_entity.ObservabilityTask
 	TaskRun  *task_entity.TaskRun
 	IsFinish bool
 }
@@ -43,8 +43,8 @@ type Processor interface {
 	ValidateConfig(ctx context.Context, config any) error
 	Invoke(ctx context.Context, trigger *Trigger) error
 
-	OnCreateTaskChange(ctx context.Context, currentTask *task.Task) error
-	OnUpdateTaskChange(ctx context.Context, currentTask *task.Task, taskOp task.TaskStatus) error
+	OnCreateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask) error
+	OnUpdateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task.TaskStatus) error
 	OnFinishTaskChange(ctx context.Context, param OnFinishTaskChangeReq) error
 
 	OnCreateTaskRunChange(ctx context.Context, param OnCreateTaskRunChangeReq) error
