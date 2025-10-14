@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
@@ -1718,7 +1719,6 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
@@ -1733,7 +1733,6 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		}, nil).AnyTimes()
 		tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1").AnyTimes()
 		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
 
 		app := &OpenAPIApplication{
 			traceService: traceServiceMock,
@@ -1850,15 +1849,13 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
-		// 设置期望
+		// Set expectations.
 		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
-		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
 		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
 		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
@@ -1907,7 +1904,6 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
@@ -1915,7 +1911,6 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 
 		// 设置期望
 		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
-		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
 		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
 		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -1951,7 +1946,376 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 	})
 }
 
-// 补充ListSpansOApi测试
+// 补充validateSearchTraceTreeOApiReq的单元测试
+func TestOpenAPIApplication_validateSearchTraceTreeOApiReq(t *testing.T) {
+	app := &OpenAPIApplication{}
+
+	// 测试nil请求
+	err := app.validateSearchTraceTreeOApiReq(context.Background(), nil)
+	assert.Error(t, err)
+
+	// 测试空trace_id
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		TraceID: ptr.Of(""),
+	})
+	assert.Error(t, err)
+
+	// 测试超过最大限制
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		TraceID: ptr.Of("test-trace-id"),
+		Limit:   MaxTraceTreeLength + 1,
+	})
+	assert.Error(t, err)
+
+	// 测试负限制
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		TraceID: ptr.Of("test-trace-id"),
+		Limit:   -1,
+	})
+	assert.Error(t, err)
+
+	// 测试正常情况
+	startTime := time.Now().UnixMilli()
+	endTime := time.Now().Add(1 * time.Hour).UnixMilli() // 结束时间晚于开始时间
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		TraceID:   ptr.Of("test-trace-id"),
+		Limit:     10,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+	})
+	assert.NoError(t, err)
+
+	// 测试日期验证错误 - 开始时间大于结束时间
+	startTime = time.Now().UnixMilli()
+	endTime = time.Now().Add(-1 * time.Hour).UnixMilli() // 结束时间早于开始时间
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		TraceID:   ptr.Of("test-trace-id"),
+		Limit:     10,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+	})
+	assert.Error(t, err) // 开始时间大于结束时间会返回错误
+}
+
+// 补充buildSearchTraceTreeOApiReq的单元测试
+func TestOpenAPIApplication_buildSearchTraceTreeOApiReq(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	app := &OpenAPIApplication{
+		tenant:    tenantMock,
+		workspace: workspaceMock,
+	}
+
+	// 测试正常情况
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1", "tenant2"})
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+
+	req := &openapi.SearchTraceTreeOApiRequest{
+		WorkspaceID:  ptr.Of(int64(123)),
+		TraceID:      ptr.Of("test-trace-id"),
+		StartTime:    ptr.Of(time.Now().Add(-1 * time.Hour).UnixMilli()),
+		EndTime:      ptr.Of(time.Now().UnixMilli()),
+		Limit:        10,
+		PlatformType: ptr.Of(common.PlatformType("platform")),
+		Filters: &filter.FilterFields{
+			FilterFields: []*filter.FilterField{
+				{
+					FieldName: ptr.Of("key1"),
+					QueryType: ptr.Of(filter.QueryTypeEq),
+					Values:    []string{"value1"},
+				},
+			},
+		},
+	}
+
+	result, err := app.buildSearchTraceTreeOApiReq(context.Background(), req)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(123), result.WorkspaceID)
+	assert.Equal(t, "third-party-123", result.ThirdPartyWorkspaceID)
+	assert.Equal(t, "test-trace-id", result.TraceID)
+	assert.Equal(t, int32(10), result.Limit)
+	assert.False(t, result.WithDetail)
+	assert.Len(t, result.Tenants, 2)
+
+	// Test case without providing a platform type.
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1"})
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+
+	req2 := &openapi.SearchTraceTreeOApiRequest{
+		WorkspaceID: ptr.Of(int64(123)),
+		TraceID:     ptr.Of("test-trace-id"),
+		Limit:       10,
+	}
+
+	result2, err := app.buildSearchTraceTreeOApiReq(context.Background(), req2)
+	assert.NoError(t, err)
+	assert.NotNil(t, result2)
+	assert.Equal(t, loop_span.PlatformCozeLoop, result2.PlatformType)
+
+	// Test case when no tenants are returned.
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{})
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+
+	result3, err := app.buildSearchTraceTreeOApiReq(context.Background(), req)
+	assert.Error(t, err)
+	assert.Nil(t, result3)
+}
+
+// Add comprehensive unit tests for SearchTraceTreeOApi.
+func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
+	t.Run("successful search trace tree", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		// Set expectations.
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
+		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1", "tenant2"})
+		traceServiceMock.EXPECT().SearchTraceOApi(gomock.Any(), gomock.Any()).Return(&service.SearchTraceOApiResp{
+			Spans: []*loop_span.Span{{SpanID: "test"}},
+		}, nil)
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			benefit:      benefitMock,
+			tenant:       tenantMock,
+			workspace:    workspaceMock,
+			rateLimiter:  rateLimiter,
+			traceConfig:  traceConfigMock,
+			metrics:      metricsMock,
+			collector:    collectorMock,
+		}
+
+		now := time.Now().UnixMilli()
+		startTime := now - 3600000 // 1 hour ago
+		endTime := now             // current time
+		req := &openapi.SearchTraceTreeOApiRequest{
+			WorkspaceID:  ptr.Of(int64(123)),
+			TraceID:      ptr.Of("trace123"),
+			StartTime:    &startTime,
+			EndTime:      &endTime,
+			Limit:        10,
+			PlatformType: ptr.Of(common.PlatformType("platform")),
+		}
+
+		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.NotNil(t, resp.Data)
+		assert.NotNil(t, resp.Data.TracesAdvanceInfo)
+		assert.NotNil(t, resp.Data.TracesAdvanceInfo.Tokens)
+	})
+
+	t.Run("invalid request", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// Set metrics and collector mocks to avoid panics when testing a nil request.
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		// Set expectations for the calls triggered inside the deferred function.
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			metrics:   metricsMock,
+			collector: collectorMock,
+		}
+
+		// A nil request should return before the deferred function executes to prevent panics.
+		resp, err := app.SearchTraceTreeOApi(context.Background(), nil)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+
+		// An empty trace_id should trigger validation while still executing the deferred function.
+		resp, err = app.SearchTraceTreeOApi(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+			TraceID: ptr.Of(""),
+			Limit:   10, // Limit is a required field.
+		})
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("permission denied", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(assert.AnError)
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			auth:      authMock,
+			metrics:   metricsMock,
+			collector: collectorMock,
+		}
+
+		req := &openapi.SearchTraceTreeOApiRequest{
+			WorkspaceID:  ptr.Of(int64(123)),
+			TraceID:      ptr.Of("trace123"),
+			PlatformType: ptr.Of(common.PlatformType("platform")),
+		}
+
+		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("rate limit exceeded", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
+		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			auth:        authMock,
+			rateLimiter: rateLimiter,
+			traceConfig: traceConfigMock,
+			metrics:     metricsMock,
+			collector:   collectorMock,
+		}
+
+		req := &openapi.SearchTraceTreeOApiRequest{
+			WorkspaceID:  ptr.Of(int64(123)),
+			TraceID:      ptr.Of("trace123"),
+			PlatformType: ptr.Of(common.PlatformType("platform")),
+		}
+
+		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("build request failed", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
+		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
+		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{}) // Empty tenants should trigger an error.
+		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			auth:        authMock,
+			tenant:      tenantMock,
+			workspace:   workspaceMock,
+			rateLimiter: rateLimiter,
+			traceConfig: traceConfigMock,
+			metrics:     metricsMock,
+			collector:   collectorMock,
+		}
+
+		req := &openapi.SearchTraceTreeOApiRequest{
+			WorkspaceID:  ptr.Of(int64(123)),
+			TraceID:      ptr.Of("trace123"),
+			PlatformType: ptr.Of(common.PlatformType("platform")),
+		}
+
+		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("trace service failed", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
+		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		// 设置期望
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
+		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
+		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1", "tenant2"})
+		traceServiceMock.EXPECT().SearchTraceOApi(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			benefit:      benefitMock,
+			tenant:       tenantMock,
+			workspace:    workspaceMock,
+			rateLimiter:  rateLimiter,
+			traceConfig:  traceConfigMock,
+			metrics:      metricsMock,
+			collector:    collectorMock,
+		}
+
+		req := &openapi.SearchTraceTreeOApiRequest{
+			WorkspaceID:  ptr.Of(int64(123)),
+			TraceID:      ptr.Of("trace123"),
+			PlatformType: ptr.Of(common.PlatformType("platform")),
+		}
+
+		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+}
+
+// Add unit tests for ListSpansOApi.
 func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 	t.Run("successful list spans", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -2130,7 +2494,7 @@ func TestOpenAPIApplication_ListTracesOApi(t *testing.T) {
 	})
 }
 
-// 补充AllowByKey测试
+// Add unit tests for AllowByKey.
 func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2179,7 +2543,7 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 		}
 
 		result := app.AllowByKey(context.Background(), "test_key")
-		assert.True(t, result) // 出错时默认允许
+		assert.True(t, result) // Defaults to allowing requests when an error occurs.
 	})
 
 	t.Run("allow by key - rate limiter error", func(t *testing.T) {
@@ -2195,7 +2559,7 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 		}
 
 		result := app.AllowByKey(context.Background(), "test_key")
-		assert.True(t, result) // 出错时默认允许
+		assert.True(t, result) // Defaults to allowing requests when an error occurs.
 	})
 }
 
