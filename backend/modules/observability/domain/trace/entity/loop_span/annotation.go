@@ -11,12 +11,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
+	"github.com/spf13/cast"
 )
 
 type (
@@ -187,13 +187,13 @@ func (a *Annotation) ToFornaxAnnotation(ctx context.Context) (fa *annotation.Ann
 		fa.Value = lo.ToPtr(a.Value.StringValue)
 	case annotation.ValueTypeLong:
 		fa.ValueType = lo.ToPtr(annotation.ValueTypeLong)
-		fa.Value = lo.ToPtr(strconvh.FormatInt64(a.Value.LongValue))
+		fa.Value = lo.ToPtr(cast.ToString(a.Value.LongValue))
 	case annotation.ValueTypeDouble:
 		fa.ValueType = lo.ToPtr(annotation.ValueTypeDouble)
-		fa.Value = lo.ToPtr(strconvh.FormatFloat64(a.Value.FloatValue))
+		fa.Value = lo.ToPtr(cast.ToString(a.Value.FloatValue))
 	case annotation.ValueTypeBool:
 		fa.ValueType = lo.ToPtr(annotation.ValueTypeBool)
-		fa.Value = lo.ToPtr(strconvh.FormatBool(a.Value.BoolValue))
+		fa.Value = lo.ToPtr(cast.ToString(a.Value.BoolValue))
 	default:
 		logs.CtxWarn(ctx, "toFornaxAnnotation invalid ValueType", "ValueType", a.Value.ValueType)
 	}

@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/apaxa-go/helper/strconvh"
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -32,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/spf13/cast"
 )
 
 var _ taskexe.Processor = (*AutoEvaluteProcessor)(nil)
@@ -139,8 +139,8 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		Session:          session,
 		Ext: map[string]string{"workspace_id": strconv.FormatInt(trigger.Task.WorkspaceID, 10),
 			"span_id":     trigger.Span.SpanID,
-			"task_id":     strconvh.FormatInt64(trigger.Task.ID),
-			"task_run_id": strconvh.FormatInt64(taskRun.ID)},
+			"task_id":     cast.ToString(trigger.Task.ID),
+			"task_run_id": cast.ToString(taskRun.ID)},
 	})
 
 	if err != nil {
@@ -341,13 +341,13 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 			FromEvalSet: []*expt.FieldMapping{},
 		},
 		CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
-			SourceTargetID: gptr.Of(strconvh.FormatInt64(currentTask.ID)),
+			SourceTargetID: gptr.Of(cast.ToString(currentTask.ID)),
 			EvalTargetType: gptr.Of(eval_target_d.EvalTargetType_Trace),
 		},
 		ExptType:     gptr.Of(expt.ExptType_Online),
 		MaxAliveTime: gptr.Of(maxAliveTime),
 		SourceType:   gptr.Of(expt.SourceType_AutoTask),
-		SourceID:     gptr.Of(strconvh.FormatInt64(currentTask.ID)),
+		SourceID:     gptr.Of(cast.ToString(currentTask.ID)),
 		Session:      sessionInfo,
 	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
