@@ -14,7 +14,6 @@ require (
 	github.com/alitto/pond/v2 v2.3.4
 	github.com/apache/rocketmq-client-go/v2 v2.1.2
 	github.com/apache/thrift v0.19.0
-	github.com/apaxa-go/helper v0.0.0-20180607175117-61d31b1c31c3
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/baidubce/bce-qianfan-sdk/go/qianfan v0.0.15
@@ -100,7 +99,10 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+require (
+	github.com/apaxa-go/helper v0.0.0-20180607175117-61d31b1c31c3 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+)
 
 require github.com/brianvoe/gofakeit/v6 v6.28.0
 
