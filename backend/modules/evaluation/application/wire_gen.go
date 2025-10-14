@@ -229,6 +229,20 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService
 }
 
+func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metrics.Meter, authClient authservice.Client, userClient userservice.Client) evaluation.EvaluationOpenAPIService {
+	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
+	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(client)
+	iEvaluationSetService := service.NewEvaluationSetServiceImpl(iDatasetRPCAdapter)
+	evaluationSetVersionService := service.NewEvaluationSetVersionServiceImpl(iDatasetRPCAdapter)
+	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
+	evaluationSetSchemaService := service.NewEvaluationSetSchemaServiceImpl(iDatasetRPCAdapter)
+	openAPIEvaluationSetMetrics := metrics4.NewOpenAPIEvaluationSetMetrics(meter)
+	iUserProvider := foundation.NewUserRPCProvider(userClient)
+	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
+	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationSetMetrics, userInfoService)
+	return evaluationOpenAPIService
+}
+
 // wire.go:
 
 var (
@@ -258,6 +272,10 @@ var (
 	evaluationSetSet = wire.NewSet(
 		NewEvaluationSetApplicationImpl,
 		evalSetDomainService, metrics4.NewEvaluationSetMetrics, service.NewEvaluationSetSchemaServiceImpl, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
+	)
+
+	evaluationOpenAPISet = wire.NewSet(
+		NewEvaluationOpenApiApplicationImpl, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, service.NewEvaluationSetSchemaServiceImpl, data.NewDatasetRPCAdapter, metrics4.NewOpenAPIEvaluationSetMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
 	)
 
 	targetDomainService = wire.NewSet(service.NewEvalTargetServiceImpl, NewSourceTargetOperators, prompt.NewPromptRPCAdapter, target.NewEvalTargetRepo, mysql3.NewEvalTargetDAO, mysql3.NewEvalTargetRecordDAO, mysql3.NewEvalTargetVersionDAO)
