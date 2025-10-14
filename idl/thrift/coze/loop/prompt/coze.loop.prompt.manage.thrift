@@ -49,6 +49,7 @@ struct CreatePromptRequest {
     11: optional string prompt_name (vt.not_nil="true", vt.min_size="1")
     12: optional string prompt_key (vt.not_nil="true", vt.min_size="1")
     13: optional string prompt_description
+    14: optional prompt.PromptType prompt_type
 
     21: optional prompt.PromptDetail draft_detail
 
@@ -136,6 +137,7 @@ struct ListPromptRequest {
     11: optional string key_word
     12: optional list<string> created_bys
     13: optional bool committed_only
+    14: optional list<prompt.PromptType> filter_prompt_types // 向前兼容，如果不传，默认查询normal类型的Prompt
 
     127: optional i32 page_num (vt.not_nil="true", vt.gt="0")
     128: optional i32 page_size (vt.not_nil="true", vt.gt="0", vt.le="100")

@@ -18,8 +18,13 @@ struct PromptBasic {
     6: optional i64 created_at (api.js_conv="true", go.tag='json:"created_at"')
     7: optional i64 updated_at (api.js_conv="true", go.tag='json:"updated_at"')
     8: optional i64 latest_committed_at (api.js_conv="true", go.tag='json:"latest_committed_at"')
+    9: optional PromptType prompt_type
 
 }
+
+typedef string PromptType (ts.enum="true")
+const PromptType PromptType_Normal = "normal"
+const PromptType PromptType_Snippet = "snippet"
 
 struct PromptCommit {
     1: optional PromptDetail detail
@@ -61,6 +66,7 @@ struct PromptTemplate {
     1: optional TemplateType template_type
     2: optional list<Message> messages
     3: optional list<VariableDef> variable_defs
+    4: optional bool has_snippet
 
     100: optional map<string, string> metadata
 }
