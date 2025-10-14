@@ -6,7 +6,6 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
@@ -15,10 +14,10 @@ import (
 
 // TTL策略常量
 const (
-	TaskTTL         = 30 * time.Minute // 单个任务/任务运行记录：30分钟
-	TaskListTTL     = 10 * time.Minute // 任务列表：10分钟
-	TaskRunTTL      = 30 * time.Minute // 单个任务运行记录：30分钟
-	TaskRunListTTL  = 5 * time.Minute  // 任务运行记录列表：5分钟
+	TaskTTL        = 30 * time.Minute // 单个任务/任务运行记录：30分钟
+	TaskListTTL    = 10 * time.Minute // 任务列表：10分钟
+	TaskRunTTL     = 30 * time.Minute // 单个任务运行记录：30分钟
+	TaskRunListTTL = 5 * time.Minute  // 任务运行记录列表：5分钟
 )
 
 // CacheManager 缓存管理器接口
@@ -27,17 +26,17 @@ type CacheManager interface {
 	GetTask(ctx context.Context, id int64) (*model.ObservabilityTask, error)
 	SetTask(ctx context.Context, task *model.ObservabilityTask) error
 	DeleteTask(ctx context.Context, id int64) error
-	
+
 	// 任务列表缓存操作
 	GetTaskList(ctx context.Context, key string) ([]*model.ObservabilityTask, error)
 	SetTaskList(ctx context.Context, key string, tasks []*model.ObservabilityTask) error
 	DeleteTaskListByPattern(ctx context.Context, pattern string) error
-	
+
 	// 任务运行记录缓存操作
 	GetTaskRun(ctx context.Context, id int64) (*model.ObservabilityTaskRun, error)
 	SetTaskRun(ctx context.Context, taskRun *model.ObservabilityTaskRun) error
 	DeleteTaskRun(ctx context.Context, id int64) error
-	
+
 	// 任务运行记录列表缓存操作
 	GetTaskRunList(ctx context.Context, key string) ([]*model.ObservabilityTaskRun, error)
 	SetTaskRunList(ctx context.Context, key string, taskRuns []*model.ObservabilityTaskRun) error
@@ -66,17 +65,17 @@ func (c *cacheManagerImpl) GetTask(ctx context.Context, id int64) (*model.Observ
 		logs.CtxWarn(ctx, "Failed to get task from cache: %v", err)
 		return nil, err
 	}
-	
+
 	if data == "" {
 		return nil, nil // 缓存未命中
 	}
-	
+
 	var task model.ObservabilityTask
 	if err := json.Unmarshal([]byte(data), &task); err != nil {
 		logs.CtxWarn(ctx, "Failed to unmarshal task from cache: %v", err)
 		return nil, err
 	}
-	
+
 	return &task, nil
 }
 
@@ -88,12 +87,12 @@ func (c *cacheManagerImpl) SetTask(ctx context.Context, task *model.Observabilit
 		logs.CtxWarn(ctx, "Failed to marshal task for cache: %v", err)
 		return err
 	}
-	
+
 	if err := c.redisClient.Set(ctx, key, string(data), TaskTTL); err != nil {
 		logs.CtxWarn(ctx, "Failed to set task cache: %v", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -114,17 +113,17 @@ func (c *cacheManagerImpl) GetTaskList(ctx context.Context, key string) ([]*mode
 		logs.CtxWarn(ctx, "Failed to get task list from cache: %v", err)
 		return nil, err
 	}
-	
+
 	if data == "" {
 		return nil, nil // 缓存未命中
 	}
-	
+
 	var tasks []*model.ObservabilityTask
 	if err := json.Unmarshal([]byte(data), &tasks); err != nil {
 		logs.CtxWarn(ctx, "Failed to unmarshal task list from cache: %v", err)
 		return nil, err
 	}
-	
+
 	return tasks, nil
 }
 
@@ -135,12 +134,12 @@ func (c *cacheManagerImpl) SetTaskList(ctx context.Context, key string, tasks []
 		logs.CtxWarn(ctx, "Failed to marshal task list for cache: %v", err)
 		return err
 	}
-	
+
 	if err := c.redisClient.Set(ctx, key, string(data), TaskListTTL); err != nil {
 		logs.CtxWarn(ctx, "Failed to set task list cache: %v", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -160,17 +159,17 @@ func (c *cacheManagerImpl) GetTaskRun(ctx context.Context, id int64) (*model.Obs
 		logs.CtxWarn(ctx, "Failed to get task run from cache: %v", err)
 		return nil, err
 	}
-	
+
 	if data == "" {
 		return nil, nil // 缓存未命中
 	}
-	
+
 	var taskRun model.ObservabilityTaskRun
 	if err := json.Unmarshal([]byte(data), &taskRun); err != nil {
 		logs.CtxWarn(ctx, "Failed to unmarshal task run from cache: %v", err)
 		return nil, err
 	}
-	
+
 	return &taskRun, nil
 }
 
@@ -182,12 +181,12 @@ func (c *cacheManagerImpl) SetTaskRun(ctx context.Context, taskRun *model.Observ
 		logs.CtxWarn(ctx, "Failed to marshal task run for cache: %v", err)
 		return err
 	}
-	
+
 	if err := c.redisClient.Set(ctx, key, string(data), TaskRunTTL); err != nil {
 		logs.CtxWarn(ctx, "Failed to set task run cache: %v", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -208,17 +207,17 @@ func (c *cacheManagerImpl) GetTaskRunList(ctx context.Context, key string) ([]*m
 		logs.CtxWarn(ctx, "Failed to get task run list from cache: %v", err)
 		return nil, err
 	}
-	
+
 	if data == "" {
 		return nil, nil // 缓存未命中
 	}
-	
+
 	var taskRuns []*model.ObservabilityTaskRun
 	if err := json.Unmarshal([]byte(data), &taskRuns); err != nil {
 		logs.CtxWarn(ctx, "Failed to unmarshal task run list from cache: %v", err)
 		return nil, err
 	}
-	
+
 	return taskRuns, nil
 }
 
@@ -229,12 +228,12 @@ func (c *cacheManagerImpl) SetTaskRunList(ctx context.Context, key string, taskR
 		logs.CtxWarn(ctx, "Failed to marshal task run list for cache: %v", err)
 		return err
 	}
-	
+
 	if err := c.redisClient.Set(ctx, key, string(data), TaskRunListTTL); err != nil {
 		logs.CtxWarn(ctx, "Failed to set task run list cache: %v", err)
 		return err
 	}
-	
+
 	return nil
 }
 
