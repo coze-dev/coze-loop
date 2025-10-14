@@ -39,14 +39,11 @@ func NewClipProcessorFactory() Factory {
 }
 
 func clipSpanField(content string) string {
-	if content == "" {
+	if content == "" || len(content) <= clipProcessorMaxLength {
 		return content
 	}
 	if clipped, ok := clipJSONContent(content); ok {
 		return clipped
-	}
-	if len(content) <= clipProcessorMaxLength {
-		return content
 	}
 	return clipPlainText(content)
 }
