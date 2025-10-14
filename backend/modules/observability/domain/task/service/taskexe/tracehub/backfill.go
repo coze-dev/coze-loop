@@ -91,10 +91,9 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	h.flushErrLock.Unlock()
 
 	// 5. Retrieve span data from the observability service
-	listErr := h.listSpans(ctx, sub)
+	listErr := h.listAndSendSpans(ctx, sub)
 	if listErr != nil {
 		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.GetID(), listErr)
-		// continue on error without interrupting the flow
 	}
 
 	// 6. Synchronously wait for completion to ensure all data is processed
@@ -143,7 +142,7 @@ func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context, sub *spanSubsc
 	return sub.tr.RunStatus == task.RunStatusDone, nil
 }
 
-func (h *TraceHubServiceImpl) listSpans(ctx context.Context, sub *spanSubscriber) error {
+func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSubscriber) error {
 	backfillTime := sub.t.GetRule().GetBackfillEffectiveTime()
 	tenants, err := h.getTenants(ctx, loop_span.PlatformType(sub.t.GetRule().GetSpanFilters().GetPlatformType()))
 	if err != nil {

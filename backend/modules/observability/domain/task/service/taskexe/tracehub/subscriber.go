@@ -49,7 +49,7 @@ func (s *spanSubscriber) Sampled() bool {
 
 	const base = 10000
 	threshold := int64(float64(base) * t.GetRule().GetSampler().GetSampleRate())
-	r := rand.Int63n(base) // todo: rand seed
+	r := rand.Int63n(base)
 	return r <= threshold
 }
 func (s *spanSubscriber) getTask() *task.Task {

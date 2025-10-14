@@ -48,7 +48,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			select {
 			case <-h.scheduledTaskTicker.C:
 				// Execute scheduled task
-				h.transformTaskStatus()
+				h.transformTaskStatus() //抢锁
 			case <-h.stopChan:
 				// Stop scheduled task
 				h.scheduledTaskTicker.Stop()
@@ -61,7 +61,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 			select {
 			case <-h.syncTaskTicker.C:
 				// Execute scheduled task
-				h.syncTaskRunCounts()
+				h.syncTaskRunCounts() //抢锁
 				h.syncTaskCache()
 			case <-h.stopChan:
 				// Stop scheduled task
@@ -339,8 +339,6 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 
 // processBatch synchronizes TaskRun counts in batches
 func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRunCountInfo) {
-	logs.CtxInfo(ctx, "Start processing batch, batchSize:%d", len(batch))
-
 	// 1. Read Redis count data in batch
 	for _, info := range batch {
 		// Read taskruncount

@@ -73,14 +73,13 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 }
 
 func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loop_span.Span) ([]*spanSubscriber, error) {
-	logs.CtxInfo(ctx, "getSubscriberOfSpan start")
 	var subscribers []*spanSubscriber
-	taskPOs, err := h.listNonFinalTask(ctx)
+	taskDOs, err := h.listNonFinalTask(ctx)
 	if err != nil {
-		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		logs.CtxError(ctx, "Failed to get non-final task list, err: %v", err)
 		return nil, err
 	}
-	taskList := tconv.TaskDOs2DTOs(ctx, taskPOs, nil)
+	taskList := tconv.TaskDOs2DTOs(ctx, taskDOs, nil)
 	for _, taskDO := range taskList {
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		subscribers = append(subscribers, &spanSubscriber{
