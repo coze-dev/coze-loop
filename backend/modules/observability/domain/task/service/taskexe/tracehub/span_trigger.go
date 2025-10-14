@@ -21,7 +21,7 @@ import (
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan) error {
 	ctx = h.fillCtx(ctx)
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", rawSpan.LogID, rawSpan.TraceID, rawSpan.SpanID)
-	logs.CtxInfo(ctx, "TraceHub start, log_suffix=%s", logSuffix)
+	logs.CtxInfo(ctx, "auto_task start, log_suffix=%s", logSuffix)
 	var tags []metrics.T
 	// 1、Convert to standard span and perform initial filtering based on space_id
 	span := rawSpan.RawSpanConvertToLoopSpan()

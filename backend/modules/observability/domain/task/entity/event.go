@@ -22,7 +22,8 @@ type RawSpan struct {
 	SpanName      string            `json:"_span_name"`
 	SpanType      string            `json:"_span_type"`
 	ServerEnv     *ServerInRawSpan  `json:"_server_env"`
-	Tags          map[string]any    `json:"_tags"` // value can be: [float64, int64, bool, string, []byte]
+	Tags          map[string]any    `json:"_tags"`        // value can be: [float64, int64, bool, string, []byte]
+	SystemTags    map[string]any    `json:"_system_tags"` // value can be: [float64, int64, bool, string, []byte]
 	Tenant        string            `json:"tenant"`
 	SensitiveTags *SensitiveTags    `json:"sensitive_tags"`
 }
@@ -100,6 +101,22 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	tagsBool := make(map[string]bool)
 	tagsByte := make(map[string]string)
 	for k, v := range s.Tags {
+		switch v.(type) {
+		case string:
+			tagsString[k] = v.(string)
+		case int64:
+			tagsLong[k] = v.(int64)
+		case float64:
+			tagsDouble[k] = v.(float64)
+		case bool:
+			tagsBool[k] = v.(bool)
+		case []byte:
+			tagsByte[k] = string(v.([]byte))
+		default:
+			tagsString[k] = ""
+		}
+	}
+	for k, v := range s.SystemTags {
 		switch v.(type) {
 		case string:
 			tagsString[k] = v.(string)
