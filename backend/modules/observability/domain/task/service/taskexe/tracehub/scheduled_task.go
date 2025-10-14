@@ -117,7 +117,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		// Task time horizon reached
 		// End when the task end time is reached
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
-		if taskPO.BackfillEffectiveTime != nil && taskPO.EffectiveTime != nil {
+		if taskPO.BackfillEffectiveTime != nil && taskPO.EffectiveTime != nil && backfillTaskRun != nil {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -130,7 +130,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					continue
 				}
 			}
-			if backfillTaskRun.RunStatus != task.RunStatusDone {
+			if backfillTaskRun.RunStatus != task.RunStatusDone && backfillTaskRun != nil {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
