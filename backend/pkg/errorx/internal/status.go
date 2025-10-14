@@ -50,6 +50,14 @@ func (w *statusError) Error() string {
 	return fmt.Sprintf("code=%d message=%s", w.statusCode, w.message)
 }
 
+func (w *statusError) IsAffectStability() bool {
+	return w.ext.IsAffectStability
+}
+
+func (w *statusError) WithAffectStability(affectStability bool) {
+	w.ext.IsAffectStability = affectStability
+}
+
 func (w *statusError) Extra() map[string]string {
 	return w.ext.Extra
 }
