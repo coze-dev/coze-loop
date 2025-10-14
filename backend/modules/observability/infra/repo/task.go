@@ -5,7 +5,6 @@ package repo
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -173,13 +172,6 @@ func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspac
 		return err
 	}
 
-	// 数据库操作成功后，删除缓存（因为无法直接更新部分字段）
-	go func() {
-		// 清理相关列表缓存
-		v.clearListCaches(context.Background(), workspaceID)
-
-	}()
-
 	return nil
 }
 func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask) {
@@ -203,33 +195,7 @@ func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityT
 		return err
 	}
 
-	// 数据库操作成功后，异步清理缓存
-	go func() {
-		// 清理相关列表缓存
-		v.clearListCaches(context.Background(), do.WorkspaceID)
-	}()
-
 	return nil
-}
-
-// clearListCaches 清理与指定 workspace 相关的列表缓存
-func (v *TaskRepoImpl) clearListCaches(ctx context.Context, workspaceID int64) {
-	// 清理任务列表缓存（使用模糊匹配）
-	pattern := fmt.Sprintf("task:list:%d:*", workspaceID)
-	if err := v.TaskRedisDao.DeleteTaskList(ctx, pattern); err != nil {
-		logs.Error("failed to delete task list cache", "pattern", pattern, "err", err)
-	}
-}
-
-// isNonFinalTaskStatus 判断任务状态是否为非最终状态
-func isNonFinalTaskStatus(status string) bool {
-	finalStatuses := []string{"success", "disabled"}
-	for _, finalStatus := range finalStatuses {
-		if status == finalStatus {
-			return false
-		}
-	}
-	return true
 }
 
 func (v *TaskRepoImpl) CreateTaskRun(ctx context.Context, do *entity.TaskRun) (int64, error) {
@@ -251,11 +217,6 @@ func (v *TaskRepoImpl) CreateTaskRun(ctx context.Context, do *entity.TaskRun) (i
 
 	// 4. 异步更新缓存
 	do.ID = createdID
-	go func() {
-		// 清理相关列表缓存(因为TaskRuns列表发生变化，Task的缓存会自然过期)
-		v.clearListCaches(context.Background(), do.WorkspaceID)
-	}()
-
 	return createdID, nil
 }
 func (v *TaskRepoImpl) UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error {
@@ -265,13 +226,6 @@ func (v *TaskRepoImpl) UpdateTaskRun(ctx context.Context, do *entity.TaskRun) er
 	if err != nil {
 		return err
 	}
-
-	// 2. 异步清理缓存
-	go func() {
-		// 清理相关列表缓存(因为TaskRuns信息发生变化，Task的缓存会自然过期)
-		v.clearListCaches(context.Background(), do.WorkspaceID)
-	}()
-
 	return nil
 }
 func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {

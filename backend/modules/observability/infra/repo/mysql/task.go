@@ -370,15 +370,27 @@ func (d *TaskDaoImpl) order(q *query.Query, orderBy string, asc bool) field.Expr
 func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	//todo[xun]: 乐观锁
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
-	q := genquery.Use(v.dbMgr.NewSession(ctx))
-	qd := q.WithContext(ctx).ObservabilityTask
-	qd = qd.Where(q.ObservabilityTask.ID.Eq(id)).Where(q.ObservabilityTask.WorkspaceID.Eq(workspaceID))
-	info, err := qd.Updates(updateMap)
-	if err != nil {
-		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
+	qd := q.WithContext(ctx)
+	qd = qd.Where(q.ID.Eq(id)).Where(q.WorkspaceID.Eq(workspaceID))
+	for i := 0; i < MaxRetries; i++ {
+		// 使用原始 updated_at 作为乐观锁条件
+		existingTask, err := qd.First()
+		if err != nil {
+			return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+		updateMap["updated_at"] = time.Now()
+		info, err := qd.Where(q.UpdatedAt.Eq(existingTask.UpdatedAt)).Updates(updateMap)
+		if err != nil {
+			return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+		logs.CtxInfo(ctx, "TaskRun updated with OCC, id:%d, workspaceID:%d, rowsAffected:%d", id, workspaceID, info.RowsAffected)
+		if info.RowsAffected == 1 {
+			return nil
+		}
+		time.Sleep(RetryDelay)
 	}
-	logs.CtxInfo(ctx, "%d rows updated", info.RowsAffected)
-	return nil
+	return errorx.NewByCode(obErrorx.CommonMySqlErrorCode, errorx.WithExtraMsg("TaskRun update failed with OCC"))
 }
 
 func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error) {

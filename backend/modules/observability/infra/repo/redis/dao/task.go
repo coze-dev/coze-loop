@@ -26,9 +26,6 @@ type ITaskDAO interface {
 	GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error)
 	SetTask(ctx context.Context, task *entity.ObservabilityTask, ttl time.Duration) error
 
-	// TaskList相关
-	DeleteTaskList(ctx context.Context, pattern string) error
-
 	// TaskCount相关
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
 	IncrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error)
