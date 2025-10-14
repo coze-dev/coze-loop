@@ -124,7 +124,6 @@ func NewTraceProcessorBuilder(
 		[]span_processor.Factory{
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
-			span_processor.NewClipProcessorFactory(),
 		},
 		// batch get advance info processors
 		[]span_processor.Factory{
@@ -143,7 +142,6 @@ func NewTraceProcessorBuilder(
 		[]span_processor.Factory{
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
-			span_processor.NewClipProcessorFactory(),
 		})
 }
 
