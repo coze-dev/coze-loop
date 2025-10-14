@@ -496,7 +496,7 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 		})
 		if err != nil {
 			logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-			return nil, err
+			break
 		}
 
 		// Add tasks from the current page to the full list
