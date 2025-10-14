@@ -191,7 +191,10 @@ func SamplerDO2DTO(sampler *entity.Sampler) *task.Sampler {
 
 func EffectiveTimeDO2DTO(effectiveTime *entity.EffectiveTime) *task.EffectiveTime {
 	if effectiveTime == nil {
-		return nil
+		return &task.EffectiveTime{
+			StartAt: ptr.Of(int64(0)),
+			EndAt:   ptr.Of(int64(0)),
+		}
 	}
 	return &task.EffectiveTime{
 		StartAt: ptr.Of(effectiveTime.StartAt),
