@@ -382,7 +382,6 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 	logs.CtxInfo(ctx, "Start updating TaskRun detail in batch, batchSize:%d, batch:%v", len(batch), batch)
 	// 2. Update database in batch
 	for _, info := range batch {
-
 		err := h.updateTaskRunDetail(ctx, info)
 		if err != nil {
 			logs.CtxError(ctx, "Failed to update TaskRun detail",

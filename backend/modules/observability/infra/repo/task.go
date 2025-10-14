@@ -276,7 +276,7 @@ func (v *TaskRepoImpl) UpdateTaskRun(ctx context.Context, do *entity.TaskRun) er
 }
 func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作
-	logs.CtxInfo(ctx, "UpdateTaskRunWithOCC", "id", id, "workspaceID", workspaceID, "updateMap", updateMap)
+	logs.CtxInfo(ctx, "UpdateTaskRunWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
 	err := v.TaskRunDao.UpdateTaskRunWithOCC(ctx, id, workspaceID, updateMap)
 	if err != nil {
 		return err

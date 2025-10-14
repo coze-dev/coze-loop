@@ -215,6 +215,6 @@ func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, wor
 		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
 
-	logs.CtxInfo(ctx, "TaskRun updated with OCC", "id", id, "workspaceID", workspaceID, "rowsAffected", info.RowsAffected)
+	logs.CtxInfo(ctx, "TaskRun updated with OCC, id:%d, workspaceID:%d, rowsAffected:%d", id, workspaceID, info.RowsAffected)
 	return nil
 }
