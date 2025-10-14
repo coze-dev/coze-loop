@@ -13,7 +13,7 @@ import (
 type ClipProcessor struct{}
 
 const (
-	clipProcessorMaxLength = 10 * 1024
+	clipProcessorMaxLength = 1 * 1024
 	clipProcessorSuffix    = "..."
 )
 
