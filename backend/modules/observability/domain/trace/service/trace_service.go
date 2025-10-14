@@ -1135,16 +1135,16 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 	resp.Evaluators = make([]*annotation.AnnotationEvaluator, 0)
 	evaluators := make([]*rpc.Evaluator, 0)
 
-	var err error
 	if req.Name != nil {
 		// 有name直接模糊查询
-		evaluators, err = r.evalSvc.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
+		evaluatorList, err := r.evalSvc.ListEvaluators(ctx, &rpc.ListEvaluatorsParam{
 			WorkspaceID: req.WorkspaceID,
 			Name:        req.Name,
 		})
 		if err != nil {
 			return resp, err
 		}
+		evaluators = append(evaluators, evaluatorList...)
 	} else {
 		// 没有name先查task
 		taskDOs, _, err := r.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
@@ -1180,13 +1180,14 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		for k := range evaluatorVersionIDS {
 			evaluatorVersionIDList = append(evaluatorVersionIDList, k)
 		}
-		evaluators, _, err = r.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+		evaluatorList, _, err := r.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
 			WorkspaceID:         req.WorkspaceID,
 			EvaluatorVersionIds: evaluatorVersionIDList,
 		})
 		if err != nil {
 			return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithMsgParam("evaluatorVersionIDs is invalid, BatchGetEvaluators err: %v", err.Error()))
 		}
+		evaluators = append(evaluators, evaluatorList...)
 	}
 	for _, evaluator := range evaluators {
 		re := &annotation.AnnotationEvaluator{}

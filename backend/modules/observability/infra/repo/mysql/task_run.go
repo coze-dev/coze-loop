@@ -12,7 +12,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -182,7 +181,7 @@ func (v *TaskRunDaoImpl) ListTaskRuns(ctx context.Context, param ListTaskRunPara
 	return results, total, nil
 }
 
-func (d *TaskRunDaoImpl) order(q *query.Query, orderBy string, asc bool) field.Expr {
+func (d *TaskRunDaoImpl) order(q *genquery.Query, orderBy string, asc bool) field.Expr {
 	var orderExpr field.OrderExpr
 	switch orderBy {
 	case "created_at":

@@ -226,6 +226,10 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		ReqOffset:    req.Offset,
 		OrderBy:      req.OrderBy,
 	})
+	if err != nil {
+		logs.CtxError(ctx, "ListTasks err:%v", err)
+		return resp, err
+	}
 	if len(taskDOs) == 0 {
 		logs.CtxInfo(ctx, "GetTasks tasks is nil")
 		return resp, nil

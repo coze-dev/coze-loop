@@ -15,7 +15,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -145,7 +144,7 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 }
 
 // 处理任务过滤条件
-func (v *TaskDaoImpl) applyTaskFilters(q *query.Query, taskFilters *filter.TaskFilterFields) (field.Expr, error) {
+func (v *TaskDaoImpl) applyTaskFilters(q *genquery.Query, taskFilters *filter.TaskFilterFields) (field.Expr, error) {
 	if taskFilters == nil || len(taskFilters.FilterFields) == 0 {
 		return nil, nil
 	}
@@ -172,7 +171,7 @@ func (v *TaskDaoImpl) applyTaskFilters(q *query.Query, taskFilters *filter.TaskF
 }
 
 // 构建单个过滤条件
-func (v *TaskDaoImpl) buildSingleFilterExpr(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildSingleFilterExpr(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if f.FieldName == nil || f.QueryType == nil {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("field name or query type is nil"))
 	}
@@ -211,7 +210,7 @@ func (v *TaskDaoImpl) combineExpressions(expressions []field.Expr, relation stri
 }
 
 // 构建任务名称过滤条件
-func (v *TaskDaoImpl) buildTaskNameFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskNameFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task name query"))
 	}
@@ -227,7 +226,7 @@ func (v *TaskDaoImpl) buildTaskNameFilter(q *query.Query, f *filter.TaskFilterFi
 }
 
 // 构建任务类型过滤条件
-func (v *TaskDaoImpl) buildTaskTypeFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskTypeFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for task type query"))
 	}
@@ -243,7 +242,7 @@ func (v *TaskDaoImpl) buildTaskTypeFilter(q *query.Query, f *filter.TaskFilterFi
 }
 
 // 构建任务状态过滤条件
-func (v *TaskDaoImpl) buildTaskStatusFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskStatusFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for task status query"))
 	}
@@ -259,7 +258,7 @@ func (v *TaskDaoImpl) buildTaskStatusFilter(q *query.Query, f *filter.TaskFilter
 }
 
 // 构建创建者过滤条件
-func (v *TaskDaoImpl) buildCreatedByFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildCreatedByFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for created_by query"))
 	}
@@ -275,7 +274,7 @@ func (v *TaskDaoImpl) buildCreatedByFilter(q *query.Query, f *filter.TaskFilterF
 }
 
 // 构建采样率过滤条件
-func (v *TaskDaoImpl) buildSampleRateFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildSampleRateFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for sample rate"))
 	}
@@ -302,7 +301,7 @@ func (v *TaskDaoImpl) buildSampleRateFilter(q *query.Query, f *filter.TaskFilter
 }
 
 // 构建任务ID过滤条件
-func (v *TaskDaoImpl) buildTaskIDFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskIDFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task id"))
 	}
@@ -319,7 +318,7 @@ func (v *TaskDaoImpl) buildTaskIDFilter(q *query.Query, f *filter.TaskFilterFiel
 	return q.ObservabilityTask.ID.In(taskIDs...), nil
 }
 
-func (v *TaskDaoImpl) buildUpdateAtFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildUpdateAtFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for update at"))
 	}
@@ -353,7 +352,7 @@ func calculatePagination(reqLimit, reqOffset int32) (int, int) {
 	return limit, offset
 }
 
-func (d *TaskDaoImpl) order(q *query.Query, orderBy string, asc bool) field.Expr {
+func (d *TaskDaoImpl) order(q *genquery.Query, orderBy string, asc bool) field.Expr {
 	var orderExpr field.OrderExpr
 	switch orderBy {
 	case "created_at":
