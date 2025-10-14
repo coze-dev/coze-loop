@@ -99,10 +99,7 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require (
-	github.com/apaxa-go/helper v0.0.0-20180607175117-61d31b1c31c3 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
-)
+require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 
 require github.com/brianvoe/gofakeit/v6 v6.28.0
 
