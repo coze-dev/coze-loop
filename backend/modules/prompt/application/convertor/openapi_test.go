@@ -350,6 +350,30 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 				Version:     ptr.Of("1.0.0"),
 			},
 		},
+		{
+			name: "prompt template metadata",
+			do: &entity.Prompt{
+				ID:        123,
+				SpaceID:   456,
+				PromptKey: "test_prompt",
+				PromptCommit: &entity.PromptCommit{
+					CommitInfo: &entity.CommitInfo{Version: "1.0.0"},
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							Metadata: map[string]string{"commit": "meta"},
+						},
+					},
+				},
+			},
+			want: &openapi.Prompt{
+				WorkspaceID: ptr.Of(int64(456)),
+				PromptKey:   ptr.Of("test_prompt"),
+				Version:     ptr.Of("1.0.0"),
+				PromptTemplate: &openapi.PromptTemplate{
+					Metadata: map[string]string{"commit": "meta"},
+				},
+			},
+		},
 	}
 }
 
@@ -408,6 +432,15 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 						Type: ptr.Of(prompt.VariableTypeString),
 					},
 				},
+			},
+		},
+		{
+			name: "template with metadata",
+			do: &entity.PromptTemplate{
+				Metadata: map[string]string{"k": "v"},
+			},
+			want: &openapi.PromptTemplate{
+				Metadata: map[string]string{"k": "v"},
 			},
 		},
 	}
@@ -824,6 +857,17 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "message with metadata",
+			do: &entity.Message{
+				Role:     entity.RoleAssistant,
+				Metadata: map[string]string{"meta": "value"},
+			},
+			want: &openapi.Message{
+				Role:     ptr.Of(prompt.RoleAssistant),
+				Metadata: map[string]string{"meta": "value"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1102,6 +1146,21 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		{
+			name: "messages with metadata",
+			dtos: []*openapi.Message{
+				{
+					Role:     ptr.Of(prompt.RoleAssistant),
+					Metadata: map[string]string{"meta": "value"},
+				},
+			},
+			want: []*entity.Message{
+				{
+					Role:     entity.RoleAssistant,
+					Metadata: map[string]string{"meta": "value"},
 				},
 			},
 		},

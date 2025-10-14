@@ -342,6 +342,41 @@ func mockPromptCases() []promptTestCase {
 				},
 			},
 		},
+		{
+			name: "prompt template metadata",
+			dto: &prompt.Prompt{
+				PromptCommit: &prompt.PromptCommit{
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							Metadata: map[string]string{"commit-meta": "value"},
+						},
+					},
+				},
+				PromptDraft: &prompt.PromptDraft{
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							Metadata: map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+			do: &entity.Prompt{
+				PromptCommit: &entity.PromptCommit{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							Metadata: map[string]string{"commit-meta": "value"},
+						},
+					},
+				},
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							Metadata: map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -519,6 +554,17 @@ func mockMessageCases() []messageTestCase {
 				Role:             entity.RoleAssistant,
 				Content:          ptr.Of("Final answer"),
 				ReasoningContent: ptr.Of("This is my reasoning process..."),
+			},
+		},
+		{
+			name: "message with metadata",
+			dto: &prompt.Message{
+				Role:     ptr.Of(prompt.RoleAssistant),
+				Metadata: map[string]string{"key": "value"},
+			},
+			do: &entity.Message{
+				Role:     entity.RoleAssistant,
+				Metadata: map[string]string{"key": "value"},
 			},
 		},
 	}
