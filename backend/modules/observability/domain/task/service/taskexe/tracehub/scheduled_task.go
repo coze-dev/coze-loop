@@ -486,7 +486,7 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 					{
 						FieldName: ptr.Of("updated_at"),
 						Values: []string{
-							fmt.Sprintf("%d", time.Now().Add(-time.Hour).UnixMilli()),
+							fmt.Sprintf("%d", time.Now().Add(-24*time.Hour).UnixMilli()),
 						},
 						QueryType: ptr.Of(filter.QueryTypeGt),
 						FieldType: ptr.Of(filter.FieldTypeLong),
