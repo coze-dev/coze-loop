@@ -1697,18 +1697,17 @@ func TestOpenAPIApplication_unpackTenant(t *testing.T) {
 		tenant: tenantMock,
 	}
 
-	// 测试nil spans
+	// Test nil spans.
 	result := app.unpackTenant(context.Background(), nil)
 	assert.Nil(t, result)
 
-	// 测试正常情况
+	// Test normal scenario.
 	tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1")
 	result = app.unpackTenant(context.Background(), []*loop_span.Span{{SpanID: "test"}})
 	assert.Len(t, result, 1)
 	assert.Len(t, result["tenant1"], 1)
 }
 
-// 补充OtelIngestTraces测试
 func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 	t.Run("successful otel ingest", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -1719,12 +1718,12 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
-		// 设置期望
+		// Set expectations.
 		authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
 			AccountAvailable: true,
@@ -1740,13 +1739,13 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			benefit:      benefitMock,
 			tenant:       tenantMock,
 			workspace:    workspaceMock,
-			rateLimiter:  rateLimiterMock.NewRateLimiter(),
+			rateLimiter:  rateLimiterMock,
 			traceConfig:  traceConfigMock,
 			metrics:      metricsMock,
 			collector:    collectorMock,
 		}
 
-		// 创建测试数据
+		// Create test request.
 		req := &openapi.OtelIngestTracesRequest{
 			WorkspaceID:     "123",
 			ContentType:     "application/json",
@@ -1762,12 +1761,12 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 	t.Run("invalid request", func(t *testing.T) {
 		app := &OpenAPIApplication{}
 
-		// nil请求
+		// Nil request should return an error.
 		resp, err := app.OtelIngestTraces(context.Background(), nil)
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 
-		// 空body
+		// Empty body should trigger validation error.
 		resp, err = app.OtelIngestTraces(context.Background(), &openapi.OtelIngestTracesRequest{
 			Body: []byte{},
 		})
@@ -1791,12 +1790,12 @@ func TestOpenAPIApplication_OtelIngestTraces_InvalidCases(t *testing.T) {
 	t.Run("invalid request", func(t *testing.T) {
 		app := &OpenAPIApplication{}
 
-		// nil请求
+		// Nil request should return an error.
 		resp, err := app.OtelIngestTraces(context.Background(), nil)
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 
-		// 空body
+		// Empty body should trigger validation error.
 		resp, err = app.OtelIngestTraces(context.Background(), &openapi.OtelIngestTracesRequest{
 			Body: []byte{},
 		})
@@ -2174,9 +2173,14 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			collector: collectorMock,
 		}
 
+		now := time.Now().UnixMilli()
+		start := now - 3600000
+		end := now
 		req := &openapi.SearchTraceTreeOApiRequest{
 			WorkspaceID:  ptr.Of(int64(123)),
 			TraceID:      ptr.Of("trace123"),
+			StartTime:    &start,
+			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
 		}
 
@@ -2190,14 +2194,12 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 		defer ctrl.Finish()
 
 		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
 		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
-		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
 		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
 		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -2211,9 +2213,14 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			collector:   collectorMock,
 		}
 
+		now := time.Now().UnixMilli()
+		start := now - 3600000
+		end := now
 		req := &openapi.SearchTraceTreeOApiRequest{
 			WorkspaceID:  ptr.Of(int64(123)),
 			TraceID:      ptr.Of("trace123"),
+			StartTime:    &start,
+			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
 		}
 
@@ -2227,7 +2234,6 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 		defer ctrl.Finish()
 
 		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -2236,7 +2242,6 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
 		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
-		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
 		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
 		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{}) // Empty tenants should trigger an error.
@@ -2254,9 +2259,14 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			collector:   collectorMock,
 		}
 
+		now := time.Now().UnixMilli()
+		start := now - 3600000
+		end := now
 		req := &openapi.SearchTraceTreeOApiRequest{
 			WorkspaceID:  ptr.Of(int64(123)),
 			TraceID:      ptr.Of("trace123"),
+			StartTime:    &start,
+			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
 		}
 
@@ -2274,15 +2284,13 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-		rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
 		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
-		// 设置期望
+		// Set expectations.
 		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
-		rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiter).AnyTimes()
 		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
 		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
@@ -2303,9 +2311,14 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			collector:    collectorMock,
 		}
 
+		now := time.Now().UnixMilli()
+		start := now - 3600000
+		end := now
 		req := &openapi.SearchTraceTreeOApiRequest{
 			WorkspaceID:  ptr.Of(int64(123)),
 			TraceID:      ptr.Of("trace123"),
+			StartTime:    &start,
+			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
 		}
 
