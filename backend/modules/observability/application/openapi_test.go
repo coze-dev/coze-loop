@@ -2625,8 +2625,8 @@ func TestUngzip(t *testing.T) {
 		gzipWriter := gzip.NewWriter(&compressed)
 		_, err := gzipWriter.Write(original)
 		assert.NoError(t, err)
-		gzipWriter.Close()
-
+		err = gzipWriter.Close()
+		assert.NoError(t, err)
 		result, err := ungzip("gzip", compressed.Bytes())
 		assert.NoError(t, err)
 		assert.Equal(t, original, result)
