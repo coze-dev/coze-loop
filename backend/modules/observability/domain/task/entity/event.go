@@ -119,17 +119,13 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	for k, v := range s.SystemTags {
 		switch v.(type) {
 		case string:
-			tagsString[k] = v.(string)
+			systemTagsString[k] = v.(string)
 		case int64:
-			tagsLong[k] = v.(int64)
+			systemTagsLong[k] = v.(int64)
 		case float64:
-			tagsDouble[k] = v.(float64)
-		case bool:
-			tagsBool[k] = v.(bool)
-		case []byte:
-			tagsByte[k] = string(v.([]byte))
+			systemTagsDouble[k] = v.(float64)
 		default:
-			tagsString[k] = ""
+			systemTagsString[k] = ""
 		}
 	}
 	tagsLong["input_tokens"] = s.SensitiveTags.InputTokens
