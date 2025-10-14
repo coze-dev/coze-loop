@@ -5,7 +5,6 @@ package tracehub
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -407,21 +406,10 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 		"failed_count":  info.TaskRunFailCount,
 	}
 
-	// Serialize into JSON string
-	runDetailJSON, err := json.Marshal(runDetail)
-	if err != nil {
-		return errors.Wrap(err, "Failed to serialize run_detail")
-	}
-
-	runDetailStr := string(runDetailJSON)
-
-	// Build update map
-	updateMap := map[string]interface{}{
-		"run_detail": &runDetailStr,
-	}
-
 	// Update using optimistic locking
-	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, updateMap)
+	err := h.taskRepo.UpdateTaskRunWithOCC(ctx, info.TaskRunID, 0, map[string]interface{}{
+		"run_detail": ToJSONString(ctx, runDetail),
+	})
 	if err != nil {
 		return errors.Wrap(err, "Failed to update TaskRun")
 	}

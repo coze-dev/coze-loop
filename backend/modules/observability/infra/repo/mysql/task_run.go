@@ -6,6 +6,7 @@ package mysql
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
@@ -201,6 +202,9 @@ func (d *TaskRunDaoImpl) order(q *query.Query, orderBy string, asc bool) field.E
 	return orderExpr.Desc()
 }
 
+const MaxRetries = 3
+const RetryDelay = 100 * time.Millisecond
+
 // UpdateTaskRunWithOCC 乐观并发控制更新
 func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
@@ -208,13 +212,22 @@ func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, wor
 	if workspaceID != 0 {
 		qd = qd.Where(q.WorkspaceID.Eq(workspaceID))
 	}
-
-	// 执行更新操作
-	info, err := qd.Updates(updateMap)
-	if err != nil {
-		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	for i := 0; i < MaxRetries; i++ {
+		// 使用原始 updated_at 作为乐观锁条件
+		existingTaskRun, err := qd.First()
+		if err != nil {
+			return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+		updateMap["updated_at"] = time.Now()
+		info, err := qd.Where(q.UpdatedAt.Eq(existingTaskRun.UpdatedAt)).Updates(updateMap)
+		if err != nil {
+			return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+		logs.CtxInfo(ctx, "TaskRun updated with OCC, id:%d, workspaceID:%d, rowsAffected:%d", id, workspaceID, info.RowsAffected)
+		if info.RowsAffected == 1 {
+			return nil
+		}
+		time.Sleep(RetryDelay)
 	}
-
-	logs.CtxInfo(ctx, "TaskRun updated with OCC, id:%d, workspaceID:%d, rowsAffected:%d", id, workspaceID, info.RowsAffected)
-	return nil
+	return errorx.NewByCode(obErrorx.CommonMySqlErrorCode, errorx.WithExtraMsg("TaskRun update failed with OCC"))
 }
