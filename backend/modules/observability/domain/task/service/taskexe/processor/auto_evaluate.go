@@ -76,7 +76,7 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) e
 	}
 	var evaluatorVersionIDs []int64
 	for _, autoEvaluateConfig := range cfg.TaskConfig.AutoEvaluateConfigs {
-		evaluatorVersionIDs = append(evaluatorVersionIDs, autoEvaluateConfig.EvaluatorID)
+		evaluatorVersionIDs = append(evaluatorVersionIDs, autoEvaluateConfig.EvaluatorVersionID)
 	}
 	if len(evaluatorVersionIDs) == 0 {
 		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
