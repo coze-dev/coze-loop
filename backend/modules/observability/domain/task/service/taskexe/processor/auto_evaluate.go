@@ -98,7 +98,7 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) e
 func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
 	taskRun := tconv.TaskRunDO2DTO(ctx, trigger.TaskRun, nil)
 	workspaceID := trigger.Task.WorkspaceID
-	session := p.getSession(ctx, trigger.Task)
+	sessionInfo := p.getSession(ctx, trigger.Task)
 	var mapping []*task_entity.EvaluateFieldMapping
 	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
@@ -136,7 +136,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		AllowPartialAdd:  gptr.Of(true),
 		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
 		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
-		Session:          session,
+		Session:          sessionInfo,
 		Ext: map[string]string{"workspace_id": strconv.FormatInt(trigger.Task.WorkspaceID, 10),
 			"span_id":     trigger.Span.SpanID,
 			"task_id":     cast.ToString(trigger.Task.ID),
@@ -398,16 +398,6 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 		logs.CtxError(ctx, "[auto_task] OnCreateTaskRunProcessor, CreateTaskRun err, taskRun:%+v, err:%v", taskRun, err)
 		return err
 	}
-	//taskRun.ID = id
-	//taskConfig, err := p.taskRepo.GetTask(ctx, currentTask.GetID(), nil, nil)
-	//if err != nil {
-	//	return err
-	//}
-	//taskConfig.TaskRuns = append(taskConfig.TaskRuns, taskRun)
-	//err = p.taskRepo.UpdateTask(ctx, taskConfig)
-	//if err != nil {
-	//	return err
-	//}
 	return nil
 }
 
