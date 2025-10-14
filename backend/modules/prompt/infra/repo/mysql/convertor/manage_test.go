@@ -214,6 +214,7 @@ func TestBatchBasicPO2PromptDO(t *testing.T) {
 					SpaceID:   100,
 					PromptKey: "test_key",
 					PromptBasic: &entity.PromptBasic{
+						PromptType:    entity.PromptTypeNormal,
 						DisplayName:   "test_name",
 						Description:   "test_description",
 						CreatedBy:     "test_creator",
@@ -280,6 +281,7 @@ func TestPromptPO2DO(t *testing.T) {
 				SpaceID:   100,
 				PromptKey: "test_key",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "test_name",
 					Description:   "test_description",
 					CreatedBy:     "test_creator",
@@ -344,6 +346,7 @@ func TestBasicPO2DO(t *testing.T) {
 				UpdatedAt:     time.Unix(2000, 0),
 			},
 			expected: &entity.PromptBasic{
+				PromptType:    entity.PromptTypeNormal,
 				DisplayName:   "test_name",
 				Description:   "test_description",
 				CreatedBy:     "test_creator",

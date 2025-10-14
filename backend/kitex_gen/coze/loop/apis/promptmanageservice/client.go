@@ -17,6 +17,7 @@ type Client interface {
 	GetPrompt(ctx context.Context, request *manage.GetPromptRequest, callOptions ...callopt.Option) (r *manage.GetPromptResponse, err error)
 	BatchGetPrompt(ctx context.Context, request *manage.BatchGetPromptRequest, callOptions ...callopt.Option) (r *manage.BatchGetPromptResponse, err error)
 	ListPrompt(ctx context.Context, request *manage.ListPromptRequest, callOptions ...callopt.Option) (r *manage.ListPromptResponse, err error)
+	ListParentPrompt(ctx context.Context, request *manage.ListParentPromptRequest, callOptions ...callopt.Option) (r *manage.ListParentPromptResponse, err error)
 	UpdatePrompt(ctx context.Context, request *manage.UpdatePromptRequest, callOptions ...callopt.Option) (r *manage.UpdatePromptResponse, err error)
 	SaveDraft(ctx context.Context, request *manage.SaveDraftRequest, callOptions ...callopt.Option) (r *manage.SaveDraftResponse, err error)
 	CreateLabel(ctx context.Context, request *manage.CreateLabelRequest, callOptions ...callopt.Option) (r *manage.CreateLabelResponse, err error)
@@ -85,6 +86,11 @@ func (p *kPromptManageServiceClient) BatchGetPrompt(ctx context.Context, request
 func (p *kPromptManageServiceClient) ListPrompt(ctx context.Context, request *manage.ListPromptRequest, callOptions ...callopt.Option) (r *manage.ListPromptResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListPrompt(ctx, request)
+}
+
+func (p *kPromptManageServiceClient) ListParentPrompt(ctx context.Context, request *manage.ListParentPromptRequest, callOptions ...callopt.Option) (r *manage.ListParentPromptResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListParentPrompt(ctx, request)
 }
 
 func (p *kPromptManageServiceClient) UpdatePrompt(ctx context.Context, request *manage.UpdatePromptRequest, callOptions ...callopt.Option) (r *manage.UpdatePromptResponse, err error) {
