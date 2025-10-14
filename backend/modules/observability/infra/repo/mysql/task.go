@@ -190,7 +190,7 @@ func (v *TaskDaoImpl) buildSingleFilterExpr(q *query.Query, f *filter.TaskFilter
 		return v.buildSampleRateFilter(q, f)
 	case "task_id":
 		return v.buildTaskIDFilter(q, f)
-	case "update_at":
+	case "updated_at":
 		return v.buildUpdateAtFilter(q, f)
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
@@ -330,9 +330,9 @@ func (v *TaskDaoImpl) buildUpdateAtFilter(q *query.Query, f *filter.TaskFilterFi
 	}
 	switch *f.QueryType {
 	case filter.QueryTypeGt:
-		return q.ObservabilityTask.UpdatedAt.Gt(time.Unix(int64(updateAtLatest), 0)), nil
+		return q.ObservabilityTask.UpdatedAt.Gt(time.UnixMilli(int64(updateAtLatest))), nil
 	case filter.QueryTypeLt:
-		return q.ObservabilityTask.UpdatedAt.Lt(time.Unix(int64(updateAtLatest), 0)), nil
+		return q.ObservabilityTask.UpdatedAt.Lt(time.UnixMilli(int64(updateAtLatest))), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for update at"))
 	}
