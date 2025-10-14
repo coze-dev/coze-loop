@@ -35,6 +35,7 @@ func TaskDOs2DTOs(ctx context.Context, taskPOs []*entity.ObservabilityTask, user
 	}
 	return taskList
 }
+
 func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[string]*entity_common.UserInfo) *task.Task {
 	if v == nil {
 		return nil
@@ -137,6 +138,7 @@ func AutoEvaluateConfigDO2DTO(v *entity.AutoEvaluateConfig) *task.AutoEvaluateCo
 		FieldMappings:      fieldMappings,
 	}
 }
+
 func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 	if v == nil {
 		return nil
@@ -166,6 +168,7 @@ func RuleDO2DTO(spanFilter *filter.SpanFilterFields, effectiveTime *entity.Effec
 		BackfillEffectiveTime: EffectiveTimeDO2DTO(backfillEffectiveTime),
 	}
 }
+
 func SpanFilterPO2DO(ctx context.Context, spanFilter *string) *filter.SpanFilterFields {
 	if spanFilter == nil {
 		return nil
@@ -256,6 +259,7 @@ func AutoEvaluateRunConfigDO2DTO(v *entity.AutoEvaluateRunConfig) *task.AutoEval
 		Status:       v.Status,
 	}
 }
+
 func DataReflowRunConfigDO2DTO(v *entity.DataReflowRunConfig) *task.DataReflowRunConfig {
 	if v == nil {
 		return nil
@@ -357,6 +361,7 @@ func EffectiveTimeDTO2DO(effectiveTime *task.EffectiveTime) *entity.EffectiveTim
 		EndAt:   *effectiveTime.EndAt,
 	}
 }
+
 func SamplerDTO2DO(sampler *task.Sampler) *entity.Sampler {
 	if sampler == nil {
 		return nil
@@ -370,6 +375,7 @@ func SamplerDTO2DO(sampler *task.Sampler) *entity.Sampler {
 		CycleTimeUnit: sampler.GetCycleTimeUnit(),
 	}
 }
+
 func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 	if taskConfig == nil {
 		return nil
@@ -432,6 +438,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 		DataReflowConfig:    dataReflowConfigs,
 	}
 }
+
 func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 	if taskRun == nil {
 		return nil
@@ -450,7 +457,6 @@ func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 		CreatedAt:      time.UnixMilli(taskRun.GetBaseInfo().GetCreatedAt()),
 		UpdatedAt:      time.UnixMilli(taskRun.GetBaseInfo().GetUpdatedAt()),
 	}
-
 }
 
 func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
