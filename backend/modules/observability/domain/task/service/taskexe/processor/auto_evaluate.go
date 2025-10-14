@@ -109,15 +109,15 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		return nil
 	}
 	taskTTL := trigger.Task.GetTaskttl()
-	p.taskRepo.IncrTaskCount(ctx, trigger.Task.ID, taskTTL)
-	p.taskRepo.IncrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+	_ = p.taskRepo.IncrTaskCount(ctx, trigger.Task.ID, taskTTL)
+	_ = p.taskRepo.IncrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 	taskCount, _ := p.taskRepo.GetTaskCount(ctx, trigger.Task.ID)
 	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, trigger.Task.ID, taskRun.ID)
 	if (trigger.Task.Sampler.CycleCount != 0 && taskRunCount > trigger.Task.Sampler.CycleCount) ||
 		(taskCount > trigger.Task.Sampler.SampleSize) {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
-		p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
-		p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 		return nil
 	}
 	_, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
@@ -144,8 +144,8 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 	})
 
 	if err != nil {
-		p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
-		p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 		return err
 	}
 	return nil
@@ -195,6 +195,10 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 			RunStartAt:  runStartAt,
 			RunEndAt:    runEndAt,
 		})
+		if err != nil {
+			logs.CtxError(ctx, "OnCreateTaskChange failed, taskID:%d, err:%v", currentTask.ID, err)
+			return err
+		}
 		err = p.OnUpdateTaskChange(ctx, currentTask, task.TaskStatusRunning)
 		if err != nil {
 			logs.CtxError(ctx, "OnCreateTaskChange failed, taskID:%d, err:%v", currentTask.ID, err)

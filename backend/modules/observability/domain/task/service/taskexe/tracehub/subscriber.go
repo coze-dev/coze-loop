@@ -30,7 +30,6 @@ type spanSubscriber struct {
 	t            *task.Task
 	tr           *task.TaskRun
 	processor    taskexe.Processor
-	buf          []*loop_span.Span
 	bufCap       int // max buffer size
 
 	flushWait        sync.WaitGroup

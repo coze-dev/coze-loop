@@ -133,7 +133,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
-					h.sendBackfillMessage(ctx, &entity.BackFillEvent{
+					_ = h.sendBackfillMessage(ctx, &entity.BackFillEvent{
 						TaskID:  taskPO.ID,
 						SpaceID: taskPO.WorkspaceID,
 					})
@@ -157,7 +157,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
-					h.sendBackfillMessage(ctx, &entity.BackFillEvent{
+					_ = h.sendBackfillMessage(ctx, &entity.BackFillEvent{
 						TaskID:  taskPO.ID,
 						SpaceID: taskPO.WorkspaceID,
 					})
@@ -187,6 +187,10 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					RunStartAt:  taskPO.EffectiveTime.StartAt,
 					RunEndAt:    taskPO.EffectiveTime.EndAt,
 				})
+				if err != nil {
+					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					continue
+				}
 				err = proc.OnUpdateTaskChange(ctx, taskPO, task.TaskStatusRunning)
 				if err != nil {
 					logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
@@ -206,7 +210,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		}
 		// Handle taskRun
-		if taskPO.TaskStatus == task.TaskStatusRunning && taskPO.TaskStatus == task.TaskStatusPending {
+		if taskPO.TaskStatus == task.TaskStatusRunning || taskPO.TaskStatus == task.TaskStatusPending {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskPO.ID, taskRun.RunEndAt)
 			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
@@ -353,7 +357,6 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 		successCount, err := h.taskRepo.GetTaskRunSuccessCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || successCount == -1 {
 			logs.CtxWarn(ctx, "Failed to get TaskRunSuccessCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
-			successCount = 0
 		} else {
 			info.TaskRunSuccCount = successCount
 		}
@@ -362,7 +365,6 @@ func (h *TraceHubServiceImpl) processBatch(ctx context.Context, batch []*TaskRun
 		failCount, err := h.taskRepo.GetTaskRunFailCount(ctx, info.TaskID, info.TaskRunID)
 		if err != nil || failCount == -1 {
 			logs.CtxWarn(ctx, "Failed to get TaskRunFailCount, taskID:%d, taskRunID:%d, err:%v", info.TaskID, info.TaskRunID, err)
-			failCount = 0
 		} else {
 			info.TaskRunFailCount = failCount
 		}

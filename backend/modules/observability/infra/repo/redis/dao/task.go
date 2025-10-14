@@ -5,17 +5,13 @@ package dao
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -56,24 +52,6 @@ func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
 }
 func (q *TaskDAOImpl) makeTaskRunCountCacheKey(taskID, taskRunID int64) string {
 	return fmt.Sprintf("count_%d_%d", taskID, taskRunID)
-}
-
-// generateFilterHash 生成过滤条件的 hash
-func (q *TaskDAOImpl) generateFilterHash(param mysql.ListTaskParam) string {
-	if param.TaskFilters == nil {
-		return "no_filter"
-	}
-
-	// 将过滤条件序列化为 JSON 字符串
-	filterBytes, err := json.Marshal(param.TaskFilters)
-	if err != nil {
-		logs.Error("failed to marshal filter: %v", err)
-		return "no_filter"
-	}
-
-	// 生成 MD5 hash
-	hash := md5.Sum(filterBytes)
-	return hex.EncodeToString(hash[:])
 }
 
 // GetTask 获取单个任务缓存

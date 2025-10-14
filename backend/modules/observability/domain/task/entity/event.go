@@ -101,29 +101,29 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	tagsBool := make(map[string]bool)
 	tagsByte := make(map[string]string)
 	for k, v := range s.Tags {
-		switch v.(type) {
+		switch val := v.(type) {
 		case string:
-			tagsString[k] = v.(string)
+			tagsString[k] = val
 		case int64:
-			tagsLong[k] = v.(int64)
+			tagsLong[k] = val
 		case float64:
-			tagsDouble[k] = v.(float64)
+			tagsDouble[k] = val
 		case bool:
-			tagsBool[k] = v.(bool)
+			tagsBool[k] = val
 		case []byte:
-			tagsByte[k] = string(v.([]byte))
+			tagsByte[k] = string(val)
 		default:
 			tagsString[k] = ""
 		}
 	}
 	for k, v := range s.SystemTags {
-		switch v.(type) {
+		switch val := v.(type) {
 		case string:
-			systemTagsString[k] = v.(string)
+			systemTagsString[k] = val
 		case int64:
-			systemTagsLong[k] = v.(int64)
+			systemTagsLong[k] = val
 		case float64:
-			systemTagsDouble[k] = v.(float64)
+			systemTagsDouble[k] = val
 		default:
 			systemTagsString[k] = ""
 		}

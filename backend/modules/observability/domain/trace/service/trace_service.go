@@ -1133,9 +1133,8 @@ func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, evalSvc 
 func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
 	resp := &ListAnnotationEvaluatorsResp{}
 	resp.Evaluators = make([]*annotation.AnnotationEvaluator, 0)
-	var (
-		evaluators = make([]*rpc.Evaluator, 0)
-	)
+	evaluators := make([]*rpc.Evaluator, 0)
+
 	var err error
 	if req.Name != nil {
 		// 有name直接模糊查询

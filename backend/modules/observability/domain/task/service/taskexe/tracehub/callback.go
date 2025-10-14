@@ -47,6 +47,9 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 			turn.GetStartTimeFromExt()/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
 			turn.GetStartTimeFromExt()/1000+10*time.Minute.Milliseconds(),
 		)
+		if err != nil {
+			return err
+		}
 		if len(spans) == 0 {
 			return fmt.Errorf("span not found, span_id: %s", turn.GetSpanIDFromExt())
 		}
