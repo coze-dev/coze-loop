@@ -459,12 +459,12 @@ func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.O
 }
 
 func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
-	var taskPOs []*entity.ObservabilityTask
-	//taskPOs, err := h.listNonFinalTask(ctx)
-	//if err != nil {
-	//	logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-	//	return nil, err
-	//}
+	var taskDOs []*entity.ObservabilityTask
+	taskDOs, err := h.listNonFinalTask(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		return nil, err
+	}
 	var offset int32 = 0
 	const limit int32 = 1000
 	// Paginate through all tasks
@@ -477,19 +477,20 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 					{
 						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
 						Values: []string{
-							string(task.TaskStatusUnstarted),
+							string(task.TaskStatusSuccess),
+							string(task.TaskStatusDisabled),
 						},
-						QueryType: ptr.Of(filter.QueryTypeNotIn),
+						QueryType: ptr.Of(filter.QueryTypeIn),
 						FieldType: ptr.Of(filter.FieldTypeString),
 					},
-					//{
-					//	FieldName: ptr.Of("updated_at"),
-					//	Values: []string{
-					//		fmt.Sprintf("%d", time.Now().Add(-time.Hour).UnixMilli()),
-					//	},
-					//	QueryType: ptr.Of(filter.QueryTypeGt),
-					//	FieldType: ptr.Of(filter.FieldTypeLong),
-					//},
+					{
+						FieldName: ptr.Of("updated_at"),
+						Values: []string{
+							fmt.Sprintf("%d", time.Now().Add(-time.Hour).UnixMilli()),
+						},
+						QueryType: ptr.Of(filter.QueryTypeGt),
+						FieldType: ptr.Of(filter.FieldTypeLong),
+					},
 				},
 			},
 		})
@@ -499,7 +500,7 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 		}
 
 		// Add tasks from the current page to the full list
-		taskPOs = append(taskPOs, tasklist...)
+		taskDOs = append(taskDOs, tasklist...)
 
 		// If fewer tasks than limit are returned, this is the last page
 		if len(tasklist) < int(limit) {
@@ -509,5 +510,5 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 		// Move to the next page, increasing offset by 1000
 		offset += limit
 	}
-	return taskPOs, nil
+	return taskDOs, nil
 }
