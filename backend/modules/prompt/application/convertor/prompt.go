@@ -76,6 +76,7 @@ func PromptBasicDTO2DO(dto *prompt.PromptBasic) *entity.PromptBasic {
 		return nil
 	}
 	return &entity.PromptBasic{
+		PromptType:    PromptTypeDTO2DO(dto.GetPromptType()),
 		DisplayName:   dto.GetDisplayName(),
 		Description:   dto.GetDescription(),
 		LatestVersion: dto.GetLatestVersion(),
@@ -109,6 +110,7 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 		TemplateType: TemplateTypeDTO2DO(dto.GetTemplateType()),
 		Messages:     BatchMessageDTO2DO(dto.Messages),
 		VariableDefs: BatchVariableDefDTO2DO(dto.VariableDefs),
+		HasSnippets:  dto.GetHasSnippet(),
 		Metadata:     dto.Metadata,
 	}
 }
@@ -125,6 +127,17 @@ func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 		return entity.TemplateTYpeCustomTemplateM
 	default:
 		return entity.TemplateTypeNormal
+	}
+}
+
+func PromptTypeDTO2DO(dto prompt.PromptType) entity.PromptType {
+	switch dto {
+	case prompt.PromptTypeNormal:
+		return entity.PromptTypeNormal
+	case prompt.PromptTypeSnippet:
+		return entity.PromptTypeSnippet
+	default:
+		return entity.PromptTypeNormal
 	}
 }
 
@@ -760,6 +773,18 @@ func PromptBasicDO2DTO(do *entity.PromptBasic) *prompt.PromptBasic {
 			}
 			return ptr.Of(do.LatestCommittedAt.UnixMilli())
 		}(),
+		PromptType: ptr.Of(PromptTypeDO2DTO(do.PromptType)),
+	}
+}
+
+func PromptTypeDO2DTO(do entity.PromptType) prompt.PromptType {
+	switch do {
+	case entity.PromptTypeNormal:
+		return prompt.PromptTypeNormal
+	case entity.PromptTypeSnippet:
+		return prompt.PromptTypeSnippet
+	default:
+		return prompt.PromptTypeNormal
 	}
 }
 
@@ -885,6 +910,7 @@ func PromptTemplateDO2DTO(do *entity.PromptTemplate) *prompt.PromptTemplate {
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     BatchMessageDO2DTO(do.Messages),
 		VariableDefs: BatchVariableDefDO2DTO(do.VariableDefs),
+		HasSnippet:   ptr.Of(do.HasSnippets),
 		Metadata:     do.Metadata,
 	}
 }

@@ -86,6 +86,21 @@ func (mr *MockIPromptServiceMockRecorder) CreateLabel(ctx, labelDO any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLabel", reflect.TypeOf((*MockIPromptService)(nil).CreateLabel), ctx, labelDO)
 }
 
+// CreatePrompt mocks base method.
+func (m *MockIPromptService) CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePrompt", ctx, promptDO)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreatePrompt indicates an expected call of CreatePrompt.
+func (mr *MockIPromptServiceMockRecorder) CreatePrompt(ctx, promptDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePrompt", reflect.TypeOf((*MockIPromptService)(nil).CreatePrompt), ctx, promptDO)
+}
+
 // Execute mocks base method.
 func (m *MockIPromptService) Execute(ctx context.Context, param service.ExecuteParam) (*entity.Reply, error) {
 	m.ctrl.T.Helper()
@@ -114,6 +129,20 @@ func (m *MockIPromptService) ExecuteStreaming(ctx context.Context, param service
 func (mr *MockIPromptServiceMockRecorder) ExecuteStreaming(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStreaming", reflect.TypeOf((*MockIPromptService)(nil).ExecuteStreaming), ctx, param)
+}
+
+// ExpandSnippets mocks base method.
+func (m *MockIPromptService) ExpandSnippets(ctx context.Context, promptDO *entity.Prompt) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExpandSnippets", ctx, promptDO)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExpandSnippets indicates an expected call of ExpandSnippets.
+func (mr *MockIPromptServiceMockRecorder) ExpandSnippets(ctx, promptDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExpandSnippets", reflect.TypeOf((*MockIPromptService)(nil).ExpandSnippets), ctx, promptDO)
 }
 
 // FormatPrompt mocks base method.
@@ -217,6 +246,21 @@ func (m *MockIPromptService) MParseCommitVersion(ctx context.Context, spaceID in
 func (mr *MockIPromptServiceMockRecorder) MParseCommitVersion(ctx, spaceID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MParseCommitVersion", reflect.TypeOf((*MockIPromptService)(nil).MParseCommitVersion), ctx, spaceID, params)
+}
+
+// SaveDraft mocks base method.
+func (m *MockIPromptService) SaveDraft(ctx context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveDraft", ctx, promptDO)
+	ret0, _ := ret[0].(*entity.DraftInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveDraft indicates an expected call of SaveDraft.
+func (mr *MockIPromptServiceMockRecorder) SaveDraft(ctx, promptDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDraft", reflect.TypeOf((*MockIPromptService)(nil).SaveDraft), ctx, promptDO)
 }
 
 // UpdateCommitLabels mocks base method.

@@ -109,9 +109,10 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
 				mockBasicDAO.EXPECT().MGet(gomock.Any(), []int64{123}, gomock.Any()).Return(map[int64]*model.PromptBasic{
 					123: {
-						ID:        123,
-						SpaceID:   123456,
-						PromptKey: "test_key_1",
+						ID:         123,
+						SpaceID:    123456,
+						PromptKey:  "test_key_1",
+						PromptType: "normal",
 					},
 				}, nil)
 				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
@@ -144,10 +145,12 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 					WithDraft: true,
 					UserID:    "111222",
 				}: {
-					ID:          123,
-					SpaceID:     123456,
-					PromptKey:   "test_key_1",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_key_1",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptDraft: &entity.PromptDraft{
 						PromptDetail: &entity.PromptDetail{
 							PromptTemplate: &entity.PromptTemplate{},
@@ -168,10 +171,12 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 						WithCommit:    true,
 						CommitVersion: "1.0.0",
 					}: {
-						ID:          123,
-						SpaceID:     123456,
-						PromptKey:   "test_key_1",
-						PromptBasic: &entity.PromptBasic{},
+						ID:        123,
+						SpaceID:   123456,
+						PromptKey: "test_key_1",
+						PromptBasic: &entity.PromptBasic{
+							PromptType: entity.PromptTypeNormal,
+						},
 						PromptCommit: &entity.PromptCommit{
 							PromptDetail: &entity.PromptDetail{
 								PromptTemplate: &entity.PromptTemplate{},
@@ -247,10 +252,12 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 					WithCommit:    true,
 					CommitVersion: "1.0.0",
 				}: {
-					ID:          123,
-					SpaceID:     123456,
-					PromptKey:   "test_key_1",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_key_1",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptCommit: &entity.PromptCommit{
 						PromptDetail: &entity.PromptDetail{
 							PromptTemplate: &entity.PromptTemplate{},
@@ -263,10 +270,12 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 					WithCommit:    true,
 					CommitVersion: "1.0.0",
 				}: {
-					ID:          456,
-					SpaceID:     123456,
-					PromptKey:   "test_key_2",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        456,
+					SpaceID:   123456,
+					PromptKey: "test_key_2",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptCommit: &entity.PromptCommit{
 						PromptDetail: &entity.PromptDetail{
 							PromptTemplate: &entity.PromptTemplate{},
@@ -305,10 +314,12 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 				{
 					PromptID: 123,
 				}: {
-					ID:          123,
-					SpaceID:     123456,
-					PromptKey:   "test_key",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_key",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			wantErr: nil,
@@ -370,10 +381,12 @@ func TestManageRepoImpl_MGetPrompt(t *testing.T) {
 					WithCommit:    true,
 					CommitVersion: "1.0.0",
 				}: {
-					ID:          123,
-					SpaceID:     123456,
-					PromptKey:   "test_key",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_key",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptCommit: &entity.PromptCommit{
 						PromptDetail: &entity.PromptDetail{
 							PromptTemplate: &entity.PromptTemplate{
@@ -541,16 +554,20 @@ func TestManageRepoImpl_MGetPromptBasicByPromptKey(t *testing.T) {
 			},
 			want: []*entity.Prompt{
 				{
-					ID:          123,
-					SpaceID:     123,
-					PromptKey:   "test_key_1",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123,
+					PromptKey: "test_key_1",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 				{
-					ID:          456,
-					SpaceID:     123,
-					PromptKey:   "test_key_2",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        456,
+					SpaceID:   123,
+					PromptKey: "test_key_2",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			wantErr: nil,
@@ -595,16 +612,20 @@ func TestManageRepoImpl_MGetPromptBasicByPromptKey(t *testing.T) {
 			},
 			want: []*entity.Prompt{
 				{
-					ID:          123,
-					SpaceID:     123,
-					PromptKey:   "test_key_1",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123,
+					PromptKey: "test_key_1",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 				{
-					ID:          456,
-					SpaceID:     123,
-					PromptKey:   "test_key_2",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        456,
+					SpaceID:   123,
+					PromptKey: "test_key_2",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			wantErr: nil,
@@ -643,10 +664,12 @@ func TestManageRepoImpl_MGetPromptBasicByPromptKey(t *testing.T) {
 				mockCacheDAO := redismocks.NewMockIPromptBasicDAO(ctrl)
 				mockCacheDAO.EXPECT().MGetByPromptKey(gomock.Any(), int64(123), []string{"test_key_1", "test_key_2"}).Return(map[string]*entity.Prompt{
 					"test_key_1": {
-						ID:          123,
-						SpaceID:     123,
-						PromptKey:   "test_key_1",
-						PromptBasic: &entity.PromptBasic{},
+						ID:        123,
+						SpaceID:   123,
+						PromptKey: "test_key_1",
+						PromptBasic: &entity.PromptBasic{
+							PromptType: entity.PromptTypeNormal,
+						},
 					},
 				}, nil)
 
@@ -679,16 +702,20 @@ func TestManageRepoImpl_MGetPromptBasicByPromptKey(t *testing.T) {
 			},
 			want: []*entity.Prompt{
 				{
-					ID:          123,
-					SpaceID:     123,
-					PromptKey:   "test_key_1",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        123,
+					SpaceID:   123,
+					PromptKey: "test_key_1",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 				{
-					ID:          456,
-					SpaceID:     123,
-					PromptKey:   "test_key_2",
-					PromptBasic: &entity.PromptBasic{},
+					ID:        456,
+					SpaceID:   123,
+					PromptKey: "test_key_2",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			wantErr: nil,
@@ -722,10 +749,11 @@ func TestManageRepoImpl_MGetPromptBasicByPromptKey(t *testing.T) {
 
 func TestManageRepoImpl_GetPrompt(t *testing.T) {
 	type fields struct {
-		db              db.Provider
-		promptBasicDAO  mysql.IPromptBasicDAO
-		promptCommitDAO mysql.IPromptCommitDAO
-		promptDraftDAO  mysql.IPromptUserDraftDAO
+		db                db.Provider
+		promptBasicDAO    mysql.IPromptBasicDAO
+		promptCommitDAO   mysql.IPromptCommitDAO
+		promptDraftDAO    mysql.IPromptUserDraftDAO
+		promptRelationDAO mysql.IPromptRelationDAO
 	}
 	type args struct {
 		ctx   context.Context
@@ -882,6 +910,7 @@ func TestManageRepoImpl_GetPrompt(t *testing.T) {
 				SpaceID:   100,
 				PromptKey: "test_key",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "test_name",
 					Description:   "test_description",
 					CreatedBy:     "test_creator",
@@ -931,10 +960,11 @@ func TestManageRepoImpl_GetPrompt(t *testing.T) {
 				}, nil)
 
 				return fields{
-					db:              mockDB,
-					promptBasicDAO:  mockBasicDAO,
-					promptCommitDAO: mockCommitDAO,
-					promptDraftDAO:  mockDraftDAO,
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptCommitDAO:   mockCommitDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: nil,
 				}
 			},
 			args: args{
@@ -952,6 +982,7 @@ func TestManageRepoImpl_GetPrompt(t *testing.T) {
 				SpaceID:   100,
 				PromptKey: "test_key",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "test_name",
 					Description:   "test_description",
 					CreatedBy:     "test_creator",
@@ -1108,10 +1139,11 @@ func TestManageRepoImpl_GetPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			d := &ManageRepoImpl{
-				db:              ttFields.db,
-				promptBasicDAO:  ttFields.promptBasicDAO,
-				promptCommitDAO: ttFields.promptCommitDAO,
-				promptDraftDAO:  ttFields.promptDraftDAO,
+				db:                ttFields.db,
+				promptBasicDAO:    ttFields.promptBasicDAO,
+				promptCommitDAO:   ttFields.promptCommitDAO,
+				promptDraftDAO:    ttFields.promptDraftDAO,
+				promptRelationDAO: ttFields.promptRelationDAO,
 			}
 
 			got, err := d.GetPrompt(tt.args.ctx, tt.args.param)
@@ -1426,11 +1458,12 @@ func TestManageRepoImpl_ListCommitInfo(t *testing.T) {
 
 func TestManageRepoImpl_SaveDraft(t *testing.T) {
 	type fields struct {
-		db              db.Provider
-		promptBasicDAO  mysql.IPromptBasicDAO
-		promptCommitDAO mysql.IPromptCommitDAO
-		promptDraftDAO  mysql.IPromptUserDraftDAO
-		idgen           idgen.IIDGenerator
+		db                db.Provider
+		promptBasicDAO    mysql.IPromptBasicDAO
+		promptCommitDAO   mysql.IPromptCommitDAO
+		promptDraftDAO    mysql.IPromptUserDraftDAO
+		promptRelationDAO mysql.IPromptRelationDAO
+		idgen             idgen.IIDGenerator
 	}
 	type args struct {
 		ctx      context.Context
@@ -1642,6 +1675,156 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 		//	wantErr: errorx.New("Draft's base version is invalid, saving draft's base version = 1.0.0, original draft's base version = 0.9.0 "),
 		//},
 		{
+			name: "create draft with snippets",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1), gomock.Any()).Return(&model.PromptBasic{
+					ID:      1,
+					SpaceID: 100,
+				}, nil)
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Get(gomock.Any(), int64(1), "test_user", gomock.Any()).Return(nil, nil)
+
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+
+				mockDraftDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, draft *model.PromptUserDraft, opts ...db.Option) error {
+					assert.Equal(t, int64(100), draft.SpaceID)
+					assert.Equal(t, "test_user", draft.UserID)
+					assert.True(t, draft.HasSnippets)
+					return nil
+				})
+
+				mockDraftDAO.EXPECT().GetByID(gomock.Any(), int64(1001), gomock.Any()).Return(&model.PromptUserDraft{
+					ID:     1001,
+					UserID: "test_user",
+				}, nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*model.PromptRelation{}, nil)
+
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{4001, 4002}, nil)
+				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, relations []*model.PromptRelation, opts ...db.Option) error {
+					assert.Len(t, relations, 2)
+					for _, relation := range relations {
+						assert.Equal(t, int64(1), relation.MainPromptID)
+						assert.Equal(t, "", relation.MainPromptVersion)
+						assert.Equal(t, "test_user", relation.MainDraftUserID)
+						assert.Equal(t, int64(100), relation.SpaceID)
+					}
+					assert.Equal(t, int64(200), relations[0].SubPromptID)
+					assert.Equal(t, "v1", relations[0].SubPromptVersion)
+					assert.Equal(t, int64(201), relations[1].SubPromptID)
+					assert.Equal(t, "", relations[1].SubPromptVersion)
+					return nil
+				})
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					ID:      1,
+					SpaceID: 100,
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID: "test_user",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Snippets: []*entity.Prompt{
+									{
+										ID: 200,
+										PromptCommit: &entity.PromptCommit{
+											CommitInfo: &entity.CommitInfo{
+												Version: "v1",
+											},
+										},
+									},
+									{
+										ID: 201,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "create draft with snippets relation error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1), gomock.Any()).Return(&model.PromptBasic{
+					ID:      1,
+					SpaceID: 100,
+				}, nil)
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Get(gomock.Any(), int64(1), "test_user", gomock.Any()).Return(nil, nil)
+
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+
+				mockDraftDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockDraftDAO.EXPECT().GetByID(gomock.Any(), int64(1001), gomock.Any()).Return(&model.PromptUserDraft{
+					ID:     1001,
+					UserID: "test_user",
+				}, nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errorx.New("relation list error"))
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					ID:      1,
+					SpaceID: 100,
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID: "test_user",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Snippets: []*entity.Prompt{
+									{ID: 200},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: errorx.New("relation list error"),
+		},
+		{
 			name: "update draft with no changes",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockDB := dbmocks.NewMockProvider(ctrl)
@@ -1668,10 +1851,11 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 				}, nil)
 
 				return fields{
-					db:              mockDB,
-					promptBasicDAO:  mockBasicDAO,
-					promptCommitDAO: mockCommitDAO,
-					promptDraftDAO:  mockDraftDAO,
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptCommitDAO:   mockCommitDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: nil,
 				}
 			},
 			args: args{
@@ -1727,11 +1911,16 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 					return nil
 				})
 
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().DeleteByMainPrompt(gomock.Any(), int64(1), "", "test_user", gomock.Any()).Return(nil)
+
 				return fields{
-					db:              mockDB,
-					promptBasicDAO:  mockBasicDAO,
-					promptCommitDAO: mockCommitDAO,
-					promptDraftDAO:  mockDraftDAO,
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptCommitDAO:   mockCommitDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             nil,
 				}
 			},
 			args: args{
@@ -1750,6 +1939,121 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 									{
 										Role:    entity.RoleUser,
 										Content: ptr.Of("new content"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "update draft with snippets",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1), gomock.Any()).Return(&model.PromptBasic{
+					ID:      1,
+					SpaceID: 100,
+				}, nil)
+
+				mockCommitDAO := daomocks.NewMockIPromptCommitDAO(ctrl)
+				mockCommitDAO.EXPECT().Get(gomock.Any(), int64(1), "v1", gomock.Any()).Return(&model.PromptCommit{
+					Version: "v1",
+				}, nil)
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Get(gomock.Any(), int64(1), "test_user", gomock.Any()).Return(&model.PromptUserDraft{
+					ID:          1001,
+					BaseVersion: "v1",
+				}, nil)
+				mockDraftDAO.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, draft *model.PromptUserDraft, opts ...db.Option) error {
+					assert.Equal(t, int64(1001), draft.ID)
+					assert.True(t, draft.HasSnippets)
+					return nil
+				})
+				mockDraftDAO.EXPECT().GetByID(gomock.Any(), int64(1001), gomock.Any()).Return(&model.PromptUserDraft{
+					ID:     1001,
+					UserID: "test_user",
+				}, nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*model.PromptRelation{
+					{
+						ID:                2001,
+						SpaceID:           100,
+						MainPromptID:      1,
+						MainPromptVersion: "",
+						MainDraftUserID:   "test_user",
+						SubPromptID:       200,
+						SubPromptVersion:  "v1",
+					},
+					{
+						ID:                2002,
+						SpaceID:           100,
+						MainPromptID:      1,
+						MainPromptVersion: "",
+						MainDraftUserID:   "test_user",
+						SubPromptID:       201,
+						SubPromptVersion:  "old",
+					},
+				}, nil)
+				mockRelationDAO.EXPECT().BatchDeleteByIDs(gomock.Any(), []int64{2002}, gomock.Any()).Return(nil)
+
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{4001}, nil)
+				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, relations []*model.PromptRelation, opts ...db.Option) error {
+					assert.Len(t, relations, 1)
+					assert.Equal(t, int64(1), relations[0].MainPromptID)
+					assert.Equal(t, "test_user", relations[0].MainDraftUserID)
+					assert.Equal(t, int64(202), relations[0].SubPromptID)
+					assert.Equal(t, "v2", relations[0].SubPromptVersion)
+					return nil
+				})
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptCommitDAO:   mockCommitDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					ID:      1,
+					SpaceID: 100,
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID:      "test_user",
+							BaseVersion: "v1",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Snippets: []*entity.Prompt{
+									{
+										ID: 200,
+										PromptCommit: &entity.PromptCommit{
+											CommitInfo: &entity.CommitInfo{
+												Version: "v1",
+											},
+										},
+									},
+									{
+										ID: 202,
+										PromptCommit: &entity.PromptCommit{
+											CommitInfo: &entity.CommitInfo{
+												Version: "v2",
+											},
+										},
 									},
 								},
 							},
@@ -2000,10 +2304,11 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 				mockDraftDAO.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errorx.New("update error"))
 
 				return fields{
-					db:              mockDB,
-					promptBasicDAO:  mockBasicDAO,
-					promptCommitDAO: mockCommitDAO,
-					promptDraftDAO:  mockDraftDAO,
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptCommitDAO:   mockCommitDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: nil,
 				}
 			},
 			args: args{
@@ -2041,11 +2346,12 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			d := &ManageRepoImpl{
-				db:              ttFields.db,
-				promptBasicDAO:  ttFields.promptBasicDAO,
-				promptCommitDAO: ttFields.promptCommitDAO,
-				promptDraftDAO:  ttFields.promptDraftDAO,
-				idgen:           ttFields.idgen,
+				db:                ttFields.db,
+				promptBasicDAO:    ttFields.promptBasicDAO,
+				promptCommitDAO:   ttFields.promptCommitDAO,
+				promptDraftDAO:    ttFields.promptDraftDAO,
+				promptRelationDAO: ttFields.promptRelationDAO,
+				idgen:             ttFields.idgen,
 			}
 
 			_, err := d.SaveDraft(tt.args.ctx, tt.args.promptDO)
@@ -2056,10 +2362,11 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 
 func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 	type fields struct {
-		db             db.Provider
-		promptBasicDAO mysql.IPromptBasicDAO
-		promptDraftDAO mysql.IPromptUserDraftDAO
-		idgen          idgen.IIDGenerator
+		db                db.Provider
+		promptBasicDAO    mysql.IPromptBasicDAO
+		promptDraftDAO    mysql.IPromptUserDraftDAO
+		promptRelationDAO mysql.IPromptRelationDAO
+		idgen             idgen.IIDGenerator
 	}
 	type args struct {
 		ctx      context.Context
@@ -2111,7 +2418,9 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			want:    0,
@@ -2131,7 +2440,9 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptDraft: &entity.PromptDraft{
 						DraftInfo: &entity.DraftInfo{
 							UserID: "test_user",
@@ -2159,7 +2470,9 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			want:    0,
@@ -2191,7 +2504,9 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			want:    0,
@@ -2232,7 +2547,9 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptDraft: &entity.PromptDraft{
 						DraftInfo: &entity.DraftInfo{
 							UserID: "test_user",
@@ -2269,7 +2586,9 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 				},
 			},
 			want:    1001,
@@ -2310,10 +2629,256 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				promptDO: &entity.Prompt{
-					PromptBasic: &entity.PromptBasic{},
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
 					PromptDraft: &entity.PromptDraft{
 						DraftInfo: &entity.DraftInfo{
 							UserID: "test_user",
+						},
+					},
+				},
+			},
+			want:    1001,
+			wantErr: nil,
+		},
+		{
+			name: "create prompt with snippets success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(2001), nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{3001, 3002}, nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, basic *model.PromptBasic, opts ...db.Option) error {
+					assert.Equal(t, int64(1001), basic.ID)
+					return nil
+				})
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, draft *model.PromptUserDraft, opts ...db.Option) error {
+					assert.Equal(t, int64(2001), draft.ID)
+					assert.Equal(t, int64(1001), draft.PromptID)
+					return nil
+				})
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, relations []*model.PromptRelation, opts ...db.Option) error {
+					assert.Len(t, relations, 2)
+					assert.Equal(t, int64(1001), relations[0].MainPromptID)
+					assert.Equal(t, int64(200), relations[0].SubPromptID)
+					assert.Equal(t, int64(1001), relations[1].MainPromptID)
+					assert.Equal(t, int64(201), relations[1].SubPromptID)
+					assert.Equal(t, "test_user", relations[0].MainDraftUserID)
+					assert.Equal(t, "test_user", relations[1].MainDraftUserID)
+					return nil
+				})
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					SpaceID: 123,
+					PromptBasic: &entity.PromptBasic{
+						DisplayName: "Test Prompt",
+						Description: "Test Description",
+					},
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID: "test_user",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Snippets: []*entity.Prompt{
+									{ID: 200},
+									{ID: 201},
+								},
+							},
+						},
+					},
+				},
+			},
+			want:    1001,
+			wantErr: nil,
+		},
+		{
+			name: "create prompt with snippets - skip nil snippets",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(2001), nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 3).Return([]int64{3001, 3002, 3003}, nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				// No relation creation expected since valid snippets are 0
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, relations []*model.PromptRelation, opts ...db.Option) error {
+					assert.Len(t, relations, 2) // 2 valid snippets (ID: 0 and ID: 202)
+					return nil
+				})
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					SpaceID: 123,
+					PromptBasic: &entity.PromptBasic{
+						DisplayName: "Test Prompt",
+						Description: "Test Description",
+					},
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID: "test_user",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Snippets: []*entity.Prompt{
+									nil,
+									{ID: 0},   // Invalid ID
+									{ID: 202}, // Valid
+								},
+							},
+						},
+					},
+				},
+			},
+			want:    1001,
+			wantErr: nil,
+		},
+		{
+			name: "create prompt with snippets - relation dao error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(2001), nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{3001}, nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(errorx.New("relation dao error"))
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					SpaceID: 123,
+					PromptBasic: &entity.PromptBasic{
+						DisplayName: "Test Prompt",
+						Description: "Test Description",
+					},
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID: "test_user",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Snippets: []*entity.Prompt{
+									{ID: 200},
+								},
+							},
+						},
+					},
+				},
+			},
+			want:    0,
+			wantErr: errorx.New("relation dao error"),
+		},
+		{
+			name: "create prompt without snippets - no relation creation",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(2001), nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				// No relation creation expected
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+
+				return fields{
+					db:                mockDB,
+					promptBasicDAO:    mockBasicDAO,
+					promptDraftDAO:    mockDraftDAO,
+					promptRelationDAO: mockRelationDAO,
+					idgen:             mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					SpaceID: 123,
+					PromptBasic: &entity.PromptBasic{
+						DisplayName: "Test Prompt",
+						Description: "Test Description",
+					},
+					PromptDraft: &entity.PromptDraft{
+						DraftInfo: &entity.DraftInfo{
+							UserID: "test_user",
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: false,
+								Snippets:    []*entity.Prompt{},
+							},
 						},
 					},
 				},
@@ -2331,10 +2896,11 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			d := &ManageRepoImpl{
-				db:             ttFields.db,
-				promptBasicDAO: ttFields.promptBasicDAO,
-				promptDraftDAO: ttFields.promptDraftDAO,
-				idgen:          ttFields.idgen,
+				db:                ttFields.db,
+				promptBasicDAO:    ttFields.promptBasicDAO,
+				promptDraftDAO:    ttFields.promptDraftDAO,
+				promptRelationDAO: ttFields.promptRelationDAO,
+				idgen:             ttFields.idgen,
 			}
 
 			got, err := d.CreatePrompt(tt.args.ctx, tt.args.promptDO)
@@ -2356,6 +2922,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 		commitLabelMappingDAO mysql.ICommitLabelMappingDAO
 		promptBasicCacheDAO   redis.IPromptBasicDAO
 		promptCacheDAO        redis.IPromptDAO
+		promptRelationDAO     mysql.IPromptRelationDAO
 	}
 	type args struct {
 		ctx   context.Context
@@ -2372,6 +2939,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				return fields{
 					commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl),
+					promptRelationDAO:     daomocks.NewMockIPromptRelationDAO(ctrl),
 				}
 			},
 			args: args{
@@ -2386,7 +2954,10 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 		{
 			name: "invalid user id",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				return fields{commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl)}
+				return fields{
+					commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl),
+					promptRelationDAO:     daomocks.NewMockIPromptRelationDAO(ctrl),
+				}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -2400,7 +2971,10 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 		{
 			name: "invalid commit version",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				return fields{commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl)}
+				return fields{
+					commitLabelMappingDAO: daomocks.NewMockICommitLabelMappingDAO(ctrl),
+					promptRelationDAO:     daomocks.NewMockIPromptRelationDAO(ctrl),
+				}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -3366,6 +3940,177 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "commit with snippets - hasSnippets true",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 0).Return([]int64{}, nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				nilDB, _ := gorm.Open(nil)
+				mockDB.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(nilDB)
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1), gomock.Any()).Return(&model.PromptBasic{
+					ID:            1,
+					SpaceID:       100,
+					PromptKey:     "test_key",
+					LatestVersion: "1.0.0",
+				}, nil)
+
+				// 创建包含snippet的草稿
+				draftWithSnippets := &model.PromptUserDraft{
+					ID:          1001,
+					BaseVersion: "1.0.0",
+					HasSnippets: true,
+				}
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Get(gomock.Any(), int64(1), "test_user", gomock.Any()).Return(draftWithSnippets, nil)
+
+				mockCommitDAO := daomocks.NewMockIPromptCommitDAO(ctrl)
+				mockCommitDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, commit *model.PromptCommit, timeNow time.Time, opts ...db.Option) error {
+					assert.Equal(t, int64(1001), commit.ID)
+					assert.Equal(t, "2.0.0", commit.Version)
+					assert.Equal(t, "1.0.0", commit.BaseVersion)
+					assert.Equal(t, "test_user", commit.CommittedBy)
+					assert.True(t, commit.HasSnippets, "HasSnippets should be true for drafts with snippets")
+					return nil
+				})
+
+				mockDraftDAO.EXPECT().Delete(gomock.Any(), int64(1001), gomock.Any()).Return(nil)
+
+				mockBasicDAO.EXPECT().Update(gomock.Any(), int64(1), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockPromptBasicCacheDAO := redismocks.NewMockIPromptBasicDAO(ctrl)
+				mockPromptBasicCacheDAO.EXPECT().DelByPromptKey(gomock.Any(), int64(100), "test_key").Return(nil)
+
+				mockCommitLabelMappingDAO := daomocks.NewMockICommitLabelMappingDAO(ctrl)
+				mockCommitLabelMappingDAO.EXPECT().ListByPromptIDAndLabelKeys(gomock.Any(), int64(1), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				// Mock snippet relation operations
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*model.PromptRelation{
+					{
+						ID:                2001,
+						SpaceID:           100,
+						MainPromptID:      1,
+						MainPromptVersion: "",
+						MainDraftUserID:   "test_user",
+						SubPromptID:       2,
+						SubPromptVersion:  "1.0.0",
+					},
+				}, nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{3001}, nil)
+				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockRelationDAO.EXPECT().BatchDeleteByIDs(gomock.Any(), []int64{2001}, gomock.Any()).Return(nil)
+
+				return fields{
+					db:                    mockDB,
+					idgen:                 mockIDGen,
+					promptBasicDAO:        mockBasicDAO,
+					promptCommitDAO:       mockCommitDAO,
+					promptDraftDAO:        mockDraftDAO,
+					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					promptBasicCacheDAO:   mockPromptBasicCacheDAO,
+					promptCacheDAO:        redismocks.NewMockIPromptDAO(ctrl),
+					promptRelationDAO:     mockRelationDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.CommitDraftParam{
+					PromptID:          1,
+					UserID:            "test_user",
+					CommitVersion:     "2.0.0",
+					CommitDescription: "commit with snippets",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "commit without snippets - hasSnippets false",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 0).Return([]int64{}, nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, opts ...db.Option) error {
+					return fc(nil)
+				})
+
+				nilDB, _ := gorm.Open(nil)
+				mockDB.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(nilDB)
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1), gomock.Any()).Return(&model.PromptBasic{
+					ID:            1,
+					SpaceID:       100,
+					PromptKey:     "test_key",
+					LatestVersion: "1.0.0",
+				}, nil)
+
+				// 创建不包含snippet的草稿
+				draftWithoutSnippets := &model.PromptUserDraft{
+					ID:          1001,
+					BaseVersion: "1.0.0",
+					HasSnippets: false,
+				}
+
+				mockDraftDAO := daomocks.NewMockIPromptUserDraftDAO(ctrl)
+				mockDraftDAO.EXPECT().Get(gomock.Any(), int64(1), "test_user", gomock.Any()).Return(draftWithoutSnippets, nil)
+
+				mockCommitDAO := daomocks.NewMockIPromptCommitDAO(ctrl)
+				mockCommitDAO.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, commit *model.PromptCommit, timeNow time.Time, opts ...db.Option) error {
+					assert.Equal(t, int64(1001), commit.ID)
+					assert.Equal(t, "2.0.0", commit.Version)
+					assert.Equal(t, "1.0.0", commit.BaseVersion)
+					assert.Equal(t, "test_user", commit.CommittedBy)
+					assert.False(t, commit.HasSnippets, "HasSnippets should be false for drafts without snippets")
+					return nil
+				})
+
+				mockDraftDAO.EXPECT().Delete(gomock.Any(), int64(1001), gomock.Any()).Return(nil)
+
+				mockBasicDAO.EXPECT().Update(gomock.Any(), int64(1), gomock.Any(), gomock.Any()).Return(nil)
+
+				mockPromptBasicCacheDAO := redismocks.NewMockIPromptBasicDAO(ctrl)
+				mockPromptBasicCacheDAO.EXPECT().DelByPromptKey(gomock.Any(), int64(100), "test_key").Return(nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+
+				mockCommitLabelMappingDAO := daomocks.NewMockICommitLabelMappingDAO(ctrl)
+				mockCommitLabelMappingDAO.EXPECT().ListByPromptIDAndLabelKeys(gomock.Any(), int64(1), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				return fields{
+					db:                    mockDB,
+					idgen:                 mockIDGen,
+					promptBasicDAO:        mockBasicDAO,
+					promptCommitDAO:       mockCommitDAO,
+					promptDraftDAO:        mockDraftDAO,
+					commitLabelMappingDAO: mockCommitLabelMappingDAO,
+					promptBasicCacheDAO:   mockPromptBasicCacheDAO,
+					promptCacheDAO:        redismocks.NewMockIPromptDAO(ctrl),
+					promptRelationDAO:     mockRelationDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.CommitDraftParam{
+					PromptID:          1,
+					UserID:            "test_user",
+					CommitVersion:     "2.0.0",
+					CommitDescription: "commit without snippets",
+				},
+			},
+			wantErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -3384,6 +4129,7 @@ func TestManageRepoImpl_CommitDraft(t *testing.T) {
 				commitLabelMappingDAO: ttFields.commitLabelMappingDAO,
 				promptBasicCacheDAO:   ttFields.promptBasicCacheDAO,
 				promptCacheDAO:        ttFields.promptCacheDAO,
+				promptRelationDAO:     ttFields.promptRelationDAO,
 			}
 
 			err := d.CommitDraft(tt.args.ctx, tt.args.param)
@@ -3406,6 +4152,7 @@ func TestNewManageRepo(t *testing.T) {
 	mockCommitLabelMappingDAO := daomocks.NewMockICommitLabelMappingDAO(ctrl)
 	mockPromptBasicCacheDAO := redismocks.NewMockIPromptBasicDAO(ctrl)
 	mockPromptCacheDAO := redismocks.NewMockIPromptDAO(ctrl)
+	mockPromptRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
 
 	// 调用构造函数
 	// 调用构造函数
@@ -3417,6 +4164,7 @@ func TestNewManageRepo(t *testing.T) {
 		mockPromptCommitDAO,
 		mockPromptDraftDAO,
 		mockCommitLabelMappingDAO,
+		mockPromptRelationDAO,
 		mockPromptBasicCacheDAO,
 		mockPromptCacheDAO,
 	)
@@ -3468,7 +4216,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":0,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"PageNum\":1,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
+			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":0,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PageNum\":1,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
 		},
 		{
 			name: "invalid page num",
@@ -3484,7 +4232,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"PageNum\":0,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
+			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PageNum\":0,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
 		},
 		{
 			name: "invalid page size",
@@ -3500,7 +4248,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"PageNum\":1,\"PageSize\":0,\"OrderBy\":0,\"Asc\":false}"),
+			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PageNum\":1,\"PageSize\":0,\"OrderBy\":0,\"Asc\":false}"),
 		},
 		{
 			name: "empty result",
@@ -3595,7 +4343,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 						ID:          1001,
 						SpaceID:     123,
 						PromptKey:   "test_key_1",
-						PromptBasic: &entity.PromptBasic{DisplayName: "Test Prompt 1"},
+						PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeNormal, DisplayName: "Test Prompt 1"},
 						PromptDraft: &entity.PromptDraft{
 							PromptDetail: &entity.PromptDetail{
 								PromptTemplate: &entity.PromptTemplate{},
@@ -3609,7 +4357,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 						ID:          1002,
 						SpaceID:     123,
 						PromptKey:   "test_key_2",
-						PromptBasic: &entity.PromptBasic{DisplayName: "Test Prompt 2"},
+						PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeNormal, DisplayName: "Test Prompt 2"},
 					},
 				},
 			},
@@ -3663,7 +4411,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 						ID:          1001,
 						SpaceID:     123,
 						PromptKey:   "test_key_1",
-						PromptBasic: &entity.PromptBasic{DisplayName: "Test search_term Prompt"},
+						PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeNormal, DisplayName: "Test search_term Prompt"},
 					},
 				},
 			},
@@ -3718,7 +4466,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 						ID:          1001,
 						SpaceID:     123,
 						PromptKey:   "test_key_1",
-						PromptBasic: &entity.PromptBasic{DisplayName: "Test Prompt 1", CreatedBy: "user1"},
+						PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeNormal, DisplayName: "Test Prompt 1", CreatedBy: "user1"},
 					},
 				},
 			},
@@ -3774,7 +4522,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 						ID:          1001,
 						SpaceID:     123,
 						PromptKey:   "test_key_1",
-						PromptBasic: &entity.PromptBasic{DisplayName: "Test Prompt 1"},
+						PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeNormal, DisplayName: "Test Prompt 1"},
 					},
 				},
 			},
@@ -3865,6 +4613,196 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if err == nil {
 				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestManageRepoImpl_ListParentPrompt(t *testing.T) {
+	t.Parallel()
+	type fields struct {
+		promptRelationDAO mysql.IPromptRelationDAO
+		promptBasicDAO    mysql.IPromptBasicDAO
+	}
+	type args struct {
+		ctx   context.Context
+		param repo.ListParentPromptParam
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+		wantErrMsg   string
+		check        func(t *testing.T, got map[string]*repo.PromptCommitVersions)
+	}{
+		{
+			name: "invalid sub prompt id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.ListParentPromptParam{
+					SubPromptID: 0,
+				},
+			},
+			wantErrMsg: "param(SubPromptID) is invalid",
+		},
+		{
+			name: "relation dao error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, errorx.New("list error"))
+				return fields{
+					promptRelationDAO: mockRelationDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.ListParentPromptParam{
+					SubPromptID: 200,
+				},
+			},
+			wantErr: errorx.New("list error"),
+		},
+		{
+			name: "no relations",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any()).Return([]*model.PromptRelation{}, nil)
+				return fields{
+					promptRelationDAO: mockRelationDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.ListParentPromptParam{
+					SubPromptID: 200,
+				},
+			},
+			check: func(t *testing.T, got map[string]*repo.PromptCommitVersions) {
+				assert.Nil(t, got)
+			},
+		},
+		{
+			name: "list success with versions",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				relations := []*model.PromptRelation{
+					{
+						ID:                1,
+						SpaceID:           1,
+						MainPromptID:      101,
+						MainPromptVersion: "1.0.0",
+						SubPromptID:       200,
+						SubPromptVersion:  "v1",
+					},
+					{
+						ID:                2,
+						SpaceID:           1,
+						MainPromptID:      101,
+						MainPromptVersion: "",
+						SubPromptID:       200,
+						SubPromptVersion:  "v1",
+					},
+					{
+						ID:                3,
+						SpaceID:           1,
+						MainPromptID:      102,
+						MainPromptVersion: "2.0.0",
+						SubPromptID:       200,
+						SubPromptVersion:  "v2",
+					},
+					{
+						ID:                4,
+						SpaceID:           1,
+						MainPromptID:      102,
+						MainPromptVersion: "2.0.1",
+						SubPromptID:       200,
+						SubPromptVersion:  "v2",
+					},
+				}
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().List(gomock.Any(), gomock.Any()).Return(relations, nil)
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().MGet(gomock.Any(), gomock.Any()).Return(map[int64]*model.PromptBasic{
+					101: {
+						ID:         101,
+						SpaceID:    1,
+						PromptKey:  "parent_a",
+						PromptType: string(entity.PromptTypeNormal),
+					},
+					102: {
+						ID:         102,
+						SpaceID:    1,
+						PromptKey:  "parent_b",
+						PromptType: string(entity.PromptTypeSnippet),
+					},
+				}, nil)
+
+				return fields{
+					promptRelationDAO: mockRelationDAO,
+					promptBasicDAO:    mockBasicDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.ListParentPromptParam{
+					SubPromptID:       200,
+					SubPromptVersions: []string{"v1", "v2"},
+				},
+			},
+			check: func(t *testing.T, got map[string]*repo.PromptCommitVersions) {
+				assert.Len(t, got, 2)
+				v1, ok := got["v1"]
+				assert.True(t, ok)
+				assert.Equal(t, int64(101), v1.PromptID)
+				assert.Equal(t, int64(1), v1.SpaceID)
+				assert.Equal(t, "parent_a", v1.PromptKey)
+				if assert.NotNil(t, v1.PromptBasic) {
+					assert.Equal(t, entity.PromptTypeNormal, v1.PromptBasic.PromptType)
+				}
+				assert.Equal(t, []string{"1.0.0"}, v1.CommitVersions)
+
+				v2, ok := got["v2"]
+				assert.True(t, ok)
+				assert.Equal(t, int64(102), v2.PromptID)
+				assert.Equal(t, "parent_b", v2.PromptKey)
+				if assert.NotNil(t, v2.PromptBasic) {
+					assert.Equal(t, entity.PromptTypeSnippet, v2.PromptBasic.PromptType)
+				}
+				assert.ElementsMatch(t, []string{"2.0.0", "2.0.1"}, v2.CommitVersions)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		ttt := tt
+		t.Run(ttt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			fields := ttt.fieldsGetter(ctrl)
+			repoImpl := &ManageRepoImpl{
+				promptRelationDAO: fields.promptRelationDAO,
+				promptBasicDAO:    fields.promptBasicDAO,
+			}
+
+			got, err := repoImpl.ListParentPrompt(ttt.args.ctx, ttt.args.param)
+			if ttt.wantErr != nil {
+				unittest.AssertErrorEqual(t, ttt.wantErr, err)
+				return
+			}
+			if ttt.wantErrMsg != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), ttt.wantErrMsg)
+				return
+			}
+			assert.NoError(t, err)
+			if ttt.check != nil {
+				ttt.check(t, got)
 			}
 		})
 	}

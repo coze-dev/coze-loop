@@ -18,8 +18,13 @@ struct PromptBasic {
     6: optional i64 created_at (api.js_conv="true", go.tag='json:"created_at"')
     7: optional i64 updated_at (api.js_conv="true", go.tag='json:"updated_at"')
     8: optional i64 latest_committed_at (api.js_conv="true", go.tag='json:"latest_committed_at"')
+    9: optional PromptType prompt_type
 
 }
+
+typedef string PromptType (ts.enum="true")
+const PromptType PromptType_Normal = "normal"
+const PromptType PromptType_Snippet = "snippet"
 
 struct PromptCommit {
     1: optional PromptDetail detail
@@ -61,6 +66,7 @@ struct PromptTemplate {
     1: optional TemplateType template_type
     2: optional list<Message> messages
     3: optional list<VariableDef> variable_defs
+    4: optional bool has_snippet
 
     100: optional map<string, string> metadata
 }
@@ -274,4 +280,12 @@ const Scenario Scenario_EvalTarget = "eval_target"
 
 struct OverridePromptParams {
     1: optional ModelConfig model_config
+}
+
+struct PromptCommitVersions {
+    1: optional i64 id (api.js_conv="true", go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    3: optional string prompt_key
+    4: optional PromptBasic prompt_basic
+    5: optional list<string> commit_versions
 }

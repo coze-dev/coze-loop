@@ -63,6 +63,7 @@ func mockPromptCases() []promptTestCase {
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
+					PromptType:    ptr.Of(prompt.PromptTypeNormal),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -82,6 +83,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Messages: []*prompt.Message{
 								{
 									Role:    ptr.Of(prompt.RoleSystem),
@@ -143,6 +145,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Messages: []*prompt.Message{
 								{
 									Role:    ptr.Of(prompt.RoleSystem),
@@ -158,6 +161,7 @@ func mockPromptCases() []promptTestCase {
 				SpaceID:   456,
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -256,6 +260,7 @@ func mockPromptCases() []promptTestCase {
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
+					PromptType:    ptr.Of(prompt.PromptTypeNormal),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -270,6 +275,7 @@ func mockPromptCases() []promptTestCase {
 				SpaceID:   456,
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -352,6 +358,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
@@ -360,6 +367,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Metadata:     map[string]string{"draft-meta": "value"},
 						},
 					},
@@ -370,6 +378,7 @@ func mockPromptCases() []promptTestCase {
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
 							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  false,
 							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
@@ -378,7 +387,125 @@ func mockPromptCases() []promptTestCase {
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
 							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  false,
 							Metadata:     map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "snippet prompt with snippets",
+			dto: &prompt.Prompt{
+				ID:          ptr.Of(int64(789)),
+				WorkspaceID: ptr.Of(int64(321)),
+				PromptKey:   ptr.Of("snippet_prompt"),
+				PromptBasic: &prompt.PromptBasic{
+					PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+					DisplayName:   ptr.Of("Snippet Prompt"),
+					Description:   ptr.Of("Snippet description"),
+					LatestVersion: ptr.Of("2.0.0"),
+					CreatedBy:     ptr.Of("snippet_creator"),
+					UpdatedBy:     ptr.Of("snippet_updater"),
+					CreatedAt:     ptr.Of(nowMilli),
+					UpdatedAt:     ptr.Of(nowMilli),
+				},
+				PromptCommit: &prompt.PromptCommit{
+					CommitInfo: &prompt.CommitInfo{
+						Version:     ptr.Of("2.0.0"),
+						BaseVersion: ptr.Of("1.0.0"),
+						Description: ptr.Of("Snippet version"),
+						CommittedBy: ptr.Of("snippet_creator"),
+						CommittedAt: ptr.Of(nowMilli),
+					},
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(true),
+							Messages: []*prompt.Message{
+								{
+									Role:    ptr.Of(prompt.RoleSystem),
+									Content: ptr.Of("Snippet content"),
+								},
+							},
+						},
+					},
+				},
+				PromptDraft: &prompt.PromptDraft{
+					DraftInfo: &prompt.DraftInfo{
+						UserID:      ptr.Of("snippet_creator"),
+						BaseVersion: ptr.Of("2.0.0"),
+						IsModified:  ptr.Of(false),
+						CreatedAt:   ptr.Of(nowMilli),
+						UpdatedAt:   ptr.Of(nowMilli),
+					},
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(true),
+							Messages: []*prompt.Message{
+								{
+									Role:    ptr.Of(prompt.RoleUser),
+									Content: ptr.Of("Draft snippet content"),
+								},
+							},
+						},
+					},
+				},
+			},
+			do: &entity.Prompt{
+				ID:        789,
+				SpaceID:   321,
+				PromptKey: "snippet_prompt",
+				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeSnippet,
+					DisplayName:   "Snippet Prompt",
+					Description:   "Snippet description",
+					LatestVersion: "2.0.0",
+					CreatedBy:     "snippet_creator",
+					UpdatedBy:     "snippet_updater",
+					CreatedAt:     time.UnixMilli(nowMilli),
+					UpdatedAt:     time.UnixMilli(nowMilli),
+				},
+				PromptCommit: &entity.PromptCommit{
+					CommitInfo: &entity.CommitInfo{
+						Version:     "2.0.0",
+						BaseVersion: "1.0.0",
+						Description: "Snippet version",
+						CommittedBy: "snippet_creator",
+						CommittedAt: time.UnixMilli(nowMilli),
+					},
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  true,
+							Messages: []*entity.Message{
+								{
+									Role:    entity.RoleSystem,
+									Content: ptr.Of("Snippet content"),
+								},
+							},
+						},
+					},
+				},
+				PromptDraft: &entity.PromptDraft{
+					DraftInfo: &entity.DraftInfo{
+						UserID:      "snippet_creator",
+						BaseVersion: "2.0.0",
+						IsModified:  false,
+						CreatedAt:   time.UnixMilli(nowMilli),
+						UpdatedAt:   time.UnixMilli(nowMilli),
+					},
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  true,
+							Messages: []*entity.Message{
+								{
+									Role:    entity.RoleUser,
+									Content: ptr.Of("Draft snippet content"),
+								},
+							},
 						},
 					},
 				},

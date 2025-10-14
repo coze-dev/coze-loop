@@ -58,6 +58,51 @@ type PromptManageApplicationImpl struct {
 	configProvider   conf.IConfigProvider
 }
 
+func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, request *manage.ListParentPromptRequest) (r *manage.ListParentPromptResponse, err error) {
+	r = manage.NewListParentPromptResponse()
+
+	// 用户验证
+	userID, ok := session.UserIDInCtx(ctx)
+	if !ok || lo.IsEmpty(userID) {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
+	}
+
+	// 权限检查
+	err = app.authRPCProvider.CheckSpacePermission(ctx, request.GetWorkspaceID(), consts.ActionLoopPromptRead)
+	if err != nil {
+		return r, err
+	}
+
+	// 参数验证
+	if request.GetPromptID() <= 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Prompt ID is required"))
+	}
+
+	// 调用repository层查询父prompt
+	result, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
+		SubPromptID:       request.GetPromptID(),
+		SubPromptVersions: request.GetCommitVersions(),
+	})
+	if err != nil {
+		return r, err
+	}
+
+	// 转换结果
+	parentPrompts := make(map[string]*prompt.PromptCommitVersions)
+	for version, promptCommitVersions := range result {
+		parentPrompts[version] = &prompt.PromptCommitVersions{
+			ID:             ptr.Of(promptCommitVersions.PromptID),
+			WorkspaceID:    ptr.Of(promptCommitVersions.SpaceID),
+			PromptKey:      ptr.Of(promptCommitVersions.PromptKey),
+			PromptBasic:    convertor.PromptBasicDO2DTO(promptCommitVersions.PromptBasic),
+			CommitVersions: promptCommitVersions.CommitVersions,
+		}
+	}
+
+	r.ParentPrompts = parentPrompts
+	return r, nil
+}
+
 func (app *PromptManageApplicationImpl) CreatePrompt(ctx context.Context, request *manage.CreatePromptRequest) (r *manage.CreatePromptResponse, err error) {
 	r = manage.NewCreatePromptResponse()
 
@@ -73,11 +118,15 @@ func (app *PromptManageApplicationImpl) CreatePrompt(ctx context.Context, reques
 		return r, err
 	}
 
+	if request.PromptType == nil {
+		request.PromptType = ptr.Of(prompt.PromptTypeNormal)
+	}
 	// create prompt
 	promptDTO := &prompt.Prompt{
 		WorkspaceID: request.WorkspaceID,
 		PromptKey:   request.PromptKey,
 		PromptBasic: &prompt.PromptBasic{
+			PromptType:  request.PromptType,
 			DisplayName: request.PromptName,
 			Description: request.PromptDescription,
 			CreatedBy:   ptr.Of(userID),
@@ -104,8 +153,9 @@ func (app *PromptManageApplicationImpl) CreatePrompt(ctx context.Context, reques
 		return r, err
 	}
 
-	// create prompt
-	promptID, err := app.manageRepo.CreatePrompt(ctx, promptDO)
+	// create prompt using domain service with snippet validation
+	var promptID int64
+	promptID, err = app.promptService.CreatePrompt(ctx, promptDO)
 	if err != nil {
 		return r, err
 	}
@@ -159,7 +209,7 @@ func (app *PromptManageApplicationImpl) ClonePrompt(ctx context.Context, request
 		PromptDetail: clonedPromptDO.PromptCommit.PromptDetail,
 	}
 	clonedPromptDO.PromptCommit = nil
-	clonedPromptID, err := app.manageRepo.CreatePrompt(ctx, clonedPromptDO)
+	clonedPromptID, err := app.promptService.CreatePrompt(ctx, clonedPromptDO)
 	if err != nil {
 		return r, err
 	}
@@ -183,6 +233,9 @@ func (app *PromptManageApplicationImpl) DeletePrompt(ctx context.Context, reques
 	promptDO, err := app.manageRepo.GetPrompt(ctx, getPromptParam)
 	if err != nil {
 		return r, err
+	}
+	if promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Snippet prompt can not be deleted"))
 	}
 
 	// 权限
@@ -244,6 +297,14 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
 	}
 
+	if request.GetExpandSnippet() {
+		// expand snippets
+		err = app.promptService.ExpandSnippets(ctx, promptDO)
+		if err != nil {
+			return r, err
+		}
+	}
+
 	// 返回
 	r.Prompt = convertor.PromptDO2DTO(promptDO)
 
@@ -300,14 +361,26 @@ func (app *PromptManageApplicationImpl) ListPrompt(ctx context.Context, request 
 		return r, err
 	}
 
-	// list prompt
+	// Default filtering behavior: if no filter_prompt_types specified, only show normal prompts
+	filterPromptTypes := request.GetFilterPromptTypes()
+	if len(filterPromptTypes) == 0 {
+		filterPromptTypes = []prompt.PromptType{prompt.PromptTypeNormal}
+	}
+
+	// Convert prompt.PromptType to entity.PromptType
+	var entityFilterPromptTypes []entity.PromptType
+	for _, pt := range filterPromptTypes {
+		entityFilterPromptTypes = append(entityFilterPromptTypes, convertor.PromptTypeDTO2DO(pt))
+	}
+
 	listPromptParam := repo.ListPromptParam{
 		SpaceID: request.GetWorkspaceID(),
 
-		KeyWord:       request.GetKeyWord(),
-		CreatedBys:    request.GetCreatedBys(),
-		UserID:        userID,
-		CommittedOnly: request.GetCommittedOnly(),
+		KeyWord:           request.GetKeyWord(),
+		CreatedBys:        request.GetCreatedBys(),
+		UserID:            userID,
+		CommittedOnly:     request.GetCommittedOnly(),
+		FilterPromptTypes: entityFilterPromptTypes,
 
 		PageNum:  int(request.GetPageNum()),
 		PageSize: int(request.GetPageSize()),
@@ -429,7 +502,7 @@ func (app *PromptManageApplicationImpl) SaveDraft(ctx context.Context, request *
 	}
 
 	// save draft
-	draftInfoDO, err := app.manageRepo.SaveDraft(ctx, savingPromptDO)
+	draftInfoDO, err := app.promptService.SaveDraft(ctx, savingPromptDO)
 	if err != nil {
 		return r, err
 	}
@@ -634,7 +707,7 @@ func (app *PromptManageApplicationImpl) RevertDraftFromCommit(ctx context.Contex
 		},
 		PromptDetail: promptDO.PromptCommit.PromptDetail,
 	}
-	_, err = app.manageRepo.SaveDraft(ctx, promptDO)
+	_, err = app.promptService.SaveDraft(ctx, promptDO)
 	return r, err
 }
 

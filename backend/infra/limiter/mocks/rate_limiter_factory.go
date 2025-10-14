@@ -20,6 +20,7 @@ import (
 type MockIRateLimiterFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockIRateLimiterFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockIRateLimiterFactoryMockRecorder is the mock recorder for MockIRateLimiterFactory.
@@ -40,10 +41,10 @@ func (m *MockIRateLimiterFactory) EXPECT() *MockIRateLimiterFactoryMockRecorder 
 }
 
 // NewRateLimiter mocks base method.
-func (m *MockIRateLimiterFactory) NewRateLimiter(arg0 ...limiter.FactoryOptionFn) limiter.IRateLimiter {
+func (m *MockIRateLimiterFactory) NewRateLimiter(opts ...limiter.FactoryOptionFn) limiter.IRateLimiter {
 	m.ctrl.T.Helper()
 	varargs := []any{}
-	for _, a := range arg0 {
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "NewRateLimiter", varargs...)
@@ -52,7 +53,7 @@ func (m *MockIRateLimiterFactory) NewRateLimiter(arg0 ...limiter.FactoryOptionFn
 }
 
 // NewRateLimiter indicates an expected call of NewRateLimiter.
-func (mr *MockIRateLimiterFactoryMockRecorder) NewRateLimiter(arg0 ...any) *gomock.Call {
+func (mr *MockIRateLimiterFactoryMockRecorder) NewRateLimiter(opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRateLimiter", reflect.TypeOf((*MockIRateLimiterFactory)(nil).NewRateLimiter), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRateLimiter", reflect.TypeOf((*MockIRateLimiterFactory)(nil).NewRateLimiter), opts...)
 }

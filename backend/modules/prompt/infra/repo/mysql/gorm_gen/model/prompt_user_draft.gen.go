@@ -31,6 +31,7 @@ type PromptUserDraft struct {
 	CreatedAt      time.Time             `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                                                        // 创建时间
 	UpdatedAt      time.Time             `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                                                        // 更新时间
 	DeletedAt      soft_delete.DeletedAt `gorm:"column:deleted_at;type:bigint(20);not null;uniqueIndex:uniq_prompt_id_user_id_deleted_at,priority:3;column:deleted_at;not null;default:0;softDelete:milli;comment:删除时间" json:"deleted_at"` // 删除时间
+	HasSnippets    bool                  `gorm:"column:has_snippets;type:tinyint(1);not null;comment:是否包含prompt片段" json:"has_snippets"`                                                                                                    // 是否包含prompt片段
 }
 
 // TableName PromptUserDraft's table name

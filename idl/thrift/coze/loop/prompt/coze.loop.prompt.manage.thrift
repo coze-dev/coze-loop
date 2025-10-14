@@ -20,6 +20,8 @@ service PromptManageService {
     GetPromptResponse GetPrompt(1: GetPromptRequest request) (api.get = '/api/prompt/v1/prompts/:prompt_id')
     BatchGetPromptResponse BatchGetPrompt(1: BatchGetPromptRequest request)
     ListPromptResponse ListPrompt(1: ListPromptRequest request) (api.post = '/api/prompt/v1/prompts/list')
+    // 查询片段的引用记录
+    ListParentPromptResponse ListParentPrompt (1: ListParentPromptRequest request) (api.post = '/api/prompt/v1/prompts/list_parent')
 
     // 改
     UpdatePromptResponse UpdatePrompt(1: UpdatePromptRequest request) (api.put = '/api/prompt/v1/prompts/:prompt_id')
@@ -49,6 +51,7 @@ struct CreatePromptRequest {
     11: optional string prompt_name (vt.not_nil="true", vt.min_size="1")
     12: optional string prompt_key (vt.not_nil="true", vt.min_size="1")
     13: optional string prompt_description
+    14: optional prompt.PromptType prompt_type
 
     21: optional prompt.PromptDetail draft_detail
 
@@ -95,6 +98,7 @@ struct GetPromptRequest {
     21: optional bool with_draft (api.query="with_draft")
 
     31: optional bool with_default_config (api.query="with_default_config")
+    32: optional bool expand_snippet (api.query="expand_snippet")
 
     255: optional base.Base Base
 }
@@ -136,6 +140,7 @@ struct ListPromptRequest {
     11: optional string key_word
     12: optional list<string> created_bys
     13: optional bool committed_only
+    14: optional list<prompt.PromptType> filter_prompt_types // 向前兼容，如果不传，默认查询normal类型的Prompt
 
     127: optional i32 page_num (vt.not_nil="true", vt.gt="0")
     128: optional i32 page_size (vt.not_nil="true", vt.gt="0", vt.le="100")
@@ -286,5 +291,19 @@ struct UpdateCommitLabelsRequest {
 }
 
 struct UpdateCommitLabelsResponse {
+    255: optional base.BaseResp  BaseResp
+}
+
+struct ListParentPromptRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional i64 prompt_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    3: optional list<string> commit_versions // 片段版本，不传则表示查询所有版本的引用记录
+
+    255: optional base.Base Base
+}
+
+struct ListParentPromptResponse {
+    1: optional map<string, prompt.PromptCommitVersions> parent_prompts // 不同片段版本被引用的父prompt记录
+
     255: optional base.BaseResp  BaseResp
 }
