@@ -197,7 +197,7 @@ struct ListEvaluationSetVersionItemsOpenAPIData {
 
 
 struct UpdateEvaluationSetSchemaOApiRequest {
-    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     // fieldSchema.key 为空时：插入新的一列
