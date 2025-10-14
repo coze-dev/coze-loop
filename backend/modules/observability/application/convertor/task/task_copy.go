@@ -269,7 +269,7 @@ func UserInfoPO2DO(userInfo *entity_common.UserInfo, userID string) *common.User
 	}
 }
 
-func TaskDTO2DO(ctx context.Context, taskDTO *task.Task, userID string, spanFilters *filter.SpanFilterFields) *entity.ObservabilityTask {
+func TaskDTO2DO(taskDTO *task.Task, userID string, spanFilters *filter.SpanFilterFields) *entity.ObservabilityTask {
 	if taskDTO == nil {
 		return nil
 	}
@@ -291,6 +291,12 @@ func TaskDTO2DO(ctx context.Context, taskDTO *task.Task, userID string, spanFilt
 			updatedBy = taskDTO.GetBaseInfo().GetUpdatedBy().GetUserID()
 		}
 	}
+	var spanFilterDO *filter.SpanFilterFields
+	if spanFilters != nil {
+		spanFilterDO = spanFilters
+	} else {
+		spanFilterDO = taskDTO.GetRule().GetSpanFilters()
+	}
 
 	return &entity.ObservabilityTask{
 		ID:                    taskDTO.GetID(),
@@ -300,7 +306,7 @@ func TaskDTO2DO(ctx context.Context, taskDTO *task.Task, userID string, spanFilt
 		TaskType:              taskDTO.GetTaskType(),
 		TaskStatus:            taskDTO.GetTaskStatus(),
 		TaskDetail:            RunDetailDTO2DO(taskDTO.GetTaskDetail()),
-		SpanFilter:            taskDTO.GetRule().GetSpanFilters(),
+		SpanFilter:            spanFilterDO,
 		EffectiveTime:         EffectiveTimeDTO2DO(taskDTO.GetRule().GetEffectiveTime()),
 		Sampler:               SamplerDTO2DO(taskDTO.GetRule().GetSampler()),
 		TaskConfig:            TaskConfigDTO2DO(taskDTO.GetTaskConfig()),

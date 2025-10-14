@@ -11,6 +11,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -150,7 +151,7 @@ func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpa
 
 func (s *spanSubscriber) Creative(ctx context.Context, runStartAt, runEndAt int64) error {
 	err := s.processor.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-		CurrentTask: s.t,
+		CurrentTask: tconv.TaskDTO2DO(s.t, "", nil),
 		RunType:     s.runType,
 		RunStartAt:  runStartAt,
 		RunEndAt:    runEndAt,
@@ -190,7 +191,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 		return nil
 	}
-	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
+	trigger := &taskexe.Trigger{Task: tconv.TaskDTO2DO(s.t, "", nil), Span: span, TaskRun: taskRunConfig}
 	logs.CtxInfo(ctx, "invoke processor, trigger: %v", trigger)
 	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {

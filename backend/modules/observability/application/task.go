@@ -133,7 +133,7 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if err != nil {
 		return nil, err
 	}
-	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: tconv.TaskDTO2DO(ctx, req.GetTask(), userID, spanFilers)})
+	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: tconv.TaskDTO2DO(req.GetTask(), userID, spanFilers)})
 	if err != nil {
 		return resp, err
 	}

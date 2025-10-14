@@ -11,7 +11,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
@@ -108,18 +107,18 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		backfillTaskRun = taskPO.GetBackfillTaskRun()
 		taskRun = taskPO.GetCurrentTaskRun()
 
-		taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
-		endTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetEndAt())
-		startTime := time.UnixMilli(taskInfo.GetRule().GetEffectiveTime().GetStartAt())
-		proc := h.taskProcessor.GetTaskProcessor(taskInfo.TaskType)
+		//taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
+		endTime := time.UnixMilli(taskPO.EffectiveTime.EndAt)
+		startTime := time.UnixMilli(taskPO.EffectiveTime.StartAt)
+		proc := h.taskProcessor.GetTaskProcessor(taskPO.TaskType)
 		// Task time horizon reached
 		// End when the task end time is reached
-		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskInfo.GetID(), endTime, startTime)
-		if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 && taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
+		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
+		if taskPO.BackfillEffectiveTime.EndAt != 0 && taskPO.EffectiveTime.EndAt != 0 {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskInfo.GetID())
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:     taskInfo,
+					Task:     taskPO,
 					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
@@ -129,21 +128,21 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				}
 			}
 			if backfillTaskRun.RunStatus != task.RunStatusDone {
-				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskInfo.GetID())
+				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
 					h.sendBackfillMessage(ctx, &entity.BackFillEvent{
-						TaskID:  taskInfo.GetID(),
-						SpaceID: taskInfo.GetWorkspaceID(),
+						TaskID:  taskPO.ID,
+						SpaceID: taskPO.WorkspaceID,
 					})
 				}
 				defer cancel()
 			}
-		} else if taskInfo.GetRule().GetBackfillEffectiveTime().GetEndAt() != 0 {
+		} else if taskPO.BackfillEffectiveTime.EndAt != 0 {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskInfo.GetID())
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:     taskInfo,
+					Task:     taskPO,
 					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
@@ -153,21 +152,21 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				}
 			}
 			if backfillTaskRun.RunStatus != task.RunStatusDone {
-				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskInfo.GetID())
+				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
 					h.sendBackfillMessage(ctx, &entity.BackFillEvent{
-						TaskID:  taskInfo.GetID(),
-						SpaceID: taskInfo.GetWorkspaceID(),
+						TaskID:  taskPO.ID,
+						SpaceID: taskPO.WorkspaceID,
 					})
 				}
 				defer cancel()
 			}
-		} else if taskInfo.GetRule().GetEffectiveTime().GetEndAt() != 0 {
+		} else if taskPO.EffectiveTime.EndAt != 0 {
 			if time.Now().After(endTime) {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime)", taskInfo.GetID())
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime)", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:     taskInfo,
+					Task:     taskPO,
 					TaskRun:  taskRun,
 					IsFinish: true,
 				})
@@ -178,22 +177,22 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		}
 		// If the task status is unstarted, create it once the task start time is reached
-		if taskInfo.GetTaskStatus() == task.TaskStatusUnstarted && time.Now().After(startTime) {
-			if !taskInfo.GetRule().GetSampler().GetIsCycle() {
+		if taskPO.TaskStatus == task.TaskStatusUnstarted && time.Now().After(startTime) {
+			if !taskPO.Sampler.IsCycle {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-					CurrentTask: taskInfo,
+					CurrentTask: taskPO,
 					RunType:     task.TaskRunTypeNewData,
-					RunStartAt:  taskInfo.GetRule().GetEffectiveTime().GetStartAt(),
-					RunEndAt:    taskInfo.GetRule().GetEffectiveTime().GetEndAt(),
+					RunStartAt:  taskPO.EffectiveTime.StartAt,
+					RunEndAt:    taskPO.EffectiveTime.EndAt,
 				})
-				err = proc.OnUpdateTaskChange(ctx, taskInfo, task.TaskStatusRunning)
+				err = proc.OnUpdateTaskChange(ctx, taskPO, task.TaskStatusRunning)
 				if err != nil {
 					logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
 					continue
 				}
 			} else {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-					CurrentTask: taskInfo,
+					CurrentTask: taskPO,
 					RunType:     task.TaskRunTypeNewData,
 					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
@@ -205,13 +204,13 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		}
 		// Handle taskRun
-		if taskInfo.GetTaskStatus() == task.TaskStatusRunning && taskInfo.GetTaskStatus() == task.TaskStatusPending {
-			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskInfo.GetID(), taskRun.RunEndAt)
+		if taskPO.TaskStatus == task.TaskStatusRunning && taskPO.TaskStatus == task.TaskStatusPending {
+			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskPO.ID, taskRun.RunEndAt)
 			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(cycleEndTime)", taskInfo.GetID())
+				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(cycleEndTime)", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:     taskInfo,
+					Task:     taskPO,
 					TaskRun:  taskRun,
 					IsFinish: false,
 				})
@@ -219,9 +218,9 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
 					continue
 				}
-				if taskInfo.GetRule().GetSampler().GetIsCycle() {
+				if taskPO.Sampler.IsCycle {
 					err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-						CurrentTask: taskInfo,
+						CurrentTask: taskPO,
 						RunType:     task.TaskRunTypeNewData,
 						RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 						RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
