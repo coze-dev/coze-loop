@@ -75,9 +75,11 @@ func (p *EvalTargetType) Value() (driver.Value, error) {
 type VolcengineAgentProtocol int64
 
 const (
-	VolcengineAgentProtocol_MCP   VolcengineAgentProtocol = 1
-	VolcengineAgentProtocol_A2A   VolcengineAgentProtocol = 2
-	VolcengineAgentProtocol_Other VolcengineAgentProtocol = 3
+	VolcengineAgentProtocol_MCP VolcengineAgentProtocol = 1
+	VolcengineAgentProtocol_A2A VolcengineAgentProtocol = 2
+	// a2a和mcp都支持
+	VolcengineAgentProtocol_A2AMCP VolcengineAgentProtocol = 3
+	VolcengineAgentProtocol_Other  VolcengineAgentProtocol = 4
 )
 
 func (p VolcengineAgentProtocol) String() string {
@@ -86,6 +88,8 @@ func (p VolcengineAgentProtocol) String() string {
 		return "MCP"
 	case VolcengineAgentProtocol_A2A:
 		return "A2A"
+	case VolcengineAgentProtocol_A2AMCP:
+		return "A2AMCP"
 	case VolcengineAgentProtocol_Other:
 		return "Other"
 	}
@@ -98,6 +102,8 @@ func VolcengineAgentProtocolFromString(s string) (VolcengineAgentProtocol, error
 		return VolcengineAgentProtocol_MCP, nil
 	case "A2A":
 		return VolcengineAgentProtocol_A2A, nil
+	case "A2AMCP":
+		return VolcengineAgentProtocol_A2AMCP, nil
 	case "Other":
 		return VolcengineAgentProtocol_Other, nil
 	}

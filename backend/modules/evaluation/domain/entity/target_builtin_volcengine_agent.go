@@ -21,7 +21,8 @@ type VolcengineAgentEndpoint struct {
 type VolcengineAgentProtocol int64
 
 const (
-	VolcengineAgentProtocol_MCP   VolcengineAgentProtocol = 1
-	VolcengineAgentProtocol_A2A   VolcengineAgentProtocol = 2
-	VolcengineAgentProtocol_Other VolcengineAgentProtocol = 3
+	VolcengineAgentProtocol_MCP    VolcengineAgentProtocol = 1
+	VolcengineAgentProtocol_A2A    VolcengineAgentProtocol = 2
+	VolcengineAgentProtocol_A2AMCP VolcengineAgentProtocol = 3
+	VolcengineAgentProtocol_Other  VolcengineAgentProtocol = 4
 )

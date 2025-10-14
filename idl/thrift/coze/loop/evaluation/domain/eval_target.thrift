@@ -55,7 +55,8 @@ enum EvalTargetType {
 enum VolcengineAgentProtocol {
     MCP = 1
     A2A = 2
-    Other = 3
+    A2AMCP = 3  // a2a和mcp都支持
+    Other = 4
 }
 
 struct VolcengineAgent {
