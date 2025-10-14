@@ -460,11 +460,11 @@ func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.O
 
 func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
 	var taskPOs []*entity.ObservabilityTask
-	taskPOs, err := h.listNonFinalTask(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-		return nil, err
-	}
+	//taskPOs, err := h.listNonFinalTask(ctx)
+	//if err != nil {
+	//	logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+	//	return nil, err
+	//}
 	var offset int32 = 0
 	const limit int32 = 1000
 	// Paginate through all tasks
@@ -477,20 +477,19 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 					{
 						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
 						Values: []string{
-							string(task.TaskStatusSuccess),
-							string(task.TaskStatusDisabled),
+							string(task.TaskStatusUnstarted),
 						},
 						QueryType: ptr.Of(filter.QueryTypeNotIn),
 						FieldType: ptr.Of(filter.FieldTypeString),
 					},
-					{
-						FieldName: ptr.Of("updated_at"),
-						Values: []string{
-							fmt.Sprintf("%d", time.Now().Add(-time.Hour).UnixMilli()),
-						},
-						QueryType: ptr.Of(filter.QueryTypeGt),
-						FieldType: ptr.Of(filter.FieldTypeLong),
-					},
+					//{
+					//	FieldName: ptr.Of("updated_at"),
+					//	Values: []string{
+					//		fmt.Sprintf("%d", time.Now().Add(-time.Hour).UnixMilli()),
+					//	},
+					//	QueryType: ptr.Of(filter.QueryTypeGt),
+					//	FieldType: ptr.Of(filter.FieldTypeLong),
+					//},
 				},
 			},
 		})

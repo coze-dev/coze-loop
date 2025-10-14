@@ -324,15 +324,15 @@ func (v *TaskDaoImpl) buildUpdateAtFilter(q *query.Query, f *filter.TaskFilterFi
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for update at"))
 	}
 
-	updateAtLatest, err := strconv.ParseFloat(f.Values[0], 64)
+	updateAtLatest, err := strconv.ParseInt(f.Values[0], 10, 64)
 	if err != nil {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid update at: %v", err.Error()))
 	}
 	switch *f.QueryType {
 	case filter.QueryTypeGt:
-		return q.ObservabilityTask.UpdatedAt.Gt(time.UnixMilli(int64(updateAtLatest))), nil
+		return q.ObservabilityTask.UpdatedAt.Gt(time.UnixMilli(updateAtLatest)), nil
 	case filter.QueryTypeLt:
-		return q.ObservabilityTask.UpdatedAt.Lt(time.UnixMilli(int64(updateAtLatest))), nil
+		return q.ObservabilityTask.UpdatedAt.Lt(time.UnixMilli(updateAtLatest)), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for update at"))
 	}
