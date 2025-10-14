@@ -1271,6 +1271,11 @@ func _listtracesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _validateevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _tasksMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -1317,6 +1322,15 @@ func _checktasknameMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _traceMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _mockevaltargetoutputMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+func _batchdebugevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1372,6 +1386,11 @@ func _getexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFunc
 }
 
 func _listexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _annotations0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
