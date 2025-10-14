@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
@@ -189,6 +190,8 @@ func (v *TaskDaoImpl) buildSingleFilterExpr(q *query.Query, f *filter.TaskFilter
 		return v.buildSampleRateFilter(q, f)
 	case "task_id":
 		return v.buildTaskIDFilter(q, f)
+	case "update_at":
+		return v.buildUpdateAtFilter(q, f)
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
 	}
@@ -314,6 +317,25 @@ func (v *TaskDaoImpl) buildTaskIDFilter(q *query.Query, f *filter.TaskFilterFiel
 	}
 
 	return q.ObservabilityTask.ID.In(taskIDs...), nil
+}
+
+func (v *TaskDaoImpl) buildUpdateAtFilter(q *query.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for update at"))
+	}
+
+	updateAtLatest, err := strconv.ParseFloat(f.Values[0], 64)
+	if err != nil {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid update at: %v", err.Error()))
+	}
+	switch *f.QueryType {
+	case filter.QueryTypeGt:
+		return q.ObservabilityTask.UpdatedAt.Gt(time.Unix(int64(updateAtLatest), 0)), nil
+	case filter.QueryTypeLt:
+		return q.ObservabilityTask.UpdatedAt.Lt(time.Unix(int64(updateAtLatest), 0)), nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for update at"))
+	}
 }
 
 // 计算分页参数

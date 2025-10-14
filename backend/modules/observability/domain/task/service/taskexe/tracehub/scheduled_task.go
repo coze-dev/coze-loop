@@ -261,21 +261,19 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 	}
 	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to database...")
 	// 1. Retrieve non-final task list
-	taskPOs, err := h.listNonFinalTask(ctx)
+	taskDOs, err := h.listSyncTaskRunTask(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
 		return
 	}
-	if len(taskPOs) == 0 {
+	if len(taskDOs) == 0 {
 		logs.CtxInfo(ctx, "No non-final tasks need syncing")
 		return
 	}
 
-	logs.CtxInfo(ctx, "Retrieved non-final task count:%d", len(taskPOs))
-
 	// 2. Collect all TaskRun information that needs syncing
 	var taskRunInfos []*TaskRunCountInfo
-	for _, taskPO := range taskPOs {
+	for _, taskPO := range taskDOs {
 		if len(taskPO.TaskRuns) == 0 {
 			continue
 		}
@@ -437,6 +435,61 @@ func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.O
 						},
 						QueryType: ptr.Of(filter.QueryTypeIn),
 						FieldType: ptr.Of(filter.FieldTypeString),
+					},
+				},
+			},
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+			return nil, err
+		}
+
+		// Add tasks from the current page to the full list
+		taskPOs = append(taskPOs, tasklist...)
+
+		// If fewer tasks than limit are returned, this is the last page
+		if len(tasklist) < int(limit) {
+			break
+		}
+
+		// Move to the next page, increasing offset by 1000
+		offset += limit
+	}
+	return taskPOs, nil
+}
+
+func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+	var taskPOs []*entity.ObservabilityTask
+	taskPOs, err := h.listNonFinalTask(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		return nil, err
+	}
+	var offset int32 = 0
+	const limit int32 = 1000
+	// Paginate through all tasks
+	for {
+		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+			ReqLimit:  limit,
+			ReqOffset: offset,
+			TaskFilters: &filter.TaskFilterFields{
+				FilterFields: []*filter.TaskFilterField{
+					{
+						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+						Values: []string{
+							string(task.TaskStatusSuccess),
+							string(task.TaskStatusDisabled),
+						},
+						QueryType: ptr.Of(filter.QueryTypeNotIn),
+						FieldType: ptr.Of(filter.FieldTypeString),
+					},
+					{
+						FieldName: ptr.Of("update_at"),
+						Values: []string{
+							fmt.Sprintf("%d", time.Now().Add(-time.Hour).UnixMilli()),
+						},
+						QueryType: ptr.Of(filter.QueryTypeGt),
+						FieldType: ptr.Of(filter.FieldTypeLong),
 					},
 				},
 			},
