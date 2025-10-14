@@ -21,8 +21,13 @@ import (
 )
 
 const (
-	CtxKeyEnv = "K_ENV"
-	XttEnv    = "x_tt_env"
+	XttEnv = "x_tt_env"
+)
+
+type ContextKey string
+
+const (
+	CtxKeyEnv ContextKey = "env"
 )
 
 func ToJSONString(ctx context.Context, obj interface{}) string {

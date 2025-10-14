@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gslice"
-	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -25,14 +24,12 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	ctx = h.fillCtx(ctx)
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", rawSpan.LogID, rawSpan.TraceID, rawSpan.SpanID)
 	logs.CtxInfo(ctx, "auto_task start, log_suffix=%s", logSuffix)
-	var tags []metrics.T
 	// 1、Convert to standard span and perform initial filtering based on space_id
 	span := rawSpan.RawSpanConvertToLoopSpan()
 	// 1.1 Filter out spans that do not belong to any space or bot
 	spaceIDs, botIDs, _ := h.getObjListWithTaskFromCache(ctx)
 	logs.CtxInfo(ctx, "space list: %v, bot list: %v, log_suffix=%s", spaceIDs, botIDs, logSuffix)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_space_or_bot"})
 		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
 		return nil
 	}
@@ -48,30 +45,25 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 
 	logs.CtxInfo(ctx, "%d subscriber of flow span found, %s", len(subs), logSuffix)
 	if len(subs) == 0 {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "no_subscriber"})
 		return nil
 	}
 	// 3、Sample
 	subs = gslice.Filter(subs, func(sub *spanSubscriber) bool { return sub.Sampled() })
 	logs.CtxInfo(ctx, "%d subscriber of flow span sampled, %s", len(subs), logSuffix)
 	if len(subs) == 0 {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "sampler_not_hit"})
 		return nil
 	}
 	// 3. PreDispatch
 	subs, err = h.preDispatch(ctx, span, subs)
 	if err != nil {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "preDispatch_failed"})
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
 	}
 	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
 	// 4、Dispatch
 	if err = h.dispatch(ctx, span, subs); err != nil {
-		tags = append(tags, metrics.T{Name: TagKeyResult, Value: "dispatch_failed"})
 		logs.CtxWarn(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
 		return err
 	}
-	tags = append(tags, metrics.T{Name: TagKeyResult, Value: "dispatched"})
 	return nil
 }
 
@@ -248,7 +240,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 	}
-	subs = needDispatchSubs
 	return needDispatchSubs, merr.ErrorOrNil()
 }
 
