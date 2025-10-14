@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -370,14 +372,29 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 	for _, autoEvaluateConfig := range taskConfig.AutoEvaluateConfigs {
 		var fieldMappings []*entity.EvaluateFieldMapping
 		if len(autoEvaluateConfig.FieldMappings) > 0 {
+			var evalSetNames []string
+			jspnPathMapping := make(map[string]string)
 			for _, config := range autoEvaluateConfig.FieldMappings {
+				var evalSetName string
+				jspnPath := fmt.Sprintf("%s.%s", config.TraceFieldKey, config.TraceFieldJsonpath)
+				if _, exits := jspnPathMapping[jspnPath]; exits {
+					evalSetName = jspnPathMapping[jspnPath]
+				} else {
+					evalSetName = getLastPartAfterDot(jspnPath)
+					for exists := slices.Contains(evalSetNames, evalSetName); exists; exists = slices.Contains(evalSetNames, evalSetName) {
+						evalSetName += "_"
+					}
+				}
+				evalSetNames = append(evalSetNames, evalSetName)
+				jspnPathMapping[jspnPath] = evalSetName
 				fieldMappings = append(fieldMappings, &entity.EvaluateFieldMapping{
 					FieldSchema:        config.FieldSchema,
 					TraceFieldKey:      config.TraceFieldKey,
 					TraceFieldJsonpath: config.TraceFieldJsonpath,
-					EvalSetName:        config.EvalSetName,
+					EvalSetName:        ptr.Of(evalSetName),
 				})
 			}
+
 		}
 		autoEvaluateConfigs = append(autoEvaluateConfigs, &entity.AutoEvaluateConfig{
 			EvaluatorVersionID: autoEvaluateConfig.EvaluatorVersionID,
