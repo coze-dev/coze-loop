@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	taskRepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -40,6 +42,8 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -192,7 +196,10 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.GetTracesAdvanceInfo(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, got, tt.want)
@@ -209,6 +216,8 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -293,7 +302,10 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -309,6 +321,8 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -399,7 +413,10 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.GetTracesMetaInfo(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, got, tt.want)
@@ -416,6 +433,8 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -532,7 +551,10 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.ListAnnotations(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
@@ -549,6 +571,8 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -738,7 +762,10 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.UpdateManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -754,6 +781,8 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -974,7 +1003,10 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.CreateManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
@@ -993,6 +1025,8 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -1408,7 +1442,10 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.ListSpans(tt.args.ctx, tt.args.req)
 			assert.Equal(t, err != nil, tt.wantErr)
 			assert.Equal(t, got, tt.want)
@@ -1425,6 +1462,8 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -1789,7 +1828,10 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.CreateAnnotation(tt.args.ctx, tt.args.req)
 			t.Log(err)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1806,6 +1848,8 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -2133,7 +2177,10 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.DeleteAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -2149,6 +2196,8 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -2369,7 +2418,10 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.DeleteManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
