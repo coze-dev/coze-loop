@@ -106,15 +106,18 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		var taskRun, backfillTaskRun *entity.TaskRun
 		backfillTaskRun = taskPO.GetBackfillTaskRun()
 		taskRun = taskPO.GetCurrentTaskRun()
-
+		var startTime, endTime time.Time
 		//taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
-		endTime := time.UnixMilli(taskPO.EffectiveTime.EndAt)
-		startTime := time.UnixMilli(taskPO.EffectiveTime.StartAt)
+
+		if taskPO.EffectiveTime != nil {
+			endTime = time.UnixMilli(taskPO.EffectiveTime.EndAt)
+			startTime = time.UnixMilli(taskPO.EffectiveTime.StartAt)
+		}
 		proc := h.taskProcessor.GetTaskProcessor(taskPO.TaskType)
 		// Task time horizon reached
 		// End when the task end time is reached
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
-		if taskPO.BackfillEffectiveTime.EndAt != 0 && taskPO.EffectiveTime.EndAt != 0 {
+		if taskPO.BackfillEffectiveTime != nil && taskPO.EffectiveTime != nil {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -138,7 +141,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				}
 				defer cancel()
 			}
-		} else if taskPO.BackfillEffectiveTime.EndAt != 0 {
+		} else if taskPO.BackfillEffectiveTime != nil {
 			if backfillTaskRun.RunStatus == task.RunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
@@ -162,7 +165,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				}
 				defer cancel()
 			}
-		} else if taskPO.EffectiveTime.EndAt != 0 {
+		} else if taskPO.EffectiveTime != nil {
 			if time.Now().After(endTime) {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime)", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
