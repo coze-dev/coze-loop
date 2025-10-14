@@ -65,7 +65,7 @@ func TestBatchCreateEvaluationSetItems(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockSetup()
 
-			idMap, errors, err := service.BatchCreateEvaluationSetItems(context.Background(), tc.param)
+			idMap, errors, _, err := service.BatchCreateEvaluationSetItems(context.Background(), tc.param)
 
 			if !equalIDMaps(idMap, tc.expectedIDMap) {
 				t.Errorf("期望 IDMap 为 %v, 但得到 %v", tc.expectedIDMap, idMap)
