@@ -146,10 +146,6 @@ func (p *provider) Expire(ctx context.Context, key string, expiration time.Durat
 	return p.cli.Expire(ctx, key, expiration)
 }
 
-func (p *provider) Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd {
-	return p.cli.Scan(ctx, cursor, match, count)
-}
-
 func (p *provider) Pipeline() Pipeliner {
 	pipe := p.cli.Pipeline()
 	return pipe
