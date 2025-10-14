@@ -137,6 +137,10 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
 		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
 		Session:          session,
+		Ext: map[string]string{"workspace_id": strconv.FormatInt(trigger.Task.WorkspaceID, 10),
+			"span_id":     trigger.Span.SpanID,
+			"task_id":     strconvh.FormatInt64(trigger.Task.ID),
+			"task_run_id": strconvh.FormatInt64(taskRun.ID)},
 	})
 
 	if err != nil {
