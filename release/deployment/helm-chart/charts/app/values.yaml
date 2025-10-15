@@ -4,12 +4,12 @@ service:
   targetPort: 8888
 
 image:
-  registry: "docker.io"
-  repository: "cozedev"
+  registry: ""
+  repository: "coze-dev"
   image: "coze-loop"
-  tag: "1.2.0"
-  pullPolicy: Always
-  pullSecrets: "coze-loop-image-secret"
+  tag: "dev"
+  pullPolicy: Never
+  pullSecrets: ""
 
 init_image:
   redis:
@@ -18,7 +18,7 @@ init_image:
     image: "redis"
     tag: "8.2.0"
   mysql:
-    registry: "docker.iom"
+    registry: "docker.io"
     repository: "library"
     image: "mysql"
     tag: "8.4.6"
@@ -80,10 +80,16 @@ env:
       user: ""
       password: ""
 
+  # faas
+  pythonFaas:
+    port: 8000
+  jsFaas:
+    port: 8000
+
 # customization
 custom:
   image:
-    registry:
+    registry: ""
     pullSecrets:
   redis:
     disabled: true

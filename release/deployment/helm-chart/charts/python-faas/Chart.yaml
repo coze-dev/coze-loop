@@ -1,0 +1,6 @@
+apiVersion: v2
+name:  coze-loop-python-faas
+description: Python FaaS service for Coze Loop
+type: application
+version: 1.2.0
+appVersion: "1.2.0"

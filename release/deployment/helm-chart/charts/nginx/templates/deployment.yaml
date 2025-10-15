@@ -23,7 +23,7 @@ spec:
             name: {{ include "configmap.name" . }}
       initContainers:
         - name: transfer-resources
-          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.init_image.app.registry) .Values.init_image.app.repository .Values.init_image.app.image .Values.init_image.app.tag }}
+          image: {{ if .Values.custom.image.registry }}{{ printf "%s/%s/%s:%s" .Values.custom.image.registry .Values.init_image.app.repository .Values.init_image.app.image .Values.init_image.app.tag }}{{ else if .Values.init_image.app.registry }}{{ printf "%s/%s/%s:%s" .Values.init_image.app.registry .Values.init_image.app.repository .Values.init_image.app.image .Values.init_image.app.tag }}{{ else }}{{ printf "%s/%s:%s" .Values.init_image.app.repository .Values.init_image.app.image .Values.init_image.app.tag }}{{ end }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: resources

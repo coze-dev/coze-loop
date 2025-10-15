@@ -28,8 +28,7 @@ else
 fi
 
 # 验证Pyodide可用性
-echo "🧪 验证Pyodide可用性..."
-deno run -A jsr:@eyurtsev/pyodide-sandbox -c "print('Hello, Pyodide!')" && echo "✅ Pyodide 可用" || echo "⚠️  Pyodide 可能需要网络连接"
+# 移除启动期的Pyodide网络依赖验证，避免无外网环境失败
 
 # 确保工作空间目录存在
 mkdir -p "${FAAS_WORKSPACE:-/tmp/faas-workspace}"
@@ -80,7 +79,7 @@ fi
 # 后台健康检查循环
 (
   while true; do
-    if sh /coze-loop/bootstrap/python-faas/healthcheck.sh; then
+    if sh /coze-loop/bootstrap/healthcheck.sh; then
       print_banner "Pyodide Python FaaS Ready!"
       break
     else
@@ -104,4 +103,4 @@ exec deno run \
   --allow-read=/app,/tmp \
   --allow-write=/tmp \
   --allow-run=deno \
-  /coze-loop/bootstrap/python-faas/pyodide_faas_server.ts
+  /coze-loop/bootstrap/pyodide_faas_server.ts

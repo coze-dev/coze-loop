@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "js-faas.fullname" . }}
+  labels:
+    {{- include "js-faas.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "js-faas.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "js-faas.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: {{ (.Values.custom.image.pullSecrets | default .Values.image.pullSecrets) | quote }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: {{ include "js-faas.fullname" . }}-bootstrap-configmap
+        - name: js-faas-workspace
+          emptyDir:
+            sizeLimit: 1Gi
+            medium: Memory
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: {{ include "js-faas.name" . }}
+          image: {{ printf "%s/%s/%s:%s" (.Values.custom.image.registry | default .Values.image.registry) .Values.image.repository .Values.image.image .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: bootstrap
+              mountPath: "/coze-loop/bootstrap"
+              readOnly: true
+            - name: js-faas-workspace
+              mountPath: "/tmp/faas-workspace"
+          env:
+            # Deno 配置
+            - name: DENO_DIR
+              value: {{ .Values.env.DENO_DIR | quote }}
+            - name: DENO_NO_UPDATE_CHECK
+              value: {{ .Values.env.DENO_NO_UPDATE_CHECK | quote }}
+            
+            # FaaS 基础配置
+            - name: FAAS_WORKSPACE
+              value: {{ .Values.env.FAAS_WORKSPACE | quote }}
+            - name: FAAS_PORT
+              value: {{ .Values.env.FAAS_PORT | quote }}
+            - name: FAAS_TIMEOUT
+              value: {{ .Values.env.FAAS_TIMEOUT | quote }}
+            - name: FAAS_LANGUAGE
+              value: {{ .Values.env.FAAS_LANGUAGE | quote }}
+          
+          workingDir: /app
+          command: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
+          
+          resources:
+            {{- toYaml (.Values.custom.resources | default .Values.resources) | nindent 12 }}
+          
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            capabilities:
+              drop:
+                - ALL
+          
+          livenessProbe:
+            exec:
+              command: [ "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
+            initialDelaySeconds: {{ .Values.liveness.startSeconds }}
+            periodSeconds: {{ .Values.liveness.intervalSeconds }}
+            timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.liveness.shutdownFailureTimes }}
