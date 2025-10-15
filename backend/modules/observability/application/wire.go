@@ -176,8 +176,11 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		general.NewGeneralToolLatencyAvgMetric(),
 		// Model 模型统计指标
 		model.NewModelTokenCountMetric(),
+		model.NewModelTokenCountByTimeMetric(),
 		model.NewModelInputTokenCountMetric(),
+		model.NewModelInputTokenCountByTimeMetric(),
 		model.NewModelOutputTokenCountMetric(),
+		model.NewModelOutputTokenCountByTimeMetric(),
 		model.NewModelQPSMetric(),
 		model.NewModelQPMMetric(),
 		model.NewModelSuccessRatioMetric(),
