@@ -99,8 +99,6 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 		if err != nil {
 			logs.CtxError(ctx, "failed to list span, %v", err)
 			return nil, err
-		} else if len(res.Spans) == 0 {
-			return nil, nil
 		}
 		spans = append(spans, res.Spans...)
 	}
