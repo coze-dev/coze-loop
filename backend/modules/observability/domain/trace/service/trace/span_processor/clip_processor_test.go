@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 
@@ -146,4 +147,92 @@ func TestClipProcessor_TransformOutputPlainText(t *testing.T) {
 	require.Len(t, res, 1)
 	require.Equal(t, clipProcessorMaxLength+len(clipProcessorSuffix), len(res[0].Output))
 	require.True(t, strings.HasSuffix(res[0].Output, clipProcessorSuffix))
+}
+
+func TestClipByByteLimit_EdgeCases(t *testing.T) {
+	content := "abc你好"
+	require.Equal(t, "", clipByByteLimit(content, 0))
+	require.Equal(t, "", clipByByteLimit(content, -1))
+	require.Equal(t, content, clipByByteLimit(content, len(content)))
+	require.Equal(t, "abc你", clipByByteLimit(content, len("abc你")))
+	require.Equal(t, "abc你", clipByByteLimit(content, len("abc你")+1))
+	require.Equal(t, "", clipByByteLimit("你好", 1))
+}
+
+func TestClipPlainText_UTF8Validity(t *testing.T) {
+	content := strings.Repeat("只能制定计划让执行代理分析代码仓库结构并根据实际情况进行分析。", 40)
+	clipped := clipPlainText(content)
+	require.True(t, strings.HasSuffix(clipped, clipProcessorSuffix))
+	require.False(t, strings.Contains(clipped, "\ufffd"))
+	require.True(t, strings.HasPrefix(clipped, "只能制定计划"))
+	require.True(t, utf8.ValidString(clipped))
+}
+
+func TestClipSpanField_JSONFallback(t *testing.T) {
+	data := map[string]interface{}{
+		"message": strings.Repeat("好", clipProcessorMaxLength/3+20),
+	}
+	raw, err := json.MarshalString(data)
+	require.NoError(t, err)
+	result := clipSpanField(raw)
+	require.True(t, json.Valid([]byte(result)))
+	require.NotContains(t, result, "\ufffd")
+
+	var parsed map[string]string
+	require.NoError(t, json.Unmarshal([]byte(result), &parsed))
+	require.True(t, strings.HasSuffix(parsed["message"], clipProcessorSuffix))
+	require.True(t, strings.HasPrefix(parsed["message"], "好"))
+}
+
+func TestClipSpanField_NonJSON(t *testing.T) {
+	content := strings.Repeat("目标风", 400)
+	result := clipSpanField(content)
+	require.True(t, strings.HasSuffix(result, clipProcessorSuffix))
+	require.NotContains(t, result, "\ufffd")
+}
+
+func TestClipSpanField_ShortContent(t *testing.T) {
+	content := "short"
+	require.Equal(t, content, clipSpanField(content))
+}
+
+func TestClipJSONContent_Invalid(t *testing.T) {
+	clipped, ok := clipJSONContent("not-json")
+	require.False(t, ok)
+	require.Equal(t, "", clipped)
+}
+
+func TestClipJSONContent_NoChange(t *testing.T) {
+	data := []string{"foo", "bar"}
+	raw, err := json.MarshalString(data)
+	require.NoError(t, err)
+	clipped, ok := clipJSONContent(raw)
+	require.False(t, ok)
+	require.Equal(t, "", clipped)
+}
+
+func TestClipProcessor_TransformSkipNil(t *testing.T) {
+	processor := &ClipProcessor{}
+	spans := loop_span.SpanList{
+		nil,
+		{Input: "short"},
+	}
+	res, err := processor.Transform(context.Background(), spans)
+	require.NoError(t, err)
+	require.Len(t, res, 2)
+	require.Nil(t, res[0])
+	require.Equal(t, "short", res[1].Input)
+}
+
+func TestClipProcessorFactory(t *testing.T) {
+	factory := NewClipProcessorFactory()
+	processor, err := factory.CreateProcessor(context.Background(), Settings{})
+	require.NoError(t, err)
+	require.IsType(t, &ClipProcessor{}, processor)
+}
+
+func TestClipJSONValue_DefaultBranch(t *testing.T) {
+	res, changed := clipJSONValue(float64(123.456))
+	require.Equal(t, float64(123.456), res)
+	require.False(t, changed)
 }
