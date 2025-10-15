@@ -26,7 +26,7 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 		}
 		var storageDuration int64 = 1
 		res, err := h.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-			ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
+			ConnectorUID: turn.BaseInfo.CreatedBy.UserID,
 			SpaceID:      workspaceID,
 		})
 		if err != nil {
