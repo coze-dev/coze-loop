@@ -64,7 +64,7 @@ func clipByByteLimit(content string, limit int) string {
 		return content
 	}
 	cutoff := limit
-	for cutoff > 0 && !utf8.RuneStart(content[cutoff]) {
+	for shift := 0; cutoff > 0 && shift < utf8.UTFMax && !utf8.RuneStart(content[cutoff]); shift++ {
 		cutoff--
 	}
 	if cutoff == 0 {
