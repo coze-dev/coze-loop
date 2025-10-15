@@ -42,7 +42,6 @@ type ConsumerConfig struct {
 	// Timeout for consumer one message
 	ConsumeTimeout time.Duration
 	EnablePPE      *bool
-	SubExpr        *string
 	IsEnabled      *bool
 }
 
