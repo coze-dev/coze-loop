@@ -4,6 +4,11 @@ typedef string CompareType (ts.enum="true")
 const CompareType CompareType_YoY = "yoy" // 同比
 const CompareType CompareType_MoM = "mom" // 环比
 
+
+typedef string DrillDownValueType (ts.enum="true")
+const DrillDownValueType DrillDownValueType_ModelName = "model_name"
+const DrillDownValueType DrillDownValueType_ToolName= "tool_name"
+
 struct Metric {
     1: optional string summary
     2: optional map<string, string> pie

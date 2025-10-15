@@ -15,8 +15,8 @@ import (
 type MetricType string
 type MetricSource string
 type MetricGranularity string
-
 type MetricCompareType string
+type MetricOperator string
 
 const (
 	MetricTypeTimeSeries MetricType = "time_series" // 时间序列
@@ -79,6 +79,7 @@ const (
 	MetricNameModelTPOTPct50        = "model_tpot_pct50"
 	MetricNameModelTPOTPct90        = "model_tpot_pct90"
 	MetricNameModelTPOTPct99        = "model_tpot_pct99"
+	MetricNameModelNamePie          = "model_name_pie"
 
 	// Tool 工具统计指标
 	MetricNameToolTotalCount    = "tool_total_count"
@@ -89,6 +90,7 @@ const (
 	MetricNameToolDurationPct90 = "tool_duration_pct90"
 	MetricNameToolDurationPct99 = "tool_duration_pct99"
 	MetricNameToolSuccessRatio  = "tool_success_ratio"
+	MetricNameToolNamePie       = "tool_name_pie"
 
 	// Service 服务调用指标
 	MetricNameServiceTraceCountTotal = "service_trace_count_total"
@@ -109,6 +111,10 @@ const (
 	MetricNameServiceDurationPct90   = "service_duration_pct90"
 	MetricNameServiceDurationPct99   = "service_duration_pct99"
 	MetricNameServiceSuccessRatio    = "service_success_ratio"
+
+	// 复合指标计算
+	MetricOperatorDivide = "divide"
+	MetricOperatorPie    = "pie"
 )
 
 type Compare struct {
@@ -123,6 +129,11 @@ type Dimension struct {
 
 type IMetricFill interface {
 	Interpolate() string
+}
+
+type IMetricCompound interface {
+	GetMetrics() []IMetricDefinition
+	Operator() MetricOperator
 }
 
 type MetricFillNull struct{}

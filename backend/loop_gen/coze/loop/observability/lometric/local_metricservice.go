@@ -43,6 +43,27 @@ func (l *LocalMetricService) GetMetrics(ctx context.Context, Req *metric.GetMetr
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalMetricService) GetDrillDownValues(ctx context.Context, Req *metric.GetDrillDownValuesRequest, callOptions ...callopt.Option) (*metric.GetDrillDownValuesResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*metric.MetricServiceGetDrillDownValuesArgs)
+		result := out.(*metric.MetricServiceGetDrillDownValuesResult)
+		resp, err := l.impl.GetDrillDownValues(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &metric.MetricServiceGetDrillDownValuesArgs{Req: Req}
+	result := &metric.MetricServiceGetDrillDownValuesResult{}
+	ctx = l.injectRPCInfo(ctx, "GetDrillDownValues")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalMetricService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

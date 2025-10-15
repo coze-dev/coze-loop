@@ -12,9 +12,15 @@ const (
 	CompareTypeYoY = "yoy"
 
 	CompareTypeMoM = "mom"
+
+	DrillDownValueTypeModelName = "model_name"
+
+	DrillDownValueTypeToolName = "tool_name"
 )
 
 type CompareType = string
+
+type DrillDownValueType = string
 
 type Metric struct {
 	Summary    *string                   `thrift:"summary,1,optional" frugal:"1,optional,string" form:"summary" json:"summary,omitempty" query:"summary"`

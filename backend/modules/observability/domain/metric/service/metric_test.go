@@ -4,6 +4,7 @@
 package service
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -751,7 +752,7 @@ func TestDivideNumber(t *testing.T) {
 
 func TestDivideTimeSeries(t *testing.T) {
 	t.Run("nil inputs", func(t *testing.T) {
-		got := divideTimeSeries(nil, nil)
+		got := divideTimeSeries(context.Background(), nil, nil)
 		if got == nil {
 			t.Fatalf("expected non-nil metric")
 		}
@@ -772,7 +773,7 @@ func TestDivideTimeSeries(t *testing.T) {
 				{Timestamp: "1", Value: "1"},
 			},
 		}}
-		got := divideTimeSeries(numerator, denominator)
+		got := divideTimeSeries(context.Background(), numerator, denominator)
 		if len(got.TimeSeries) != 0 {
 			t.Fatalf("expected no timeseries entries, got %v", got.TimeSeries)
 		}
@@ -791,7 +792,7 @@ func TestDivideTimeSeries(t *testing.T) {
 				{Timestamp: "2024-01-01T01:00:00Z", Value: "0"},
 			},
 		}}
-		got := divideTimeSeries(numerator, denominator)
+		got := divideTimeSeries(context.Background(), numerator, denominator)
 		expected := map[string][]*entity.MetricPoint{
 			"group": {
 				{Timestamp: "2024-01-01T00:00:00Z", Value: "2"},

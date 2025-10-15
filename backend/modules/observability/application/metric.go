@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"strconv"
+	"time"
 
 	metric2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/metric"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
@@ -16,6 +17,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -121,4 +125,45 @@ func (m *MetricApplication) shouldCompareWith(start, end int64, c *entity.Compar
 	default:
 		return 0, 0, false
 	}
+}
+
+// 取最近七天内数据
+func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest) (r *metric.GetDrillDownValuesResponse, err error) {
+	var metricName string
+	switch req.DrillDownValueType {
+	case metric2.DrillDownValueTypeModelName:
+		metricName = entity.MetricNameModelNamePie
+	case metric2.DrillDownValueTypeToolName:
+		metricName = entity.MetricNameToolNamePie
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid drill_down_value_type"))
+	}
+	sReq := &service.QueryMetricsReq{
+		PlatformType: loop_span.PlatformType(req.GetPlatformType()),
+		WorkspaceID:  req.GetWorkspaceID(),
+		MetricsNames: []string{metricName},
+		StartTime:    req.GetStartTime(),
+		EndTime:      req.GetEndTime(),
+		FilterFields: tconv.FilterFieldsDTO2DO(req.Filters),
+	}
+	var sevenDayMills = 7 * 24 * time.Hour.Milliseconds()
+	if sReq.EndTime-sReq.StartTime > sevenDayMills {
+		sReq.StartTime = sReq.EndTime - sevenDayMills
+	}
+	sResp, err := m.metricService.QueryMetrics(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+	resp := &metric.GetDrillDownValuesResponse{}
+	metricVal := sResp.Metrics[metricName]
+	if metricVal != nil {
+		for k, _ := range metricVal.Pie {
+			mp := make(map[string]string)
+			_ = json.Unmarshal([]byte(k), &mp)
+			if val := mp["name"]; val != "" {
+				resp.Values = append(resp.Values, val)
+			}
+		}
+	}
+	return resp, nil
 }

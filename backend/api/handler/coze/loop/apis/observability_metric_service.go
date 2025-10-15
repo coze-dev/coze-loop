@@ -16,3 +16,9 @@ var observabilityMetricClient observabilitymetricservice.Client
 func GetMetrics(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityMetricClient.GetMetrics)
 }
+
+// GetDrillDownValues .
+// @router /api/observability/v1/metrics/drill_down_values [POST]
+func GetDrillDownValues(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityMetricClient.GetDrillDownValues)
+}

@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 )
@@ -104,13 +105,14 @@ func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 		}
 		mCom, ok := mVal.(entity.IMetricCompound)
 		if ok {
-			return m.queryCompoundMetric(ctx, req, mCom)
+			return m.queryCompoundMetric(ctx, req, mVal, mCom)
 		}
 	}
 	return m.queryMetrics(ctx, req)
 }
 
-func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetricsReq, mCom entity.IMetricCompound) (*QueryMetricsResp, error) {
+func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetricsReq,
+	mDef entity.IMetricDefinition, mCom entity.IMetricCompound) (*QueryMetricsResp, error) {
 	metrics := mCom.GetMetrics()
 	if len(metrics) == 0 {
 		return &QueryMetricsResp{}, nil
@@ -149,11 +151,11 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 	// 复合指标计算...
 	switch mCom.Operator() {
 	case entity.MetricOperatorDivide:
-		// time series相除/summary相除
-		return m.divideMetrics(ctx, metricsResp)
+		// time_series相除/summary相除
+		return m.divideMetrics(ctx, metricsResp, mDef.Name())
 	case entity.MetricOperatorPie:
-		// summary指标进行聚合
-		return m.pieMetrics(ctx, metricsResp)
+		// summary指标组合构成饼图
+		return m.pieMetrics(ctx, metricsResp, mDef.Name())
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
@@ -427,7 +429,7 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 	return ret
 }
 
-func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetricsResp) (*QueryMetricsResp, error) {
+func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetricsResp, newMetricName string) (*QueryMetricsResp, error) {
 	if len(resp) != 2 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
@@ -444,9 +446,9 @@ func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetrics
 			continue
 		}
 		if metricVal.TimeSeries != nil && deMetricVal.TimeSeries != nil {
-			ret.Metrics[metricName] = divideTimeSeries(metricVal, deMetricVal)
+			ret.Metrics[newMetricName] = divideTimeSeries(ctx, metricVal, deMetricVal)
 		} else if metricVal.Summary != "" && deMetricVal.Summary != "" {
-			ret.Metrics[metricName] = &entity.Metric{
+			ret.Metrics[newMetricName] = &entity.Metric{
 				Summary: divideNumber(metricVal.Summary, deMetricVal.Summary),
 			}
 		} else {
@@ -471,7 +473,7 @@ func divideNumber(a, b string) string {
 	return ""
 }
 
-func divideTimeSeries(a, b *entity.Metric) *entity.Metric {
+func divideTimeSeries(ctx context.Context, a, b *entity.Metric) *entity.Metric {
 	ret := &entity.Metric{TimeSeries: make(map[string][]*entity.MetricPoint)}
 	if a == nil || b == nil || a.TimeSeries == nil || b.TimeSeries == nil {
 		return ret
@@ -481,6 +483,7 @@ func divideTimeSeries(a, b *entity.Metric) *entity.Metric {
 		if len(val) == 0 || len(anotherVal) == 0 {
 			continue
 		} else if len(val) != len(anotherVal) {
+			logs.CtxWarn(ctx, "time series length mismatch, not expected to be here")
 			continue
 		}
 		sort.Slice(val, func(i, j int) bool {
@@ -505,6 +508,18 @@ func divideTimeSeries(a, b *entity.Metric) *entity.Metric {
 	return ret
 }
 
-func (m *MetricsService) pieMetrics(ctx context.Context, resp []*QueryMetricsResp) (*QueryMetricsResp, error) {
-	return nil, nil
+// 预期就是多个Summary结果组合
+func (m *MetricsService) pieMetrics(ctx context.Context, resp []*QueryMetricsResp, newMetricName string) (*QueryMetricsResp, error) {
+	ret := &QueryMetricsResp{
+		Metrics: make(map[string]*entity.Metric),
+	}
+	ret.Metrics[newMetricName] = &entity.Metric{
+		Pie: make(map[string]string),
+	}
+	for _, r := range resp {
+		for metricName, metricVal := range r.Metrics {
+			ret.Metrics[newMetricName].Pie[metricName] = metricVal.Summary
+		}
+	}
+	return ret, nil
 }

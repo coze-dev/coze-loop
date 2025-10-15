@@ -211,6 +211,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		model.NewModelTPOTPct50Metric(),
 		model.NewModelTPOTPct90Metric(),
 		model.NewModelTPOTPct99Metric(),
+		model.NewModelNamePieMetric(),
 		// Tool 工具统计指标
 		tool.NewToolTotalCountMetric(),
 		tool.NewToolDurationAvgMetric(),
@@ -220,6 +221,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		tool.NewToolDurationPct90Metric(),
 		tool.NewToolDurationPct99Metric(),
 		tool.NewToolSuccessRatioMetric(),
+		tool.NewToolNamePieMetric(),
 		// Service 服务调用指标
 		service_metric.NewServiceTraceCountTotalMetric(),
 		service_metric.NewServiceTraceCountMetric(),

@@ -291,6 +291,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_views.PUT("/:view_id", append(_updateviewMw(handler), apis.UpdateView)...)
 				{
 					_metrics := _v14.Group("/metrics", _metricsMw(handler)...)
+					_metrics.POST("/drill_down_values", append(_getdrilldownvaluesMw(handler), apis.GetDrillDownValues)...)
 					_metrics.POST("/list", append(_getmetricsMw(handler), apis.GetMetrics)...)
 				}
 				{

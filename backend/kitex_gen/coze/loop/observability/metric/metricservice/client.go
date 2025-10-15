@@ -12,6 +12,7 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	GetMetrics(ctx context.Context, req *metric.GetMetricsRequest, callOptions ...callopt.Option) (r *metric.GetMetricsResponse, err error)
+	GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest, callOptions ...callopt.Option) (r *metric.GetDrillDownValuesResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -46,4 +47,9 @@ type kMetricServiceClient struct {
 func (p *kMetricServiceClient) GetMetrics(ctx context.Context, req *metric.GetMetricsRequest, callOptions ...callopt.Option) (r *metric.GetMetricsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetMetrics(ctx, req)
+}
+
+func (p *kMetricServiceClient) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest, callOptions ...callopt.Option) (r *metric.GetDrillDownValuesResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetDrillDownValues(ctx, req)
 }
