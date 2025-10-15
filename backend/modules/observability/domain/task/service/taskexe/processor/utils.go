@@ -152,7 +152,8 @@ func convertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
-	evaluationSetSchema string, taskRunID string) (turns []*eval_set.Turn) {
+	evaluationSetSchema string, taskRunID string,
+) (turns []*eval_set.Turn) {
 	turns = make([]*eval_set.Turn, 0, len(spans))
 	for _, span := range spans {
 		fieldData := buildItem(ctx, span, fieldMappings, evaluationSetSchema, taskRunID)
@@ -168,7 +169,8 @@ func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*t
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
-	evaluationSetSchema string, taskRunID string) []*eval_set.FieldData {
+	evaluationSetSchema string, taskRunID string,
+) []*eval_set.FieldData {
 	var fieldDatas []*eval_set.FieldData
 	fieldDatas = append(fieldDatas, &eval_set.FieldData{
 		Key:  gptr.Of("trace_id"),

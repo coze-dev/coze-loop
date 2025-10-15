@@ -102,8 +102,8 @@ func (v *TaskRunDaoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *in
 		}
 	}
 	return taskRunPo, nil
-
 }
+
 func (v *TaskRunDaoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
 	qd := q.WithContext(ctx).Where(q.TaskType.Eq(task.TaskRunTypeNewData)).Where(q.TaskID.Eq(taskID))
@@ -120,7 +120,6 @@ func (v *TaskRunDaoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceI
 		}
 	}
 	return taskRunPo, nil
-
 }
 
 func (v *TaskRunDaoImpl) CreateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) (int64, error) {
@@ -201,8 +200,10 @@ func (d *TaskRunDaoImpl) order(q *genquery.Query, orderBy string, asc bool) fiel
 	return orderExpr.Desc()
 }
 
-const MaxRetries = 3
-const RetryDelay = 100 * time.Millisecond
+const (
+	MaxRetries = 3
+	RetryDelay = 100 * time.Millisecond
+)
 
 // UpdateTaskRunWithOCC 乐观并发控制更新
 func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {

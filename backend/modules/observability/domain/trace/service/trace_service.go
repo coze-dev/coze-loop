@@ -1130,6 +1130,7 @@ func (r *TraceServiceImpl) correctEvaluatorRecords(ctx context.Context, evalSvc 
 	}
 	return nil
 }
+
 func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error) {
 	resp := &ListAnnotationEvaluatorsResp{}
 	resp.Evaluators = make([]*annotation.AnnotationEvaluator, 0)
@@ -1204,6 +1205,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 	}
 	return resp, nil
 }
+
 func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error) {
 	resp := &ExtractSpanInfoResp{}
 	var spanInfos []*trace.SpanInfo
@@ -1256,6 +1258,7 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 		SpanInfos: spanInfos,
 	}, nil
 }
+
 func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMapping *entity.FieldMapping) (string, error) {
 	value, err := span.ExtractByJsonpath(ctx, fieldMapping.TraceFieldKey, fieldMapping.TraceFieldJsonpath)
 	if err != nil {

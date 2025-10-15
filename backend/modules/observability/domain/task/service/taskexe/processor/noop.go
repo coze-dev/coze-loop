@@ -13,8 +13,7 @@ import (
 
 var _ taskexe.Processor = (*NoopTaskProcessor)(nil)
 
-type NoopTaskProcessor struct {
-}
+type NoopTaskProcessor struct{}
 
 func NewNoopTaskProcessor() *NoopTaskProcessor {
 	return &NoopTaskProcessor{}

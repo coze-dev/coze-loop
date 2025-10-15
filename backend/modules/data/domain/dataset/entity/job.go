@@ -225,7 +225,7 @@ func (p *IOJob) GetID() (v int64) {
 	if p != nil {
 		return p.ID
 	}
-	return
+	return v
 }
 
 func (p *IOJob) SetID(val int64) {

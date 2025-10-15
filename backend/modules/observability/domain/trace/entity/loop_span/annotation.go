@@ -211,6 +211,7 @@ func (a *Annotation) ToFornaxAnnotation(ctx context.Context) (fa *annotation.Ann
 	})
 	return fa
 }
+
 func (a *Annotation) toAutoEvaluate() *annotation.AutoEvaluate {
 	metadata := a.GetAutoEvaluateMetadata()
 	if metadata == nil {

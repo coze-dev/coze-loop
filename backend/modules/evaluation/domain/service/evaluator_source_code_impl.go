@@ -218,19 +218,19 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 	// 1. 验证评估器
 	if err = c.validateEvaluator(evaluator, startTime); err != nil {
 		output, runStatus = c.createErrorOutput(err, errno.InvalidEvaluatorTypeCode, "invalid evaluator type or code evaluator version is nil", startTime)
-		return
+		return output, runStatus, traceID
 	}
 
 	// 2. 准备代码执行环境
 	code, result, err := c.prepareAndExecuteCode(ctx, evaluator, input, startTime)
 	if err != nil {
 		output, runStatus = c.createErrorOutputFromError(err, startTime)
-		return
+		return output, runStatus, traceID
 	}
 
 	// 3. 处理执行结果
 	output, runStatus, err = c.processCodeExecutionResult(result, startTime)
-	return
+	return output, runStatus, traceID
 }
 
 // handleRunDefer 处理Run方法的defer逻辑

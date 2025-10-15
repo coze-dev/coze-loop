@@ -731,7 +731,7 @@ func (t *TraceApplication) ListAnnotations(ctx context.Context, req *trace.ListA
 func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId int64, userIds []string, evalIds []int64, tagKeyIds []string,
 ) (userMap map[string]*commdo.UserInfo, evalMap map[int64]*rpc.Evaluator, tagMap map[int64]*rpc.TagInfo) {
 	if len(userIds) == 0 && len(tagKeyIds) == 0 && len(evalIds) == 0 {
-		return
+		return userMap, evalMap, tagMap
 	}
 	g := errgroup.Group{}
 	g.Go(func() error {
@@ -753,7 +753,7 @@ func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId i
 		return nil
 	})
 	_ = g.Wait()
-	return
+	return userMap, evalMap, tagMap
 }
 
 func (t *TraceApplication) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest) (
@@ -828,6 +828,7 @@ func (t *TraceApplication) PreviewExportTracesToDataset(ctx context.Context, req
 	// 转换响应
 	return tconv.PreviewResponseDO2DTO(serviceResp), nil
 }
+
 func (t *TraceApplication) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) (*trace.ChangeEvaluatorScoreResponse, error) {
 	if err := t.validateChangeEvaluatorScoreReq(ctx, req); err != nil {
 		return nil, err
@@ -870,6 +871,7 @@ func (t *TraceApplication) validateChangeEvaluatorScoreReq(ctx context.Context, 
 	}
 	return nil
 }
+
 func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest) (*trace.ListAnnotationEvaluatorsResponse, error) {
 	var resp *trace.ListAnnotationEvaluatorsResponse
 	if req == nil {
@@ -892,6 +894,7 @@ func (t *TraceApplication) ListAnnotationEvaluators(ctx context.Context, req *tr
 	}
 	return &trace.ListAnnotationEvaluatorsResponse{Evaluators: sResp.Evaluators}, nil
 }
+
 func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (*trace.ExtractSpanInfoResponse, error) {
 	var resp *trace.ExtractSpanInfoResponse
 	if err := t.validateExtractSpanInfoReq(ctx, req); err != nil {
@@ -917,6 +920,7 @@ func (t *TraceApplication) ExtractSpanInfo(ctx context.Context, req *trace.Extra
 	}
 	return &trace.ExtractSpanInfoResponse{SpanInfos: sResp.SpanInfos}, nil
 }
+
 func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *trace.ExtractSpanInfoRequest) error {
 	if req == nil {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))

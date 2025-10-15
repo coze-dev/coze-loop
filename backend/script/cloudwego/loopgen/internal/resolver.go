@@ -110,7 +110,7 @@ func (r *resolver) buildResolver() {
 			}, r.nsToPackage(ast.GetNamespaceOrReferenceName("go")))
 		}
 
-		return
+		return ident
 	}
 }
 

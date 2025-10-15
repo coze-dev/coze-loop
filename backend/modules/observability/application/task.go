@@ -104,6 +104,7 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 		Pass: sResp.Pass,
 	}, nil
 }
+
 func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRequest) (*task.CreateTaskResponse, error) {
 	resp := task.NewCreateTaskResponse()
 	if err := t.validateCreateTaskReq(ctx, req); err != nil {
@@ -140,8 +141,8 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
 }
-func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
 
+func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
 	switch spanFilterFields.GetPlatformType() {
 	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
 		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
@@ -210,6 +211,7 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 
 	return nil
 }
+
 func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRequest) (*task.UpdateTaskResponse, error) {
 	resp := task.NewUpdateTaskResponse()
 	if req == nil {
@@ -244,6 +246,7 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 
 	return resp, nil
 }
+
 func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequest) (*task.ListTasksResponse, error) {
 	resp := task.NewListTasksResponse()
 	if req == nil {
@@ -282,6 +285,7 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 		Total: sResp.Total,
 	}, nil
 }
+
 func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest) (*task.GetTaskResponse, error) {
 	resp := task.NewGetTaskResponse()
 	if req == nil {

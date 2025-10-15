@@ -73,7 +73,7 @@ func (p *EvalTargetType) Scan(value interface{}) (err error) {
 	var result sql.NullInt64
 	err = result.Scan(value)
 	*p = EvalTargetType(result.Int64)
-	return
+	return err
 }
 
 func (p *EvalTargetType) Value() (driver.Value, error) {

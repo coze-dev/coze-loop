@@ -367,7 +367,7 @@ func (d *TaskDaoImpl) order(q *genquery.Query, orderBy string, asc bool) field.E
 }
 
 func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
-	//todo[xun]: 乐观锁
+	// todo[xun]: 乐观锁
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
 	qd := q.WithContext(ctx)
@@ -398,7 +398,7 @@ func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []strin
 
 	// 查询非终态任务的workspace_id，使用DISTINCT去重
 	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn("success", "disabled"))
-	//qd = qd.Select(q.ObservabilityTask.WorkspaceID).Distinct()
+	// qd = qd.Select(q.ObservabilityTask.WorkspaceID).Distinct()
 
 	results, err := qd.Find()
 	if err != nil {

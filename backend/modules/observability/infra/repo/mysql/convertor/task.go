@@ -159,6 +159,7 @@ func RunDetailJSON2DO(runDetail *string) *entity.RunDetail {
 	}
 	return runDetailDO
 }
+
 func BackfillRunDetailJSON2DO(backfillDetail *string) *entity.BackfillDetail {
 	if backfillDetail == nil || *backfillDetail == "" {
 		return nil
@@ -170,6 +171,7 @@ func BackfillRunDetailJSON2DO(backfillDetail *string) *entity.BackfillDetail {
 	}
 	return backfillDetailDO
 }
+
 func TaskRunConfigJSON2DO(taskRunConfig *string) *entity.TaskRunConfig {
 	if taskRunConfig == nil || *taskRunConfig == "" {
 		return nil

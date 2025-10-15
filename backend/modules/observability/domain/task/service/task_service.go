@@ -252,6 +252,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		Total: ptr.Of(total),
 	}, nil
 }
+
 func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *GetTaskResp, err error) {
 	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
 	if err != nil {
@@ -268,6 +269,7 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 	}
 	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)}, nil
 }
+
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
 	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},

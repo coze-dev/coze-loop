@@ -94,6 +94,7 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 
 	return taskDO, nil
 }
+
 func (v *TaskRepoImpl) ListTasks(ctx context.Context, param mysql.ListTaskParam) ([]*entity.ObservabilityTask, int64, error) {
 	results, total, err := v.TaskDao.ListTasks(ctx, param)
 	if err != nil {
@@ -119,6 +120,7 @@ func (v *TaskRepoImpl) ListTasks(ctx context.Context, param mysql.ListTaskParam)
 
 	return resp, total, nil
 }
+
 func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityTask) (int64, error) {
 	id, err := v.idGenerator.GenID(ctx)
 	if err != nil {
@@ -135,6 +137,7 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 
 	return createdID, nil
 }
+
 func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error {
 	TaskPo := convertor.TaskDO2PO(do)
 
@@ -164,6 +167,7 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 
 	return nil
 }
+
 func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
@@ -174,6 +178,7 @@ func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspac
 
 	return nil
 }
+
 func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask) {
 	var tasks []*entity.ObservabilityTask
 	spaceList, botList, results, err := v.TaskDao.GetObjListWithTask(ctx)
@@ -188,6 +193,7 @@ func (v *TaskRepoImpl) GetObjListWithTask(ctx context.Context) ([]string, []stri
 
 	return spaceList, botList, tasks
 }
+
 func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityTask) error {
 	// 先执行数据库删除操作
 	err := v.TaskDao.DeleteTask(ctx, do.ID, do.WorkspaceID, do.CreatedBy)
@@ -219,6 +225,7 @@ func (v *TaskRepoImpl) CreateTaskRun(ctx context.Context, do *entity.TaskRun) (i
 	do.ID = createdID
 	return createdID, nil
 }
+
 func (v *TaskRepoImpl) UpdateTaskRun(ctx context.Context, do *entity.TaskRun) error {
 	// 1. 转换并更新数据库
 	taskRunPo := convertor.TaskRunDO2PO(do)
@@ -228,6 +235,7 @@ func (v *TaskRepoImpl) UpdateTaskRun(ctx context.Context, do *entity.TaskRun) er
 	}
 	return nil
 }
+
 func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
 	// 先执行数据库操作
 	logs.CtxInfo(ctx, "UpdateTaskRunWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
@@ -238,6 +246,7 @@ func (v *TaskRepoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, works
 
 	return nil
 }
+
 func (v *TaskRepoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error) {
 	taskRunPo, err := v.TaskRunDao.GetBackfillTaskRun(ctx, workspaceID, taskID)
 	if err != nil {
@@ -248,6 +257,7 @@ func (v *TaskRepoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int6
 	}
 	return convertor.TaskRunPO2DO(taskRunPo), nil
 }
+
 func (v *TaskRepoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*entity.TaskRun, error) {
 	taskRunPo, err := v.TaskRunDao.GetLatestNewDataTaskRun(ctx, workspaceID, taskID)
 	if err != nil {
@@ -268,6 +278,7 @@ func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, e
 	}
 	return count, nil
 }
+
 func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID, ttl int64) error {
 	_, err := v.TaskRedisDao.IncrTaskCount(ctx, taskID, time.Duration(ttl)*time.Second)
 	if err != nil {
@@ -276,6 +287,7 @@ func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID, ttl int64) err
 	}
 	return nil
 }
+
 func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID, ttl int64) error {
 	_, err := v.TaskRedisDao.DecrTaskCount(ctx, taskID, time.Duration(ttl)*time.Second)
 	if err != nil {
@@ -294,6 +306,7 @@ func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID in
 	}
 	return count, nil
 }
+
 func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
 	_, err := v.TaskRedisDao.IncrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 	if err != nil {
@@ -302,6 +315,7 @@ func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID i
 	}
 	return nil
 }
+
 func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
 	_, err := v.TaskRedisDao.DecrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 	if err != nil {
@@ -314,9 +328,11 @@ func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID i
 func (v *TaskRepoImpl) GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
 	return v.TaskRunRedisDao.GetTaskRunSuccessCount(ctx, taskID, taskRunID)
 }
+
 func (v *TaskRepoImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
 	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
 }
+
 func (v *TaskRepoImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
 	return v.TaskRunRedisDao.DecrTaskRunSuccessCount(ctx, taskID, taskRunID)
 }
@@ -324,6 +340,7 @@ func (v *TaskRepoImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, task
 func (v *TaskRepoImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error) {
 	return v.TaskRunRedisDao.GetTaskRunFailCount(ctx, taskID, taskRunID)
 }
+
 func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error {
 	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID)
 }

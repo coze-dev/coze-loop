@@ -87,6 +87,7 @@ func (p *TaskRunDAOImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRu
 	}
 	return got, nil
 }
+
 func (p *TaskRunDAOImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
 	key := p.makeTaskRunSuccessCountKey(taskID, taskRunID)
 	if err := p.cmdable.Decr(ctx, key).Err(); err != nil {

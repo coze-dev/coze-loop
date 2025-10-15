@@ -203,7 +203,7 @@ func (h *importHandler) nextFile(ctx context.Context, w *importWorkspace) (fr *v
 			return nil, false, err
 		}
 	}
-	return
+	return fr, ok, err
 }
 
 func (h *importHandler) importFile(ctx context.Context, w *importWorkspace, fr *vfs.FileReader) (err error) {

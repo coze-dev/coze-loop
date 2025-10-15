@@ -545,7 +545,7 @@ func (s SpanList) Stat(ctx context.Context) (inputTokens, outputTokens int64, er
 		inputTokens += in
 		outputTokens += out
 	}
-	return
+	return inputTokens, outputTokens, err
 }
 
 func (s SpanList) FilterSpans(f *FilterFields) SpanList {

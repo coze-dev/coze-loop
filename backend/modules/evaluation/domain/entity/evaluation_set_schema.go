@@ -88,7 +88,7 @@ func (p *FieldDisplayFormat) Scan(value interface{}) (err error) {
 	var result sql.NullInt64
 	err = result.Scan(value)
 	*p = FieldDisplayFormat(result.Int64)
-	return
+	return err
 }
 
 func (p *FieldDisplayFormat) Value() (driver.Value, error) {
@@ -130,7 +130,7 @@ func (p *FieldStatus) Scan(value interface{}) (err error) {
 	var result sql.NullInt64
 	err = result.Scan(value)
 	*p = FieldStatus(result.Int64)
-	return
+	return err
 }
 
 func (p *FieldStatus) Value() (driver.Value, error) {

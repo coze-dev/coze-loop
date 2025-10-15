@@ -47,9 +47,11 @@ func NewTaskDAO(cmdable redis.Cmdable) ITaskDAO {
 func (q *TaskDAOImpl) makeTaskConfigKey(taskID int64) string {
 	return fmt.Sprintf("task_config_%d", taskID)
 }
+
 func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
 	return fmt.Sprintf("count_%d", taskID)
 }
+
 func (q *TaskDAOImpl) makeTaskRunCountCacheKey(taskID, taskRunID int64) string {
 	return fmt.Sprintf("count_%d_%d", taskID, taskRunID)
 }

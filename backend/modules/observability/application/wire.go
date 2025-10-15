@@ -68,7 +68,7 @@ var (
 		NewInitTaskProcessor,
 		taskSvc.NewTaskServiceImpl,
 		obrepo.NewTaskRepoImpl,
-		//obrepo.NewTaskRunRepoImpl,
+		// obrepo.NewTaskRunRepoImpl,
 		mysqldao.NewTaskDaoImpl,
 		tredis.NewTaskDAO,
 		tredis.NewTaskRunDAO,
@@ -204,7 +204,8 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo) *task_processor.TaskProcessor {
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo,
+) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
 	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
@@ -252,7 +253,8 @@ func InitOpenAPIApplication(
 func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
 	ckDb ck.Provider,
-	mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
+	mqFactory mq.IFactory,
+) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil
 }
@@ -273,7 +275,8 @@ func InitTaskApplication(
 	datasetService datasetservice.Client,
 	fileClient fileservice.Client,
 	taskProcessor task_processor.TaskProcessor,
-	aid int32) (ITaskApplication, error) {
+	aid int32,
+) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
 }

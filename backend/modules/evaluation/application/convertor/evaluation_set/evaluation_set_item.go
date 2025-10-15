@@ -175,6 +175,7 @@ func CreateDatasetItemOutputDO2DTOs(dos []*entity.CreateDatasetItemOutput) []*da
 	}
 	return result
 }
+
 func CreateDatasetItemOutputDO2DTO(do *entity.CreateDatasetItemOutput) *dataset.CreateDatasetItemOutput {
 	if do == nil {
 		return nil

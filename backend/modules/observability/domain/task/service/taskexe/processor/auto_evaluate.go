@@ -49,7 +49,8 @@ func NewAutoEvaluteProcessor(
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
-	taskRepo repo.ITaskRepo) *AutoEvaluteProcessor {
+	taskRepo repo.ITaskRepo,
+) *AutoEvaluteProcessor {
 	return &AutoEvaluteProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
@@ -137,12 +138,13 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
 		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
 		Session:          sessionInfo,
-		Ext: map[string]string{"workspace_id": strconv.FormatInt(trigger.Task.WorkspaceID, 10),
-			"span_id":     trigger.Span.SpanID,
-			"task_id":     cast.ToString(trigger.Task.ID),
-			"task_run_id": cast.ToString(taskRun.ID)},
+		Ext: map[string]string{
+			"workspace_id": strconv.FormatInt(trigger.Task.WorkspaceID, 10),
+			"span_id":      trigger.Span.SpanID,
+			"task_id":      cast.ToString(trigger.Task.ID),
+			"task_run_id":  cast.ToString(taskRun.ID),
+		},
 	})
-
 	if err != nil {
 		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
 		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
@@ -294,9 +296,9 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 				Name:        gptr.Of(*fieldMapping.EvalSetName),
 				Description: gptr.Of(fieldMapping.TraceFieldJsonpath),
 				ContentType: fieldMapping.FieldSchema.ContentType,
-				//DefaultDisplayFormat: gptr.Of(dataset.FieldDisplayFormat_PlainText),
+				// DefaultDisplayFormat: gptr.Of(dataset.FieldDisplayFormat_PlainText),
 				TextSchema: fieldMapping.FieldSchema.TextSchema,
-				//Hidden:               gptr.Of(false),
+				// Hidden:               gptr.Of(false),
 			})
 			evaluationSetColumns = append(evaluationSetColumns, *fieldMapping.EvalSetName)
 		}

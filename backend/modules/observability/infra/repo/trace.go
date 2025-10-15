@@ -272,6 +272,7 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 		Annotations: pos,
 	})
 }
+
 func (t *TraceCkRepoImpl) UpsertAnnotation(ctx context.Context, param *repo.UpsertAnnotationParam) error {
 	return nil
 }

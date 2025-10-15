@@ -42,5 +42,4 @@ func ListTasks(ctx context.Context, c *app.RequestContext) {
 // @router /api/observability/v1/tasks/:task_id [GET]
 func GetTask(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityTaskClient.GetTask)
-
 }
