@@ -84,23 +84,28 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
 	}
-	res, err := h.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		Tenants: tenants,
-		Filters: &loop_span.FilterFields{
-			FilterFields: filterFields,
-		},
-		StartAt:            startAt,
-		EndAt:              endAt,
-		NotQueryAnnotation: true,
-		Limit:              2,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "failed to list span, %v", err)
-		return nil, err
-	} else if len(res.Spans) == 0 {
-		return nil, nil
+	var spans []*loop_span.Span
+	for _, tenant := range tenants {
+		res, err := h.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+			Tenants: []string{tenant},
+			Filters: &loop_span.FilterFields{
+				FilterFields: filterFields,
+			},
+			StartAt:            startAt,
+			EndAt:              endAt,
+			NotQueryAnnotation: true,
+			Limit:              2,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "failed to list span, %v", err)
+			return nil, err
+		} else if len(res.Spans) == 0 {
+			return nil, nil
+		}
+		spans = append(spans, res.Spans...)
 	}
-	return res.Spans, nil
+
+	return spans, nil
 }
 
 // updateTaskRunStatusCount updates the Redis count based on Status

@@ -20,7 +20,7 @@ import (
 func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
 	for _, turn := range event.TurnEvalResults {
 		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
-		tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
+		tenants, err := h.getTenants(ctx, loop_span.PlatformType("callback_all"))
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	tenants, err := h.getTenants(ctx, loop_span.PlatformType("loop_all"))
+	tenants, err := h.getTenants(ctx, loop_span.PlatformType("callback_all"))
 	if err != nil {
 		return err
 	}
