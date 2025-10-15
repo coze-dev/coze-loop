@@ -44,7 +44,9 @@ func (e *TaskConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, err
 		ConsumeGoroutineNums: cfg.WorkerNum,
 		EnablePPE:            cfg.EnablePPE,
 		IsEnabled:            cfg.IsEnabled,
-		TagExpression:        *cfg.TagExpression,
+	}
+	if cfg.TagExpression != nil {
+		res.TagExpression = *cfg.TagExpression
 	}
 	return res, nil
 }
