@@ -43,6 +43,7 @@ type ConsumerConfig struct {
 	ConsumeTimeout time.Duration
 	EnablePPE      *bool
 	SubExpr        *string
+	IsEnabled      *bool
 }
 
 type CompressionCodec int
