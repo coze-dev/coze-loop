@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package tracehub
 
 import (
@@ -17,10 +20,6 @@ import (
 )
 
 func floatPtr(v float64) *float64 { return &v }
-
-func int64Ptr(v int64) *int64 { return &v }
-
-func boolPtr(v bool) *bool { return &v }
 
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_Fallback(t *testing.T) {
 	t.Parallel()
