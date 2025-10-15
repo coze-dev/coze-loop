@@ -19,8 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func floatPtr(v float64) *float64 { return &v }
-
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_Fallback(t *testing.T) {
 	t.Parallel()
 
