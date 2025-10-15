@@ -6,7 +6,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
+	"sort"
+	"strconv"
+	"sync"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
@@ -20,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/samber/lo"
+	"golang.org/x/sync/errgroup"
 )
 
 type QueryMetricsReq struct {
@@ -88,6 +93,73 @@ type metricInfo struct {
 }
 
 func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	if len(req.MetricsNames) == 0 {
+		return &QueryMetricsResp{}, nil
+	}
+	for _, metricName := range req.MetricsNames {
+		mVal, ok := m.metricDefMap[metricName]
+		if !ok {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
+				errorx.WithExtraMsg(fmt.Sprintf("metric definition %s not found", metricName)))
+		}
+		mCom, ok := mVal.(entity.IMetricCompound)
+		if ok {
+			return m.queryCompoundMetric(ctx, req, mCom)
+		}
+	}
+	return m.queryMetrics(ctx, req)
+}
+
+func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetricsReq, mCom entity.IMetricCompound) (*QueryMetricsResp, error) {
+	metrics := mCom.GetMetrics()
+	if len(metrics) == 0 {
+		return &QueryMetricsResp{}, nil
+	}
+	var (
+		metricsResp = make([]*QueryMetricsResp, len(metrics))
+		eGroup      errgroup.Group
+		lock        sync.Mutex
+	)
+	for i, metric := range metrics {
+		eGroup.Go(func(t int) func() error {
+			return func() error {
+				sReq := &QueryMetricsReq{
+					PlatformType:    req.PlatformType,
+					WorkspaceID:     req.WorkspaceID,
+					MetricsNames:    []string{metric.Name()},
+					Granularity:     req.Granularity,
+					FilterFields:    req.FilterFields,
+					DrillDownFields: req.DrillDownFields,
+					StartTime:       req.StartTime,
+					EndTime:         req.EndTime,
+				}
+				resp, err := m.queryMetrics(ctx, sReq)
+				lock.Lock()
+				defer lock.Unlock()
+				if err == nil {
+					metricsResp[i] = resp
+				}
+				return err
+			}
+		}(i))
+	}
+	if err := eGroup.Wait(); err != nil {
+		return nil, err
+	}
+	// 复合指标计算...
+	switch mCom.Operator() {
+	case entity.MetricOperatorDivide:
+		// time series相除/summary相除
+		return m.divideMetrics(ctx, metricsResp)
+	case entity.MetricOperatorPie:
+		// summary指标进行聚合
+		return m.pieMetrics(ctx, metricsResp)
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+}
+
+func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
 	mBuilder, err := m.buildMetricQuery(ctx, req)
 	if err != nil {
 		return nil, err
@@ -274,9 +346,11 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 			}
 		}
 		// 填充零值...
-		t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
-		for metricName, metricVal := range ret {
-			m.fillTimeSeriesData(t, metricName, metricVal)
+		if mBuilder.mRepoReq != nil {
+			t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
+			for metricName, metricVal := range ret {
+				m.fillTimeSeriesData(t, metricName, metricVal)
+			}
 		}
 	}
 	return ret
@@ -351,4 +425,86 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 		}
 	}
 	return ret
+}
+
+func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetricsResp) (*QueryMetricsResp, error) {
+	if len(resp) != 2 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	numerator, denominator := resp[0], resp[1]
+	if numerator == nil || denominator == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	ret := &QueryMetricsResp{
+		Metrics: make(map[string]*entity.Metric),
+	}
+	for metricName, metricVal := range resp[0].Metrics {
+		deMetricVal := denominator.Metrics[metricName]
+		if deMetricVal == nil {
+			continue
+		}
+		if metricVal.TimeSeries != nil && deMetricVal.TimeSeries != nil {
+			ret.Metrics[metricName] = divideTimeSeries(metricVal, deMetricVal)
+		} else if metricVal.Summary != "" && deMetricVal.Summary != "" {
+			ret.Metrics[metricName] = &entity.Metric{
+				Summary: divideNumber(metricVal.Summary, deMetricVal.Summary),
+			}
+		} else {
+			continue
+		}
+	}
+	return ret, nil
+}
+
+func divideNumber(a, b string) string {
+	numerator, errA := strconv.ParseFloat(a, 64)
+	denominator, errB := strconv.ParseFloat(b, 64)
+	if errA != nil || errB != nil {
+		return ""
+	}
+	if math.IsNaN(numerator) || math.IsNaN(denominator) || math.IsInf(numerator, 0) || math.IsInf(denominator, 0) {
+		return ""
+	}
+	if numerator >= 0 && denominator > 0 {
+		return strconv.FormatFloat(numerator/denominator, 'f', -1, 64)
+	}
+	return ""
+}
+
+func divideTimeSeries(a, b *entity.Metric) *entity.Metric {
+	ret := &entity.Metric{TimeSeries: make(map[string][]*entity.MetricPoint)}
+	if a == nil || b == nil || a.TimeSeries == nil || b.TimeSeries == nil {
+		return ret
+	}
+	for k, val := range a.TimeSeries {
+		anotherVal := b.TimeSeries[k]
+		if len(val) == 0 || len(anotherVal) == 0 {
+			continue
+		} else if len(val) != len(anotherVal) {
+			continue
+		}
+		sort.Slice(val, func(i, j int) bool {
+			return val[i].Timestamp < val[j].Timestamp
+		})
+		sort.Slice(anotherVal, func(i, j int) bool {
+			return anotherVal[i].Timestamp < anotherVal[j].Timestamp
+		})
+		// 正常情况下这里的key是一样的, 都是完全补齐的时间戳
+		ret.TimeSeries[k] = make([]*entity.MetricPoint, 0)
+		for i := 0; i < len(val); i++ {
+			dividedVal := divideNumber(val[i].Value, anotherVal[i].Value)
+			if dividedVal == "" {
+				dividedVal = "null" // 无法除, 那就是null
+			}
+			ret.TimeSeries[k] = append(ret.TimeSeries[k], &entity.MetricPoint{
+				Timestamp: val[i].Timestamp,
+				Value:     dividedVal,
+			})
+		}
+	}
+	return ret
+}
+
+func (m *MetricsService) pieMetrics(ctx context.Context, resp []*QueryMetricsResp) (*QueryMetricsResp, error) {
+	return nil, nil
 }
