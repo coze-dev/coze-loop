@@ -1945,6 +1945,124 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 	})
 }
 
+func TestOpenAPIApplication_validateSearchTraceOApiReq(t *testing.T) {
+	t.Parallel()
+	app := &OpenAPIApplication{}
+	ctx := context.Background()
+
+	// nil request
+	assert.Error(t, app.validateSearchTraceOApiReq(ctx, nil))
+
+	now := time.Now().UnixMilli()
+	validStart := now - int64(time.Hour/time.Millisecond)
+	validReq := &openapi.SearchTraceOApiRequest{
+		WorkspaceID:  1,
+		TraceID:      ptr.Of("trace-id"),
+		StartTime:    validStart,
+		EndTime:      now,
+		Limit:        10,
+		PlatformType: ptr.Of("platform"),
+	}
+
+	// missing trace and log id
+	missingIDs := *validReq
+	missingIDs.TraceID = nil
+	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &missingIDs))
+
+	// limit out of range (positive overflow)
+	tooLargeLimit := *validReq
+	tooLargeLimit.Limit = MaxListSpansLimit + 1
+	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &tooLargeLimit))
+
+	// negative limit
+	negativeLimit := *validReq
+	negativeLimit.Limit = -1
+	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &negativeLimit))
+
+	// invalid time range (zero values)
+	invalidTime := *validReq
+	invalidTime.StartTime = 0
+	invalidTime.EndTime = 0
+	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &invalidTime))
+
+	// valid request should pass
+	assert.NoError(t, app.validateSearchTraceOApiReq(ctx, validReq))
+
+	// start time later than end time
+	invalidRange := *validReq
+	invalidRange.StartTime = now + 1000
+	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &invalidRange))
+}
+
+func TestOpenAPIApplication_buildSearchTraceOApiReq(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	app := &OpenAPIApplication{
+		tenant:    tenantMock,
+		workspace: workspaceMock,
+	}
+
+	ctx := context.Background()
+	now := time.Now().UnixMilli()
+	start := now - int64(time.Hour/time.Millisecond)
+
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(1)).Return("third-1")
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformType("platform")).Return([]string{"tenant-a"})
+
+	withPlatformReq := &openapi.SearchTraceOApiRequest{
+		WorkspaceID:  1,
+		TraceID:      ptr.Of("trace-id"),
+		Logid:        ptr.Of("log-id"),
+		StartTime:    start,
+		EndTime:      now,
+		Limit:        50,
+		PlatformType: ptr.Of("platform"),
+		SpanIds:      []string{"span-1", "span-2"},
+	}
+
+	res, err := app.buildSearchTraceOApiReq(ctx, withPlatformReq)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), res.WorkspaceID)
+	assert.Equal(t, "third-1", res.ThirdPartyWorkspaceID)
+	assert.Equal(t, loop_span.PlatformType("platform"), res.PlatformType)
+	assert.True(t, res.WithDetail)
+	assert.Equal(t, withPlatformReq.SpanIds, res.SpanIDs)
+	assert.Equal(t, withPlatformReq.GetTraceID(), res.TraceID)
+	assert.Equal(t, withPlatformReq.GetLogid(), res.LogID)
+	assert.Equal(t, withPlatformReq.GetLimit(), res.Limit)
+
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(2)).Return("third-2")
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant-b"})
+
+	defaultPlatformReq := &openapi.SearchTraceOApiRequest{
+		WorkspaceID: 2,
+		TraceID:     ptr.Of("trace-id-2"),
+		StartTime:   start,
+		EndTime:     now,
+		Limit:       5,
+	}
+
+	res2, err := app.buildSearchTraceOApiReq(ctx, defaultPlatformReq)
+	assert.NoError(t, err)
+	assert.Equal(t, loop_span.PlatformCozeLoop, res2.PlatformType)
+	assert.Empty(t, res2.SpanIDs)
+
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(3)).Return("third-3")
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{})
+
+	_, err = app.buildSearchTraceOApiReq(ctx, &openapi.SearchTraceOApiRequest{
+		WorkspaceID: 3,
+		TraceID:     ptr.Of("trace-id-3"),
+		StartTime:   start,
+		EndTime:     now,
+		Limit:       1,
+	})
+	assert.Error(t, err)
+}
+
 // 补充validateSearchTraceTreeOApiReq的单元测试
 func TestOpenAPIApplication_validateSearchTraceTreeOApiReq(t *testing.T) {
 	app := &OpenAPIApplication{}
