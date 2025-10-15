@@ -49,6 +49,7 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 			return err
 		}
 		if len(spans) == 0 {
+			logs.CtxWarn(ctx, "span not found, span_id: %s", turn.GetSpanIDFromExt())
 			return fmt.Errorf("span not found, span_id: %s", turn.GetSpanIDFromExt())
 		}
 		span := spans[0]
