@@ -77,6 +77,11 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 			Status:    loop_span.AnnotationStatusNormal,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
+			Metadata: &loop_span.AutoEvaluateMetadata{
+				TaskID:             turn.GetTaskIDFromExt(),
+				EvaluatorRecordID:  turn.EvaluatorRecordID,
+				EvaluatorVersionID: turn.EvaluatorVersionID,
+			},
 		}
 		if err = annotation.GenID(); err != nil {
 			return err
