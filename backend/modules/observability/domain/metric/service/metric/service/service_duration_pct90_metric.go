@@ -27,7 +27,7 @@ func (m *ServiceDurationPct90Metric) Source() entity.MetricSource {
 }
 
 func (m *ServiceDurationPct90Metric) Expression(granularity entity.MetricGranularity) string {
-	return "quantile(0.9)(duration)"
+	return "quantile(0.9)(duration)/1000"
 }
 
 func (m *ServiceDurationPct90Metric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

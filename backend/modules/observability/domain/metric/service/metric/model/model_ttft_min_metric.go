@@ -27,7 +27,7 @@ func (m *ModelTTFTMinMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTTFTMinMetric) Expression(granularity entity.MetricGranularity) string {
-	return "min(tags_long['latency_first_resp']/1000)"
+	return "min(tags_long['latency_first_resp'])/1000"
 }
 
 func (m *ModelTTFTMinMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

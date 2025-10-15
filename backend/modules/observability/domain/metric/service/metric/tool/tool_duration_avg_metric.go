@@ -28,7 +28,7 @@ func (m *ToolDurationAvgMetric) Source() entity.MetricSource {
 }
 
 func (m *ToolDurationAvgMetric) Expression(granularity entity.MetricGranularity) string {
-	return "avg(duration)"
+	return "avg(duration)/1000"
 }
 
 func (m *ToolDurationAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

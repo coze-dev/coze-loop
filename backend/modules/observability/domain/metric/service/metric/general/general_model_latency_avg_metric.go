@@ -29,7 +29,7 @@ func (m *GeneralModelLatencyAvgMetric) Source() entity.MetricSource {
 }
 
 func (m *GeneralModelLatencyAvgMetric) Expression(granularity entity.MetricGranularity) string {
-	return "sum(duration / 1000) / count()" // ms
+	return "sum(duration) / (1000 * count())" // ms
 }
 
 func (m *GeneralModelLatencyAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

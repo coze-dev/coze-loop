@@ -27,7 +27,7 @@ func (m *ServiceDurationMaxMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceDurationMaxMetric) Expression(granularity entity.MetricGranularity) string {
-	return "max(duration)"
+	return "max(duration)/1000"
 }
 
 func (m *ServiceDurationMaxMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

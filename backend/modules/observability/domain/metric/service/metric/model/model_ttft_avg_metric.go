@@ -27,7 +27,7 @@ func (m *ModelTTFTAvgMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTTFTAvgMetric) Expression(granularity entity.MetricGranularity) string {
-	return "avg(tags_long['latency_first_resp']/1000)" // ms
+	return "avg(tags_long['latency_first_resp'])latency_first_resp" // ms
 }
 
 func (m *ModelTTFTAvgMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

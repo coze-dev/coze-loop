@@ -28,7 +28,7 @@ func (m *ToolDurationPct99Metric) Source() entity.MetricSource {
 }
 
 func (m *ToolDurationPct99Metric) Expression(granularity entity.MetricGranularity) string {
-	return "quantile(0.99)(duration)"
+	return "quantile(0.99)(duration)/1000"
 }
 
 func (m *ToolDurationPct99Metric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

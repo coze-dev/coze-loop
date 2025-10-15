@@ -27,7 +27,7 @@ func (m *ServiceDurationMinMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceDurationMinMetric) Expression(granularity entity.MetricGranularity) string {
-	return "min(duration)"
+	return "min(duration)/1000"
 }
 
 func (m *ServiceDurationMinMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
