@@ -154,10 +154,12 @@ type IMetricDefinition interface {
 	GroupBy() []*Dimension                                                                             // 聚合维度
 }
 
+type TimeSeries map[string][]*MetricPoint
+
 type Metric struct {
 	Summary    string
 	Pie        map[string]string
-	TimeSeries map[string][]*MetricPoint
+	TimeSeries TimeSeries
 }
 
 type MetricPoint struct {

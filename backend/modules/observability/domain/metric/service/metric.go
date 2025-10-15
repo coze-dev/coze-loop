@@ -103,17 +103,16 @@ func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
 				errorx.WithExtraMsg(fmt.Sprintf("metric definition %s not found", metricName)))
 		}
-		mCom, ok := mVal.(entity.IMetricCompound)
-		if ok {
-			return m.queryCompoundMetric(ctx, req, mVal, mCom)
+		if _, ok := mVal.(entity.IMetricCompound); ok {
+			return m.queryCompoundMetric(ctx, req, mVal)
 		}
 	}
 	return m.queryMetrics(ctx, req)
 }
 
-func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetricsReq,
-	mDef entity.IMetricDefinition, mCom entity.IMetricCompound) (*QueryMetricsResp, error) {
-	metrics := mCom.GetMetrics()
+func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetricsReq, mDef entity.IMetricDefinition) (*QueryMetricsResp, error) {
+	mCompound := mDef.(entity.IMetricCompound)
+	metrics := mCompound.GetMetrics()
 	if len(metrics) == 0 {
 		return &QueryMetricsResp{}, nil
 	}
@@ -149,10 +148,10 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 		return nil, err
 	}
 	// 复合指标计算...
-	switch mCom.Operator() {
+	switch mCompound.Operator() {
 	case entity.MetricOperatorDivide:
 		// time_series相除/summary相除
-		return m.divideMetrics(ctx, metricsResp, mDef.Name())
+		return m.divideMetrics(ctx, metricsResp, mCompound.GetMetrics(), mDef)
 	case entity.MetricOperatorPie:
 		// summary指标组合构成饼图
 		return m.pieMetrics(ctx, metricsResp, mDef.Name())
@@ -429,30 +428,26 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 	return ret
 }
 
-func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetricsResp, newMetricName string) (*QueryMetricsResp, error) {
-	if len(resp) != 2 {
+func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetricsResp,
+	compoundMetrics []entity.IMetricDefinition, newMetric entity.IMetricDefinition) (*QueryMetricsResp, error) {
+	if len(resp) != 2 || len(compoundMetrics) != 2 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	numerator, denominator := resp[0], resp[1]
+	numerator := resp[0].Metrics[compoundMetrics[0].Name()]
+	denominator := resp[1].Metrics[compoundMetrics[1].Name()]
 	if numerator == nil || denominator == nil {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	ret := &QueryMetricsResp{
 		Metrics: make(map[string]*entity.Metric),
 	}
-	for metricName, metricVal := range resp[0].Metrics {
-		deMetricVal := denominator.Metrics[metricName]
-		if deMetricVal == nil {
-			continue
+	if numerator.TimeSeries != nil && denominator.TimeSeries != nil {
+		ret.Metrics[newMetric.Name()] = &entity.Metric{
+			TimeSeries: divideTimeSeries(ctx, numerator.TimeSeries, denominator.TimeSeries),
 		}
-		if metricVal.TimeSeries != nil && deMetricVal.TimeSeries != nil {
-			ret.Metrics[newMetricName] = divideTimeSeries(ctx, metricVal, deMetricVal)
-		} else if metricVal.Summary != "" && deMetricVal.Summary != "" {
-			ret.Metrics[newMetricName] = &entity.Metric{
-				Summary: divideNumber(metricVal.Summary, deMetricVal.Summary),
-			}
-		} else {
-			continue
+	} else if numerator.Summary != "" && denominator.Summary != "" {
+		ret.Metrics[newMetric.Name()] = &entity.Metric{
+			Summary: divideNumber(numerator.Summary, denominator.Summary),
 		}
 	}
 	return ret, nil
@@ -473,13 +468,10 @@ func divideNumber(a, b string) string {
 	return ""
 }
 
-func divideTimeSeries(ctx context.Context, a, b *entity.Metric) *entity.Metric {
-	ret := &entity.Metric{TimeSeries: make(map[string][]*entity.MetricPoint)}
-	if a == nil || b == nil || a.TimeSeries == nil || b.TimeSeries == nil {
-		return ret
-	}
-	for k, val := range a.TimeSeries {
-		anotherVal := b.TimeSeries[k]
+func divideTimeSeries(ctx context.Context, a, b entity.TimeSeries) entity.TimeSeries {
+	ret := make(entity.TimeSeries)
+	for k, val := range a {
+		anotherVal := b[k]
 		if len(val) == 0 || len(anotherVal) == 0 {
 			continue
 		} else if len(val) != len(anotherVal) {
@@ -493,13 +485,13 @@ func divideTimeSeries(ctx context.Context, a, b *entity.Metric) *entity.Metric {
 			return anotherVal[i].Timestamp < anotherVal[j].Timestamp
 		})
 		// 正常情况下这里的key是一样的, 都是完全补齐的时间戳
-		ret.TimeSeries[k] = make([]*entity.MetricPoint, 0)
+		ret[k] = make([]*entity.MetricPoint, 0)
 		for i := 0; i < len(val); i++ {
 			dividedVal := divideNumber(val[i].Value, anotherVal[i].Value)
 			if dividedVal == "" {
 				dividedVal = "null" // 无法除, 那就是null
 			}
-			ret.TimeSeries[k] = append(ret.TimeSeries[k], &entity.MetricPoint{
+			ret[k] = append(ret[k], &entity.MetricPoint{
 				Timestamp: val[i].Timestamp,
 				Value:     dividedVal,
 			})
