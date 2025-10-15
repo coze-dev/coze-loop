@@ -5,6 +5,7 @@ package span_processor
 
 import (
 	"context"
+	"unicode/utf8"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -52,7 +53,22 @@ func clipPlainText(content string) string {
 	if len(content) <= clipProcessorMaxLength {
 		return content
 	}
-	return content[:clipProcessorMaxLength] + clipProcessorSuffix
+	return clipByByteLimit(content, clipProcessorMaxLength) + clipProcessorSuffix
+}
+
+func clipByByteLimit(content string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	idx := 0
+	for idx < len(content) && idx < limit {
+		_, size := utf8.DecodeRuneInString(content[idx:])
+		if idx+size > limit {
+			break
+		}
+		idx += size
+	}
+	return content[:idx]
 }
 
 func clipJSONContent(content string) (string, bool) {
