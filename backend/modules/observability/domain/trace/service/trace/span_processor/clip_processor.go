@@ -60,15 +60,17 @@ func clipByByteLimit(content string, limit int) string {
 	if limit <= 0 {
 		return ""
 	}
-	idx := 0
-	for idx < len(content) && idx < limit {
-		_, size := utf8.DecodeRuneInString(content[idx:])
-		if idx+size > limit {
-			break
-		}
-		idx += size
+	if limit >= len(content) {
+		return content
 	}
-	return content[:idx]
+	cutoff := limit
+	for cutoff > 0 && !utf8.RuneStart(content[cutoff]) {
+		cutoff--
+	}
+	if cutoff == 0 {
+		return ""
+	}
+	return content[:cutoff]
 }
 
 func clipJSONContent(content string) (string, bool) {
