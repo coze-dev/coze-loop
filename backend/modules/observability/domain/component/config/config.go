@@ -47,6 +47,7 @@ type MqConsumerCfg struct {
 	WorkerNum     int      `mapstructure:"worker_num" json:"worker_num"`
 	EnablePPE     *bool    `mapstructure:"enable_ppe" json:"enable_ppe"`
 	IsEnabled     *bool    `mapstructure:"is_enabled" json:"is_enabled"`
+	TagExpression *string  `mapstructure:"tag_expression" json:"tag_expression"`
 }
 
 type TraceCKCfg struct {
