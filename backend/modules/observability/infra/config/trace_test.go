@@ -978,7 +978,7 @@ func TestTraceConfigCenter_GetKeySpanTypes(t *testing.T) {
 					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
 						cfg := v.(*map[string]map[string][]string)
 						(*cfg)["coze"] = map[string][]string{
-							"db": []string{"select", "insert"},
+							"db": {"select", "insert"},
 						}
 						return nil
 					})
