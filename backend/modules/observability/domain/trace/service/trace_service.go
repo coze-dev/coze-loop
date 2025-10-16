@@ -923,22 +923,34 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 }
 
 func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
-	if len(spanIds) == 0 || workspaceId == "" {
+	if (len(spanIds) == 0 && traceId == "") || workspaceId == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	var filterFields []*loop_span.FilterField
-	filterFields = append(filterFields, &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldSpanId,
-		FieldType: loop_span.FieldTypeString,
-		Values:    spanIds,
-		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-	})
+	if len(spanIds) != 0 {
+		filterFields = append(filterFields,
+			&loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpanId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    spanIds,
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			})
+	} else {
+		filterFields = append(filterFields,
+			&loop_span.FilterField{
+				FieldName: loop_span.SpanFieldParentID,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{"0", ""},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			})
+	}
 	filterFields = append(filterFields, &loop_span.FilterField{
 		FieldName: loop_span.SpanFieldSpaceId,
 		FieldType: loop_span.FieldTypeString,
 		Values:    []string{workspaceId},
 		QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 	})
+
 	if traceId != "" {
 		filterFields = append(filterFields, &loop_span.FilterField{
 			FieldName: loop_span.SpanFieldTraceId,
