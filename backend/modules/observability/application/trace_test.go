@@ -1747,3 +1747,388 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceApplication_ChangeEvaluatorScore(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ChangeEvaluatorScoreRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ChangeEvaluatorScoreResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				expectedAnnotation := &annodto.Annotation{}
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, "123", false).Return(nil)
+				mockSvc.EXPECT().ChangeEvaluatorScore(gomock.Any(), gomock.Any()).Return(&service.ChangeEvaluatorScoreResp{
+					Annotation: expectedAnnotation,
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ChangeEvaluatorScoreRequest{
+					WorkspaceID:  123,
+					AnnotationID: "anno",
+					SpanID:       "span",
+					StartTime:    time.Now().UnixMilli(),
+					Correction: &annodto.Correction{
+						Score: ptr.Of(1.0),
+					},
+				},
+			},
+			want: &trace.ChangeEvaluatorScoreResponse{
+				Annotation: &annodto.Annotation{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid request",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ChangeEvaluatorScoreRequest{},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "permission error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, "123", false).Return(fmt.Errorf("permission denied"))
+				return fields{
+					auth: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ChangeEvaluatorScoreRequest{
+					WorkspaceID:  123,
+					AnnotationID: "anno",
+					SpanID:       "span",
+					StartTime:    time.Now().UnixMilli(),
+					Correction: &annodto.Correction{
+						Score: ptr.Of(1.0),
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, "123", false).Return(nil)
+				mockSvc.EXPECT().ChangeEvaluatorScore(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ChangeEvaluatorScoreRequest{
+					WorkspaceID:  123,
+					AnnotationID: "anno",
+					SpanID:       "span",
+					StartTime:    time.Now().UnixMilli(),
+					Correction: &annodto.Correction{
+						Score: ptr.Of(1.0),
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+			}
+			got, err := tr.ChangeEvaluatorScore(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_ListAnnotationEvaluators(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ListAnnotationEvaluatorsRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ListAnnotationEvaluatorsResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				evaluators := []*annodto.AnnotationEvaluator{{}}
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, "123", false).Return(nil)
+				mockSvc.EXPECT().ListAnnotationEvaluators(gomock.Any(), gomock.Any()).Return(&service.ListAnnotationEvaluatorsResp{Evaluators: evaluators}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationEvaluatorsRequest{
+					WorkspaceID: 123,
+					Name:        ptr.Of("foo"),
+				},
+			},
+			want:    &trace.ListAnnotationEvaluatorsResponse{Evaluators: []*annodto.AnnotationEvaluator{{}}},
+			wantErr: false,
+		},
+		{
+			name: "invalid request",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationEvaluatorsRequest{},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "permission error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, "123", false).Return(fmt.Errorf("permission denied"))
+				return fields{
+					auth: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationEvaluatorsRequest{
+					WorkspaceID: 123,
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, "123", false).Return(nil)
+				mockSvc.EXPECT().ListAnnotationEvaluators(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationEvaluatorsRequest{
+					WorkspaceID: 123,
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+			}
+			got, err := tr.ListAnnotationEvaluators(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_ExtractSpanInfo(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+		traceCfg config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ExtractSpanInfoRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ExtractSpanInfoResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				spanInfos := []*trace.SpanInfo{{SpanID: "span1"}}
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+				mockSvc.EXPECT().ExtractSpanInfo(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, req *service.ExtractSpanInfoRequest) (*service.ExtractSpanInfoResp, error) {
+						assert.Equal(t, int64(123), req.WorkspaceID)
+						assert.Equal(t, "trace", req.TraceID)
+						assert.Equal(t, []string{"span"}, req.SpanIds)
+						return &service.ExtractSpanInfoResp{SpanInfos: spanInfos}, nil
+					},
+				)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExtractSpanInfoRequest{
+					WorkspaceID: 123,
+					TraceID:     "trace",
+					SpanIds:     []string{"span"},
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    &trace.ExtractSpanInfoResponse{SpanInfos: []*trace.SpanInfo{{SpanID: "span1"}}},
+			wantErr: false,
+		},
+		{
+			name:         "invalid workspace",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExtractSpanInfoRequest{},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:         "span length exceeded",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExtractSpanInfoRequest{
+					WorkspaceID: 123,
+					SpanIds:     make([]string, MaxSpanLength+1),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "permission error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(fmt.Errorf("permission denied"))
+				return fields{
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExtractSpanInfoRequest{
+					WorkspaceID: 123,
+					TraceID:     "trace",
+					SpanIds:     []string{"span"},
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+				mockSvc.EXPECT().ExtractSpanInfo(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ExtractSpanInfoRequest{
+					WorkspaceID: 123,
+					TraceID:     "trace",
+					SpanIds:     []string{"span"},
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+				traceConfig:  fields.traceCfg,
+			}
+			got, err := tr.ExtractSpanInfo(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
