@@ -308,7 +308,7 @@ func (m *MetricsService) formatMetrics(data []map[string]any, mBuilder *metricQu
 	case entity.MetricTypeTimeSeries:
 		return m.formatTimeSeriesData(data, mBuilder)
 	case entity.MetricTypeSummary: // 预期不会有聚合, 有就是参数问题
-		return m.formatSummaryData(data, mInfo)
+		return m.formatSummaryData(data)
 	case entity.MetricTypePie:
 		return m.formatPieData(data, mInfo)
 	default:
@@ -381,17 +381,13 @@ func (m *MetricsService) fillTimeSeriesData(intervals []string, metricName strin
 	}
 }
 
-func (m *MetricsService) formatSummaryData(data []map[string]any, mInfo *metricInfo) map[string]*entity.Metric {
+func (m *MetricsService) formatSummaryData(data []map[string]any) map[string]*entity.Metric {
 	ret := make(map[string]*entity.Metric)
-	for _, name := range mInfo.mAggregation {
-		ret[name.Alias] = &entity.Metric{}
-	}
 	for _, dataItem := range data {
 		for k, v := range dataItem { // 预期不应该有下钻, 有就是参数问题
 			ret[k] = &entity.Metric{
 				Summary: conv.ToString(v),
 			}
-			break
 		}
 	}
 	return ret
