@@ -923,16 +923,23 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 }
 
 func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
-	if (len(spanIds) == 0 && traceId == "") || workspaceId == "" {
+	validSpanIds := make([]string, 0, len(spanIds))
+	for _, span := range spanIds {
+		if span == "" {
+			continue
+		}
+		validSpanIds = append(validSpanIds, span)
+	}
+	if (len(validSpanIds) == 0 && traceId == "") || workspaceId == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	var filterFields []*loop_span.FilterField
-	if len(spanIds) != 0 {
+	if len(validSpanIds) != 0 {
 		filterFields = append(filterFields,
 			&loop_span.FilterField{
 				FieldName: loop_span.SpanFieldSpanId,
 				FieldType: loop_span.FieldTypeString,
-				Values:    spanIds,
+				Values:    validSpanIds,
 				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 			})
 	} else {
