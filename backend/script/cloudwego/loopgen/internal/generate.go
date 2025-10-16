@@ -206,11 +206,11 @@ func (g *Generator) solvePkg() (string, error) {
 
 func (g *Generator) writeFile(tf *ThriftFile, s *Schema, data []byte) error {
 	dir := filepath.Join(tf.OutputDir, tf.ImportPrefix, filepath.Dir(g.ns), s.Package)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 	fullpath := filepath.Join(dir, fmt.Sprintf("local_%s.go", strings.ToLower(s.ServiceType)))
-	return os.WriteFile(fullpath, data, 0o644)
+	return os.WriteFile(fullpath, data, 0644)
 }
 
 func (g *Generator) filterServerStreamingFuncs(s *parser.Service) (map[string]bool, error) {
