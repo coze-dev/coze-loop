@@ -1737,7 +1737,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_EdgeCases(t *testing.T) {
 						Target: &entity.EvalTarget{
 							ID:                1,
 							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},
-							EvalTargetType:    entity.EvalTargetTypeLoopPrompt,
+							EvalTargetType:    entity.EvalTargetTypeCozeBot,
 						},
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
@@ -1849,14 +1849,14 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_EdgeCases(t *testing.T) {
 			// Setup mocks based on test case
 			switch tt.name {
 			case "execute target service fails":
-				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), true)
 				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("execute target failed"))
 			case "target config validation fails":
 				// For target config validation fails, no ExecuteTarget call should be made
-				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), true)
 			default:
 				// For json path parsing error case
-				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), true)
 			}
 
 			_, err := service.callTarget(context.Background(), tt.etec, tt.history, tt.spaceID)

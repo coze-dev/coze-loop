@@ -156,7 +156,7 @@ func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx, history []*entity.Message, spaceID int64) (record *entity.EvalTargetRecord, err error) {
-	defer e.metric.EmitTurnExecTargetResult(etec.Event.SpaceID, err != nil)
+	defer func() { e.metric.EmitTurnExecTargetResult(etec.Event.SpaceID, err != nil) }()
 
 	turn := etec.Turn
 	targetConf := etec.Expt.EvalConf.ConnectorConf.TargetConf
