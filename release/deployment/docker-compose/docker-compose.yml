@@ -308,9 +308,7 @@ services:
   coze-loop-python-faas:
     profiles: [ "faas", "app" ]
     container_name: "coze-loop-python-faas"
-    build:
-      context: ./bootstrap/python-faas
-      dockerfile: Dockerfile
+    image: "${COZE_LOOP_PYTHON_FAAS_IMAGE_REGISTRY}/${COZE_LOOP_PYTHON_FAAS_IMAGE_REPOSITORY}/${COZE_LOOP_PYTHON_FAAS_IMAGE_NAME}:${COZE_LOOP_PYTHON_FAAS_IMAGE_TAG}"
     restart: always
     networks:
       - coze-loop-network
@@ -322,20 +320,17 @@ services:
       DENO_DIR: "${DENO_DIR}"
       DENO_NO_UPDATE_CHECK: "${DENO_NO_UPDATE_CHECK}"
       DENO_V8_FLAGS: "${DENO_V8_FLAGS}"
-
       # FaaS 基础配置
       FAAS_WORKSPACE: "${FAAS_WORKSPACE}"
       FAAS_PORT: "${FAAS_PORT}"
       FAAS_TIMEOUT: "${FAAS_TIMEOUT}"
       FAAS_LANGUAGE: "${FAAS_LANGUAGE}"
-
       # 预装Python包版本配置（使用兼容版本）
       NUMPY_VERSION: "${NUMPY_VERSION}"
       PANDAS_VERSION: "${PANDAS_VERSION}"
       JSONSCHEMA_VERSION: "${JSONSCHEMA_VERSION}"
       SCIPY_VERSION: "${SCIPY_VERSION}"
       SKLEARN_VERSION: "${SKLEARN_VERSION}"
-
     working_dir: /app
     entrypoint: [ "sh", "/coze-loop-python-faas/bootstrap/entrypoint.sh" ]
     tmpfs:
