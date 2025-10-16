@@ -13,6 +13,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // JavaScriptRuntime JavaScript运行时实现，专门处理JavaScript代码执行
@@ -33,9 +34,9 @@ func NewJavaScriptRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (
 	}
 
 	// 检查JavaScript FaaS服务配置
-	jsFaaSURL := os.Getenv("COZE_LOOP_JS_FAAS_URL")
+	jsFaaSURL := "http://" + os.Getenv("COZE_LOOP_JS_FAAS_DOMAIN") + ":" + os.Getenv("COZE_LOOP_JS_FAAS_PORT")
 	if jsFaaSURL == "" {
-		return nil, fmt.Errorf("必须配置JavaScript FaaS服务URL，请设置COZE_LOOP_JS_FAAS_URL环境变量")
+		return nil, fmt.Errorf("必须配置JavaScript FaaS服务URL，请设置COZE_LOOP_JS_FAAS_DOMAIN和COZE_LOOP_JS_FAAS_PORT环境变量")
 	}
 
 	// 创建HTTP FaaS适配器配置
@@ -52,6 +53,7 @@ func NewJavaScriptRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (
 	if err != nil {
 		return nil, fmt.Errorf("初始化JavaScript FaaS适配器失败: %w", err)
 	}
+	logs.CtxInfo(context.Background(), "JavaScript FaaS适配器配置: %+v, httpFaaSAdapter: %+v", faasConfig, httpFaaSAdapter)
 
 	runtime := &JavaScriptRuntime{
 		logger:          logger,

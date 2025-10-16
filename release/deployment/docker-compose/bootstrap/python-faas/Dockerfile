@@ -60,8 +60,4 @@ USER faas
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD deno eval "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { Deno.exit(0); } else { Deno.exit(1); } } catch (e) { Deno.exit(1); }"
 
-# 暴露端口
-EXPOSE 8000
 
-# 默认命令 - 使用 entrypoint 脚本
-CMD ["/app/entrypoint.sh"]

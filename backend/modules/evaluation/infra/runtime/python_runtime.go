@@ -33,9 +33,9 @@ func NewPythonRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (*Pyt
 	}
 
 	// 检查Python FaaS服务配置
-	pythonFaaSURL := os.Getenv("COZE_LOOP_PYTHON_FAAS_URL")
+	pythonFaaSURL := "http://" + os.Getenv("COZE_LOOP_PYTHON_FAAS_DOMAIN") + ":" + os.Getenv("COZE_LOOP_PYTHON_FAAS_PORT")
 	if pythonFaaSURL == "" {
-		return nil, fmt.Errorf("必须配置Python FaaS服务URL，请设置COZE_LOOP_PYTHON_FAAS_URL环境变量")
+		return nil, fmt.Errorf("必须配置Python FaaS服务URL，请设置COZE_LOOP_PYTHON_FAAS_DOMAIN和COZE_LOOP_PYTHON_FAAS_PORT环境变量")
 	}
 
 	// 创建HTTP FaaS适配器配置

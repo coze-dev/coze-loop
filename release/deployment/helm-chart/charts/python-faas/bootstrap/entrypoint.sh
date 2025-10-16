@@ -33,30 +33,6 @@ fi
 # 确保工作空间目录存在
 mkdir -p "${FAAS_WORKSPACE:-/tmp/faas-workspace}"
 
-# 检查并恢复 vendor 文件（处理 emptyDir 挂载覆盖问题）
-if [ ! -f "${FAAS_WORKSPACE:-/tmp/faas-workspace}/vendor/import_map.json" ]; then
-    echo "📦 检查并恢复 vendor 文件..."
-    mkdir -p "${FAAS_WORKSPACE:-/tmp/faas-workspace}/vendor"
-
-    # 检查是否有备份的 vendor 文件（在镜像构建时创建的）
-    # 由于 emptyDir 挂载会覆盖 /tmp/faas-workspace，我们需要从其他地方恢复
-    if [ -d "/app/vendor" ]; then
-        echo "从 /app/vendor 恢复..."
-        cp -r /app/vendor/* "${FAAS_WORKSPACE:-/tmp/faas-workspace}/vendor/"
-        echo "✅ 从 /app/vendor 恢复完成"
-    else
-        echo "❌ 未找到备份的 vendor 文件，尝试重新创建..."
-        # 如果镜像中没有备份，尝试重新创建
-        cd "${FAAS_WORKSPACE:-/tmp/faas-workspace}" && \
-        deno vendor jsr:@eyurtsev/pyodide-sandbox@0.0.3 --output=vendor && \
-        echo '{"imports":{"https://jsr.io/":"./jsr.io/"},"scopes":{"./jsr.io/":{"jsr:@eyurtsev/pyodide-sandbox@0.0.3":"./jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts","jsr:@std/path@^1.0.8":"./jsr.io/@std/path/1.1.2/mod.ts","jsr:/@std/cli@^1.0.16/parse-args":"./jsr.io/@std/cli/1.0.23/parse_args.ts","jsr:@std/internal@^1.0.10/os":"./jsr.io/@std/internal/1.0.12/os.ts"}}}' > vendor/import_map.json && \
-        echo "✅ 重新创建 vendor 文件完成" || \
-        echo "❌ 重新创建 vendor 文件失败"
-    fi
-else
-    echo "✅ Vendor 文件已存在"
-fi
-
 # 验证 vendor 文件是否正确
 if [ -f "${FAAS_WORKSPACE:-/tmp/faas-workspace}/vendor/import_map.json" ]; then
     echo "🔍 验证 vendor 文件..."
