@@ -48,6 +48,7 @@ func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
 	} else {
 		ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task")
 	}
+	logs.CtxInfo(ctx, "cluster:%s", os.Getenv("TCE_HOST_CLUSTER"))
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
