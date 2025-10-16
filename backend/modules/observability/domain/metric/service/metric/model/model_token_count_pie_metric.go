@@ -14,7 +14,7 @@ import (
 type ModelTokenCountPieMetric struct{}
 
 func (m *ModelTokenCountPieMetric) Name() string {
-	return entity.MetricNameModelTokenCount
+	return entity.MetricNameModelTokenCountPie
 }
 
 func (m *ModelTokenCountPieMetric) Type() entity.MetricType {

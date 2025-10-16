@@ -46,6 +46,7 @@ const (
 	// Model 模型统计指标
 	MetricNameModelTokenCount             = "model_token_count"
 	MetricNameModelTokenCountByTime       = "model_token_count_by_time"
+	MetricNameModelTokenCountPie          = "model_token_count_pie"
 	MetricNameModelInputTokenCount        = "model_input_token_count"
 	MetricNameModelInputTokenCountByTime  = "model_input_token_count_by_time"
 	MetricNameModelOutputTokenCount       = "model_output_token_count"
