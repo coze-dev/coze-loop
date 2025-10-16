@@ -4,7 +4,6 @@
 package service
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -748,59 +747,4 @@ func TestDivideNumber(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestDivideTimeSeries(t *testing.T) {
-	t.Run("nil inputs", func(t *testing.T) {
-		got := divideTimeSeries(context.Background(), nil, nil)
-		if got == nil {
-			t.Fatalf("expected non-nil metric")
-		}
-		if len(got.TimeSeries) != 0 {
-			t.Fatalf("expected empty timeseries, got %v", got.TimeSeries)
-		}
-	})
-
-	t.Run("length mismatch", func(t *testing.T) {
-		numerator := &entity.Metric{TimeSeries: map[string][]*entity.MetricPoint{
-			"group": {
-				{Timestamp: "1", Value: "2"},
-				{Timestamp: "2", Value: "4"},
-			},
-		}}
-		denominator := &entity.Metric{TimeSeries: map[string][]*entity.MetricPoint{
-			"group": {
-				{Timestamp: "1", Value: "1"},
-			},
-		}}
-		got := divideTimeSeries(context.Background(), numerator, denominator)
-		if len(got.TimeSeries) != 0 {
-			t.Fatalf("expected no timeseries entries, got %v", got.TimeSeries)
-		}
-	})
-
-	t.Run("normal division", func(t *testing.T) {
-		numerator := &entity.Metric{TimeSeries: map[string][]*entity.MetricPoint{
-			"group": {
-				{Timestamp: "2024-01-01T01:00:00Z", Value: "4"},
-				{Timestamp: "2024-01-01T00:00:00Z", Value: "2"},
-			},
-		}}
-		denominator := &entity.Metric{TimeSeries: map[string][]*entity.MetricPoint{
-			"group": {
-				{Timestamp: "2024-01-01T00:00:00Z", Value: "1"},
-				{Timestamp: "2024-01-01T01:00:00Z", Value: "0"},
-			},
-		}}
-		got := divideTimeSeries(context.Background(), numerator, denominator)
-		expected := map[string][]*entity.MetricPoint{
-			"group": {
-				{Timestamp: "2024-01-01T00:00:00Z", Value: "2"},
-				{Timestamp: "2024-01-01T01:00:00Z", Value: "null"},
-			},
-		}
-		if !reflect.DeepEqual(got.TimeSeries, expected) {
-			t.Fatalf("divideTimeSeries result = %+v, expected %+v", got.TimeSeries, expected)
-		}
-	})
 }

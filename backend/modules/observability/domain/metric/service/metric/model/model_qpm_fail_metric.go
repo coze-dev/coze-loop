@@ -28,11 +28,7 @@ func (m *ModelQPMFailMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelQPMFailMetric) Expression(granularity entity.MetricGranularity) string {
-	seconds := entity.GranularityToSecond(granularity) / 60
-	if seconds == 0 {
-		seconds = 1
-	}
-	return fmt.Sprintf("countIf(1, status_code != 0)/%d", seconds)
+	return fmt.Sprintf("countIf(1, status_code != 0)/%d", entity.GranularityToSecond(granularity)/60)
 }
 
 func (m *ModelQPMFailMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -221,6 +221,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		model.NewModelNamePieMetric(),
 		// Tool 工具统计指标
 		tool.NewToolTotalCountMetric(),
+		tool.NewToolTotalCountByTimeMetric(),
 		tool.NewToolDurationAvgMetric(),
 		tool.NewToolDurationMinMetric(),
 		tool.NewToolDurationMaxMetric(),
@@ -248,6 +249,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		service_metric.NewServiceDurationPct90Metric(),
 		service_metric.NewServiceDurationPct99Metric(),
 		service_metric.NewServiceSuccessRatioMetric(),
+		service_metric.NewServiceExecutionStepCountByTimeMetric(),
 	}
 }
 
