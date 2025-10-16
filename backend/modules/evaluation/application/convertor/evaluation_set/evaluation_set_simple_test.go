@@ -38,10 +38,12 @@ func TestCreateDatasetItemOutputDO2DTOs(t *testing.T) {
 				},
 			},
 			expected: []*dataset.CreateDatasetItemOutput{
-				{ItemIndex: gptr.Of(int32(1)),
+				{
+					ItemIndex: gptr.Of(int32(1)),
 					ItemKey:   gptr.Of("key1"),
 					ItemID:    gptr.Of(int64(1)),
-					IsNewItem: gptr.Of(true)},
+					IsNewItem: gptr.Of(true),
+				},
 			},
 		},
 	}
