@@ -9,19 +9,12 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 //go:generate mockgen -destination=mocks/Task_dao.go -package=mocks . ITaskDAO
 type ITaskDAO interface {
-	// Task相关
-	GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error)
-	SetTask(ctx context.Context, task *entity.ObservabilityTask, ttl time.Duration) error
-
 	// TaskCount相关
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
 	IncrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error)
@@ -44,51 +37,12 @@ func NewTaskDAO(cmdable redis.Cmdable) ITaskDAO {
 	}
 }
 
-func (q *TaskDAOImpl) makeTaskConfigKey(taskID int64) string {
-	return fmt.Sprintf("task_config_%d", taskID)
-}
-
 func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
 	return fmt.Sprintf("count_%d", taskID)
 }
 
 func (q *TaskDAOImpl) makeTaskRunCountCacheKey(taskID, taskRunID int64) string {
 	return fmt.Sprintf("count_%d_%d", taskID, taskRunID)
-}
-
-// GetTask 获取单个任务缓存
-func (p *TaskDAOImpl) GetTask(ctx context.Context, id int64) (*entity.ObservabilityTask, error) {
-	key := p.makeTaskConfigKey(id)
-	got, err := p.cmdable.Get(ctx, key).Result()
-	if err != nil {
-		if redis.IsNilError(err) {
-			return nil, nil // 缓存未命中
-		}
-		return nil, errorx.Wrapf(err, "redis get task fail, key: %v", key)
-	}
-	return convert.NewTaskConverter().ToDO(conv.UnsafeStringToBytes(got))
-}
-
-// SetTask 设置单个任务缓存
-func (p *TaskDAOImpl) SetTask(ctx context.Context, task *entity.ObservabilityTask, ttl time.Duration) error {
-	bytes, err := convert.NewTaskConverter().FromDO(task)
-	if err != nil {
-		return err
-	}
-	key := p.makeTaskConfigKey(task.ID)
-	if err := p.cmdable.Set(ctx, key, bytes, ttl).Err(); err != nil {
-		logs.CtxError(ctx, "redis set task cache failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis set task key: %v", key)
-	}
-	return nil
-}
-
-// DeleteTaskList 删除任务列表缓存（支持模糊匹配）
-func (p *TaskDAOImpl) DeleteTaskList(ctx context.Context, pattern string) error {
-	// 由于 redis.Cmdable 接口没有 Keys 方法，这里简化处理
-	// 在实际生产环境中，可能需要使用 SCAN 命令或其他方式来实现模糊删除
-	logs.CtxWarn(ctx, "DeleteTaskList with pattern not fully implemented", "pattern", pattern)
-	return nil
 }
 
 // GetTaskCount 获取任务计数缓存

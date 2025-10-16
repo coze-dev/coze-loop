@@ -48,22 +48,6 @@ const (
 )
 
 func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error) {
-	// 先查 Redis 缓存
-	cachedTask, err := v.TaskRedisDao.GetTask(ctx, id)
-	if err != nil {
-		logs.CtxWarn(ctx, "failed to get task from redis cache", "id", id, "err", err)
-	} else if cachedTask != nil {
-		// 验证权限（workspaceID 和 userID）
-		if workspaceID != nil && cachedTask.WorkspaceID != *workspaceID {
-			return nil, nil // 权限不符，返回空
-		}
-		if userID != nil && cachedTask.CreatedBy != *userID {
-			return nil, nil // 权限不符，返回空
-		}
-		return cachedTask, nil
-	}
-
-	// 缓存未命中，查询数据库
 	TaskPO, err := v.TaskDao.GetTask(ctx, id, workspaceID, userID)
 	if err != nil {
 		return nil, err
@@ -82,15 +66,6 @@ func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64
 	if err != nil {
 		return nil, err
 	}
-
-	// 异步缓存到 Redis
-	go func() {
-		if len(taskDO.TaskRuns) > 0 {
-			if err := v.TaskRedisDao.SetTask(context.Background(), taskDO, TaskDetailTTL); err != nil {
-				logs.Error("failed to set task cache", "id", id, "err", err)
-			}
-		}
-	}()
 
 	return taskDO, nil
 }
@@ -153,17 +128,6 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 			return err
 		}
 	}
-
-	// 数据库操作成功后，更新缓存
-	go func() {
-		// 更新单个任务缓存
-		if len(do.TaskRuns) > 0 {
-			if err = v.TaskRedisDao.SetTask(context.Background(), do, TaskDetailTTL); err != nil {
-				logs.Error("failed to update task cache", "id", do.ID, "err", err)
-				return
-			}
-		}
-	}()
 
 	return nil
 }
