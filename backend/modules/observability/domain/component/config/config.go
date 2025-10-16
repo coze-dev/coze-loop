@@ -106,7 +106,8 @@ type QueryTraceRateLimitConfig struct {
 }
 
 type ConsumerListening struct {
-	IsEnabled bool `json:"is_enabled"`
+	IsEnabled bool     `json:"is_enabled"`
+	Clusters  []string `json:"clusters"`
 }
 
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig

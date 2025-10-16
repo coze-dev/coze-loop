@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	domaincommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	repomock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
@@ -2202,12 +2203,13 @@ func TestTraceApplication_ListAnnotations(t *testing.T) {
 						UpdatedAt: now,
 					},
 				}
+				userMap := map[string]*domaincommon.UserInfo{
+					"user1": {UserID: "user1", Name: "User One"},
+					"user2": {UserID: "user2", Name: "User Two"},
+				}
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
 				mockSvc.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListAnnotationsResp{Annotations: annotations}, nil)
-				mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*commondto.UserInfo{
-					"user1": {UserID: ptr.Of("user1"), Name: ptr.Of("User One")},
-					"user2": {UserID: ptr.Of("user2"), Name: ptr.Of("User Two")},
-				}, nil)
+				mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, userMap, nil)
 				mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, map[int64]*rpc.Evaluator{
 					3: {EvaluatorName: "eval", EvaluatorVersion: "v1"},
 				}, nil)
@@ -2236,7 +2238,7 @@ func TestTraceApplication_ListAnnotations(t *testing.T) {
 					PlatformType:    ptr.Of(commondto.PlatformTypeCozeloop),
 				},
 			},
-			want:    &trace.ListAnnotationsResponse{},
+			want:    nil,
 			wantErr: false,
 		},
 		{
@@ -2297,14 +2299,21 @@ func TestTraceApplication_ListAnnotations(t *testing.T) {
 			assert.NotNil(t, manual.ManualFeedback)
 			assert.Equal(t, int64(100), manual.ManualFeedback.TagKeyID)
 			assert.Equal(t, "key-name", manual.ManualFeedback.TagKeyName)
-			assert.NotNil(t, manual.BaseInfo)
-			if manual.BaseInfo != nil {
-				assert.NotNil(t, manual.BaseInfo.CreatedBy)
+			assert.Equal(t, "free text", manual.ManualFeedback.GetTagValue())
+			if manual.BaseInfo != nil && manual.BaseInfo.CreatedBy != nil {
+				assert.Equal(t, "User One", manual.BaseInfo.CreatedBy.GetName())
 			}
 			auto := got.Annotations[1]
 			assert.NotNil(t, auto.AutoEvaluate)
+			if auto.BaseInfo != nil && auto.BaseInfo.CreatedBy != nil {
+				assert.Equal(t, "User Two", auto.BaseInfo.CreatedBy.GetName())
+			}
 			if auto.AutoEvaluate != nil {
 				assert.Equal(t, "eval", auto.AutoEvaluate.EvaluatorName)
+				assert.Equal(t, "v1", auto.AutoEvaluate.EvaluatorVersion)
+				if auto.AutoEvaluate.EvaluatorResult_ != nil && auto.AutoEvaluate.EvaluatorResult_.Score != nil {
+					assert.Equal(t, 0.8, *auto.AutoEvaluate.EvaluatorResult_.Score)
+				}
 			}
 		})
 	}

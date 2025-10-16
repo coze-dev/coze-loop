@@ -5,11 +5,17 @@ package consumer
 
 import (
 	"context"
+	"os"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+)
+
+const (
+	TceCluster = "TCE_CLUSTER"
 )
 
 func NewConsumerWorkers(
@@ -26,7 +32,7 @@ func NewConsumerWorkers(
 	if err := loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
 		return nil, err
 	}
-	if cfg.IsEnabled {
+	if cfg.IsEnabled && slices.Contains(cfg.Clusters, os.Getenv(TceCluster)) {
 		workers = append(workers,
 			newTaskConsumer(taskConsumer, loader),
 			newCallbackConsumer(taskConsumer, loader),

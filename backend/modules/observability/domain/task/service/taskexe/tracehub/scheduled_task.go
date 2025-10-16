@@ -6,6 +6,7 @@ package tracehub
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -73,6 +74,9 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 }
 
 func (h *TraceHubServiceImpl) transformTaskStatus() {
+	if os.Getenv(TceCluster) == TceClusterName {
+		return
+	}
 	ctx := context.Background()
 	ctx = h.fillCtx(ctx)
 
@@ -243,6 +247,9 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 
 // syncTaskRunCounts synchronizes TaskRunCount data to the database
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
+	if os.Getenv(TceCluster) == TceClusterName {
+		return
+	}
 	ctx := context.Background()
 	ctx = h.fillCtx(ctx)
 
