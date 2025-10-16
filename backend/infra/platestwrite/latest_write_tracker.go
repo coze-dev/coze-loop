@@ -129,6 +129,7 @@ const (
 	ResourceTypePromptCommit             ResourceType = "prompt_commit"
 	ResourceTypePromptLabel              ResourceType = "prompt_label"
 	ResourceTypePromptCommitLabelMapping ResourceType = "prompt_commit_label_mapping"
+	ResourceTypeCozeloopOptimizeTask     ResourceType = "cozeloop_optimize_task" // 外场智能优化
 
 	ResourceTypeExperiment    ResourceType = "experiment"
 	ResourceTypeEvalSet       ResourceType = "eval_set"
