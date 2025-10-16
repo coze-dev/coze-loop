@@ -177,6 +177,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		// Model 模型统计指标
 		model.NewModelTokenCountMetric(),
 		model.NewModelTokenCountByTimeMetric(),
+		model.NewModelTokenCountPieMetric(),
 		model.NewModelInputTokenCountMetric(),
 		model.NewModelInputTokenCountByTimeMetric(),
 		model.NewModelOutputTokenCountMetric(),

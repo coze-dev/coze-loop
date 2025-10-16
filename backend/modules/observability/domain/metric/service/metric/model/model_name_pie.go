@@ -13,7 +13,7 @@ import (
 )
 
 // ModelTokenCountMetric Tokens消耗指标
-type ModelTokenCountMetric struct{}
+type ModelNamePieMetric struct{}
 
 func (m *ModelNamePieMetric) Name() string {
 	return entity.MetricNameModelNamePie

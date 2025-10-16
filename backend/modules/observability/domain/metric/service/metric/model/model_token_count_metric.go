@@ -11,7 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-type ModelNamePieMetric struct{}
+type ModelTokenCountMetric struct{}
 
 func (m *ModelTokenCountMetric) Name() string {
 	return entity.MetricNameModelTokenCount
