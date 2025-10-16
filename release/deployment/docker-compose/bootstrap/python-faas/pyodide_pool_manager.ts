@@ -113,6 +113,13 @@ class PyodidePoolManager {
       this.processes.set(processId, pooledProcess);
       this.availableProcesses.add(processId);
 
+      // 预加载 Pyodide，提升首次执行速度
+      try {
+        await this.preloadPyodide(processId);
+      } catch (e) {
+        console.warn(`⚠️  预加载失败但不影响进程创建: ${processId}: ${e}`);
+      }
+
       console.log(`✅ 进程槽位创建成功: ${processId}`);
       return pooledProcess;
 
@@ -306,11 +313,13 @@ ${request.code}
       console.log(`🗂️ [${processId}] 临时代码文件: ${tmpFile}`);
       console.log(`🧾 [${processId}] 代码预览(前400字):\n${processedCode.slice(0, 400)}`);
 
+      const importMap = Deno.env.get("PYODIDE_IMPORT_MAP") || "/tmp/faas-workspace/vendor/import_map.json";
       const process = new Deno.Command("deno", {
         args: [
           "run",
           "-A",
-          "jsr:@eyurtsev/pyodide-sandbox",
+          `--import-map=${importMap}`,
+          "/tmp/faas-workspace/vendor/jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts",
           "-f",
           tmpFile
         ],
@@ -412,6 +421,61 @@ ${request.code}
           processId
         }
       };
+    }
+  }
+
+
+  /**
+   * 预加载 Pyodide（与 K8s 行为保持一致）
+   */
+  private async preloadPyodide(processId: string): Promise<void> {
+    console.log(`⏳ [${processId}] 预加载Pyodide...`);
+
+    try {
+      const importMap = Deno.env.get("PYODIDE_IMPORT_MAP") || "/tmp/faas-workspace/vendor/import_map.json";
+      const workspaceDir = Deno.env.get("FAAS_WORKSPACE") || "/tmp/faas-workspace";
+
+      const preloadTestFile = `${workspaceDir}/preload_test_${processId}.py`;
+      await Deno.writeTextFile(preloadTestFile, "print('preload test')");
+
+      const preloadCommand = new Deno.Command("deno", {
+        args: [
+          "run",
+          "-A",
+          `--import-map=${importMap}`,
+          "/tmp/faas-workspace/vendor/jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts",
+          "-f",
+          preloadTestFile
+        ],
+        stdout: "piped",
+        stderr: "piped",
+        timeout: 30000,
+        env: {
+          "PYTHONIOENCODING": "utf-8",
+          "LANG": "en_US.UTF-8",
+          "LC_ALL": "en_US.UTF-8"
+        }
+      });
+
+      const { stderr, code: exitCode } = await preloadCommand.output();
+
+      try {
+        await Deno.remove(preloadTestFile);
+      } catch (e) {
+        console.warn(`⚠️ [${processId}] 清理预加载测试文件失败: ${e}`);
+      }
+
+      if (exitCode === 0) {
+        console.log(`✅ [${processId}] Pyodide预加载成功`);
+      } else {
+        const stderrText = new TextDecoder('utf-8', { fatal: false }).decode(stderr);
+        console.warn(`⚠️ [${processId}] Pyodide预加载完成但有警告: ${stderrText}`);
+      }
+
+    } catch (error) {
+      console.error(`❌ [${processId}] Pyodide预加载失败:`, error);
+      // 抛出让调用方决定是否忽略
+      throw error;
     }
   }
 
