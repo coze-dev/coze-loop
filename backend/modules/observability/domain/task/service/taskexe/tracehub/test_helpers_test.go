@@ -57,16 +57,3 @@ func (s *stubProcessor) OnCreateTaskRunChange(context.Context, taskexe.OnCreateT
 func (s *stubProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnFinishTaskRunChangeReq) error {
 	return s.finishTaskRunErr
 }
-
-type errorBackfillProducer struct {
-	called bool
-	err    error
-}
-
-func (e *errorBackfillProducer) SendBackfill(context.Context, *entity.BackFillEvent) error {
-	e.called = true
-	if e.err != nil {
-		return e.err
-	}
-	return nil
-}
