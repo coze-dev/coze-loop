@@ -77,16 +77,14 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 	if req.EvaluationSetSchema == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("schema is nil"))
 	}
-	if req.Session == nil {
-		// 鉴权
-		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-			ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
-			SpaceID:       req.WorkspaceID,
-			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-		})
-		if err != nil {
-			return nil, err
-		}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
 	}
 	// domain调用
 	var session *entity.Session
