@@ -48,7 +48,7 @@ func TestBatchCreateEvaluationSetItems(t *testing.T) {
 			expectedErrors: nil,
 			expectedErr:    nil,
 			mockSetup: func() {
-				mockAdapter.EXPECT().BatchCreateDatasetItems(gomock.Any(), gomock.Any()).Return(map[int64]int64{1: 100, 2: 200}, nil, nil)
+				mockAdapter.EXPECT().BatchCreateDatasetItems(gomock.Any(), gomock.Any()).Return(map[int64]int64{1: 100, 2: 200}, nil, nil, nil)
 			},
 		},
 		{

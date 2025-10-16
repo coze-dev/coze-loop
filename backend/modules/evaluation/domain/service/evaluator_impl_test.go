@@ -439,9 +439,9 @@ func TestEvaluatorServiceImpl_GetEvaluator(t *testing.T) {
 			includeDeleted: false,
 			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
 				mockRepo.EXPECT().BatchGetEvaluatorDraftByEvaluatorID(gomock.Any(), int64(1), gomock.Eq([]int64{102}), false).
-					Return([]*entity.Evaluator{{ID: 102, Name: "Test Eval"}}, nil)
+					Return([]*entity.Evaluator{{ID: 102, SpaceID: 1, Name: "Test Eval"}}, nil)
 			},
-			expectedEvaluator: &entity.Evaluator{ID: 102, Name: "Test Eval"},
+			expectedEvaluator: &entity.Evaluator{ID: 102, SpaceID: 1, Name: "Test Eval"},
 			expectedErr:       nil,
 		},
 		{
@@ -452,11 +452,11 @@ func TestEvaluatorServiceImpl_GetEvaluator(t *testing.T) {
 			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
 				mockRepo.EXPECT().BatchGetEvaluatorDraftByEvaluatorID(gomock.Any(), int64(1), gomock.Eq([]int64{103}), true).
 					Return([]*entity.Evaluator{
-						{ID: 103, Name: "First Eval"},
-						{ID: 10301, Name: "Second Eval"},
+						{ID: 103, SpaceID: 1, Name: "First Eval"},
+						{ID: 10301, SpaceID: 1, Name: "Second Eval"},
 					}, nil)
 			},
-			expectedEvaluator: &entity.Evaluator{ID: 103, Name: "First Eval"},
+			expectedEvaluator: &entity.Evaluator{ID: 103, SpaceID: 1, Name: "First Eval"},
 			expectedErr:       nil,
 		},
 	}

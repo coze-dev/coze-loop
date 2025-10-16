@@ -89,11 +89,11 @@ type taskRepoMockAdapter struct {
 }
 
 func (m *taskRepoMockAdapter) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID, ttl int64) error {
-	return m.MockITaskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+	return m.MockITaskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID, ttl)
 }
 
 func (m *taskRepoMockAdapter) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID, ttl int64) error {
-	return m.MockITaskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+	return m.MockITaskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID, ttl)
 }
 
 func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {

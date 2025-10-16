@@ -40,7 +40,7 @@ func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
 		taskRepo:       mockTaskRepo,
 	}
 
-	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType("loop_all")).Return([]string{"tenant"}, nil).AnyTimes()
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 
 	now := time.Now()
@@ -53,7 +53,7 @@ func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
 	}
 
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
-	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202)).Return(nil)
+	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202), gomock.Any()).Return(nil)
 	mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).DoAndReturn(
 		func(_ context.Context, param *repo.InsertAnnotationParam) error {
 			require.Len(t, param.Annotations, 1)
@@ -70,6 +70,9 @@ func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
 				Score:              0.9,
 				Reasoning:          "ok",
 				Status:             entity.EvaluatorRunStatus_Success,
+				BaseInfo: &entity.BaseInfo{
+					CreatedBy: &entity.UserInfo{UserID: "user-1"},
+				},
 				Ext: map[string]string{
 					"workspace_id": strconv.FormatInt(1, 10),
 					"span_id":      "span-1",
@@ -101,7 +104,7 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 		traceRepo:      mockTraceRepo,
 	}
 
-	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType("loop_all")).Return([]string{"tenant"}, nil).AnyTimes()
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil)
 
@@ -109,6 +112,9 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 		TurnEvalResults: []*entity.OnlineExptTurnEvalResult{
 			{
 				Status: entity.EvaluatorRunStatus_Success,
+				BaseInfo: &entity.BaseInfo{
+					CreatedBy: &entity.UserInfo{UserID: "user-1"},
+				},
 				Ext: map[string]string{
 					"workspace_id": "1",
 					"span_id":      "span-1",

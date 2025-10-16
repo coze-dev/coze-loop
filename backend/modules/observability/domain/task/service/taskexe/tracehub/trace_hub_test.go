@@ -163,13 +163,13 @@ func TestTraceHubServiceImpl_updateTaskRunDetailsCount(t *testing.T) {
 			}
 
 			if tt.expectSuccess {
-				mockRepo.EXPECT().IncrTaskRunSuccessCount(ctx, taskID, runID).Return(nil)
+				mockRepo.EXPECT().IncrTaskRunSuccessCount(ctx, taskID, runID, gomock.Any()).Return(nil)
 			}
 			if tt.expectFail {
-				mockRepo.EXPECT().IncrTaskRunFailCount(ctx, taskID, runID).Return(nil)
+				mockRepo.EXPECT().IncrTaskRunFailCount(ctx, taskID, runID, gomock.Any()).Return(nil)
 			}
 
-			err := impl.updateTaskRunDetailsCount(ctx, taskID, turn)
+			err := impl.updateTaskRunDetailsCount(ctx, taskID, turn, 0)
 			if tt.expectErr {
 				require.Error(t, err)
 			} else {
@@ -181,14 +181,14 @@ func TestTraceHubServiceImpl_updateTaskRunDetailsCount(t *testing.T) {
 	t.Run("missing_run_id", func(t *testing.T) {
 		t.Parallel()
 		impl := &TraceHubServiceImpl{}
-		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{}})
+		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{}}, 0)
 		require.Error(t, err)
 	})
 
 	t.Run("invalid_run_id", func(t *testing.T) {
 		t.Parallel()
 		impl := &TraceHubServiceImpl{}
-		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{"run_id": "abc"}})
+		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{"run_id": "abc"}}, 0)
 		require.Error(t, err)
 	})
 }
