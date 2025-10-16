@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -42,14 +41,14 @@ func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 
-	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
-	if os.Getenv("TCE_HOST_ENV") == "boe" {
-		ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
-	} else {
-		ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task")
-	}
-	logs.CtxInfo(ctx, "cluster:%s", os.Getenv("TCE_HOST_CLUSTER"))
-	if env := os.Getenv(XttEnv); env != "" {
+	//ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
+	//if os.Getenv("TCE_HOST_ENV") == "boe" {
+	//	ctx = context.WithValue(ctx, CtxKeyEnv, "boe_auto_task")
+	//} else {
+	//	ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task")
+	//}
+	logs.CtxInfo(ctx, "cluster:%s", os.Getenv("TCE_CLUSTER"))
+	if env := os.Getenv("TCE_ENV"); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
 	return ctx
