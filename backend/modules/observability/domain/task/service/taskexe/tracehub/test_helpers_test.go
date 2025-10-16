@@ -26,6 +26,9 @@ type stubProcessor struct {
 	createTaskRunErr    error
 	finishChangeInvoked int
 	invokeCalled        bool
+	createTaskRunReqs   []taskexe.OnCreateTaskRunChangeReq
+	finishChangeReqs    []taskexe.OnFinishTaskChangeReq
+	updateCallCount     int
 }
 
 func (s *stubProcessor) ValidateConfig(context.Context, any) error {
@@ -42,15 +45,18 @@ func (s *stubProcessor) OnCreateTaskChange(context.Context, *entity.Observabilit
 }
 
 func (s *stubProcessor) OnUpdateTaskChange(context.Context, *entity.ObservabilityTask, string) error {
+	s.updateCallCount++
 	return s.updateErr
 }
 
-func (s *stubProcessor) OnFinishTaskChange(context.Context, taskexe.OnFinishTaskChangeReq) error {
+func (s *stubProcessor) OnFinishTaskChange(_ context.Context, req taskexe.OnFinishTaskChangeReq) error {
 	s.finishChangeInvoked++
+	s.finishChangeReqs = append(s.finishChangeReqs, req)
 	return s.finishErr
 }
 
-func (s *stubProcessor) OnCreateTaskRunChange(context.Context, taskexe.OnCreateTaskRunChangeReq) error {
+func (s *stubProcessor) OnCreateTaskRunChange(_ context.Context, req taskexe.OnCreateTaskRunChangeReq) error {
+	s.createTaskRunReqs = append(s.createTaskRunReqs, req)
 	return s.createTaskRunErr
 }
 
