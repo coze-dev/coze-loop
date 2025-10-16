@@ -1410,6 +1410,227 @@ func TestFilterSpan(t *testing.T) {
 			},
 			satisfied: false,
 		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0", ""},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+				},
+			},
+			span: &Span{
+				ParentID: "0",
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0", ""},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+				},
+			},
+			span: &Span{
+				ParentID: "",
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0", ""},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+				},
+			},
+			span: &Span{
+				ParentID: "anc",
+			},
+			satisfied: false,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0", ""},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+				},
+			},
+			span: &Span{
+				ParentID: "cnv",
+				TagsBool: map[string]bool{
+					"abc": true,
+				},
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0"},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+					{
+						FieldName:  SpanFieldTraceId,
+						FieldType:  FieldTypeString,
+						Values:     []string{"123"},
+						QueryType:  ptr.Of(QueryTypeEnumEq),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+					},
+				},
+			},
+			span: &Span{
+				TraceID: "123",
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0"},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+					{
+						FieldName:  SpanFieldTraceId,
+						FieldType:  FieldTypeString,
+						Values:     []string{"123"},
+						QueryType:  ptr.Of(QueryTypeEnumEq),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+					},
+				},
+			},
+			span: &Span{
+				ParentID: "0",
+			},
+			satisfied: true,
+		},
+		{
+			filter: &FilterFields{
+				QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+				FilterFields: []*FilterField{
+					{
+						FieldName:  SpanFieldParentID,
+						FieldType:  FieldTypeString,
+						Values:     []string{"0"},
+						QueryType:  ptr.Of(QueryTypeEnumIn),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+						SubFilter: &FilterFields{
+							FilterFields: []*FilterField{
+								{
+									FieldName: "abc",
+									FieldType: FieldTypeBool,
+									Values:    []string{"true"},
+									QueryType: ptr.Of(QueryTypeEnumEq),
+								},
+							},
+						},
+					},
+					{
+						FieldName:  SpanFieldTraceId,
+						FieldType:  FieldTypeString,
+						Values:     []string{"123"},
+						QueryType:  ptr.Of(QueryTypeEnumEq),
+						QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+					},
+				},
+			},
+			span: &Span{
+				ParentID: "0",
+				TraceID:  "123",
+			},
+			satisfied: true,
+		},
 	}
 	for _, tc := range tests {
 		assert.Equal(t, tc.filter.Satisfied(tc.span), tc.satisfied)
@@ -1770,4 +1991,36 @@ func TestQueryTypeEnumNotMatchValidation(t *testing.T) {
 		err := filter.Validate()
 		assert.Error(t, err, "Invalid NotMatch filter %d should fail validation", i)
 	}
+}
+
+func TestLocal(t *testing.T) {
+	span := &Span{
+		ParentID: "s",
+		TagsBool: map[string]bool{
+			"fornax_psm_first_span": true,
+		},
+	}
+	f := []*FilterField{
+		{
+			FieldName:  SpanFieldParentID,
+			FieldType:  FieldTypeString,
+			Values:     []string{"0", ""},
+			QueryType:  ptr.Of(QueryTypeEnumIn),
+			QueryAndOr: ptr.Of(QueryAndOrEnumOr),
+			SubFilter: &FilterFields{
+				FilterFields: []*FilterField{
+					{
+						FieldName: "fornax_psm_first_span",
+						FieldType: FieldTypeBool,
+						Values:    []string{"true"},
+						QueryType: ptr.Of(QueryTypeEnumEq),
+					},
+				},
+			},
+		},
+	}
+	ff := &FilterFields{
+		FilterFields: f,
+	}
+	t.Log(ff.Satisfied(span))
 }
