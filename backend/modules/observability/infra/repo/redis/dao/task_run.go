@@ -6,6 +6,7 @@ package dao
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -15,9 +16,9 @@ import (
 //go:generate mockgen -destination=mocks/task_run_dao.go -package=mocks . ITaskRunDAO
 type ITaskRunDAO interface {
 	// 成功/失败计数操作
-	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
+	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) error
 	DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
-	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
+	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) error
 	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 }
@@ -43,21 +44,29 @@ func (q *TaskRunDAOImpl) makeTaskRunFailCountKey(taskID, taskRunID int64) string
 }
 
 // IncrTaskRunSuccessCount 增加成功计数
-func (p *TaskRunDAOImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
+func (p *TaskRunDAOImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) error {
 	key := p.makeTaskRunSuccessCountKey(taskID, taskRunID)
 	if err := p.cmdable.Incr(ctx, key).Err(); err != nil {
 		logs.CtxError(ctx, "redis incr taskrun success count failed, key:%v, err:%v", key, err)
 		return errorx.Wrapf(err, "redis incr taskrun success count key: %v", key)
 	}
+	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis expire taskrun success count failed, key:%v, err:%v", key, err)
+		return errorx.Wrapf(err, "redis expire taskrun success count key: %v", key)
+	}
 	return nil
 }
 
 // IncrTaskRunFailCount 增加失败计数
-func (p *TaskRunDAOImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error {
+func (p *TaskRunDAOImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) error {
 	key := p.makeTaskRunFailCountKey(taskID, taskRunID)
 	if err := p.cmdable.Incr(ctx, key).Err(); err != nil {
 		logs.CtxError(ctx, "redis incr taskrun fail count failed, key:", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis incr taskrun fail count key: %v", key)
+	}
+	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
+		logs.CtxError(ctx, "redis expire taskrun fail count failed, key:%v, err:%v", key, err)
+		return errorx.Wrapf(err, "redis expire taskrun fail count key: %v", key)
 	}
 	return nil
 }

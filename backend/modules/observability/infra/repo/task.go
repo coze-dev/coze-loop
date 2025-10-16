@@ -329,8 +329,8 @@ func (v *TaskRepoImpl) GetTaskRunSuccessCount(ctx context.Context, taskID, taskR
 	return v.TaskRunRedisDao.GetTaskRunSuccessCount(ctx, taskID, taskRunID)
 }
 
-func (v *TaskRepoImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
-	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+func (v *TaskRepoImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
+	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 }
 
 func (v *TaskRepoImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
@@ -341,6 +341,6 @@ func (v *TaskRepoImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRunI
 	return v.TaskRunRedisDao.GetTaskRunFailCount(ctx, taskID, taskRunID)
 }
 
-func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error {
-	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
+	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 }

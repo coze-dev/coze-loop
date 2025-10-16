@@ -39,9 +39,9 @@ type ITaskRepo interface {
 
 	// task run success/fail count
 	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
-	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
+	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 	DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
-	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) error
+	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 
 	GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask)

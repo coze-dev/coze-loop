@@ -101,7 +101,7 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 }
 
 // updateTaskRunStatusCount updates the Redis count based on Status
-func (h *TraceHubServiceImpl) updateTaskRunDetailsCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult) error {
+func (h *TraceHubServiceImpl) updateTaskRunDetailsCount(ctx context.Context, taskID int64, turn *entity.OnlineExptTurnEvalResult, ttl int64) error {
 	// Retrieve taskRunID from Ext
 	taskRunIDStr := turn.Ext["run_id"]
 	if taskRunIDStr == "" {
@@ -115,9 +115,9 @@ func (h *TraceHubServiceImpl) updateTaskRunDetailsCount(ctx context.Context, tas
 	// Increase the corresponding counter based on Status
 	switch turn.Status {
 	case entity.EvaluatorRunStatus_Success:
-		return h.taskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+		return h.taskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID, ttl)
 	case entity.EvaluatorRunStatus_Fail:
-		return h.taskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+		return h.taskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID, ttl)
 	default:
 		logs.CtxDebug(ctx, "未知的评估状态，跳过计数: taskID=%d, taskRunID=%d, status=%d",
 			taskID, taskRunID, turn.Status)

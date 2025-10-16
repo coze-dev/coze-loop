@@ -55,7 +55,7 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 		span := spans[0]
 
 		// Newly added: write Redis counters based on the Status
-		err = h.updateTaskRunDetailsCount(ctx, turn.GetTaskIDFromExt(), turn)
+		err = h.updateTaskRunDetailsCount(ctx, turn.GetTaskIDFromExt(), turn, storageDuration*24*60*60)
 		if err != nil {
 			logs.CtxWarn(ctx, "更新TaskRun状态计数失败: taskID=%d, status=%d, err=%v",
 				turn.GetTaskIDFromExt(), turn.Status, err)
