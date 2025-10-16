@@ -117,28 +117,28 @@ evaluator_tool_conf_en-US:
 evaluator_tool_conf:
   score_range:
     function:
-        description: '评估函数。为了得到评估结果，必须调用评估函数。调用工具时需要根据Prompt 中的评判标准一步步思考、分析，先填写 reason 参数的值，再填写 score 参数的值。'
-        name: 'eval'
-        parameters: |
-          {
-            "type": "object",
-            "properties": {
-              "reason": {
-                "description": "对得分的可读解释。最后，必须用一句话结束理由，该句话为：因此，应该给出的分数是你的评分.",
-                "type": "string"
-              },
-              "score": {
-                "description": "最终的得分，必须输出，必须输出一个数字，表示满足Prompt中评分标准的程度。得分范围从 0.0 到 1.0，1.0 表示完全满足评分标准，0.0 表示完全不满足评分标准。",
-                "type": "number"
-              }
+      description: '评估函数。为了得到评估结果，必须调用评估函数。调用工具时需要根据Prompt 中的评判标准一步步思考、分析，先填写 reason 参数的值，再填写 score 参数的值。'
+      name: 'eval'
+      parameters: |
+        {
+          "type": "object",
+          "properties": {
+            "reason": {
+              "description": "对得分的可读解释。最后，必须用一句话结束理由，该句话为：因此，应该给出的分数是你的评分.",
+              "type": "string"
             },
-            "additionalProperties": false,
-            "strict": true,
-            "required": [
-              "reason",
-              "score"
-            ]
-          }
+            "score": {
+              "description": "最终的得分，必须输出，必须输出一个数字，表示满足Prompt中评分标准的程度。得分范围从 0.0 到 1.0，1.0 表示完全满足评分标准，0.0 表示完全不满足评分标准。",
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "strict": true,
+          "required": [
+            "reason",
+            "score"
+          ]
+        }
     type: 1
   score_enum:
     function:
@@ -2144,7 +2144,7 @@ evaluator_template_conf_en-US:
         prompt_source_type: 1
         prompt_template_key: builtin_template_detail
         prompt_template_name: "Detail"
-        receive_chat_history: false
+      receive_chat_history: false
 
 code_evaluator_template_conf:
   equals_checker:

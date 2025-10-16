@@ -96,7 +96,7 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 		return r, err
 	}
 	// 执行权限检查
-	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), maps.Values(promptKeyIDMap), consts.ActionLoopPromptRead); err != nil {
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), maps.Values(promptKeyIDMap), consts.ActionLoopPromptRead); err != nil {
 		return nil, err
 	}
 
@@ -330,7 +330,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 	}
 
 	// 执行权限检查
-	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
 	}
 
@@ -418,7 +418,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	}
 
 	// 执行权限检查
-	if err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
 	}
 

@@ -57,9 +57,6 @@ func (p *CreateAnnotationRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
-	if len(p.SpanID) < int(1) {
-		return fmt.Errorf("field SpanID min_len rule failed, current value: %d", len(p.SpanID))
-	}
 	if len(p.TraceID) < int(1) {
 		return fmt.Errorf("field TraceID min_len rule failed, current value: %d", len(p.TraceID))
 	}
@@ -84,9 +81,6 @@ func (p *CreateAnnotationResponse) IsValid() error {
 func (p *DeleteAnnotationRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
-	}
-	if len(p.SpanID) < int(1) {
-		return fmt.Errorf("field SpanID min_len rule failed, current value: %d", len(p.SpanID))
 	}
 	if len(p.TraceID) < int(1) {
 		return fmt.Errorf("field TraceID min_len rule failed, current value: %d", len(p.TraceID))
