@@ -54,7 +54,7 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 		return nil
 	}
 	// 3. PreDispatch
-	err = h.preDispatch(ctx, span, subs)
+	subs, err = h.preDispatch(ctx, span, subs)
 	if err != nil {
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
 	}
@@ -111,9 +111,9 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	return subscribers[:keep], merr.ErrorOrNil()
 }
 
-func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
+func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) ([]*spanSubscriber, error) {
 	merr := &multierror.Error{}
-	var needDispatchSubs []*spanSubscriber
+	needDispatchSubs := make([]*spanSubscriber, 0, len(subs))
 	for _, sub := range subs {
 		if span.StartTime < sub.t.GetRule().GetEffectiveTime().GetStartAt() {
 			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
@@ -240,8 +240,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 	}
-	subs = needDispatchSubs
-	return merr.ErrorOrNil()
+	return needDispatchSubs, merr.ErrorOrNil()
 }
 
 func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
