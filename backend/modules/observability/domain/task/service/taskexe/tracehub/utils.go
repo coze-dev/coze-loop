@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	CtxKeyEnv      = "K_ENV"
-	TceEnv         = "TCE_ENV"
-	TceCluster     = "TCE_CLUSTER"
-	TceClusterName = "tracehub_default"
-	AppIDKey       = "LANE_C_FORNAX_APPID"
+	CtxKeyEnv           = "K_ENV"
+	TceEnv              = "TCE_ENV"
+	TceCluster          = "TCE_CLUSTER"
+	TracehubClusterName = "tracehub_default"
+	InjectClusterName   = "ingest_default"
+	AppIDKey            = "LANE_C_FORNAX_APPID"
 )
 
 func ToJSONString(ctx context.Context, obj interface{}) string {

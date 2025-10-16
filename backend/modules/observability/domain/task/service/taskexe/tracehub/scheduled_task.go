@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -74,7 +75,7 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 }
 
 func (h *TraceHubServiceImpl) transformTaskStatus() {
-	if os.Getenv(TceCluster) == TceClusterName {
+	if slices.Contains([]string{TracehubClusterName, InjectClusterName}, os.Getenv(TceCluster)) {
 		return
 	}
 	ctx := context.Background()
@@ -247,7 +248,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 
 // syncTaskRunCounts synchronizes TaskRunCount data to the database
 func (h *TraceHubServiceImpl) syncTaskRunCounts() {
-	if os.Getenv(TceCluster) == TceClusterName {
+	if slices.Contains([]string{TracehubClusterName, InjectClusterName}, os.Getenv(TceCluster)) {
 		return
 	}
 	ctx := context.Background()
