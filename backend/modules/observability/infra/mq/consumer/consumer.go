@@ -4,8 +4,11 @@
 package consumer
 
 import (
+	"context"
+
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
 
@@ -14,11 +17,22 @@ func NewConsumerWorkers(
 	handler application.IAnnotationQueueConsumer,
 	taskConsumer application.ITaskQueueConsumer,
 ) ([]mq.IConsumerWorker, error) {
-	return []mq.IConsumerWorker{
+	workers := []mq.IConsumerWorker{}
+	workers = append(workers,
 		newAnnotationConsumer(handler, loader),
-		newTaskConsumer(taskConsumer, loader),
-		newCallbackConsumer(taskConsumer, loader),
-		newCorrectionConsumer(taskConsumer, loader),
-		newBackFillConsumer(taskConsumer, loader),
-	}, nil
+	)
+	const key = "consumer_listening"
+	cfg := &config.ConsumerListening{}
+	if err := loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+		return nil, err
+	}
+	if cfg.IsEnabled {
+		workers = append(workers,
+			newTaskConsumer(taskConsumer, loader),
+			newCallbackConsumer(taskConsumer, loader),
+			newCorrectionConsumer(taskConsumer, loader),
+			newBackFillConsumer(taskConsumer, loader),
+		)
+	}
+	return workers, nil
 }

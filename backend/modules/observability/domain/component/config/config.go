@@ -105,6 +105,10 @@ type QueryTraceRateLimitConfig struct {
 	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
 }
 
+type ConsumerListening struct {
+	IsEnabled bool `json:"is_enabled"`
+}
+
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
