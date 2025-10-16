@@ -555,6 +555,145 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	assert.Equal(t, task.TaskStatusSuccess, taskObj.TaskStatus)
 }
 
+func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+	evalAdapter := &fakeEvaluationAdapter{}
+	evalAdapter.finishErr = errors.New("finish fail")
+
+	proc := &AutoEvaluteProcessor{
+		evaluationSvc: evalAdapter,
+		taskRepo:      repoAdapter,
+	}
+
+	err := proc.OnFinishTaskChange(context.Background(), taskexe.OnFinishTaskChangeReq{
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123},
+		TaskRun: &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}},
+	})
+	assert.EqualError(t, err, "finish fail")
+}
+
+func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	datasetProvider := rpcmock.NewMockIDatasetProvider(ctrl)
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	adaptor := service.NewDatasetServiceAdaptor()
+	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
+
+	evalAdapter := &fakeEvaluationAdapter{}
+	evalAdapter.submitResp.exptID = 111
+	evalAdapter.submitResp.exptRunID = 222
+
+	proc := &AutoEvaluteProcessor{
+		datasetServiceAdaptor: adaptor,
+		evaluationSvc:         evalAdapter,
+		taskRepo:              repoAdapter,
+		aid:                   321,
+	}
+
+	taskObj := buildTestTask(t)
+	taskObj.TaskStatus = task.TaskStatusPending
+
+	var runTypes []task.TaskRunType
+	var statuses []task.TaskStatus
+
+	getBackfill := repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), taskObj.ID).Return(nil, nil)
+	createDatasetBackfill := datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(9101), nil)
+	getDatasetBackfill := datasetProvider.EXPECT().GetDataset(gomock.Any(), taskObj.WorkspaceID, int64(9101), traceentity.DatasetCategory_Evaluation).
+		Return(&traceentity.Dataset{DatasetVersion: traceentity.DatasetVersion{DatasetSchema: traceentity.DatasetSchema{ID: 7101}}}, nil)
+	createTaskRunBackfill := repoMock.EXPECT().CreateTaskRun(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.TaskRun{}))
+	createTaskRunBackfill.DoAndReturn(func(_ context.Context, run *taskentity.TaskRun) (int64, error) {
+		runTypes = append(runTypes, run.TaskType)
+		return int64(len(runTypes)), nil
+	})
+	updateTaskBackfill := repoMock.EXPECT().UpdateTask(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.ObservabilityTask{}))
+	updateTaskBackfill.DoAndReturn(func(_ context.Context, obj *taskentity.ObservabilityTask) error {
+		statuses = append(statuses, obj.TaskStatus)
+		return nil
+	})
+	createDatasetNewData := datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(9101), nil)
+	getDatasetNewData := datasetProvider.EXPECT().GetDataset(gomock.Any(), taskObj.WorkspaceID, int64(9101), traceentity.DatasetCategory_Evaluation).
+		Return(&traceentity.Dataset{DatasetVersion: traceentity.DatasetVersion{DatasetSchema: traceentity.DatasetSchema{ID: 7101}}}, nil)
+	createTaskRunNewData := repoMock.EXPECT().CreateTaskRun(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.TaskRun{}))
+	createTaskRunNewData.DoAndReturn(func(_ context.Context, run *taskentity.TaskRun) (int64, error) {
+		runTypes = append(runTypes, run.TaskType)
+		return int64(len(runTypes)), nil
+	})
+	updateTaskNewData := repoMock.EXPECT().UpdateTask(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.ObservabilityTask{}))
+	updateTaskNewData.DoAndReturn(func(_ context.Context, obj *taskentity.ObservabilityTask) error {
+		statuses = append(statuses, obj.TaskStatus)
+		return nil
+	})
+
+	gomock.InOrder(
+		getBackfill,
+		createDatasetBackfill,
+		getDatasetBackfill,
+		createTaskRunBackfill,
+		updateTaskBackfill,
+		createDatasetNewData,
+		getDatasetNewData,
+		createTaskRunNewData,
+		updateTaskNewData,
+	)
+
+	err := proc.OnCreateTaskChange(context.Background(), taskObj)
+	assert.NoError(t, err)
+	assert.Equal(t, []task.TaskRunType{task.TaskRunTypeBackFill, task.TaskRunTypeNewData}, runTypes)
+	assert.Equal(t, []task.TaskStatus{task.TaskStatusRunning, task.TaskStatusRunning}, statuses)
+	assert.Equal(t, task.TaskStatusRunning, taskObj.TaskStatus)
+}
+
+func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, errors.New("db error"))
+
+	proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
+
+	err := proc.OnCreateTaskChange(context.Background(), buildTestTask(t))
+	assert.EqualError(t, err, "db error")
+}
+
+func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	datasetProvider := rpcmock.NewMockIDatasetProvider(ctrl)
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	adaptor := service.NewDatasetServiceAdaptor()
+	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
+
+	proc := &AutoEvaluteProcessor{
+		datasetServiceAdaptor: adaptor,
+		taskRepo:              repoAdapter,
+		evaluationSvc:         &fakeEvaluationAdapter{},
+	}
+
+	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, nil)
+	datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(0), errors.New("create fail"))
+
+	err := proc.OnCreateTaskChange(context.Background(), buildTestTask(t))
+	assert.EqualError(t, err, "create fail")
+}
+
 func TestAutoEvaluteProcessor_getSession(t *testing.T) {
 	t.Parallel()
 	proc := &AutoEvaluteProcessor{aid: 567}
