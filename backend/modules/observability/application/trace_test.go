@@ -2132,3 +2132,180 @@ func TestTraceApplication_ExtractSpanInfo(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceApplication_ListAnnotations(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+		tagSvc   rpc.ITagRPCAdapter
+		evalSvc  rpc.IEvaluatorRPCAdapter
+		userSvc  rpc.IUserProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ListAnnotationsRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ListAnnotationsResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
+				mockEval := rpcmock.NewMockIEvaluatorRPCAdapter(ctrl)
+				mockUser := rpcmock.NewMockIUserProvider(ctrl)
+				now := time.Now()
+				annotations := loop_span.AnnotationList{
+					{
+						ID:             "ann1",
+						SpanID:         "span1",
+						TraceID:        "trace1",
+						WorkspaceID:    "123",
+						StartTime:      now,
+						AnnotationType: loop_span.AnnotationTypeManualFeedback,
+						Key:            "100",
+						Value:          loop_span.NewStringValue("free text"),
+						Status:         loop_span.AnnotationStatusNormal,
+						Reasoning:      "manual",
+						CreatedBy:      "user1",
+						UpdatedBy:      "user1",
+						CreatedAt:      now,
+						UpdatedAt:      now,
+					},
+					{
+						ID:             "ann2",
+						SpanID:         "span2",
+						TraceID:        "trace1",
+						WorkspaceID:    "123",
+						StartTime:      now,
+						AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+						Value: loop_span.AnnotationValue{
+							ValueType:  loop_span.AnnotationValueTypeDouble,
+							FloatValue: 0.8,
+						},
+						Reasoning: "auto",
+						Status:    loop_span.AnnotationStatusNormal,
+						Metadata: loop_span.AutoEvaluateMetadata{
+							TaskID:             1,
+							EvaluatorRecordID:  2,
+							EvaluatorVersionID: 3,
+						},
+						CreatedBy: "user2",
+						UpdatedBy: "user2",
+						CreatedAt: now,
+						UpdatedAt: now,
+					},
+				}
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+				mockSvc.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListAnnotationsResp{Annotations: annotations}, nil)
+				mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*commondto.UserInfo{
+					"user1": {UserID: ptr.Of("user1"), Name: ptr.Of("User One")},
+					"user2": {UserID: ptr.Of("user2"), Name: ptr.Of("User Two")},
+				}, nil)
+				mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, map[int64]*rpc.Evaluator{
+					3: {EvaluatorName: "eval", EvaluatorVersion: "v1"},
+				}, nil)
+				mockTag.EXPECT().BatchGetTagInfo(gomock.Any(), int64(123), gomock.Any()).Return(map[int64]*rpc.TagInfo{
+					100: {
+						TagKeyName:     "key-name",
+						TagContentType: rpc.TagContentTypeFreeText,
+					},
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					tagSvc:   mockTag,
+					evalSvc:  mockEval,
+					userSvc:  mockUser,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationsRequest{
+					WorkspaceID:     123,
+					SpanID:          "span1",
+					TraceID:         "trace1",
+					StartTime:       time.Now().Add(-time.Hour).UnixMilli(),
+					DescByUpdatedAt: ptr.Of(true),
+					PlatformType:    ptr.Of(commondto.PlatformTypeCozeloop),
+				},
+			},
+			want:    &trace.ListAnnotationsResponse{},
+			wantErr: false,
+		},
+		{
+			name: "permission error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(assert.AnError)
+				return fields{auth: mockAuth}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationsRequest{WorkspaceID: 123},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+				mockSvc.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListAnnotationsRequest{WorkspaceID: 123},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+				tagSvc:       fields.tagSvc,
+				evalSvc:      fields.evalSvc,
+				userSvc:      fields.userSvc,
+			}
+			got, err := tr.ListAnnotations(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.wantErr {
+				return
+			}
+			assert.NotNil(t, got)
+			assert.Len(t, got.Annotations, 2)
+			manual := got.Annotations[0]
+			assert.NotNil(t, manual.ManualFeedback)
+			assert.Equal(t, int64(100), manual.ManualFeedback.TagKeyID)
+			assert.Equal(t, "key-name", manual.ManualFeedback.TagKeyName)
+			assert.NotNil(t, manual.BaseInfo)
+			if manual.BaseInfo != nil {
+				assert.NotNil(t, manual.BaseInfo.CreatedBy)
+			}
+			auto := got.Annotations[1]
+			assert.NotNil(t, auto.AutoEvaluate)
+			if auto.AutoEvaluate != nil {
+				assert.Equal(t, "eval", auto.AutoEvaluate.EvaluatorName)
+			}
+		})
+	}
+}

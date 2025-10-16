@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -40,7 +41,7 @@ func ToJSONString(ctx context.Context, obj interface{}) string {
 func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	logs.CtxInfo(ctx, "cluster:%s", os.Getenv("TCE_CLUSTER"))
+	ctx = metainfo.WithPersistentValue(ctx, "LANE_C_FORNAX_APPID", strconv.FormatInt(int64(h.aid), 10))
 	if env := os.Getenv("TCE_ENV"); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
