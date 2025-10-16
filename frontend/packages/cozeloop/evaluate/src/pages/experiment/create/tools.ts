@@ -366,3 +366,20 @@ export const getValidateFields = ({
     return [...defaultArray, ...extraArray];
   }
 };
+
+export const calcNextStepRenderValue = (
+  renderData: CreateExperimentValues,
+  formData: CreateExperimentValues,
+): CreateExperimentValues => {
+  if (!formData?.evaluatorProList) {
+    return {
+      ...renderData,
+      ...formData,
+      evaluatorProList: [],
+    };
+  }
+  return {
+    ...renderData,
+    ...formData,
+  };
+};
