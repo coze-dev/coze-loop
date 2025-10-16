@@ -1992,35 +1992,3 @@ func TestQueryTypeEnumNotMatchValidation(t *testing.T) {
 		assert.Error(t, err, "Invalid NotMatch filter %d should fail validation", i)
 	}
 }
-
-func TestLocal(t *testing.T) {
-	span := &Span{
-		ParentID: "s",
-		TagsBool: map[string]bool{
-			"fornax_psm_first_span": true,
-		},
-	}
-	f := []*FilterField{
-		{
-			FieldName:  SpanFieldParentID,
-			FieldType:  FieldTypeString,
-			Values:     []string{"0", ""},
-			QueryType:  ptr.Of(QueryTypeEnumIn),
-			QueryAndOr: ptr.Of(QueryAndOrEnumOr),
-			SubFilter: &FilterFields{
-				FilterFields: []*FilterField{
-					{
-						FieldName: "fornax_psm_first_span",
-						FieldType: FieldTypeBool,
-						Values:    []string{"true"},
-						QueryType: ptr.Of(QueryTypeEnumEq),
-					},
-				},
-			},
-		},
-	}
-	ff := &FilterFields{
-		FilterFields: f,
-	}
-	t.Log(ff.Satisfied(span))
-}
