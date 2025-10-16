@@ -6,19 +6,25 @@ package tracehub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	lockmock "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	spanfilter_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
 func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
@@ -205,4 +211,232 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 	err := impl.processBatchSpans(context.Background(), spans, sub)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "invoke fail")
+}
+
+func TestTraceHubServiceImpl_BackFill_LockError(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	locker := lockmock.NewMockILocker(ctrl)
+	impl := &TraceHubServiceImpl{locker: locker}
+
+	event := &entity.BackFillEvent{TaskID: 123}
+	lockErr := errors.New("lock failed")
+	locker.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf(backfillLockKeyTemplate, event.TaskID), transformTaskStatusLockTTL, backfillLockMaxHold).
+		Return(false, context.Background(), func() {}, lockErr)
+
+	err := impl.BackFill(context.Background(), event)
+	require.Error(t, err)
+	require.ErrorIs(t, err, lockErr)
+}
+
+func TestTraceHubServiceImpl_BackFill_LockHeldByOthers(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	locker := lockmock.NewMockILocker(ctrl)
+	impl := &TraceHubServiceImpl{locker: locker}
+
+	event := &entity.BackFillEvent{TaskID: 456}
+	locker.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf(backfillLockKeyTemplate, event.TaskID), transformTaskStatusLockTTL, backfillLockMaxHold).
+		Return(false, context.Background(), func() {}, nil)
+
+	err := impl.BackFill(context.Background(), event)
+	require.NoError(t, err)
+}
+
+func TestTraceHubServiceImpl_IsBackfillDone(t *testing.T) {
+	t.Parallel()
+
+	impl := &TraceHubServiceImpl{}
+	taskDTO := &task.Task{ID: ptr.Of(int64(1))}
+
+	t.Run("nil task run", func(t *testing.T) {
+		t.Parallel()
+		sub := &spanSubscriber{t: taskDTO}
+		isDone, err := impl.isBackfillDone(context.Background(), sub)
+		require.NoError(t, err)
+		require.True(t, isDone)
+	})
+
+	t.Run("status running", func(t *testing.T) {
+		t.Parallel()
+		sub := &spanSubscriber{t: taskDTO, tr: &task.TaskRun{RunStatus: task.RunStatusRunning}}
+		isDone, err := impl.isBackfillDone(context.Background(), sub)
+		require.NoError(t, err)
+		require.False(t, isDone)
+	})
+
+	t.Run("status done", func(t *testing.T) {
+		t.Parallel()
+		sub := &spanSubscriber{t: taskDTO, tr: &task.TaskRun{RunStatus: task.RunStatusDone}}
+		isDone, err := impl.isBackfillDone(context.Background(), sub)
+		require.NoError(t, err)
+		require.True(t, isDone)
+	})
+}
+
+func TestBuildBuiltinFiltersVariants(t *testing.T) {
+	t.Parallel()
+
+	t.Run("root span", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, false, nil)
+		filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, nil)
+
+		res, err := buildBuiltinFilters(context.Background(), filterMock, &ListSpansReq{WorkspaceID: 1, SpanListType: loop_span.SpanListTypeRootSpan})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Len(t, res.FilterFields, 2)
+	})
+
+	t.Run("llm span", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, false, nil)
+		filterMock.EXPECT().BuildLLMSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, nil)
+
+		res, err := buildBuiltinFilters(context.Background(), filterMock, &ListSpansReq{WorkspaceID: 1, SpanListType: loop_span.SpanListTypeLLMSpan})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Len(t, res.FilterFields, 2)
+	})
+
+	t.Run("all span", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, false, nil)
+		filterMock.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, nil)
+
+		res, err := buildBuiltinFilters(context.Background(), filterMock, &ListSpansReq{WorkspaceID: 1, SpanListType: loop_span.SpanListTypeAllSpan})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Len(t, res.FilterFields, 2)
+	})
+}
+
+func TestBuildBuiltinFiltersInvalidType(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, false, nil)
+
+	_, err := buildBuiltinFilters(context.Background(), filterMock, &ListSpansReq{WorkspaceID: 1, SpanListType: loop_span.SpanListType("invalid")})
+	require.Error(t, err)
+	statusErr, ok := errorx.FromStatusError(err)
+	require.True(t, ok)
+	require.EqualValues(t, obErrorx.CommercialCommonInvalidParamCodeCode, statusErr.Code())
+}
+
+func TestTraceHubServiceImpl_CombineFilters(t *testing.T) {
+	t.Parallel()
+
+	impl := &TraceHubServiceImpl{}
+	inner := &loop_span.FilterFields{FilterFields: []*loop_span.FilterField{{}}}
+	res := impl.combineFilters(nil, inner)
+	require.NotNil(t, res)
+	require.Len(t, res.FilterFields, 1)
+	require.Equal(t, inner, res.FilterFields[0].SubFilter)
+}
+
+func TestTraceHubServiceImpl_ApplySampling(t *testing.T) {
+	t.Parallel()
+
+	impl := &TraceHubServiceImpl{}
+	spans := []*loop_span.Span{{SpanID: "1"}, {SpanID: "2"}, {SpanID: "3"}}
+
+	sub := &spanSubscriber{t: &task.Task{Rule: &task.Rule{Sampler: &task.Sampler{SampleRate: ptr.Of(float64(1.0))}}}}
+	res := impl.applySampling(spans, sub)
+	require.Len(t, res, 3)
+
+	subZero := &spanSubscriber{t: &task.Task{Rule: &task.Rule{Sampler: &task.Sampler{SampleRate: ptr.Of(float64(0.0))}}}}
+	resZero := impl.applySampling(spans, subZero)
+	require.Nil(t, resZero)
+
+	subHalf := &spanSubscriber{t: &task.Task{Rule: &task.Rule{Sampler: &task.Sampler{SampleRate: ptr.Of(float64(0.4))}}}}
+	resHalf := impl.applySampling(spans, subHalf)
+	require.Len(t, resHalf, 1)
+	require.Equal(t, spans[:1], resHalf)
+}
+
+func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with errors triggers retry", func(t *testing.T) {
+		t.Parallel()
+		ch := make(chan *entity.BackFillEvent, 1)
+		impl := &TraceHubServiceImpl{
+			backfillProducer: &stubBackfillProducer{ch: ch},
+			flushErr:         []error{errors.New("flush err"), errors.New("other")},
+		}
+		sub := &spanSubscriber{t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))}}
+
+		err := impl.onHandleDone(context.Background(), nil, sub)
+		require.Error(t, err)
+		require.EqualError(t, err, "flush err")
+
+		select {
+		case msg := <-ch:
+			require.Equal(t, int64(20), msg.SpaceID)
+			require.Equal(t, int64(10), msg.TaskID)
+		case <-time.After(500 * time.Millisecond):
+			t.Fatal("expected backfill message")
+		}
+	})
+
+	t.Run("no errors", func(t *testing.T) {
+		t.Parallel()
+		ch := make(chan *entity.BackFillEvent, 1)
+		impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
+		sub := &spanSubscriber{t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))}}
+
+		err := impl.onHandleDone(context.Background(), nil, sub)
+		require.NoError(t, err)
+
+		select {
+		case <-ch:
+			t.Fatal("unexpected message sent")
+		case <-time.After(100 * time.Millisecond):
+		}
+	})
+}
+
+func TestTraceHubServiceImpl_SendBackfillMessage(t *testing.T) {
+	t.Parallel()
+
+	impl := &TraceHubServiceImpl{}
+	err := impl.sendBackfillMessage(context.Background(), &entity.BackFillEvent{})
+	require.Error(t, err)
+
+	impl.backfillProducer = &stubBackfillProducer{}
+	require.NoError(t, impl.sendBackfillMessage(context.Background(), &entity.BackFillEvent{}))
+}
+
+type stubBackfillProducer struct {
+	ch  chan *entity.BackFillEvent
+	err error
+}
+
+func (s *stubBackfillProducer) SendBackfill(ctx context.Context, message *entity.BackFillEvent) error {
+	if s.ch != nil {
+		s.ch <- message
+	}
+	return s.err
 }
