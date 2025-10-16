@@ -726,6 +726,93 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
 }
 
+func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+
+	now := time.Now()
+	firstStartAt := now.Add(-time.Hour).UnixMilli()
+	firstSamplerUnit := task.TimeUnitWeek
+	firstProc := &stubProcessor{createTaskRunErrSeq: []error{errors.New("first fail")}}
+	firstSampler := &task.Sampler{
+		IsCycle:       boolPtr(true),
+		CycleInterval: int64Ptr(1),
+		CycleTimeUnit: &firstSamplerUnit,
+	}
+	firstSub := &spanSubscriber{
+		taskID: 11,
+		t: &task.Task{
+			ID:          ptr.Of(int64(11)),
+			WorkspaceID: ptr.Of(int64(21)),
+			TaskType:    task.TaskTypeAutoEval,
+			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+			Rule: &task.Rule{
+				EffectiveTime: &task.EffectiveTime{StartAt: ptr.Of(firstStartAt), EndAt: ptr.Of(now.Add(time.Hour).UnixMilli())},
+				Sampler:       firstSampler,
+			},
+			BaseInfo: &common.BaseInfo{},
+		},
+		processor: firstProc,
+		taskRepo:  mockRepo,
+		runType:   task.TaskRunTypeNewData,
+	}
+
+	secondStartAt := now.Add(-2 * time.Hour).UnixMilli()
+	secondEndAt := now.Add(-time.Minute).UnixMilli()
+	secondSamplerUnit := task.TimeUnitDay
+	secondSampler := &task.Sampler{
+		SampleRate:    floatPtr(1),
+		SampleSize:    int64Ptr(1),
+		IsCycle:       boolPtr(false),
+		CycleTimeUnit: &secondSamplerUnit,
+	}
+	secondTaskID := int64(12)
+	secondWorkspaceID := int64(22)
+	secondRun := &entity.TaskRun{
+		ID:          101,
+		TaskID:      secondTaskID,
+		WorkspaceID: secondWorkspaceID,
+		TaskType:    task.TaskRunTypeNewData,
+		RunStatus:   task.TaskStatusRunning,
+		RunStartAt:  now.Add(-3 * time.Hour),
+		RunEndAt:    now.Add(-90 * time.Minute),
+	}
+	secondProc := &stubProcessor{finishErrSeq: []error{errors.New("second fail")}}
+	secondSub := &spanSubscriber{
+		taskID: secondTaskID,
+		t: &task.Task{
+			ID:          ptr.Of(secondTaskID),
+			WorkspaceID: ptr.Of(secondWorkspaceID),
+			TaskType:    task.TaskTypeAutoEval,
+			TaskStatus:  ptr.Of(task.TaskStatusRunning),
+			Rule: &task.Rule{
+				EffectiveTime: &task.EffectiveTime{StartAt: ptr.Of(secondStartAt), EndAt: ptr.Of(secondEndAt)},
+				Sampler:       secondSampler,
+			},
+			BaseInfo: &common.BaseInfo{},
+		},
+		processor: secondProc,
+		taskRepo:  mockRepo,
+		runType:   task.TaskRunTypeNewData,
+	}
+
+	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), secondTaskID).Return(secondRun, nil)
+	mockRepo.EXPECT().GetTaskCount(gomock.Any(), secondTaskID).Return(int64(0), nil)
+	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), secondTaskID, secondRun.ID).Return(int64(0), nil)
+
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
+
+	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{firstSub, secondSub})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "first fail")
+	require.Contains(t, err.Error(), "second fail")
+	require.Equal(t, 1, len(firstProc.createTaskRunReqs))
+	require.Equal(t, 1, secondProc.finishChangeInvoked)
+}
+
 func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
