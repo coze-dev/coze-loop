@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -18,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	trace_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
 
 //go:generate mockgen -destination=mocks/trace_hub_service.go -package=mocks . ITraceHubService
@@ -39,6 +41,7 @@ func NewTraceHubImpl(
 	aid int32,
 	backfillProducer mq.IBackfillProducer,
 	locker lock.ILocker,
+	loader conf.IConfigLoader,
 ) (ITraceHubService, error) {
 	// Create two independent timers with different intervals
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // Task status lifecycle management - 5-minute interval
@@ -59,7 +62,14 @@ func NewTraceHubImpl(
 	}
 
 	// Start the scheduled tasks immediately
-	impl.startScheduledTask()
+	const key = "consumer_listening"
+	cfg := &config.ConsumerListening{}
+	if err := loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+		return nil, err
+	}
+	if cfg.IsEnabled {
+		impl.startScheduledTask()
+	}
 
 	// default+lane?+新集群？——定时任务和任务处理分开——内场
 	return impl, nil

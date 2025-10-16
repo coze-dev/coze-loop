@@ -239,7 +239,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iLocker := NewTaskLocker(redis2)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer, iLocker)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer, iLocker, iConfigLoader)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,8 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo3.ITaskRepo) *processor.TaskProcessor {
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo3.ITaskRepo,
+) *processor.TaskProcessor {
 	taskProcessor := processor.NewTaskProcessor()
 	taskProcessor.Register(task.TaskTypeAutoEval, processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
