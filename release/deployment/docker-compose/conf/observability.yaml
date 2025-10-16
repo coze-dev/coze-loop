@@ -341,9 +341,11 @@ key_columns:
   - "logic_delete_date"
 
 key_span_type:
-  - "UserInput"
-  - "UserInputV2"
-  - "LLMCall"
-  - "model"
-  - "tool"
-  - "prompt"
+  default:
+    root_span:
+      - "model",
+      - "tool",
+      - "root"
+      - "UserInput"
+      - "UserInputV2"
+      - "LLMCall"
