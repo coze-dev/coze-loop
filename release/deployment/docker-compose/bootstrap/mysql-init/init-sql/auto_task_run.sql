@@ -1,4 +1,4 @@
-CREATE TABLE auto_task_run (
+CREATE TABLE IF NOT EXISTS `auto_task_run` (
                                `id` bigint unsigned NOT NULL COMMENT 'TaskRun ID',
                                `workspace_id` bigint unsigned NOT NULL COMMENT '空间ID',
                                `task_id` bigint unsigned NOT NULL COMMENT 'Task ID',

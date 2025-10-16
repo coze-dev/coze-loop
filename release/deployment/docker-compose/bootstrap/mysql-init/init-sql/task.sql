@@ -1,4 +1,4 @@
-CREATE TABLE `task` (
+CREATE TABLE IF NOT EXISTS `task` (
                         `id` bigint unsigned NOT NULL COMMENT 'Task ID',
                         `workspace_id` bigint unsigned NOT NULL COMMENT '空间ID',
                         `name` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '任务名称',
