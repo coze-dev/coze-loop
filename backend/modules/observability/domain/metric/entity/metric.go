@@ -28,6 +28,7 @@ const (
 	MetricGranularity1Min  MetricGranularity = "1min"
 	MetricGranularity1Hour MetricGranularity = "1hour"
 	MetricGranularity1Day  MetricGranularity = "1day"
+	MetricGranularity1Week MetricGranularity = "1week"
 
 	MetricCompareTypeYoY = "yoy" // 同比
 	MetricCompareTypeMoM = "mom" // 环比
@@ -173,7 +174,7 @@ type MetricPoint struct {
 	Value     string
 }
 
-func GranularityToSecond(g MetricGranularity) int {
+func GranularityToSecond(g MetricGranularity) int64 {
 	switch g {
 	case MetricGranularity1Min:
 		return 60
@@ -181,6 +182,8 @@ func GranularityToSecond(g MetricGranularity) int {
 		return 3600
 	case MetricGranularity1Day:
 		return 86400
+	case MetricGranularity1Week:
+		return 604800
 	default:
 		return 86400
 	}
@@ -188,19 +191,28 @@ func GranularityToSecond(g MetricGranularity) int {
 
 func NewTimeIntervals(startTime, endTime int64, granularity MetricGranularity) []string {
 	var truncatedTime int64
+	var intervalMills = GranularityToSecond(granularity) * 1000
 	switch granularity {
 	case MetricGranularity1Min:
-		truncatedTime = time.UnixMilli(startTime).Truncate(time.Minute).UnixMilli()
+		truncatedTime = startTime - (startTime % intervalMills)
 	case MetricGranularity1Hour:
-		truncatedTime = time.UnixMilli(startTime).Truncate(time.Hour).UnixMilli()
+		truncatedTime = startTime - (startTime % intervalMills)
 	case MetricGranularity1Day:
-		truncatedTime = time.UnixMilli(startTime).Truncate(24 * time.Hour).UnixMilli()
+		t := time.UnixMilli(startTime)
+		truncatedTime = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UnixMilli()
+	case MetricGranularity1Week:
+		t := time.UnixMilli(startTime)
+		baseTime := time.Unix(0, 0).In(t.Location())
+		durationSinceBase := t.Sub(baseTime).Milliseconds()
+		intervals := durationSinceBase / intervalMills
+		t = baseTime.Add(time.Duration(intervals*intervalMills) * time.Millisecond)
+		truncatedTime = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UnixMilli()
 	default:
-		truncatedTime = time.UnixMilli(startTime).Truncate(24 * time.Hour).UnixMilli()
+		t := time.UnixMilli(startTime)
+		truncatedTime = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UnixMilli()
 	}
 	ret := make([]string, 0)
-	intervalMills := int64(GranularityToSecond(granularity)) * 1000
-	for truncatedTime < endTime {
+	for truncatedTime <= endTime {
 		tmp := strconv.FormatInt(truncatedTime, 10)
 		ret = append(ret, tmp)
 		truncatedTime += intervalMills

@@ -499,6 +499,8 @@ func getTimeInterval(granularity metrics_entity.MetricGranularity) string {
 		return "INTERVAL 1 HOUR"
 	case metrics_entity.MetricGranularity1Day:
 		return "INTERVAL 1 DAY"
+	case metrics_entity.MetricGranularity1Week:
+		return "INTERVAL 7 DAY"
 	default:
 		return "INTERVAL 1 DAY"
 	}
