@@ -54,13 +54,13 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 		return nil
 	}
 	// 3. PreDispatch
-	needDispatchSubs, err := h.preDispatch(ctx, span, subs)
+	err = h.preDispatch(ctx, span, subs)
 	if err != nil {
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
 	}
-	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(needDispatchSubs), needDispatchSubs)
+	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
 	// 4、Dispatch
-	if err = h.dispatch(ctx, span, needDispatchSubs); err != nil {
+	if err = h.dispatch(ctx, span, subs); err != nil {
 		logs.CtxWarn(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
 		return err
 	}
@@ -111,9 +111,8 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	return subscribers[:keep], merr.ErrorOrNil()
 }
 
-func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) ([]*spanSubscriber, error) {
+func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
-	var needDispatchSubs []*spanSubscriber
 	for _, sub := range subs {
 		if span.StartTime < sub.t.GetRule().GetEffectiveTime().GetStartAt() {
 			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
@@ -139,7 +138,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
-				needDispatchSubs = append(needDispatchSubs, sub)
 				continue
 			}
 			if err := sub.processor.OnUpdateTaskChange(ctx, tconv.TaskDTO2DO(sub.t, "", nil), task.TaskStatusRunning); err != nil {
@@ -170,7 +168,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			if err = sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task run config not found,creative processor, task_id=%d", sub.taskID))
-				needDispatchSubs = append(needDispatchSubs, sub)
 				continue
 			}
 		}
@@ -222,7 +219,6 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				runEndAt = taskRunConfig.RunEndAt.UnixMilli() + (taskRunConfig.RunEndAt.UnixMilli() - taskRunConfig.RunStartAt.UnixMilli())
 				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(cycleEndTime) creative processor, task_id=%d", sub.taskID))
-					needDispatchSubs = append(needDispatchSubs, sub)
 					continue
 				}
 			}
@@ -240,8 +236,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 	}
-	subs = needDispatchSubs
-	return subs, merr.ErrorOrNil()
+	return merr.ErrorOrNil()
 }
 
 func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
