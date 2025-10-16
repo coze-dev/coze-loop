@@ -84,6 +84,18 @@ func (f *fakeEvaluationAdapter) FinishExperiment(ctx context.Context, param *rpc
 	return f.finishErr
 }
 
+type taskRepoMockAdapter struct {
+	*repomocks.MockITaskRepo
+}
+
+func (m *taskRepoMockAdapter) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID, ttl int64) error {
+	return m.MockITaskRepo.IncrTaskRunFailCount(ctx, taskID, taskRunID)
+}
+
+func (m *taskRepoMockAdapter) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID, ttl int64) error {
+	return m.MockITaskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID)
+}
+
 func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 	t.Helper()
 	start := time.Now().Add(-30 * time.Minute).UnixMilli()
@@ -301,9 +313,10 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		trigger.Span.Input = "invalid json"
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 		proc := &AutoEvaluteProcessor{
 			evaluationSvc: &fakeEvaluationAdapter{},
-			taskRepo:      repoMock,
+			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
 		assert.NoError(t, err)
@@ -319,6 +332,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		trigger := buildTrigger(taskObj, textSchema)
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(2), nil)
@@ -328,7 +342,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 
 		proc := &AutoEvaluteProcessor{
 			evaluationSvc: &fakeEvaluationAdapter{},
-			taskRepo:      repoMock,
+			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
 		assert.NoError(t, err)
@@ -343,6 +357,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		trigger := buildTrigger(taskObj, textSchema)
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
@@ -355,7 +370,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 
 		proc := &AutoEvaluteProcessor{
 			evaluationSvc: eval,
-			taskRepo:      repoMock,
+			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
 		assert.EqualError(t, err, "invoke fail")
@@ -370,6 +385,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		trigger := buildTrigger(taskObj, textSchema)
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
@@ -381,7 +397,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 
 		proc := &AutoEvaluteProcessor{
 			evaluationSvc: eval,
-			taskRepo:      repoMock,
+			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
 		assert.NoError(t, err)
@@ -412,13 +428,14 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 			defer ctrl.Finish()
 
 			repoMock := repomocks.NewMockITaskRepo(ctrl)
+			repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 			repoMock.EXPECT().UpdateTask(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.ObservabilityTask{})).DoAndReturn(
 				func(_ context.Context, taskObj *taskentity.ObservabilityTask) error {
 					assert.Equal(t, caseItem.expect, taskObj.TaskStatus)
 					return nil
 				})
 
-			proc := &AutoEvaluteProcessor{taskRepo: repoMock}
+			proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
 			taskObj := &taskentity.ObservabilityTask{TaskStatus: caseItem.initial}
 			err := proc.OnUpdateTaskChange(ctx, taskObj, caseItem.op)
 			assert.NoError(t, err)
@@ -439,6 +456,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 
 	datasetProvider := rpcmock.NewMockIDatasetProvider(ctrl)
 	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 
 	taskObj := buildTestTask(t)
 	param := taskexe.OnCreateTaskRunChangeReq{
@@ -463,7 +481,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	proc := &AutoEvaluteProcessor{
 		datasetServiceAdaptor: adaptor,
 		evaluationSvc:         evalAdapter,
-		taskRepo:              repoMock,
+		taskRepo:              repoAdapter,
 		aid:                   321,
 	}
 
@@ -480,6 +498,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 	defer ctrl.Finish()
 
 	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
 	taskRun := &taskentity.TaskRun{
@@ -494,7 +513,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(nil)
 
 	proc := &AutoEvaluteProcessor{
-		taskRepo:      repoMock,
+		taskRepo:      repoAdapter,
 		evaluationSvc: evalAdapter,
 	}
 
@@ -513,6 +532,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	defer ctrl.Finish()
 
 	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
 	taskObj := &taskentity.ObservabilityTask{TaskStatus: task.TaskStatusRunning, WorkspaceID: 123}
@@ -523,7 +543,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 
 	proc := &AutoEvaluteProcessor{
 		evaluationSvc: evalAdapter,
-		taskRepo:      repoMock,
+		taskRepo:      repoAdapter,
 	}
 
 	err := proc.OnFinishTaskChange(context.Background(), taskexe.OnFinishTaskChangeReq{
