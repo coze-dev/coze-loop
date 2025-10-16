@@ -236,7 +236,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 		},
 		{
 			name:       "service error",
-			ctx:        context.Background(),
+			ctx:        ctxWithAppID(1),
 			req:        &taskapi.CreateTaskRequest{Task: taskForSvcErr},
 			expectResp: taskapi.NewCreateTaskResponse(),
 			expectErr:  errors.New("svc error"),
