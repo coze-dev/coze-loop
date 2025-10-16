@@ -168,8 +168,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			if err = sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task run config not found,creative processor, task_id=%d", sub.taskID))
-				continue
 			}
+			continue
 		}
 		sampler := sub.t.GetRule().GetSampler()
 		// Fetch the corresponding task count and subtask count
