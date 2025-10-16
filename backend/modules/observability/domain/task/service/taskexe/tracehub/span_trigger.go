@@ -54,13 +54,13 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 		return nil
 	}
 	// 3. PreDispatch
-	subs, err = h.preDispatch(ctx, span, subs)
+	needDispatchSubs, err := h.preDispatch(ctx, span, subs)
 	if err != nil {
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
 	}
-	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
+	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(needDispatchSubs), needDispatchSubs)
 	// 4、Dispatch
-	if err = h.dispatch(ctx, span, subs); err != nil {
+	if err = h.dispatch(ctx, span, needDispatchSubs); err != nil {
 		logs.CtxWarn(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
 		return err
 	}
