@@ -115,7 +115,7 @@ func EvalTargetPO2DOs(targetPOs []*model.Target) (targetDOs []*entity.EvalTarget
 
 func EvalTargetPO2DO(targetPO *model.Target) (targetDO *entity.EvalTarget) {
 	if targetPO == nil {
-		return targetDO
+		return
 	}
 	targetDO = &entity.EvalTarget{}
 	targetDO.ID = targetPO.ID
@@ -137,12 +137,12 @@ func EvalTargetPO2DO(targetPO *model.Target) (targetDO *entity.EvalTarget) {
 		targetDO.BaseInfo.DeletedAt = gptr.Of(targetPO.DeletedAt.Time.UnixMilli())
 	}
 
-	return targetDO
+	return
 }
 
 func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType entity.EvalTargetType) (targetVersionDO *entity.EvalTargetVersion) {
 	if targetVersionPO == nil {
-		return targetVersionDO
+		return
 	}
 	targetVersionDO = &entity.EvalTargetVersion{}
 	targetVersionDO.ID = targetVersionPO.ID
@@ -168,7 +168,7 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 	if targetVersionPO.InputSchema != nil {
 		schema := make([]*entity.ArgsSchema, 0)
 		if err := json.Unmarshal(*targetVersionPO.InputSchema, &schema); err != nil {
-			return targetVersionDO
+			return
 		}
 		targetVersionDO.InputSchema = schema
 	}

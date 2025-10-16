@@ -53,7 +53,7 @@ func (m *Message) HasMultiModalContent() bool {
 
 func (m *Message) GetImageCountAndMaxSize() (hasUrl, hasBinary bool, cnt int64, maxSizeInByte int64) {
 	if !m.HasMultiModalContent() {
-		return hasUrl, hasBinary, cnt, maxSizeInByte
+		return
 	}
 	for _, p := range m.MultiModalContent {
 		if p.IsURL() {
@@ -69,7 +69,7 @@ func (m *Message) GetImageCountAndMaxSize() (hasUrl, hasBinary bool, cnt int64, 
 			}
 		}
 	}
-	return hasUrl, hasBinary, cnt, maxSizeInByte
+	return
 }
 
 type Role string

@@ -36,7 +36,7 @@ func (h *DatasetApplicationImpl) BatchCreateDatasetItems(ctx context.Context, re
 	}
 	rc, err := h.prepare(ctx, req)
 	if err != nil {
-		return resp, err
+		return
 	}
 	if rc != nil && rc.ds != nil {
 		rc.ds.UpdatedBy = session.UserIDInCtxOrEmpty(ctx)

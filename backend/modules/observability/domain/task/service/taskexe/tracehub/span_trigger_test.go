@@ -153,14 +153,15 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 	workspaceID := int64(101)
 	taskID := int64(202)
 
-	sampl := &task.Sampler{
-		SampleRate:    floatPtr(1),
-		SampleSize:    int64Ptr(1),
-		IsCycle:       boolPtr(true),
-		CycleCount:    int64Ptr(1),
-		CycleInterval: int64Ptr(1),
-		CycleTimeUnit: ptr.Of(task.TimeUnitDay),
-	}
+cycleUnitDay := task.TimeUnitDay
+sampl := &task.Sampler{
+	SampleRate:    floatPtr(1),
+	SampleSize:    int64Ptr(1),
+	IsCycle:       boolPtr(true),
+	CycleCount:    int64Ptr(1),
+	CycleInterval: int64Ptr(1),
+	CycleTimeUnit: &cycleUnitDay,
+}
 	rule := &task.Rule{
 		EffectiveTime: &task.EffectiveTime{
 			StartAt: ptr.Of(startAt),
@@ -232,11 +233,12 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 	workspaceID := int64(303)
 	taskID := int64(404)
 
-	sampl := &task.Sampler{
-		IsCycle:       boolPtr(true),
-		CycleInterval: int64Ptr(2),
-		CycleTimeUnit: ptr.Of(task.TimeUnitWeek),
-	}
+cycleUnitWeek := task.TimeUnitWeek
+sampl := &task.Sampler{
+	IsCycle:       boolPtr(true),
+	CycleInterval: int64Ptr(2),
+	CycleTimeUnit: &cycleUnitWeek,
+}
 	rule := &task.Rule{
 		EffectiveTime: &task.EffectiveTime{
 			StartAt: ptr.Of(startAt),

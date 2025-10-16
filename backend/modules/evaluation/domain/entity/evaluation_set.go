@@ -93,7 +93,7 @@ func (p *DatasetStatus) Scan(value interface{}) (err error) {
 	var result sql.NullInt64
 	err = result.Scan(value)
 	*p = DatasetStatus(result.Int64)
-	return err
+	return
 }
 
 func (p *DatasetStatus) Value() (driver.Value, error) {

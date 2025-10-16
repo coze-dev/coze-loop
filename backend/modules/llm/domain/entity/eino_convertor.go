@@ -149,7 +149,7 @@ func FromDOToolChoice(do ToolChoice) (einoToolChoice schema.ToolChoice) {
 	case ToolChoiceRequired:
 		return schema.ToolChoiceForced
 	default:
-		return einoToolChoice
+		return
 	}
 }
 

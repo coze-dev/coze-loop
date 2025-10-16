@@ -61,7 +61,7 @@ func ConvertToLoopPrompt(p *prompt.Prompt) *rpc.LoopPrompt {
 
 func ConvertVariables2Prompt(fromVals []*entity.VariableVal) (toVals []*prompt.VariableVal) {
 	if len(fromVals) == 0 {
-		return toVals
+		return
 	}
 	toVals = make([]*prompt.VariableVal, 0)
 	for _, v := range fromVals {
@@ -72,12 +72,12 @@ func ConvertVariables2Prompt(fromVals []*entity.VariableVal) (toVals []*prompt.V
 			MultiPartValues:     ConvertContent(v.Content),
 		})
 	}
-	return toVals
+	return
 }
 
 func ConvertMessages2Prompt(fromMsg []*entity.Message) (toMsg []*prompt.Message) {
 	if len(fromMsg) == 0 {
-		return toMsg
+		return
 	}
 	toMsg = make([]*prompt.Message, 0)
 	for _, m := range fromMsg {
@@ -93,7 +93,7 @@ func ConvertMessages2Prompt(fromMsg []*entity.Message) (toMsg []*prompt.Message)
 			// ToolCalls:  nil,
 		})
 	}
-	return toMsg
+	return
 }
 
 func ConvertPromptToolCalls2Eval(promptToolCalls []*prompt.ToolCall) []*entity.ToolCall {
