@@ -363,13 +363,9 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 						"field2": {FieldType: "int"},
 					},
 				}, nil)
-				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string]map[string][]string{
-					string(loop_span.PlatformDefault): {
-						string(loop_span.SpanListTypeRootSpan): {},
-					},
-					string(loop_span.PlatformCozeLoop): {
-						string(loop_span.SpanListTypeAllSpan): {},
-					},
+				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string][]string{
+					string(loop_span.PlatformDefault):  {},
+					string(loop_span.PlatformCozeLoop): {},
 				})
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
