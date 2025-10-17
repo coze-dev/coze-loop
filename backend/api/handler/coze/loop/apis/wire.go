@@ -10,6 +10,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/kitex/pkg/endpoint"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
+	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/google/wire"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
@@ -93,6 +95,7 @@ var (
 		obapp.InitTraceApplication,
 		obapp.InitTraceIngestionApplication,
 		obapp.InitOpenAPIApplication,
+		obapp.InitTaskApplication,
 	)
 )
 
@@ -208,6 +211,10 @@ func InitObservabilityHandler(
 	tagClient tagservice.Client,
 	limiterFactory limiter.IRateLimiterFactory,
 	datasetClient datasetservice.Client,
+	redis redis.Cmdable,
+	experimentClient experimentservice.Client,
+	taskProcessor task_processor.TaskProcessor,
+	aid int32,
 ) (*ObservabilityHandler, error) {
 	wire.Build(
 		observabilitySet,

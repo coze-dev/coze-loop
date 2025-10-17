@@ -54,7 +54,8 @@ func InitRuntimeApplication(
 	configFactory conf.IConfigLoaderFactory,
 	db db.Provider,
 	redis redis.Cmdable,
-	factory limiter.IRateLimiterFactory) (runtime.LLMRuntimeService, error) {
+	factory limiter.IRateLimiterFactory,
+) (runtime.LLMRuntimeService, error) {
 	wire.Build(runtimeSet)
 	return nil, nil
 }
@@ -62,7 +63,8 @@ func InitRuntimeApplication(
 func InitManageApplication(
 	ctx context.Context,
 	configFactory conf.IConfigLoaderFactory,
-	authClient authservice.Client) (manage.LLMManageService, error) {
+	authClient authservice.Client,
+) (manage.LLMManageService, error) {
 	wire.Build(manageSet)
 	return nil, nil
 }

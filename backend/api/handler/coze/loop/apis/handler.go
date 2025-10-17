@@ -13,10 +13,13 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotask"
 
 	"github.com/coze-dev/coze-loop/backend/infra/i18n"
 	cachemw "github.com/coze-dev/coze-loop/backend/infra/middleware/ctxcache"
 	logmw "github.com/coze-dev/coze-loop/backend/infra/middleware/logs"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/validator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
@@ -200,20 +203,24 @@ type ObservabilityHandler struct {
 	obapp.ITraceApplication
 	obapp.ITraceIngestionApplication
 	obapp.IObservabilityOpenAPIApplication
+	obapp.ITaskApplication
 }
 
 func NewObservabilityHandler(
 	traceApp obapp.ITraceApplication,
 	ingestApp obapp.ITraceIngestionApplication,
 	openAPIApp obapp.IObservabilityOpenAPIApplication,
+	taskApp obapp.ITaskApplication,
 ) *ObservabilityHandler {
 	h := &ObservabilityHandler{
 		ITraceApplication:                traceApp,
 		ITraceIngestionApplication:       ingestApp,
 		IObservabilityOpenAPIApplication: openAPIApp,
+		ITaskApplication:                 taskApp,
 	}
 	bindLocalCallClient(trace.TraceService(h), &observabilityClient, lotrace.NewLocalTraceService)
 	bindLocalCallClient(traceopenapi.OpenAPIService(h), &observabilityOpenAPIClient, looptraceopenapi.NewLocalOpenAPIService)
+	bindLocalCallClient(task.TaskService(h), &observabilityTaskClient, lotask.NewLocalTaskService)
 	return h
 }
 
@@ -230,6 +237,7 @@ func defaultKiteXMiddlewares() []endpoint.Middleware {
 	return []endpoint.Middleware{
 		logmw.LogTrafficMW,
 		validator.KiteXValidatorMW,
+		session.NewRequestSessionMW(),
 		cachemw.CtxCacheMW,
 	}
 }

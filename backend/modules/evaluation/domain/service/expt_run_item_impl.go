@@ -216,6 +216,12 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		if fieldData.Name == "span_id" {
 			etec.Ext["span_id"] = fieldData.Content.GetText()
 		}
+		if fieldData.Name == "run_id" {
+			etec.Ext["run_id"] = fieldData.Content.GetText()
+		}
+		if fieldData.Name == "trace_id" {
+			etec.Ext["trace_id"] = fieldData.Content.GetText()
+		}
 	}
 	etec.Ext["task_id"] = eiec.Expt.SourceID
 	etec.Ext["workspace_id"] = strconv.FormatInt(eiec.Expt.SpaceID, 10)
