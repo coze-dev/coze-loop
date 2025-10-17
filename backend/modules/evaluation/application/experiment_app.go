@@ -515,21 +515,21 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest) (r *expt.KillExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
 
-	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	_, err = e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
 	}
 
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
-		OwnerID:         gptr.Of(got.CreatedBy),
-		ResourceSpaceID: req.GetWorkspaceID(),
-	})
-	if err != nil {
-		return nil, err
-	}
+	//err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+	//	ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+	//	SpaceID:         req.GetWorkspaceID(),
+	//	ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	//	OwnerID:         gptr.Of(got.CreatedBy),
+	//	ResourceSpaceID: req.GetWorkspaceID(),
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	if err := e.manager.CompleteExpt(ctx, req.GetExptID(), req.GetWorkspaceID(), session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 		return nil, err
