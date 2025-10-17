@@ -276,10 +276,10 @@ func (a *DatasetRPCAdapter) UpdateDatasetSchema(ctx context.Context, spaceID, ev
 	return nil
 }
 
-func (a *DatasetRPCAdapter) BatchCreateDatasetItems(ctx context.Context, param *rpc.BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, err error) {
+func (a *DatasetRPCAdapter) BatchCreateDatasetItems(ctx context.Context, param *rpc.BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.CreateDatasetItemOutput, err error) {
 	datasetItems, err := convert2DatasetItems(ctx, param.Items)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	resp, err := a.client.BatchCreateDatasetItems(ctx, &dataset.BatchCreateDatasetItemsRequest{
 		WorkspaceID:      &param.SpaceID,
@@ -289,16 +289,16 @@ func (a *DatasetRPCAdapter) BatchCreateDatasetItems(ctx context.Context, param *
 		AllowPartialAdd:  param.AllowPartialAdd,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if resp == nil {
-		return nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode)
+		return nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode)
 	}
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
 		logs.CtxInfo(ctx, "BatchCreateDatasetItems resp: %v", json.Jsonify(resp))
-		return nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
+		return nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
-	return resp.GetAddedItems(), convert2EvaluationSetErrorGroups(ctx, resp.GetErrors()), nil
+	return resp.GetAddedItems(), convert2EvaluationSetErrorGroups(ctx, resp.GetErrors()), nil, nil
 }
 
 func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error) {

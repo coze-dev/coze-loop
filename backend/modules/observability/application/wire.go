@@ -12,17 +12,25 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset/datasetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	trepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -40,8 +48,10 @@ import (
 	obrepo "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
@@ -54,6 +64,17 @@ import (
 )
 
 var (
+	taskDomainSet = wire.NewSet(
+		NewInitTaskProcessor,
+		taskSvc.NewTaskServiceImpl,
+		obrepo.NewTaskRepoImpl,
+		// obrepo.NewTaskRunRepoImpl,
+		mysqldao.NewTaskDaoImpl,
+		tredis.NewTaskDAO,
+		tredis.NewTaskRunDAO,
+		mysqldao.NewTaskRunDaoImpl,
+		mq2.NewBackfillProducerImpl,
+	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
@@ -69,7 +90,9 @@ var (
 		obconfig.NewTraceConfigCenter,
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
+		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
+		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
@@ -78,7 +101,6 @@ var (
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
-		evaluator.NewEvaluatorRPCProvider,
 		traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
@@ -96,7 +118,20 @@ var (
 		auth.NewAuthProvider,
 		traceDomainSet,
 	)
+	taskSet = wire.NewSet(
+		tracehub.NewTraceHubImpl,
+		NewTaskApplication,
+		auth.NewAuthProvider,
+		user.NewUserRPCProvider,
+		evaluation.NewEvaluationRPCProvider,
+		NewTaskLocker,
+		traceDomainSet,
+	)
 )
+
+func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
+	return lock.NewRedisLockerWithHolder(cmdable, "observability")
+}
 
 func NewTraceProcessorBuilder(
 	traceConfig config.ITraceConfig,
@@ -168,9 +203,18 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 	return adapter
 }
 
+func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo,
+) *task_processor.TaskProcessor {
+	taskProcessor := task_processor.NewTaskProcessor()
+	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
+	return taskProcessor
+}
+
 func InitTraceApplication(
 	db db.Provider,
 	ckDb ck.Provider,
+	redis redis.Cmdable,
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
@@ -197,6 +241,10 @@ func InitOpenAPIApplication(
 	limiterFactory limiter.IRateLimiterFactory,
 	authClient authservice.Client,
 	meter metrics.Meter,
+	db db.Provider,
+	redis redis.Cmdable,
+	idgen idgen.IIDGenerator,
+	evalService evaluatorservice.Client,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
 	return nil, nil
@@ -205,7 +253,30 @@ func InitOpenAPIApplication(
 func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
 	ckDb ck.Provider,
-	mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
+	mqFactory mq.IFactory,
+) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
+	return nil, nil
+}
+
+func InitTaskApplication(
+	db db.Provider,
+	idgen idgen.IIDGenerator,
+	configFactory conf.IConfigLoaderFactory,
+	benefit benefit.IBenefitService,
+	ckDb ck.Provider,
+	redis redis.Cmdable,
+	mqFactory mq.IFactory,
+	userClient userservice.Client,
+	authClient authservice.Client,
+	evalService evaluatorservice.Client,
+	evalSetService evaluationsetservice.Client,
+	exptService experimentservice.Client,
+	datasetService datasetservice.Client,
+	fileClient fileservice.Client,
+	taskProcessor task_processor.TaskProcessor,
+	aid int32,
+) (ITaskApplication, error) {
+	wire.Build(taskSet)
 	return nil, nil
 }

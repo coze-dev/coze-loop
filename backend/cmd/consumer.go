@@ -19,6 +19,7 @@ func MustInitConsumerWorkers(
 	experimentApplication exptapp.IExperimentApplication,
 	datasetApplication dataapp.IJobRunMsgHandler,
 	obApplication obapp.IObservabilityOpenAPIApplication,
+	taskApplication obapp.ITaskApplication,
 ) []mq.IConsumerWorker {
 	var res []mq.IConsumerWorker
 
@@ -38,7 +39,7 @@ func MustInitConsumerWorkers(
 	if err != nil {
 		panic(err)
 	}
-	workers, err = obconsumer.NewConsumerWorkers(loader, obApplication)
+	workers, err = obconsumer.NewConsumerWorkers(loader, obApplication, taskApplication)
 	if err != nil {
 		panic(err)
 	}

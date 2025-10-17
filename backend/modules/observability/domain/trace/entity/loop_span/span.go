@@ -217,6 +217,13 @@ func (s *Span) getTokens(ctx context.Context) (inputTokens, outputTokens int64, 
 	return inputToken, outputToken, nil
 }
 
+func (s *Span) getStatus() string {
+	if s.StatusCode == 0 {
+		return SpanStatusSuccess
+	}
+	return SpanStatusError
+}
+
 // filter使用, 当前只支持特定参数,后续有需要可拓展到其他参数
 func (s *Span) GetFieldValue(fieldName string, isSystem bool) any {
 	switch fieldName {
@@ -252,6 +259,8 @@ func (s *Span) GetFieldValue(fieldName string, isSystem bool) any {
 		return s.ObjectStorage
 	case SpanFieldMethod:
 		return s.Method
+	case SpanFieldStatus:
+		return s.getStatus()
 	}
 	if isSystem {
 		if val, ok := s.SystemTagsString[fieldName]; ok {
@@ -536,7 +545,7 @@ func (s SpanList) Stat(ctx context.Context) (inputTokens, outputTokens int64, er
 		inputTokens += in
 		outputTokens += out
 	}
-	return
+	return inputTokens, outputTokens, err
 }
 
 func (s SpanList) FilterSpans(f *FilterFields) SpanList {

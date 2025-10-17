@@ -284,18 +284,36 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
 				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
+				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)
+				_tasks := _v14.Group("/tasks", _tasksMw(handler)...)
+				_tasks.POST("/list", append(_listtasksMw(handler), apis.ListTasks)...)
+				_tasks.GET("/:task_id", append(_gettaskMw(handler), apis.GetTask)...)
+				_tasks.PUT("/:task_id", append(_updatetaskMw(handler), apis.UpdateTask)...)
 				_v14.POST("/views", append(_viewsMw(handler), apis.CreateView)...)
 				_views := _v14.Group("/views", _viewsMw(handler)...)
 				_views.POST("/list", append(_listviewsMw(handler), apis.ListViews)...)
 				_views.DELETE("/:view_id", append(_deleteviewMw(handler), apis.DeleteView)...)
 				_views.PUT("/:view_id", append(_updateviewMw(handler), apis.UpdateView)...)
 				{
+					_annotation := _v14.Group("/annotation", _annotationMw(handler)...)
+					_annotation.GET("/list_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
+				}
+				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
 				}
 				{
+					_tasks0 := _v14.Group("/tasks", _tasks0Mw(handler)...)
+					_tasks0.POST("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
+				}
+				{
+					_trace := _v14.Group("/trace", _traceMw(handler)...)
+					_trace.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
+				}
+				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
+					_traces.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
@@ -357,6 +375,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations0 := _loop.Group("/annotations", _annotations0Mw(handler)...)
 				_annotations0.POST("/create", append(_createannotationMw(handler), apis.CreateAnnotation)...)
 				_annotations0.DELETE("/delete", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
+			}
+			{
 				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)
 				_evaluation0.GET("/evaluation_sets", append(_evaluation_sets0Mw(handler), apis.ListEvaluationSetsOApi)...)
 				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
