@@ -37,6 +37,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 	mockEvaluatorRecordService := servicemocks.NewMockEvaluatorRecordService(ctrl)
 	mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 
 	tests := []struct {
 		name                   string
@@ -48,6 +49,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 		evaluatorRecordService EvaluatorRecordService
 		evaluatorService       EvaluatorService
 		benefitService         benefit.IBenefitService
+		evalAsyncRepo          repo.IEvalAsyncRepo
 	}{
 		{
 			name:                   "所有参数有效",
@@ -59,6 +61,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 			evaluatorRecordService: mockEvaluatorRecordService,
 			evaluatorService:       mockEvaluatorService,
 			benefitService:         mockBenefitService,
+			evalAsyncRepo:          mockEvalAsyncRepo,
 		},
 		{
 			name:                   "部分参数为nil",
@@ -70,6 +73,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 			evaluatorRecordService: mockEvaluatorRecordService,
 			evaluatorService:       mockEvaluatorService,
 			benefitService:         mockBenefitService,
+			evalAsyncRepo:          mockEvalAsyncRepo,
 		},
 		{
 			name:                   "全部为nil",
@@ -81,6 +85,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 			evaluatorRecordService: nil,
 			evaluatorService:       nil,
 			benefitService:         nil,
+			evalAsyncRepo:          nil,
 		},
 	}
 
@@ -95,6 +100,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 				tt.evaluatorRecordService,
 				tt.evaluatorService,
 				tt.benefitService,
+				tt.evalAsyncRepo,
 			)
 			assert.NotNil(t, inst)
 		})
@@ -269,14 +275,14 @@ func Test_ExptItemEvalCtxExecutor_EvalTurns(t *testing.T) {
 
 	t.Run("参数校验失败-EvalSetItem为nil", func(t *testing.T) {
 		execCtx := &entity.ExptItemEvalCtx{EvalSetItem: nil}
-		err := executor.EvalTurns(context.Background(), execCtx)
+		_, err := executor.EvalTurns(context.Background(), execCtx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid empty eval_set_item")
 	})
 
 	t.Run("正常流程-无turns", func(t *testing.T) {
 		execCtx := &entity.ExptItemEvalCtx{EvalSetItem: &entity.EvaluationSetItem{Turns: []*entity.Turn{}}}
-		err := executor.EvalTurns(context.Background(), execCtx)
+		_, err := executor.EvalTurns(context.Background(), execCtx)
 		assert.NoError(t, err)
 	})
 }

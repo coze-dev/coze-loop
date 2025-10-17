@@ -130,6 +130,7 @@ var (
 		targetDomainService,
 		evaluatorDomainService,
 		flagSet,
+		evalAsyncRepoSet,
 	)
 
 	evaluatorDomainService = wire.NewSet(
@@ -203,6 +204,21 @@ var (
 		foundation.NewAuthRPCProvider,
 		targetDomainService,
 		flagSet,
+		evalAsyncRepoSet,
+	)
+
+	evalAsyncRepoSet = wire.NewSet(
+		experiment.NewEvalAsyncRepo,
+		exptredis.NewEvalAsyncDAO,
+	)
+
+	evalOpenAPISet = wire.NewSet(
+		NewEvalOpenAPIApplication,
+		targetDomainService,
+		evaltargetmtr.NewEvalTargetMetrics,
+		flagSet,
+		rmqproducer.NewExptEventPublisher,
+		evalAsyncRepoSet,
 	)
 )
 
@@ -336,4 +352,22 @@ func NewEvaluatorSourceServices(
 		serviceMap[svc.EvaluatorType()] = svc
 	}
 	return serviceMap
+}
+
+func InitEvalOpenAPIApplication(
+	ctx context.Context,
+	configFactory conf.IConfigLoaderFactory,
+	rmqFactory mq.IFactory,
+	cmdable redis.Cmdable,
+	idgen idgen.IIDGenerator,
+	db db.Provider,
+	client promptmanageservice.Client,
+	executeClient promptexecuteservice.Client,
+	authClient authservice.Client,
+	meter metrics.Meter,
+) (IEvalOpenAPIApplication, error) {
+	wire.Build(
+		evalOpenAPISet,
+	)
+	return nil, nil
 }

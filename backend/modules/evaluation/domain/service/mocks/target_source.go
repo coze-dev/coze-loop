@@ -41,6 +41,22 @@ func (m *MockISourceEvalTargetOperateService) EXPECT() *MockISourceEvalTargetOpe
 	return m.recorder
 }
 
+// AsyncExecute mocks base method.
+func (m *MockISourceEvalTargetOperateService) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (int64, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncExecute", ctx, spaceID, param)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// AsyncExecute indicates an expected call of AsyncExecute.
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) AsyncExecute(ctx, spaceID, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncExecute", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).AsyncExecute), ctx, spaceID, param)
+}
+
 // BatchGetSource mocks base method.
 func (m *MockISourceEvalTargetOperateService) BatchGetSource(ctx context.Context, spaceID int64, ids []string) ([]*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()
@@ -180,6 +196,23 @@ func (m *MockISourceEvalTargetOperateService) RuntimeParam() entity.IRuntimePara
 func (mr *MockISourceEvalTargetOperateServiceMockRecorder) RuntimeParam() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RuntimeParam", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).RuntimeParam))
+}
+
+// SearchCustomEvalTarget mocks base method.
+func (m *MockISourceEvalTargetOperateService) SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) ([]*entity.CustomEvalTarget, string, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchCustomEvalTarget", ctx, param)
+	ret0, _ := ret[0].([]*entity.CustomEvalTarget)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(bool)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// SearchCustomEvalTarget indicates an expected call of SearchCustomEvalTarget.
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) SearchCustomEvalTarget(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCustomEvalTarget", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).SearchCustomEvalTarget), ctx, param)
 }
 
 // ValidateInput mocks base method.

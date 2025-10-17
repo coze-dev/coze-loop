@@ -29,6 +29,7 @@ type EvalTargetVersion struct {
 	Prompt          *LoopPrompt
 	CozeWorkflow    *CozeWorkflow
 	VolcengineAgent *VolcengineAgent
+	CustomRPCServer *CustomRPCServer
 
 	InputSchema      []*ArgsSchema
 	OutputSchema     []*ArgsSchema
@@ -50,6 +51,8 @@ const (
 	EvalTargetTypeCozeWorkflow EvalTargetType = 4
 	// 火山智能体
 	EvalTargetTypeVolcengineAgent EvalTargetType = 5
+	// 自定义服务 for内场
+	EvalTargetTypeCustomRPCServer EvalTargetType = 6
 )
 
 func (p EvalTargetType) String() string {
@@ -64,6 +67,8 @@ func (p EvalTargetType) String() string {
 		return "CozeWorkflow"
 	case EvalTargetTypeVolcengineAgent:
 		return "VolcengineAgent"
+	case EvalTargetTypeCustomRPCServer:
+		return "CustomRPCServer"
 	}
 	return "<UNSET>"
 }

@@ -8,6 +8,7 @@ package apis
 
 import (
 	"context"
+
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -128,7 +129,11 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 	if err != nil {
 		return nil, err
 	}
-	evaluationHandler := NewEvaluationHandler(iExperimentApplication, evaluatorService, evaluationSetService, evalTargetService)
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter)
+	if err != nil {
+		return nil, err
+	}
+	evaluationHandler := NewEvaluationHandler(iExperimentApplication, evaluatorService, evaluationSetService, evalTargetService, evalOpenAPIService)
 	return evaluationHandler, nil
 }
 
@@ -184,7 +189,7 @@ var (
 		NewPromptHandler, application2.InitPromptManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
 	)
 	evaluationSet = wire.NewSet(
-		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication,
+		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, foundation.NewAuthRPCProvider, conf2.NewConfigerFactory,

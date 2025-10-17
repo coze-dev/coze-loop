@@ -1143,7 +1143,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 				ExptTurnResultRepo: f.exptTurnResultRepo,
 			}
 
-			alives, zombies, err := svc.handleZombies(tt.args.ctx, tt.args.event, tt.args.items)
+			alives, zombies, err := svc.handleZombies(tt.args.ctx, tt.args.event, tt.args.items, nil)
 
 			if tt.assertErr != nil {
 				tt.assertErr(t, err)

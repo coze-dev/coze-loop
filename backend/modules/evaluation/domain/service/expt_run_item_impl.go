@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/jinzhu/copier"
 
@@ -38,6 +39,7 @@ func NewExptItemEvaluation(
 	evaluatorRecordService EvaluatorRecordService,
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) ExptItemEvaluation {
 	return &ExptItemEvalCtxExecutor{
 		TurnResultRepo:         turnResultRepo,
@@ -48,6 +50,7 @@ func NewExptItemEvaluation(
 		evaluatorRecordService: evaluatorRecordService,
 		evaluatorService:       evaluatorService,
 		benefitService:         benefitService,
+		evalAsyncRepo:          evalAsyncRepo,
 	}
 }
 
@@ -60,6 +63,7 @@ type ExptItemEvalCtxExecutor struct {
 	evaluatorService       EvaluatorService
 	evaluatorRecordService EvaluatorRecordService
 	benefitService         benefit.IBenefitService
+	evalAsyncRepo          repo.IEvalAsyncRepo
 }
 
 func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
@@ -68,43 +72,55 @@ func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptIte
 	// if err := e.SetItemRunProcessing(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID, event.Session); err != nil {
 	//	return err
 	// }
-	if err := e.CompleteItemRun(ctx, event, e.EvalTurns(ctx, eiec)); err != nil {
+
+	asyncAbort, evalErr := e.EvalTurns(ctx, eiec)
+	if asyncAbort {
+		return nil
+	}
+
+	if err := e.CompleteItemRun(ctx, event, evalErr); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.ExptItemEvalCtx) (asyncAbort bool, err error) {
 	var history []*entity.Message
 
 	if eiec.EvalSetItem == nil {
-		return fmt.Errorf("EvalTurns with invalid empty eval_set_item")
+		return false, fmt.Errorf("EvalTurns with invalid empty eval_set_item")
 	}
 
 	for _, turn := range eiec.EvalSetItem.Turns {
 		etec, err := e.buildExptTurnEvalCtx(ctx, turn, eiec, history)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
 
-		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService).Eval(ctx, etec)
+		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).Eval(ctx, etec)
 
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
-			return err
+			return false, err
+		}
+
+		if turnRunRes.AsyncAbort {
+			logs.CtxInfo(ctx, "[ExptTurnEval] eval async abort, expt_id: %v, item_id: %v, turn_id: %v", eiec.Event.ExptID, eiec.Event.EvalSetItemID, turn.ID)
+			return true, nil
 		}
 
 		if err := turnRunRes.GetEvalErr(); err != nil {
-			return err
+			return false, err
 		}
 
 		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
 
-	time.Sleep(time.Second * 1) // 确保日志落库
-	return nil
+	time.Sleep(time.Second * 1)
+
+	return false, nil
 }
 
 func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
@@ -165,7 +181,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		clone.Status = entity.TurnRunState_Fail
 		clone.ErrMsg = errno.SerializeErr(evalErr)
 	} else {
-		clone.Status = entity.TurnRunState_Success
+		clone.Status = gcond.If(result.AsyncAbort, clone.Status, entity.TurnRunState_Success)
 	}
 
 	result.SetEvalErr(evalErr)
@@ -264,11 +280,11 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	}
 
 	if e.evalErrNeedTerminateExpt(ctx, event.SpaceID, evalErr) {
-		logs.CtxWarn(ctx, "[ExptRecordEval] found error which should terminate expt, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, evalErr)
+		logs.CtxWarn(ctx, "[ExptTurnEval] found error which should terminate expt, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, evalErr)
 		return evalErr
 	}
 
-	logs.CtxInfo(ctx, "[ExptRecordEval] expt item eval finished, expt_id: %v, expt_run_id: %v, success: %v, update_fields: %v", event.ExptID, event.ExptRunID, evalErr == nil, ufields)
+	logs.CtxInfo(ctx, "[ExptTurnEval] expt item eval finished, expt_id: %v, expt_run_id: %v, success: %v, update_fields: %v", event.ExptID, event.ExptRunID, evalErr == nil, ufields)
 	time.Sleep(time.Second * 2) // 确保日志落库
 	return nil
 }
