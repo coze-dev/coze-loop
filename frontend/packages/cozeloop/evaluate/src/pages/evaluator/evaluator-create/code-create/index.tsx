@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 
+ * Copyright 2025
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 import { nanoid } from 'nanoid';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint } from '@cozeloop/guard';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
 import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
@@ -47,7 +48,11 @@ import {
   FormTextArea,
 } from '@coze-arch/coze-design';
 
-import { SCROLL_DELAY, SCROLL_OFFSET } from '@/utils/evaluator';
+import {
+  EVALUATOR_CODE_DOCUMENT_LINK,
+  SCROLL_DELAY,
+  SCROLL_OFFSET,
+} from '@/utils/evaluator';
 import {
   CodeEvaluatorLanguageFE,
   codeEvaluatorLanguageMap,
@@ -66,10 +71,6 @@ import { FullScreenEditorConfigModal } from './full-screen-editor-config-modal';
 import { CodeTemplateModal } from './code-template-modal';
 
 import styles from './index.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
-
-const CODE_EVALUATOR_DOCUMENT_LINK =
-  'https://loop.coze.cn/open/docs/cozeloop/create_evaluators';
 
 const CodeEvaluatorCreatePage = () => {
   const { spaceID } = useSpace();
@@ -536,7 +537,7 @@ const CodeEvaluatorCreatePage = () => {
               <div>
                 {I18n.t('evaluate_test_data_tutorial_tip')}
                 <a
-                  href={CODE_EVALUATOR_DOCUMENT_LINK}
+                  href={EVALUATOR_CODE_DOCUMENT_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

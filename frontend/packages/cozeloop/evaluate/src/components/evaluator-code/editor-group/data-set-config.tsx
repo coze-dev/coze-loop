@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 
+ * Copyright 2025
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import {
   Tooltip,
 } from '@coze-arch/coze-design';
 
+import { EVALUATOR_CODE_DOCUMENT_LINK } from '@/utils/evaluator';
 import { defaultTestData, MAX_SELECT_COUNT } from '@/constants/code-evaluator';
 
 import {
@@ -63,7 +64,7 @@ const toolTipContent = (
     ext：补充字段
     <br />
     详细内容请参考
-    <a href="/open/docs/cozeloop/create_evaluators" target="_blank">
+    <a href={EVALUATOR_CODE_DOCUMENT_LINK} target="_blank">
       文档
     </a>
     。

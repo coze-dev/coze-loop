@@ -92,12 +92,7 @@ export function TemplateModal({
       header={null}
       footer={null}
     >
-      <div
-        className="overflow-hidden w-full h-full flex flex-row"
-        style={{
-          height: 'calc(100% + 32px)',
-        }}
-      >
+      <div className="overflow-hidden w-full h-full flex flex-row">
         <div className="coz-bg-primary w-60 flex flex-col">
           <div className="m-4 pl-2 h-10 flex items-center text-[20px] coz-fg-plus font-medium">
             {I18n.t('select_template')}
