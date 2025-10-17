@@ -130,22 +130,24 @@ export class PyodidePoolManager {
    */
   private async preloadPyodide(processId: string): Promise<void> {
     console.log(`⏳ [${processId}] 预加载Pyodide...`);
-    
+
     try {
       // 构建预加载命令，使用与执行时相同的配置
       const importMap = (Deno as any)?.env?.get("PYODIDE_IMPORT_MAP") || "/tmp/faas-workspace/vendor/import_map.json";
       const workspaceDir = (Deno as any)?.env?.get("FAAS_WORKSPACE") || "/tmp/faas-workspace";
-      
+      const vendorRoot = importMap.replace(/\/import_map\.json$/, "");
+      const sandboxMainTs = `${vendorRoot}/jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts`;
+
       // 创建一个简单的预加载测试文件
       const preloadTestFile = `${workspaceDir}/preload_test_${processId}.py`;
       await Deno.writeTextFile(preloadTestFile, "print('preload test')");
-      
+
       const preloadCommand = new Deno.Command("deno", {
         args: [
-          "run", 
+          "run",
           "-A",
           `--import-map=${importMap}`,
-          "/tmp/faas-workspace/vendor/jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts",
+          sandboxMainTs,
           "-f",
           preloadTestFile
         ],
@@ -155,26 +157,29 @@ export class PyodidePoolManager {
         env: {
           "PYTHONIOENCODING": "utf-8",
           "LANG": "en_US.UTF-8",
-          "LC_ALL": "en_US.UTF-8"
+          "LC_ALL": "en_US.UTF-8",
+          // 显式传递以避免子进程丢失上游环境变量
+          "PYODIDE_IMPORT_MAP": importMap,
+          "FAAS_WORKSPACE": workspaceDir
         }
       });
 
       const { stdout, stderr, code: exitCode } = await preloadCommand.output();
-      
+
       // 清理预加载测试文件
       try {
         await Deno.remove(preloadTestFile);
       } catch (e) {
         console.warn(`⚠️ [${processId}] 清理预加载测试文件失败: ${e}`);
       }
-      
+
       if (exitCode === 0) {
         console.log(`✅ [${processId}] Pyodide预加载成功`);
       } else {
         const stderrText = new TextDecoder('utf-8', { fatal: false }).decode(stderr);
         console.warn(`⚠️ [${processId}] Pyodide预加载完成但有警告: ${stderrText}`);
       }
-      
+
     } catch (error) {
       console.error(`❌ [${processId}] Pyodide预加载失败:`, error);
       throw new Error(`Pyodide预加载失败: ${(error as any).message}`);
@@ -390,7 +395,7 @@ export class PyodidePoolManager {
    */
   private async executeInProcess(processId: string, code: string, timeout: number): Promise<ExecutionResult> {
     const startTime = Date.now();
-
+    let tmpFile: string | undefined;
     try {
       console.log(`🚀 [${processId}] 开始执行Python代码，超时: ${timeout}ms`);
 
@@ -414,7 +419,7 @@ ${processedCode}
 
       // 将代码写入workspace目录的临时文件，避免只读文件系统问题
       const workspaceDir = (Deno as any)?.env?.get("FAAS_WORKSPACE") || "/tmp/faas-workspace";
-      const tmpFile = `${workspaceDir}/pyodide-${processId}-${Date.now()}.py`;
+      tmpFile = `${workspaceDir}/pyodide-${processId}-${Date.now()}.py`;
       await Deno.writeTextFile(tmpFile, enhancedCode);
       console.log(`🗂️ [${processId}] 临时代码文件: ${tmpFile}`);
       console.log(`🧾 [${processId}] 代码预览(前400字):\n${enhancedCode.slice(0, 400)}`);
@@ -423,12 +428,14 @@ ${processedCode}
       // 通过 import map 使用镜像内预置的 vendor 缓存离线解析 jsr 规格
       // 避免硬编码具体版本目录，兼容镜像构建时 vendor 的实际版本
       const importMap = (Deno as any)?.env?.get("PYODIDE_IMPORT_MAP") || "/tmp/faas-workspace/vendor/import_map.json";
+      const vendorRoot = importMap.replace(/\/import_map\.json$/, "");
+      const sandboxMainTs = `${vendorRoot}/jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts`;
       const process = new Deno.Command("deno", {
         args: [
           "run",
           "-A",
           `--import-map=${importMap}`,
-          "/tmp/faas-workspace/vendor/jsr.io/@eyurtsev/pyodide-sandbox/0.0.3/main.ts",
+          sandboxMainTs,
           "-f",
           tmpFile
         ],
@@ -438,7 +445,10 @@ ${processedCode}
         env: {
           "PYTHONIOENCODING": "utf-8",
           "LANG": "en_US.UTF-8",
-          "LC_ALL": "en_US.UTF-8"
+          "LC_ALL": "en_US.UTF-8",
+          // 显式传递以避免子进程丢失上游环境变量
+          "PYODIDE_IMPORT_MAP": importMap,
+          "FAAS_WORKSPACE": (Deno as any)?.env?.get("FAAS_WORKSPACE") || "/tmp/faas-workspace"
         }
       });
 
@@ -517,7 +527,11 @@ ${processedCode}
       }
 
       // 失败分支：不要尝试删除临时文件，便于排查
-      console.warn(`🧾 [${processId}] 发生异常，保留临时代码文件: ${tmpFile}`);
+      if (tmpFile) {
+        console.warn(`🧾 [${processId}] 发生异常，保留临时代码文件: ${tmpFile}`);
+      } else {
+        console.warn(`🧾 [${processId}] 发生异常，尚未创建临时代码文件`);
+      }
 
       return {
         stdout: "",

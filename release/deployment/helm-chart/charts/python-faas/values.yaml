@@ -34,7 +34,7 @@ env:
   DENO_DIR: "/tmp/faas-workspace/.deno"
   DENO_NO_UPDATE_CHECK: "1"
   DENO_V8_FLAGS: "--max-old-space-size=2048"
-  PYODIDE_IMPORT_MAP: "/tmp/faas-workspace/vendor/import_map.json"
+  PYODIDE_IMPORT_MAP: "/app/vendor/import_map.json"
 
   # FaaS 基础配置
   FAAS_WORKSPACE: "/tmp/faas-workspace"

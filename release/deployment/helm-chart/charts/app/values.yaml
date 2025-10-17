@@ -89,7 +89,7 @@ env:
 # customization
 custom:
   image:
-    registry: ""
+    registry:
     pullSecrets:
   redis:
     disabled: true
