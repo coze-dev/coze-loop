@@ -285,6 +285,8 @@ struct InvokeExperimentResponse {
     1: optional map<i64, i64> added_items // key: item 在 items 中的索引
     2: optional list<dataset.ItemErrorGroup> errors
 
+    3: optional list<dataset.CreateDatasetItemOutput> item_outputs
+
     255: base.BaseResp BaseResp
 }
 

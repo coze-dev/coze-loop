@@ -13,7 +13,7 @@ struct CreateEvaluationSetRequest {
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
     5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
 
-    200: optional common.Session session
+    200: optional common.Session session (api.none = 'true')
     255: optional base.Base Base
 }
 
@@ -192,6 +192,8 @@ struct BatchCreateEvaluationSetItemsRequest {
 struct BatchCreateEvaluationSetItemsResponse {
     1: optional map<i64, i64> added_items (api.js_conv='true', go.tag='json:"added_items"') // key: item 在 items 中的索引
     2: optional list<dataset.ItemErrorGroup> errors
+
+    3: optional list<dataset.CreateDatasetItemOutput> item_outputs
 
     255: base.BaseResp BaseResp
 }

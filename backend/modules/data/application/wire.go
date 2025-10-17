@@ -101,7 +101,8 @@ func InitTagApplication(idgen idgen.IIDGenerator,
 	cmdable redis.Cmdable,
 	configLoader conf.IConfigLoader,
 	userClient userservice.Client,
-	authAdapter rpc.IAuthProvider) (tag2.TagService, error) {
+	authAdapter rpc.IAuthProvider,
+) (tag2.TagService, error) {
 	wire.Build(tagSet)
 	return nil, nil
 }
