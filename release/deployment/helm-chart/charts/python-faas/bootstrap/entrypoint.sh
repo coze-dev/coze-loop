@@ -79,7 +79,7 @@ fi
 # 后台健康检查循环
 (
   while true; do
-    if sh /coze-loop/bootstrap/healthcheck.sh; then
+    if sh /coze-loop-python-faas/bootstrap/healthcheck.sh; then
       print_banner "Pyodide Python FaaS Ready!"
       break
     else
@@ -103,4 +103,4 @@ exec deno run \
   --allow-read=/app,/tmp \
   --allow-write=/tmp \
   --allow-run=deno \
-  /coze-loop/bootstrap/pyodide_faas_server.ts
+  /coze-loop-python-faas/bootstrap/pyodide_faas_server.ts

@@ -38,7 +38,7 @@ spec:
             - containerPort: {{ .Values.service.targetPort }}
           volumeMounts:
             - name: bootstrap
-              mountPath: "/coze-loop/bootstrap"
+              mountPath: "/coze-loop-js-faas/bootstrap"
               readOnly: true
             - name: js-faas-workspace
               mountPath: "/tmp/faas-workspace"
@@ -48,7 +48,7 @@ spec:
               value: {{ .Values.env.DENO_DIR | quote }}
             - name: DENO_NO_UPDATE_CHECK
               value: {{ .Values.env.DENO_NO_UPDATE_CHECK | quote }}
-            
+
             # FaaS 基础配置
             - name: FAAS_WORKSPACE
               value: {{ .Values.env.FAAS_WORKSPACE | quote }}
@@ -58,13 +58,13 @@ spec:
               value: {{ .Values.env.FAAS_TIMEOUT | quote }}
             - name: FAAS_LANGUAGE
               value: {{ .Values.env.FAAS_LANGUAGE | quote }}
-          
+
           workingDir: /app
-          command: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
-          
+          command: [ "sh", "/coze-loop-js-faas/bootstrap/entrypoint.sh" ]
+
           resources:
             {{- toYaml (.Values.custom.resources | default .Values.resources) | nindent 12 }}
-          
+
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -74,10 +74,10 @@ spec:
             capabilities:
               drop:
                 - ALL
-          
+
           livenessProbe:
             exec:
-              command: [ "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
+              command: [ "sh", "/coze-loop-js-faas/bootstrap/healthcheck.sh" ]
             initialDelaySeconds: {{ .Values.liveness.startSeconds }}
             periodSeconds: {{ .Values.liveness.intervalSeconds }}
             timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}

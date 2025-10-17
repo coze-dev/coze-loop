@@ -13,11 +13,11 @@ image:
 
 init_image:
   app:
-    registry: ""
-    repository: "coze-dev"
+    registry: "docker.io"
+    repository: "cozedev"
     image: "coze-loop"
-    tag: "dev"
-    pullSecrets: ""
+    tag: "1.2.0"
+    pullSecrets: "coze-loop-image-secret"
 
 deployment:
   replicaCount: 1

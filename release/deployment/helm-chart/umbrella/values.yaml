@@ -15,14 +15,7 @@ custom: &custom
 
 # 固定，不要动，用于传递全局变量
 coze-loop-app:
-  # 合并全局 custom，并仅覆盖 app 的 registry 为空
-  custom:
-    <<: *custom
-    image:
-      registry: ""
-  image:
-    pullSecrets: ""
-    pullPolicy: Never
+  custom: *custom
 coze-loop-nginx:
   custom: *custom
 coze-loop-redis:

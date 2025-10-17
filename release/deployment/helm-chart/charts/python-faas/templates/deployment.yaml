@@ -38,7 +38,7 @@ spec:
             - containerPort: {{ .Values.service.targetPort }}
           volumeMounts:
             - name: bootstrap
-              mountPath: "/coze-loop/bootstrap"
+              mountPath: "/coze-loop-python-faas/bootstrap"
               readOnly: true
             - name: python-faas-workspace
               mountPath: "/tmp/faas-workspace"
@@ -77,7 +77,7 @@ spec:
               value: {{ .Values.env.SKLEARN_VERSION | quote }}
 
           workingDir: /app
-          command: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
+          command: [ "sh", "/coze-loop-python-faas/bootstrap/entrypoint.sh" ]
 
           resources:
             {{- toYaml (.Values.custom.resources | default .Values.resources) | nindent 12 }}
@@ -97,7 +97,7 @@ spec:
 
           livenessProbe:
             exec:
-              command: [ "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
+              command: [ "sh", "/coze-loop-python-faas/bootstrap/healthcheck.sh" ]
             initialDelaySeconds: {{ .Values.liveness.startSeconds }}
             periodSeconds: {{ .Values.liveness.intervalSeconds }}
             timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}

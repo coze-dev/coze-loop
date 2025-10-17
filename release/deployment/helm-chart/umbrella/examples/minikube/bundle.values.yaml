@@ -21,13 +21,7 @@ custom: &custom
 
 # 固定，不要动，用于传递全局变量
 coze-loop-app:
-  custom:
-    <<: *custom
-    image:
-      registry: ""
-  image:
-    pullPolicy: Never
-    pullSecrets: ""
+  custom: *custom
 coze-loop-nginx:
   custom: *custom
 coze-loop-redis:

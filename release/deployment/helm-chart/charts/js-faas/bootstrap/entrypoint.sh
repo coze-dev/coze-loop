@@ -24,7 +24,7 @@ mkdir -p "${FAAS_WORKSPACE:-/tmp/faas-workspace}"
 # 后台健康检查循环
 (
   while true; do
-    if sh /coze-loop/bootstrap/healthcheck.sh; then
+    if sh /coze-loop-js-faas/bootstrap/healthcheck.sh; then
       print_banner "JavaScript FaaS Completed!"
       break
     else
@@ -34,4 +34,4 @@ mkdir -p "${FAAS_WORKSPACE:-/tmp/faas-workspace}"
 )&
 
 # 启动JavaScript FaaS服务器
-exec deno run --allow-net=0.0.0.0:8000 --allow-env --allow-read=/coze-loop/bootstrap,/tmp --allow-write=/tmp --allow-run /coze-loop/bootstrap/js_faas_server.ts
+exec deno run --allow-net=0.0.0.0:8000 --allow-env --allow-read=/coze-loop-js-faas/bootstrap,/tmp --allow-write=/tmp --allow-run /coze-loop-js-faas/bootstrap/js_faas_server.ts
