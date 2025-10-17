@@ -174,6 +174,9 @@ func (f *FilterFields) Satisfied(obj FilterObject) bool {
 			}
 		}
 	}
+	if len(f.FilterFields) == 0 {
+		hit = true
+	}
 	return hit
 }
 
@@ -247,19 +250,36 @@ func (f *FilterField) ValidateField() error {
 }
 
 func (f *FilterField) Satisfied(obj FilterObject) bool {
+	op := QueryAndOrEnumAnd
+	hit := true
+	if f.QueryAndOr != nil && *f.QueryAndOr == QueryAndOrEnumOr {
+		op = QueryAndOrEnumOr
+		hit = false
+	}
 	// 检测是否满足筛选条件
 	if f.FieldName != "" {
 		// 不满足field过滤条件
 		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem)) {
-			return false
+			if op == QueryAndOrEnumAnd {
+				return false
+			}
+		} else if op == QueryAndOrEnumOr {
+			return true
 		}
 	}
 	if f.SubFilter != nil {
 		if !f.SubFilter.Satisfied(obj) {
-			return false
+			if op == QueryAndOrEnumAnd {
+				return false
+			}
+		} else if op == QueryAndOrEnumOr {
+			return true
 		}
 	}
-	return true
+	if f.FieldName == "" && f.SubFilter == nil {
+		hit = true
+	}
+	return hit
 }
 
 // 当前支持特定类型, 满足可用性和可拓展性
