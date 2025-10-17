@@ -342,7 +342,7 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 			if metricNameMap[k] {
 				ret[k].TimeSeries[val] = append(ret[k].TimeSeries[val], &entity.MetricPoint{
 					Timestamp: conv.ToString(dataItem[timeBucketKey]),
-					Value:     conv.ToString(v),
+					Value:     getMetricValue(v),
 				})
 			}
 		}
@@ -386,7 +386,7 @@ func (m *MetricsService) formatSummaryData(data []map[string]any) map[string]*en
 	for _, dataItem := range data {
 		for k, v := range dataItem { // 预期不应该有下钻, 有就是参数问题
 			ret[k] = &entity.Metric{
-				Summary: conv.ToString(v),
+				Summary: getMetricValue(v),
 			}
 		}
 	}
@@ -406,7 +406,7 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 		groupByVals := make(map[string]string)
 		for k, v := range dataItem {
 			if !metricNameMap[k] {
-				groupByVals[k] = conv.ToString(v)
+				groupByVals[k] = getMetricValue(v)
 			}
 		}
 		val := "all"
@@ -417,7 +417,7 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 		}
 		for k, v := range dataItem {
 			if metricNameMap[k] {
-				ret[k].Pie[val] = conv.ToString(v)
+				ret[k].Pie[val] = getMetricValue(v)
 			}
 		}
 	}
@@ -455,7 +455,10 @@ func divideNumber(a, b string) string {
 	if errA != nil || errB != nil {
 		return ""
 	}
-	if math.IsNaN(numerator) || math.IsNaN(denominator) || math.IsInf(numerator, 0) || math.IsInf(denominator, 0) {
+	if math.IsNaN(numerator) ||
+		math.IsNaN(denominator) ||
+		math.IsInf(numerator, 0) ||
+		math.IsInf(denominator, 0) {
 		return ""
 	}
 	if numerator >= 0 && denominator > 0 {
@@ -510,4 +513,12 @@ func (m *MetricsService) pieMetrics(ctx context.Context, resp []*QueryMetricsRes
 		}
 	}
 	return ret, nil
+}
+
+func getMetricValue(v any) string {
+	ret := conv.ToString(v)
+	if ret == "NaN" || ret == "+Inf" || ret == "-Inf" {
+		return "null"
+	}
+	return ret
 }
