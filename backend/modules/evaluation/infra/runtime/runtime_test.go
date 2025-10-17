@@ -838,7 +838,8 @@ func TestPythonRuntime_MissingEnvironmentVariable(t *testing.T) {
 
 	// 这种情况下NewPythonRuntime会创建成功（因为URL检查逻辑有缺陷）
 	runtime, err := NewPythonRuntime(config, logger)
-	require.NoError(t, err)  // 不会返回错误，因为URL检查逻辑有缺陷
+	// 不会返回错误，因为URL检查逻辑有缺陷
+	require.NoError(t, err)
 	require.NotNil(t, runtime)
 
 	// 验证运行时的GetMetrics显示未配置状态
