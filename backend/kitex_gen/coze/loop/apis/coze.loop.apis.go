@@ -19,6 +19,7 @@ import (
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/debug"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
@@ -390,6 +391,32 @@ func NewObservabilityOpenAPIServiceClient(c thrift.TClient) *ObservabilityOpenAP
 	}
 }
 
+type ObservabilityTaskService interface {
+	task.TaskService
+}
+
+type ObservabilityTaskServiceClient struct {
+	*task.TaskServiceClient
+}
+
+func NewObservabilityTaskServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityTaskServiceClient {
+	return &ObservabilityTaskServiceClient{
+		TaskServiceClient: task.NewTaskServiceClientFactory(t, f),
+	}
+}
+
+func NewObservabilityTaskServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityTaskServiceClient {
+	return &ObservabilityTaskServiceClient{
+		TaskServiceClient: task.NewTaskServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewObservabilityTaskServiceClient(c thrift.TClient) *ObservabilityTaskServiceClient {
+	return &ObservabilityTaskServiceClient{
+		TaskServiceClient: task.NewTaskServiceClient(c),
+	}
+}
+
 type FoundationAuthService interface {
 	auth.AuthService
 }
@@ -669,6 +696,15 @@ type ObservabilityOpenAPIServiceProcessor struct {
 
 func NewObservabilityOpenAPIServiceProcessor(handler ObservabilityOpenAPIService) *ObservabilityOpenAPIServiceProcessor {
 	self := &ObservabilityOpenAPIServiceProcessor{openapi1.NewOpenAPIServiceProcessor(handler)}
+	return self
+}
+
+type ObservabilityTaskServiceProcessor struct {
+	*task.TaskServiceProcessor
+}
+
+func NewObservabilityTaskServiceProcessor(handler ObservabilityTaskService) *ObservabilityTaskServiceProcessor {
+	self := &ObservabilityTaskServiceProcessor{task.NewTaskServiceProcessor(handler)}
 	return self
 }
 

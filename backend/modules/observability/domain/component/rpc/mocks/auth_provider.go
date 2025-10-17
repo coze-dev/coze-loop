@@ -68,6 +68,20 @@ func (mr *MockIAuthProviderMockRecorder) CheckQueryPermission(ctx, workspaceId, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckQueryPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckQueryPermission), ctx, workspaceId, platformType)
 }
 
+// CheckTaskPermission mocks base method.
+func (m *MockIAuthProvider) CheckTaskPermission(arg0 context.Context, arg1, arg2, arg3 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckTaskPermission", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckTaskPermission indicates an expected call of CheckTaskPermission.
+func (mr *MockIAuthProviderMockRecorder) CheckTaskPermission(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckTaskPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckTaskPermission), arg0, arg1, arg2, arg3)
+}
+
 // CheckViewPermission mocks base method.
 func (m *MockIAuthProvider) CheckViewPermission(ctx context.Context, action, workspaceId, viewId string) error {
 	m.ctrl.T.Helper()

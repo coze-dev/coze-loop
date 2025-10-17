@@ -163,3 +163,12 @@ type ItemSnapshotFieldMapping struct {
 	// tag_array时，无值
 	MappingSubKey string `json:"mapping_subKey"`
 }
+
+type CreateDatasetItemOutput struct {
+	// item 在 BatchCreateDatasetItemsReq.items 中的索引
+	ItemIndex *int32
+	ItemKey   *string
+	ItemID    *int64
+	// 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
+	IsNewItem *bool
+}

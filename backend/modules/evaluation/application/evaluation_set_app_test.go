@@ -731,11 +731,12 @@ func TestEvaluationSetApplicationImpl_BatchCreateEvaluationSetItems(t *testing.T
 				// Mock batch create
 				mockEvalSetItemService.EXPECT().
 					BatchCreateEvaluationSetItems(gomock.Any(), gomock.Any()).
-					Return(map[int64]int64{1: 101, 2: 102}, nil, nil)
+					Return(map[int64]int64{1: 101, 2: 102}, nil, nil, nil)
 			},
 			wantResp: &eval_set.BatchCreateEvaluationSetItemsResponse{
-				AddedItems: map[int64]int64{1: 101, 2: 102},
-				Errors:     nil,
+				AddedItems:  map[int64]int64{1: 101, 2: 102},
+				Errors:      nil,
+				ItemOutputs: nil,
 			},
 			wantErr: false,
 		},
@@ -813,7 +814,7 @@ func TestEvaluationSetApplicationImpl_BatchCreateEvaluationSetItems(t *testing.T
 
 				mockEvalSetItemService.EXPECT().
 					BatchCreateEvaluationSetItems(gomock.Any(), gomock.Any()).
-					Return(nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+					Return(nil, nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantErr:     true,
 			wantErrCode: errno.CommonInternalErrorCode,

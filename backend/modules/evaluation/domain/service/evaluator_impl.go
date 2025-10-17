@@ -169,7 +169,7 @@ func (e *EvaluatorServiceImpl) GetEvaluator(ctx context.Context, spaceID, evalua
 		return nil, err
 	}
 
-	if len(drafts) == 0 {
+	if len(drafts) == 0 || drafts[0].SpaceID != spaceID {
 		return nil, nil
 	}
 

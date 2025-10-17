@@ -49,7 +49,7 @@ func ExportRequestDTO2DO(req *trace.ExportTracesToDatasetRequest) *service.Expor
 
 	// 转换字段映射
 	if req.IsSetFieldMappings() {
-		result.FieldMappings = convertFieldMappingsDTO2DO(req.GetFieldMappings())
+		result.FieldMappings = ConvertFieldMappingsDTO2DO(req.GetFieldMappings())
 	}
 
 	return result
@@ -107,7 +107,7 @@ func PreviewRequestDTO2DO(req *trace.PreviewExportTracesToDatasetRequest) *servi
 
 	// 转换字段映射
 	if req.IsSetFieldMappings() {
-		result.FieldMappings = convertFieldMappingsDTO2DO(req.GetFieldMappings())
+		result.FieldMappings = ConvertFieldMappingsDTO2DO(req.GetFieldMappings())
 	}
 
 	return result
@@ -186,8 +186,8 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 	return result
 }
 
-// convertFieldMappingsDTO2DO 转换字段映射
-func convertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.FieldMapping {
+// ConvertFieldMappingsDTO2DO 转换字段映射
+func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.FieldMapping {
 	if len(mappings) == 0 {
 		return nil
 	}
