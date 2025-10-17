@@ -4,39 +4,39 @@ service:
   targetPort: 8888
 
 image:
-  registry: "docker.io"
-  repository: "cozedev"
-  image: "coze-loop"
-  tag: "1.4.0"
+  registry: 'docker.io'
+  repository: 'cozedev'
+  image: 'coze-loop'
+  tag: '1.4.0'
   pullPolicy: Always
-  pullSecrets: "coze-loop-image-secret"
+  pullSecrets: 'coze-loop-image-secret'
 
 init_image:
   redis:
-    registry: "docker.io"
-    repository: "library"
-    image: "redis"
-    tag: "8.2.0"
+    registry: 'docker.io'
+    repository: 'library'
+    image: 'redis'
+    tag: '8.2.0'
   mysql:
-    registry: "docker.io"
-    repository: "library"
-    image: "mysql"
-    tag: "8.4.6"
+    registry: 'docker.io'
+    repository: 'library'
+    image: 'mysql'
+    tag: '8.4.6'
   clickhouse:
-    registry: "docker.io"
-    repository: "clickhouse"
-    image: "clickhouse-server"
-    tag: "latest"
+    registry: 'docker.io'
+    repository: 'clickhouse'
+    image: 'clickhouse-server'
+    tag: 'latest'
   minio:
-    registry: "docker.io"
-    repository: "minio"
-    image: "minio"
-    tag: "RELEASE.2025-06-13T11-33-47Z"
+    registry: 'docker.io'
+    repository: 'minio'
+    image: 'minio'
+    tag: 'RELEASE.2025-06-13T11-33-47Z'
   rmq:
-    registry: "docker.io"
-    repository: "apache"
-    image: "rocketmq"
-    tag: "5.3.3"
+    registry: 'docker.io'
+    repository: 'apache'
+    image: 'rocketmq'
+    tag: '5.3.3'
 
 deployment:
   replicaCount: 1
@@ -50,35 +50,35 @@ liveness:
 
 env:
   redis:
-    domain: "coze-loop-redis"
-    port: "6379"
-    password: "coze-loop"
+    domain: 'coze-loop-redis'
+    port: '6379'
+    password: 'coze-loop'
   mysql:
-    domain: "coze-loop-mysql"
-    port: "3306"
-    user: "root"
-    password: "coze-loop"
-    database: "coze-loop"
+    domain: 'coze-loop-mysql'
+    port: '3306'
+    user: 'root'
+    password: 'coze-loop'
+    database: 'coze-loop'
   clickhouse:
-    domain: "coze-loop-clickhouse"
-    port: "9000"
-    user: "default"
-    password: "coze-loop"
-    database: "coze-loop"
+    domain: 'coze-loop-clickhouse'
+    port: '9000'
+    user: 'default'
+    password: 'coze-loop'
+    database: 'coze-loop'
   oss:
-    protocol: "http"
-    domain: "coze-loop-minio"
-    port: "9000"
-    region: "us-east-1"
-    user: "root"
-    password: "coze-loop"
-    bucket: "coze-loop"
+    protocol: 'http'
+    domain: 'coze-loop-minio'
+    port: '9000'
+    region: 'us-east-1'
+    user: 'root'
+    password: 'coze-loop'
+    bucket: 'coze-loop'
   rmq:
     namesrv:
-      domain: "coze-loop-rmq-namesrv"
-      port: "9876"
-      user: ""
-      password: ""
+      domain: 'coze-loop-rmq-namesrv'
+      port: '9876'
+      user: ''
+      password: ''
 
   # faas
   pythonFaas:
