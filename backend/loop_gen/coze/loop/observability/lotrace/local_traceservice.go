@@ -64,6 +64,27 @@ func (l *LocalTraceService) GetTrace(ctx context.Context, req *trace.GetTraceReq
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest, callOptions ...callopt.Option) (*trace.SearchTraceTreeResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceSearchTraceTreeArgs)
+		result := out.(*trace.TraceServiceSearchTraceTreeResult)
+		resp, err := l.impl.SearchTraceTree(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceSearchTraceTreeArgs{Req: req}
+	result := &trace.TraceServiceSearchTraceTreeResult{}
+	ctx = l.injectRPCInfo(ctx, "SearchTraceTree")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (*trace.BatchGetTracesAdvanceInfoResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*trace.TraceServiceBatchGetTracesAdvanceInfoArgs)

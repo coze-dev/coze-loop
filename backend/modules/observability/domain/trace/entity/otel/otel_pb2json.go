@@ -151,7 +151,7 @@ func OtelTraceRequestPbToJson(src *v3.ExportTraceServiceRequest) *ExportTraceSer
 		ResourceSpans: make([]*ResourceSpans, 0, len(src.ResourceSpans)),
 	}
 	for _, rs := range src.ResourceSpans {
-		if rs == nil {
+		if rs == nil || rs.Resource == nil {
 			continue
 		}
 

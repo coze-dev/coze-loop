@@ -177,6 +177,46 @@ trace_field_meta_info:
         - "not_exist"
       support_custom: true
   field_metas:
+    default:
+      root_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "span_type"
+        - "message_id"
+        - "user_id"
+      all_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "span_type"
+        - "message_id"
+        - "user_id"
+        - "input_tokens"
+        - "output_tokens"
+        - "prompt_key"
+        - "tokens"
+      llm_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "message_id"
+        - "user_id"
+        - "input_tokens"
+        - "output_tokens"
+        - "tokens"
     cozeloop:
       root_span:
         - "input"
@@ -288,6 +328,26 @@ query_trace_rate_limit_config:
   default_max_qps: 10
   space_max_qps:
     123456: 100
+
+key_columns:
+  - "start_time"
+  - "span_id"
+  - "parent_id"
+  - "duration"
+  - "span_type"
+  - "span_name"
+  - "status_code"
+  - "tags_long"
+  - "logic_delete_date"
+
+key_span_type:
+  default:
+    - "model",
+    - "tool",
+    - "root"
+    - "UserInput"
+    - "UserInputV2"
+    - "LLMCall"
 
 correction_mq_consumer_config:
   addr:
