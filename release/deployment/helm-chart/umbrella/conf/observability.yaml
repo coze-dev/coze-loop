@@ -342,13 +342,12 @@ key_columns:
 
 key_span_type:
   default:
-    root_span:
-      - "model",
-      - "tool",
-      - "root"
-      - "UserInput"
-      - "UserInputV2"
-      - "LLMCall"
+    - "model",
+    - "tool",
+    - "root"
+    - "UserInput"
+    - "UserInputV2"
+    - "LLMCall"
 
 correction_mq_consumer_config:
   addr:

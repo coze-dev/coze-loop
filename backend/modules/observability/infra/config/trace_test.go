@@ -968,7 +968,7 @@ func TestTraceConfigCenter_GetKeySpanTypes(t *testing.T) {
 		name         string
 		fieldsGetter func(ctrl *gomock.Controller) fields
 		args         args
-		want         map[string]map[string][]string
+		want         map[string][]string
 	}{
 		{
 			name: "get key span types successfully",
@@ -976,19 +976,17 @@ func TestTraceConfigCenter_GetKeySpanTypes(t *testing.T) {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
 				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), keySpanTypeCfgKey, gomock.Any()).
 					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
-						cfg := v.(*map[string]map[string][]string)
-						(*cfg)["coze"] = map[string][]string{
-							"db": {"select", "insert"},
+						cfg := v.(*map[string][]string)
+						(*cfg)["coze"] = []string{
+							"select", "insert",
 						}
 						return nil
 					})
 				return fields{configLoader: mockLoader}
 			},
 			args: args{ctx: context.Background()},
-			want: map[string]map[string][]string{
-				"coze": {
-					"db": []string{"select", "insert"},
-				},
+			want: map[string][]string{
+				"coze": {"select", "insert"},
 			},
 		},
 		{
@@ -1000,7 +998,7 @@ func TestTraceConfigCenter_GetKeySpanTypes(t *testing.T) {
 				return fields{configLoader: mockLoader}
 			},
 			args: args{ctx: context.Background()},
-			want: map[string]map[string][]string{},
+			want: map[string][]string{},
 		},
 	}
 	for _, tt := range tests {
