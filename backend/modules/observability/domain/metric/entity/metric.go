@@ -51,6 +51,8 @@ const (
 	MetricNameModelInputTokenCountByTime  = "model_input_token_count_by_time"
 	MetricNameModelOutputTokenCount       = "model_output_token_count"
 	MetricNameModelOutputTokenCountByTime = "model_output_token_count_by_time"
+	MetricNameModelSystemTokenCount       = "model_system_token_count"
+	MetricNameModelToolChoiceTokenCount   = "model_tool_choice_token_count"
 	MetricNameModelQPS                    = "model_qps"
 	MetricNameModelQPSSuccess             = "model_qps_success"
 	MetricNameModelQPSFail                = "model_qps_fail"
@@ -198,15 +200,8 @@ func NewTimeIntervals(startTime, endTime int64, granularity MetricGranularity) [
 		truncatedTime = startTime - (startTime % intervalMills)
 	case MetricGranularity1Hour:
 		truncatedTime = startTime - (startTime % intervalMills)
-	case MetricGranularity1Day:
+	case MetricGranularity1Day, MetricGranularity1Week:
 		t := time.UnixMilli(startTime)
-		truncatedTime = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UnixMilli()
-	case MetricGranularity1Week:
-		t := time.UnixMilli(startTime)
-		baseTime := time.Unix(0, 0).In(t.Location())
-		durationSinceBase := t.Sub(baseTime).Milliseconds()
-		intervals := durationSinceBase / intervalMills
-		t = baseTime.Add(time.Duration(intervals*intervalMills) * time.Millisecond)
 		truncatedTime = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UnixMilli()
 	default:
 		t := time.UnixMilli(startTime)

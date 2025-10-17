@@ -182,6 +182,8 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		model.NewModelInputTokenCountByTimeMetric(),
 		model.NewModelOutputTokenCountMetric(),
 		model.NewModelOutputTokenCountByTimeMetric(),
+		model.NewModelSystemTokenCountMetric(),
+		model.NewModelToolChoiceTokenCountMetric(),
 		model.NewModelQPSMetric(),
 		model.NewModelQPSSuccessMetric(),
 		model.NewModelQPSFailMetric(),
