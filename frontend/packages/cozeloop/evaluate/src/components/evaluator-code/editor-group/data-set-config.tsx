@@ -33,6 +33,7 @@ import {
   Tooltip,
 } from '@coze-arch/coze-design';
 
+import { EVALUATOR_CODE_DOCUMENT_LINK } from '@/utils/evaluator';
 import { defaultTestData, MAX_SELECT_COUNT } from '@/constants/code-evaluator';
 
 import {
@@ -63,10 +64,7 @@ const toolTipContent = (
     ext：补充字段
     <br />
     详细内容请参考
-    <a
-      href="https://loop.coze.cn/open/docs/cozeloop/create_evaluators"
-      target="_blank"
-    >
+    <a href={EVALUATOR_CODE_DOCUMENT_LINK} target="_blank">
       文档
     </a>
     。

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 
+ * Copyright 2025
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,3 +16,5 @@
 
 export const SCROLL_DELAY = 200;
 export const SCROLL_OFFSET = 200;
+export const EVALUATOR_CODE_DOCUMENT_LINK =
+  'https://loop.coze.cn/open/docs/cozeloop/create_evaluators';
