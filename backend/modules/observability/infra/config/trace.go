@@ -26,6 +26,7 @@ const (
 	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
 	keyColumnsCfgKey           = "key_columns"
 	keySpanTypeCfgKey          = "key_span_type"
+	backfillMqProducerCfgKey   = "backfill_mq_producer_config"
 )
 
 type TraceConfigCenter struct {
@@ -69,6 +70,14 @@ func (t *TraceConfigCenter) GetTraceIngestTenantProducerCfg(ctx context.Context)
 func (t *TraceConfigCenter) GetAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
 	cfg := new(config.MqProducerCfg)
 	if err := t.UnmarshalKey(context.Background(), annotationMqProducerCfgKey, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func (t *TraceConfigCenter) GetBackfillMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	cfg := new(config.MqProducerCfg)
+	if err := t.UnmarshalKey(context.Background(), backfillMqProducerCfgKey, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil

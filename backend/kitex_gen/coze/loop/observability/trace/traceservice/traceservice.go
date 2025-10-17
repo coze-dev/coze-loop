@@ -125,6 +125,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ChangeEvaluatorScore": kitex.NewMethodInfo(
+		changeEvaluatorScoreHandler,
+		newTraceServiceChangeEvaluatorScoreArgs,
+		newTraceServiceChangeEvaluatorScoreResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListAnnotationEvaluators": kitex.NewMethodInfo(
+		listAnnotationEvaluatorsHandler,
+		newTraceServiceListAnnotationEvaluatorsArgs,
+		newTraceServiceListAnnotationEvaluatorsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ExtractSpanInfo": kitex.NewMethodInfo(
+		extractSpanInfoHandler,
+		newTraceServiceExtractSpanInfoArgs,
+		newTraceServiceExtractSpanInfoResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -462,6 +483,63 @@ func newTraceServicePreviewExportTracesToDatasetResult() interface{} {
 	return trace.NewTraceServicePreviewExportTracesToDatasetResult()
 }
 
+func changeEvaluatorScoreHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceChangeEvaluatorScoreArgs)
+	realResult := result.(*trace.TraceServiceChangeEvaluatorScoreResult)
+	success, err := handler.(trace.TraceService).ChangeEvaluatorScore(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceChangeEvaluatorScoreArgs() interface{} {
+	return trace.NewTraceServiceChangeEvaluatorScoreArgs()
+}
+
+func newTraceServiceChangeEvaluatorScoreResult() interface{} {
+	return trace.NewTraceServiceChangeEvaluatorScoreResult()
+}
+
+func listAnnotationEvaluatorsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListAnnotationEvaluatorsArgs)
+	realResult := result.(*trace.TraceServiceListAnnotationEvaluatorsResult)
+	success, err := handler.(trace.TraceService).ListAnnotationEvaluators(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListAnnotationEvaluatorsArgs() interface{} {
+	return trace.NewTraceServiceListAnnotationEvaluatorsArgs()
+}
+
+func newTraceServiceListAnnotationEvaluatorsResult() interface{} {
+	return trace.NewTraceServiceListAnnotationEvaluatorsResult()
+}
+
+func extractSpanInfoHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceExtractSpanInfoArgs)
+	realResult := result.(*trace.TraceServiceExtractSpanInfoResult)
+	success, err := handler.(trace.TraceService).ExtractSpanInfo(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceExtractSpanInfoArgs() interface{} {
+	return trace.NewTraceServiceExtractSpanInfoArgs()
+}
+
+func newTraceServiceExtractSpanInfoResult() interface{} {
+	return trace.NewTraceServiceExtractSpanInfoResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -629,6 +707,36 @@ func (p *kClient) PreviewExportTracesToDataset(ctx context.Context, req *trace.P
 	_args.Req = req
 	var _result trace.TraceServicePreviewExportTracesToDatasetResult
 	if err = p.c.Call(ctx, "PreviewExportTracesToDataset", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest) (r *trace.ChangeEvaluatorScoreResponse, err error) {
+	var _args trace.TraceServiceChangeEvaluatorScoreArgs
+	_args.Req = req
+	var _result trace.TraceServiceChangeEvaluatorScoreResult
+	if err = p.c.Call(ctx, "ChangeEvaluatorScore", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListAnnotationEvaluators(ctx context.Context, req *trace.ListAnnotationEvaluatorsRequest) (r *trace.ListAnnotationEvaluatorsResponse, err error) {
+	var _args trace.TraceServiceListAnnotationEvaluatorsArgs
+	_args.Req = req
+	var _result trace.TraceServiceListAnnotationEvaluatorsResult
+	if err = p.c.Call(ctx, "ListAnnotationEvaluators", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInfoRequest) (r *trace.ExtractSpanInfoResponse, err error) {
+	var _args trace.TraceServiceExtractSpanInfoArgs
+	_args.Req = req
+	var _result trace.TraceServiceExtractSpanInfoResult
+	if err = p.c.Call(ctx, "ExtractSpanInfo", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

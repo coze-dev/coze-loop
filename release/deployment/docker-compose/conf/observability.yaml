@@ -349,3 +349,43 @@ key_span_type:
       - "UserInput"
       - "UserInputV2"
       - "LLMCall"
+
+correction_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "cozeloop_evaluation_correction_evaluator_result"
+  consumer_group: "cozeloop_evaluation_correction_evaluator_result_evaluation_cg"
+  worker_num: 4
+
+backfill_mq_producer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 200
+  retry_times: 3
+  topic: "cozeloop_async_tasks"
+  producer_group: "cozeloop_async_tasks_backfill_cg"
+
+backfill_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "cozeloop_async_tasks"
+  consumer_group: "cozeloop_async_tasks_backfill_cg"
+  worker_num: 4
+
+autotask_callback_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "cozeloop_evaluation_online_expt_eval_result"
+  consumer_group: "cozeloop_evaluation_online_expt_eval_result_cg"
+  worker_num: 4
+
+task_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "trace_to_task"
+  consumer_group: "trace_to_task_cg"
+  worker_num: 4
