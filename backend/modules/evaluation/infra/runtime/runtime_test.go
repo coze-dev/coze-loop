@@ -508,7 +508,7 @@ func TestPythonRuntime_GetMetrics_NotConfigured(t *testing.T) {
 	// 这种情况下NewPythonRuntime会创建成功（因为URL检查逻辑有缺陷）
 	// 但GetMetrics会返回未配置的状态
 	runtime, err := NewPythonRuntime(config, logger)
-	require.NoError(t, err)  // 不会返回错误，因为URL检查逻辑有缺陷
+	require.NoError(t, err) // 不会返回错误，因为URL检查逻辑有缺陷
 	require.NotNil(t, runtime)
 
 	// 测试GetMetrics，应该显示未配置状态

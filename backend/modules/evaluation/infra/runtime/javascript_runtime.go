@@ -34,10 +34,12 @@ func NewJavaScriptRuntime(config *entity.SandboxConfig, logger *logrus.Logger) (
 	}
 
 	// 检查JavaScript FaaS服务配置
-	jsFaaSURL := "http://" + os.Getenv("COZE_LOOP_JS_FAAS_DOMAIN") + ":" + os.Getenv("COZE_LOOP_JS_FAAS_PORT")
-	if jsFaaSURL == "" {
+	jsFaaSDomain := os.Getenv("COZE_LOOP_JS_FAAS_DOMAIN")
+	jsFaaSPort := os.Getenv("COZE_LOOP_JS_FAAS_PORT")
+	if jsFaaSDomain == "" || jsFaaSPort == "" {
 		return nil, fmt.Errorf("必须配置JavaScript FaaS服务URL，请设置COZE_LOOP_JS_FAAS_DOMAIN和COZE_LOOP_JS_FAAS_PORT环境变量")
 	}
+	jsFaaSURL := "http://" + jsFaaSDomain + ":" + jsFaaSPort
 
 	// 创建HTTP FaaS适配器配置
 	faasConfig := &HTTPFaaSRuntimeConfig{
