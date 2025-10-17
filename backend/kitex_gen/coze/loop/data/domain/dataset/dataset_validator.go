@@ -151,3 +151,6 @@ func (p *ItemErrorDetail) IsValid() error {
 func (p *ItemErrorGroup) IsValid() error {
 	return nil
 }
+func (p *CreateDatasetItemOutput) IsValid() error {
+	return nil
+}

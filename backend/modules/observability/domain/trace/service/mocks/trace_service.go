@@ -22,7 +22,6 @@ import (
 type MockITraceService struct {
 	ctrl     *gomock.Controller
 	recorder *MockITraceServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockITraceServiceMockRecorder is the mock recorder for MockITraceService.
@@ -42,206 +41,251 @@ func (m *MockITraceService) EXPECT() *MockITraceServiceMockRecorder {
 	return m.recorder
 }
 
-// CreateAnnotation mocks base method.
-func (m *MockITraceService) CreateAnnotation(ctx context.Context, req *service.CreateAnnotationReq) error {
+// ChangeEvaluatorScore mocks base method.
+func (m *MockITraceService) ChangeEvaluatorScore(arg0 context.Context, arg1 *service.ChangeEvaluatorScoreRequest) (*service.ChangeEvaluatorScoreResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAnnotation", ctx, req)
+	ret := m.ctrl.Call(m, "ChangeEvaluatorScore", arg0, arg1)
+	ret0, _ := ret[0].(*service.ChangeEvaluatorScoreResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeEvaluatorScore indicates an expected call of ChangeEvaluatorScore.
+func (mr *MockITraceServiceMockRecorder) ChangeEvaluatorScore(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeEvaluatorScore", reflect.TypeOf((*MockITraceService)(nil).ChangeEvaluatorScore), arg0, arg1)
+}
+
+// CreateAnnotation mocks base method.
+func (m *MockITraceService) CreateAnnotation(arg0 context.Context, arg1 *service.CreateAnnotationReq) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAnnotation", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAnnotation indicates an expected call of CreateAnnotation.
-func (mr *MockITraceServiceMockRecorder) CreateAnnotation(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) CreateAnnotation(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnnotation", reflect.TypeOf((*MockITraceService)(nil).CreateAnnotation), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnnotation", reflect.TypeOf((*MockITraceService)(nil).CreateAnnotation), arg0, arg1)
 }
 
 // CreateManualAnnotation mocks base method.
-func (m *MockITraceService) CreateManualAnnotation(ctx context.Context, req *service.CreateManualAnnotationReq) (*service.CreateManualAnnotationResp, error) {
+func (m *MockITraceService) CreateManualAnnotation(arg0 context.Context, arg1 *service.CreateManualAnnotationReq) (*service.CreateManualAnnotationResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateManualAnnotation", ctx, req)
+	ret := m.ctrl.Call(m, "CreateManualAnnotation", arg0, arg1)
 	ret0, _ := ret[0].(*service.CreateManualAnnotationResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateManualAnnotation indicates an expected call of CreateManualAnnotation.
-func (mr *MockITraceServiceMockRecorder) CreateManualAnnotation(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) CreateManualAnnotation(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).CreateManualAnnotation), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).CreateManualAnnotation), arg0, arg1)
 }
 
 // DeleteAnnotation mocks base method.
-func (m *MockITraceService) DeleteAnnotation(ctx context.Context, req *service.DeleteAnnotationReq) error {
+func (m *MockITraceService) DeleteAnnotation(arg0 context.Context, arg1 *service.DeleteAnnotationReq) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAnnotation", ctx, req)
+	ret := m.ctrl.Call(m, "DeleteAnnotation", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAnnotation indicates an expected call of DeleteAnnotation.
-func (mr *MockITraceServiceMockRecorder) DeleteAnnotation(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) DeleteAnnotation(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAnnotation", reflect.TypeOf((*MockITraceService)(nil).DeleteAnnotation), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAnnotation", reflect.TypeOf((*MockITraceService)(nil).DeleteAnnotation), arg0, arg1)
 }
 
 // DeleteManualAnnotation mocks base method.
-func (m *MockITraceService) DeleteManualAnnotation(ctx context.Context, req *service.DeleteManualAnnotationReq) error {
+func (m *MockITraceService) DeleteManualAnnotation(arg0 context.Context, arg1 *service.DeleteManualAnnotationReq) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteManualAnnotation", ctx, req)
+	ret := m.ctrl.Call(m, "DeleteManualAnnotation", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteManualAnnotation indicates an expected call of DeleteManualAnnotation.
-func (mr *MockITraceServiceMockRecorder) DeleteManualAnnotation(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) DeleteManualAnnotation(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).DeleteManualAnnotation), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).DeleteManualAnnotation), arg0, arg1)
+}
+
+// ExtractSpanInfo mocks base method.
+func (m *MockITraceService) ExtractSpanInfo(arg0 context.Context, arg1 *service.ExtractSpanInfoRequest) (*service.ExtractSpanInfoResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtractSpanInfo", arg0, arg1)
+	ret0, _ := ret[0].(*service.ExtractSpanInfoResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExtractSpanInfo indicates an expected call of ExtractSpanInfo.
+func (mr *MockITraceServiceMockRecorder) ExtractSpanInfo(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractSpanInfo", reflect.TypeOf((*MockITraceService)(nil).ExtractSpanInfo), arg0, arg1)
 }
 
 // GetTrace mocks base method.
-func (m *MockITraceService) GetTrace(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
+func (m *MockITraceService) GetTrace(arg0 context.Context, arg1 *service.GetTraceReq) (*service.GetTraceResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTrace", ctx, req)
+	ret := m.ctrl.Call(m, "GetTrace", arg0, arg1)
 	ret0, _ := ret[0].(*service.GetTraceResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTrace indicates an expected call of GetTrace.
-func (mr *MockITraceServiceMockRecorder) GetTrace(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) GetTrace(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrace", reflect.TypeOf((*MockITraceService)(nil).GetTrace), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrace", reflect.TypeOf((*MockITraceService)(nil).GetTrace), arg0, arg1)
 }
 
 // GetTracesAdvanceInfo mocks base method.
-func (m *MockITraceService) GetTracesAdvanceInfo(ctx context.Context, req *service.GetTracesAdvanceInfoReq) (*service.GetTracesAdvanceInfoResp, error) {
+func (m *MockITraceService) GetTracesAdvanceInfo(arg0 context.Context, arg1 *service.GetTracesAdvanceInfoReq) (*service.GetTracesAdvanceInfoResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTracesAdvanceInfo", ctx, req)
+	ret := m.ctrl.Call(m, "GetTracesAdvanceInfo", arg0, arg1)
 	ret0, _ := ret[0].(*service.GetTracesAdvanceInfoResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTracesAdvanceInfo indicates an expected call of GetTracesAdvanceInfo.
-func (mr *MockITraceServiceMockRecorder) GetTracesAdvanceInfo(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) GetTracesAdvanceInfo(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTracesAdvanceInfo", reflect.TypeOf((*MockITraceService)(nil).GetTracesAdvanceInfo), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTracesAdvanceInfo", reflect.TypeOf((*MockITraceService)(nil).GetTracesAdvanceInfo), arg0, arg1)
 }
 
 // GetTracesMetaInfo mocks base method.
-func (m *MockITraceService) GetTracesMetaInfo(ctx context.Context, req *service.GetTracesMetaInfoReq) (*service.GetTracesMetaInfoResp, error) {
+func (m *MockITraceService) GetTracesMetaInfo(arg0 context.Context, arg1 *service.GetTracesMetaInfoReq) (*service.GetTracesMetaInfoResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTracesMetaInfo", ctx, req)
+	ret := m.ctrl.Call(m, "GetTracesMetaInfo", arg0, arg1)
 	ret0, _ := ret[0].(*service.GetTracesMetaInfoResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTracesMetaInfo indicates an expected call of GetTracesMetaInfo.
-func (mr *MockITraceServiceMockRecorder) GetTracesMetaInfo(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) GetTracesMetaInfo(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTracesMetaInfo", reflect.TypeOf((*MockITraceService)(nil).GetTracesMetaInfo), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTracesMetaInfo", reflect.TypeOf((*MockITraceService)(nil).GetTracesMetaInfo), arg0, arg1)
 }
 
 // IngestTraces mocks base method.
-func (m *MockITraceService) IngestTraces(ctx context.Context, req *service.IngestTracesReq) error {
+func (m *MockITraceService) IngestTraces(arg0 context.Context, arg1 *service.IngestTracesReq) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IngestTraces", ctx, req)
+	ret := m.ctrl.Call(m, "IngestTraces", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IngestTraces indicates an expected call of IngestTraces.
-func (mr *MockITraceServiceMockRecorder) IngestTraces(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) IngestTraces(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IngestTraces", reflect.TypeOf((*MockITraceService)(nil).IngestTraces), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IngestTraces", reflect.TypeOf((*MockITraceService)(nil).IngestTraces), arg0, arg1)
+}
+
+// ListAnnotationEvaluators mocks base method.
+func (m *MockITraceService) ListAnnotationEvaluators(arg0 context.Context, arg1 *service.ListAnnotationEvaluatorsRequest) (*service.ListAnnotationEvaluatorsResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAnnotationEvaluators", arg0, arg1)
+	ret0, _ := ret[0].(*service.ListAnnotationEvaluatorsResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAnnotationEvaluators indicates an expected call of ListAnnotationEvaluators.
+func (mr *MockITraceServiceMockRecorder) ListAnnotationEvaluators(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotationEvaluators", reflect.TypeOf((*MockITraceService)(nil).ListAnnotationEvaluators), arg0, arg1)
 }
 
 // ListAnnotations mocks base method.
-func (m *MockITraceService) ListAnnotations(ctx context.Context, req *service.ListAnnotationsReq) (*service.ListAnnotationsResp, error) {
+func (m *MockITraceService) ListAnnotations(arg0 context.Context, arg1 *service.ListAnnotationsReq) (*service.ListAnnotationsResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAnnotations", ctx, req)
+	ret := m.ctrl.Call(m, "ListAnnotations", arg0, arg1)
 	ret0, _ := ret[0].(*service.ListAnnotationsResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListAnnotations indicates an expected call of ListAnnotations.
-func (mr *MockITraceServiceMockRecorder) ListAnnotations(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) ListAnnotations(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotations", reflect.TypeOf((*MockITraceService)(nil).ListAnnotations), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotations", reflect.TypeOf((*MockITraceService)(nil).ListAnnotations), arg0, arg1)
 }
 
 // ListSpans mocks base method.
-func (m *MockITraceService) ListSpans(ctx context.Context, req *service.ListSpansReq) (*service.ListSpansResp, error) {
+func (m *MockITraceService) ListSpans(arg0 context.Context, arg1 *service.ListSpansReq) (*service.ListSpansResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSpans", ctx, req)
+	ret := m.ctrl.Call(m, "ListSpans", arg0, arg1)
 	ret0, _ := ret[0].(*service.ListSpansResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListSpans indicates an expected call of ListSpans.
-func (mr *MockITraceServiceMockRecorder) ListSpans(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) ListSpans(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpans", reflect.TypeOf((*MockITraceService)(nil).ListSpans), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpans", reflect.TypeOf((*MockITraceService)(nil).ListSpans), arg0, arg1)
 }
 
 // ListSpansOApi mocks base method.
-func (m *MockITraceService) ListSpansOApi(ctx context.Context, req *service.ListSpansOApiReq) (*service.ListSpansOApiResp, error) {
+func (m *MockITraceService) ListSpansOApi(arg0 context.Context, arg1 *service.ListSpansOApiReq) (*service.ListSpansOApiResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSpansOApi", ctx, req)
+	ret := m.ctrl.Call(m, "ListSpansOApi", arg0, arg1)
 	ret0, _ := ret[0].(*service.ListSpansOApiResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListSpansOApi indicates an expected call of ListSpansOApi.
-func (mr *MockITraceServiceMockRecorder) ListSpansOApi(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) ListSpansOApi(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpansOApi", reflect.TypeOf((*MockITraceService)(nil).ListSpansOApi), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpansOApi", reflect.TypeOf((*MockITraceService)(nil).ListSpansOApi), arg0, arg1)
 }
 
 // SearchTraceOApi mocks base method.
-func (m *MockITraceService) SearchTraceOApi(ctx context.Context, req *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
+func (m *MockITraceService) SearchTraceOApi(arg0 context.Context, arg1 *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchTraceOApi", ctx, req)
+	ret := m.ctrl.Call(m, "SearchTraceOApi", arg0, arg1)
 	ret0, _ := ret[0].(*service.SearchTraceOApiResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SearchTraceOApi indicates an expected call of SearchTraceOApi.
-func (mr *MockITraceServiceMockRecorder) SearchTraceOApi(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) SearchTraceOApi(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchTraceOApi", reflect.TypeOf((*MockITraceService)(nil).SearchTraceOApi), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchTraceOApi", reflect.TypeOf((*MockITraceService)(nil).SearchTraceOApi), arg0, arg1)
 }
 
 // Send mocks base method.
-func (m *MockITraceService) Send(ctx context.Context, msg *entity.AnnotationEvent) error {
+func (m *MockITraceService) Send(arg0 context.Context, arg1 *entity.AnnotationEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Send", ctx, msg)
+	ret := m.ctrl.Call(m, "Send", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockITraceServiceMockRecorder) Send(ctx, msg any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) Send(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockITraceService)(nil).Send), ctx, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockITraceService)(nil).Send), arg0, arg1)
 }
 
 // UpdateManualAnnotation mocks base method.
-func (m *MockITraceService) UpdateManualAnnotation(ctx context.Context, req *service.UpdateManualAnnotationReq) error {
+func (m *MockITraceService) UpdateManualAnnotation(arg0 context.Context, arg1 *service.UpdateManualAnnotationReq) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateManualAnnotation", ctx, req)
+	ret := m.ctrl.Call(m, "UpdateManualAnnotation", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateManualAnnotation indicates an expected call of UpdateManualAnnotation.
-func (mr *MockITraceServiceMockRecorder) UpdateManualAnnotation(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) UpdateManualAnnotation(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).UpdateManualAnnotation), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).UpdateManualAnnotation), arg0, arg1)
 }

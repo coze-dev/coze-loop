@@ -6,6 +6,7 @@ package producer
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -118,7 +119,9 @@ func (e *evaluatorEventPublisher) batchSend(ctx context.Context, pk string, even
 		}
 		msgs = append(msgs, msg)
 	}
-
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
+	}
 	resp, err := p.p.SendBatch(ctx, msgs)
 	if err != nil {
 		return errorx.Wrapf(err, "send batch message fail, msgs: %v", json.Jsonify(msgs))
