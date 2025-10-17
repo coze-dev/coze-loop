@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "js-faas.fullname" . }}-bootstrap-configmap
+  labels:
+    {{- include "js-faas.labels" . | nindent 4 }}
+data:
+  entrypoint.sh: |
+{{ .Files.Get "bootstrap/entrypoint.sh" | indent 4 }}
+  healthcheck.sh: |
+{{ .Files.Get "bootstrap/healthcheck.sh" | indent 4 }}
+  js_faas_server.ts: |
+{{ .Files.Get "bootstrap/js_faas_server.ts" | indent 4 }}
+  deno.json: |
+{{ .Files.Get "bootstrap/deno.json" | indent 4 }}

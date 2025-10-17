@@ -1,0 +1,79 @@
+/* Copyright (c) 2025 coze-dev Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* stylelint-disable declaration-no-important */
+.code-create-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  :global(.semi-form-field-main) {
+    height: 100%;
+  }
+
+  :global(.semi-empty-content) {
+    margin-top: 0 !important;
+  }
+
+  :global(.semi-empty-description) {
+    margin-top: 4px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: var(--coz-fg-primary, rgba(15, 21, 40, 82%)) !important;
+  }
+
+  :global(.semi-empty-footer) {
+    margin-top: 0 !important;
+  }
+}
+
+.full-screen-modal {
+  :global(.semi-modal-content){
+    gap: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  :global(.editor-group-container) {
+    padding: 0 20px;
+  }
+
+  :global(.trial-operation-results-container) {
+    padding: 0 20px;
+  }
+}
+
+.full-screen-form-wrapper {
+  /* start_aigc */
+  > div:first-child {
+    height: 100%;
+
+    > *:first-child {
+      height: 100%;
+    }
+  }
+
+  /* end_aigc */
+
+
+  :global(.func-executor-container) {
+    > div:first-child {
+      height: 100%;
+
+      > *:first-child {
+        height: 100%;
+      }
+    }
+  }
+
+  :global(.data-set-config-container) {
+    > div:first-child {
+      height: 100%;
+
+      > *:first-child {
+        height: 100%;
+      }
+    }
+  }
+}

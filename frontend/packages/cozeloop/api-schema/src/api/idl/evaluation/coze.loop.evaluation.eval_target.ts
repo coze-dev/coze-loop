@@ -110,6 +110,19 @@ export interface ListSourceEvalTargetVersionsResponse {
   next_page_token?: string,
   has_more?: boolean,
 }
+export interface MockEvalTargetOutputRequest {
+  workspace_id: string,
+  /** EvalTargetID参数实际上为SourceTargetID */
+  source_target_id: string,
+  eval_target_version: string,
+  target_type: eval_target.EvalTargetType,
+}
+export interface MockEvalTargetOutputResponse {
+  eval_target?: eval_target.EvalTarget,
+  mock_output?: {
+    [key: string | number]: string
+  },
+}
 /** 创建评测对象 */
 export const CreateEvalTarget = /*#__PURE__*/createAPI<CreateEvalTargetRequest, CreateEvalTargetResponse>({
   "url": "/api/evaluation/v1/eval_targets",
@@ -237,6 +250,19 @@ export const BatchGetEvalTargetRecords = /*#__PURE__*/createAPI<BatchGetEvalTarg
     "body": ["workspace_id", "eval_target_record_ids"]
   },
   "resType": "BatchGetEvalTargetRecordsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
+/** mock输出数据 */
+export const MockEvalTargetOutput = /*#__PURE__*/createAPI<MockEvalTargetOutputRequest, MockEvalTargetOutputResponse>({
+  "url": "/api/evaluation/v1/eval_targets/mock_output",
+  "method": "POST",
+  "name": "MockEvalTargetOutput",
+  "reqType": "MockEvalTargetOutputRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "source_target_id", "eval_target_version", "target_type"]
+  },
+  "resType": "MockEvalTargetOutputResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });

@@ -1,6 +1,7 @@
+/* eslint-disable @coze-arch/max-line-per-function */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
@@ -23,10 +24,13 @@ export const useBatchSelect = ({
   itemList,
   onDelete,
   datasetDetail,
+  // 最大选择数量, 当选择数量达到最大选择数量时, 禁用添加新数据, 默认不限制
+  maxNumber,
 }: {
   itemList?: EvaluationSetItem[];
-  onDelete: () => void;
+  onDelete?: () => void;
   datasetDetail?: EvaluationSet | undefined;
+  maxNumber?: number;
 }) => {
   const { spaceID } = useSpace();
   const [batchSelectItems, setBatchSelectedItems] = useState<Set<string>>(
@@ -36,13 +40,31 @@ export const useBatchSelect = ({
 
   const handleBatchSelect = e => {
     if (e.target.checked) {
-      setBatchSelectedItems(
-        new Set([
-          ...(itemList?.map(item => item.item_id as string) || []),
-          ...batchSelectItems,
-        ]),
-      );
+      if (maxNumber) {
+        // 当存在maxNumber限制时，从itemList中按顺序取出maxNumber减去batchSelectItems大小差值的数量
+        const availableSlots = maxNumber - batchSelectItems.size;
+
+        if (availableSlots > 0) {
+          const itemListIds =
+            itemList?.map(item => item.item_id as string) || [];
+          // 剔除已经存在于batchSelectItems中的项目
+          const availableItems = itemListIds.filter(
+            itemId => !batchSelectItems.has(itemId),
+          );
+          const newItems = availableItems.slice(0, availableSlots);
+          setBatchSelectedItems(new Set([...batchSelectItems, ...newItems]));
+        }
+      } else {
+        // 没有限制时，选择所有itemList中的项目
+        setBatchSelectedItems(
+          new Set([
+            ...(itemList?.map(item => item.item_id as string) || []),
+            ...batchSelectItems,
+          ]),
+        );
+      }
     } else {
+      // 如果超出限制
       const newSet = Array.from(batchSelectItems).filter(
         item => !itemList?.some(set => set.item_id === item),
       );
@@ -60,9 +82,18 @@ export const useBatchSelect = ({
     }
   };
 
+  const disableAddNew = useMemo(() => {
+    if (!maxNumber) {
+      return false;
+    }
+
+    return batchSelectItems.size >= maxNumber;
+  }, [batchSelectItems, maxNumber]);
+
   const selectColumn: ColumnProps = {
     title: (
       <Checkbox
+        disabled={disableAddNew}
         checked={itemList?.every(item =>
           batchSelectItems.has(item.item_id as string),
         )}
@@ -72,16 +103,21 @@ export const useBatchSelect = ({
     key: 'check',
     width: 50,
     fixed: 'left',
-    render: (_, record) => (
-      <div onClick={e => e.stopPropagation()}>
-        <Checkbox
-          checked={batchSelectItems.has(record.item_id as string)}
-          onChange={e => {
-            handleSingleSelect(e, record.item_id as string);
-          }}
-        />
-      </div>
-    ),
+    render: (_, record) => {
+      const isChecked = batchSelectItems.has(record.item_id as string);
+      const isDisabled = !isChecked && disableAddNew;
+      return (
+        <div onClick={e => e.stopPropagation()}>
+          <Checkbox
+            disabled={isDisabled}
+            checked={isChecked}
+            onChange={e => {
+              handleSingleSelect(e, record.item_id as string);
+            }}
+          />
+        </div>
+      );
+    },
   };
   const EnterBatchSelectButton = (
     <Button
@@ -114,7 +150,7 @@ export const useBatchSelect = ({
         });
         setBatchSelectVisible(false);
         setBatchSelectedItems(new Set());
-        onDelete();
+        onDelete?.();
       },
     });
   };
@@ -150,6 +186,7 @@ export const useBatchSelect = ({
 
   return {
     selectColumn,
+    batchSelectItems,
     setBatchSelectedItems,
     EnterBatchSelectButton,
     BatchSelectHeader,

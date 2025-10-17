@@ -1,0 +1,63 @@
+/* Copyright (c) 2025 coze-dev Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* stylelint-disable order/properties-order */
+/* stylelint-disable comment-empty-line-before */
+.debug-results-group {
+  :global(.coz-collapse) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  :global(.semi-collapse-item) {
+    border: 1px solid #e5e6eb;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  :global(.semi-collapse-header) {
+    min-height: 48px;
+    padding: 8px 24px 8px 8px;
+    background-color: white;
+    margin: 0;
+  }
+
+  :global(.semi-collapse-content) {
+    padding: 0;
+  }
+
+  :global(.semi-collapse-header-right) {
+    margin-left: auto;
+  }
+
+  :global(.semi-collapsible-wrapper) {
+    border-radius: 0 0 8px 8px;
+  }
+
+  :global(.semi-collapse-header-icon) {
+    place-self: start;
+    margin-top: 2px;
+  }
+}
+
+.running-loading {
+  height: 62px;
+  padding: 16px 24px;
+  gap: 8px;
+  border: 1px solid rgba(82,100,154,13%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--coz-fg-secondary);
+
+  :global(.semi-spin-wrapper) {
+    width: 16px;
+    height: 16px;
+    color: var(--coz-fg-secondary);
+  }
+
+}

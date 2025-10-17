@@ -227,6 +227,8 @@ export interface EvalTargetDefinition {
    * 获取初始化数据
    */
   getInitData?: (spaceID: string) => Promise<CreateExperimentValues>;
+  /** 是否在code评估器中使用 */
+  disabledInCodeEvaluator?: boolean;
 }
 
 export interface IKeySchema {

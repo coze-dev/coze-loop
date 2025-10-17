@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "python-faas.fullname" . }}
+  labels:
+    {{- include "python-faas.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "python-faas.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "python-faas.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: {{ (.Values.custom.image.pullSecrets | default .Values.image.pullSecrets) | quote }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: {{ include "python-faas.fullname" . }}-bootstrap-configmap
+        - name: python-faas-workspace
+          emptyDir:
+            sizeLimit: 1Gi
+            medium: Memory
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: {{ include "python-faas.name" . }}
+          image: {{ if and .Values.custom.image.registry .Values.image.repository }}{{ printf "%s/%s/%s:%s" .Values.custom.image.registry .Values.image.repository .Values.image.image .Values.image.tag }}{{ else if .Values.custom.image.registry }}{{ printf "%s/%s:%s" .Values.custom.image.registry .Values.image.image .Values.image.tag }}{{ else if and .Values.image.registry .Values.image.repository }}{{ printf "%s/%s/%s:%s" .Values.image.registry .Values.image.repository .Values.image.image .Values.image.tag }}{{ else if .Values.image.registry }}{{ printf "%s/%s:%s" .Values.image.registry .Values.image.image .Values.image.tag }}{{ else if .Values.image.repository }}{{ printf "%s/%s:%s" .Values.image.repository .Values.image.image .Values.image.tag }}{{ else }}{{ printf "%s:%s" .Values.image.image .Values.image.tag }}{{ end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: bootstrap
+              mountPath: "/coze-loop-python-faas/bootstrap"
+              readOnly: true
+            - name: python-faas-workspace
+              mountPath: "/tmp/faas-workspace"
+              readOnly: false
+          env:
+            # Deno 配置
+            - name: DENO_DIR
+              value: {{ .Values.env.DENO_DIR | quote }}
+            - name: DENO_NO_UPDATE_CHECK
+              value: {{ .Values.env.DENO_NO_UPDATE_CHECK | quote }}
+            - name: DENO_V8_FLAGS
+              value: {{ .Values.env.DENO_V8_FLAGS | quote }}
+            - name: PYODIDE_IMPORT_MAP
+              value: {{ .Values.env.PYODIDE_IMPORT_MAP | quote }}
+
+            # FaaS 基础配置
+            - name: FAAS_WORKSPACE
+              value: {{ .Values.env.FAAS_WORKSPACE | quote }}
+            - name: FAAS_PORT
+              value: {{ .Values.env.FAAS_PORT | quote }}
+            - name: FAAS_TIMEOUT
+              value: {{ .Values.env.FAAS_TIMEOUT | quote }}
+            - name: FAAS_LANGUAGE
+              value: {{ .Values.env.FAAS_LANGUAGE | quote }}
+
+            # 预装Python包版本配置
+            - name: NUMPY_VERSION
+              value: {{ .Values.env.NUMPY_VERSION | quote }}
+            - name: PANDAS_VERSION
+              value: {{ .Values.env.PANDAS_VERSION | quote }}
+            - name: JSONSCHEMA_VERSION
+              value: {{ .Values.env.JSONSCHEMA_VERSION | quote }}
+            - name: SCIPY_VERSION
+              value: {{ .Values.env.SCIPY_VERSION | quote }}
+            - name: SKLEARN_VERSION
+              value: {{ .Values.env.SKLEARN_VERSION | quote }}
+
+          workingDir: /app
+          command: [ "sh", "/coze-loop-python-faas/bootstrap/entrypoint.sh" ]
+
+          resources:
+            {{- toYaml (.Values.custom.resources | default .Values.resources) | nindent 12 }}
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - SETUID
+                - SETGID
+
+          livenessProbe:
+            exec:
+              command: [ "sh", "/coze-loop-python-faas/bootstrap/healthcheck.sh" ]
+            initialDelaySeconds: {{ .Values.liveness.startSeconds }}
+            periodSeconds: {{ .Values.liveness.intervalSeconds }}
+            timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.liveness.shutdownFailureTimes }}

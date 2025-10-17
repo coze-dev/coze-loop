@@ -3,7 +3,12 @@
 // 评估器
 export { default as EvaluatorListPage } from './pages/evaluator/evaluator-list';
 export { default as EvaluatorDetailPage } from './pages/evaluator/evaluator-detail';
-export { default as EvaluatorCreatePage } from './pages/evaluator/evaluator-create';
+export {
+  EvaluatorCreatePage,
+  CodeEvaluatorCreatePage,
+} from './pages/evaluator/evaluator-create';
+
+export { default as CodeEvaluatorDetailPage } from './pages/evaluator/evaluator-detail/code-detail';
 
 // 评测集
 export { DatasetListPage } from '@cozeloop/evaluate-components';
