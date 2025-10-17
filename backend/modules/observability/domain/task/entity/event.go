@@ -129,24 +129,33 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 			systemTagsString[k] = ""
 		}
 	}
-	tagsLong["input_tokens"] = s.SensitiveTags.InputTokens
-	tagsLong["output_tokens"] = s.SensitiveTags.OutputTokens
-	tagsLong["tokens"] = s.SensitiveTags.Tokens
+	if s.SensitiveTags != nil {
+		tagsLong["input_tokens"] = s.SensitiveTags.InputTokens
+		tagsLong["output_tokens"] = s.SensitiveTags.OutputTokens
+		tagsLong["tokens"] = s.SensitiveTags.Tokens
+	}
 	if s.Tags == nil {
 		s.Tags = make(map[string]any)
 	}
+	var callType string
 	if s.Tags["call_type"] == nil {
-		s.Tags["call_type"] = ""
+		callType = ""
+	} else {
+		callType = s.Tags["call_type"].(string)
 	}
-	callType := s.Tags["call_type"].(string)
+	var spaceID string
 	if s.Tags["fornax_space_id"] == nil {
-		s.Tags["fornax_space_id"] = ""
+		spaceID = ""
+	} else {
+		spaceID = s.Tags["fornax_space_id"].(string)
 	}
-	spaceID := s.Tags["fornax_space_id"].(string)
+	var spanType string
+
 	if s.Tags["span_type"] == nil {
-		s.Tags["span_type"] = ""
+		spanType = ""
+	} else {
+		spanType = s.Tags["span_type"].(string)
 	}
-	spanType := s.Tags["span_type"].(string)
 
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs / 1000,
