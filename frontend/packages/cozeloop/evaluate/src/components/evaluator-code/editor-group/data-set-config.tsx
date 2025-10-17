@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 
+ * Copyright 2025
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,10 @@ const toolTipContent = (
     ext：补充字段
     <br />
     详细内容请参考
-    <a href="/open/docs/cozeloop/create_evaluators" target="_blank">
+    <a
+      href="https://loop.coze.cn/open/docs/cozeloop/create_evaluators"
+      target="_blank"
+    >
       文档
     </a>
     。
