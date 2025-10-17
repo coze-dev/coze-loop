@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { usePagination, useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuards } from '@cozeloop/guard';
+import { EvaluatorIcon } from '@cozeloop/evaluate-components';
 import {
   type ColumnItem,
   TableColActions,
@@ -22,16 +23,27 @@ import {
   setColumnsManageStorage,
 } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { type Evaluator } from '@cozeloop/api-schema/evaluation';
+import {
+  type EvaluatorContent,
+  EvaluatorType,
+  type Evaluator,
+} from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import {
   IconCozIllusAdd,
   IconCozIllusEmpty,
 } from '@coze-arch/coze-design/illustrations';
-import { IconCozPlus, IconCozRefresh } from '@coze-arch/coze-design/icons';
+import {
+  IconCozAi,
+  IconCozArrowDown,
+  IconCozCode,
+  IconCozPlus,
+  IconCozRefresh,
+} from '@coze-arch/coze-design/icons';
 import {
   Button,
   EmptyState,
+  Menu,
   Modal,
   Tag,
   Tooltip,
@@ -39,6 +51,8 @@ import {
   type ColumnProps,
 } from '@coze-arch/coze-design';
 
+import { TemplateModal } from '../evaluator-create/template-modal';
+import { CodeTemplateModal } from '../evaluator-create/code-create/code-template-modal';
 import { type FilterParams } from './types';
 import { EvaluatorListFilter } from './evaluator-list-filter';
 
@@ -50,6 +64,9 @@ function EvaluatorListPage() {
 
   const [filterParams, setFilterParams] = useState<FilterParams>();
   const [defaultColumns, setDefaultColumns] = useState<ColumnItem[]>([]);
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [codeTemplateModalVisible, setCodeTemplateModalVisible] =
+    useState(false);
   const isSearch =
     filterParams?.search_name || !isEmpty(filterParams?.creator_ids);
 
@@ -88,7 +105,13 @@ function EvaluatorListPage() {
       content: I18n.t('copy_and_create_evaluator', {
         name: record.name,
       }),
-      onOk: () => navigate(`create/${record.evaluator_id}`),
+      onOk: () => {
+        if (record.evaluator_type === EvaluatorType.Code) {
+          navigate(`create/code/${record.evaluator_id}`);
+        } else {
+          navigate(`create/${record.evaluator_id}`);
+        }
+      },
       showCancelButton: true,
       cancelText: I18n.t('cancel'),
       okText: I18n.t('confirm'),
@@ -138,6 +161,27 @@ function EvaluatorListPage() {
         ),
         checked: true,
         disabled: true,
+      },
+      {
+        title: I18n.t('type'),
+        value: I18n.t('type'),
+        dataIndex: 'evaluator_type',
+        key: 'evaluator_type',
+        width: 100,
+        render: (text: Evaluator['evaluator_type']) => (
+          <div className="flex items-center gap-1">
+            {/* start_aigc */}
+            <EvaluatorIcon iconSize={12} evaluatorType={text} />
+            <span
+              className="text-[13px] font-normal"
+              style={{ color: 'var(--coz-fg-plus, rgba(8, 13, 30, 0.90))' }}
+            >
+              {text === EvaluatorType.Code ? 'Code' : 'LLM'}
+            </span>
+            {/* end_aigc */}
+          </div>
+        ),
+        checked: true,
       },
       {
         title: I18n.t('latest_version'),
@@ -252,7 +296,13 @@ function EvaluatorListPage() {
             actions={[
               {
                 label: I18n.t('detail'),
-                onClick: () => navigate(`${record.evaluator_id}`),
+                onClick: () => {
+                  if (record.evaluator_type === EvaluatorType.Code) {
+                    navigate(`code/${record.evaluator_id}`);
+                  } else {
+                    navigate(`${record.evaluator_id}`);
+                  }
+                },
               },
               {
                 label: I18n.t('copy'),
@@ -298,6 +348,48 @@ function EvaluatorListPage() {
   const [currentColumns, setCurrentColumns] =
     useState<ColumnProps<Evaluator>[]>(columns);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tableOnChange = ({ sorter, extra }: Record<string, any>) => {
+    if (extra?.changeType === 'sorter' && sorter) {
+      let field: string | undefined = undefined;
+      switch (sorter.dataIndex) {
+        case 'base_info.created_at':
+          field = 'created_at';
+          break;
+        case 'base_info.updated_at':
+          field = 'updated_at';
+          break;
+        default:
+          break;
+      }
+      if (sorter.dataIndex) {
+        setFilterParams({
+          ...filterParams,
+          order_bys: sorter.sortOrder
+            ? [
+                {
+                  field,
+                  is_asc: sorter.sortOrder === 'ascend',
+                },
+              ]
+            : undefined,
+        });
+      }
+    }
+  };
+
+  const handleCodeClick = (template?: EvaluatorContent) => {
+    if (!template) {
+      navigate('create/code');
+    } else {
+      const { code_template_key, language_type } =
+        template.code_evaluator || {};
+      navigate(
+        `create/code?templateKey=${code_template_key}&templateLang=${language_type}`,
+      );
+    }
+  };
+
   return (
     <PrimaryPage
       pageTitle={I18n.t('evaluator')}
@@ -325,13 +417,30 @@ function EvaluatorListPage() {
                 setColumnsManageStorage(columnManageStorageKey, items);
               }}
             />
-            <Button
-              type="primary"
-              icon={<IconCozPlus />}
-              onClick={() => navigate('create')}
+            <Menu
+              position="bottomRight"
+              render={
+                <Menu.SubMenu className="w-[130px]" mode="menu">
+                  <Menu.Item onClick={() => setTemplateModalVisible(true)}>
+                    <div className="flex flex-row items-center">
+                      <IconCozAi className="mr-1" />
+                      <span>{I18n.t('evaluate_llm_evaluator')}</span>
+                    </div>
+                  </Menu.Item>
+                  <Menu.Item onClick={() => setCodeTemplateModalVisible(true)}>
+                    <div className="flex flex-row items-center">
+                      <IconCozCode className="mr-1" />
+                      <span>{I18n.t('evaluate_code_evaluator')}</span>
+                    </div>
+                  </Menu.Item>
+                </Menu.SubMenu>
+              }
             >
-              {I18n.t('new_evaluator')}
-            </Button>
+              <Button type="primary" icon={<IconCozPlus />}>
+                <span className="mr-1">{I18n.t('new_evaluator')}</span>
+                <IconCozArrowDown />
+              </Button>
+            </Menu>
           </div>
         </div>
       }
@@ -345,36 +454,15 @@ function EvaluatorListPage() {
             columns: currentColumns,
             sticky: { top: 0 },
             onRow: record => ({
-              onClick: () => navigate(`${record.evaluator_id}`),
+              onClick: () => {
+                if (record.evaluator_type === EvaluatorType.Code) {
+                  navigate(`code/${record.evaluator_id}`);
+                } else {
+                  navigate(`${record.evaluator_id}`);
+                }
+              },
             }),
-            onChange: ({ sorter, extra }) => {
-              if (extra?.changeType === 'sorter' && sorter) {
-                let field: string | undefined = undefined;
-                switch (sorter.dataIndex) {
-                  case 'base_info.created_at':
-                    field = 'created_at';
-                    break;
-                  case 'base_info.updated_at':
-                    field = 'updated_at';
-                    break;
-                  default:
-                    break;
-                }
-                if (sorter.dataIndex) {
-                  setFilterParams({
-                    ...filterParams,
-                    order_bys: sorter.sortOrder
-                      ? [
-                          {
-                            field,
-                            is_asc: sorter.sortOrder === 'ascend',
-                          },
-                        ]
-                      : undefined,
-                  });
-                }
-              }
-            },
+            onChange: tableOnChange,
           }}
           empty={
             isSearch ? (
@@ -397,6 +485,24 @@ function EvaluatorListPage() {
           }
         />
       </div>
+      <TemplateModal
+        visible={templateModalVisible}
+        onCancel={() => setTemplateModalVisible(false)}
+        onSelect={evaluatorContent => {
+          if (evaluatorContent) {
+            navigate(
+              `create/llm?templateKey=${evaluatorContent.prompt_evaluator?.prompt_template_key}`,
+            );
+          } else {
+            navigate('create/llm');
+          }
+        }}
+      />
+      <CodeTemplateModal
+        visible={codeTemplateModalVisible}
+        onCancel={() => setCodeTemplateModalVisible(false)}
+        onSelect={handleCodeClick}
+      />
     </PrimaryPage>
   );
 }

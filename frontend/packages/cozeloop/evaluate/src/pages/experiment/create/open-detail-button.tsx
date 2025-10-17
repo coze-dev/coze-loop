@@ -8,16 +8,22 @@ import { Tooltip, Button } from '@coze-arch/coze-design';
 export function OpenDetailButton({
   url,
   className,
+  customOpen,
 }: {
   url: string;
   className?: string;
+  customOpen?: () => void;
 }) {
   return (
     <Tooltip theme="dark" content={I18n.t('detail')}>
       <Button
         onClick={e => {
           e.stopPropagation();
-          window.open(url);
+          if (customOpen) {
+            customOpen();
+          } else {
+            window.open(url, '_blank');
+          }
         }}
         className={classNames(
           'flex-shrink-0 !h-6 !w-6 !min-w-[24px] !p-[5px]',
