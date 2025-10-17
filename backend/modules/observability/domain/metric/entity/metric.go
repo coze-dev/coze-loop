@@ -183,10 +183,8 @@ func GranularityToSecond(g MetricGranularity) int64 {
 		return 60
 	case MetricGranularity1Hour:
 		return 3600
-	case MetricGranularity1Day:
+	case MetricGranularity1Day, MetricGranularity1Week:
 		return 86400
-	case MetricGranularity1Week:
-		return 604800
 	default:
 		return 86400
 	}
