@@ -46,6 +46,9 @@ func NewMetricApplication(
 }
 
 func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetricsRequest) (r *metric.GetMetricsResponse, err error) {
+	if err := m.validateGetMetricsReq(ctx, req); err != nil {
+		return nil, err
+	}
 	if err := m.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceMetricRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
@@ -95,6 +98,13 @@ func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetri
 	return resp, nil
 }
 
+func (m *MetricApplication) validateGetMetricsReq(ctx context.Context, req *metric.GetMetricsRequest) error {
+	if req.StartTime > req.EndTime {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start_time cannot be greater than end_time"))
+	}
+	return nil
+}
+
 func (m *MetricApplication) buildGetMetricsReq(req *metric.GetMetricsRequest) *service.QueryMetricsReq {
 	sReq := &service.QueryMetricsReq{
 		PlatformType:    loop_span.PlatformType(req.GetPlatformType()),
@@ -129,6 +139,9 @@ func (m *MetricApplication) shouldCompareWith(start, end int64, c *entity.Compar
 
 // 取最近七天内数据
 func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest) (r *metric.GetDrillDownValuesResponse, err error) {
+	if err := m.validateGetDrillDownValuesReq(ctx, req); err != nil {
+		return nil, err
+	}
 	var metricName string
 	switch req.DrillDownValueType {
 	case metric2.DrillDownValueTypeModelName:
@@ -166,4 +179,11 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 		}
 	}
 	return resp, nil
+}
+
+func (m *MetricApplication) validateGetDrillDownValuesReq(ctx context.Context, req *metric.GetDrillDownValuesRequest) error {
+	if req.StartTime > req.EndTime {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start_time cannot be greater than end_time"))
+	}
+	return nil
 }

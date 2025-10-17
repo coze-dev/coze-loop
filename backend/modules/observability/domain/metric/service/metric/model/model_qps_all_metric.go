@@ -13,32 +13,32 @@ import (
 )
 
 // ModelQPSMetric 模型QPS指标
-type ModelQPSMetric struct{}
+type ModelQPSAllMetric struct{}
 
-func (m *ModelQPSMetric) Name() string {
-	return entity.MetricNameModelQPS
+func (m *ModelQPSAllMetric) Name() string {
+	return entity.MetricNameModelQPSAll
 }
 
-func (m *ModelQPSMetric) Type() entity.MetricType {
+func (m *ModelQPSAllMetric) Type() entity.MetricType {
 	return entity.MetricTypeTimeSeries
 }
 
-func (m *ModelQPSMetric) Source() entity.MetricSource {
+func (m *ModelQPSAllMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ModelQPSMetric) Expression(granularity entity.MetricGranularity) string {
+func (m *ModelQPSAllMetric) Expression(granularity entity.MetricGranularity) string {
 	return fmt.Sprintf("count()/%d", entity.GranularityToSecond(granularity))
 }
 
-func (m *ModelQPSMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *ModelQPSAllMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	return filter.BuildLLMSpanFilter(ctx, env)
 }
 
-func (m *ModelQPSMetric) GroupBy() []*entity.Dimension {
+func (m *ModelQPSAllMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func NewModelQPSMetric() entity.IMetricDefinition {
-	return &ModelQPSMetric{}
+func NewModelQPSAllMetric() entity.IMetricDefinition {
+	return &ModelQPSAllMetric{}
 }
