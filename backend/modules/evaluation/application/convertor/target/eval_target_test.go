@@ -404,3 +404,117 @@ func TestEvalTargetVersionDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+func TestCustomRPCServerConversions(t *testing.T) {
+	t.Parallel()
+
+	trueVal := true
+	timeout := int64(1000)
+	asyncTimeout := int64(2000)
+	execEnv := "prod"
+	doValue := &do.CustomRPCServer{
+		ID:                  123,
+		Name:                "custom",
+		Description:         "desc",
+		ServerName:          "svc",
+		AccessProtocol:      do.AccessProtocolFaasHTTP,
+		Regions:             []do.Region{"cn"},
+		Cluster:             "default",
+		InvokeHTTPInfo:      &do.HTTPInfo{Method: do.HTTPMethodPost, Path: "/invoke"},
+		AsyncInvokeHTTPInfo: &do.HTTPInfo{Method: do.HTTPMethodGet, Path: "/async"},
+		NeedSearchTarget:    &trueVal,
+		SearchHTTPInfo:      &do.HTTPInfo{Method: do.HTTPMethodGet, Path: "/search"},
+		CustomEvalTarget:    &do.CustomEvalTarget{ID: gptr.Of("id"), Name: gptr.Of("target"), AvatarURL: gptr.Of("avatar"), Ext: map[string]string{"k": "v"}},
+		IsAsync:             &trueVal,
+		ExecRegion:          do.RegionCN,
+		ExecEnv:             &execEnv,
+		Timeout:             &timeout,
+		AsyncTimeout:        &asyncTimeout,
+		Ext:                 map[string]string{"extra": "value"},
+	}
+
+	dtoValue := CustomRPCServerDO2DTO(doValue)
+	assert.NotNil(t, dtoValue)
+	assert.Equal(t, doValue.ID, gptr.Indirect(dtoValue.ID))
+	assert.Equal(t, doValue.Name, gptr.Indirect(dtoValue.Name))
+	assert.Equal(t, doValue.Description, gptr.Indirect(dtoValue.Description))
+	assert.Equal(t, doValue.ServerName, gptr.Indirect(dtoValue.ServerName))
+	assert.Equal(t, doValue.AccessProtocol, gptr.Indirect(dtoValue.AccessProtocol))
+	assert.Equal(t, []string(doValue.Regions), dtoValue.Regions)
+	assert.Equal(t, doValue.Cluster, gptr.Indirect(dtoValue.Cluster))
+	assert.Equal(t, doValue.InvokeHTTPInfo.Path, gptr.Indirect(dtoValue.InvokeHTTPInfo.Path))
+	assert.Equal(t, doValue.AsyncInvokeHTTPInfo.Method, gptr.Indirect(dtoValue.AsyncInvokeHTTPInfo.Method))
+	assert.Equal(t, doValue.NeedSearchTarget, dtoValue.NeedSearchTarget)
+	assert.Equal(t, doValue.SearchHTTPInfo.Path, gptr.Indirect(dtoValue.SearchHTTPInfo.Path))
+	assert.Equal(t, doValue.CustomEvalTarget.Name, dtoValue.CustomEvalTarget.Name)
+	assert.Equal(t, doValue.IsAsync, dtoValue.IsAsync)
+	assert.Equal(t, do.Region(gptr.Indirect(dtoValue.ExecRegion)), doValue.ExecRegion)
+	assert.Equal(t, doValue.ExecEnv, dtoValue.ExecEnv)
+	assert.Equal(t, doValue.Timeout, dtoValue.Timeout)
+	assert.Equal(t, doValue.AsyncTimeout, dtoValue.AsyncTimeout)
+	assert.Equal(t, doValue.Ext, dtoValue.Ext)
+
+	roundtrip := CustomRPCServerDTO2DO(dtoValue)
+	assert.Equal(t, doValue.ID, roundtrip.ID)
+	assert.Equal(t, doValue.Name, roundtrip.Name)
+	assert.Equal(t, doValue.Description, roundtrip.Description)
+	assert.Equal(t, doValue.ServerName, roundtrip.ServerName)
+	assert.Equal(t, doValue.AccessProtocol, roundtrip.AccessProtocol)
+	assert.Equal(t, doValue.Regions, roundtrip.Regions)
+	assert.Equal(t, doValue.Cluster, roundtrip.Cluster)
+	assert.Equal(t, doValue.InvokeHTTPInfo.Method, roundtrip.InvokeHTTPInfo.Method)
+	assert.Equal(t, doValue.AsyncInvokeHTTPInfo.Path, roundtrip.AsyncInvokeHTTPInfo.Path)
+	assert.Equal(t, doValue.NeedSearchTarget, roundtrip.NeedSearchTarget)
+	assert.Equal(t, doValue.SearchHTTPInfo.Method, roundtrip.SearchHTTPInfo.Method)
+	assert.Equal(t, doValue.CustomEvalTarget.Ext, roundtrip.CustomEvalTarget.Ext)
+	assert.Equal(t, doValue.IsAsync, roundtrip.IsAsync)
+	assert.Equal(t, doValue.ExecRegion, roundtrip.ExecRegion)
+	assert.Equal(t, doValue.ExecEnv, roundtrip.ExecEnv)
+	assert.Equal(t, doValue.Timeout, roundtrip.Timeout)
+	assert.Equal(t, doValue.AsyncTimeout, roundtrip.AsyncTimeout)
+	assert.Equal(t, doValue.Ext, roundtrip.Ext)
+
+	assert.Nil(t, CustomRPCServerDTO2DO(nil))
+}
+
+func TestCustomEvalTargetConversions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		dos  []*do.CustomEvalTarget
+	}{
+		{
+			name: "包含nil元素",
+			dos: []*do.CustomEvalTarget{
+				{ID: gptr.Of("1"), Name: gptr.Of("a")},
+				nil,
+			},
+		},
+		{
+			name: "nil输入",
+			dos:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			dtos := CustomEvalTargetDO2DTOs(tt.dos)
+			if tt.dos == nil {
+				assert.Nil(t, dtos)
+				return
+			}
+			assert.Len(t, dtos, 1)
+			assert.Equal(t, gptr.Indirect(tt.dos[0].ID), gptr.Indirect(dtos[0].ID))
+		})
+	}
+
+	dtoValue := &dto.CustomEvalTarget{ID: gptr.Of("id"), Name: gptr.Of("name"), AvatarURL: gptr.Of("avatar")}
+	doValue := CustomEvalTargetDTO2DO(dtoValue)
+	assert.Equal(t, gptr.Indirect(dtoValue.ID), gptr.Indirect(doValue.ID))
+	assert.Equal(t, gptr.Indirect(dtoValue.Name), gptr.Indirect(doValue.Name))
+	assert.Equal(t, gptr.Indirect(dtoValue.AvatarURL), gptr.Indirect(doValue.AvatarURL))
+	assert.Nil(t, CustomEvalTargetDTO2DO(nil))
+	assert.Nil(t, CustomEvalTargetDO2DTO(nil))
+}

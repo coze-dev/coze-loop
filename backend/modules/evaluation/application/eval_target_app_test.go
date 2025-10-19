@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"strconv"
 	"testing"
 
@@ -12,13 +13,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -1205,14 +1209,14 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 				}).Return(nil)
 
 				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), &entity.SearchCustomEvalTargetParam{
-					WorkspaceID:   &validSpaceID,
-					Keyword:       &validKeyword,
-					ApplicationID: &validApplicationID,
+					WorkspaceID:     &validSpaceID,
+					Keyword:         &validKeyword,
+					ApplicationID:   &validApplicationID,
 					CustomRPCServer: nil,
-					Region:        &validRegion,
-					Env:           &validEnv,
-					PageSize:      &validPageSize,
-					PageToken:     &validPageToken,
+					Region:          &validRegion,
+					Env:             &validEnv,
+					PageSize:        &validPageSize,
+					PageToken:       &validPageToken,
 				}).Return(validCustomEvalTargets, "next-token", true, nil)
 			},
 			wantResp: &eval_target.SearchCustomEvalTargetResponse{
@@ -1286,9 +1290,9 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		{
 			name: "error - nil workspaceID",
 			req: &eval_target.SearchCustomEvalTargetRequest{
-				Keyword:         &validKeyword,
-				ApplicationID:   &validApplicationID,
-				Region:          &validRegion,
+				Keyword:       &validKeyword,
+				ApplicationID: &validApplicationID,
+				Region:        &validRegion,
 			},
 			mockSetup:   func() {},
 			wantResp:    nil,
@@ -1384,14 +1388,14 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 				}).Return(nil)
 
 				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), &entity.SearchCustomEvalTargetParam{
-					WorkspaceID:   &validSpaceID,
-					Keyword:       &validKeyword,
-					ApplicationID: &validApplicationID,
+					WorkspaceID:     &validSpaceID,
+					Keyword:         &validKeyword,
+					ApplicationID:   &validApplicationID,
 					CustomRPCServer: nil,
-					Region:        &validRegion,
-					Env:           nil,
-					PageSize:      nil,
-					PageToken:     nil,
+					Region:          &validRegion,
+					Env:             nil,
+					PageSize:        nil,
+					PageToken:       nil,
 				}).Return([]*entity.CustomEvalTarget{}, "", false, nil)
 			},
 			wantResp: &eval_target.SearchCustomEvalTargetResponse{
@@ -1409,7 +1413,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 			app.typedOperators = map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 				entity.EvalTargetTypeCustomRPCServer: mockTypedOperator,
 			}
-			
+
 			tt.mockSetup()
 
 			resp, err := app.SearchCustomEvalTarget(context.Background(), tt.req)
@@ -1678,6 +1682,368 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 				if tt.wantResp != nil {
 					assert.Equal(t, tt.wantResp.MockOutput, resp.MockOutput)
 				}
+			}
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_AsyncExecuteEvalTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	workspaceID := int64(101)
+	targetID := int64(202)
+	versionID := int64(303)
+	inputData := &domain_eval_target.EvalTargetInputData{}
+	record := &entity.EvalTargetRecord{ID: 888}
+
+	tests := []struct {
+		name        string
+		req         *eval_target.AsyncExecuteEvalTargetRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success",
+			req: &eval_target.AsyncExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+				InputData:           inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(targetID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+				}).Return(nil)
+				mockEvalTargetService.EXPECT().AsyncExecuteTarget(
+					gomock.Any(),
+					workspaceID,
+					targetID,
+					versionID,
+					gomock.Any(),
+					gomock.Any(),
+				).Return(record, "callee", nil)
+			},
+		},
+		{
+			name: "auth failure",
+			req: &eval_target.AsyncExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+				InputData:           inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "service failure",
+			req: &eval_target.AsyncExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+				InputData:           inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvalTargetService.EXPECT().AsyncExecuteTarget(gomock.Any(), workspaceID, targetID, versionID, gomock.Any(), gomock.Any()).
+					Return(nil, "", errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.mockSetup != nil {
+				tc.mockSetup()
+			}
+
+			resp, err := app.AsyncExecuteEvalTarget(context.Background(), tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.InvokeID)
+				assert.Equal(t, record.ID, *resp.InvokeID)
+				assert.NotNil(t, resp.BaseResp)
+			}
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		evalTargetService: mockEvalTargetService,
+	}
+
+	workspaceID := int64(1001)
+	targetType := domain_eval_target.EvalTargetType_CustomRPCServer
+	runtimeParamJSON := "{}"
+	content := map[string]*spi.Content{
+		"input": {
+			ContentType: gptr.Of(spi.ContentType("text")),
+			Text:        gptr.Of("hello"),
+		},
+	}
+	paramBytes, _ := stdjson.Marshal(content)
+	customRPC := &domain_eval_target.CustomRPCServer{Name: gptr.Of("debug")}
+	record := &entity.EvalTargetRecord{
+		ID:                   909,
+		EvalTargetOutputData: &entity.EvalTargetOutputData{},
+		BaseInfo: &entity.BaseInfo{
+			CreatedAt: gptr.Of(int64(1)),
+			UpdatedAt: gptr.Of(int64(1)),
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *eval_target.DebugEvalTargetRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success",
+			req: &eval_target.DebugEvalTargetRequest{
+				WorkspaceID:    &workspaceID,
+				EvalTargetType: &targetType,
+				Param:          gptr.Of(string(paramBytes)),
+				TargetRuntimeParam: &domaincommon.RuntimeParam{
+					JSONValue: gptr.Of(runtimeParamJSON),
+				},
+				CustomRPCServer: customRPC,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().DebugTarget(gomock.Any(), gomock.Any()).Return(record, nil)
+			},
+		},
+		{
+			name: "invalid json",
+			req: &eval_target.DebugEvalTargetRequest{
+				WorkspaceID:    &workspaceID,
+				EvalTargetType: &targetType,
+				Param:          gptr.Of("{"),
+			},
+			mockSetup:   func() {},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "service failure",
+			req: &eval_target.DebugEvalTargetRequest{
+				WorkspaceID:        &workspaceID,
+				EvalTargetType:     &targetType,
+				Param:              gptr.Of(string(paramBytes)),
+				TargetRuntimeParam: &domaincommon.RuntimeParam{JSONValue: gptr.Of(runtimeParamJSON)},
+				CustomRPCServer:    customRPC,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().DebugTarget(gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "unsupported type",
+			req: &eval_target.DebugEvalTargetRequest{
+				WorkspaceID:    &workspaceID,
+				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType(0)),
+				Param:          gptr.Of(string(paramBytes)),
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.mockSetup != nil {
+				tc.mockSetup()
+			}
+
+			resp, err := app.DebugEvalTarget(context.Background(), tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.EvalTargetRecord)
+			}
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		evalTargetService: mockEvalTargetService,
+		evalAsyncRepo:     mockEvalAsyncRepo,
+	}
+
+	workspaceID := int64(2001)
+	targetType := domain_eval_target.EvalTargetType_CustomRPCServer
+	runtimeParamJSON := "{}"
+	content := map[string]*spi.Content{
+		"input": {
+			ContentType: gptr.Of(spi.ContentType("text")),
+			Text:        gptr.Of("world"),
+		},
+	}
+	paramBytes, _ := stdjson.Marshal(content)
+	customRPC := &domain_eval_target.CustomRPCServer{Name: gptr.Of("async")}
+	record := &entity.EvalTargetRecord{
+		ID:                   707,
+		EvalTargetOutputData: &entity.EvalTargetOutputData{},
+		BaseInfo: &entity.BaseInfo{
+			CreatedAt: gptr.Of(int64(1)),
+			UpdatedAt: gptr.Of(int64(1)),
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *eval_target.AsyncDebugEvalTargetRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success",
+			req: &eval_target.AsyncDebugEvalTargetRequest{
+				WorkspaceID:    &workspaceID,
+				EvalTargetType: &targetType,
+				Param:          gptr.Of(string(paramBytes)),
+				TargetRuntimeParam: &domaincommon.RuntimeParam{
+					JSONValue: gptr.Of(runtimeParamJSON),
+				},
+				CustomRPCServer: customRPC,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(record, "callee", nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "invalid json",
+			req: &eval_target.AsyncDebugEvalTargetRequest{
+				WorkspaceID:    &workspaceID,
+				EvalTargetType: &targetType,
+				Param:          gptr.Of("{"),
+			},
+			mockSetup:   func() {},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "service failure",
+			req: &eval_target.AsyncDebugEvalTargetRequest{
+				WorkspaceID:        &workspaceID,
+				EvalTargetType:     &targetType,
+				Param:              gptr.Of(string(paramBytes)),
+				TargetRuntimeParam: &domaincommon.RuntimeParam{JSONValue: gptr.Of(runtimeParamJSON)},
+				CustomRPCServer:    customRPC,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).
+					Return(nil, "", errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "set async ctx failure",
+			req: &eval_target.AsyncDebugEvalTargetRequest{
+				WorkspaceID:        &workspaceID,
+				EvalTargetType:     &targetType,
+				Param:              gptr.Of(string(paramBytes)),
+				TargetRuntimeParam: &domaincommon.RuntimeParam{JSONValue: gptr.Of(runtimeParamJSON)},
+				CustomRPCServer:    customRPC,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(record, "callee", nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "unsupported type",
+			req: &eval_target.AsyncDebugEvalTargetRequest{
+				WorkspaceID:    &workspaceID,
+				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType(0)),
+				Param:          gptr.Of(string(paramBytes)),
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.mockSetup != nil {
+				tc.mockSetup()
+			}
+
+			resp, err := app.AsyncDebugEvalTarget(context.Background(), tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.Equal(t, record.ID, resp.InvokeID)
+				assert.Equal(t, gptr.Of("callee"), resp.Callee)
+				assert.NotNil(t, resp.BaseResp)
 			}
 		})
 	}
