@@ -299,7 +299,7 @@ func filterHiddenFilters(tasks []*task.Task) []*task.Task {
 func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterField {
 	var res []*filter.FilterField
 	for _, f := range fields {
-		if f == nil || f.GetHidden() {
+		if f == nil || f.GetHidden() || (f.SubFilter == nil && *f.FieldName == "") {
 			continue
 		}
 		sub := f.GetSubFilter()
