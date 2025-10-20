@@ -5,6 +5,7 @@ package repo
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -109,7 +110,7 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 	if err != nil {
 		return 0, err
 	}
-	err = v.AddNonFinalTask(ctx, id)
+	err = v.TaskRedisDao.AddNonFinalTask(ctx, strconv.FormatInt(do.WorkspaceID, 10), id)
 	if err != nil {
 		return createdID, err
 	}
@@ -175,7 +176,7 @@ func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityT
 		return err
 	}
 
-	err = v.RemoveNonFinalTask(ctx, do.ID)
+	err = v.TaskRedisDao.RemoveNonFinalTask(ctx, strconv.FormatInt(do.WorkspaceID, 10), do.ID)
 	if err != nil {
 		logs.CtxError(ctx, "remove non final task failed, task_id=%d, err=%v", do.ID, err)
 	}
@@ -323,15 +324,15 @@ func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRun
 	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
 }
 
-func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context) ([]int64, error) {
-	return v.TaskRedisDao.ListNonFinalTask(ctx)
+func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error) {
+	return v.TaskRedisDao.ListNonFinalTask(ctx, spaceID)
 }
 
-func (v *TaskRepoImpl) AddNonFinalTask(ctx context.Context, taskID int64) error {
-	return v.TaskRedisDao.AddNonFinalTask(ctx, taskID)
+func (v *TaskRepoImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
+	return v.TaskRedisDao.AddNonFinalTask(ctx, spaceID, taskID)
 }
-func (v *TaskRepoImpl) RemoveNonFinalTask(ctx context.Context, taskID int64) error {
-	return v.TaskRedisDao.RemoveNonFinalTask(ctx, taskID)
+func (v *TaskRepoImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
+	return v.TaskRedisDao.RemoveNonFinalTask(ctx, spaceID, taskID)
 }
 
 func (v *TaskRepoImpl) GetTaskByRedis(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error) {

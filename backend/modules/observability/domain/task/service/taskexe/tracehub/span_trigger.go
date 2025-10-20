@@ -77,7 +77,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	}
 
 	var subscribers []*spanSubscriber
-	taskDOs, err := h.listNonFinalTask(ctx)
+	taskDOs, err := h.listNonFinalTaskByRedis(ctx, span.WorkspaceID)
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get non-final task list, err: %v", err)
 		return nil, err

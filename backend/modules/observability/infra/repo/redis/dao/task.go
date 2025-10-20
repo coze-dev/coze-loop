@@ -22,9 +22,10 @@ type ITaskDAO interface {
 	GetTask(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error)
 	SetTask(ctx context.Context, task *entity.ObservabilityTask) error
 	// 非终态task列表by spaceID
-	ListNonFinalTask(ctx context.Context) ([]int64, error)
-	AddNonFinalTask(ctx context.Context, taskID int64) error
-	RemoveNonFinalTask(ctx context.Context, taskID int64) error
+	// ListNonFinalTask lists all non-final tasks in the given space.
+	ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error)
+	AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
+	RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
 
 	// TaskCount相关
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
@@ -48,7 +49,7 @@ var (
 const (
 	taskDetailCacheKeyPattern   = "observability:task:%d"
 	taskDetailCacheTTL          = 30 * time.Minute
-	nonFinalTaskCacheKeyPattern = "observability:task:non_final"
+	nonFinalTaskCacheKeyPattern = "tasks_of_"
 	nonFinalTaskCacheTTL        = 1 * time.Minute
 )
 
@@ -71,8 +72,8 @@ func (q *TaskDAOImpl) makeTaskRunCountCacheKey(taskID, taskRunID int64) string {
 	return fmt.Sprintf("count_%d_%d", taskID, taskRunID)
 }
 
-func (q *TaskDAOImpl) makeNonFinalTaskCacheKey() string {
-	return nonFinalTaskCacheKeyPattern
+func (q *TaskDAOImpl) makeNonFinalTaskCacheKey(spaceID string) string {
+	return fmt.Sprintf("tasks_of_%s", spaceID)
 }
 
 // GetTask 从缓存中获取任务详情
@@ -120,8 +121,8 @@ func (p *TaskDAOImpl) SetTask(ctx context.Context, task *entity.ObservabilityTas
 }
 
 // ListNonFinalTask 获取非终态任务ID列表
-func (p *TaskDAOImpl) ListNonFinalTask(ctx context.Context) ([]int64, error) {
-	key := p.makeNonFinalTaskCacheKey()
+func (p *TaskDAOImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error) {
+	key := p.makeNonFinalTaskCacheKey(spaceID)
 	members, err := p.cmdable.HKeys(ctx, key).Result()
 	if err != nil {
 		if redis.IsNilError(err) {
@@ -151,13 +152,13 @@ func (p *TaskDAOImpl) ListNonFinalTask(ctx context.Context) ([]int64, error) {
 }
 
 // AddNonFinalTask 将任务加入非终态列表
-func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, taskID int64) error {
+func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
 	if taskID == 0 {
 		logs.CtxWarn(ctx, "skip adding non final task with empty id")
 		return nil
 	}
 
-	key := p.makeNonFinalTaskCacheKey()
+	key := p.makeNonFinalTaskCacheKey(spaceID)
 	field := strconv.FormatInt(taskID, 10)
 	if err := p.cmdable.HSet(ctx, key, field, 1).Err(); err != nil {
 		logs.CtxError(ctx, "redis add non final task failed", "key", key, "taskID", taskID, "err", err)
@@ -172,13 +173,13 @@ func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, taskID int64) error {
 }
 
 // RemoveNonFinalTask 将任务从非终态列表移除
-func (p *TaskDAOImpl) RemoveNonFinalTask(ctx context.Context, taskID int64) error {
+func (p *TaskDAOImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
 	if taskID == 0 {
 		logs.CtxWarn(ctx, "skip removing non final task with empty id")
 		return nil
 	}
 
-	key := p.makeNonFinalTaskCacheKey()
+	key := p.makeNonFinalTaskCacheKey(spaceID)
 	field := strconv.FormatInt(taskID, 10)
 	if err := p.cmdable.HDel(ctx, key, field).Err(); err != nil {
 		logs.CtxError(ctx, "redis remove non final task failed", "key", key, "taskID", taskID, "err", err)

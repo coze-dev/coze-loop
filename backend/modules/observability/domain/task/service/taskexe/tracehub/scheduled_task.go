@@ -422,9 +422,9 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 	return nil
 }
 
-func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, spaceID string) ([]*entity.ObservabilityTask, error) {
 	var taskPOs []*entity.ObservabilityTask
-	nonFinalTaskIDs, err := h.taskRepo.ListNonFinalTask(ctx)
+	nonFinalTaskIDs, err := h.taskRepo.ListNonFinalTask(ctx, spaceID)
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
 		return nil, err
@@ -442,6 +442,49 @@ func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.O
 			continue
 		}
 		taskPOs = append(taskPOs, taskPO)
+	}
+	return taskPOs, nil
+}
+
+func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+	var taskPOs []*entity.ObservabilityTask
+	var offset int32 = 0
+	const limit int32 = 1000
+	// Paginate through all tasks
+	for {
+		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+			ReqLimit:  limit,
+			ReqOffset: offset,
+			TaskFilters: &filter.TaskFilterFields{
+				FilterFields: []*filter.TaskFilterField{
+					{
+						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+						Values: []string{
+							string(task.TaskStatusUnstarted),
+							string(task.TaskStatusRunning),
+							string(task.TaskStatusPending),
+						},
+						QueryType: ptr.Of(filter.QueryTypeIn),
+						FieldType: ptr.Of(filter.FieldTypeString),
+					},
+				},
+			},
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+			return nil, err
+		}
+
+		// Add tasks from the current page to the full list
+		taskPOs = append(taskPOs, tasklist...)
+
+		// If fewer tasks than limit are returned, this is the last page
+		if len(tasklist) < int(limit) {
+			break
+		}
+
+		// Move to the next page, increasing offset by 1000
+		offset += limit
 	}
 	return taskPOs, nil
 }
