@@ -12,7 +12,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelQPMFailMetric 模型失败 QPM 指标
 type ModelQPMFailMetric struct{}
 
 func (m *ModelQPMFailMetric) Name() string {
@@ -37,6 +36,10 @@ func (m *ModelQPMFailMetric) Where(ctx context.Context, filter span_filter.Filte
 
 func (m *ModelQPMFailMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelQPMFailMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelQPMFailMetric() entity.IMetricDefinition {

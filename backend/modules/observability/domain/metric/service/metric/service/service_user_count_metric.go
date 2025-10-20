@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package service
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ServiceUserCountMetric 用户数指标（仅SDK数据来源）
 type ServiceUserCountMetric struct{}
 
 func (m *ServiceUserCountMetric) Name() string {
@@ -36,6 +32,10 @@ func (m *ServiceUserCountMetric) Where(ctx context.Context, filter span_filter.F
 
 func (m *ServiceUserCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ServiceUserCountMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewServiceUserCountMetric() entity.IMetricDefinition {

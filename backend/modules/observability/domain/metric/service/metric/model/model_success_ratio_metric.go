@@ -11,7 +11,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelSuccessRatioMetric 模型请求成功率指标
 type ModelSuccessRatioMetric struct {
 	entity.MetricFillNull
 }
@@ -38,6 +37,10 @@ func (m *ModelSuccessRatioMetric) Where(ctx context.Context, filter span_filter.
 
 func (m *ModelSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelSuccessRatioMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelSuccessRatioMetric() entity.IMetricDefinition {

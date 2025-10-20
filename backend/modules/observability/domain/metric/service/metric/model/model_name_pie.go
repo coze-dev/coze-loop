@@ -12,7 +12,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-// ModelTokenCountMetric Tokens消耗指标
 type ModelNamePieMetric struct{}
 
 func (m *ModelNamePieMetric) Name() string {
@@ -56,6 +55,10 @@ func (m *ModelNamePieMetric) GroupBy() []*entity.Dimension {
 			Alias: "name",
 		},
 	}
+}
+
+func (m *ModelNamePieMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelNamePieMetric() entity.IMetricDefinition {

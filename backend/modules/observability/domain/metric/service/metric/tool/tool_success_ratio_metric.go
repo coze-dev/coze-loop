@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package tool
 
 import (
@@ -12,7 +9,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-// ToolSuccessRatioMetric 工具调用成功率指标
 type ToolSuccessRatioMetric struct {
 	entity.MetricFillNull
 }
@@ -46,6 +42,10 @@ func (m *ToolSuccessRatioMetric) Where(ctx context.Context, filter span_filter.F
 
 func (m *ToolSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ToolSuccessRatioMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewToolSuccessRatioMetric() entity.IMetricDefinition {

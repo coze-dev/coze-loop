@@ -1,18 +1,15 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package tool
 
 import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric_new/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-// ToolTotalCountMetric 工具调用量指标
 type ToolTotalCountMetric struct{}
 
 func (m *ToolTotalCountMetric) Name() string {
@@ -44,6 +41,13 @@ func (m *ToolTotalCountMetric) Where(ctx context.Context, filter span_filter.Fil
 
 func (m *ToolTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ToolTotalCountMetric) Wrappers() []entity.IMetricWrapper {
+	return []entity.IMetricWrapper{
+		wrapper.NewSelfWrapper(),
+		wrapper.NewTimeSeriesWrapper(),
+	}
 }
 
 func NewToolTotalCountMetric() entity.IMetricDefinition {

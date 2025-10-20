@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package general
 
 import (
@@ -12,7 +9,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-// GeneralToolFailRatioMetric 工具调用错误率指标
 type GeneralToolFailRatioMetric struct {
 	entity.MetricFillNull
 }
@@ -46,6 +42,10 @@ func (m *GeneralToolFailRatioMetric) Where(ctx context.Context, filter span_filt
 
 func (m *GeneralToolFailRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralToolFailRatioMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewGeneralToolFailRatioMetric() entity.IMetricDefinition {

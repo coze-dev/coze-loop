@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package general
 
 import (
@@ -12,7 +9,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-// GeneralToolTotalCountMetric 工具调用次数指标
 type GeneralToolTotalCountMetric struct{}
 
 func (m *GeneralToolTotalCountMetric) Name() string {
@@ -44,6 +40,10 @@ func (m *GeneralToolTotalCountMetric) Where(ctx context.Context, filter span_fil
 
 func (m *GeneralToolTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralToolTotalCountMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewGeneralToolTotalCountMetric() entity.IMetricDefinition {

@@ -11,7 +11,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelToolChoiceTokenCountMetric Tool Choice Tokens 消耗指标
 type ModelToolChoiceTokenCountMetric struct{}
 
 func (m *ModelToolChoiceTokenCountMetric) Name() string {
@@ -36,6 +35,10 @@ func (m *ModelToolChoiceTokenCountMetric) Where(ctx context.Context, filter span
 
 func (m *ModelToolChoiceTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelToolChoiceTokenCountMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelToolChoiceTokenCountMetric() entity.IMetricDefinition {

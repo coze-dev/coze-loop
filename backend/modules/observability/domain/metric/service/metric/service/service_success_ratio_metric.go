@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package service
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ServiceSuccessRatioMetric 服务请求成功率指标
 type ServiceSuccessRatioMetric struct {
 	entity.MetricFillNull
 }
@@ -38,6 +34,10 @@ func (m *ServiceSuccessRatioMetric) Where(ctx context.Context, filter span_filte
 
 func (m *ServiceSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ServiceSuccessRatioMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewServiceSuccessRatioMetric() entity.IMetricDefinition {

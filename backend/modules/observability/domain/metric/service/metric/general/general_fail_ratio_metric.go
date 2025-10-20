@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package general
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// GeneralFailRatioMetric Span错误率指标
 type GeneralFailRatioMetric struct {
 	entity.MetricFillNull
 }
@@ -38,6 +34,10 @@ func (m *GeneralFailRatioMetric) Where(ctx context.Context, filter span_filter.F
 
 func (m *GeneralFailRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralFailRatioMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewGeneralFailRatioMetric() entity.IMetricDefinition {

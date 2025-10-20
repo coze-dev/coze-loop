@@ -11,7 +11,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelSystemTokenCountMetric System Tokens 消耗指标
 type ModelSystemTokenCountMetric struct{}
 
 func (m *ModelSystemTokenCountMetric) Name() string {
@@ -36,6 +35,10 @@ func (m *ModelSystemTokenCountMetric) Where(ctx context.Context, filter span_fil
 
 func (m *ModelSystemTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelSystemTokenCountMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelSystemTokenCountMetric() entity.IMetricDefinition {

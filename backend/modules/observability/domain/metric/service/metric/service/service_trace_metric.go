@@ -12,7 +12,7 @@ import (
 type ServiceTraceMetric struct{}
 
 func (m *ServiceTraceMetric) Name() string {
-	return entity.MetricNameServiceTraceCountTotal
+	return entity.MetricNameServiceTraceCount
 }
 
 func (m *ServiceTraceMetric) Type() entity.MetricType {
@@ -37,7 +37,8 @@ func (m *ServiceTraceMetric) GroupBy() []*entity.Dimension {
 
 func (m *ServiceTraceMetric) Wrappers() []entity.IMetricWrapper {
 	return []entity.IMetricWrapper{
-		wrapper.NewTimeSeriesWrapper(wrapper.WithTimeSeriesName(entity.MetricNameServiceTraceCount)),
+		wrapper.NewSelfWrapper(),
+		wrapper.NewTimeSeriesWrapper(),
 	}
 }
 

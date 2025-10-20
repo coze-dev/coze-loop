@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package general
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// GeneralModelTotalTokensMetric 模型Tokens消耗指标
 type GeneralModelTotalTokensMetric struct{}
 
 func (m *GeneralModelTotalTokensMetric) Name() string {
@@ -36,6 +32,10 @@ func (m *GeneralModelTotalTokensMetric) Where(ctx context.Context, filter span_f
 
 func (m *GeneralModelTotalTokensMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralModelTotalTokensMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewGeneralModelTotalTokensMetric() entity.IMetricDefinition {

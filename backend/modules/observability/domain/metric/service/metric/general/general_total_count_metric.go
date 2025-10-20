@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package general
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// GeneralTotalCountMetric 使用次数指标
 type GeneralTotalCountMetric struct{}
 
 func (m *GeneralTotalCountMetric) Name() string {
@@ -36,6 +32,10 @@ func (m *GeneralTotalCountMetric) Where(ctx context.Context, filter span_filter.
 
 func (m *GeneralTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralTotalCountMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewGeneralTotalCountMetric() entity.IMetricDefinition {

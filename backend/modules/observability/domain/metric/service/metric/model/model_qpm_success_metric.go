@@ -12,7 +12,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelQPMSuccessMetric 模型成功 QPM 指标
 type ModelQPMSuccessMetric struct{}
 
 func (m *ModelQPMSuccessMetric) Name() string {
@@ -37,6 +36,10 @@ func (m *ModelQPMSuccessMetric) Where(ctx context.Context, filter span_filter.Fi
 
 func (m *ModelQPMSuccessMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelQPMSuccessMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelQPMSuccessMetric() entity.IMetricDefinition {

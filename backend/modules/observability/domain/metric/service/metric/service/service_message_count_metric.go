@@ -1,6 +1,3 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
-
 package service
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ServiceMessageCountMetric 消息数指标（仅SDK数据来源）
 type ServiceMessageCountMetric struct{}
 
 func (m *ServiceMessageCountMetric) Name() string {
@@ -36,6 +32,10 @@ func (m *ServiceMessageCountMetric) Where(ctx context.Context, filter span_filte
 
 func (m *ServiceMessageCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ServiceMessageCountMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewServiceMessageCountMetric() entity.IMetricDefinition {

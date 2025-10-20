@@ -12,7 +12,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelQPMMetric 模型QPM指标
 type ModelQPMAllMetric struct{}
 
 func (m *ModelQPMAllMetric) Name() string {
@@ -37,6 +36,10 @@ func (m *ModelQPMAllMetric) Where(ctx context.Context, filter span_filter.Filter
 
 func (m *ModelQPMAllMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelQPMAllMetric) Wrappers() []entity.IMetricWrapper {
+	return nil
 }
 
 func NewModelQPMAllMetric() entity.IMetricDefinition {
