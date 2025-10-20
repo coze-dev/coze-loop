@@ -133,6 +133,21 @@ func TestToInvokeOutputDataDO(t *testing.T) {
 	assert.Nil(t, ToInvokeOutputDataDO(unknownReq))
 }
 
+func TestToInvokeOutputDataDO_PartialData(t *testing.T) {
+	successStatus := spi.InvokeEvalTargetStatus_SUCCESS
+	req := &openapi.ReportEvalTargetInvokeResultRequest{
+		Status: &successStatus,
+		Output: &spi.InvokeEvalTargetOutput{},
+		Usage:  &spi.InvokeEvalTargetUsage{},
+	}
+
+	output := ToInvokeOutputDataDO(req)
+	if assert.NotNil(t, output) {
+		assert.Empty(t, output.OutputFields)
+		assert.Nil(t, output.EvalTargetUsage)
+	}
+}
+
 func TestToSPIContentHelpers(t *testing.T) {
 	textType := spi.ContentTypeText
 	imageType := spi.ContentTypeImage
