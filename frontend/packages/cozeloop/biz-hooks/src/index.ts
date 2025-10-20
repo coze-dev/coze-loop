@@ -31,3 +31,5 @@ export {
   type ListDatasetImportTemplateReq,
   type ListDatasetImportTemplateResp,
 } from './dataset-template-download';
+
+export { useOpenWindow } from './route';
