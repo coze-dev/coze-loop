@@ -17,7 +17,9 @@ type MaxWrapper struct {
 }
 
 func (m *MaxWrapper) Wrap(definition entity.IMetricDefinition) entity.IMetricDefinition {
-	return &MaxWrapper{originalMetric: definition}
+	return &MaxWrapper{
+		originalMetric: definition,
+	}
 }
 
 func (m *MaxWrapper) Name() string {

@@ -17,7 +17,9 @@ type MinWrapper struct {
 }
 
 func (m *MinWrapper) Wrap(definition entity.IMetricDefinition) entity.IMetricDefinition {
-	return &MinWrapper{originalMetric: definition}
+	return &MinWrapper{
+		originalMetric: definition,
+	}
 }
 
 func (m *MinWrapper) Name() string {
