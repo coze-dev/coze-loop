@@ -6,7 +6,6 @@ package dao
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
@@ -155,14 +154,32 @@ func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskI
 	}
 
 	key := p.makeNonFinalTaskCacheKey(spaceID)
-	field := strconv.FormatInt(taskID, 10)
-	if err := p.cmdable.HSet(ctx, key, field, 1).Err(); err != nil {
-		logs.CtxError(ctx, "redis add non final task failed", "key", key, "taskID", taskID, "err", err)
-		return errorx.Wrapf(err, "redis hset non final task key: %v", key)
+	bytes, err := p.cmdable.Get(ctx, key).Bytes()
+	var tasks []int64
+
+	if err != nil && !redis.IsNilError(err) {
+		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis get task fail, key: %v", key)
 	}
 
-	if err := p.cmdable.Expire(ctx, key, nonFinalTaskCacheTTL).Err(); err != nil {
-		logs.CtxWarn(ctx, "failed to set ttl for non final task list", "key", key, "err", err)
+	if len(bytes) > 0 {
+		if err := json.Unmarshal(bytes, &tasks); err != nil {
+			return errorx.Wrapf(err, "TaskExpt json unmarshal failed")
+		}
+	}
+
+	if !lo.Contains(tasks, taskID) {
+		tasks = append(tasks, taskID)
+	}
+
+	bytes, err = json.Marshal(tasks)
+	if err != nil {
+		return errorx.Wrapf(err, "TaskExpt json marshal failed")
+	}
+
+	if err := p.cmdable.Set(ctx, key, bytes, nonFinalTaskCacheTTL).Err(); err != nil {
+		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
 	}
 
 	return nil
@@ -176,12 +193,34 @@ func (p *TaskDAOImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, ta
 	}
 
 	key := p.makeNonFinalTaskCacheKey(spaceID)
-	field := strconv.FormatInt(taskID, 10)
-	if err := p.cmdable.HDel(ctx, key, field).Err(); err != nil {
-		logs.CtxError(ctx, "redis remove non final task failed", "key", key, "taskID", taskID, "err", err)
-		return errorx.Wrapf(err, "redis hdel non final task key: %v", key)
+	bytes, err := p.cmdable.Get(ctx, key).Bytes()
+	if err != nil {
+		if redis.IsNilError(err) {
+			return nil
+		}
+		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis get task fail, key: %v", key)
 	}
-
+	if len(bytes) == 0 {
+		return nil
+	}
+	var tasks []int64
+	if err := lo.TernaryF(
+		len(bytes) > 0,
+		func() error { return json.Unmarshal(bytes, &tasks) },
+		func() error { return nil },
+	); err != nil {
+		return errorx.Wrapf(err, "TaskExpt json unmarshal failed")
+	}
+	tasks = lo.Filter(tasks, func(item int64, _ int) bool { return item != taskID })
+	bytes, err = json.Marshal(tasks)
+	if err != nil {
+		return errorx.Wrapf(err, "TaskExpt json marshal failed")
+	}
+	if err := p.cmdable.Set(ctx, key, bytes, nonFinalTaskCacheTTL).Err(); err != nil {
+		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
+		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
+	}
 	return nil
 }
 
