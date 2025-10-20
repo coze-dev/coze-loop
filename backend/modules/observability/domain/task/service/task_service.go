@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -297,19 +298,27 @@ func filterHiddenFilters(tasks []*task.Task) []*task.Task {
 }
 
 func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterField {
-	var res []*filter.FilterField
+	res := make([]*filter.FilterField, 0, len(fields))
 	for _, f := range fields {
-		if f == nil || f.GetHidden() || (f.SubFilter == nil && *f.FieldName == "") {
+		if f == nil || f.GetHidden() {
 			continue
 		}
 		sub := f.GetSubFilter()
+		var filteredSub []*filter.FilterField
 		if sub != nil {
-			filteredSub := filterVisibleFilterFields(sub.GetFilterFields())
+			filteredSub = filterVisibleFilterFields(sub.GetFilterFields())
 			if len(filteredSub) == 0 {
-				sub.FilterFields = nil
+				f.SetSubFilter(nil)
 			} else {
 				sub.FilterFields = filteredSub
 			}
+		}
+		hasSub := len(filteredSub) > 0
+		fieldName := strings.TrimSpace(f.GetFieldName())
+		hasFieldName := fieldName != ""
+		hasValues := len(f.GetValues()) > 0
+		if !hasSub && (!hasFieldName || !hasValues) {
+			continue
 		}
 		res = append(res, f)
 	}
