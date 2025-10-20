@@ -61,8 +61,10 @@ export function EvaluatorExperimentsChartTooltip(
 
       {showEvalTarget ? (
         <div className="flex items-center gap-2 justify-between">
-          <span>{I18n.t('evaluation_object')}</span>
-          <div className="font-medium text-[var(--coz-fg-plus)]">
+          <span className="grow min-w-[50px]">
+            {I18n.t('evaluation_object')}
+          </span>
+          <div className="font-medium text-[var(--coz-fg-plus)] max-w-[150px]">
             <EvalTargetPreview
               spaceID={spaceID}
               evalTarget={experiment?.eval_target}
