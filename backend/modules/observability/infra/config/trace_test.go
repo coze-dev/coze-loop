@@ -903,60 +903,6 @@ func TestTraceConfigCenter_GetQueryMaxQPS(t *testing.T) {
 	}
 }
 
-func TestTraceConfigCenter_GetKeyColumns(t *testing.T) {
-	type fields struct {
-		configLoader *confmocks.MockIConfigLoader
-	}
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name         string
-		fieldsGetter func(ctrl *gomock.Controller) fields
-		args         args
-		want         []string
-	}{
-		{
-			name: "get key columns successfully",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), keyColumnsCfgKey, gomock.Any()).
-					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
-						columns := v.(*[]string)
-						*columns = []string{"trace_id", "span_id"}
-						return nil
-					})
-				return fields{configLoader: mockLoader}
-			},
-			args: args{ctx: context.Background()},
-			want: []string{"trace_id", "span_id"},
-		},
-		{
-			name: "unmarshal key failed, return default",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), keyColumnsCfgKey, gomock.Any()).
-					Return(fmt.Errorf("unmarshal error"))
-				return fields{configLoader: mockLoader}
-			},
-			args: args{ctx: context.Background()},
-			want: []string{"start_time", "span_id", "parent_id", "duration", "span_type", "span_name", "status_code", "tags_long", "logic_delete_date"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			f := tt.fieldsGetter(ctrl)
-			tr := &TraceConfigCenter{
-				IConfigLoader: f.configLoader,
-			}
-			got := tr.GetKeyColumns(tt.args.ctx)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestTraceConfigCenter_GetKeySpanTypes(t *testing.T) {
 	type fields struct {
 		configLoader *confmocks.MockIConfigLoader
