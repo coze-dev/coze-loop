@@ -43,9 +43,7 @@ type TaskDAOImpl struct {
 	cmdable redis.Cmdable
 }
 
-var (
-	taskConverter = redisconvert.NewTaskConverter()
-)
+var taskConverter = redisconvert.NewTaskConverter()
 
 const (
 	taskDetailCacheKeyPattern = "observability:task:%d"
