@@ -7,11 +7,11 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric_new/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-// ModelInputTokenCountMetric Input Tokens消耗指标
 type ModelInputTokenCountMetric struct{}
 
 func (m *ModelInputTokenCountMetric) Name() string {
@@ -36,6 +36,13 @@ func (m *ModelInputTokenCountMetric) Where(ctx context.Context, filter span_filt
 
 func (m *ModelInputTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelInputTokenCountMetric) Wrappers() []entity.IMetricWrapper {
+	return []entity.IMetricWrapper{
+		wrapper.NewSelfWrapper(),
+		wrapper.NewTimeSeriesWrapper(),
+	}
 }
 
 func NewModelInputTokenCountMetric() entity.IMetricDefinition {

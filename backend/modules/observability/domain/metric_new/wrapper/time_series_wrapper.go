@@ -2,3 +2,74 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package wrapper
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+)
+
+type TimeSeriesWrapper struct {
+	originalMetric entity.IMetricDefinition
+	nameFormatter  func(string) string
+}
+
+func (a *TimeSeriesWrapper) Wrap(definition entity.IMetricDefinition) entity.IMetricDefinition {
+	return &TimeSeriesWrapper{
+		originalMetric: definition,
+		nameFormatter:  a.nameFormatter,
+	}
+}
+
+func (a *TimeSeriesWrapper) Name() string {
+	return a.nameFormatter(a.originalMetric.Name())
+}
+
+func (a *TimeSeriesWrapper) Type() entity.MetricType {
+	return entity.MetricTypeTimeSeries
+}
+
+func (a *TimeSeriesWrapper) Source() entity.MetricSource {
+	return a.originalMetric.Source()
+}
+
+func (a *TimeSeriesWrapper) Expression(granularity entity.MetricGranularity) string {
+	return a.originalMetric.Expression(granularity)
+}
+
+func (a *TimeSeriesWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return a.originalMetric.Where(ctx, f, env)
+}
+
+func (a *TimeSeriesWrapper) GroupBy() []*entity.Dimension {
+	return a.originalMetric.GroupBy()
+}
+
+func (a *TimeSeriesWrapper) Wrappers() []entity.IMetricWrapper {
+	return nil
+}
+
+type TimeSeriesWrapperOption func(*TimeSeriesWrapper)
+
+func NewTimeSeriesWrapper(opts ...TimeSeriesWrapperOption) entity.IMetricWrapper {
+	wrapper := &TimeSeriesWrapper{
+		nameFormatter: func(name string) string {
+			return fmt.Sprintf("%s_by_time", name)
+		},
+	}
+	for _, opt := range opts {
+		opt(wrapper)
+	}
+	return wrapper
+}
+
+func WithTimeSeriesName(name string) TimeSeriesWrapperOption {
+	return func(wrapper *TimeSeriesWrapper) {
+		wrapper.nameFormatter = func(string) string {
+			return name
+		}
+	}
+}
