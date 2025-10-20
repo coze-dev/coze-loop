@@ -370,5 +370,4 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 	default:
 		return nil
 	}
-
 }
