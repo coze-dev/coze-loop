@@ -286,7 +286,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
-	targetResult *entity.EvalTargetRecord, history []*entity.Message) (map[int64]*entity.EvaluatorRecord, error) {
+	targetResult *entity.EvalTargetRecord, history []*entity.Message,
+) (map[int64]*entity.EvaluatorRecord, error) {
 	var (
 		recordMap      sync.Map
 		item           = etec.EvalSetItem

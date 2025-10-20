@@ -705,9 +705,9 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 			},
 			eiec: &entity.ExptItemEvalCtx{
 				Event: &entity.ExptItemEvalEvent{
-					ExptID:    1,
-					ExptRunID: 2,
-					SpaceID:   3,
+					ExptID:        1,
+					ExptRunID:     2,
+					SpaceID:       3,
 					EvalSetItemID: 1,
 				},
 				EvalSetItem: mockEvalSetItem,

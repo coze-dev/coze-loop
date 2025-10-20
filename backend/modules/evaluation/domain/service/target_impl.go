@@ -346,7 +346,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 }
 
 func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64,
-	param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, callee string, err error) {
+	param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData,
+) (record *entity.EvalTargetRecord, callee string, err error) {
 	if inputData == nil || param == nil {
 		return nil, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("AsyncExecuteTarget with invalid param"))
 	}
@@ -360,7 +361,8 @@ func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID 
 }
 
 func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID int64, target *entity.EvalTarget, param *entity.ExecuteTargetCtx,
-	inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, callee string, err error) {
+	inputData *entity.EvalTargetInputData,
+) (record *entity.EvalTargetRecord, callee string, err error) {
 	defer func(st time.Time) { e.metric.EmitRun(spaceID, err, st) }(time.Now()) // todo(@liushengyang): mtr
 	defer goroutine.Recovery(ctx)
 
