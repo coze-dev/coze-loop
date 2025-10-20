@@ -162,7 +162,7 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
 			FilterFields: basicFilter,
 		}
-		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields), spanFilterFields.Filters)
+		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields, true), spanFilterFields.Filters)
 		return &filter.SpanFilterFields{
 			Filters:      filters,
 			PlatformType: spanFilterFields.PlatformType,
