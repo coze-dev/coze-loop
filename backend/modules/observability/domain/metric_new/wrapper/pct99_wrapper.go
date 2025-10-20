@@ -17,7 +17,9 @@ type Pct99Wrapper struct {
 }
 
 func (p *Pct99Wrapper) Wrap(definition entity.IMetricDefinition) entity.IMetricDefinition {
-	return &Pct99Wrapper{originalMetric: definition}
+	return &Pct99Wrapper{
+		originalMetric: definition,
+	}
 }
 
 func (p *Pct99Wrapper) Name() string {
@@ -46,4 +48,8 @@ func (p *Pct99Wrapper) GroupBy() []*entity.Dimension {
 
 func (p *Pct99Wrapper) Wrappers() []entity.IMetricWrapper {
 	return nil
+}
+
+func NewPct99Wrapper() entity.IMetricWrapper {
+	return &Pct99Wrapper{}
 }

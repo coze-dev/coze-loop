@@ -60,30 +60,35 @@ const (
 	MetricNameModelQPMSuccess             = "model_qpm_success"
 	MetricNameModelQPMFail                = "model_qpm_fail"
 	MetricNameModelSuccessRatio           = "model_success_ratio"
+	MetricNameModelTPS                    = "model_tps"
 	MetricNameModelTPSAvg                 = "model_tps_avg"
 	MetricNameModelTPSMin                 = "model_tps_min"
 	MetricNameModelTPSMax                 = "model_tps_max"
 	MetricNameModelTPSPct50               = "model_tps_pct50"
 	MetricNameModelTPSPct90               = "model_tps_pct90"
 	MetricNameModelTPSPct99               = "model_tps_pct99"
+	MetricNameModelTPM                    = "model_tpm"
 	MetricNameModelTPMAvg                 = "model_tpm_avg"
 	MetricNameModelTPMMin                 = "model_tpm_min"
 	MetricNameModelTPMMax                 = "model_tpm_max"
 	MetricNameModelTPMPct50               = "model_tpm_pct50"
 	MetricNameModelTPMPct90               = "model_tpm_pct90"
 	MetricNameModelTPMPct99               = "model_tpm_pct99"
+	MetricNameModelDuration               = "model_duration"
 	MetricNameModelDurationAvg            = "model_duration_avg"
 	MetricNameModelDurationMin            = "model_duration_min"
 	MetricNameModelDurationMax            = "model_duration_max"
 	MetricNameModelDurationPct50          = "model_duration_pct50"
 	MetricNameModelDurationPct90          = "model_duration_pct90"
 	MetricNameModelDurationPct99          = "model_duration_pct99"
+	MetricNameModelTTFT                   = "model_ttft"
 	MetricNameModelTTFTAvg                = "model_ttft_avg"
 	MetricNameModelTTFTMin                = "model_ttft_min"
 	MetricNameModelTTFTMax                = "model_ttft_max"
 	MetricNameModelTTFTPct50              = "model_ttft_pct50"
 	MetricNameModelTTFTPct90              = "model_ttft_pct90"
 	MetricNameModelTTFTPct99              = "model_ttft_pct99"
+	MetricNameModelTPOT                   = "model_tpot"
 	MetricNameModelTPOTAvg                = "model_tpot_avg"
 	MetricNameModelTPOTMin                = "model_tpot_min"
 	MetricNameModelTPOTMax                = "model_tpot_max"
@@ -95,6 +100,7 @@ const (
 	// Tool 工具统计指标
 	MetricNameToolTotalCount       = "tool_total_count"
 	MetricNameToolTotalCountByTime = "tool_total_count_by_time"
+	MetricNameToolDuration         = "tool_duration"
 	MetricNameToolDurationAvg      = "tool_duration_avg"
 	MetricNameToolDurationMin      = "tool_duration_min"
 	MetricNameToolDurationMax      = "tool_duration_max"
@@ -116,6 +122,7 @@ const (
 	MetricNameServiceQPMAll             = "service_qpm_all"
 	MetricNameServiceQPMSuccess         = "service_qpm_success"
 	MetricNameServiceQPMFail            = "service_qpm_fail"
+	MetricNameServiceDuration           = "service_duration"
 	MetricNameServiceDurationAvg        = "service_duration_avg"
 	MetricNameServiceDurationMin        = "service_duration_min"
 	MetricNameServiceDurationMax        = "service_duration_max"
@@ -162,6 +169,11 @@ type IMetricDefinition interface {
 	Expression(MetricGranularity) string                                                               // 计算表达式
 	Where(context.Context, span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) // 筛选条件
 	GroupBy() []*Dimension                                                                             // 聚合维度
+	Wrappers() []IMetricWrapper
+}
+
+type IMetricWrapper interface {
+	Wrap(definition IMetricDefinition) IMetricDefinition
 }
 
 type TimeSeries map[string][]*MetricPoint

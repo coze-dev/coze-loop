@@ -49,3 +49,7 @@ func (m *MaxWrapper) GroupBy() []*entity.Dimension {
 func (m *MaxWrapper) Wrappers() []entity.IMetricWrapper {
 	return nil
 }
+
+func NewMaxWrapper() entity.IMetricWrapper {
+	return &MaxWrapper{}
+}
