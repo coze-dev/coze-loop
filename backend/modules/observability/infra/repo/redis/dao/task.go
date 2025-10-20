@@ -49,10 +49,9 @@ var (
 )
 
 const (
-	taskDetailCacheKeyPattern   = "observability:task:%d"
-	taskDetailCacheTTL          = 30 * time.Minute
-	nonFinalTaskCacheKeyPattern = "tasks_of_"
-	nonFinalTaskCacheTTL        = 1 * time.Minute
+	taskDetailCacheKeyPattern = "observability:task:%d"
+	taskDetailCacheTTL        = 30 * time.Minute
+	nonFinalTaskCacheTTL      = 1 * time.Minute
 )
 
 // NewTaskDAO creates a new TaskDAO instance

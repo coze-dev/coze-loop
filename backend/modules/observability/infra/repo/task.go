@@ -360,6 +360,7 @@ func (v *TaskRepoImpl) GetTaskByRedis(ctx context.Context, taskID int64) (*entit
 	}
 	return taskDO, nil
 }
+
 func (v *TaskRepoImpl) SetTask(ctx context.Context, task *entity.ObservabilityTask) error {
 	return v.TaskRedisDao.SetTask(ctx, task)
 }
