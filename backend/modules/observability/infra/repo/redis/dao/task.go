@@ -139,7 +139,7 @@ func (p *TaskDAOImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]i
 	var tasks []int64
 	if err := lo.TernaryF(
 		len(bytes) > 0,
-		func() error { return json.Unmarshal(bytes, tasks) },
+		func() error { return json.Unmarshal(bytes, &tasks) },
 		func() error { return nil },
 	); err != nil {
 		return nil, errorx.Wrapf(err, "TaskExpt json unmarshal failed")
