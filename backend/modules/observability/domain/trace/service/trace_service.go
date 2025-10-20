@@ -340,6 +340,8 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		QueryEndTime:    req.EndTime,
 		SpanDoubleCheck: len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
 		QueryTenants:    tenants,
+		QueryLogID:      req.LogID,
+		QueryTraceID:    req.TraceID,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
