@@ -77,16 +77,16 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	}
 
 	var subscribers []*spanSubscriber
-	//taskDOs, err := h.listNonFinalTaskByRedis(ctx, span.WorkspaceID)
-	//if err != nil {
-	//	logs.CtxError(ctx, "Failed to get non-final task list, err: %v", err)
-	//	return nil, err
-	//}
-	taskDOs, err := h.listNonFinalTask(ctx)
+	taskDOs, err := h.listNonFinalTaskByRedis(ctx, span.WorkspaceID)
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get non-final task list, err: %v", err)
 		return nil, err
 	}
+	//taskDOs, err := h.listNonFinalTask(ctx)
+	//if err != nil {
+	//	logs.CtxError(ctx, "Failed to get non-final task list, err: %v", err)
+	//	return nil, err
+	//}
 	taskList := tconv.TaskDOs2DTOs(ctx, taskDOs, nil)
 	for _, taskDO := range taskList {
 		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.GetWorkspaceID()) {
