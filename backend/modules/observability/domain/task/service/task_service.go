@@ -291,15 +291,24 @@ func filterHiddenFilters(tasks []*task.Task) []*task.Task {
 			continue
 		}
 
-		resFilters := make([]*filter.FilterField, 0)
-		for _, filter := range filterFields {
-			if filter != nil && !filter.GetHidden() {
-				resFilters = append(resFilters, filter)
-			}
-		}
-		filters.FilterFields = resFilters
+		filters.FilterFields = filterVisibleFilterFields(filterFields)
 	}
 	return tasks
+}
+
+func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterField {
+	res := make([]*filter.FilterField, 0, len(fields))
+	for _, f := range fields {
+		if f == nil || f.GetHidden() {
+			continue
+		}
+		sub := f.GetSubFilter()
+		if sub != nil {
+			sub.FilterFields = filterVisibleFilterFields(sub.GetFilterFields())
+		}
+		res = append(res, f)
+	}
+	return res
 }
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
