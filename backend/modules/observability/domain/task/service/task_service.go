@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -207,7 +208,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 					logs.CtxError(ctx, "proc Finish err:%v", err)
 					return err
 				}
-				err = t.TaskRepo.RemoveNonFinalTask(ctx, taskDO.ID)
+				err = t.TaskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(taskDO.WorkspaceID, 10), taskDO.ID)
 				if err != nil {
 					logs.CtxError(ctx, "remove non final task failed, task_id=%d, err=%v", taskDO.ID, err)
 				}

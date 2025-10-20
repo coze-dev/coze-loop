@@ -114,7 +114,7 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 	if err != nil {
 		return createdID, err
 	}
-	err = v.SetTask(ctx, do)
+	err = v.TaskRedisDao.SetTask(ctx, do)
 	if err != nil {
 		return createdID, err
 	}
@@ -136,7 +136,7 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 			return err
 		}
 	}
-	err = v.SetTask(ctx, do)
+	err = v.TaskRedisDao.SetTask(ctx, do)
 	if err != nil {
 		return err
 	}

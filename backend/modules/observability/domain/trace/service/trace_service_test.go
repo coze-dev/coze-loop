@@ -51,15 +51,15 @@ func newTaskRepoMock(ctrl *gomock.Controller) *taskRepoMock {
 	return &taskRepoMock{MockITaskRepo: taskRepomocks.NewMockITaskRepo(ctrl)}
 }
 
-func (m *taskRepoMock) ListNonFinalTask(context.Context) ([]int64, error) {
+func (m *taskRepoMock) ListNonFinalTask(context.Context, string) ([]int64, error) {
 	panic("unexpected call to ListNonFinalTask in taskRepoMock")
 }
 
-func (m *taskRepoMock) AddNonFinalTask(context.Context, int64) error {
+func (m *taskRepoMock) AddNonFinalTask(context.Context, string, int64) error {
 	panic("unexpected call to AddNonFinalTask in taskRepoMock")
 }
 
-func (m *taskRepoMock) RemoveNonFinalTask(context.Context, int64) error {
+func (m *taskRepoMock) RemoveNonFinalTask(context.Context, string, int64) error {
 	panic("unexpected call to RemoveNonFinalTask in taskRepoMock")
 }
 
