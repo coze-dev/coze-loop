@@ -191,30 +191,6 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 	}
 }
 
-func combineFilters(filters ...*filter.FilterFields) *filter.FilterFields {
-	filterAggr := &filter.FilterFields{
-		QueryAndOr:   ptr.Of(filter.QueryRelationAnd),
-		FilterFields: make([]*filter.FilterField, 0),
-	}
-	for _, f := range filters {
-		if f == nil {
-			continue
-		}
-		if len(f.GetFilterFields()) == 0 {
-			continue
-		}
-
-		filterAggr.FilterFields = append(filterAggr.FilterFields, &filter.FilterField{
-			QueryAndOr: ptr.Of(filter.QueryRelationAnd),
-			SubFilter:  f,
-		})
-	}
-	if len(filterAggr.FilterFields) == 0 {
-		return nil
-	}
-	return filterAggr
-}
-
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {
 	// 参数验证
 	if req == nil || req.GetTask() == nil {

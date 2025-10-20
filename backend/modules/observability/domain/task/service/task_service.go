@@ -275,6 +275,7 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 	}
 	return &GetTaskResp{Task: filterHiddenFilters([]*task.Task{tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)})[0]}, nil
 }
+
 func filterHiddenFilters(tasks []*task.Task) []*task.Task {
 	for _, t := range tasks {
 		if t == nil {

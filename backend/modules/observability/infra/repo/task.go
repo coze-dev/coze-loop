@@ -331,6 +331,7 @@ func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]
 func (v *TaskRepoImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
 	return v.TaskRedisDao.AddNonFinalTask(ctx, spaceID, taskID)
 }
+
 func (v *TaskRepoImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
 	return v.TaskRedisDao.RemoveNonFinalTask(ctx, spaceID, taskID)
 }
