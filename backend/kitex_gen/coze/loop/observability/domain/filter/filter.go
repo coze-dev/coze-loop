@@ -348,6 +348,7 @@ type FilterField struct {
 	QueryType  *QueryType     `thrift:"query_type,4,optional" frugal:"4,optional,string" form:"query_type" json:"query_type,omitempty" query:"query_type"`
 	QueryAndOr *QueryRelation `thrift:"query_and_or,5,optional" frugal:"5,optional,string" form:"query_and_or" json:"query_and_or,omitempty" query:"query_and_or"`
 	SubFilter  *FilterFields  `thrift:"sub_filter,6,optional" frugal:"6,optional,FilterFields" form:"sub_filter" json:"sub_filter,omitempty" query:"sub_filter"`
+	Hidden     *bool          `thrift:"hidden,7,optional" frugal:"7,optional,bool" form:"hidden" json:"hidden,omitempty" query:"hidden"`
 }
 
 func NewFilterField() *FilterField {
@@ -428,6 +429,18 @@ func (p *FilterField) GetSubFilter() (v *FilterFields) {
 	}
 	return p.SubFilter
 }
+
+var FilterField_Hidden_DEFAULT bool
+
+func (p *FilterField) GetHidden() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetHidden() {
+		return FilterField_Hidden_DEFAULT
+	}
+	return *p.Hidden
+}
 func (p *FilterField) SetFieldName(val *string) {
 	p.FieldName = val
 }
@@ -446,6 +459,9 @@ func (p *FilterField) SetQueryAndOr(val *QueryRelation) {
 func (p *FilterField) SetSubFilter(val *FilterFields) {
 	p.SubFilter = val
 }
+func (p *FilterField) SetHidden(val *bool) {
+	p.Hidden = val
+}
 
 var fieldIDToName_FilterField = map[int16]string{
 	1: "field_name",
@@ -454,6 +470,7 @@ var fieldIDToName_FilterField = map[int16]string{
 	4: "query_type",
 	5: "query_and_or",
 	6: "sub_filter",
+	7: "hidden",
 }
 
 func (p *FilterField) IsSetFieldName() bool {
@@ -478,6 +495,10 @@ func (p *FilterField) IsSetQueryAndOr() bool {
 
 func (p *FilterField) IsSetSubFilter() bool {
 	return p.SubFilter != nil
+}
+
+func (p *FilterField) IsSetHidden() bool {
+	return p.Hidden != nil
 }
 
 func (p *FilterField) Read(iprot thrift.TProtocol) (err error) {
@@ -541,6 +562,14 @@ func (p *FilterField) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -650,6 +679,17 @@ func (p *FilterField) ReadField6(iprot thrift.TProtocol) error {
 	p.SubFilter = _field
 	return nil
 }
+func (p *FilterField) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Hidden = _field
+	return nil
+}
 
 func (p *FilterField) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -679,6 +719,10 @@ func (p *FilterField) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -815,6 +859,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *FilterField) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHidden() {
+		if err = oprot.WriteFieldBegin("hidden", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Hidden); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 
 func (p *FilterField) String() string {
 	if p == nil {
@@ -846,6 +908,9 @@ func (p *FilterField) DeepEqual(ano *FilterField) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.SubFilter) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Hidden) {
 		return false
 	}
 	return true
@@ -915,6 +980,18 @@ func (p *FilterField) Field5DeepEqual(src *QueryRelation) bool {
 func (p *FilterField) Field6DeepEqual(src *FilterFields) bool {
 
 	if !p.SubFilter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *FilterField) Field7DeepEqual(src *bool) bool {
+
+	if p.Hidden == src {
+		return true
+	} else if p.Hidden == nil || src == nil {
+		return false
+	}
+	if *p.Hidden != *src {
 		return false
 	}
 	return true

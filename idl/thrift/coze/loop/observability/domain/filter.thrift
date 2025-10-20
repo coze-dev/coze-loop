@@ -46,6 +46,8 @@ struct FilterField {
     4: optional QueryType query_type
     5: optional QueryRelation query_and_or
     6: optional FilterFields sub_filter
+
+    7: optional bool hidden
 }
 
 struct FieldOptions {

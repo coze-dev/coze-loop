@@ -248,7 +248,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
 	return &ListTasksResp{
-		Tasks: tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap),
+		Tasks: filterHiddenFilters(tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap)),
 		Total: ptr.Of(total),
 	}, nil
 }
@@ -267,7 +267,39 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)}, nil
+	return &GetTaskResp{Task: filterHiddenFilters([]*task.Task{tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)})[0]}, nil
+}
+func filterHiddenFilters(tasks []*task.Task) []*task.Task {
+	for _, t := range tasks {
+		if t == nil {
+			continue
+		}
+		rule := t.GetRule()
+		if rule == nil {
+			continue
+		}
+		spanFilters := rule.GetSpanFilters()
+		if spanFilters == nil {
+			continue
+		}
+		filters := spanFilters.GetFilters()
+		if filters == nil {
+			continue
+		}
+		filterFields := filters.GetFilterFields()
+		if len(filterFields) == 0 {
+			continue
+		}
+
+		resFilters := make([]*filter.FilterField, 0)
+		for _, filter := range filterFields {
+			if filter != nil && !filter.GetHidden() {
+				resFilters = append(resFilters, filter)
+			}
+		}
+		filters.FilterFields = resFilters
+	}
+	return tasks
 }
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
