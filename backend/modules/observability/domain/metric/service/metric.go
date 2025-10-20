@@ -321,7 +321,7 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 	metricNameMap := lo.Associate(mBuilder.mInfo.mAggregation,
 		func(item *entity.Dimension) (string, bool) {
 			ret[item.Alias] = &entity.Metric{
-				TimeSeries: make(map[string][]*entity.MetricPoint),
+				TimeSeries: make(entity.TimeSeries, 0),
 			}
 			return item.Alias, true
 		})
@@ -346,13 +346,11 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 				})
 			}
 		}
-		// 填充零值...
-		if mBuilder.mRepoReq != nil {
-			t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
-			for metricName, metricVal := range ret {
-				m.fillTimeSeriesData(t, metricName, metricVal)
-			}
-		}
+	}
+	// 零值填充
+	t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
+	for metricName, _ := range metricNameMap {
+		m.fillTimeSeriesData(t, metricName, ret[metricName])
 	}
 	return ret
 }
